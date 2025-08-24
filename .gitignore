@@ -1,10 +1,12 @@
 # Xcode / JUCE build artifacts
 build/
+Builds/
 *.app
 *.vst3
 *.component
 *.a
 *.dylib
+
 
 # Xcode user settings
 *.xcworkspace
