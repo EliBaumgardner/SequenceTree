@@ -1,0 +1,14 @@
+# Xcode / JUCE build artifacts
+build/
+*.app
+*.vst3
+*.component
+*.a
+*.dylib
+
+# Xcode user settings
+*.xcworkspace
+*.xcuserdata/
+
+# macOS system files
+.DS_Store
