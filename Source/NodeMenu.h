@@ -15,7 +15,6 @@
 #include "DynamicLabel.h"
 #include "SliderBar.h"
 #include "MenuItem.h"
-#include "ColourWheel.h"
 #include "ColourSelector.h"
 
 class Node;

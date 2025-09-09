@@ -9,6 +9,7 @@
 NodeCanvas::NodeCanvas()
 {
     updateInfoText();
+    
 }
 
 NodeCanvas::~NodeCanvas() {
@@ -50,12 +51,10 @@ void NodeCanvas::paint(juce::Graphics& g)
         x2 = x2 - nx*radius;
         y2 = y2 - ny*radius;
         
-        
         // Draw main line
         g.drawLine(x1, y1, x2, y2, 2.0f);
         g.setColour(juce::Colours::white);
         g.drawLine(x1, y1, x2, y2, 1.0f);
-    
         
         // Calculate the two points for the arrowhead lines
         float leftX = x2 - arrowLength * nx + arrowWidth * ny;
@@ -78,9 +77,7 @@ void NodeCanvas::paint(juce::Graphics& g)
 
 void NodeCanvas::resized()
 {
-    // Capture the original size for expansion calculations
-//    originalWidth  = getWidth();
-//    originalHeight = getHeight();
+  
 }
 
 void NodeCanvas::updateInfoText()
@@ -92,10 +89,9 @@ void NodeCanvas::updateInfoText()
 void NodeCanvas::mouseDown(const juce::MouseEvent& e)
 {
 
-    if (e.mods.isLeftButtonDown())
+    if (e.mods.isLeftButtonDown() && controllerMode == ControllerMode::Node)
     {
-        if (canvasNodes.isEmpty())
-        {
+        
             auto* node = new Node(this);
             
             canvasNodes.add(node);
@@ -104,10 +100,11 @@ void NodeCanvas::mouseDown(const juce::MouseEvent& e)
             addAndMakeVisible(node);
             updateInfoText();
             
-            root = node;
+            if(root == nullptr){
+                root = node;
+            }
+        
             makeRTGraph(root);
-        }
-
     }
 }
 
@@ -193,7 +190,8 @@ std::shared_ptr<RTGraph> NodeCanvas::makeRTGraph(Node* root){
             
             RTNode rtNode;
             rtNode.nodeID = id;
-            rtNode.countLimit = current->nodeLogic.countLimit;
+            rtNode.countLimit = static_cast<int>(current->nodeData.nodeData.getProperty("countLimit"));
+            std::cout<<"countLimit: "<<rtNode.countLimit<<std::endl;
             
             for(auto note : current->nodeData.midiNotes){
                 
@@ -232,4 +230,12 @@ void NodeCanvas::updateProcessorGraph(Node* node){
     
     ComponentContext::processor->setNewGraph(makeRTGraph(node));
     //context->processor.setNewGraph(makeRTGraph(node));
+}
+
+void NodeCanvas::setSelectionMode(NodeBox::DisplayMode mode) {
+    
+    for(int i = 0; i < canvasNodes.size(); i++){
+        canvasNodes[i]->setDisplayMode(mode);
+        canvasNodes[i]->editor.get()->formatDisplay(mode);
+    }
 }

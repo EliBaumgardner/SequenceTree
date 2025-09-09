@@ -11,7 +11,6 @@
 #include "DynamicEditor.h"
 #include "ComponentContext.h"
 #include "NodeCanvas.h"
-#include "Node.h"
 
 DynamicEditor::DynamicEditor(){
     
@@ -29,8 +28,7 @@ DynamicEditor::DynamicEditor(){
         }
         else if(editable){
             
-            //setText(bindValue.toString());
-            getTextValue().referTo(bindValue);
+            
             setColour(juce::TextEditor::textColourId, juce::Colours::black);
             showHint = false;
             if(tree.hasType("MidiNoteData")){
@@ -65,7 +63,8 @@ void DynamicEditor::bindEditor(juce::ValueTree tree, const juce::Identifier prop
         bindValue.referTo(tree.getPropertyAsValue(propertyID,nullptr));
     }
     
-    onTextChange();
+    getTextValue().referTo(bindValue);
+    //onTextChange();
 }
 
 void DynamicEditor::refit(){
@@ -78,9 +77,11 @@ void DynamicEditor::refit(){
         height *= ratio;
         
         auto font = baseFont;
+    
         font.setHeight(height);
         setFont(font);
         applyFontToAllText(font);
+    
 }
 
 void DynamicEditor::setEditable(bool editable){
@@ -153,4 +154,85 @@ bool DynamicEditor::textChanged(juce::String string){
     
     oldString = string;
     return true;
-};
+}
+
+void DynamicEditor::formatDisplay(DisplayMode mode){
+    
+    juce::String displayValue = bindValue.toString();
+    
+    std::cout<<displayValue<<std::endl;
+    double value = displayValue.getDoubleValue();
+    
+    juce::String display;
+    
+    if(mode == DisplayMode::Pitch){
+        value += 1;
+        int valueRange = (int)value % 127;
+        int pitchValue = (int)valueRange % 11;
+        int octave = (valueRange+1) / 12;
+        
+        juce::String pitchNames[] = {
+            juce::String(L"C"),
+            juce::String(L"C♯"),
+            juce::String(L"D"),
+            juce::String(L"D♯"),
+            juce::String(L"E"),
+            juce::String(L"F"),
+            juce::String(L"F♯"),
+            juce::String(L"G"),
+            juce::String(L"G♯"),
+            juce::String(L"A"),
+            juce::String(L"A♯"),
+            juce::String(L"B")
+        };
+
+        display = pitchNames[pitchValue] + juce::String(octave);
+    }
+    
+    if(mode == DisplayMode::Velocity){
+        int velocity = (int)value;
+        display = juce::String(velocity);
+    }
+    
+    if(mode == DisplayMode::Duration){
+        display = juce::String(value);
+    }
+    
+    setText(display);
+    refit();
+}
+
+int DynamicEditor::noteToNumber(juce::String string){
+    
+    //note  //accidental  //octave
+    
+    char note = string[1];
+    juce::juce_wchar accidental;
+    char octave;
+    
+    int midiNumber = 0;
+    int accidentalValue = 0;
+    
+    if(string.length() > 2){
+        accidental = string[2];
+        octave = string[3];
+        
+        switch(accidental) {
+            case 0x266F: accidentalValue = 1;
+                break;
+                
+            case 0x266D: accidentalValue = -1;
+                break;
+        }
+    }
+    else {
+        octave = string [2];
+    }
+    
+    
+    midiNumber = note - 97;
+    midiNumber += (octave - 49) * 12;
+    midiNumber += accidentalValue;
+    
+    return midiNumber;
+}

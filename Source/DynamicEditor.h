@@ -41,12 +41,19 @@ class DynamicEditor : public juce::TextEditor {
     
         void mouseDown(const juce::MouseEvent& e) override;
     
+        enum class DisplayMode {Pitch, Velocity, Duration};
+    
+        void formatDisplay(DisplayMode mode);
+    
+        int noteToNumber(juce::String string);
+    
+        DisplayMode mode;
+    
         juce::String hintText = "test";
     
     private:
     
         bool textChanged(juce::String string);
-        
         
         juce::String groupID;
         juce::String labelText;

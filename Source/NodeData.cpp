@@ -1,4 +1,3 @@
-#include "PluginContext.h"
 #include "NodeCanvas.h"
 #include "Node.h"
 #include "NodeData.h"
@@ -23,7 +22,7 @@ const juce::Identifier NodeData::ccNumberID { "ccNumber" };
 
 
 
-NodeData::NodeData() : nodeData("NodeData"), midiNoteData("MidiCCData"), midiCCData("MidiNoteData"){
+NodeData::NodeData() : nodeData("NodeData"), midiNoteData("MidiNoteData"), midiCCData("MidiCCData"){
     
     nodeData.setProperty(nameID,"node",nullptr);
     nodeData.setProperty(xID, 0, nullptr);

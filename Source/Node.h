@@ -12,6 +12,7 @@
 
 #include <JuceHeader.h>
 #include "DynamicEditor.h"
+#include "NodeBox.h"
 
 #include "NodeController.h"
 #include "NodeLogic.h"
@@ -28,7 +29,7 @@ class Node : public juce::Component {
         Node(NodeCanvas* nodeCanvas);
     
         ~Node() override;
-    //public methods
+    
         void paint(juce::Graphics& g) override;
         
         void resized() override;
@@ -55,12 +56,16 @@ class Node : public juce::Component {
 
         NodeData nodeData;
 
-        DynamicEditor editor;
+        std::unique_ptr<NodeBox> editor = nullptr;
     
         bool isRoot = false;
 
         int nodeID = 0;
         static int globalNodeID;
+    
+        NodeBox::DisplayMode mode;
+    
+        void setDisplayMode(NodeBox::DisplayMode mode);
     
     private:
     
@@ -68,5 +73,60 @@ class Node : public juce::Component {
         bool isSelected = false;
         bool isHighlighted = false;
     
+    class IncrementButton : public juce::Component {
+        
+        public:
+        
+        bool increment;
+        std::function<void()> onChanged;
+        
+        IncrementButton(bool increment) : increment(increment) {
+            
+        }
+        
+        void paint(juce::Graphics& g) override {
+            
+            auto bounds = getLocalBounds().toFloat();
+            auto w = bounds.getWidth();
+            auto h = bounds.getHeight();
+            
+            if(increment == true){
+                juce::Path path;
+                
+                path.startNewSubPath(0, h);
+                path.lineTo(w / 2, 0);
+                path.lineTo(w, h);
+                path.closeSubPath();
+
+                g.setColour(juce::Colours::white);
+                g.fillPath(path);
+                
+                g.setColour(juce::Colours::black);
+                g.strokePath(path, juce::PathStrokeType(1.0f));
+            }
+            else {
+                juce::Path path;
+                
+                path.startNewSubPath(0,0);
+                path.lineTo(w/2,h);
+                path.lineTo(w,0);
+                path.closeSubPath();
+                
+                g.setColour(juce::Colours::white);
+                g.fillPath(path);
+                
+                g.setColour(juce::Colours::black);
+                g.strokePath(path, juce::PathStrokeType(1.0f));
+            }
+        }
+        
+        void mouseDown(const juce::MouseEvent& e) override {
+            
+            onChanged();
+        }
+        
+    };
     
+    IncrementButton upButton { true };
+    IncrementButton downButton { false };
 };

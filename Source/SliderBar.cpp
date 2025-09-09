@@ -57,10 +57,16 @@ void SliderBar::mouseDrag(const juce::MouseEvent& event)
         {
             case SliderPosition::Top:
             {
-                int newHeight = parentBounds.getHeight() + delta.y;
+                int newHeight = parentBounds.getHeight() - delta.y;
                 int maxHeight = containerBounds.getHeight();
                 newHeight = juce::jlimit(thickness, maxHeight, newHeight);
-                parent->setBounds(parentBounds.withHeight(newHeight));
+
+                int newY = containerBounds.getBottom() - newHeight;
+
+                parent->setBounds(parentBounds.getX(),
+                                  newY,
+                                  parentBounds.getWidth(),
+                                  newHeight);
                 break;
             }
             case SliderPosition::Bottom:

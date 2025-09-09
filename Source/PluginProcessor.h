@@ -91,6 +91,8 @@ public:
     
     NodeCanvas* canvas;
     std::shared_ptr<RTGraph> rtGraph;
+    std::shared_ptr<std::vector<RTGraph*>> storedGraphs;
+    std::shared_ptr<std::vector<RTGraph*>> loadedGraphs;
     std::shared_ptr<std::unordered_map<int,int>> nodeCounts;
 
 private:

@@ -18,7 +18,7 @@
 #include "SliderBar.h"
 #include "DynamicPort.h"
 #include "TitleBar.h"
-
+#include "SelectionBar.h"
 
 
 //==============================================================================
@@ -48,8 +48,10 @@ private:
     std::unique_ptr<DynamicPort> port;
     
     TitleBar titleBar;
+    SelectionBar selectionBar;
     
     float menuWidthRatio = 0.25f;
+    float menuHeightRatio = 0.25f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessorEditor)
 };

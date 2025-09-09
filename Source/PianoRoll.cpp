@@ -1,18 +1,20 @@
 /*
   ==============================================================================
 
-    PluginContext.h
-    Created: 10 Jul 2025 10:24:57am
+    PianoRoll.cpp
+    Created: 27 Aug 2025 5:25:07pm
     Author:  Eli Baimgardner
 
   ==============================================================================
 */
 
-#pragma once
+#include "PianoRoll.h"
 
-class SequenceTreeAudioProcessor;
-
-struct PluginContext {
+PianoRoll::PianoRoll() {
     
-    SequenceTreeAudioProcessor& processor;
-};
+}
+
+void PianoRoll::paint(juce::Graphics& g) {
+    
+    g.fillAll(juce::Colours::red);
+}

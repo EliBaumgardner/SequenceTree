@@ -12,31 +12,49 @@
 #include "NodeCanvas.h"
 
 
+
 int Node::globalNodeID = 0;
 
 Node::Node(NodeCanvas* nodeCanvas) : nodeCanvas(nodeCanvas),nodeID(++globalNodeID){
     
+    editor = std::make_unique<NodeBox>(this);
+    
+    addAndMakeVisible(upButton);
+    addAndMakeVisible(downButton);
+    addAndMakeVisible(editor.get());
+    
     nodeLogic.setNode(this);
     nodeData.setNode(this);
-    editor.makeBoundsVisible(false);
-    editor.setColour(juce::TextEditor::textColourId, juce::Colours::white);
- 
-    nodeController = std::make_unique<NodeController>(nodeCanvas,this);
-    
+    nodeController = std::make_unique<NodeController>(this);
     this->addMouseListener(nodeController.get(), true);
     
-    editor.setText("1");
-    addAndMakeVisible(editor);
-    editor.refit();
+    editor.get()->setColour(juce::TextEditor::textColourId, juce::Colours::white);
+    editor.get()->bindEditor(nodeData.nodeData,"countLimit");
+    //editor.get()->formatDisplay(NodeBox::DisplayMode::CountLimit);
+    //editor.refit();
     
-    editor.onTextChange = [=]()
-        {
-            if(editor.getText().getIntValue() != 0){
-                nodeLogic.setCountLimit(editor.getText().getIntValue());
-                nodeData.nodeData.setProperty("countLimit",editor.getText().getIntValue(),nullptr);
-                nodeCanvas->updateProcessorGraph(nodeCanvas->root);
-            }
-        };
+//    editor.get()->onTextChange = [=]()
+//        {
+//            if(editor.get()->getText().getIntValue() != 0){
+//                nodeLogic.setCountLimit(editor.get()->getText().getIntValue());
+//                nodeData.nodeData.setProperty("countLimit",editor.get()->getText().getIntValue(),nullptr);
+//                nodeCanvas->updateProcessorGraph(nodeCanvas->root);
+//            }
+//        };
+    
+    upButton.onChanged = [this](){
+        double value = editor.get()->bindValue.toString().getDoubleValue();
+        value += 1;
+        editor.get()->bindValue.setValue(value);
+        editor.get()->formatDisplay(editor.get()->mode);
+    };
+    
+    downButton.onChanged = [this](){
+        double value = editor.get()->bindValue.toString().getDoubleValue();
+        value -= 1;
+        editor.get()->bindValue.setValue(value);
+        editor.get()->formatDisplay(editor.get()->mode);
+    };
 }
 
 Node::~Node(){
@@ -80,9 +98,14 @@ void Node::paint(juce::Graphics& g)
 
 void Node::resized(){
     
-    editor.setBounds(getLocalBounds().reduced(10.0f));
-    editor.setJustification(juce::Justification::centred);
-    editor.refit();
+    auto editorArea = getLocalBounds().reduced(10.0f);
+    
+    upButton.setBounds(editorArea.removeFromTop(4.0f));
+    downButton.setBounds(editorArea.removeFromBottom(4.0f));
+    
+    editor.get()->setBounds(editorArea);
+    editor.get()->setJustification(juce::Justification::centred);
+    //editor.refit();
     
     nodeData.nodeData.setProperty("x",getX(),nullptr);
     nodeData.nodeData.setProperty("y",getY(),nullptr);
@@ -118,3 +141,39 @@ NodeData* Node::getNodeData(){
     return &nodeData;
 }
 
+void Node::setDisplayMode(NodeBox::DisplayMode mode){
+    
+    
+    juce::ValueTree midiTree("MidiNoteData");
+    
+    midiTree.setProperty("pitch",60,nullptr);
+    midiTree.setProperty("velocity", 60, nullptr);
+    midiTree.setProperty("duration", 500, nullptr);
+    
+    if(nodeData.midiNotes.isEmpty()){
+        nodeData.midiNotes.add(midiTree);
+    }
+    else if(nodeData.midiNotes.size() == 1) {
+        midiTree = nodeData.midiNotes.getLast();
+    }
+    
+    if(mode == NodeBox::DisplayMode::Pitch){
+        editor.get()->bindEditor(midiTree, "pitch");
+        editor.get()->formatDisplay(NodeBox::DisplayMode::Pitch);
+    }
+    
+    if(mode == NodeBox::DisplayMode::Velocity){
+        editor.get()->bindEditor(midiTree, "velocity");
+        editor.get()->formatDisplay(NodeBox::DisplayMode::Velocity);
+    }
+    
+    if(mode == NodeBox::DisplayMode::Duration){
+        editor.get()->bindEditor(midiTree, "duration");
+        editor.get()->formatDisplay(NodeBox::DisplayMode::Duration);
+    }
+    
+    if(mode == NodeBox::DisplayMode::CountLimit){
+        editor.get()->bindEditor(nodeData.nodeData,"countLimit");
+        editor.get()->formatDisplay(NodeBox::DisplayMode::CountLimit);
+    }
+}

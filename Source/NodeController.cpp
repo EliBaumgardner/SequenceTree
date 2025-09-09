@@ -13,10 +13,11 @@
 #include "NodeMenu.h"
 #include "NodeData.h"
 #include "NodeController.h"
-#include "PluginContext.h"
 
-NodeController::NodeController(NodeCanvas* nodeCanvas,Node* node) : nodeCanvas(nodeCanvas),node(node){
+
+NodeController::NodeController(Node* node) : node(node){
     
+    nodeCanvas = ComponentContext::canvas;
 }
 
 
@@ -38,27 +39,28 @@ void NodeController::mouseExit(const juce::MouseEvent& e){
 
 
 void NodeController::mouseDrag(const juce::MouseEvent& e){
-    
+    //check if drag is substantial
     if(e.getDistanceFromDragStart() < 5){
         return;
     }
     
     auto position = e.getEventRelativeTo(node->getParentComponent()).position;
     
-    if(e.mods.isRightButtonDown()){
-        node->setCentrePosition(position.toInt());
+    if(ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Inspect){
         
+        node->setCentrePosition(position.toInt());
         node->getNodeData()->nodeData.setProperty("x",node->getX(),nullptr);
         node->getNodeData()->nodeData.setProperty("y",node->getY(),nullptr);
-        //node->getNodeData()->nodeData.setProperty("radius", childNode->getWidth()/2,nullptr);
+        nodeCanvas->repaint();
+        return;
     }
     
-    else if(e.mods.isLeftButtonDown()){
+    if(e.mods.isLeftButtonDown()){
         
         if(isDragStart){
             isDragStart = false;
             nodeCanvas->getCanvasNodes().add(new Node(nodeCanvas));
-            std::cout<<"adding node"<<std::endl;
+
             childNode = nodeCanvas->getCanvasNodes().getLast();
             childNode->parent = node;
             
@@ -93,15 +95,15 @@ void NodeController::mouseDown(const juce::MouseEvent& e){
         
     }
     
-    if(e.mods.isLeftButtonDown()&& e.mods.isShiftDown()){
+    if(e.mods.isRightButtonDown()){
         
         nodeCanvas->removeNode(node);
-        //nodeCanvas->makeRTGraph(nodeCanvas->root);
     }
     else {
         node->setSelectVisual();
         nodeCanvas->getNodeMenu()->setDisplayedNode(node);
     }
+    
 }
 
 void NodeController::mouseUp(const juce::MouseEvent& e){

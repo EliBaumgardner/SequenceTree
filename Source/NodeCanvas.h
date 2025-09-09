@@ -15,6 +15,8 @@
 #include "DynamicPort.h"
 #include "Node.h"
 #include "RTData.h"
+#include "DynamicEditor.h"
+#include "NodeBox.h"
 
 class NodeCanvas : public juce::Component {
     
@@ -51,12 +53,21 @@ class NodeCanvas : public juce::Component {
         std::shared_ptr<RTGraph> makeRTGraph(Node* root);
     
         void updateProcessorGraph(Node* node);
+        
+        void setSelectionMode(NodeBox::DisplayMode mode);
+    
+        void updateRoots(Node* removedRoot);
+    
+        enum class ControllerMode { Inspect, Node };
+    
+        ControllerMode controllerMode;
     
         Node* root = nullptr;
 
         std::unordered_map<Node*, int> nodeMap;
     
         bool start = false;
+    
         
     private:
     
@@ -79,4 +90,6 @@ class NodeCanvas : public juce::Component {
         juce::String infoText;
     
         juce::Array<std::pair<Node*,Node*>> linePoints;
+    
+        juce::Array<Node*> roots;
 };

@@ -254,6 +254,8 @@ void SequenceTreeAudioProcessor::scheduleTraversal(){
 
 void SequenceTreeAudioProcessor::traverse(){
     
+    
+    
     std::shared_ptr<RTGraph> loadedGraph = std::atomic_load(&rtGraph);
     
     if(loadedGraph == nullptr)
@@ -324,12 +326,16 @@ void SequenceTreeAudioProcessor::scheduleNodeHighlight(RTNode* node, bool should
 void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
     std::shared_ptr<std::unordered_map<int,int>> newCounts;
 
+    
     if (nodeCounts != nullptr) {
         newCounts = std::make_shared<std::unordered_map<int,int>>(*nodeCounts);
     } else {
         newCounts = std::make_shared<std::unordered_map<int,int>>();
     }
-
+    
+    loadedGraphs.get()->push_back(graph.get());
+    std::atomic_store(&storedGraphs,loadedGraphs);
+    
     std::atomic_store(&rtGraph, graph);
 
     for (const auto& [nodeId, node] : rtGraph->nodeMap) {
@@ -338,7 +344,7 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
         }
     }
 
-    // safe erase pass
+    
     std::vector<int> idsToErase;
     for (const auto& [nodeId, _] : *newCounts) {
         if (!rtGraph->nodeMap.count(nodeId)) {

@@ -8,6 +8,9 @@
               pluginVST3Category="Fx" pluginAUMainType="'aumf'" cppLanguageStandard="20">
   <MAINGROUP id="O08QNG" name="SequenceTree">
     <GROUP id="{ED3D104E-C539-5C41-E35A-AEE55C9C69D5}" name="Source">
+      <FILE id="tIYuXF" name="SelectionBar.cpp" compile="1" resource="0"
+            file="Source/SelectionBar.cpp"/>
+      <FILE id="U7JuFa" name="SelectionBar.h" compile="0" resource="0" file="Source/SelectionBar.h"/>
       <FILE id="puFMgj" name="ColourSelector.cpp" compile="1" resource="0"
             file="Source/ColourSelector.cpp"/>
       <FILE id="WXU5gN" name="ColourSelector.h" compile="0" resource="0"
@@ -52,12 +55,13 @@
       <FILE id="Sex9TF" name="DynamicLabel.h" compile="0" resource="0" file="Source/DynamicLabel.h"/>
       <FILE id="lMnxQf" name="NodeArrow.cpp" compile="1" resource="0" file="Source/NodeArrow.cpp"/>
       <FILE id="HzEaLJ" name="NodeArrow.h" compile="0" resource="0" file="Source/NodeArrow.h"/>
-      <FILE id="arIbcw" name="ColourWheel.cpp" compile="1" resource="0" file="Source/ColourWheel.cpp"/>
-      <FILE id="IfMNrl" name="ColourWheel.h" compile="0" resource="0" file="Source/ColourWheel.h"/>
       <FILE id="kKMf65" name="TitleBar.cpp" compile="1" resource="0" file="Source/TitleBar.cpp"/>
       <FILE id="thD2zp" name="TitleBar.h" compile="0" resource="0" file="Source/TitleBar.h"/>
-      <FILE id="Xa4Msd" name="PluginContext.h" compile="0" resource="0" file="Source/PluginContext.h"/>
       <FILE id="Ed6IJZ" name="RTData.h" compile="0" resource="0" file="Source/RTData.h"/>
+      <FILE id="mVZEBv" name="PianoRoll.cpp" compile="1" resource="0" file="Source/PianoRoll.cpp"/>
+      <FILE id="Binh64" name="PianoRoll.h" compile="0" resource="0" file="Source/PianoRoll.h"/>
+      <FILE id="xKg4lj" name="NodeBox.cpp" compile="1" resource="0" file="Source/NodeBox.cpp"/>
+      <FILE id="WcsKXI" name="NodeBox.h" compile="0" resource="0" file="Source/NodeBox.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

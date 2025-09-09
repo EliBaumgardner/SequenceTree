@@ -10,6 +10,7 @@
 
 #pragma once
 #include <JuceHeader.h>
+#include "ComponentContext.h"
 
 class NodeCanvas;
 
@@ -23,7 +24,7 @@ class NodeController : public juce::MouseListener {
     
     public:
     
-        NodeController(NodeCanvas* nodeCanvas,Node* node);
+        NodeController(Node* node);
     
         ~NodeController();
     
