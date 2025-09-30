@@ -36,7 +36,7 @@ DynamicField::DynamicField(juce::ValueTree tree, bool withMinusButton) : withMin
             auto* parent = getParentComponent();
             if(auto* component = dynamic_cast<MenuItem*>(parent)){
                 component->removeComponent(this);
-                ComponentContext::canvas->updateProcessorGraph(ComponentContext::canvas->root);
+                ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root);
             }
         };
     }

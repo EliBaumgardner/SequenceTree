@@ -147,47 +147,70 @@ bool SequenceTreeAudioProcessor::isBusesLayoutSupported (const BusesLayout& layo
 
 void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    if(isPlaying.load() == false){
+        return;
+    }
+    
+    RTGraphs* loadedGraphs = std::atomic_load(&rtGraphs).get();
     
     juce::ScopedNoDenormals noDenormals;
     auto numSamples = buffer.getNumSamples();
     buffer.clear();
-
-    static bool noteActive = false;
-    static MidiEvent currentEvent = {};
-    static int remainingSamples = 0;
-
-    for (int sample = 0; sample < numSamples; ++sample)
-    {
-        // If no note is active, try to grab one from the FIFO
-        if (!noteActive)
+    
+    if(activeNotes.empty()){
+        
+        for(auto& [graphID, graph] : *loadedGraphs){
+            traverse(graphID);
+            numGraphs += 1;
+        }
+    }
+    
+    if(loadedGraphs->size() != numGraphs){
+        numGraphs = loadedGraphs->size();
+        int lastGraph = 0;
+        for(auto& [graphID,graph] : *loadedGraphs){
+            lastGraph = graphID;
+            break;
+        }
+        traverse(lastGraph);
+    }
+    
+    
+    for (int sample = 0; sample < numSamples; ++sample){
+        
+        for (int i = activeNotes.size() - 1; i >= 0; --i)
         {
-            //scheduleTraversal();
-            traverse();
+            ActiveNote& note = activeNotes[i];
             
-            int start1, size1, start2, size2;
-            fifo.prepareToRead(1, start1, size1, start2, size2);
-
-            if (size1 > 0)
+            if (--note.remainingSamples <= 0)
             {
+                midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), sample);
+                note.isActive = false;
                 
-                currentEvent = midiBuffer[start1];
-                remainingSamples = static_cast<int>((currentEvent.duration / 1000.0) * currentSampleRate);
-                fifo.finishedRead(size1);
-                
-                // Send noteOn
-                midiMessages.addEvent(juce::MidiMessage::noteOn(1, currentEvent.pitch, (juce::uint8)currentEvent.velocity), sample);
-                noteActive = true;
+                traverse(note.graphID);
+                activeNotes.erase(activeNotes.begin() + i);
             }
         }
-        else
+        
+        int start1, size1, start2, size2;
+        fifo.prepareToRead(fifoSize, start1, size1, start2, size2);
+        
+        for (int idx = 0; idx < size1; ++idx)
         {
-            // Countdown and send noteOff when time is up
-            if (--remainingSamples <= 0)
-            {
-                midiMessages.addEvent(juce::MidiMessage::noteOff(1, currentEvent.pitch), sample);
-                noteActive = false;
-            }
+            const MidiEvent& evt = midiBuffer[start1 + idx];
+            
+            ActiveNote newNote;
+            newNote.event = evt;
+            newNote.remainingSamples = static_cast<int>((evt.duration / 1000.0) * currentSampleRate);
+            newNote.isActive = true;
+            newNote.graphID = evt.graphID;
+        
+            activeNotes.push_back(newNote);
+            
+            midiMessages.addEvent(juce::MidiMessage::noteOn(1, evt.pitch, (juce::uint8)evt.velocity), sample);
         }
+        
+        fifo.finishedRead(size1);
     }
 }
 
@@ -225,15 +248,14 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
     return new SequenceTreeAudioProcessor();
 }
 
-void SequenceTreeAudioProcessor::pushNote(int pitch, int velocity, int duration){
+void SequenceTreeAudioProcessor::pushNote(int pitch, int velocity, int duration, int graphID){
     
-    std::cout << "Pushing note: " << pitch << ", " << velocity << ", " << duration << std::endl;
-
     int start1, size1, start2, size2;
         fifo.prepareToWrite(1, start1, size1, start2, size2);
 
-        if (size1 > 0)
-            midiBuffer[start1] = { pitch, velocity, duration };
+    if (size1 > 0)
+        midiBuffer[start1] = { pitch, velocity, duration, graphID};
+    
 
         fifo.finishedWrite(size1);
 }
@@ -252,109 +274,145 @@ void SequenceTreeAudioProcessor::scheduleTraversal(){
     });
 }
 
-void SequenceTreeAudioProcessor::traverse(){
-    
-    
-    
-    std::shared_ptr<RTGraph> loadedGraph = std::atomic_load(&rtGraph);
-    
-    if(loadedGraph == nullptr)
+void SequenceTreeAudioProcessor::traverse(int graphID) {
+    RTGraphs* loadedGraphs = std::atomic_load(&rtGraphs).get();
+    std::shared_ptr<GraphInfo> loadedInfo = std::atomic_load(&rtGraphInfo);
+
+    if (!loadedGraphs || !loadedInfo)
         return;
+
+    auto currentRTGraph = (*loadedGraphs)[graphID];
     
-    std::unordered_map<int, RTNode>& loadedMap = loadedGraph->nodeMap;
-    
-    if(loadedGraph->traversalRequested.load(std::memory_order_acquire) != true) { return; }
-    
-    if(rtTargetId == 0){ rtTargetId = rtRootId; }
-    
-    if(rtReferenceId){
-        scheduleNodeHighlight(&loadedMap[rtReferenceId], false);
-    }
-    
-    scheduleNodeHighlight(&loadedMap[rtTargetId], true);
-    
-    if(!loadedMap[rtTargetId].notes.empty()){
-        auto note = loadedMap[rtTargetId].notes[0];
-        pushNote(note.pitch,note.velocity,note.duration);
-    }
-    else {
-        pushNote(64,64,1000);
-    }
-    
-    int count = ++(*nodeCounts)[rtTargetId];
-    std::cout<<count<<std::endl;
-    
-    rtReferenceId = rtTargetId;
-    
-    int maxLimit = 0;
-    for(auto childIndex : loadedMap[rtTargetId].children){
-        int limit = loadedMap[childIndex].countLimit;
-        if(count % limit == 0 && limit > maxLimit){
-            maxLimit = limit;
-            rtTargetId = childIndex;
+        auto infoIt = loadedInfo->find(graphID);
+        if (infoIt == loadedInfo->end())
+            return;
+
+        TraversalInfo* info = &infoIt->second;
+        auto& loadedMap = currentRTGraph->nodeMap;
+
+        if (loadedMap.empty()) {
+            return;
         }
-    }
-    
-    if(rtTargetId == rtReferenceId){
-        rtTargetId = rtRootId;
-    }
+
+        if (!currentRTGraph->traversalRequested.load(std::memory_order_acquire))
+        { return; }
+        
+        if (info->rtTargetId == 0)
+            info->rtTargetId = graphID;
+
+        // Highlight previous node
+        if (info->rtReferenceId) {
+            auto it = loadedMap.find(info->rtReferenceId);
+            if (it != loadedMap.end()) {
+                std::shared_ptr<RTNode> highlightNode = std::make_shared<RTNode>(it->second);
+                scheduleNodeHighlight(highlightNode, false, graphID);
+            }
+        }
+        // Highlight current node
+        auto itTarget = loadedMap.find(info->rtTargetId);
+        if (itTarget != loadedMap.end()) {
+            std::shared_ptr<RTNode> highlightNode = std::make_shared<RTNode>(itTarget->second);
+            scheduleNodeHighlight(highlightNode, true, graphID);
+
+            // Push first note if any
+            if (!itTarget->second.notes.empty()) {
+                const auto& note = itTarget->second.notes[0];
+                pushNote(note.pitch, note.velocity, note.duration,graphID);
+            } else {
+                pushNote(64, 64, 1000,graphID);
+            }
+
+            // Increment count
+            int count = ++info->counts[info->rtTargetId];
+
+            info->rtReferenceId = info->rtTargetId;
+
+            // Traverse children
+            int maxLimit = 0;
+            for (int childIndex : itTarget->second.children) {
+                auto itChild = loadedMap.find(childIndex);
+                if (itChild != loadedMap.end()) {
+                    int limit = itChild->second.countLimit;
+                    if (count % limit == 0 && limit > maxLimit) {
+                        maxLimit = limit;
+                        info->rtTargetId = childIndex;
+                    }
+                }
+            }
+
+            if (info->rtTargetId == info->rtReferenceId)
+                info->rtTargetId = graphID;
+        }
+       
 }
 
-void SequenceTreeAudioProcessor::scheduleNodeHighlight(RTNode* node, bool shouldHighlight) {
+
+void SequenceTreeAudioProcessor::scheduleNodeHighlight(std::shared_ptr<RTNode> node, bool shouldHighlight,int graphID) {
+    
     if (node == nullptr) {
         return;
     }
-
-    int nodeID = node->nodeID;
+    
+    int nodeID = node.get()->nodeID;
     pendingAsyncCalls.fetch_add(1, std::memory_order_relaxed);
 
-    juce::MessageManager::callAsync([this, nodeID, shouldHighlight]() {
-        auto& nodeMap = canvas->nodeMap;
+    juce::MessageManager::callAsync([this, nodeID, shouldHighlight, graphID]() {
+        
+        if(canvas->nodeMaps.find(graphID) == canvas->nodeMaps.end()){
+            return;
+        }
+
+        auto& nodeMap = canvas->nodeMaps[graphID];
+        
         Node* foundNode = nullptr;
         
-        for (const auto& pair : nodeMap) {
-            if (pair.second == nodeID) {
-                foundNode = pair.first;
-                break;
-            }
-        }
+        auto it = nodeMap.find(nodeID);
+        if (it != nodeMap.end()) {
+            foundNode = it->second;
             foundNode->setHighlightVisual(shouldHighlight);
+        }
         
+        pendingAsyncCalls.fetch_sub(1, std::memory_order_relaxed);
     });
 }
 
 void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
-    std::shared_ptr<std::unordered_map<int,int>> newCounts;
+    std::shared_ptr<GraphInfo> newRTGraphInfo;
+    std::shared_ptr<RTGraphs> newRTGraphs;
 
-    
-    if (nodeCounts != nullptr) {
-        newCounts = std::make_shared<std::unordered_map<int,int>>(*nodeCounts);
-    } else {
-        newCounts = std::make_shared<std::unordered_map<int,int>>();
-    }
-    
-    loadedGraphs.get()->push_back(graph.get());
-    std::atomic_store(&storedGraphs,loadedGraphs);
-    
-    std::atomic_store(&rtGraph, graph);
+    if(rtGraphs != nullptr)
+        newRTGraphs = std::make_shared<RTGraphs>(*rtGraphs);
+    else
+        newRTGraphs = std::make_shared<RTGraphs>();
 
-    for (const auto& [nodeId, node] : rtGraph->nodeMap) {
-        if (!newCounts->count(nodeId)) {
-            (*newCounts)[nodeId] = 0;
+    (*newRTGraphs)[graph->graphID] = graph;
+
+    if(rtGraphInfo != nullptr)
+        newRTGraphInfo = std::make_shared<GraphInfo>(*rtGraphInfo);
+    else
+        newRTGraphInfo = std::make_shared<GraphInfo>();
+
+    // Safe node insertion
+    auto& graphData = (*newRTGraphInfo)[graph->graphID]; // creates in-place safely
+    auto& counts = graphData.counts;
+
+    for (const auto& [nodeId, node] : graph->nodeMap) {
+        if (!counts.count(nodeId)) {
+            counts[nodeId] = 0;
         }
     }
 
-    
+    // Remove stale nodes
     std::vector<int> idsToErase;
-    for (const auto& [nodeId, _] : *newCounts) {
-        if (!rtGraph->nodeMap.count(nodeId)) {
+    for (const auto& [nodeId, _] : counts) {
+        if (!graph->nodeMap.count(nodeId))
             idsToErase.push_back(nodeId);
-        }
     }
-    for (int id : idsToErase) {
-        newCounts->erase(id);
-    }
+    for (int id : idsToErase)
+        counts.erase(id);
 
-    std::atomic_store(&nodeCounts, newCounts);
+    std::atomic_store(&rtGraphs, newRTGraphs);
+    std::atomic_store(&rtGraphInfo, newRTGraphInfo);
 }
+
 

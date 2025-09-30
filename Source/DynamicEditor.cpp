@@ -32,7 +32,7 @@ DynamicEditor::DynamicEditor(){
             setColour(juce::TextEditor::textColourId, juce::Colours::black);
             showHint = false;
             if(tree.hasType("MidiNoteData")){
-               ComponentContext::canvas->updateProcessorGraph(ComponentContext::canvas->root);
+               ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root);
             }
         }
         else {

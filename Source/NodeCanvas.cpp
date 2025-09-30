@@ -12,7 +12,8 @@ NodeCanvas::NodeCanvas()
     
 }
 
-NodeCanvas::~NodeCanvas() {
+NodeCanvas::~NodeCanvas()
+{
     
 }
 
@@ -100,11 +101,12 @@ void NodeCanvas::mouseDown(const juce::MouseEvent& e)
             addAndMakeVisible(node);
             updateInfoText();
             
-            if(root == nullptr){
-                root = node;
-            }
+//            if(root == nullptr){
+//                root = node;
+//            }
         
-            makeRTGraph(root);
+            node->root = node;
+            makeRTGraph(node);
     }
 }
 
@@ -139,54 +141,56 @@ void NodeCanvas::removeLinePoints(Node* target)
 NodeMenu* NodeCanvas::getNodeMenu() { return nodeMenu; }
 void NodeCanvas::setNodeMenu(NodeMenu* nm) { nodeMenu = nm; }
 
-void NodeCanvas::removeNode(Node* node) {
+void NodeCanvas::removeNode(Node* node)
+{
     std::cout<<"removed Node"<<std::endl;
 
+    Node* temp = node->root;
+    
     if(!node->getNodeData()->children.isEmpty()){
         for (Node* child : node->getNodeData()->children){
             child->parent = nullptr;
         }
     }
     
-    root->nodeLogic.hardStart = false;
-
-    if (node == root->nodeLogic.target)
-        root->nodeLogic.target = nullptr;
-
-    if (node == root->nodeLogic.referenceNode)
-        root->nodeLogic.referenceNode = nullptr;
-    
     if (node->parent != nullptr) {
         node->parent->getNodeData()->removeChild(node);
     }
-
+    nodeMaps[node->root->nodeID].erase(node->nodeID);
     node->removeMouseListener(node->nodeController.get());
     removeLinePoints(node);
     canvasNodes.removeObject(node);
-  
-    repaint();
     
-    updateProcessorGraph(root);
+  
+    makeRTGraph(temp);
+    
+    repaint();
 }
 
-std::shared_ptr<RTGraph> NodeCanvas::makeRTGraph(Node* root){
+void NodeCanvas::makeRTGraph(Node* root)
+{
     
     std::cout<<"graph made"<<std::endl;
-    nodeMap.clear();
-
+    //nodeMap.clear();
+    
+    
     auto rtGraph = std::make_shared<RTGraph>();
+    rtGraph->graphID = root->nodeID;
+
+
+    std::unordered_map<int,Node*> nodeMap;
+    
     std::vector<Node*> stack = {root};
     
     while(!stack.empty()){
         
         Node* current = stack.back();
         stack.pop_back();
+        int id = current->nodeID;
         
-        
-        if(nodeMap.count(current) == false){
-            int id = current->nodeID;
+        if(nodeMap.count(id) == false){
             std::cout<<"nodeID: "<<id<<std::endl;
-            nodeMap[current] = id;
+            nodeMap[id] = current;
             
             RTNode rtNode;
             rtNode.nodeID = id;
@@ -212,30 +216,50 @@ std::shared_ptr<RTGraph> NodeCanvas::makeRTGraph(Node* root){
             for(auto child : current->nodeData.children){
                 stack.push_back(child);
             }
+            
         }
     }
-    
-    for(auto& [node, id] : nodeMap){
+    for(auto& [id, node] : nodeMap){
         
-        for(auto child : node->nodeData.children){
-            rtGraph->nodeMap[id].children.push_back(nodeMap[child]);
+        for(auto& child : node->nodeData.children){
+            rtGraph->nodeMap[id].children.push_back(child->nodeID);
         }
     }
-    
     rtGraph->traversalRequested = start;
-    return rtGraph;
+    nodeMaps[rtGraph->graphID] = nodeMap;
+    
+    rtGraphs[rtGraph->graphID] = rtGraph;
+    
+    lastGraph = rtGraph;
+    ComponentContext::processor->setNewGraph(rtGraph);
+    
 }
 
-void NodeCanvas::updateProcessorGraph(Node* node){
+void NodeCanvas::destroyRTGraph(Node* root)
+{
     
-    ComponentContext::processor->setNewGraph(makeRTGraph(node));
-    //context->processor.setNewGraph(makeRTGraph(node));
+    
 }
 
-void NodeCanvas::setSelectionMode(NodeBox::DisplayMode mode) {
-    
-    for(int i = 0; i < canvasNodes.size(); i++){
+
+void NodeCanvas::setSelectionMode(NodeBox::DisplayMode mode)
+{
+    for(int i = 0; i < canvasNodes.size(); i++) {
         canvasNodes[i]->setDisplayMode(mode);
         canvasNodes[i]->editor.get()->formatDisplay(mode);
     }
+}
+
+void NodeCanvas::setProcessorPlayblack(bool isPlaying)
+{
+
+    start = isPlaying;
+    ComponentContext::processor->isPlaying.store(start);
+    
+    
+    for(auto& [graphID,graph] : rtGraphs){
+        graph.get()->traversalRequested = start;
+        ComponentContext::processor->setNewGraph(graph);
+    }
+    
 }

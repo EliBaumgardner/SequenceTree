@@ -97,7 +97,7 @@ void NodeData::createTree(juce::String type){
         
         listener.onChanged = [this](){
             std::cout<<"note edited"<<std::endl;
-            node->nodeCanvas->updateProcessorGraph(node->nodeCanvas->root);
+            node->nodeCanvas->makeRTGraph(node->nodeCanvas->root);
         };
     }
     else {
@@ -109,7 +109,7 @@ void NodeData::createTree(juce::String type){
         midiCCs.add(tree);
     }
     
-    node->nodeCanvas->updateProcessorGraph(node->nodeCanvas->root);
+    node->nodeCanvas->makeRTGraph(node->nodeCanvas->root);
 }
 
 void NodeData::setNode(Node* node){

@@ -38,6 +38,8 @@ struct RTGraph {
     std::unordered_map<int, RTNode> nodeMap;
     std::vector<RTNode> nodes;
     std::atomic<bool> traversalRequested;
+    
+    int graphID = 0;
 
     RTGraph() = default;
     

@@ -100,7 +100,7 @@ void NodeBox::formatDisplay(DisplayMode mode){
     setText(display);
     refit();
     
-    ComponentContext::canvas->updateProcessorGraph(ComponentContext::canvas->root);
+    ComponentContext::canvas->makeRTGraph(node->root);
 }
 
 int NodeBox::noteToNumber(juce::String string){

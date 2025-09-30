@@ -32,6 +32,7 @@ struct MidiEvent {
     int pitch;
     int velocity;
     int duration;
+    int graphID;
 };
 
 struct NodeCount{
@@ -43,77 +44,102 @@ struct NodeCount{
 
 class SequenceTreeAudioProcessor  : public juce::AudioProcessor
 {
-public:
+    public:
     //==============================================================================
     SequenceTreeAudioProcessor();
     ~SequenceTreeAudioProcessor() override;
-
+    
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
-
-   #ifndef JucePlugin_PreferredChannelConfigurations
+    
+#ifndef JucePlugin_PreferredChannelConfigurations
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
-   #endif
-
+#endif
+    
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
-
+    
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
-
+    
     //==============================================================================
     const juce::String getName() const override;
-
+    
     bool acceptsMidi() const override;
     bool producesMidi() const override;
     bool isMidiEffect() const override;
     double getTailLengthSeconds() const override;
-
+    
     //==============================================================================
     int getNumPrograms() override;
     int getCurrentProgram() override;
     void setCurrentProgram (int index) override;
     const juce::String getProgramName (int index) override;
     void changeProgramName (int index, const juce::String& newName) override;
-
+    
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
     
-    void pushNote(int pitch, int velocity, int duration);
+    void pushNote(int pitch, int velocity, int duration, int graphID);
     void setNewGraph(std::shared_ptr<RTGraph> graph);
     
     void scheduleTraversal();
-    void traverse();
+    void traverse(int graphID);
     
-    void scheduleNodeHighlight(RTNode* node,bool shouldHighlight);
+    void scheduleNodeHighlight(std::shared_ptr<RTNode> node,bool shouldHighlight, int graphID);
+    
+    struct TraversalInfo {
+        int rtTargetId = 0;
+        int rtRootId = 1;
+        int rtReferenceId = 0;
+        std::unordered_map<int,int> counts;
+    };
     
     NodeCanvas* canvas;
-    std::shared_ptr<RTGraph> rtGraph;
-    std::shared_ptr<std::vector<RTGraph*>> storedGraphs;
-    std::shared_ptr<std::vector<RTGraph*>> loadedGraphs;
-    std::shared_ptr<std::unordered_map<int,int>> nodeCounts;
+    
+    using RTGraphs = std::unordered_map<int,std::shared_ptr<RTGraph>>;
+    std::shared_ptr<RTGraphs> rtGraphs = nullptr;
+    
+    int numGraphs = 0;
+    
+    using GraphInfo = std::unordered_map<int,TraversalInfo>;
+    std::shared_ptr<GraphInfo> rtGraphInfo = nullptr;
 
-private:
+    std::atomic<bool> isPlaying = false;
+    
+    
+    private:
     //==============================================================================
     
     Node* root = nullptr;
     
     double currentSampleRate = 44100.0;
     int samplesPerBeat = 0;
-
+    
     int currentStep = 0;
     int stepLengthInSamples = 0;
     int samplesIntoStep = 0;
     
     int bpm = 120;
-
-    std::vector<int> midiNotes = { 60, 62, 64, 65, 67, 69, 71, 72 };
+    
+    struct ActiveNote {
+        MidiEvent event;
+        int remainingSamples;
+        bool isActive;
+        int graphID;
+    };
+    
+    std::vector<ActiveNote> activeNotes;
+    int maxPolyphony = 128;
+    //activeNotes.reserve(maxPolyphony);
     
     static constexpr int fifoSize = 1024;
     juce::AbstractFifo fifo;
     std::vector<MidiEvent> midiBuffer;
+    
+    
     
     RTNode* rtTarget = nullptr;
     int rtTargetId = 0;
@@ -123,6 +149,8 @@ private:
     
     RTNode* rtReference = nullptr;
     int rtReferenceId = 0;
+    
+    
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessor)
 };

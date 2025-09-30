@@ -51,37 +51,39 @@ void NodeController::mouseDrag(const juce::MouseEvent& e){
         node->setCentrePosition(position.toInt());
         node->getNodeData()->nodeData.setProperty("x",node->getX(),nullptr);
         node->getNodeData()->nodeData.setProperty("y",node->getY(),nullptr);
-        nodeCanvas->repaint();
-        return;
     }
     
-    if(e.mods.isLeftButtonDown()){
+    else if (ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Node){
         
-        if(isDragStart){
-            isDragStart = false;
-            nodeCanvas->getCanvasNodes().add(new Node(nodeCanvas));
-
-            childNode = nodeCanvas->getCanvasNodes().getLast();
-            childNode->parent = node;
+        if(e.mods.isLeftButtonDown()){
             
-            node->getNodeData()->addChild(childNode);
+            if(isDragStart){
+                isDragStart = false;
+                nodeCanvas->getCanvasNodes().add(new Node(nodeCanvas));
+                
+                childNode = nodeCanvas->getCanvasNodes().getLast();
+                childNode->parent = node;
+                childNode->root = childNode->parent->root;
+                
+                node->getNodeData()->addChild(childNode);
+                
+                nodeCanvas->addAndMakeVisible(childNode);
+                nodeCanvas->makeRTGraph(childNode->root);
+            }
             
-            nodeCanvas->addAndMakeVisible(childNode);
-            nodeCanvas->updateProcessorGraph(nodeCanvas->root);
+            else {
+                node->setSelectVisual(false);
+                
+                childNode->setCentrePosition(position.toInt());
+                childNode->setSize(40,40);
+                nodeCanvas->addLinePoints(node,childNode);
+                
+                childNode->getNodeData()->nodeData.setProperty("x",childNode->getX(),nullptr);
+                childNode->getNodeData()->nodeData.setProperty("y",childNode->getY(),nullptr);
+                //childNode->getNodeData()->nodeData.setProperty("radius", childNode->getWidth()/2,nullptr);
+            }
+            
         }
-
-        else {
-            node->setSelectVisual(false);
-            
-            childNode->setCentrePosition(position.toInt());
-            childNode->setSize(40,40);
-            nodeCanvas->addLinePoints(node,childNode);
-            
-            childNode->getNodeData()->nodeData.setProperty("x",childNode->getX(),nullptr);
-            childNode->getNodeData()->nodeData.setProperty("y",childNode->getY(),nullptr);
-            //childNode->getNodeData()->nodeData.setProperty("radius", childNode->getWidth()/2,nullptr);
-        }
-        
     }
     nodeCanvas->repaint();
 }

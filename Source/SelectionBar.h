@@ -5,6 +5,8 @@
     Created: 27 Aug 2025 6:30:12pm
     Author:  Eli Baimgardner
 
+  INNER CLASSES ARE LISTED FIRST, SO THEY CAN BE IMPLEMENTED!
+  
   ==============================================================================
 */
 
@@ -35,12 +37,88 @@ class SelectionBar : public juce::Component {
     
     private:
     
+    //BUTTONS//
     class NodeButton : public juce::Component {
         
         public:
         
-        bool buttonSelected = true;
+        class MyTableModel : public juce::TableListBoxModel
+        {
+        public:
+            int getNumRows() override { return (int) data.size(); }
+
+            void paintCell (juce::Graphics& g,
+                            int rowNumber,
+                            int columnId,
+                            int width,
+                            int height,
+                            bool rowIsSelected) override
+            {
+                if (columnId == 0)
+                    g.drawImage (data[rowNumber].icon,
+                                 juce::Rectangle<float> (0, 0, (float) width, (float) height));
+                else if (columnId == 1)
+                    g.drawText (data[rowNumber].description,
+                                0, 0, width, height,
+                                juce::Justification::centredLeft);
+            }
+
+            juce::Component* refreshComponentForCell (int, int, bool, juce::Component* existing) override
+            {
+                return existing;
+            }
+            
+            void paintRowBackground (juce::Graphics& g,
+                                     int rowNumber,
+                                     int width,
+                                     int height,
+                                     bool rowIsSelected) override
+            {
+                if (rowIsSelected)
+                    g.fillAll (juce::Colours::lightblue);
+                else
+                    g.fillAll (juce::Colours::transparentBlack);
+            }
+
+        private:
+            struct RowData { juce::Image icon; juce::String description; };
+            std::vector<RowData> data;
+            
+        };
+
+        
+        
+        class NodeButtonOptions : public juce::DocumentWindow {
+            
+            public:
+            
+            std::unique_ptr<MyTableModel> myTableModel = nullptr;
+            
+            NodeButtonOptions(juce::String name, juce::Colour backgroundColour, int requiredButtons,bool addToDesktop) : DocumentWindow(name,backgroundColour, requiredButtons, addToDesktop){
+                
+                myTableModel = std::make_unique<MyTableModel>();
+                
+                auto* table = new juce::TableListBox("NodeOptions",myTableModel.get());
+                table->setModel(myTableModel.get());
+                table->getHeader().addColumn("Icon", 1, 100, 50, -1, true);
+                table->getHeader().addColumn("Name",2,100, 50, -1, true);
+                table->getHeader().addColumn("Description",3,100,50,-1,true);
+                
+                setContentOwned(table,true);
+                setResizable(true,true);
+            }
+            
+            void closeButtonPressed() override {
+                setVisible(false);
+            }
+        };
+        
+        //NODEBUTTON IMPLEMENTATION
+        
+        std::unique_ptr<NodeButtonOptions> nodeButtonOptions = nullptr;
+        
         std::function<void()> onClick;
+        bool buttonSelected = false;
         
         NodeButton() {}
         void paint(juce::Graphics& g) override {
@@ -62,11 +140,17 @@ class SelectionBar : public juce::Component {
         
         void mouseDown(const juce::MouseEvent& e) override {
             onClick();
+            
+            if(nodeButtonOptions != nullptr){
+                nodeButtonOptions.reset();
+            }
+            
+            nodeButtonOptions = std::make_unique<NodeButtonOptions>("",juce::Colours::white,juce::DocumentWindow::closeButton, true);
+            nodeButtonOptions.get()->centreWithSize(200,200);
+            nodeButtonOptions.get()->setVisible(true);
         }
-        
     };
     
-    //BUTTONS//
     
     class InspectButton : public juce::Component {
         
@@ -121,6 +205,7 @@ class SelectionBar : public juce::Component {
         }
         
     };
+    
     
     class PianoRollButton : public juce::Component {
         
@@ -178,6 +263,7 @@ class SelectionBar : public juce::Component {
             
         }
     };
+    
     
     class SelectionButton : public juce::Component {
         

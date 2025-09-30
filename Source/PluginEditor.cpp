@@ -32,7 +32,8 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     titleBar.toggled = [this](){
         
         canvas.start = !canvas.start;
-        canvas.updateProcessorGraph(canvas.root);
+        canvas.setProcessorPlayblack(canvas.start);
+        //canvas.updateProcessorGraph(canvas.root);
     };
     
     ComponentContext::processor = &p;
