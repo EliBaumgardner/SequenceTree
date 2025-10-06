@@ -10,9 +10,9 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include "ProjectModules.h"
 #include "NodeMenu.h"
-//#include "PluginEditor.h"
+
 
 class PluginEditor;
 

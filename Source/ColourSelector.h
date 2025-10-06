@@ -11,7 +11,7 @@
 #pragma once
 
 
-#include <JuceHeader.h>
+#include "ProjectModules.h"
 #include "Node.h"
 
 /* Colour Selector Button that displays the selected colour and opens a pop up menu and cursor for colour selection; */

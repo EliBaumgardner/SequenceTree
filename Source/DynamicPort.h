@@ -1,5 +1,5 @@
 #pragma once
-#include <JuceHeader.h>
+#include "ProjectModules.h"
 
 class DynamicPort : public juce::Viewport
 {

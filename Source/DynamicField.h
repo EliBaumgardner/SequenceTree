@@ -1,6 +1,6 @@
 #pragma once
 
-#include <JuceHeader.h>
+#include "ProjectModules.h"
 #include "DynamicEditor.h"
 #include "NodeData.h"
 

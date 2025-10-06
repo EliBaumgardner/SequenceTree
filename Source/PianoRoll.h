@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include "ProjectModules.h"
 
 class PianoRoll : public juce::Component {
     

@@ -11,7 +11,7 @@
 */
 
 #pragma once
-#include <JuceHeader.h>
+#include "ProjectModules.h"
 #include "PianoRoll.h"
 #include "ComponentContext.h"
 #include "Node.h"
@@ -45,6 +45,9 @@ class SelectionBar : public juce::Component {
         class MyTableModel : public juce::TableListBoxModel
         {
         public:
+
+            juce::TableListBox* table = nullptr;
+
             int getNumRows() override { return (int) data.size(); }
 
             void paintCell (juce::Graphics& g,
@@ -58,9 +61,14 @@ class SelectionBar : public juce::Component {
                     g.drawImage (data[rowNumber].icon,
                                  juce::Rectangle<float> (0, 0, (float) width, (float) height));
                 else if (columnId == 1)
-                    g.drawText (data[rowNumber].description,
+                    g.drawText (data[rowNumber].name,
                                 0, 0, width, height,
                                 juce::Justification::centredLeft);
+                else if (columnId == 2)
+                    g.drawText (data[rowNumber].description,0,0,width,height,juce::Justification::centredLeft);
+
+                g.setColour(juce::Colours::black);
+                g.drawRect(0, 0, width, height, 0.5);
             }
 
             juce::Component* refreshComponentForCell (int, int, bool, juce::Component* existing) override
@@ -80,25 +88,32 @@ class SelectionBar : public juce::Component {
                     g.fillAll (juce::Colours::transparentBlack);
             }
 
-        private:
-            struct RowData { juce::Image icon; juce::String description; };
+
+            struct RowData { juce::Image icon; juce::String name; juce::String description; };
             std::vector<RowData> data;
-            
+
+            juce::Image icon;
+
         };
 
         
         
         class NodeButtonOptions : public juce::DocumentWindow {
-            
-            public:
+        public:
             
             std::unique_ptr<MyTableModel> myTableModel = nullptr;
+            juce::TableListBox* table = nullptr;
             
             NodeButtonOptions(juce::String name, juce::Colour backgroundColour, int requiredButtons,bool addToDesktop) : DocumentWindow(name,backgroundColour, requiredButtons, addToDesktop){
                 
                 myTableModel = std::make_unique<MyTableModel>();
-                
-                auto* table = new juce::TableListBox("NodeOptions",myTableModel.get());
+                juce::Image icon;
+                myTableModel.get()->data.push_back({icon,"Node","Nodes represent musical events"});
+                myTableModel.get()->data.push_back({icon,"NodeCounter","NodeCounter counts the amount of events triggered"});
+                myTableModel.get()->data.push_back({icon,"TraversalStarter","TraversalStarter starts traversals of nodes"});
+
+
+                table = new juce::TableListBox("NodeOptions",myTableModel.get());
                 table->setModel(myTableModel.get());
                 table->getHeader().addColumn("Icon", 1, 100, 50, -1, true);
                 table->getHeader().addColumn("Name",2,100, 50, -1, true);
@@ -110,6 +125,28 @@ class SelectionBar : public juce::Component {
             
             void closeButtonPressed() override {
                 setVisible(false);
+            }
+
+            void resized() override
+            {
+                juce::DocumentWindow::resized();
+                auto* content = getContentComponent();
+                if (auto* table = dynamic_cast<juce::TableListBox*>(content))
+                {
+                    int numRows = myTableModel->getNumRows();
+                    if (numRows > 0)
+                        table->setRowHeight(table->getHeight() / numRows);
+                }
+
+                auto* header = &table->getHeader(); // take address
+                if (header != nullptr)
+                {
+                    int totalWidth = table->getWidth();
+                    header->setColumnWidth(1, totalWidth / 6);
+                    header->setColumnWidth(2, totalWidth / 3);
+                    header->setColumnWidth(3, totalWidth / 2);
+                }
+
             }
         };
         

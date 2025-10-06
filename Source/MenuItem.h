@@ -9,7 +9,7 @@
 */
 
 #pragma once
-#include "JuceHeader.h"
+#include "ProjectModules.h"
 #include "DynamicEditor.h"
 #include "DynamicField.h"
 #include "Node.h"

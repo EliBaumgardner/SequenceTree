@@ -1,6 +1,6 @@
 #include "PluginEditor.h"
 #include "SliderBar.h"
-#include <JuceHeader.h>
+
 
 SliderBar::SliderBar(SliderPosition position, float thickness) : thickness(thickness),sliderPosition(position){
     //resized();

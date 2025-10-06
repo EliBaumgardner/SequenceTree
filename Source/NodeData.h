@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include "ProjectModules.h"
 
 struct PluginContext;
 
