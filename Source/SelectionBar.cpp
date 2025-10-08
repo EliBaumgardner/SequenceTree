@@ -18,15 +18,27 @@ SelectionBar::SelectionBar(){
     addAndMakeVisible(inspectButton);
     
     nodeButton.onClick = [this]() {
+
         nodeButton.buttonSelected = true;
         inspectButton.buttonSelected = false;
-        
+
         nodeButton.repaint();
         inspectButton.repaint();
-        
-        ComponentContext::canvas->controllerMode = NodeCanvas::ControllerMode::Node;
     };
-    
+
+    nodeButton.onSelectionChanged = [this](int columnSelected) {
+        columnSelected += 1;
+        if (columnSelected == 1) {
+            ComponentContext::canvas->controllerMode = NodeCanvas::ControllerMode::Node;
+        }
+        else if (columnSelected == 2) {
+            ComponentContext::canvas->controllerMode = NodeCanvas::ControllerMode::Counter;
+        }
+        else if (columnSelected == 3) {
+            ComponentContext::canvas->controllerMode = NodeCanvas::ControllerMode::Traverser;
+        }
+    };
+
     inspectButton.onClick = [this]() {
         inspectButton.buttonSelected = true;
         nodeButton.buttonSelected = false;

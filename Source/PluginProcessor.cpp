@@ -413,6 +413,8 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
 
     std::atomic_store(&rtGraphs, newRTGraphs);
     std::atomic_store(&rtGraphInfo, newRTGraphInfo);
+
+    //std::cout<<"graph transfer completed"<<std::endl;
 }
 
 

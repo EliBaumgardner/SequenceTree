@@ -11,8 +11,6 @@
 #include "Node.h"
 #include "NodeCanvas.h"
 
-
-
 int Node::globalNodeID = 0;
 
 Node::Node(NodeCanvas* nodeCanvas) : nodeCanvas(nodeCanvas),nodeID(++globalNodeID){
@@ -25,7 +23,7 @@ Node::Node(NodeCanvas* nodeCanvas) : nodeCanvas(nodeCanvas),nodeID(++globalNodeI
     
     nodeLogic.setNode(this);
     nodeData.setNode(this);
-    nodeController = std::make_unique<NodeController>(this);
+    nodeController = std::make_unique<ObjectController>(this);
     this->addMouseListener(nodeController.get(), true);
     
     editor.get()->setColour(juce::TextEditor::textColourId, juce::Colours::white);

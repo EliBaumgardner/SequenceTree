@@ -12,9 +12,9 @@
 
 #pragma once
 #include "ProjectModules.h"
+#include "BinaryData.h"
 #include "PianoRoll.h"
 #include "ComponentContext.h"
-#include "Node.h"
 #include "NodeCanvas.h"
 #include "DynamicEditor.h"
 #include "NodeBox.h"
@@ -45,7 +45,7 @@ class SelectionBar : public juce::Component {
         class MyTableModel : public juce::TableListBoxModel
         {
         public:
-
+            std::function<void(int)> onSelectionChanged;
             juce::TableListBox* table = nullptr;
 
             int getNumRows() override { return (int) data.size(); }
@@ -57,14 +57,14 @@ class SelectionBar : public juce::Component {
                             int height,
                             bool rowIsSelected) override
             {
-                if (columnId == 0)
+                if (columnId == 1)
                     g.drawImage (data[rowNumber].icon,
                                  juce::Rectangle<float> (0, 0, (float) width, (float) height));
-                else if (columnId == 1)
+                else if (columnId == 2)
                     g.drawText (data[rowNumber].name,
                                 0, 0, width, height,
                                 juce::Justification::centredLeft);
-                else if (columnId == 2)
+                else if (columnId == 3)
                     g.drawText (data[rowNumber].description,0,0,width,height,juce::Justification::centredLeft);
 
                 g.setColour(juce::Colours::black);
@@ -88,6 +88,11 @@ class SelectionBar : public juce::Component {
                     g.fillAll (juce::Colours::transparentBlack);
             }
 
+            void selectedRowsChanged(int lastRowSelected) override {
+                if (onSelectionChanged) {
+                    onSelectionChanged(lastRowSelected);
+                }
+            }
 
             struct RowData { juce::Image icon; juce::String name; juce::String description; };
             std::vector<RowData> data;
@@ -100,22 +105,31 @@ class SelectionBar : public juce::Component {
         
         class NodeButtonOptions : public juce::DocumentWindow {
         public:
-            
+            std::function<void(int)> onSelectionChanged;
             std::unique_ptr<MyTableModel> myTableModel = nullptr;
             juce::TableListBox* table = nullptr;
+
+            juce::Image nodeIcon = juce::ImageFileFormat::loadFrom( BinaryData::Node_png, BinaryData::Node_pngSize );
+            juce::Image counterIcon = juce::ImageFileFormat::loadFrom ( BinaryData::Counter_png, BinaryData::Counter_pngSize );
+            juce::Image traverserIcon = juce::ImageFileFormat::loadFrom ( BinaryData::Traverser_png, BinaryData::Traverser_pngSize );
             
             NodeButtonOptions(juce::String name, juce::Colour backgroundColour, int requiredButtons,bool addToDesktop) : DocumentWindow(name,backgroundColour, requiredButtons, addToDesktop){
                 
                 myTableModel = std::make_unique<MyTableModel>();
-                juce::Image icon;
-                myTableModel.get()->data.push_back({icon,"Node","Nodes represent musical events"});
-                myTableModel.get()->data.push_back({icon,"NodeCounter","NodeCounter counts the amount of events triggered"});
-                myTableModel.get()->data.push_back({icon,"TraversalStarter","TraversalStarter starts traversals of nodes"});
+
+                myTableModel->onSelectionChanged = [this](int lastRow) {
+                    onSelectionChanged(lastRow);
+                };
+
+                myTableModel.get()->data.push_back({nodeIcon,"Node","Nodes represent musical events"});
+                myTableModel.get()->data.push_back({counterIcon,"NodeCounter","NodeCounter counts the amount of events triggered"});
+                myTableModel.get()->data.push_back({traverserIcon,"TraversalStarter","TraversalStarter starts traversals of nodes"});
 
 
                 table = new juce::TableListBox("NodeOptions",myTableModel.get());
                 table->setModel(myTableModel.get());
-                table->getHeader().addColumn("Icon", 1, 100, 50, -1, true);
+                table->setRowHeight(20);
+                table->getHeader().addColumn("Icon", 1, 100, 100, -1, true);
                 table->getHeader().addColumn("Name",2,100, 50, -1, true);
                 table->getHeader().addColumn("Description",3,100,50,-1,true);
                 
@@ -148,18 +162,32 @@ class SelectionBar : public juce::Component {
                 }
 
             }
+
+
         };
         
         //NODEBUTTON IMPLEMENTATION
-        
+
+        juce::Image nodeIcon = juce::ImageFileFormat::loadFrom( BinaryData::Node_png, BinaryData::Node_pngSize );
+        juce::Image counterIcon = juce::ImageFileFormat::loadFrom ( BinaryData::Counter_png, BinaryData::Counter_pngSize );
+        juce::Image traverserIcon = juce::ImageFileFormat::loadFrom ( BinaryData::Traverser_png, BinaryData::Traverser_pngSize );
+
         std::unique_ptr<NodeButtonOptions> nodeButtonOptions = nullptr;
         
         std::function<void()> onClick;
+        std::function<void(int)> onSelectionChanged;
+
         bool buttonSelected = false;
+
+        int columnSelected = 1;
         
-        NodeButton() {}
+        NodeButton() {
+
+        }
         void paint(juce::Graphics& g) override {
-            
+
+            g.fillAll(juce::Colours::transparentBlack);
+
             auto bounds = getLocalBounds().toFloat().reduced(buttonBoundsReduction);
             auto circleBounds = getLocalBounds().toFloat().reduced(buttonContentBounds);
             g.setColour(juce::Colours::black);
@@ -170,8 +198,18 @@ class SelectionBar : public juce::Component {
             else {
                 g.drawRect(bounds,buttonBorderThickness);
             }
-            
-            g.drawEllipse(circleBounds, 1.0f);
+
+            if (columnSelected == 1) {
+                g.drawImage(nodeIcon,circleBounds);
+            }
+            else if (columnSelected == 2) {
+                g.drawImage(counterIcon,circleBounds);
+            }
+            else if (columnSelected == 3) {
+                g.drawImage(traverserIcon,circleBounds);
+            }
+
+            //g.drawEllipse(circleBounds, 1.0f);
             
         }
         
@@ -183,6 +221,11 @@ class SelectionBar : public juce::Component {
             }
             
             nodeButtonOptions = std::make_unique<NodeButtonOptions>("",juce::Colours::white,juce::DocumentWindow::closeButton, true);
+            nodeButtonOptions.get()->onSelectionChanged = [this](int lastRow) {
+                columnSelected = lastRow+1;
+                repaint();
+                onSelectionChanged(lastRow);
+            };
             nodeButtonOptions.get()->centreWithSize(200,200);
             nodeButtonOptions.get()->setVisible(true);
         }

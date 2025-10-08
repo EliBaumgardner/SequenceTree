@@ -1,7 +1,7 @@
 /*
   ==============================================================================
 
-    NodeController.h
+    ObjectObjectController
     Created: 6 May 2025 8:38:35pm
     Author:  Eli Baimgardner
 
@@ -16,22 +16,22 @@ class NodeCanvas;
 
 class Node;
 
+class Counter;
+
 class NodeMenu;
 
 class NodeData;
 
-class NodeController : public juce::MouseListener {
+class ObjectController : public juce::MouseListener {
     
     public:
     
-        NodeController(Node* node);
-    
-        ~NodeController();
-    
+        ObjectController(Node* node);
+
         void mouseEnter(const juce::MouseEvent& e) override;
      
         void mouseExit(const juce::MouseEvent& e) override;
-    
+
         void mouseDrag(const juce::MouseEvent& e) override;
     
         void mouseDown(const juce::MouseEvent& e) override;
@@ -46,5 +46,4 @@ class NodeController : public juce::MouseListener {
         Node* childNode = nullptr;
 
         bool isDragStart = true;
-        
 };

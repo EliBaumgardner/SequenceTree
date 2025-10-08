@@ -1,7 +1,7 @@
 /*
   ==============================================================================
 
-    NodeController.cpp
+    ObjectController.h.cpp
     Created: 6 May 2025 8:38:35pm
     Author:  Eli Baimgardner
 
@@ -12,33 +12,31 @@
 #include "Node.h"
 #include "NodeMenu.h"
 #include "NodeData.h"
-#include "NodeController.h"
+#include "ObjectController.h"
+#include "Counter.h"
+#include "Traverser.h"
 
 
-NodeController::NodeController(Node* node) : node(node){
+ObjectController::ObjectController(Node* node) : node(node){
     
     nodeCanvas = ComponentContext::canvas;
 }
 
 
-NodeController::~NodeController(){
-    
-}
 
-
-void NodeController::mouseEnter(const juce::MouseEvent& e){
+void ObjectController::mouseEnter(const juce::MouseEvent& e){
     
     node->setHoverVisual(true);
 }
 
 
-void NodeController::mouseExit(const juce::MouseEvent& e){
+void ObjectController::mouseExit(const juce::MouseEvent& e){
     
     node->setHoverVisual(false);
 }
 
 
-void NodeController::mouseDrag(const juce::MouseEvent& e){
+void ObjectController::mouseDrag(const juce::MouseEvent& e){
     //check if drag is substantial
     if(e.getDistanceFromDragStart() < 5){
         return;
@@ -53,14 +51,23 @@ void NodeController::mouseDrag(const juce::MouseEvent& e){
         node->getNodeData()->nodeData.setProperty("y",node->getY(),nullptr);
     }
     
-    else if (ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Node){
+    else {
         
         if(e.mods.isLeftButtonDown()){
             
             if(isDragStart){
                 isDragStart = false;
-                nodeCanvas->getCanvasNodes().add(new Node(nodeCanvas));
-                
+
+                if (ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Node) {
+                    nodeCanvas->getCanvasNodes().add(new Node(nodeCanvas));
+                }
+                else if (ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Counter){
+                    nodeCanvas->getCanvasNodes().add(new Counter(nodeCanvas));
+                }
+                else if (ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Traverser) {
+                    nodeCanvas->getCanvasNodes().add(new Traverser(nodeCanvas));
+                }
+
                 childNode = nodeCanvas->getCanvasNodes().getLast();
                 childNode->parent = node;
                 childNode->root = childNode->parent->root;
@@ -85,10 +92,12 @@ void NodeController::mouseDrag(const juce::MouseEvent& e){
             
         }
     }
+
+
     nodeCanvas->repaint();
 }
 
-void NodeController::mouseDown(const juce::MouseEvent& e){
+void ObjectController::mouseDown(const juce::MouseEvent& e){
      
     for (auto canvasNode : nodeCanvas->getCanvasNodes()){
         if(canvasNode != node){
@@ -108,7 +117,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e){
     
 }
 
-void NodeController::mouseUp(const juce::MouseEvent& e){
+void ObjectController::mouseUp(const juce::MouseEvent& e){
     isDragStart = true;
-    
+    //std::cout<<"drag completed" <<std::endl;
 }

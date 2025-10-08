@@ -17,6 +17,7 @@
 #include "RTData.h"
 #include "DynamicEditor.h"
 #include "NodeBox.h"
+#include "NodeArrow.h"
 
 class NodeCanvas : public juce::Component {
     
@@ -36,7 +37,7 @@ class NodeCanvas : public juce::Component {
     
         juce::OwnedArray<Node>& getCanvasNodes();
     
-        void addLinePoints(Node* lineStartNode, Node* lineEndNode);
+        //void addLinePoints(Node* lineStartNode, Node* lineEndNode);
         void removeLinePoints(Node* linePointNode);
     
         void setNodeMenu(NodeMenu* nodeMenu);
@@ -50,7 +51,7 @@ class NodeCanvas : public juce::Component {
     
         void setProcessorPlayblack(bool isPlaying);
     
-        enum class ControllerMode { Inspect, Node };
+        enum class ControllerMode { Inspect, Node, Counter,Traverser };
     
         ControllerMode controllerMode;
     
@@ -78,7 +79,7 @@ class NodeCanvas : public juce::Component {
         juce::OwnedArray<Node> canvasNodes;
         std::unordered_map<int, std::shared_ptr<RTGraph>> rtGraphs;
     
-        juce::Array<std::pair<Node*,Node*>> linePoints;
-    
+        juce::OwnedArray<NodeArrow> nodeArrows;
+
         std::shared_ptr<RTGraph> lastGraph;
 };

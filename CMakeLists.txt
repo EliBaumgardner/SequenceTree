@@ -15,6 +15,16 @@ juce_add_plugin(SequenceTree
         FORMATS AU VST3 Standalone
 )
 
+juce_add_binary_data(MyBinaryData SOURCES
+        assets/Node.png
+        assets/Counter.png
+        assets/Traverser.png
+)
+
+target_include_directories(SequenceTree PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR}/juce_binarydata_MyBinaryData
+)
+
 target_compile_definitions(SequenceTree PRIVATE
         JUCE_IGNORE_VST3_MISMATCHED_PARAMETER_ID_WARNING=1
 )
@@ -30,7 +40,7 @@ target_sources(SequenceTree PRIVATE
         Source/NodeArrow.cpp
         Source/NodeBox.cpp
         Source/NodeCanvas.cpp
-        Source/NodeController.cpp
+        Source/ObjectController.cpp
         Source/NodeData.cpp
         Source/NodeLogic.cpp
         Source/NodeMenu.cpp
@@ -40,6 +50,9 @@ target_sources(SequenceTree PRIVATE
         Source/SelectionBar.cpp
         Source/SliderBar.cpp
         Source/TitleBar.cpp
+        Source/Counter.cpp
+        Source/ObjectController.cpp
+        Source/Traverser.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE
@@ -52,4 +65,5 @@ target_link_libraries(SequenceTree PRIVATE
         juce::juce_audio_processors
         juce::juce_audio_devices
         juce::juce_audio_utils
+        MyBinaryData
 )

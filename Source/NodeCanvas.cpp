@@ -1,8 +1,6 @@
 // NodeCanvas.cpp
 #include "ComponentContext.h"
-
 #include "NodeCanvas.h"
-#include <algorithm>
 #include "PluginProcessor.h"
 
 
@@ -27,48 +25,48 @@ void NodeCanvas::paint(juce::Graphics& g)
     {
         auto* a = linePoint.first;
         auto* b = linePoint.second;
-        
+
         // Arrow size
         float arrowLength = 10.0f;
         float arrowWidth = 5.0f;
         int radius = b->getBounds().getWidth()/2;
-        
+
         g.setColour(juce::Colours::black);
         int x1 = a->getBounds().getCentreX();
         int y1 = a->getBounds().getCentreY();
         int x2 = b->getBounds().getCentreX();
         int y2 = b->getBounds().getCentreY();
-        
+
         // Calculate direction vector
         float dx = float(x2 - x1);
         float dy = float(y2 - y1);
         float length = std::sqrt(dx*dx + dy*dy);
         if (length == 0) continue; // avoid division by zero
-        
+
         // Normalize direction
         float nx = dx / length;
         float ny = dy / length;
-        
+
         x2 = x2 - nx*radius;
         y2 = y2 - ny*radius;
-        
+
         // Draw main line
         g.drawLine(x1, y1, x2, y2, 2.0f);
         g.setColour(juce::Colours::white);
         g.drawLine(x1, y1, x2, y2, 1.0f);
-        
+
         // Calculate the two points for the arrowhead lines
         float leftX = x2 - arrowLength * nx + arrowWidth * ny;
         float leftY = y2 - arrowLength * ny - arrowWidth * nx;
-        
+
         float rightX = x2 - arrowLength * nx - arrowWidth * ny;
         float rightY = y2 - arrowLength * ny + arrowWidth * nx;
-        
+
         // Draw arrowhead lines (black thick)
         g.setColour(juce::Colours::black);
         g.drawLine(x2, y2, leftX, leftY, 2.0f);
         g.drawLine(x2, y2, rightX, rightY, 2.0f);
-        
+
         // Draw arrowhead lines (white thin) for contrast
         g.setColour(juce::Colours::white);
         g.drawLine(x2, y2, leftX, leftY, 1.0f);
@@ -78,7 +76,7 @@ void NodeCanvas::paint(juce::Graphics& g)
 
 void NodeCanvas::resized()
 {
-  
+
 }
 
 void NodeCanvas::updateInfoText()
@@ -127,7 +125,7 @@ void NodeCanvas::mouseUp(const juce::MouseEvent& e)
 
 juce::OwnedArray<Node>& NodeCanvas::getCanvasNodes() { return canvasNodes; }
 
-void NodeCanvas::addLinePoints(Node* start, Node* end) { linePoints.add({ start, end }); }
+//void NodeCanvas::addLinePoints(Node* start, Node* end) { linePoints.add({ start, end }); }
 
 void NodeCanvas::removeLinePoints(Node* target)
 {
@@ -169,8 +167,6 @@ void NodeCanvas::removeNode(Node* node)
 
 void NodeCanvas::makeRTGraph(Node* root)
 {
-    
-    std::cout<<"graph made"<<std::endl;
     //nodeMap.clear();
     
     
@@ -189,13 +185,11 @@ void NodeCanvas::makeRTGraph(Node* root)
         int id = current->nodeID;
         
         if(nodeMap.count(id) == false){
-            std::cout<<"nodeID: "<<id<<std::endl;
             nodeMap[id] = current;
             
             RTNode rtNode;
             rtNode.nodeID = id;
             rtNode.countLimit = static_cast<int>(current->nodeData.nodeData.getProperty("countLimit"));
-            std::cout<<"countLimit: "<<rtNode.countLimit<<std::endl;
             
             for(auto note : current->nodeData.midiNotes){
                 
@@ -232,7 +226,7 @@ void NodeCanvas::makeRTGraph(Node* root)
     
     lastGraph = rtGraph;
     ComponentContext::processor->setNewGraph(rtGraph);
-    
+    std::cout<<"graph updated"<<std::endl;
 }
 
 void NodeCanvas::destroyRTGraph(Node* root)
@@ -263,3 +257,10 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
     }
     
 }
+
+void NodeCanvas::addLinePoints(Node* a, Node* b) {
+    auto* arrow = new NodeArrow(a, b);
+    addAndMakeVisible(arrow);
+    nodeArrows.add(arrow);
+}
+

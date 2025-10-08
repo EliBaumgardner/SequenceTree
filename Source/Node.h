@@ -14,11 +14,9 @@
 #include "DynamicEditor.h"
 #include "NodeBox.h"
 
-#include "NodeController.h"
+#include "ObjectController.h"
 #include "NodeLogic.h"
 #include "NodeData.h"
-
-
 
 class  NodeCanvas;
 
@@ -50,7 +48,7 @@ class Node : public juce::Component {
         Node* root = nullptr;
         NodeCanvas* nodeCanvas = nullptr;
 
-        std::unique_ptr<NodeController> nodeController = nullptr;
+        std::unique_ptr<ObjectController> nodeController = nullptr;
         NodeData nodeData;
     
         std::unique_ptr<NodeBox> editor = nullptr;
@@ -66,14 +64,15 @@ class Node : public juce::Component {
         juce::Colour nodeColour = juce::Colours::blue;
     
         void setDisplayMode(NodeBox::DisplayMode mode);
-    
-    private:
-    
+
         bool isHovered = false;
         bool isSelected = false;
         bool isHighlighted = false;
 
-    
+
+    //BUTTONS//
+
+
         class IncrementButton : public juce::Component {
             
             public:

@@ -8,3 +8,24 @@
   ==============================================================================
 */
 
+#include "ProjectModules.h"
+
+class Node;
+
+class NodeArrow : public juce::Component, juce::ComponentListener {
+
+public:
+
+  NodeArrow(Node* startNode, Node* endNode);
+  void paint (juce::Graphics& g) override;
+  void resized() override;
+
+  void updatePosition();
+
+private:
+
+  Node* startNode = nullptr;
+  Node* endNode = nullptr;
+
+  juce::Colour arrowColour = juce::Colours::black;
+};
