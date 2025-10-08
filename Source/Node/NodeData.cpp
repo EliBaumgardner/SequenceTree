@@ -31,12 +31,12 @@ NodeData::NodeData() : nodeData("NodeData"), midiNoteData("MidiNoteData"), midiC
     nodeData.setProperty(countID,0,nullptr);
     nodeData.setProperty(countLimitID,1,nullptr);
     nodeData.setProperty(colourID,0,nullptr);
-    
+
     midiNoteData.setProperty(channelID,0,nullptr);
     midiNoteData.setProperty(pitchID,0,nullptr);
     midiNoteData.setProperty(velocityID,0,nullptr);
     midiNoteData.setProperty(durationID,0,nullptr);
-    
+
     midiCCData.setProperty(nameID,0,nullptr);
     midiCCData.setProperty(channelID,0,nullptr);
     midiCCData.setProperty(ccNumberID,0,nullptr);

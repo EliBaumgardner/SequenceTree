@@ -7,7 +7,7 @@
 */
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "ComponentContext.h"
+#include "Util/ComponentContext.h"
 
 
 
@@ -19,10 +19,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     addAndMakeVisible(port.get());
     
     setResizable(true,true);
-    
-    canvas.setNodeMenu(&menu);
-    //addAndMakeVisible(menu);
-    
+
     addAndMakeVisible(selectionBar);
     addAndMakeVisible(titleBar);
     setSize (400, 300);

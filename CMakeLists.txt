@@ -30,29 +30,23 @@ target_compile_definitions(SequenceTree PRIVATE
 )
 
 target_sources(SequenceTree PRIVATE
-        Source/ColourSelector.cpp
-        Source/DynamicEditor.cpp
-        Source/DynamicField.cpp
-        Source/DynamicLabel.cpp
-        Source/DynamicPort.cpp
-        Source/MenuItem.cpp
-        Source/Node.cpp
-        Source/NodeArrow.cpp
-        Source/NodeBox.cpp
-        Source/NodeCanvas.cpp
-        Source/ObjectController.cpp
-        Source/NodeData.cpp
-        Source/NodeLogic.cpp
-        Source/NodeMenu.cpp
-        Source/PianoRoll.cpp
+        Source/UI/ColourSelector.cpp
+        Source/UI/DynamicEditor.cpp
+        Source/Logic/DynamicPort.cpp
+        Source/Node/Node.cpp
+        Source/Node/NodeArrow.cpp
+        Source/Node/NodeBox.cpp
+        Source/Node/NodeCanvas.cpp
+        Source/Logic/ObjectController.cpp
+        Source/Node/NodeData.cpp
+        Source/Logic/NodeLogic.cpp
+        Source/UI/PianoRoll.cpp
         Source/PluginEditor.cpp
         Source/PluginProcessor.cpp
-        Source/SelectionBar.cpp
-        Source/SliderBar.cpp
-        Source/TitleBar.cpp
-        Source/Counter.cpp
-        Source/ObjectController.cpp
-        Source/Traverser.cpp
+        Source/UI/SelectionBar.cpp
+        Source/UI/TitleBar.cpp
+        Source/Node/Counter.cpp
+        Source/Node/Traverser.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE

@@ -11,13 +11,13 @@
 */
 
 #pragma once
-#include "ProjectModules.h"
+#include "../Util/ProjectModules.h"
 #include "BinaryData.h"
 #include "PianoRoll.h"
-#include "ComponentContext.h"
-#include "NodeCanvas.h"
+#include "../Util/ComponentContext.h"
+#include "../Node/NodeCanvas.h"
 #include "DynamicEditor.h"
-#include "NodeBox.h"
+#include "../Node/NodeBox.h"
 
 
 static constexpr float buttonBoundsReduction = 3.0f;

@@ -9,8 +9,8 @@
 */
 
 #include "DynamicEditor.h"
-#include "ComponentContext.h"
-#include "NodeCanvas.h"
+#include "../Util/ComponentContext.h"
+#include "../Node/NodeCanvas.h"
 
 DynamicEditor::DynamicEditor(){
     

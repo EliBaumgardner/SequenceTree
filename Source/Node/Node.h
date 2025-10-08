@@ -10,12 +10,12 @@
 
 #pragma once
 
-#include "ProjectModules.h"
-#include "DynamicEditor.h"
+#include "../Util/ProjectModules.h"
+
 #include "NodeBox.h"
 
-#include "ObjectController.h"
-#include "NodeLogic.h"
+#include "../Logic/ObjectController.h"
+#include "../Logic/NodeLogic.h"
 #include "NodeData.h"
 
 class  NodeCanvas;
@@ -23,55 +23,48 @@ class  NodeCanvas;
 class Node : public juce::Component {
     
     public:
-    
+
         Node(NodeCanvas* nodeCanvas);
     
         ~Node() override;
     
         void paint(juce::Graphics& g) override;
-        
         void resized() override;
+        void mouseEnter(const juce::MouseEvent& e) override;
     
         void setHoverVisual(bool isHovered);
-    
         void setSelectVisual(bool isSelected);
-    
         void setSelectVisual();
-    
         void setHighlightVisual(bool isHighlighted);
-    
-        NodeData* getNodeData();
-    
-        NodeLogic nodeLogic;
-    
+
+        void setDisplayMode(NodeBox::DisplayMode mode);
+
+        //Object Variabes//
         Node* parent = nullptr;
         Node* root = nullptr;
         NodeCanvas* nodeCanvas = nullptr;
-
+        NodeLogic nodeLogic;
         std::unique_ptr<ObjectController> nodeController = nullptr;
         NodeData nodeData;
     
         std::unique_ptr<NodeBox> editor = nullptr;
         NodeBox::DisplayMode mode;
     
-        bool isRoot = false;
-        
-        
-    
-        int nodeID = 0;
-        static int globalNodeID;
-    
         juce::Colour nodeColour = juce::Colours::blue;
-    
-        void setDisplayMode(NodeBox::DisplayMode mode);
 
+        //Primative Variables//
         bool isHovered = false;
         bool isSelected = false;
         bool isHighlighted = false;
+        bool isRoot = false;
+
+        int nodeID = 0;
+        static int globalNodeID;
 
 
-    //BUTTONS//
 
+
+        //BUTTONS//
 
         class IncrementButton : public juce::Component {
             
@@ -124,10 +117,8 @@ class Node : public juce::Component {
                 
                 onChanged();
             }
-            
         };
-    
-    
+
         IncrementButton upButton { true };
         IncrementButton downButton { false };
 };

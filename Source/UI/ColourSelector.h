@@ -11,8 +11,8 @@
 #pragma once
 
 
-#include "ProjectModules.h"
-#include "Node.h"
+#include "../Util/ProjectModules.h"
+#include "../Node/Node.h"
 
 /* Colour Selector Button that displays the selected colour and opens a pop up menu and cursor for colour selection; */
 

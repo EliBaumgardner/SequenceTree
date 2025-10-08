@@ -8,14 +8,14 @@
 
 #pragma once
 
-#include "ProjectModules.h"
+#include "Util/ProjectModules.h"
 
 //==============================================================================
 /**
 */
 #include <memory>
 #include <atomic>
-#include "RTData.h"
+#include "Util/RTData.h"
 
 class SequenceTreeAudioProcessorEditor;
 
@@ -87,6 +87,7 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     
     void scheduleTraversal();
     void traverse(int graphID);
+    void handleTraverser(int nodeID);
     
     void scheduleNodeHighlight(std::shared_ptr<RTNode> node,bool shouldHighlight, int graphID);
     

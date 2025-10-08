@@ -3,21 +3,20 @@
 
     NodeCanvas.h
     Created: 6 May 2025 8:34:41pm
-    Author:  Eli Baimgardner
+    Author:  Eli Baumgardner
 
   ==============================================================================
 */
 
 #pragma once
 
-#include "ProjectModules.h"
-#include "NodeMenu.h"
-#include "DynamicPort.h"
+#include "../Util/ProjectModules.h"
 #include "Node.h"
-#include "RTData.h"
-#include "DynamicEditor.h"
+#include "../Util/RTData.h"
 #include "NodeBox.h"
 #include "NodeArrow.h"
+#include "Traverser.h"
+#include "../Logic/DynamicPort.h"
 
 class NodeCanvas : public juce::Component {
     
@@ -32,16 +31,11 @@ class NodeCanvas : public juce::Component {
         void updateInfoText();
     
         void mouseDown(const juce::MouseEvent& e) override;
-        void mouseUp(const juce::MouseEvent& e) override;
         void mouseDrag(const juce::MouseEvent& e) override;
-    
-        juce::OwnedArray<Node>& getCanvasNodes();
-    
-        //void addLinePoints(Node* lineStartNode, Node* lineEndNode);
-        void removeLinePoints(Node* linePointNode);
-    
-        void setNodeMenu(NodeMenu* nodeMenu);
-        NodeMenu* getNodeMenu();
+
+        void addLinePoints(Node* startNode, Node* endNode);
+        void updateLinePoints(Node* movedNode);
+        void removeLinePoints(Node* node);
     
         void setSelectionMode(NodeBox::DisplayMode mode);
         void removeNode(Node* node);
@@ -52,34 +46,30 @@ class NodeCanvas : public juce::Component {
         void setProcessorPlayblack(bool isPlaying);
     
         enum class ControllerMode { Inspect, Node, Counter,Traverser };
-    
+
+
+    // Object Variables //
+
         ControllerMode controllerMode;
     
         Node* root = nullptr;
+        juce::OwnedArray<Node> canvasNodes;
 
         using nodeMap  = std::unordered_map<int, Node*>;
         std::unordered_map<int,nodeMap> nodeMaps;
-    
-        bool start = false;
-    
-        
-    private:
-    
-        float zoomLevel = 1.0f;
-        float offsetX = 0.0f; float offsetY = 0.0f;
-        bool isPanning = false;
-        juce::Point<int> lastMouse;
-        int originalHeight; int originalWidth;
-    
-        juce::Point<int> lastMouseScreen;
+
+
         juce::Colour canvasColour = juce::Colours::white;
         juce::String infoText;
-        
-        NodeMenu* nodeMenu = nullptr;
-        juce::OwnedArray<Node> canvasNodes;
+    
+        juce::Point<int> lastMouseScreen;
+
         std::unordered_map<int, std::shared_ptr<RTGraph>> rtGraphs;
     
         juce::OwnedArray<NodeArrow> nodeArrows;
 
         std::shared_ptr<RTGraph> lastGraph;
+
+    // Primative Variables //
+    bool start = false;
 };

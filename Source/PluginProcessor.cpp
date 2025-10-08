@@ -8,10 +8,10 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "NodeCanvas.h"
-#include "Node.h"
-#include "NodeData.h"
-#include "NodeLogic.h"
+#include "Node/NodeCanvas.h"
+#include "Node/Node.h"
+#include "Node/NodeData.h"
+#include "Logic/NodeLogic.h"
 
 static std::atomic<int> pendingAsyncCalls{0};
 //==============================================================================
@@ -417,4 +417,6 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
     //std::cout<<"graph transfer completed"<<std::endl;
 }
 
+void SequenceTreeAudioProcessor::handleTraverser(int nodeID) {
 
+}

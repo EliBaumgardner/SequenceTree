@@ -8,7 +8,7 @@
   ==============================================================================
 */
 
-#include "ProjectModules.h"
+#include "../Util/ProjectModules.h"
 
 class Node;
 
@@ -21,8 +21,6 @@ public:
   void resized() override;
 
   void updatePosition();
-
-private:
 
   Node* startNode = nullptr;
   Node* endNode = nullptr;

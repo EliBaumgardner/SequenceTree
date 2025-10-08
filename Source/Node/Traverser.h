@@ -5,7 +5,7 @@
 #ifndef SEQUENCETREE_TRAVERSER_H
 #define SEQUENCETREE_TRAVERSER_H
 
-#include "ProjectModules.h"
+#include "../Util/ProjectModules.h"
 #include "Node.h"
 #include "NodeBox.h"
 

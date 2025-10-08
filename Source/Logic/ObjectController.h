@@ -9,8 +9,8 @@
 */
 
 #pragma once
-#include "ProjectModules.h"
-#include "ComponentContext.h"
+#include "../Util/ProjectModules.h"
+#include "../Util/ComponentContext.h"
 
 class NodeCanvas;
 
@@ -37,6 +37,8 @@ class ObjectController : public juce::MouseListener {
         void mouseDown(const juce::MouseEvent& e) override;
     
         void mouseUp(const juce::MouseEvent& e) override;
+
+        void setObjects(Node* node);
     
     
     private:
@@ -44,6 +46,7 @@ class ObjectController : public juce::MouseListener {
         NodeCanvas* nodeCanvas = nullptr;
         Node* node = nullptr;
         Node* childNode = nullptr;
+        Node* connectorNode = nullptr;
 
         bool isDragStart = true;
 };

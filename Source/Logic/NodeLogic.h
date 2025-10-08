@@ -41,8 +41,6 @@ class NodeLogic {
     
     int getChildCount();
     
-    void pushNote();
-    
     RTGraph makeRTGraph(Node* root);
     void updateProcessorGraph(Node* root);
 

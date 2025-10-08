@@ -8,13 +8,12 @@
   ==============================================================================
 */
 
-#include "NodeCanvas.h"
-#include "Node.h"
-#include "NodeMenu.h"
-#include "NodeData.h"
+#include "../Node/NodeCanvas.h"
+#include "../Node/Node.h"
+#include "../Node/NodeData.h"
 #include "ObjectController.h"
-#include "Counter.h"
-#include "Traverser.h"
+#include "../Node/Counter.h"
+#include "../Node/Traverser.h"
 
 
 ObjectController::ObjectController(Node* node) : node(node){
@@ -47,8 +46,8 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e){
     if(ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Inspect){
         
         node->setCentrePosition(position.toInt());
-        node->getNodeData()->nodeData.setProperty("x",node->getX(),nullptr);
-        node->getNodeData()->nodeData.setProperty("y",node->getY(),nullptr);
+        node->nodeData.nodeData.setProperty("x",node->getX(),nullptr);
+        node->nodeData.nodeData.setProperty("y",node->getY(),nullptr);
     }
     
     else {
@@ -59,23 +58,25 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e){
                 isDragStart = false;
 
                 if (ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Node) {
-                    nodeCanvas->getCanvasNodes().add(new Node(nodeCanvas));
+                    nodeCanvas->canvasNodes.add(new Node(nodeCanvas));
                 }
                 else if (ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Counter){
-                    nodeCanvas->getCanvasNodes().add(new Counter(nodeCanvas));
+                    nodeCanvas->canvasNodes.add(new Counter(nodeCanvas));
                 }
                 else if (ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Traverser) {
-                    nodeCanvas->getCanvasNodes().add(new Traverser(nodeCanvas));
+                    nodeCanvas->canvasNodes.add(new Traverser(nodeCanvas));
                 }
 
-                childNode = nodeCanvas->getCanvasNodes().getLast();
+                childNode = nodeCanvas->canvasNodes.getLast();
                 childNode->parent = node;
                 childNode->root = childNode->parent->root;
                 
-                node->getNodeData()->addChild(childNode);
+                node->nodeData.addChild(childNode);
                 
                 nodeCanvas->addAndMakeVisible(childNode);
                 nodeCanvas->makeRTGraph(childNode->root);
+
+                nodeCanvas->addLinePoints(node,childNode);
             }
             
             else {
@@ -83,11 +84,10 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e){
                 
                 childNode->setCentrePosition(position.toInt());
                 childNode->setSize(40,40);
-                nodeCanvas->addLinePoints(node,childNode);
                 
-                childNode->getNodeData()->nodeData.setProperty("x",childNode->getX(),nullptr);
-                childNode->getNodeData()->nodeData.setProperty("y",childNode->getY(),nullptr);
-                //childNode->getNodeData()->nodeData.setProperty("radius", childNode->getWidth()/2,nullptr);
+                childNode->nodeData.nodeData.setProperty("x",childNode->getX(),nullptr);
+                childNode->nodeData.nodeData.setProperty("y",childNode->getY(),nullptr);
+                nodeCanvas->updateLinePoints(childNode);
             }
             
         }
@@ -99,7 +99,7 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e){
 
 void ObjectController::mouseDown(const juce::MouseEvent& e){
      
-    for (auto canvasNode : nodeCanvas->getCanvasNodes()){
+    for (auto canvasNode : nodeCanvas->canvasNodes){
         if(canvasNode != node){
             canvasNode->setSelectVisual(false);
         }
@@ -112,7 +112,6 @@ void ObjectController::mouseDown(const juce::MouseEvent& e){
     }
     else {
         node->setSelectVisual();
-        nodeCanvas->getNodeMenu()->setDisplayedNode(node);
     }
     
 }
@@ -120,4 +119,14 @@ void ObjectController::mouseDown(const juce::MouseEvent& e){
 void ObjectController::mouseUp(const juce::MouseEvent& e){
     isDragStart = true;
     //std::cout<<"drag completed" <<std::endl;
+}
+
+void ObjectController::setObjects(Node* node) {
+
+    if (node == childNode)
+        return;
+
+    if (node != this->node) {
+        this->node = node;
+    }
 }

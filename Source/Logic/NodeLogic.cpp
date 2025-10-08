@@ -7,11 +7,11 @@
 
   ==============================================================================
 */
-#include "PluginProcessor.h"
-#include "Node.h"
+#include "../PluginProcessor.h"
+#include "../Node/Node.h"
 #include "NodeLogic.h"
-#include "NodeData.h"
-#include "RTData.h"
+#include "../Node/NodeData.h"
+#include "../Util/RTData.h"
 
 bool NodeLogic::start = false;
 bool NodeLogic::hardStart = false;
@@ -53,18 +53,18 @@ void NodeLogic::traverse(){
     }
     
     referenceNode = target;
-    if(target->getNodeData()->children.isEmpty()){
+    if(target->nodeData.children.isEmpty()){
         //std::cout<<"no children"<<std::endl;
         target->setSelectVisual(false);
         target = root;
         target->setSelectVisual(true);
         start = false;
-        pushNote();
+        //pushNote();
         return;
     }
     
     NodeLogic* targetLogic = &target->nodeLogic;
-    NodeData* targetData = target->getNodeData();
+    NodeData* targetData = &target->nodeData;
     targetLogic->incCount(1);
     
     int countNum = targetLogic->count;
@@ -91,13 +91,13 @@ void NodeLogic::traverse(){
     
         start = false;
         target->setSelectVisual(true);
-        pushNote();
+        //pushNote();
     
 }
 
 void NodeLogic::setNode(Node* node){
     this->node = node;
-    data = this->node->getNodeData();
+    data = &this->node->nodeData;
     if(data != nullptr){
 
         count =  static_cast<int>(data->nodeData.getProperty("count"));
@@ -114,7 +114,7 @@ void NodeLogic::setCountLimit(int countLimit){
 }
 
 int NodeLogic::getChildCount(){
-    auto children = node->getNodeData()->children;
+    auto children = node->nodeData.children;
 
     if (children.isEmpty()) {
         return 1;
@@ -134,72 +134,3 @@ int NodeLogic::getChildCount(){
     return maxLimit;
 }
 
-
-void NodeLogic::pushNote(){
-//    
-//    auto* notes = &target->nodeData.midiNotes;
-//    auto* processor = &context->processor;
-//    
-//    
-//    if(notes->isEmpty()){
-//        processor->pushNote(63,63,1000);
-//    }
-//    
-//    for(auto note : *notes){
-//        
-//        float pitch = static_cast<float>(note.getProperty("pitch"));
-//        float velocity = static_cast<float>(note.getProperty("velocity"));
-//        float duration = static_cast<float>(note.getProperty("duration"));
-//        
-//        processor->pushNote(pitch,velocity,duration);
-//    }
-}
-
-//RTGraph NodeLogic::makeRTGraph(Node* root){
-//    
-//    RTGraph rtGraph;
-//    
-//    std::unordered_map<Node*,int> nodeTold;
-//    std::vector<Node*> stack = {root};
-//    
-//    int nextID = 0;
-//    
-//    while(!stack.empty()){
-//        
-//        Node* current = stack.back();
-//        stack.pop_back();
-//        if(nodeTold.count(current) == 0){
-//            int id = nextID++;
-//            nodeTold[current] = id;
-//            
-//            RTNode rtNode;
-//            rtNode.nodeID = id;
-//            rtNode.count = current->nodeLogic.count;
-//            rtNode.countLimit = current->nodeLogic.countLimit;
-//            
-//            rtGraph.nodes.push_back(std::move(rtNode));
-//            
-//            for(auto child : root->nodeData.children){
-//                
-//                stack.push_back(child);
-//            }
-//        }
-//    }
-//    
-//    for(auto& [child, id] : nodeTold){
-//        
-//        for(auto childNode : root->nodeData.children){
-//            rtGraph.nodes[id].children.push_back(nodeTold[child]);
-//        }
-//    }
-//    
-//    rtGraph.currentTarget = nodeTold[root];
-//    rtGraph.traversalRequested = true;
-//    
-//    return rtGraph;
-//}
-
-//void NodeLogic::updateProcessorGraph(Node* root){
-//    
-//    context->processor.rtGraph = makeRTGraph(root);
-//}

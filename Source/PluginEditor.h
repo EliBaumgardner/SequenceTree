@@ -8,17 +8,15 @@
 
 #pragma once
 
-#include "ProjectModules.h"
+#include "Util/ProjectModules.h"
 
 #include "PluginProcessor.h"
-#include "NodeCanvas.h"
-#include "Node.h"
-#include "NodeMenu.h"
-#include "NodeLogic.h"
-#include "SliderBar.h"
-#include "DynamicPort.h"
-#include "TitleBar.h"
-#include "SelectionBar.h"
+#include "Node/NodeCanvas.h"
+#include "Node/Node.h"
+#include "Logic/NodeLogic.h"
+#include "Logic/DynamicPort.h"
+#include "UI/TitleBar.h"
+#include "UI/SelectionBar.h"
 
 
 //==============================================================================
@@ -43,8 +41,7 @@ private:
     SequenceTreeAudioProcessor& audioProcessor;
     
     NodeCanvas canvas;
-    NodeMenu menu;
-    
+
     std::unique_ptr<DynamicPort> port;
     
     TitleBar titleBar;

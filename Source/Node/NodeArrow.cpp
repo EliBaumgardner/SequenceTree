@@ -26,10 +26,10 @@ void NodeArrow::paint(juce::Graphics &g) {
   int radius = b->getBounds().getWidth()/2;
 
   g.setColour(arrowColour);
-  int x1 = a->getBounds().getCentreX();
-  int y1 = a->getBounds().getCentreY();
-  int x2 = b->getBounds().getCentreX();
-  int y2 = b->getBounds().getCentreY();
+  int x1 = a->getBounds().getCentreX()-getX();
+  int y1 = a->getBounds().getCentreY()-getY();
+  int x2 = b->getBounds().getCentreX()-getX();
+  int y2 = b->getBounds().getCentreY()-getY();
 
   // Calculate direction vector
   float dx = float(x2 - x1);
@@ -66,19 +66,6 @@ void NodeArrow::paint(juce::Graphics &g) {
   g.drawLine(x2, y2, rightX, rightY, 1.0f);
 }
 
-void resized() {
+void NodeArrow::resized() {
 
-}
-
-void NodeArrow::updatePosition() {
-  auto start = startNode->getBounds().getCentre();
-  auto end = endNode->getBounds().getCentre();
-  auto bounds = juce::Rectangle<int>::leftTopRightBottom(
-      std::min(start.x, end.x),
-      std::min(start.y, end.y),
-      std::max(start.x, end.x),
-      std::max(start.y, end.y)
-  );
-  setBounds(bounds);
-  repaint();
 }

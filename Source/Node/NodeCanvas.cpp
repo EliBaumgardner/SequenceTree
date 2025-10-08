@@ -1,7 +1,8 @@
 // NodeCanvas.cpp
-#include "ComponentContext.h"
+#include "../Util/ComponentContext.h"
 #include "NodeCanvas.h"
-#include "PluginProcessor.h"
+
+#include "../PluginProcessor.h"
 
 
 NodeCanvas::NodeCanvas()
@@ -20,58 +21,6 @@ void NodeCanvas::paint(juce::Graphics& g)
     g.fillAll(canvasColour);
     g.setFont(12.0f);
     g.drawText(infoText, getLocalBounds(), juce::Justification::topRight, true);
-
-    for (auto& linePoint : linePoints)
-    {
-        auto* a = linePoint.first;
-        auto* b = linePoint.second;
-
-        // Arrow size
-        float arrowLength = 10.0f;
-        float arrowWidth = 5.0f;
-        int radius = b->getBounds().getWidth()/2;
-
-        g.setColour(juce::Colours::black);
-        int x1 = a->getBounds().getCentreX();
-        int y1 = a->getBounds().getCentreY();
-        int x2 = b->getBounds().getCentreX();
-        int y2 = b->getBounds().getCentreY();
-
-        // Calculate direction vector
-        float dx = float(x2 - x1);
-        float dy = float(y2 - y1);
-        float length = std::sqrt(dx*dx + dy*dy);
-        if (length == 0) continue; // avoid division by zero
-
-        // Normalize direction
-        float nx = dx / length;
-        float ny = dy / length;
-
-        x2 = x2 - nx*radius;
-        y2 = y2 - ny*radius;
-
-        // Draw main line
-        g.drawLine(x1, y1, x2, y2, 2.0f);
-        g.setColour(juce::Colours::white);
-        g.drawLine(x1, y1, x2, y2, 1.0f);
-
-        // Calculate the two points for the arrowhead lines
-        float leftX = x2 - arrowLength * nx + arrowWidth * ny;
-        float leftY = y2 - arrowLength * ny - arrowWidth * nx;
-
-        float rightX = x2 - arrowLength * nx - arrowWidth * ny;
-        float rightY = y2 - arrowLength * ny + arrowWidth * nx;
-
-        // Draw arrowhead lines (black thick)
-        g.setColour(juce::Colours::black);
-        g.drawLine(x2, y2, leftX, leftY, 2.0f);
-        g.drawLine(x2, y2, rightX, rightY, 2.0f);
-
-        // Draw arrowhead lines (white thin) for contrast
-        g.setColour(juce::Colours::white);
-        g.drawLine(x2, y2, leftX, leftY, 1.0f);
-        g.drawLine(x2, y2, rightX, rightY, 1.0f);
-    }
 }
 
 void NodeCanvas::resized()
@@ -90,21 +39,18 @@ void NodeCanvas::mouseDown(const juce::MouseEvent& e)
 
     if (e.mods.isLeftButtonDown() && controllerMode == ControllerMode::Node)
     {
-        
             auto* node = new Node(this);
             
             canvasNodes.add(node);
+
             auto pos = e.getPosition().toFloat();
             node->setBounds(int(pos.x) - 20, int(pos.y) - 20, 40, 40);
             addAndMakeVisible(node);
-            updateInfoText();
-            
-//            if(root == nullptr){
-//                root = node;
-//            }
-        
+
             node->root = node;
             makeRTGraph(node);
+
+            updateInfoText();
     }
 }
 
@@ -118,26 +64,16 @@ void NodeCanvas::mouseDrag(const juce::MouseEvent& e)
         }
 }
 
-void NodeCanvas::mouseUp(const juce::MouseEvent& e)
+void NodeCanvas::removeLinePoints(Node* node)
 {
-    isPanning = false;
+    for (int i = nodeArrows.size() - 1; i >= 0; i--) {
+            NodeArrow* nodeArrow = nodeArrows[i];
+        if (nodeArrow->startNode != node && nodeArrow->endNode != node)
+            continue;
+
+        nodeArrows.remove(i);
+    }
 }
-
-juce::OwnedArray<Node>& NodeCanvas::getCanvasNodes() { return canvasNodes; }
-
-//void NodeCanvas::addLinePoints(Node* start, Node* end) { linePoints.add({ start, end }); }
-
-void NodeCanvas::removeLinePoints(Node* target)
-{
-    for (int i = linePoints.size(); --i >= 0; )
-        if (linePoints.getReference(i).first == target ||
-            linePoints.getReference(i).second == target)
-            linePoints.remove(i);
-    repaint();
-}
-
-NodeMenu* NodeCanvas::getNodeMenu() { return nodeMenu; }
-void NodeCanvas::setNodeMenu(NodeMenu* nm) { nodeMenu = nm; }
 
 void NodeCanvas::removeNode(Node* node)
 {
@@ -145,14 +81,14 @@ void NodeCanvas::removeNode(Node* node)
 
     Node* temp = node->root;
     
-    if(!node->getNodeData()->children.isEmpty()){
-        for (Node* child : node->getNodeData()->children){
+    if(!node->nodeData.children.isEmpty()){
+        for (Node* child : node->nodeData.children){
             child->parent = nullptr;
         }
     }
     
     if (node->parent != nullptr) {
-        node->parent->getNodeData()->removeChild(node);
+        node->parent->nodeData.removeChild(node);
     }
     nodeMaps[node->root->nodeID].erase(node->nodeID);
     node->removeMouseListener(node->nodeController.get());
@@ -235,7 +171,6 @@ void NodeCanvas::destroyRTGraph(Node* root)
     
 }
 
-
 void NodeCanvas::setSelectionMode(NodeBox::DisplayMode mode)
 {
     for(int i = 0; i < canvasNodes.size(); i++) {
@@ -258,9 +193,39 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
     
 }
 
-void NodeCanvas::addLinePoints(Node* a, Node* b) {
-    auto* arrow = new NodeArrow(a, b);
+void NodeCanvas::addLinePoints(Node* startNode, Node* endNode) {
+
+    auto* arrow = new NodeArrow(startNode, endNode);
     addAndMakeVisible(arrow);
+    arrow->toBack();
     nodeArrows.add(arrow);
+}
+
+void NodeCanvas::updateLinePoints(Node* movedNode) {
+
+    for (NodeArrow* arrow : nodeArrows) {
+
+
+        if (arrow->startNode != movedNode && arrow->endNode != movedNode)
+            continue;
+
+        juce::Point start = movedNode->getBounds().getCentre();
+        juce::Point end = arrow->endNode->getBounds().getCentre();
+
+        if (arrow->startNode != movedNode){
+            start = arrow->endNode->getBounds().getCentre();
+            end = arrow->startNode->getBounds().getCentre();
+        }
+
+        juce::Rectangle arrowBounds = juce::Rectangle<int>::leftTopRightBottom(
+            std::min(start.x,end.x),
+            std::min(start.y,end.y),
+            std::max(start.x,end.x),
+            std::max(start.y,end.y)
+            ).expanded(10);
+
+        arrow->setBounds(arrowBounds);
+        arrow->repaint();
+    }
 }
 
