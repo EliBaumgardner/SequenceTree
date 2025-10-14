@@ -4,7 +4,7 @@
 
 #include "Traverser.h"
 
-Traverser::Traverser(NodeCanvas* canvas) : Node(canvas) {
+Traverser::Traverser() {
 
     editor = std::make_unique<NodeBox>(this);
 

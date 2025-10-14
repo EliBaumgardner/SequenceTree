@@ -51,24 +51,21 @@ class NodeCanvas : public juce::Component {
     // Object Variables //
 
         ControllerMode controllerMode;
+        std::unique_ptr<ObjectController> controller;
     
         Node* root = nullptr;
         juce::OwnedArray<Node> canvasNodes;
+        juce::OwnedArray<NodeArrow> nodeArrows;
 
         using nodeMap  = std::unordered_map<int, Node*>;
         std::unordered_map<int,nodeMap> nodeMaps;
-
+        std::unordered_map<int, std::shared_ptr<RTGraph>> rtGraphs;
+        std::shared_ptr<RTGraph> lastGraph;
 
         juce::Colour canvasColour = juce::Colours::white;
         juce::String infoText;
-    
-        juce::Point<int> lastMouseScreen;
 
-        std::unordered_map<int, std::shared_ptr<RTGraph>> rtGraphs;
-    
-        juce::OwnedArray<NodeArrow> nodeArrows;
-
-        std::shared_ptr<RTGraph> lastGraph;
+        bool controllerMade = false;
 
     // Primative Variables //
     bool start = false;

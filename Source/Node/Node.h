@@ -18,13 +18,15 @@
 #include "../Logic/NodeLogic.h"
 #include "NodeData.h"
 
+class NodeController;
+
 class  NodeCanvas;
 
 class Node : public juce::Component {
     
     public:
 
-        Node(NodeCanvas* nodeCanvas);
+        Node();
     
         ~Node() override;
     
@@ -42,9 +44,9 @@ class Node : public juce::Component {
         //Object Variabes//
         Node* parent = nullptr;
         Node* root = nullptr;
-        NodeCanvas* nodeCanvas = nullptr;
+
         NodeLogic nodeLogic;
-        std::unique_ptr<ObjectController> nodeController = nullptr;
+        //std::unique_ptr<ObjectController> nodeController = nullptr;
         NodeData nodeData;
     
         std::unique_ptr<NodeBox> editor = nullptr;
@@ -60,7 +62,6 @@ class Node : public juce::Component {
 
         int nodeID = 0;
         static int globalNodeID;
-
 
 
 

@@ -16,117 +16,110 @@
 #include "../Node/Traverser.h"
 
 
-ObjectController::ObjectController(Node* node) : node(node){
-    
-    nodeCanvas = ComponentContext::canvas;
-}
+ObjectController::ObjectController(Node* node) : node(node), nodeCanvas(ComponentContext::canvas) {}
 
+void ObjectController::mouseEnter(const juce::MouseEvent& e) { node->setHoverVisual(true); }
+void ObjectController::mouseExit(const juce::MouseEvent& e){ node->setHoverVisual(false); }
 
-
-void ObjectController::mouseEnter(const juce::MouseEvent& e){
-    
-    node->setHoverVisual(true);
-}
-
-
-void ObjectController::mouseExit(const juce::MouseEvent& e){
-    
-    node->setHoverVisual(false);
-}
-
-
-void ObjectController::mouseDrag(const juce::MouseEvent& e){
-    //check if drag is substantial
-    if(e.getDistanceFromDragStart() < 5){
-        return;
-    }
-    
-    auto position = e.getEventRelativeTo(node->getParentComponent()).position;
-    
-    if(ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Inspect){
-        
-        node->setCentrePosition(position.toInt());
-        node->nodeData.nodeData.setProperty("x",node->getX(),nullptr);
-        node->nodeData.nodeData.setProperty("y",node->getY(),nullptr);
-    }
-    
-    else {
-        
-        if(e.mods.isLeftButtonDown()){
-            
-            if(isDragStart){
-                isDragStart = false;
-
-                if (ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Node) {
-                    nodeCanvas->canvasNodes.add(new Node(nodeCanvas));
-                }
-                else if (ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Counter){
-                    nodeCanvas->canvasNodes.add(new Counter(nodeCanvas));
-                }
-                else if (ComponentContext::canvas->controllerMode == NodeCanvas::ControllerMode::Traverser) {
-                    nodeCanvas->canvasNodes.add(new Traverser(nodeCanvas));
-                }
-
-                childNode = nodeCanvas->canvasNodes.getLast();
-                childNode->parent = node;
-                childNode->root = childNode->parent->root;
-                
-                node->nodeData.addChild(childNode);
-                
-                nodeCanvas->addAndMakeVisible(childNode);
-                nodeCanvas->makeRTGraph(childNode->root);
-
-                nodeCanvas->addLinePoints(node,childNode);
-            }
-            
-            else {
-                node->setSelectVisual(false);
-                
-                childNode->setCentrePosition(position.toInt());
-                childNode->setSize(40,40);
-                
-                childNode->nodeData.nodeData.setProperty("x",childNode->getX(),nullptr);
-                childNode->nodeData.nodeData.setProperty("y",childNode->getY(),nullptr);
-                nodeCanvas->updateLinePoints(childNode);
-            }
-            
-        }
+void ObjectController::mouseUp(const juce::MouseEvent& e) {
+    if (hasConnection && connectorNode != nullptr) {
+        std::cout<<"forming connection"<<std::endl;
+        nodeCanvas->removeNode(childNode);
+        node->nodeData.addChild(connectorNode);
+        nodeCanvas->addLinePoints(node,connectorNode);
+        nodeCanvas->updateLinePoints(node);
     }
 
-
-    nodeCanvas->repaint();
+    isDragStart = true; childNode = nullptr; connectorNode = nullptr;
 }
 
 void ObjectController::mouseDown(const juce::MouseEvent& e){
-     
+
     for (auto canvasNode : nodeCanvas->canvasNodes){
         if(canvasNode != node){
             canvasNode->setSelectVisual(false);
         }
-        
     }
-    
-    if(e.mods.isRightButtonDown()){
-        
-        nodeCanvas->removeNode(node);
-    }
-    else {
-        node->setSelectVisual();
-    }
-    
+
+
+    if(e.mods.isRightButtonDown()){ nodeCanvas->removeNode(node); }
+    else { node->setSelectVisual(); }
 }
 
-void ObjectController::mouseUp(const juce::MouseEvent& e){
-    isDragStart = true;
-    //std::cout<<"drag completed" <<std::endl;
+void ObjectController::mouseDrag(const juce::MouseEvent& e)
+{
+    if (e.getDistanceFromDragStart() < 5 || !e.mods.isLeftButtonDown())
+        return;
+
+    int deltaX = e.x - lastX;
+    int deltaY = e.y - lastY;
+    lastX = e.x;
+    lastY = e.y;
+
+    const auto position = e.getEventRelativeTo(node->getParentComponent()).position;
+
+    if (nodeCanvas->controllerMode == NodeCanvas::ControllerMode::Inspect){
+        node->setCentrePosition(position.toInt());
+        node->nodeData.nodeData.setProperty("x", node->getX(), nullptr);
+        node->nodeData.nodeData.setProperty("y", node->getY(), nullptr);
+        nodeCanvas->updateLinePoints(node);
+        nodeCanvas->repaint();
+        return;
+    }
+
+    if (isDragStart){
+        isDragStart = false;
+
+        switch (nodeCanvas->controllerMode)
+        {
+            case NodeCanvas::ControllerMode::Node:      childNode = new Node(); break;
+            case NodeCanvas::ControllerMode::Counter:   childNode = new Counter(); break;
+            case NodeCanvas::ControllerMode::Traverser: childNode = new Traverser(); break;
+            default: return;
+        }
+
+        nodeCanvas->canvasNodes.add(childNode);
+        childNode->parent = node;
+        childNode->root   = node->root;
+
+        node->nodeData.addChild(childNode);
+        nodeCanvas->addAndMakeVisible(childNode);
+        nodeCanvas->makeRTGraph(childNode->root);
+        nodeCanvas->addLinePoints(node, childNode);
+        childNode->toBack();
+        return;
+    }
+
+    node->setSelectVisual(false);
+
+    childNode->setCentrePosition(position.toInt());
+    childNode->setSize(40, 40);
+    childNode->nodeData.nodeData.setProperty("x", childNode->getX(), nullptr);
+    childNode->nodeData.nodeData.setProperty("y", childNode->getY(), nullptr);
+
+    auto* target = dynamic_cast<Node*>(nodeCanvas->getComponentAt(position.x, position.y));
+
+    hasConnection = target && target != childNode && target != node && target != node->parent;
+    connectorNode = hasConnection ? target : nullptr;
+    childNode->setVisible(!hasConnection);
+
+    if (hasConnection && abs(deltaX) < 3 && abs(deltaY) < 3) {
+        auto point = target->localPointToGlobal(target->getLocalBounds().getCentre().toFloat());
+        juce::Desktop::getInstance().setMousePosition(point.toInt());
+    }
+
+    nodeCanvas->updateLinePoints(childNode);
+    nodeCanvas->repaint();
 }
 
 void ObjectController::setObjects(Node* node) {
 
-    if (node == childNode)
-        return;
+    if (node == childNode) { return;}
 
-    if (node != this->node) {
+    if ( node != this->node|| node == nodeCanvas->canvasNodes.getFirst()){
+        std::cout<<"NodeID of controller: "<<node->nodeID<<std::endl;
+        this->node->removeMouseListener(this);
         this->node = node;
+        this->node->addMouseListener(this,true);
     }
 }

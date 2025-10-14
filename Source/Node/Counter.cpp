@@ -4,7 +4,7 @@
 
 #include "Counter.h"
 
-Counter::Counter(NodeCanvas* canvas) : Node(canvas) {
+Counter::Counter() {
 
     editor = std::make_unique<NodeBox>(this);
 

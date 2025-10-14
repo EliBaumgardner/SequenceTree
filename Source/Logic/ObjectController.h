@@ -29,17 +29,12 @@ class ObjectController : public juce::MouseListener {
         ObjectController(Node* node);
 
         void mouseEnter(const juce::MouseEvent& e) override;
-     
         void mouseExit(const juce::MouseEvent& e) override;
-
         void mouseDrag(const juce::MouseEvent& e) override;
-    
         void mouseDown(const juce::MouseEvent& e) override;
-    
         void mouseUp(const juce::MouseEvent& e) override;
 
         void setObjects(Node* node);
-    
     
     private:
     
@@ -49,4 +44,8 @@ class ObjectController : public juce::MouseListener {
         Node* connectorNode = nullptr;
 
         bool isDragStart = true;
+        bool hasConnection = false;
+
+        int lastX = 0;
+        int lastY = 0;
 };

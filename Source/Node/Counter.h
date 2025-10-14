@@ -15,7 +15,7 @@ class Counter : public Node {
 
     public:
 
-    Counter(NodeCanvas* canvas);
+    Counter();
     void resized() override;
     void paint(juce::Graphics& g) override;
     void setDisplayMode(NodeBox::DisplayMode mode);

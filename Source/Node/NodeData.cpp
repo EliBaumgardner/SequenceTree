@@ -83,8 +83,8 @@ void NodeData::bindEditor(juce::TextEditor& editor, const juce::Identifier prope
     editor.getTextValue().referTo(propertyValue);
 }
 
-void NodeData::createTree(juce::String type){
-    
+void NodeData::createTree(juce::String type)
+{
     if(type == "MidiNoteData"){
         juce::ValueTree tree("MidiNoteData");
         tree.setProperty(channelID,0,nullptr);
@@ -95,10 +95,7 @@ void NodeData::createTree(juce::String type){
         
         tree.addListener(&listener);
         
-        listener.onChanged = [this](){
-            std::cout<<"note edited"<<std::endl;
-            node->nodeCanvas->makeRTGraph(node->nodeCanvas->root);
-        };
+        listener.onChanged = [this](){ ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root); };
     }
     else {
         juce::ValueTree tree("MidiCCData");
@@ -109,17 +106,9 @@ void NodeData::createTree(juce::String type){
         midiCCs.add(tree);
     }
     
-    node->nodeCanvas->makeRTGraph(node->nodeCanvas->root);
+    ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root);
 }
 
-void NodeData::setNode(Node* node){
-    this->node = node;
-};
+void NodeData::setNode(Node* node){ this->node = node; };
 
-void NodeData::pushData(){
-    
-}
 
-void NodeData::setContext(PluginContext* context){
-    
-}

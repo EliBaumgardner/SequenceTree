@@ -275,8 +275,11 @@ void SequenceTreeAudioProcessor::scheduleTraversal(){
 }
 
 void SequenceTreeAudioProcessor::traverse(int graphID) {
+
     RTGraphs* loadedGraphs = std::atomic_load(&rtGraphs).get();
     std::shared_ptr<GraphInfo> loadedInfo = std::atomic_load(&rtGraphInfo);
+
+    bool isTraverser = false;
 
     if (!loadedGraphs || !loadedInfo)
         return;
@@ -284,39 +287,36 @@ void SequenceTreeAudioProcessor::traverse(int graphID) {
     auto currentRTGraph = (*loadedGraphs)[graphID];
     
         auto infoIt = loadedInfo->find(graphID);
-        if (infoIt == loadedInfo->end())
-            return;
+        if (infoIt == loadedInfo->end()) { return; }
 
         TraversalInfo* info = &infoIt->second;
         auto& loadedMap = currentRTGraph->nodeMap;
 
-        if (loadedMap.empty()) {
-            return;
-        }
+        if (loadedMap.empty()) { return; }
 
-        if (!currentRTGraph->traversalRequested.load(std::memory_order_acquire))
-        { return; }
+        if (!currentRTGraph->traversalRequested.load(std::memory_order_acquire)) { return; }
         
-        if (info->rtTargetId == 0)
-            info->rtTargetId = graphID;
+        if (info->rtTargetId == 0) { info->rtTargetId = graphID; }
 
-        // Highlight previous node
+        // Unhighlight previous node
         if (info->rtReferenceId) {
             auto it = loadedMap.find(info->rtReferenceId);
             if (it != loadedMap.end()) {
-                std::shared_ptr<RTNode> highlightNode = std::make_shared<RTNode>(it->second);
+                auto rtNode = it->second;
+                std::shared_ptr<RTNode> highlightNode = std::make_shared<RTNode>(rtNode);
                 scheduleNodeHighlight(highlightNode, false, graphID);
             }
         }
         // Highlight current node
         auto itTarget = loadedMap.find(info->rtTargetId);
         if (itTarget != loadedMap.end()) {
-            std::shared_ptr<RTNode> highlightNode = std::make_shared<RTNode>(itTarget->second);
+            auto rtNode = itTarget->second;
+            std::shared_ptr<RTNode> highlightNode = std::make_shared<RTNode>(rtNode);
             scheduleNodeHighlight(highlightNode, true, graphID);
 
             // Push first note if any
             if (!itTarget->second.notes.empty()) {
-                const auto& note = itTarget->second.notes[0];
+                const auto& note = rtNode.notes[0];
                 pushNote(note.pitch, note.velocity, note.duration,graphID);
             } else {
                 pushNote(64, 64, 1000,graphID);
@@ -336,6 +336,11 @@ void SequenceTreeAudioProcessor::traverse(int graphID) {
                     if (count % limit == 0 && limit > maxLimit) {
                         maxLimit = limit;
                         info->rtTargetId = childIndex;
+
+                        if (!itChild->second.isNode) {
+                            isTraverser = true;
+                            traverse(graphID);
+                        }
                     }
                 }
             }
@@ -343,7 +348,6 @@ void SequenceTreeAudioProcessor::traverse(int graphID) {
             if (info->rtTargetId == info->rtReferenceId)
                 info->rtTargetId = graphID;
         }
-       
 }
 
 

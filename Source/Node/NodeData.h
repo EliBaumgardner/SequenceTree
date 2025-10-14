@@ -11,6 +11,7 @@
 #pragma once
 
 #include "../Util/ProjectModules.h"
+#include "../Util/ComponentContext.h"
 
 struct PluginContext;
 
@@ -56,26 +57,16 @@ class NodeData{
         Node* node;
     
         void setNode(Node* node);
-    
         void addChild(Node* child);
-    
         void removeChild(Node* child);
     
         void bindEditor(juce::TextEditor& editor, const juce::Identifier propertyID,juce::String treeType);
-    
         void createTree(juce::String type);
-    
-        void pushData();
-    
-        void setContext(PluginContext* context);
-    
-        
+
         private:
     
         PluginContext* context = nullptr;
-    
-        
-    
+
         class ValueListener : public juce::ValueTree::Listener {
             
             public:
@@ -88,11 +79,9 @@ class NodeData{
                     if(onChanged) onChanged();
                 }
             }
-            
         };
     
         ValueListener listener;
-    
-    
+
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NodeData)
 };

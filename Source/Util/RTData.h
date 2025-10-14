@@ -27,6 +27,8 @@ struct RTNode {
     
     int nodeID = 0;
     int countLimit = 0;
+
+    bool isNode = false;
     
     std::vector<RTNote> notes;
     std::vector<int> children;
