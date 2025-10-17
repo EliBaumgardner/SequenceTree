@@ -23,11 +23,12 @@ void ObjectController::mouseExit(const juce::MouseEvent& e){ node->setHoverVisua
 
 void ObjectController::mouseUp(const juce::MouseEvent& e) {
     if (hasConnection && connectorNode != nullptr) {
-        std::cout<<"forming connection"<<std::endl;
+
         nodeCanvas->removeNode(childNode);
         node->nodeData.addChild(connectorNode);
         nodeCanvas->addLinePoints(node,connectorNode);
         nodeCanvas->updateLinePoints(node);
+        nodeCanvas->makeRTGraph(node);
     }
 
     isDragStart = true; childNode = nullptr; connectorNode = nullptr;
@@ -80,7 +81,9 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e)
 
         nodeCanvas->canvasNodes.add(childNode);
         childNode->parent = node;
-        childNode->root   = node->root;
+
+        if (auto parent = dynamic_cast<Traverser*>(node)) { childNode->root = childNode;  }
+        else { childNode->root = node->root; }
 
         node->nodeData.addChild(childNode);
         nodeCanvas->addAndMakeVisible(childNode);
@@ -117,7 +120,6 @@ void ObjectController::setObjects(Node* node) {
     if (node == childNode) { return;}
 
     if ( node != this->node|| node == nodeCanvas->canvasNodes.getFirst()){
-        std::cout<<"NodeID of controller: "<<node->nodeID<<std::endl;
         this->node->removeMouseListener(this);
         this->node = node;
         this->node->addMouseListener(this,true);

@@ -33,14 +33,22 @@ struct MidiEvent {
     int velocity;
     int duration;
     int graphID;
+    int traverserEvent = false;
 };
 
 struct NodeCount{
-    
+
     int nodeID = 0;
     int count = 0;
 };
 
+struct TraversalInfo {
+    int rtTargetId = 0;
+    int rtRootId = 1;
+    int rtReferenceId = 0;
+
+    std::unordered_map<int,int> counts;
+};
 
 class SequenceTreeAudioProcessor  : public juce::AudioProcessor
 {
@@ -82,21 +90,14 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
     
-    void pushNote(int pitch, int velocity, int duration, int graphID);
+    void pushNote(int pitch, int velocity, int duration, RTNode node);
     void setNewGraph(std::shared_ptr<RTGraph> graph);
     
     void scheduleTraversal();
-    void traverse(int graphID);
-    void handleTraverser(int nodeID);
+    void traverse(int graphID, bool isNode);
+    void handleTraverser(RTNode node);
     
-    void scheduleNodeHighlight(std::shared_ptr<RTNode> node,bool shouldHighlight, int graphID);
-    
-    struct TraversalInfo {
-        int rtTargetId = 0;
-        int rtRootId = 1;
-        int rtReferenceId = 0;
-        std::unordered_map<int,int> counts;
-    };
+    void scheduleNodeHighlight(std::shared_ptr<RTNode> node,bool shouldHighlight);
     
     NodeCanvas* canvas;
     
@@ -104,12 +105,15 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     std::shared_ptr<RTGraphs> rtGraphs = nullptr;
     
     int numGraphs = 0;
-    
+
     using GraphInfo = std::unordered_map<int,TraversalInfo>;
     std::shared_ptr<GraphInfo> rtGraphInfo = nullptr;
+    std::shared_ptr<GraphInfo> traverserInfo = nullptr;
+
+    std::pair<std::shared_ptr<GraphInfo>,std::shared_ptr<GraphInfo>> graphInfoPairs;
 
     std::atomic<bool> isPlaying = false;
-    
+    bool isStart = true;
     
     private:
     //==============================================================================

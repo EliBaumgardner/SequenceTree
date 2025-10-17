@@ -39,7 +39,8 @@ class NodeCanvas : public juce::Component {
     
         void setSelectionMode(NodeBox::DisplayMode mode);
         void removeNode(Node* node);
-        
+
+        void addRootNode(Node* root);
         void makeRTGraph(Node* root);
         void destroyRTGraph(Node* root);
     
@@ -64,9 +65,9 @@ class NodeCanvas : public juce::Component {
 
         juce::Colour canvasColour = juce::Colours::white;
         juce::String infoText;
-
-        bool controllerMade = false;
+        juce::Point<int> lastPosition;
 
     // Primative Variables //
-    bool start = false;
+        bool start = false;
+        bool controllerMade = false;
 };

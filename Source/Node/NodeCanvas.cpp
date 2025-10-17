@@ -70,19 +70,23 @@ void NodeCanvas::mouseDown(const juce::MouseEvent& e)
 {
     if (e.mods.isLeftButtonDown() && controllerMode == ControllerMode::Node)
     {
-        auto* node = new Node();
-        canvasNodes.add(node);
+        Node* root = new Node();
+        canvasNodes.add(root);
 
         auto pos = e.getPosition().toFloat();
-        node->setBounds(int(pos.x) - 20, int(pos.y) - 20, 40, 40);
-        addAndMakeVisible(node);
+        root->setBounds(int(pos.x) - 20, int(pos.y) - 20, 40, 40);
+        addAndMakeVisible(root);
 
-        node->root = node;
-        makeRTGraph(node);
+        root->root = root;
+        makeRTGraph(root);
         updateInfoText();
 
-        if (controllerMade == false) { controllerMade = true; controller = std::make_unique<ObjectController>(node); }
+        lastPosition = e.getPosition();
+        if (controllerMade == false) { controllerMade = true; controller = std::make_unique<ObjectController>(root); }
     }
+}
+
+void NodeCanvas::addRootNode(Node* root) {
 }
 
 void NodeCanvas::mouseDrag(const juce::MouseEvent& e)
@@ -151,6 +155,9 @@ void NodeCanvas::makeRTGraph(Node* root)
     auto rtGraph = std::make_shared<RTGraph>();
     rtGraph->graphID = root->nodeID;
 
+
+    if (rtGraph->graphID == 1){ rtGraph->isTraversable = true;}
+
     std::unordered_map<int,Node*> nodeMap;
 
     std::vector<Node*> stack = {root};
@@ -165,10 +172,13 @@ void NodeCanvas::makeRTGraph(Node* root)
             nodeMap[id] = current;
 
             RTNode rtNode;
+            rtNode.graphID = rtGraph->graphID;
             rtNode.nodeID = id;
             rtNode.countLimit = static_cast<int>(current->nodeData.nodeData.getProperty("countLimit"));
 
             if (auto traverser = dynamic_cast<Traverser*>(current)) { rtNode.isNode = false; }
+
+            std::cout<<"created node: "<<rtNode.isNode<<std::endl;
 
             for(auto note : current->nodeData.midiNotes){
 
@@ -201,7 +211,6 @@ void NodeCanvas::makeRTGraph(Node* root)
 
     lastGraph = rtGraph;
     ComponentContext::processor->setNewGraph(rtGraph);
-    std::cout<<"graph updated"<<std::endl;
 }
 
 void NodeCanvas::destroyRTGraph(Node* root)
