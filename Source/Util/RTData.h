@@ -41,21 +41,21 @@ struct RTNode {
 struct RTGraph {
     
     std::unordered_map<int, RTNode> nodeMap;
-    std::vector<RTNode> nodes;
     std::atomic<bool> traversalRequested;
     bool isTraversing = false;
     bool isTraversable = false;
-    
+
+    int rootID = 0;
     int graphID = 0;
 
     RTGraph() = default;
     
-    RTGraph(RTGraph&& other) noexcept : nodes(other.nodes)
+    RTGraph(RTGraph&& other) noexcept : nodeMap(other.nodeMap)
     {}
     
     RTGraph& operator=(RTGraph&& other) noexcept {
         if(this != &other){
-            nodes = std::move(other.nodes);
+            nodeMap = std::move(other.nodeMap);
         }
         return *this;
     }

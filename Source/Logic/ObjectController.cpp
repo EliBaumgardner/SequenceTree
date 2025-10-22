@@ -82,11 +82,13 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e)
         nodeCanvas->canvasNodes.add(childNode);
         childNode->parent = node;
 
-        if (auto parent = dynamic_cast<Traverser*>(node)) { childNode->root = childNode;  }
-        else { childNode->root = node->root; }
 
         node->nodeData.addChild(childNode);
         nodeCanvas->addAndMakeVisible(childNode);
+
+        if (auto parent = dynamic_cast<Traverser*>(node)) { childNode->root = childNode; nodeCanvas->makeRTGraph(childNode); nodeCanvas->makeRTGraph(node->root); }
+        else { childNode->root = node->root; nodeCanvas->makeRTGraph(node->root); }
+
         nodeCanvas->makeRTGraph(childNode->root);
         nodeCanvas->addLinePoints(node, childNode);
         childNode->toBack();

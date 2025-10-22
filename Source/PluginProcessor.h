@@ -32,8 +32,15 @@ struct MidiEvent {
     int pitch;
     int velocity;
     int duration;
-    int graphID;
+    int graphID = 0;
     int traverserEvent = false;
+    RTNode node;
+};
+
+struct ActiveNote {
+    MidiEvent event;
+    int remainingSamples;
+    bool isActive;
 };
 
 struct NodeCount{
@@ -94,10 +101,10 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     void setNewGraph(std::shared_ptr<RTGraph> graph);
     
     void scheduleTraversal();
-    void traverse(int graphID, bool isNode);
+    void traverse(int graphID);
     void handleTraverser(RTNode node);
     
-    void scheduleNodeHighlight(std::shared_ptr<RTNode> node,bool shouldHighlight);
+    void scheduleNodeHighlight(RTNode node,bool shouldHighlight);
     
     NodeCanvas* canvas;
     
@@ -110,7 +117,7 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     std::shared_ptr<GraphInfo> rtGraphInfo = nullptr;
     std::shared_ptr<GraphInfo> traverserInfo = nullptr;
 
-    std::pair<std::shared_ptr<GraphInfo>,std::shared_ptr<GraphInfo>> graphInfoPairs;
+    std::shared_ptr<std::unordered_map<int,RTNode>> globalNodes = nullptr;
 
     std::atomic<bool> isPlaying = false;
     bool isStart = true;
@@ -128,14 +135,7 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     int samplesIntoStep = 0;
     
     int bpm = 120;
-    
-    struct ActiveNote {
-        MidiEvent event;
-        int remainingSamples;
-        bool isActive;
-        int graphID;
-    };
-    
+
     std::vector<ActiveNote> activeNotes;
     int maxPolyphony = 128;
     //activeNotes.reserve(maxPolyphony);

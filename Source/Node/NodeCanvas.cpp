@@ -177,8 +177,7 @@ void NodeCanvas::makeRTGraph(Node* root)
             rtNode.countLimit = static_cast<int>(current->nodeData.nodeData.getProperty("countLimit"));
 
             if (auto traverser = dynamic_cast<Traverser*>(current)) { rtNode.isNode = false; }
-
-            std::cout<<"created node: "<<rtNode.isNode<<std::endl;
+            if (auto parent = dynamic_cast<Traverser*>(current->parent) && !rtNode.isNode) { rtNode.graphID = rtNode.nodeID; }
 
             for(auto note : current->nodeData.midiNotes){
 
