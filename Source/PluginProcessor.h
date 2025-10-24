@@ -54,6 +54,12 @@ struct TraversalInfo {
     int rtRootId = 1;
     int rtReferenceId = 0;
 
+    bool isStart = true;
+    bool isTraversing = false;
+    bool isTraversable = false;
+    bool isLooping = false;
+    bool isInterrupted = false;
+
     std::unordered_map<int,int> counts;
 };
 
@@ -101,10 +107,10 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     void setNewGraph(std::shared_ptr<RTGraph> graph);
     
     void scheduleTraversal();
-    void traverse(int graphID);
-    void handleTraverser(RTNode node);
+    void traverse(int nodeID);
+    void handleTraverser(const RTNode& node);
     
-    void scheduleNodeHighlight(RTNode node,bool shouldHighlight);
+    void scheduleNodeHighlight(const RTNode& node,bool shouldHighlight);
     
     NodeCanvas* canvas;
     

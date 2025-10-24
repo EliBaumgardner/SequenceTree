@@ -51,14 +51,19 @@ class NodeData{
         
         juce::Array<juce::ValueTree> midiNotes;
         juce::Array<juce::ValueTree> midiCCs;
-        juce::Array<Node*> children;
         juce::Array<juce::Value> propertyValues;
+
+        juce::Array<Node*> children;
+        juce::Array<Node*> connectors;
     
         Node* node;
     
         void setNode(Node* node);
         void addChild(Node* child);
         void removeChild(Node* child);
+
+        void addConnector(Node* connector);
+        void removeConnector(Node* connector);
     
         void bindEditor(juce::TextEditor& editor, const juce::Identifier propertyID,juce::String treeType);
         void createTree(juce::String type);

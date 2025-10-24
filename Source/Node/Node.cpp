@@ -16,17 +16,19 @@ int Node::globalNodeID = 0;
 
 Node::Node() : nodeID(++globalNodeID)
 {
-    upButton.setInterceptsMouseClicks(false,false);
+    upButton.setInterceptsMouseClicks(true,false);
     addAndMakeVisible(upButton);
 
-    downButton.setInterceptsMouseClicks(false,false);
+    downButton.setInterceptsMouseClicks(true,false);
     addAndMakeVisible(downButton);
 
     editor = std::make_unique<NodeBox>(this);
     editor->setInterceptsMouseClicks(false,false);
     editor->setColour(juce::TextEditor::textColourId, juce::Colours::white);
     editor->bindEditor(nodeData.nodeData,"countLimit");
+
     addAndMakeVisible(editor.get());
+    editor->toBack();
 
     nodeLogic.setNode(this);
     nodeData.setNode(this);

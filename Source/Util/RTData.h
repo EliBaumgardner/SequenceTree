@@ -32,6 +32,7 @@ struct RTNode {
     
     std::vector<RTNote> notes;
     std::vector<int> children;
+    std::vector<int> connectors;
 
     int graphID = 0;
 
@@ -42,8 +43,6 @@ struct RTGraph {
     
     std::unordered_map<int, RTNode> nodeMap;
     std::atomic<bool> traversalRequested;
-    bool isTraversing = false;
-    bool isTraversable = false;
 
     int rootID = 0;
     int graphID = 0;

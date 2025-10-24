@@ -122,4 +122,8 @@ class Node : public juce::Component {
 
         IncrementButton upButton { true };
         IncrementButton downButton { false };
+
+        bool isConnector = false;
+
+        bool isARoot = false;
 };

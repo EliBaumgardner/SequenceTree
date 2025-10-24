@@ -154,9 +154,7 @@ void NodeCanvas::makeRTGraph(Node* root)
 {
     auto rtGraph = std::make_shared<RTGraph>();
     rtGraph->graphID = root->nodeID;
-
-
-    if (rtGraph->graphID == 1){ rtGraph->isTraversable = true;}
+    //rtGraph->rootID = rtGraph->graphID;
 
     std::unordered_map<int,Node*> nodeMap;
 
@@ -168,7 +166,10 @@ void NodeCanvas::makeRTGraph(Node* root)
         stack.pop_back();
         int id = current->nodeID;
 
+
         if(nodeMap.count(id) == false){
+
+
             nodeMap[id] = current;
 
             RTNode rtNode;
@@ -176,8 +177,8 @@ void NodeCanvas::makeRTGraph(Node* root)
             rtNode.nodeID = id;
             rtNode.countLimit = static_cast<int>(current->nodeData.nodeData.getProperty("countLimit"));
 
-            if (auto traverser = dynamic_cast<Traverser*>(current)) { rtNode.isNode = false; }
-            if (auto parent = dynamic_cast<Traverser*>(current->parent) && !rtNode.isNode) { rtNode.graphID = rtNode.nodeID; }
+            if (auto traverser = dynamic_cast<Traverser*>(current))      { rtNode.isNode = false; }
+            if (auto parent = dynamic_cast<Traverser*>(current->parent)) { rtNode.graphID = rtNode.nodeID; std::cout<<"connected root added to graph: "<<rtGraph->graphID<<std::endl; }
 
             for(auto note : current->nodeData.midiNotes){
 
@@ -190,25 +191,25 @@ void NodeCanvas::makeRTGraph(Node* root)
                 rtNote.pitch = pitch;
                 rtNote.velocity = velocity;
                 rtNote.duration = duration;
-
                 rtNode.notes.push_back(std::move(rtNote));
             }
+
             rtGraph->nodeMap[id] = std::move(rtNode);
-            //rtGraph->nodes.push_back(std::move(rtNode));
             for(auto child : current->nodeData.children){ stack.push_back(child); }
         }
     }
 
     for(auto& [id, node] : nodeMap){
         for(auto& child : node->nodeData.children){ rtGraph->nodeMap[id].children.push_back(child->nodeID); }
+        for (auto& connector : node->nodeData.connectors) { rtGraph->nodeMap[id].connectors.push_back(connector->nodeID); }
     }
 
     rtGraph->traversalRequested = start;
+
     nodeMaps[rtGraph->graphID] = nodeMap;
-
     rtGraphs[rtGraph->graphID] = rtGraph;
-
     lastGraph = rtGraph;
+
     ComponentContext::processor->setNewGraph(rtGraph);
 }
 

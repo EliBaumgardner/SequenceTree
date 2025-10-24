@@ -51,15 +51,13 @@ NodeData::~NodeData() {
     propertyValues.clear();
 }
 
-void NodeData::addChild(Node* child){
-    
-    children.add(child);
-}
+void NodeData::addChild(Node* child){ children.add(child); }
 
-void NodeData::removeChild(Node* child){
-    
-    children.removeFirstMatchingValue(child);
-}
+void NodeData::removeChild(Node* child){ children.removeFirstMatchingValue(child); }
+
+void NodeData::addConnector(Node* connector) { connectors.add(connector);  connector->isConnector = true;}
+
+void NodeData::removeConnector(Node* connector) { connectors.removeFirstMatchingValue(connector); }
 
 void NodeData::bindEditor(juce::TextEditor& editor, const juce::Identifier propertyID, juce::String treeType){
     
@@ -110,5 +108,4 @@ void NodeData::createTree(juce::String type)
 }
 
 void NodeData::setNode(Node* node){ this->node = node; };
-
 

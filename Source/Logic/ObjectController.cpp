@@ -14,6 +14,7 @@
 #include "ObjectController.h"
 #include "../Node/Counter.h"
 #include "../Node/Traverser.h"
+#include "../UI/DynamicEditor.h"
 
 
 ObjectController::ObjectController(Node* node) : node(node), nodeCanvas(ComponentContext::canvas) {}
@@ -24,8 +25,11 @@ void ObjectController::mouseExit(const juce::MouseEvent& e){ node->setHoverVisua
 void ObjectController::mouseUp(const juce::MouseEvent& e) {
     if (hasConnection && connectorNode != nullptr) {
 
+        if (auto traverser = dynamic_cast<Traverser*>(node)) { node->nodeData.removeConnector(childNode); node->nodeData.addConnector(connectorNode);}
+        else { node->nodeData.removeChild(childNode);  node->nodeData.addChild(connectorNode); }
+
         nodeCanvas->removeNode(childNode);
-        node->nodeData.addChild(connectorNode);
+
         nodeCanvas->addLinePoints(node,connectorNode);
         nodeCanvas->updateLinePoints(node);
         nodeCanvas->makeRTGraph(node);
@@ -82,12 +86,11 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e)
         nodeCanvas->canvasNodes.add(childNode);
         childNode->parent = node;
 
-
-        node->nodeData.addChild(childNode);
         nodeCanvas->addAndMakeVisible(childNode);
 
-        if (auto parent = dynamic_cast<Traverser*>(node)) { childNode->root = childNode; nodeCanvas->makeRTGraph(childNode); nodeCanvas->makeRTGraph(node->root); }
-        else { childNode->root = node->root; nodeCanvas->makeRTGraph(node->root); }
+        if (auto parent = dynamic_cast<Traverser*>(node)) { node->nodeData.addConnector(childNode); childNode->root = childNode; nodeCanvas->makeRTGraph(node->root);
+        }
+        else { childNode->root = node->root; node->nodeData.addChild(childNode); }
 
         nodeCanvas->makeRTGraph(childNode->root);
         nodeCanvas->addLinePoints(node, childNode);
@@ -105,6 +108,7 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e)
     auto* target = dynamic_cast<Node*>(nodeCanvas->getComponentAt(position.x, position.y));
 
     hasConnection = target && target != childNode && target != node && target != node->parent;
+
     connectorNode = hasConnection ? target : nullptr;
     childNode->setVisible(!hasConnection);
 
