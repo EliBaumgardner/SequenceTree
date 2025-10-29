@@ -32,13 +32,14 @@ struct MidiEvent {
     int pitch;
     int velocity;
     int duration;
-    int graphID = 0;
+    int traversalId = 0;
     int traverserEvent = false;
     RTNode node;
 };
 
 struct ActiveNote {
     MidiEvent event;
+    int traversalId = 0;
     int remainingSamples;
     bool isActive;
 };
@@ -61,6 +62,17 @@ struct TraversalInfo {
     bool isInterrupted = false;
 
     std::unordered_map<int,int> counts;
+};
+
+struct TraversalEvent {
+    enum class Type { PushNote, Highlight, Unhighlight, None };
+
+    Type type = Type::None;
+    RTNode node;
+    int pitch = 0;
+    int velocity = 0;
+    int duration = 0;
+    bool highlight = false;
 };
 
 class SequenceTreeAudioProcessor  : public juce::AudioProcessor
@@ -103,7 +115,7 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
     
-    void pushNote(int pitch, int velocity, int duration, RTNode node);
+    void pushNote(RTNode node, int traversalId);
     void setNewGraph(std::shared_ptr<RTGraph> graph);
     
     void scheduleTraversal();
@@ -111,19 +123,20 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     void handleTraverser(const RTNode& node);
     
     void scheduleNodeHighlight(const RTNode& node,bool shouldHighlight);
-    
+
     NodeCanvas* canvas;
     
     using RTGraphs = std::unordered_map<int,std::shared_ptr<RTGraph>>;
     std::shared_ptr<RTGraphs> rtGraphs = nullptr;
-    
+
     int numGraphs = 0;
 
     using GraphInfo = std::unordered_map<int,TraversalInfo>;
     std::shared_ptr<GraphInfo> rtGraphInfo = nullptr;
-    std::shared_ptr<GraphInfo> traverserInfo = nullptr;
 
     std::shared_ptr<std::unordered_map<int,RTNode>> globalNodes = nullptr;
+
+    std::shared_ptr<std::unordered_map<int,int>> globalCounts = nullptr;
 
     std::atomic<bool> isPlaying = false;
     bool isStart = true;
@@ -135,33 +148,90 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     
     double currentSampleRate = 44100.0;
     int samplesPerBeat = 0;
-    
     int currentStep = 0;
     int stepLengthInSamples = 0;
     int samplesIntoStep = 0;
-    
     int bpm = 120;
 
     std::vector<ActiveNote> activeNotes;
-    int maxPolyphony = 128;
-    //activeNotes.reserve(maxPolyphony);
     
     static constexpr int fifoSize = 1024;
     juce::AbstractFifo fifo;
     std::vector<MidiEvent> midiBuffer;
-    
-    
-    
-    RTNode* rtTarget = nullptr;
-    int rtTargetId = 0;
-    
-    RTNode* rtRoot = nullptr;
-    int rtRootId = 1;
-    
-    RTNode* rtReference = nullptr;
-    int rtReferenceId = 0;
-    
-    
-    
+
+
+
+    class TraversalLogic {
+
+        public:
+
+        std::unordered_map<int,int> counts;
+        std::vector<int> traversers;
+
+        bool isStart = true;
+        bool isTraversing = false;
+        bool isTraversable = false;
+        bool isLooping = false;
+        bool isInterrupted = false;
+
+        int rootId = 0;
+        int targetId = 0;
+        int lastTargetId = 0;
+        int referenceTargetId = 0;
+
+        enum class TraversalState{ Idle, Complete, Interrupted, Active};
+        TraversalState state = TraversalState::Idle;
+
+        SequenceTreeAudioProcessor& audioProcessor;
+
+        TraversalLogic(int root,SequenceTreeAudioProcessor& processor ) : rootId(root), audioProcessor(processor) {}
+
+        void advance()
+        {
+            traversers.clear();
+            std::shared_ptr<std::unordered_map<int,RTNode>> loadedGlobalNodes = std::atomic_load(&audioProcessor.globalNodes);
+
+            referenceTargetId = lastTargetId;
+            lastTargetId = targetId;
+            int count = ++counts[targetId];
+            auto itTarget = loadedGlobalNodes->find(targetId);
+
+            if (!itTarget->second.children.empty()){
+
+                int maxLimit = 0;
+
+                for (int childIndex : itTarget->second.children) {
+                    auto itChild = loadedGlobalNodes->find(childIndex);
+                    if (itChild != loadedGlobalNodes->end()) {
+
+                        auto childNode = itChild->second;
+
+                        int limit = childNode.countLimit;
+
+                        if (count % limit == 0 && limit > maxLimit && childNode.isNode)        { targetId = childIndex; maxLimit = limit; }
+                        if (count % limit == 0 && !childNode.isNode) { traversers.push_back(childIndex); }
+                    }
+                }
+            }
+            else if (isLooping) { state = TraversalState::Idle;     return; }
+            else                { state = TraversalState::Complete; return;}
+
+            if (targetId == lastTargetId) {
+                if (isLooping) { state = TraversalState::Idle; }
+                else { state = TraversalState::Complete; }
+            }
+        }
+
+        const RTNode& getTargetNode() { return (*std::atomic_load(&audioProcessor.globalNodes))[targetId]; }
+
+        const RTNode& getLastNode() { return (*std::atomic_load(&audioProcessor.globalNodes))[lastTargetId]; }
+
+        const RTNode& getReferenceNode() { return (*std::atomic_load(&audioProcessor.globalNodes))[referenceTargetId]; }
+
+        const RTNode& getRootNode() { return (*std::atomic_load(&audioProcessor.globalNodes))[rootId]; }
+    };
+
+    std::shared_ptr<std::unordered_map<int,TraversalLogic>> traversals;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessor)
 };
