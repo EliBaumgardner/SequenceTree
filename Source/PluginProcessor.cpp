@@ -145,169 +145,7 @@ bool SequenceTreeAudioProcessor::isBusesLayoutSupported (const BusesLayout& layo
 }
 #endif
 
-void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
-{
-    if(isPlaying.load() == false){ return; }
 
-    std::shared_ptr<std::unordered_map<int,RTNode>>loadedGlobalNodes = std::atomic_load(&globalNodes);
-    std::shared_ptr<GraphInfo> loadedInfo = std::atomic_load(&rtGraphInfo);
-    std::shared_ptr<std::unordered_map<int,TraversalLogic>> loadedTraversals = std::atomic_load(&traversals);
-
-    RTGraphs* loadedGraphs = std::atomic_load(&rtGraphs).get();
-    
-    juce::ScopedNoDenormals noDenormals;
-    auto numSamples = buffer.getNumSamples();
-    buffer.clear();
-
-    // if(loadedGraphs->size() != numGraphs){
-    //
-    //     numGraphs = loadedGraphs->size();
-    //     std::cout<<"num graphs: "<<numGraphs<<std::endl;
-    //     for(auto& [graphID,info] : *loadedInfo) {
-    //
-    //         if (!info.isTraversing && info.isTraversable && info.isStart) { traverse(graphID); std::cout<<"graph: "<<graphID<<" traversal made"<<std::endl;}
-    //     }
-    // }
-
-    if (loadedTraversals->empty()) {
-
-        loadedTraversals->insert({1,TraversalLogic(1,*this)});
-        TraversalLogic& traversal = loadedTraversals->at(1);
-        traversal.targetId = traversal.rootId;
-        traversal.state = TraversalLogic::TraversalState::Active;
-        traversal.isLooping = true;
-
-        RTNode& rootNode = (*loadedGlobalNodes)[traversal.rootId];
-        scheduleNodeHighlight(rootNode,true);
-
-        int traversalId = rootNode.nodeID;
-        pushNote(rootNode,traversalId);
-     }
-
-
-    for (int sample = 0; sample < numSamples; ++sample){
-
-        for (int i = activeNotes.size() - 1; i >= 0; --i)
-        {
-            ActiveNote& note = activeNotes[i];
-
-            if (--note.remainingSamples <= 0) {
-                midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), sample);
-                note.isActive = false;
-                int traversalId = note.traversalId;
-                auto it = loadedTraversals->find(traversalId);
-                if (it == loadedTraversals->end()) { continue;  }
-
-                TraversalLogic& traversal = it->second;
-
-                switch (traversal.state) {
-                    case TraversalLogic::TraversalState::Idle: {
-
-                        std::cout<<"traversal is idle"<<std::endl;
-                        traversal.targetId = traversal.rootId;
-                        traversal.state = TraversalLogic::TraversalState::Active;
-                        traversal.advance();
-
-                        scheduleNodeHighlight(traversal.getRootNode(),true);
-                        pushNote(traversal.getRootNode(),traversalId);
-                        break;
-                    }
-
-                    case TraversalLogic::TraversalState::Active: {
-                        std::cout<<"traversal is active"<<std::endl;
-                        traversal.advance();
-
-                        switch (traversal.state) {
-                            case TraversalLogic::TraversalState::Idle: {
-                                std::cout<<"returning to root"<<std::endl;
-                                scheduleNodeHighlight(traversal.getTargetNode(),false);
-                                scheduleNodeHighlight(traversal.getRootNode(),true);
-                                pushNote(traversal.getRootNode(),traversalId);
-
-                                traversal.targetId = traversal.rootId;
-                                traversal.state = TraversalLogic::TraversalState::Active;
-                                break;
-                            }
-                            case TraversalLogic::TraversalState::Active: {
-                                std::cout<<"going to child"<<std::endl;
-
-                                scheduleNodeHighlight(traversal.getLastNode(),false);
-                                scheduleNodeHighlight(traversal.getTargetNode(),true);
-                                pushNote(traversal.getTargetNode(),traversalId);
-
-                                for (int traverserId : traversal.traversers) {
-                                    auto& traverser = (*loadedGlobalNodes)[traverserId];
-                                    scheduleNodeHighlight(traverser,true);
-
-                                    for (auto& connectorId : traverser.connectors) {
-                                        auto& connector = (*loadedGlobalNodes)[connectorId];
-                                        pushNote(connector,connector.graphID);
-                                    }
-                                }
-                                break;
-                            }
-                            case TraversalLogic::TraversalState::Complete: {
-                                std::cout<<"finished traversal"<<std::endl;
-                                scheduleNodeHighlight(traversal.getTargetNode(),false);
-                                break;
-                            }
-                        }
-                        break;
-                    }
-
-                    case TraversalLogic::TraversalState::Complete: {
-                        std::cout<<"traversal is complete"<<std::endl;
-                        scheduleNodeHighlight(traversal.getTargetNode(),false);
-                        traversal.targetId = traversal.rootId;
-                        traversal.state = TraversalLogic::TraversalState::Idle;
-                        break;
-                    }
-
-                }
-
-                // auto& noteInfo = (*loadedInfo)[note.event.node.graphID];
-                // if (!note.event.traverserEvent) { traverse(note.event.node.graphID); }
-                // else {
-                //     scheduleNodeHighlight(note.event.node,false);
-                //      for (int childIndex : note.event.node.connectors) {
-                //
-                //          auto child = (*loadedGlobalNodes)[childIndex];
-                //
-                //          auto& childInfo = (*loadedInfo)[childIndex];
-                //          childInfo.isTraversable = true;
-                //          childInfo.isStart = true;
-                //          if (!childInfo.isTraversing)traverse(child.graphID);
-                //      }
-                // }
-
-                activeNotes.erase(activeNotes.begin() + i);
-            }
-        }
-
-        int start1, size1, start2, size2;
-        fifo.prepareToRead(fifoSize, start1, size1, start2, size2);
-
-        for (int idx = 0; idx < size1; ++idx)
-        {
-            const MidiEvent& evt = midiBuffer[start1 + idx];
-
-            ActiveNote newNote;
-            newNote.traversalId = evt.traversalId;
-            newNote.event = evt;
-            newNote.remainingSamples = static_cast<int>((evt.duration / 1000.0) * currentSampleRate);
-            newNote.isActive = true;
-
-            activeNotes.push_back(newNote);
-
-            midiMessages.addEvent(juce::MidiMessage::noteOn(1, evt.pitch, (juce::uint8)evt.velocity), sample);
-        }
-
-        fifo.finishedRead(size1);
-    }
-}
-
-
-//==============================================================================
 bool SequenceTreeAudioProcessor::hasEditor() const
 {
     return true; // (change this to false if you choose to not supply an editor)
@@ -340,165 +178,170 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
     return new SequenceTreeAudioProcessor();
 }
 
-void SequenceTreeAudioProcessor::scheduleTraversal(){
 
-    pendingAsyncCalls.fetch_add(1, std::memory_order_relaxed);
-    juce::MessageManager::callAsync([this]() {
-        pendingAsyncCalls.fetch_sub(1, std::memory_order_relaxed);
-        if (canvas && canvas->root)
+void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+{
+    if(isPlaying.load() == false){ return; }
+
+    std::shared_ptr<std::unordered_map<int,RTNode>>loadedGlobalNodes = std::atomic_load(&globalNodes);
+    std::shared_ptr<GraphInfo> loadedInfo = std::atomic_load(&rtGraphInfo);
+    std::shared_ptr<std::unordered_map<int,TraversalLogic>> loadedTraversals = std::atomic_load(&traversals);
+
+    RTGraphs* loadedGraphs = std::atomic_load(&rtGraphs).get();
+    
+    juce::ScopedNoDenormals noDenormals;
+    auto numSamples = buffer.getNumSamples();
+    buffer.clear();
+
+    if (loadedTraversals->empty()) {
+
+        loadedTraversals->insert({1,TraversalLogic(1,this)});
+        TraversalLogic& traversal = loadedTraversals->at(1);
+        traversal.targetId = traversal.rootId;
+        traversal.state = TraversalLogic::TraversalState::Active;
+        traversal.isLooping = true;
+
+        RTNode& rootNode = (*loadedGlobalNodes)[traversal.rootId];
+        scheduleNodeHighlight(rootNode,true);
+
+        int traversalId = rootNode.nodeID;
+        pushNote(rootNode,traversalId,midiMessages);
+     }
+
+    for (int sample = 0; sample < numSamples; ++sample){
+
+        for (int i = activeNotes.size() - 1; i >= 0; --i)
         {
-            this->root = canvas->root;
-            NodeLogic::start = true;
-            canvas->root->nodeLogic.traverse();
+            ActiveNote& note = activeNotes[i];
+
+            if (note.traversalId == -1) { continue; }
+            if (--note.remainingSamples > 0) { continue; }
+
+                midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), sample);
+                note.isActive = false;
+                int traversalId = note.traversalId;
+                auto it = loadedTraversals->find(traversalId);
+                if (it == loadedTraversals->end()) { continue;  }
+
+                TraversalLogic& traversal = it->second;
+
+                switch (traversal.state) {
+                    case TraversalLogic::TraversalState::Idle: {
+
+                        traversal.targetId = traversal.rootId;
+                        traversal.state = TraversalLogic::TraversalState::Active;
+                        scheduleNodeHighlight(traversal.getLastNode(),false);
+                        scheduleNodeHighlight(traversal.getRootNode(),true);
+                        pushNote(traversal.getRootNode(),traversalId,midiMessages);
+                        break;
+                    }
+
+                    case TraversalLogic::TraversalState::Active: {
+                        traversal.advance();
+
+                        for (int traverserId : traversal.traversers) {
+
+                            auto& traverser = (*loadedGlobalNodes)[traverserId];
+                            scheduleNodeHighlight(traverser,true);
+
+                            for (auto& connectorId : traverser.connectors) {
+
+                                auto& connector = (*loadedGlobalNodes)[connectorId];
+
+
+                                if (loadedTraversals->find(connector.graphID) != loadedTraversals->end()) {
+                                    TraversalLogic& nextTraversal = loadedTraversals->at(connector.graphID);
+                                    scheduleNodeHighlight(nextTraversal.getTargetNode(), false);
+                                    nextTraversal.targetId = connectorId;
+                                    nextTraversal.lastTargetId = traverserId;
+                                    scheduleNodeHighlight(nextTraversal.getTargetNode(), true);
+                                    pushNote(nextTraversal.getTargetNode(), nextTraversal.rootId,midiMessages);
+                                }
+                                else {
+                                    loadedTraversals->insert({connector.graphID,TraversalLogic(connector.graphID,this)});
+                                    TraversalLogic& nextTraversal = loadedTraversals->at(connector.graphID);
+                                    nextTraversal.lastTargetId = traverserId;
+                                    pushNote(connector,connector.graphID,midiMessages);
+                                }
+                            }
+                        }
+
+                        switch (traversal.state) {
+
+                            case TraversalLogic::TraversalState::Idle: {
+
+                                scheduleNodeHighlight(traversal.getTargetNode(),false);
+                                scheduleNodeHighlight(traversal.getRootNode(),true);
+                                pushNote(traversal.getRootNode(),traversalId,midiMessages);
+
+                                traversal.targetId = traversal.rootId;
+                                traversal.state = TraversalLogic::TraversalState::Active;
+                                break;
+                            }
+                            case TraversalLogic::TraversalState::Active: {
+
+                                scheduleNodeHighlight(traversal.getLastNode(),false);
+                                scheduleNodeHighlight(traversal.getTargetNode(),true);
+                                pushNote(traversal.getTargetNode(),traversalId,midiMessages);
+
+                                break;
+                            }
+                            case TraversalLogic::TraversalState::Complete: {
+
+                                scheduleNodeHighlight(traversal.getTargetNode(),false);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+
+                    case TraversalLogic::TraversalState::Complete: {
+                        std::cout<<"traversal is complete"<<std::endl;
+                        scheduleNodeHighlight(traversal.getTargetNode(),false);
+                        traversal.targetId = traversal.rootId;
+                        traversal.state = TraversalLogic::TraversalState::Idle;
+                        break;
+                    }
+
+                    case TraversalLogic::TraversalState::Interrupted: {
+
+                    }
+                }
+                activeNotes.erase(activeNotes.begin() + i);
         }
-    });
-}
-
-void SequenceTreeAudioProcessor::traverse(int nodeID) {
-
-    // //1. Load Graphs,Info and Maps Needed for traversal
-    // std::shared_ptr<RTGraphs> loadedGraphs = std::atomic_load(&rtGraphs);
-    // std::shared_ptr<GraphInfo> loadedInfo = std::atomic_load(&rtGraphInfo);
-    // std::shared_ptr<std::unordered_map<int, RTNode>> rtGlobalNodes = std::atomic_load(&globalNodes);
-    //
-    // if (!loadedGraphs || !loadedInfo || !rtGlobalNodes) { return; }
-    //
-    // int graphID = (*rtGlobalNodes)[nodeID].graphID;
-    // auto infoIt = loadedInfo->find(graphID);
-    // if (infoIt == loadedInfo->end()) { return; }
-    //
-    // TraversalInfo* info = &infoIt->second;
-    //
-    // info->isTraversing = true;
-    //
-    // if (loadedGraphs->find(graphID) == loadedGraphs->end()) {  std::cout<<"no graph found"<<std::endl; return;}
-    //
-    // auto currentRTGraph = (*loadedGraphs)[graphID];
-    // if(!info->isTraversable){ return;}
-    // if (!currentRTGraph->traversalRequested.load(std::memory_order_acquire)) { return; }
-    //
-    //
-    //
-    // //3. set traversal to root if looping or is traversal start, otherwise return and unhighlight node
-    //
-    // if ( info->rtTargetId == 0) {
-    //     if (info->isLooping) { info->rtTargetId = graphID; }
-    //     else if (info->isStart) {info->rtTargetId = graphID;}
-    //     info->isStart = false;
-    // }
-    //
-    // //2. unhighlight previous node
-    // if (info->rtReferenceId) {
-    //     auto it = rtGlobalNodes->find(info->rtReferenceId);
-    //     if (it != rtGlobalNodes->end()) {
-    //         auto rtNode = it->second;
-    //         scheduleNodeHighlight(rtNode, false);
-    //     }
-    //     if (info->rtTargetId == 0) { info->isTraversing = false; return; }
-    // }
-    //
-    // //if (info->isInterrupted) { info->isInterrupted = false; return; }
-    //
-    // if (nodeID != graphID) { info->rtTargetId = nodeID;}
-    //
-    // //4. Highlight current node
-    //
-    // auto itTarget = rtGlobalNodes->find(info->rtTargetId);
-    //
-    // if (itTarget != rtGlobalNodes->end()) {
-    //
-    //     auto rtNode = itTarget->second;
-    //     scheduleNodeHighlight(rtNode, true);
-    //
-    //
-    // //5. Push the notes of the current node
-    //
-    //         pushNote(rtNode);
-    //
-    //
-    // //6. Increment count of current node
-    //
-    //     int count = ++info->counts[info->rtTargetId];
-    //
-    //
-    // //7. Set the last traversed node to the current node
-    //
-    //     info->rtReferenceId = info->rtTargetId;
-    //
-    //
-    // //8. Traverse children of current node, and set the current node to traversable child
-    //
-    //     if (!itTarget->second.children.empty()) {
-    //
-    //         int maxLimit = 0;
-    //         int traverserLimit = 0;
-    //
-    //         for (int childIndex : itTarget->second.children) {
-    //             auto itChild = rtGlobalNodes->find(childIndex);
-    //             if (itChild != rtGlobalNodes->end()) {
-    //
-    //                 auto childNode = itChild->second;
-    //
-    //                 int limit = childNode.countLimit;
-    //
-    //                 if (count % limit == 0 && limit > maxLimit && childNode.isNode)        { info->rtTargetId = childIndex; maxLimit = limit; }
-    //                 if (count % limit == 0 && limit > traverserLimit && !childNode.isNode) { handleTraverser(childNode); }
-    //             }
-    //         }
-    //     }
-    //
-    // }
-    //
-    //
-    // //9. If the Node target is invalid then restart the traversal
-    //
-    // else { info->rtTargetId = 0; traverse(graphID); return; }
-    //
-    //
-    // //10. If the current node is the same as the last node, restart traversal
-    //
-    // if (info->rtTargetId == info->rtReferenceId ) {
-    //     if (info->isLooping) { info->rtTargetId = graphID; }
-    //     else info->rtTargetId = 0;
-    // }
-}
-
-
-//Handle traverser objects by pushing notes off to processBlock, and using traverse function on children
-void SequenceTreeAudioProcessor::handleTraverser(const RTNode& node) {
-
-    // if (!node.connectors.empty()) {
-    //     scheduleNodeHighlight(node, true);
-    //     if (node.notes.empty()) { pushNote(node); }
-    //     else { const auto& note = node.notes[0]; pushNote(node); }
-    // }
-    // else { scheduleNodeHighlight(node, false); }
+    }
 }
 
 //Pushes notes into a buffer that is read by processBlock, where a midi event is created
-void SequenceTreeAudioProcessor::pushNote(RTNode node, int traversalId){
+void SequenceTreeAudioProcessor::pushNote(RTNode node, int traversalId,juce::MidiBuffer& midiMessages)
+{
+
+    if (!node.isNode) {
+        for (int i = 0; i < activeNotes.size(); ++i) {
+            if (activeNotes[i].traversalId == traversalId) { activeNotes[i].traversalId = -1; }
+        }
+    }
 
     int pitch = 63, velocity = 63, duration = 1000;
 
     if (!node.notes.empty()) {
-        RTNote& note = node.notes[0];
+        const RTNote& note = node.notes[0];
         pitch = note.pitch;
         velocity = note.velocity;
         duration = note.duration;
     }
 
-    int start1, size1, start2, size2;
-    fifo.prepareToWrite(1, start1, size1, start2, size2);
+    ActiveNote newNote;
+    newNote.traversalId = traversalId;
+    newNote.event.pitch = pitch;
+    newNote.event.velocity = velocity;
+    newNote.event.duration = duration;
+    newNote.remainingSamples = static_cast<int>((duration / 1000.0) * currentSampleRate);
+    newNote.isActive = true;
+    newNote.event.node = node;
 
-    if (size1 > 0) {
-        MidiEvent& event = midiBuffer[start1];
-        event.pitch = pitch;
-        event.velocity = velocity;
-        event.duration = duration;
-        event.traversalId = traversalId;
-        event.node = node;
-    }
-    fifo.finishedWrite(size1);
+    activeNotes.push_back(newNote);
+    midiMessages.addEvent(juce::MidiMessage::noteOn(1, pitch, (juce::uint8)velocity), 0);
 }
 
 //Asynchronous node highlighting scheduled for editor
@@ -516,8 +359,6 @@ void SequenceTreeAudioProcessor::scheduleNodeHighlight(const RTNode& node, bool 
 
         auto& nodeMap = canvas->nodeMaps[graphID];
 
-
-
         auto it = nodeMap.find(nodeID);
         if (it != nodeMap.end()) {
             Node* foundNode = nullptr;
@@ -532,7 +373,7 @@ void SequenceTreeAudioProcessor::scheduleNodeHighlight(const RTNode& node, bool 
 //Adds a new graph to the processor and inserts/deletes nodes based on graph
 void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
 
-    //1. Placeholder structures to modify data and atomic swap
+    ////////  1. Placeholder structures to modify data and atomic swap  ////////
     std::shared_ptr<std::unordered_map<int,RTNode>> newGlobalNodes;
     std::shared_ptr<RTGraphs> newRTGraphs;
     std::shared_ptr<GraphInfo> newRTGraphInfo;
@@ -554,7 +395,7 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
     auto& graphData = (*newRTGraphInfo)[graph->graphID];
     auto& counts = graphData.counts;
 
-    //2. If the graph is the first one then it should loop and be traversable
+    ////////  2. If the graph is the first one then it should loop and be traversable  ////////
 
     if (graph->graphID == 1){graphData.isTraversable = true; graphData.isLooping = true; }
 
@@ -568,7 +409,7 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
     }
 
 
-    //4. remove stale data from copies
+    ////////  4. remove stale data from copies  ////////
 
     std::vector<int> idsToErase;
     for (const auto& [nodeId, count] : counts) {
@@ -588,7 +429,7 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
     for (int id : globalNodesToErase) { newGlobalNodes->erase(id); }
 
 
-    //5. atomic swap copy structures
+    ////////  5. atomic swap copy structures  ////////
 
     std::atomic_store(&rtGraphs, newRTGraphs);
     std::atomic_store(&rtGraphInfo, newRTGraphInfo);
