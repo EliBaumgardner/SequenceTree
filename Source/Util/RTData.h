@@ -12,7 +12,6 @@
 
 class Node;
 class NodeData;
-class NodeLogic;
 
 // RT POD structures for data stored in GUI //
 
@@ -26,16 +25,18 @@ struct RTNote {
 struct RTNode {
     
     int nodeID = 0;
+    int parentId = 0;
     int countLimit = 0;
 
-    bool isNode = true;
-    
+    enum class NodeType {Node, RelayNode, Counter};
+
+    NodeType nodeType = NodeType::Node;
+
     std::vector<RTNote> notes;
     std::vector<int> children;
     std::vector<int> connectors;
 
     int graphID = 0;
-
 };
 
 

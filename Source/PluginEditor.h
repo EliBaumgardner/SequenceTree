@@ -13,7 +13,6 @@
 #include "PluginProcessor.h"
 #include "Node/NodeCanvas.h"
 #include "Node/Node.h"
-#include "Logic/NodeLogic.h"
 #include "Logic/DynamicPort.h"
 #include "UI/TitleBar.h"
 #include "UI/SelectionBar.h"

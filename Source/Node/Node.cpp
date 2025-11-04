@@ -30,7 +30,6 @@ Node::Node() : nodeID(++globalNodeID)
     addAndMakeVisible(editor.get());
     editor->toBack();
 
-    nodeLogic.setNode(this);
     nodeData.setNode(this);
 
     upButton.onChanged = [this](){

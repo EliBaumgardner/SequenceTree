@@ -39,15 +39,13 @@ target_sources(SequenceTree PRIVATE
         Source/Node/NodeCanvas.cpp
         Source/Logic/ObjectController.cpp
         Source/Node/NodeData.cpp
-        Source/Logic/NodeLogic.cpp
         Source/UI/PianoRoll.cpp
         Source/PluginEditor.cpp
         Source/PluginProcessor.cpp
         Source/UI/SelectionBar.cpp
         Source/UI/TitleBar.cpp
         Source/Node/Counter.cpp
-        Source/Node/Traverser.cpp
-        Source/TraversalSystem.cpp
+        Source/Node/RelayNode.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE

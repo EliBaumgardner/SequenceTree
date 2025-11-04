@@ -15,7 +15,7 @@
 #include "../Util/RTData.h"
 #include "NodeBox.h"
 #include "NodeArrow.h"
-#include "Traverser.h"
+#include "RelayNode.h"
 #include "../Logic/DynamicPort.h"
 
 class NodeCanvas : public juce::Component {

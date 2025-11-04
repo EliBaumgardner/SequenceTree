@@ -166,9 +166,7 @@ void NodeCanvas::makeRTGraph(Node* root)
         stack.pop_back();
         int id = current->nodeID;
 
-
         if(nodeMap.count(id) == false){
-
 
             nodeMap[id] = current;
 
@@ -177,8 +175,8 @@ void NodeCanvas::makeRTGraph(Node* root)
             rtNode.nodeID = id;
             rtNode.countLimit = static_cast<int>(current->nodeData.nodeData.getProperty("countLimit"));
 
-            if (auto traverser = dynamic_cast<Traverser*>(current))      { rtNode.isNode = false; }
-            if (auto parent = dynamic_cast<Traverser*>(current->parent)) { rtNode.graphID = rtNode.nodeID; std::cout<<"connected root added to graph: "<<rtGraph->graphID<<std::endl; }
+            if (auto traverser = dynamic_cast<RelayNode*>(current))      { rtNode.nodeType = RTNode::NodeType::RelayNode; }
+            if (auto parent = dynamic_cast<RelayNode*>(current->parent)) { rtNode.graphID = rtNode.nodeID; }
 
             for(auto note : current->nodeData.midiNotes){
 

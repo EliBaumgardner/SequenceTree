@@ -2,9 +2,9 @@
 // Created by Eli Baumgardner on 10/7/25.
 //
 
-#include "Traverser.h"
+#include "RelayNode.h"
 
-Traverser::Traverser() {
+RelayNode::RelayNode() {
 
     editor = std::make_unique<NodeBox>(this);
 
@@ -12,7 +12,6 @@ Traverser::Traverser() {
     addAndMakeVisible(downButton);
     addAndMakeVisible(editor.get());
 
-    nodeLogic.setNode(this);
     nodeData.setNode(this);
     //nodeController = std::make_unique<ObjectController>(this);
     //this->addMouseListener(nodeController.get(), true);
@@ -35,7 +34,7 @@ Traverser::Traverser() {
     };
 }
 
-void Traverser::resized() {
+void RelayNode::resized() {
     auto editorArea = getLocalBounds().reduced(10.0f);
 
     upButton.setBounds(editorArea.removeFromTop(4.0f));
@@ -50,7 +49,7 @@ void Traverser::resized() {
     nodeData.nodeData.setProperty("radius", getWidth()/2,nullptr);
 }
 
-void Traverser::paint(juce::Graphics& g)
+void RelayNode::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
 
@@ -107,7 +106,7 @@ void Traverser::paint(juce::Graphics& g)
     }
 }
 
-void Traverser::setDisplayMode(NodeBox::DisplayMode mode){
+void RelayNode::setDisplayMode(NodeBox::DisplayMode mode){
 
 
     juce::ValueTree midiTree("MidiNoteData");

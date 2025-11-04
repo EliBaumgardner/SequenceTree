@@ -15,7 +15,6 @@
 #include "NodeBox.h"
 
 #include "../Logic/ObjectController.h"
-#include "../Logic/NodeLogic.h"
 #include "NodeData.h"
 
 class NodeController;
@@ -45,7 +44,6 @@ class Node : public juce::Component {
         Node* parent = nullptr;
         Node* root = nullptr;
 
-        NodeLogic nodeLogic;
         //std::unique_ptr<ObjectController> nodeController = nullptr;
         NodeData nodeData;
     

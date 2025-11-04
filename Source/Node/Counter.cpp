@@ -12,7 +12,6 @@ Counter::Counter() {
     addAndMakeVisible(downButton);
     addAndMakeVisible(editor.get());
 
-    nodeLogic.setNode(this);
     nodeData.setNode(this);
     //nodeController = std::make_unique<ObjectController>(this);
     //this->addMouseListener(nodeController.get(), true);

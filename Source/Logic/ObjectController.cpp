@@ -13,7 +13,7 @@
 #include "../Node/NodeData.h"
 #include "ObjectController.h"
 #include "../Node/Counter.h"
-#include "../Node/Traverser.h"
+#include "../Node/RelayNode.h"
 #include "../UI/DynamicEditor.h"
 
 
@@ -25,7 +25,7 @@ void ObjectController::mouseExit(const juce::MouseEvent& e){ node->setHoverVisua
 void ObjectController::mouseUp(const juce::MouseEvent& e) {
     if (hasConnection && connectorNode != nullptr) {
 
-        if (auto traverser = dynamic_cast<Traverser*>(node)) { node->nodeData.removeConnector(childNode); node->nodeData.addConnector(connectorNode);}
+        if (auto traverser = dynamic_cast<RelayNode*>(node)) { node->nodeData.removeConnector(childNode); node->nodeData.addConnector(connectorNode);}
         else { node->nodeData.removeChild(childNode);  node->nodeData.addChild(connectorNode); }
 
         nodeCanvas->removeNode(childNode);
@@ -79,7 +79,7 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e)
         {
             case NodeCanvas::ControllerMode::Node:      childNode = new Node(); break;
             case NodeCanvas::ControllerMode::Counter:   childNode = new Counter(); break;
-            case NodeCanvas::ControllerMode::Traverser: childNode = new Traverser(); break;
+            case NodeCanvas::ControllerMode::Traverser: childNode = new RelayNode(); break;
             default: return;
         }
 
@@ -88,7 +88,7 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e)
 
         nodeCanvas->addAndMakeVisible(childNode);
 
-        if (auto parent = dynamic_cast<Traverser*>(node)) { node->nodeData.addConnector(childNode); childNode->root = childNode; nodeCanvas->makeRTGraph(node->root);
+        if (auto parent = dynamic_cast<RelayNode*>(node)) { node->nodeData.addConnector(childNode); childNode->root = childNode; nodeCanvas->makeRTGraph(node->root);
         }
         else { childNode->root = node->root; node->nodeData.addChild(childNode); }
 

@@ -11,11 +11,11 @@
 
 class NodeCanvas;
 
-class Traverser : public Node {
+class RelayNode : public Node {
 
 public:
 
-    Traverser();
+    RelayNode();
     void resized() override;
     void paint(juce::Graphics& g) override;
     void setDisplayMode(NodeBox::DisplayMode mode);
