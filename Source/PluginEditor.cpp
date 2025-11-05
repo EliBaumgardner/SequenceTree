@@ -35,6 +35,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     
     ComponentContext::processor = &p;
     ComponentContext::canvas = &canvas;
+    ComponentContext::lookAndFeel = &lookAndFeel;
 }
 
 SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()

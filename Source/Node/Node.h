@@ -10,10 +10,9 @@
 
 #pragma once
 
+#include "../CustomLookAndFeel.h"
 #include "../Util/ProjectModules.h"
-
 #include "NodeBox.h"
-
 #include "../Logic/ObjectController.h"
 #include "NodeData.h"
 
@@ -61,8 +60,6 @@ class Node : public juce::Component {
         int nodeID = 0;
         static int globalNodeID;
 
-
-
         //BUTTONS//
 
         class IncrementButton : public juce::Component {
@@ -73,7 +70,7 @@ class Node : public juce::Component {
             std::function<void()> onChanged;
             
             IncrementButton(bool increment) : increment(increment) {
-                
+
             }
             
             void paint(juce::Graphics& g) override {
@@ -113,7 +110,7 @@ class Node : public juce::Component {
             }
             
             void mouseDown(const juce::MouseEvent& e) override {
-                
+
                 onChanged();
             }
         };

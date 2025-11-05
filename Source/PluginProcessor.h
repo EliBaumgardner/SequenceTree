@@ -257,11 +257,7 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
                         traversal.handleNodeEvent();
                         if (traversal.shouldTraverse()) {
                             pushNote(traversal.getTargetNode(), traversalId, midiMessages);
-
-                            for (int traverserId : traversal.traversers) {
-                                auto& traverser = loadedGlobalNodes.at(traverserId);
-                                pushNote(traverser, traversalId, midiMessages);
-                            }
+                            for (int traverserId : traversal.traversers) { pushNote(loadedGlobalNodes.at(traverserId), traversalId, midiMessages); }
                         }
                         break;
                     }
@@ -272,6 +268,7 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
                     }
                     case RTNode::NodeType::Counter : { break; }
                 }
+
                 activeNotes.erase(activeNotes.begin() + i);
             }
         }

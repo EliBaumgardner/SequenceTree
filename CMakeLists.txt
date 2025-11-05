@@ -46,6 +46,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/TitleBar.cpp
         Source/Node/Counter.cpp
         Source/Node/RelayNode.cpp
+        Source/CustomLookAndFeel.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE

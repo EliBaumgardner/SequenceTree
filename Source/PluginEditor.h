@@ -16,6 +16,7 @@
 #include "Logic/DynamicPort.h"
 #include "UI/TitleBar.h"
 #include "UI/SelectionBar.h"
+#include "CustomLookAndFeel.h"
 
 
 //==============================================================================
@@ -49,5 +50,6 @@ private:
     float menuWidthRatio = 0.25f;
     float menuHeightRatio = 0.25f;
 
+    CustomLookAndFeel lookAndFeel;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessorEditor)
 };

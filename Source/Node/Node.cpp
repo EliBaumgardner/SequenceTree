@@ -14,8 +14,11 @@
 
 int Node::globalNodeID = 0;
 
+
 Node::Node() : nodeID(++globalNodeID)
 {
+    setLookAndFeel(ComponentContext::lookAndFeel);
+
     upButton.setInterceptsMouseClicks(true,false);
     addAndMakeVisible(upButton);
 
@@ -54,32 +57,8 @@ Node::~Node()
 
 void Node::paint(juce::Graphics& g)
 {
-    auto bounds = getLocalBounds().toFloat();
-    auto circleBorder = bounds.reduced(2.5f);
-    auto circleSelect = bounds.reduced(0.5f);
-    auto circleHover = bounds.reduced(4.5f);
-    auto circleFill = bounds.reduced(5.5f);
-
-    g.setColour(juce::Colours::black);
-    g.drawEllipse(circleBorder, 1.0f);
-    
-    g.setColour(isHighlighted ? nodeColour.darker() : nodeColour);
-    g.fillEllipse(circleFill);
-    
-    if (isHovered) { g.drawEllipse(circleHover, 2.0f); }
-    
-    if (isSelected)
-    {
-        juce::Path dottedPath;
-        dottedPath.addEllipse(circleSelect);
-
-        juce::PathStrokeType stroke(0.325f);
-
-        float dashLengths[] = { 2.935f, 2.935f };
-        stroke.createDashedStroke(dottedPath, dottedPath, dashLengths, 2);
-
-        g.setColour(juce::Colours::black);
-        g.strokePath(dottedPath, stroke);
+    if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) {
+        customLookAndFeel->drawNode(g,*this);
     }
 }
 

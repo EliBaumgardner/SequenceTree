@@ -286,15 +286,10 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
 
     (*newRTGraphs)[graph->graphID] = graph;
 
-    //3. add new data to copies
     for (const auto& [nodeId, node] : graph->nodeMap) {
         for (auto& [id,traverser]: *newTraversals ) { if (!traverser.counts.count(nodeId)) { traverser.counts[nodeId] = 0; } }
         (*newGlobalNodes)[nodeId] = node;
     }
-
-
-    ////////  4. remove stale data from copies  ////////
-
 
     std::vector<int> staleIds;
     for (const auto& [nodeId,node] : *newGlobalNodes) {
@@ -305,9 +300,6 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
         newGlobalNodes->erase(id);
         for (auto& [id,traverser] : *newTraversals) { traverser.counts.erase(id); }
     }
-
-
-    ////////  5. atomic swap copy structures  ////////
 
     std::atomic_store(&rtGraphs, newRTGraphs);
     std::atomic_store(&globalNodes, newGlobalNodes);
