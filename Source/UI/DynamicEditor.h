@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "../Util/ComponentContext.h"
 #include "../Util/ProjectModules.h"
 
 class DynamicEditor : public juce::TextEditor {
@@ -34,8 +35,6 @@ class DynamicEditor : public juce::TextEditor {
         void setGroup(juce::String groupID);
     
         void clearBindings();
-        
-        void makeBoundsVisible(bool isBoundsVisible);
     
         void displayHint(bool showHint, juce::String hintText);
     

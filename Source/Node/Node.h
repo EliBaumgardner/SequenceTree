@@ -43,13 +43,12 @@ class Node : public juce::Component {
         Node* parent = nullptr;
         Node* root = nullptr;
 
-        //std::unique_ptr<ObjectController> nodeController = nullptr;
         NodeData nodeData;
     
         std::unique_ptr<NodeBox> editor = nullptr;
         NodeBox::DisplayMode mode;
     
-        juce::Colour nodeColour = juce::Colours::blue;
+        juce::Colour nodeColour = juce::Colour::fromRGB(91,86,76);
 
         //Primative Variables//
         bool isHovered = false;

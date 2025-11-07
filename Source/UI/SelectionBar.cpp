@@ -11,7 +11,9 @@
 #include "SelectionBar.h"
 
 SelectionBar::SelectionBar(){
-    
+
+    setLookAndFeel(ComponentContext::lookAndFeel);
+
     addAndMakeVisible(selectionButton);
     addAndMakeVisible(pianoRollButton);
     addAndMakeVisible(nodeButton);
@@ -76,8 +78,5 @@ void SelectionBar::resized() {
 }
 
 void SelectionBar::paint(juce::Graphics& g) {
-    
-    auto bounds = getLocalBounds().reduced(2.0f).toFloat();
-    g.setColour(juce::Colours::black);
-    g.drawRect(bounds,2.0f);
+    if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->MenuBar(g, *this); }
 }

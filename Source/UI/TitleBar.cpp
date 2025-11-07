@@ -10,37 +10,33 @@
 
 #include "TitleBar.h"
 
-TitleBar::TitleBar(){
+TitleBar::TitleBar()
+{
+    setLookAndFeel(ComponentContext::lookAndFeel);
     addAndMakeVisible(playButton);
     addAndMakeVisible(editor);
+    addAndMakeVisible(syncButton);
 
-    playButton.onClick = [=](){
-        toggled();
-    };
+    playButton.onClick = [=](){ toggled(); };
 }
 
-TitleBar::~TitleBar(){
-    
+void TitleBar::paint(juce::Graphics& g)
+{
+    if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawTitleBar(g,*this); }
 }
 
-void TitleBar::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colours::white);
-    g.setColour(juce::Colours::black);
+void TitleBar::resized()
+{
+    auto bounds = getLocalBounds().reduced(2);
 
-    auto inner = getBounds().reduced(4);
-    g.drawRect(inner,1.0f);
-    
-}
+    // Determine square button size based on smaller of desired width or TitleBar height
+    int desiredWidth = bounds.getWidth() / 25;
+    int buttonSize = std::min(desiredWidth, bounds.getHeight());
+    int spacing = 3;
 
-void TitleBar::resized(){
-    
-    
-    auto playButtonWidth = getBounds().getWidth()/25;
-    auto editorWidth = getBounds().getWidth()/15;
-    
-    playButton.setBounds(getWidth()/2 - (playButtonWidth/2+editorWidth),getHeight()*0.2,playButtonWidth,getHeight()*0.6);
-    editor.setBounds(getWidth()/2 - (editorWidth/2),getHeight()*0.2,editorWidth,getHeight()*0.6);
+    playButton.setBounds(bounds.removeFromLeft(buttonSize));
+    editor.setBounds(bounds.removeFromLeft(bounds.getWidth() / 12.5).withTrimmedTop(2).withTrimmedBottom(2).withTrimmedLeft(spacing));
+    syncButton.setBounds(bounds.removeFromLeft(buttonSize).withTrimmedLeft(spacing)); // now width scales with TitleBar
+
     editor.refit();
-    
-    //sync button
 }

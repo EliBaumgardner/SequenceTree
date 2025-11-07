@@ -36,20 +36,15 @@ public:
     void setManualMenuBounds (juce::Rectangle<int> b);
 
 private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
     SequenceTreeAudioProcessor& audioProcessor;
     
-    NodeCanvas canvas;
-
-    std::unique_ptr<DynamicPort> port;
-    
-    TitleBar titleBar;
-    SelectionBar selectionBar;
+    std::unique_ptr<NodeCanvas>   canvas       = nullptr;
+    std::unique_ptr<TitleBar>     titleBar     = nullptr;
+    std::unique_ptr<SelectionBar> selectionBar = nullptr;
+    std::unique_ptr<DynamicPort>  port         = nullptr;
+    CustomLookAndFeel lookAndFeel;
     
     float menuWidthRatio = 0.25f;
     float menuHeightRatio = 0.25f;
-
-    CustomLookAndFeel lookAndFeel;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessorEditor)
 };

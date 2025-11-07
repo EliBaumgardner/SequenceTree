@@ -13,9 +13,9 @@
 #include "../Node/NodeCanvas.h"
 
 DynamicEditor::DynamicEditor(){
-    
-    makeBoundsVisible(true);
-   
+
+    setLookAndFeel(ComponentContext::lookAndFeel);
+
     //refit the text when it changes
     onTextChange = [this](){
         
@@ -102,31 +102,10 @@ void DynamicEditor::clearBindings() {
     bindValue.referTo(juce::Value());
 }
 
-void DynamicEditor::makeBoundsVisible(bool isBoundsVisible){
-    
-    //set whether the textbox has visible boundaries
-    if(isBoundsVisible){
-        setColour(juce::TextEditor::textColourId, juce::Colours::black);
-        setOpaque(false);
-        setColour(juce::TextEditor::backgroundColourId, juce::Colours::transparentBlack);
-        setColour(juce::TextEditor::outlineColourId, juce::Colours::black);
-        setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::black);
-        setColour(juce::TextEditor::highlightColourId, juce::Colours::black);
-    }
-    else {
-        setColour(juce::TextEditor::textColourId, juce::Colours::black);
-        setOpaque(false);
-        setColour(juce::TextEditor::backgroundColourId, juce::Colours::transparentBlack);
-        setColour(juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
-        setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
-        setColour(juce::TextEditor::highlightColourId, juce::Colours::transparentBlack);
-    }
-    repaint();
-}
-
 void DynamicEditor::paint(juce::Graphics& g){
-    
-    TextEditor::paint(g);                   //paint editor + ...
+
+    if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawEditor(g,*this); }
+    //TextEditor::paint(g);                   //paint editor + ...
  
 }
 

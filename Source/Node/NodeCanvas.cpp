@@ -4,15 +4,16 @@
 #include "../PluginProcessor.h"
 
 // Canvas Related Functions //
-NodeCanvas::NodeCanvas() { updateInfoText(); }
+NodeCanvas::NodeCanvas() {
+    setLookAndFeel(ComponentContext::lookAndFeel);
+    updateInfoText();
+}
 
 NodeCanvas::~NodeCanvas() {}
 
 void NodeCanvas::paint(juce::Graphics& g)
 {
-    g.fillAll(canvasColour);
-    g.setFont(12.0f);
-    g.drawText(infoText, getLocalBounds(), juce::Justification::topRight, true);
+    if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawCanvas(g,*this); }
 }
 
 void NodeCanvas::resized()

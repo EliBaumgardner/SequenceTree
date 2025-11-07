@@ -14,68 +14,41 @@
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
 : AudioProcessorEditor(p),audioProcessor (p)
 {
-    
-    port = std::make_unique<DynamicPort>(&canvas);
-    addAndMakeVisible(port.get());
-    
-    setResizable(true,true);
-
-    addAndMakeVisible(selectionBar);
-    addAndMakeVisible(titleBar);
-    setSize (400, 300);
-    
-    audioProcessor.canvas = &canvas;
-    
-    titleBar.toggled = [this](){
-        
-        canvas.start = !canvas.start;
-        canvas.setProcessorPlayblack(canvas.start);
-        //canvas.updateProcessorGraph(canvas.root);
-    };
-    
     ComponentContext::processor = &p;
-    ComponentContext::canvas = &canvas;
     ComponentContext::lookAndFeel = &lookAndFeel;
-}
 
-SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
-{
+    canvas       = std::make_unique<NodeCanvas>(); ComponentContext::canvas = canvas.get();
+    titleBar     = std::make_unique<TitleBar>();
+    selectionBar = std::make_unique<SelectionBar>();
+    port         = std::make_unique<DynamicPort>(canvas.get());
 
-}
-
-
-void SequenceTreeAudioProcessorEditor::paint (juce::Graphics& g)
-{
-    g.fillAll(juce::Colours::white);
+    audioProcessor.canvas = canvas.get();
     
+    titleBar->toggled = [this](){ canvas->start = !canvas->start; canvas->setProcessorPlayblack(canvas->start); };
+
+    addAndMakeVisible(port.get());
+    addAndMakeVisible(selectionBar.get());
+    addAndMakeVisible(titleBar.get());
+
+    setResizable(true,true);
+    setSize (400, 300);
 }
+
+SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor() {}
+
+
+void SequenceTreeAudioProcessorEditor::paint (juce::Graphics& g) { g.fillAll(juce::Colours::white); }
 
 void SequenceTreeAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds();
     port.get()->setBounds(bounds);
     
-    auto titleHeight = static_cast<int>(bounds.getHeight() * 0.1f);
+    auto titleHeight = static_cast<int>(bounds.getHeight() * 0.05f);
     auto titleArea = bounds.removeFromTop(titleHeight);
-    titleBar.setBounds(titleArea);
+    titleBar->setBounds(titleArea);
 
-    auto selectionHeight = static_cast<int>(bounds.getHeight() * 0.1f);
+    auto selectionHeight = static_cast<int>(bounds.getHeight() * 0.05f);
     auto selectionBarArea = bounds.removeFromBottom(selectionHeight);
-    selectionBar.setBounds(selectionBarArea);
-    
-    //int menuW = static_cast<int>(menuWidthRatio * static_cast<float>(getWidth()));
-    //menu.setBounds(bounds.removeFromLeft(menuW)); // Menu on left, taking up width
+    selectionBar->setBounds(selectionBarArea);
 }
-
-
-void SequenceTreeAudioProcessorEditor::setManualMenuBounds (juce::Rectangle<int> b)
-    {
-        // compute ratio from the editor’s current width
-//        if (getWidth() > 0)
-//        {
-//            menuWidthRatio = (float) b.getWidth() / (float) getWidth();
-//            // clamp to a sensible range
-//            menuWidthRatio = juce::jlimit (0.05f, 0.95f, menuWidthRatio);
-//        }
-    }
-
