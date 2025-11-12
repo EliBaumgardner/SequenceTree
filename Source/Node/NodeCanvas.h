@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "../Util/ProjectModules.h"
+#include "../Util/PluginModules.h"
 #include "Node.h"
 #include "../Util/RTData.h"
 #include "NodeBox.h"
@@ -25,9 +25,6 @@ class NodeCanvas : public juce::Component {
         NodeCanvas();
     
         void paint(juce::Graphics& g) override;
-        void resized() override;
-    
-        void updateInfoText();
     
         void mouseDown(const juce::MouseEvent& e) override;
         void mouseDrag(const juce::MouseEvent& e) override;

@@ -1,29 +1,14 @@
 // NodeCanvas.cpp
-#include "../Util/ComponentContext.h"
+#include "../Util/PluginContext.h"
 #include "NodeCanvas.h"
 #include "../PluginProcessor.h"
 
 // Canvas Related Functions //
-NodeCanvas::NodeCanvas()
-{
-    setLookAndFeel(ComponentContext::lookAndFeel);
-    updateInfoText();
-}
+NodeCanvas::NodeCanvas() { setLookAndFeel(ComponentContext::lookAndFeel); }
 
 void NodeCanvas::paint(juce::Graphics& g)
 {
     if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawCanvas(g,*this); }
-}
-
-void NodeCanvas::resized()
-{
-
-}
-
-void NodeCanvas::updateInfoText()
-{
-    infoText = canvasNodes.isEmpty() ? "click anywhere to add root" : "";
-    repaint();
 }
 
 
@@ -32,21 +17,12 @@ void NodeCanvas::updateInfoText()
 
 void NodeCanvas::removeNode(Node* node)
 {
-    std::cout<<"removed Node"<<std::endl;
-
     Node* temp = node->root;
     
-    if(!node->nodeData.children.isEmpty()){
-        for (Node* child : node->nodeData.children){
-            child->parent = nullptr;
-        }
-    }
-    
-    if (node->parent != nullptr) {
-        node->parent->nodeData.removeChild(node);
-    }
+    if(!node->nodeData.children.isEmpty()){ for (Node* child : node->nodeData.children){ child->parent = nullptr; } }
+    if (node->parent != nullptr) { node->parent->nodeData.removeChild(node); }
+
     nodeMaps[node->root->nodeID].erase(node->nodeID);
-    //node->removeMouseListener(node->nodeController.get());
     removeLinePoints(node);
     canvasNodes.removeObject(node);
 
@@ -79,7 +55,6 @@ void NodeCanvas::mouseDown(const juce::MouseEvent& e)
 
     root->root = root;
     makeRTGraph(root);
-    updateInfoText();
 
     lastPosition = e.getPosition();
     if (controllerMade == false) { controllerMade = true; controller = std::make_unique<ObjectController>(root); }

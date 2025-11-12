@@ -50,11 +50,6 @@ Node::Node() : nodeID(++globalNodeID)
     };
 }
 
-Node::~Node()
-{
-    //this->removeMouseListener(nodeController);
-}
-
 void Node::paint(juce::Graphics& g)
 {
     if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) {

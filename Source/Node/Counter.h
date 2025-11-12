@@ -5,7 +5,7 @@
 #ifndef SEQUENCETREE_COUNTER_H
 #define SEQUENCETREE_COUNTER_H
 
-#include "../Util/ProjectModules.h"
+#include "../Util/PluginModules.h"
 #include "Node.h"
 #include "NodeBox.h"
 

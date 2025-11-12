@@ -11,15 +11,18 @@ class NodeCanvas;
 class Node;
 class NodeArrow;
 
-class TitleBar;
-class SelectionBar;
+class Titlebar;
+class ButtonPane;
 
-class DisplaySelector;
+class DisplayMenu;
+class DisplayButton;
 
 class NodeButton;
 class TraverserButton;
-class DisplayButton;
+
 class PlayButton;
+
+class TempoDisplay;
 class SyncButton;
 
 class DynamicEditor;
@@ -34,10 +37,10 @@ public:
     virtual void drawEditor         (juce::Graphics& g, DynamicEditor& editor);
     virtual void drawCanvas         (juce::Graphics& g, const NodeCanvas& canvas);
 
-    virtual void drawTitleBar       (juce::Graphics& g, const TitleBar& titleBar);
+    virtual void drawTitleBar       (juce::Graphics& g, const Titlebar& titleBar);
 
-    virtual void drawDisplaySelector(juce::Graphics& g, const DisplaySelector& displaySelector);
-    virtual void drawSelectionBar   (juce::Graphics& g, const SelectionBar& selectionBar);
+    virtual void drawDisplayMenu(juce::Graphics& g, const DisplayMenu& displaySelector);
+    virtual void drawButtonPane   (juce::Graphics& g, const ButtonPane& selectionBar);
     virtual void drawDisplayButton  (juce::Graphics& g, const DisplayButton& displayButton);
 
     virtual void drawNode           (juce::Graphics& g, const Node& node);
@@ -47,7 +50,7 @@ public:
     virtual void drawSyncButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const SyncButton& button);
     virtual void drawNodeButton     (juce::Graphics& g, const NodeButton& nodeButton);
     virtual void drawTraverserButton(juce::Graphics& g, const TraverserButton& traverserButton);
-
+    virtual void drawTempoDisplay   (juce::Graphics& g, const TempoDisplay& tempoDisplay);
 private:
 
     juce::Colour dropShadowColour = juce::Colours::black;

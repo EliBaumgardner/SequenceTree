@@ -8,14 +8,14 @@
 
 #pragma once
 
-#include "Util/ProjectModules.h"
+#include "Util/PluginModules.h"
 
 #include "PluginProcessor.h"
 #include "Node/NodeCanvas.h"
 #include "Node/Node.h"
 #include "Logic/DynamicPort.h"
-#include "UI/TitleBar.h"
-#include "CustomLookAndFeel.h"
+#include "UI/Titlebar.h"
+#include "UI/CustomLookAndFeel.h"
 
 
 //==============================================================================
@@ -38,7 +38,7 @@ private:
     SequenceTreeAudioProcessor& audioProcessor;
     
     std::unique_ptr<NodeCanvas>   canvas       = nullptr;
-    std::unique_ptr<TitleBar>     titleBar     = nullptr;
+    std::unique_ptr<Titlebar>     titleBar     = nullptr;
     std::unique_ptr<DynamicPort>  port         = nullptr;
     CustomLookAndFeel lookAndFeel;
     

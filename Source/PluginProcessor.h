@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Util/ProjectModules.h"
+#include "Util/PluginModules.h"
 
 //==============================================================================
 /**
@@ -30,7 +30,7 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     //==============================================================================
     SequenceTreeAudioProcessor();
     ~SequenceTreeAudioProcessor() override;
-    
+
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -40,11 +40,11 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
 #endif
     
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
-    
+
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
-    
+
     //==============================================================================
     const juce::String getName() const override;
     
@@ -52,7 +52,7 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     bool producesMidi() const override;
     bool isMidiEffect() const override;
     double getTailLengthSeconds() const override;
-    
+
     //==============================================================================
     int getNumPrograms() override;
     int getCurrentProgram() override;
@@ -173,7 +173,6 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
                 case TraversalState::Active: {
                     advance();
 
-                    //update traverser management
                     for (int traverserId : traversers) {
                         auto& traverserNode = (*std::atomic_load(&audioProcessor->globalNodes))[traverserId];
                         audioProcessor->scheduleNodeHighlight(traverserNode,   true);

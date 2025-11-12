@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "../CustomLookAndFeel.h"
-#include "../Util/ProjectModules.h"
+#include "../UI/CustomLookAndFeel.h"
+#include "../Util/PluginModules.h"
 #include "NodeBox.h"
 #include "../Logic/ObjectController.h"
 #include "NodeData.h"
@@ -26,8 +26,6 @@ class Node : public juce::Component {
 
         Node();
     
-        ~Node() override;
-    
         void paint(juce::Graphics& g) override;
         void resized() override;
         void mouseEnter(const juce::MouseEvent& e) override;
@@ -38,6 +36,7 @@ class Node : public juce::Component {
         void setHighlightVisual(bool isHighlighted);
 
         void setDisplayMode(NodeBox::DisplayMode mode);
+
 
         //Object Variabes//
         Node* parent = nullptr;
@@ -50,6 +49,7 @@ class Node : public juce::Component {
     
         juce::Colour nodeColour = juce::Colour::fromRGB(91,86,76);
 
+
         //Primative Variables//
         bool isHovered = false;
         bool isSelected = false;
@@ -59,7 +59,8 @@ class Node : public juce::Component {
         int nodeID = 0;
         static int globalNodeID;
 
-        //BUTTONS//
+
+        //BUTTON CLASSES//
 
         class IncrementButton : public juce::Component {
             

@@ -9,7 +9,7 @@
 */
 
 #include "DynamicEditor.h"
-#include "../Util/ComponentContext.h"
+#include "../Util/PluginContext.h"
 #include "../Node/NodeCanvas.h"
 
 

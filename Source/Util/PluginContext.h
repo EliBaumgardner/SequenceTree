@@ -16,8 +16,7 @@ class CustomLookAndFeel;
 
 namespace ComponentContext
 {
-    
     inline SequenceTreeAudioProcessor* processor = nullptr;
-    inline NodeCanvas* canvas = nullptr;
-    inline CustomLookAndFeel* lookAndFeel = nullptr;
+    inline NodeCanvas* canvas                    = nullptr;
+    inline CustomLookAndFeel* lookAndFeel        = nullptr;
 }

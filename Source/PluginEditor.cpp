@@ -7,7 +7,7 @@
 */
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "Util/ComponentContext.h"
+#include "Util/PluginContext.h"
 
 
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
@@ -17,17 +17,15 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     ComponentContext::lookAndFeel = &lookAndFeel;
 
     canvas       = std::make_unique<NodeCanvas>(); ComponentContext::canvas = canvas.get();
-    titleBar     = std::make_unique<TitleBar>();
+    titleBar     = std::make_unique<Titlebar>();
     port         = std::make_unique<DynamicPort>(canvas.get());
-
-    audioProcessor.canvas = canvas.get();
     
     titleBar->toggled = [this](){ canvas->start = !canvas->start; canvas->setProcessorPlayblack(canvas->start); };
 
     addAndMakeVisible(port.get());
     addAndMakeVisible(titleBar.get());
 
-    setResizable(true,true);
+    setResizable(true,false);
     setSize (400, 300);
 }
 
@@ -43,8 +41,5 @@ void SequenceTreeAudioProcessorEditor::resized()
     
     auto titleHeight = static_cast<int>(bounds.getHeight() * 0.05f);
     auto titleArea = bounds.removeFromTop(titleHeight);
-    titleBar->setBounds(titleArea);
-
-    auto selectionHeight = static_cast<int>(bounds.getHeight() * 0.05f);
-    auto selectionBarArea = bounds.removeFromBottom(selectionHeight);
+    titleBar->setBounds(titleArea);;
 }

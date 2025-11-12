@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "../Util/ComponentContext.h"
-#include "../Util/ProjectModules.h"
+#include "../Util/PluginContext.h"
+#include "../Util/PluginModules.h"
 
 class DynamicEditor : public juce::TextEditor {
     

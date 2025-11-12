@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "../Util/ProjectModules.h"
-#include "../Util/ComponentContext.h"
+#include "../Util/PluginModules.h"
+#include "../Util/PluginContext.h"
 
 struct PluginContext;
 

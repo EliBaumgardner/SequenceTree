@@ -3,10 +3,11 @@
 //
 
 #include "CustomLookAndFeel.h"
-#include "Node/NodeCanvas.h"
-#include "Node/Node.h"
-#include "UI/TitleBar.h"
-#include "UI/DynamicEditor.h"
+#include "../Node/NodeCanvas.h"
+#include "../Node/Node.h"
+#include "Titlebar.h"
+#include "DynamicEditor.h"
+#include "TitleBarButtons.h"
 
 CustomLookAndFeel::CustomLookAndFeel()
 {
@@ -26,12 +27,11 @@ void CustomLookAndFeel::drawEditor(juce::Graphics &g, DynamicEditor& editor)
     }
 }
 
-
 void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas) { g.fillAll(canvasColour); }
 
-void CustomLookAndFeel::drawTitleBar(juce::Graphics &g, const TitleBar &titleBar)
+void CustomLookAndFeel::drawTitleBar(juce::Graphics &g, const Titlebar &titleBar)
 {
-    auto bounds = titleBar.getLocalBounds().toFloat().reduced(2.0f);
+    auto bounds = titleBar.getLocalBounds().toFloat().withTrimmedBottom(1.0f);
 
     juce::Path rectPath;
     rectPath.addRectangle(bounds);
@@ -42,14 +42,20 @@ void CustomLookAndFeel::drawTitleBar(juce::Graphics &g, const TitleBar &titleBar
     g.fillRect(bounds);
 }
 
-void CustomLookAndFeel::drawSelectionBar(juce::Graphics &g, const SelectionBar& selectionBar)
+void CustomLookAndFeel::drawButtonPane(juce::Graphics &g, const ButtonPane& selectionBar)
 {
     auto bounds = selectionBar.getLocalBounds().reduced(2.0f).toFloat();
     g.setColour(buttonColour);
     g.fillRect(bounds);
 }
 
-void CustomLookAndFeel::drawDisplaySelector(juce::Graphics &g, const DisplaySelector& displaySelector)
+void CustomLookAndFeel::drawTempoDisplay(juce::Graphics &g, const TempoDisplay &display) {
+    g.setColour(buttonColour);
+    g.fillAll();
+}
+
+
+void CustomLookAndFeel::drawDisplayMenu(juce::Graphics &g, const DisplayMenu& displaySelector)
 {
     auto bounds = displaySelector.getLocalBounds().toFloat().reduced(buttonBoundsReduction);
     g.setColour(buttonColour);
@@ -60,13 +66,20 @@ void CustomLookAndFeel::drawDisplaySelector(juce::Graphics &g, const DisplaySele
 void CustomLookAndFeel::drawDisplayButton(juce::Graphics &g, const DisplayButton &displayButton)
 {
     g.setColour(displayButton.isSelected ? lightColour3.darker() : lightColour3);
+
     auto bounds = displayButton.getLocalBounds().toFloat().reduced(5.0f);
 
+    float triangleHeight = bounds.getHeight() * 0.9f;
+    float centerY = bounds.getCentreY();
+    float topY = centerY - triangleHeight / 2.0f;
+    float bottomY = centerY + triangleHeight / 2.0f;
+
     juce::Path vPath;
-    vPath.startNewSubPath(bounds.getTopLeft());
-    vPath.lineTo(displayButton.getWidth()/2,displayButton.getHeight());
-    vPath.lineTo(bounds.getTopRight());
+    vPath.startNewSubPath(bounds.getX(), topY);
+    vPath.lineTo(bounds.getCentreX(), bottomY);
+    vPath.lineTo(bounds.getRight(), topY);
     vPath.closeSubPath();
+
     g.fillPath(vPath);
 }
 
@@ -180,7 +193,7 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
 void CustomLookAndFeel::drawSyncButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const SyncButton &button)
 {
     juce::Rectangle<float> bounds = button.getLocalBounds().toFloat().reduced(2.0f);
-    g.setColour(buttonColour);
+    g.setColour(lightColour3);
     g.fillEllipse(bounds);
 }
 

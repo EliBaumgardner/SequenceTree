@@ -2,17 +2,62 @@
 // Created by Eli Baumgardner on 11/9/25.
 //
 
-#ifndef SEQUENCETREE_SELECTIONBAR_H
-#define SEQUENCETREE_SELECTIONBAR_H
+#ifndef SEQUENCETREE_TITLEBARBUTTONS_H
+#define SEQUENCETREE_TITLEBARBUTTONS_H
 
-#include "../Util/ProjectModules.h"
-#include "../Util/ComponentContext.h"
+#include "../Util/PluginModules.h"
+#include "../Util/PluginContext.h"
 #include "../Node/NodeCanvas.h"
 
 static constexpr float buttonBoundsReduction = 3.0f;
 static constexpr float buttonBorderThickness = 2.0f;
 static constexpr float buttonContentBounds = 4.0f;
 static constexpr float buttonSelectedThickness = 4.0f;
+
+
+class PlayButton : public juce::Button {
+
+public:
+
+    PlayButton() : juce::Button("button") { setLookAndFeel(ComponentContext::lookAndFeel); }
+
+    void paintButton(juce::Graphics& g, bool isMouseOver, bool isButtonDown) override
+    {
+        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawPlayButton(g,isMouseOver,isButtonDown,*this); }
+    }
+
+    void mouseDown(const juce::MouseEvent& event) override
+    {
+        juce::Button::mouseDown(event);
+        isOn = !isOn;
+        repaint();
+    }
+
+    bool isOn = true;
+};
+
+
+
+class SyncButton : public juce::Button {
+
+public:
+    SyncButton() : juce::Button("button") { setLookAndFeel(ComponentContext::lookAndFeel); }
+
+    void paintButton(juce::Graphics& g, bool isMouseOver, bool isButtonDown) override
+    {
+        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawSyncButton(g, isMouseOver, isButtonDown, *this); }
+    }
+
+    void mouseDown(const juce::MouseEvent& event) override
+    {
+        juce::Button::mouseDown(event);
+        isSynced = !isSynced;
+        repaint();
+    }
+
+    bool isSynced = true;
+};
+
 
 
 class NodeButton : public juce::Component {
@@ -53,14 +98,14 @@ class TraverserButton : public juce::Component {
 
 
 
-class SelectionBar : public juce::Component {
+class ButtonPane : public juce::Component {
 
     public:
 
     NodeButton nodeButton;
     TraverserButton traverserButton;
 
-    SelectionBar()
+    ButtonPane()
     {
         setLookAndFeel(ComponentContext::lookAndFeel);
         addAndMakeVisible(nodeButton);
@@ -90,10 +135,10 @@ class SelectionBar : public juce::Component {
 
     void paint(juce::Graphics& g) override
     {
-        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawSelectionBar(g, *this);}
+        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawButtonPane(g, *this);}
     }
 
-    void resized()
+    void resized () override
     {
         auto bounds = getLocalBounds().reduced(2.0f);
         int buttonSize = bounds.getHeight();
@@ -131,7 +176,7 @@ class DisplayButton : public juce::Component {
 
 
 
-class DisplaySelector : public juce::Component {
+class DisplayMenu : public juce::Component {
 
     public:
 
@@ -140,7 +185,7 @@ class DisplaySelector : public juce::Component {
     juce::PopupMenu menu;
     juce::String selectedOption = "";
 
-    DisplaySelector()
+    DisplayMenu()
     {
         setLookAndFeel(ComponentContext::lookAndFeel);
         addAndMakeVisible(display);
@@ -173,7 +218,7 @@ class DisplaySelector : public juce::Component {
 
     void paint(juce::Graphics& g) override
     {
-        if(auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawDisplaySelector(g,*this); };
+        if(auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawDisplayMenu(g,*this); };
     }
 
     void resized() override
@@ -189,4 +234,36 @@ class DisplaySelector : public juce::Component {
     }
 };
 
-#endif //SEQUENCETREE_SELECTIONBAR_H
+
+
+class TempoDisplay : public juce::Component {
+
+    public:
+
+    SyncButton syncButton;
+    DynamicEditor editor;
+
+    TempoDisplay()
+    {
+        setLookAndFeel(ComponentContext::lookAndFeel);
+        addAndMakeVisible(syncButton);
+        addAndMakeVisible(editor);
+    }
+
+    void paint(juce::Graphics& g) override
+    {
+        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawTempoDisplay(g, *this); }
+    }
+
+    void resized() override
+    {
+        auto bounds = getLocalBounds();
+        int editorWidth = bounds.getWidth() * 3 / 4;
+        editor.setBounds(bounds.removeFromLeft(editorWidth));
+        syncButton.setBounds(bounds.reduced(1.0f));
+
+        editor.refit();
+    }
+};
+
+#endif //SEQUENCETREE_TITLEBARBUTTONS_H

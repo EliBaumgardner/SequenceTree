@@ -41,10 +41,9 @@ void ObjectController::mouseUp(const juce::MouseEvent& e)
 
 void ObjectController::mouseDown(const juce::MouseEvent& e)
 {
-
     for (auto canvasNode : nodeCanvas->canvasNodes){ if(canvasNode != node){ canvasNode->setSelectVisual(false); } }
 
-    if(e.mods.isRightButtonDown()){ nodeCanvas->removeNode(node); }
+    if(e.mods.isRightButtonDown() && e.mods.isShiftDown()){ nodeCanvas->removeNode(node); }
     else { node->setSelectVisual(); }
 }
 
@@ -121,7 +120,7 @@ void ObjectController::setObjects(Node* node)
 {
     if (node == childNode) { return; }
 
-    if ( node != this->node|| node == nodeCanvas->canvasNodes.getFirst()){
+    if ( node != this->node || node == nodeCanvas->canvasNodes.getFirst() && node != nullptr){
         this->node->removeMouseListener(this);
         this->node = node;
         this->node->addMouseListener(this,true);
