@@ -10,12 +10,15 @@
 
 #include "TitleBar.h"
 
+
 TitleBar::TitleBar()
 {
     setLookAndFeel(ComponentContext::lookAndFeel);
     addAndMakeVisible(playButton);
     addAndMakeVisible(editor);
     addAndMakeVisible(syncButton);
+    addAndMakeVisible(selectionBar);
+    addAndMakeVisible(displaySelector);
 
     playButton.onClick = [=](){ toggled(); };
 }
@@ -27,16 +30,26 @@ void TitleBar::paint(juce::Graphics& g)
 
 void TitleBar::resized()
 {
-    auto bounds = getLocalBounds().reduced(2);
+    auto bounds = getLocalBounds().reduced(4);
+    int spacing = 6;
 
-    // Determine square button size based on smaller of desired width or TitleBar height
-    int desiredWidth = bounds.getWidth() / 25;
-    int buttonSize = std::min(desiredWidth, bounds.getHeight());
-    int spacing = 3;
+    int buttonSize = std::min(bounds.getHeight(), bounds.getWidth() / 25);
+    int editorWidth = bounds.getWidth() / 8;
+    int selectionBarWidth = bounds.getWidth() / 5;
+    int displaySelectorWidth = bounds.getWidth() / 10;
 
-    playButton.setBounds(bounds.removeFromLeft(buttonSize));
-    editor.setBounds(bounds.removeFromLeft(bounds.getWidth() / 12.5).withTrimmedTop(2).withTrimmedBottom(2).withTrimmedLeft(spacing));
-    syncButton.setBounds(bounds.removeFromLeft(buttonSize).withTrimmedLeft(spacing)); // now width scales with TitleBar
+    auto area = bounds;
+
+    playButton.setBounds(area.removeFromLeft(buttonSize));
+    area.removeFromLeft(spacing);
+    editor.setBounds(area.removeFromLeft(editorWidth));
+    area.removeFromLeft(spacing);
+    syncButton.setBounds(area.removeFromLeft(buttonSize));
+
+    area.removeFromRight(spacing);
+    displaySelector.setBounds(area.removeFromRight(displaySelectorWidth));
+    area.removeFromRight(spacing);
+    selectionBar.setBounds(area.removeFromRight(selectionBarWidth));
 
     editor.refit();
 }

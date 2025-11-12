@@ -10,7 +10,6 @@
 #include "Util/ComponentContext.h"
 
 
-
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
 : AudioProcessorEditor(p),audioProcessor (p)
 {
@@ -19,7 +18,6 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     canvas       = std::make_unique<NodeCanvas>(); ComponentContext::canvas = canvas.get();
     titleBar     = std::make_unique<TitleBar>();
-    selectionBar = std::make_unique<SelectionBar>();
     port         = std::make_unique<DynamicPort>(canvas.get());
 
     audioProcessor.canvas = canvas.get();
@@ -27,7 +25,6 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     titleBar->toggled = [this](){ canvas->start = !canvas->start; canvas->setProcessorPlayblack(canvas->start); };
 
     addAndMakeVisible(port.get());
-    addAndMakeVisible(selectionBar.get());
     addAndMakeVisible(titleBar.get());
 
     setResizable(true,true);
@@ -50,5 +47,4 @@ void SequenceTreeAudioProcessorEditor::resized()
 
     auto selectionHeight = static_cast<int>(bounds.getHeight() * 0.05f);
     auto selectionBarArea = bounds.removeFromBottom(selectionHeight);
-    selectionBar->setBounds(selectionBarArea);
 }

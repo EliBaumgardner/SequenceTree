@@ -6,13 +6,68 @@
 #include "Node/NodeCanvas.h"
 #include "Node/Node.h"
 #include "UI/TitleBar.h"
-#include "UI/SelectionBar.h"
 #include "UI/DynamicEditor.h"
 
 CustomLookAndFeel::CustomLookAndFeel()
 {
-    nodeDropShadow         = juce::DropShadow(dropShadowColour.withAlpha(0.4f),6,juce::Point<int>(3,3));
-    barDropShadow = juce::DropShadow( dropShadowColour.withAlpha(0.4f),6,juce::Point<int>(3,3));
+    nodeDropShadow = juce::DropShadow(dropShadowColour.withAlpha(0.4f),6,juce::Point<int>(3,3));
+    barDropShadow  = juce::DropShadow(dropShadowColour.withAlpha(0.4f),6,juce::Point<int>(3,3));
+}
+
+void CustomLookAndFeel::drawEditor(juce::Graphics &g, DynamicEditor& editor)
+{
+    if (auto* dynamicEditor = dynamic_cast<DynamicEditor*>(&editor)) {
+        dynamicEditor->setColour(juce::TextEditor::backgroundColourId, editorColour);
+        dynamicEditor->setColour(juce::TextEditor::outlineColourId, editorColour);
+        dynamicEditor->setColour(juce::TextEditor::textColourId, textColour); // choose text color
+        dynamicEditor->setColour(juce::TextEditor::highlightColourId, juce::Colours::darkgrey); // optional for selection
+        dynamicEditor->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
+        dynamicEditor->TextEditor::paint(g);
+    }
+}
+
+
+void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas) { g.fillAll(canvasColour); }
+
+void CustomLookAndFeel::drawTitleBar(juce::Graphics &g, const TitleBar &titleBar)
+{
+    auto bounds = titleBar.getLocalBounds().toFloat().reduced(2.0f);
+
+    juce::Path rectPath;
+    rectPath.addRectangle(bounds);
+
+    barDropShadow.drawForPath(g, rectPath);
+
+    g.setColour(barColour);
+    g.fillRect(bounds);
+}
+
+void CustomLookAndFeel::drawSelectionBar(juce::Graphics &g, const SelectionBar& selectionBar)
+{
+    auto bounds = selectionBar.getLocalBounds().reduced(2.0f).toFloat();
+    g.setColour(buttonColour);
+    g.fillRect(bounds);
+}
+
+void CustomLookAndFeel::drawDisplaySelector(juce::Graphics &g, const DisplaySelector& displaySelector)
+{
+    auto bounds = displaySelector.getLocalBounds().toFloat().reduced(buttonBoundsReduction);
+    g.setColour(buttonColour);
+    g.fillRect(bounds);
+
+}
+
+void CustomLookAndFeel::drawDisplayButton(juce::Graphics &g, const DisplayButton &displayButton)
+{
+    g.setColour(displayButton.isSelected ? lightColour3.darker() : lightColour3);
+    auto bounds = displayButton.getLocalBounds().toFloat().reduced(5.0f);
+
+    juce::Path vPath;
+    vPath.startNewSubPath(bounds.getTopLeft());
+    vPath.lineTo(displayButton.getWidth()/2,displayButton.getHeight());
+    vPath.lineTo(bounds.getTopRight());
+    vPath.closeSubPath();
+    g.fillPath(vPath);
 }
 
 void CustomLookAndFeel::drawNode(juce::Graphics& g,const Node& node)
@@ -46,7 +101,7 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g,const Node& node)
     }
 }
 
-void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow &nodeArrow)
+void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeArrow)
 {
     auto* a = nodeArrow.startNode;
     auto* b = nodeArrow.endNode;
@@ -90,31 +145,9 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow &nodeAr
     g.drawLine(x2, y2, rightX, rightY, 1.0f);
 }
 
-void CustomLookAndFeel::drawTitleBar(juce::Graphics &g, const TitleBar &titleBar)
-{
-    auto bounds = titleBar.getLocalBounds().toFloat().reduced(2.0f);
-
-    juce::Path rectPath;
-    rectPath.addRectangle(bounds);
-
-    barDropShadow.drawForPath(g, rectPath);
-
-    g.setColour(barColour);
-    g.fillRect(bounds);
-}
-
-void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas) { g.fillAll(canvasColour); }
-
-void CustomLookAndFeel::MenuBar(juce::Graphics &g, const SelectionBar &selectionBar)
-{
-    auto bounds = selectionBar.getLocalBounds().reduced(2.0f).toFloat();
-    g.setColour(barColour);
-    g.fillRect(bounds);
-}
-
 void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const PlayButton &button)
 {
-    auto area = button.getLocalBounds().reduced(5); // stay inside our component bounds
+    auto area = button.getLocalBounds().reduced(5);
     g.setColour(buttonColour);
 
     if (button.isOn)
@@ -124,8 +157,8 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
         playButton.startNewSubPath((float)area.getX(), (float)area.getY());
         playButton.lineTo((float)area.getRight(), (float)area.getCentreY());
         playButton.lineTo((float)area.getX(), (float)area.getBottom());
-        playButton.closeSubPath(); // complete the triangle
-        g.fillPath(playButton); // use fill instead of stroke for solid arrow
+        playButton.closeSubPath();
+        g.fillPath(playButton);
     }
     else
     {
@@ -144,21 +177,30 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
     }
 }
 
-void CustomLookAndFeel::drawSyncButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const SyncButton &button) {
-
+void CustomLookAndFeel::drawSyncButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const SyncButton &button)
+{
     juce::Rectangle<float> bounds = button.getLocalBounds().toFloat().reduced(2.0f);
     g.setColour(buttonColour);
     g.fillEllipse(bounds);
 }
 
-void CustomLookAndFeel::drawEditor(juce::Graphics &g, DynamicEditor& editor) {
+void CustomLookAndFeel::drawNodeButton(juce::Graphics &g, const NodeButton& nodeButton)
+{
+    auto bounds = nodeButton.getLocalBounds().toFloat().reduced(2.0f);
+    g.setColour(nodeButton.isSelected ? lightColour3.darker() : lightColour3);
+    g.fillEllipse(bounds);
+}
 
-    if (auto* dynamicEditor = dynamic_cast<DynamicEditor*>(&editor)) {
-        dynamicEditor->setColour(juce::TextEditor::backgroundColourId, editorColour);
-        dynamicEditor->setColour(juce::TextEditor::outlineColourId, editorColour);
-        dynamicEditor->setColour(juce::TextEditor::textColourId, textColour); // choose text color
-        dynamicEditor->setColour(juce::TextEditor::highlightColourId, juce::Colours::darkgrey); // optional for selection
-        dynamicEditor->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
-        dynamicEditor->TextEditor::paint(g);
-    }
+void CustomLookAndFeel::drawTraverserButton(juce::Graphics& g, const TraverserButton& traverserButton)
+{
+    auto bounds = traverserButton.getLocalBounds().toFloat().reduced(2.0f);
+    g.setColour(traverserButton.isSelected ? lightColour3.darker() : lightColour3);
+
+    juce::Path triangle;
+    triangle.startNewSubPath(bounds.getCentreX(), bounds.getY());
+    triangle.lineTo(bounds.getRight(), bounds.getBottom());
+    triangle.lineTo(bounds.getX(), bounds.getBottom());
+    triangle.closeSubPath();
+
+    g.fillPath(triangle);
 }

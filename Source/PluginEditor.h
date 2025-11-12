@@ -15,7 +15,6 @@
 #include "Node/Node.h"
 #include "Logic/DynamicPort.h"
 #include "UI/TitleBar.h"
-#include "UI/SelectionBar.h"
 #include "CustomLookAndFeel.h"
 
 
@@ -40,7 +39,6 @@ private:
     
     std::unique_ptr<NodeCanvas>   canvas       = nullptr;
     std::unique_ptr<TitleBar>     titleBar     = nullptr;
-    std::unique_ptr<SelectionBar> selectionBar = nullptr;
     std::unique_ptr<DynamicPort>  port         = nullptr;
     CustomLookAndFeel lookAndFeel;
     

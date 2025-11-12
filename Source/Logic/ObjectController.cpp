@@ -22,7 +22,8 @@ ObjectController::ObjectController(Node* node) : node(node), nodeCanvas(Componen
 void ObjectController::mouseEnter(const juce::MouseEvent& e) { node->setHoverVisual(true); }
 void ObjectController::mouseExit(const juce::MouseEvent& e){ node->setHoverVisual(false); }
 
-void ObjectController::mouseUp(const juce::MouseEvent& e) {
+void ObjectController::mouseUp(const juce::MouseEvent& e)
+{
     if (hasConnection && connectorNode != nullptr) {
 
         if (auto traverser = dynamic_cast<RelayNode*>(node)) { node->nodeData.removeConnector(childNode); node->nodeData.addConnector(connectorNode);}
@@ -38,14 +39,10 @@ void ObjectController::mouseUp(const juce::MouseEvent& e) {
     isDragStart = true; childNode = nullptr; connectorNode = nullptr;
 }
 
-void ObjectController::mouseDown(const juce::MouseEvent& e){
+void ObjectController::mouseDown(const juce::MouseEvent& e)
+{
 
-    for (auto canvasNode : nodeCanvas->canvasNodes){
-        if(canvasNode != node){
-            canvasNode->setSelectVisual(false);
-        }
-    }
-
+    for (auto canvasNode : nodeCanvas->canvasNodes){ if(canvasNode != node){ canvasNode->setSelectVisual(false); } }
 
     if(e.mods.isRightButtonDown()){ nodeCanvas->removeNode(node); }
     else { node->setSelectVisual(); }
@@ -63,7 +60,7 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e)
 
     const auto position = e.getEventRelativeTo(node->getParentComponent()).position;
 
-    if (nodeCanvas->controllerMode == NodeCanvas::ControllerMode::Inspect){
+    if (!e.mods.isShiftDown()){
         node->setCentrePosition(position.toInt());
         node->nodeData.nodeData.setProperty("x", node->getX(), nullptr);
         node->nodeData.nodeData.setProperty("y", node->getY(), nullptr);
@@ -88,8 +85,7 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e)
 
         nodeCanvas->addAndMakeVisible(childNode);
 
-        if (auto parent = dynamic_cast<RelayNode*>(node)) { node->nodeData.addConnector(childNode); childNode->root = childNode; nodeCanvas->makeRTGraph(node->root);
-        }
+        if (auto parent = dynamic_cast<RelayNode*>(node)) { node->nodeData.addConnector(childNode); childNode->root = childNode; nodeCanvas->makeRTGraph(node->root); }
         else { childNode->root = node->root; node->nodeData.addChild(childNode); }
 
         nodeCanvas->makeRTGraph(childNode->root);
@@ -121,9 +117,9 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e)
     nodeCanvas->repaint();
 }
 
-void ObjectController::setObjects(Node* node) {
-
-    if (node == childNode) { return;}
+void ObjectController::setObjects(Node* node)
+{
+    if (node == childNode) { return; }
 
     if ( node != this->node|| node == nodeCanvas->canvasNodes.getFirst()){
         this->node->removeMouseListener(this);

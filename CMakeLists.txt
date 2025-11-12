@@ -42,7 +42,6 @@ target_sources(SequenceTree PRIVATE
         Source/UI/PianoRoll.cpp
         Source/PluginEditor.cpp
         Source/PluginProcessor.cpp
-        Source/UI/SelectionBar.cpp
         Source/UI/TitleBar.cpp
         Source/Node/Counter.cpp
         Source/Node/RelayNode.cpp

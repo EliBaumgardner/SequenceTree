@@ -4,12 +4,11 @@
 #include "../PluginProcessor.h"
 
 // Canvas Related Functions //
-NodeCanvas::NodeCanvas() {
+NodeCanvas::NodeCanvas()
+{
     setLookAndFeel(ComponentContext::lookAndFeel);
     updateInfoText();
 }
-
-NodeCanvas::~NodeCanvas() {}
 
 void NodeCanvas::paint(juce::Graphics& g)
 {
@@ -69,26 +68,24 @@ void NodeCanvas::setSelectionMode(NodeBox::DisplayMode mode)
 
 void NodeCanvas::mouseDown(const juce::MouseEvent& e)
 {
-    if (e.mods.isLeftButtonDown() && controllerMode == ControllerMode::Node)
-    {
-        Node* root = new Node();
-        canvasNodes.add(root);
+    if (!e.mods.isLeftButtonDown() || controllerMode != ControllerMode::Node || !e.mods.isShiftDown()) { return;}
 
-        auto pos = e.getPosition().toFloat();
-        root->setBounds(int(pos.x) - 20, int(pos.y) - 20, 40, 40);
-        addAndMakeVisible(root);
+    Node* root = new Node();
+    canvasNodes.add(root);
 
-        root->root = root;
-        makeRTGraph(root);
-        updateInfoText();
+    auto pos = e.getPosition().toFloat();
+    root->setBounds(int(pos.x) - 20, int(pos.y) - 20, 40, 40);
+    addAndMakeVisible(root);
 
-        lastPosition = e.getPosition();
-        if (controllerMade == false) { controllerMade = true; controller = std::make_unique<ObjectController>(root); }
-    }
+    root->root = root;
+    makeRTGraph(root);
+    updateInfoText();
+
+    lastPosition = e.getPosition();
+    if (controllerMade == false) { controllerMade = true; controller = std::make_unique<ObjectController>(root); }
 }
 
-void NodeCanvas::addRootNode(Node* root) {
-}
+void NodeCanvas::addRootNode(Node* root) { }
 
 void NodeCanvas::mouseDrag(const juce::MouseEvent& e)
 {
@@ -155,7 +152,6 @@ void NodeCanvas::makeRTGraph(Node* root)
 {
     auto rtGraph = std::make_shared<RTGraph>();
     rtGraph->graphID = root->nodeID;
-    //rtGraph->rootID = rtGraph->graphID;
 
     std::unordered_map<int,Node*> nodeMap;
 
@@ -212,10 +208,7 @@ void NodeCanvas::makeRTGraph(Node* root)
     ComponentContext::processor->setNewGraph(rtGraph);
 }
 
-void NodeCanvas::destroyRTGraph(Node* root)
-{
-
-}
+void NodeCanvas::destroyRTGraph(Node* root) { }
 
 void NodeCanvas::setProcessorPlayblack(bool isPlaying)
 {

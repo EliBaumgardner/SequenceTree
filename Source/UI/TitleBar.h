@@ -14,6 +14,7 @@
 #include "DynamicEditor.h"
 #include "../Util/ProjectModules.h"
 #include "../Util/ComponentContext.h"
+#include "SelectionBar.h"
 
 class PlayButton : public juce::Button {
 
@@ -72,8 +73,9 @@ class TitleBar : public juce::Component {
     DynamicEditor editor;
 
     PlayButton playButton;
-    
     juce::ToggleButton toggleButton;
-    
     SyncButton syncButton;
+
+    SelectionBar selectionBar;
+    DisplaySelector displaySelector;
 };

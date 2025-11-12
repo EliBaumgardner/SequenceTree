@@ -23,7 +23,6 @@ class NodeCanvas : public juce::Component {
     public:
     
         NodeCanvas();
-        ~NodeCanvas() override;
     
         void paint(juce::Graphics& g) override;
         void resized() override;
@@ -46,7 +45,7 @@ class NodeCanvas : public juce::Component {
     
         void setProcessorPlayblack(bool isPlaying);
     
-        enum class ControllerMode { Inspect, Node, Counter,Traverser };
+        enum class ControllerMode { Node, Counter,Traverser };
 
 
     // Object Variables //
@@ -67,7 +66,9 @@ class NodeCanvas : public juce::Component {
         juce::String infoText;
         juce::Point<int> lastPosition;
 
+
     // Primative Variables //
+
         bool start = false;
         bool controllerMade = false;
 };
