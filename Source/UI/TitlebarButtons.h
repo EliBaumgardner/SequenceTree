@@ -19,6 +19,8 @@ class PlayButton : public juce::Button {
 
 public:
 
+    std::function<void()> onClick;
+
     PlayButton() : juce::Button("button") { setLookAndFeel(ComponentContext::lookAndFeel); }
 
     void paintButton(juce::Graphics& g, bool isMouseOver, bool isButtonDown) override
@@ -28,9 +30,11 @@ public:
 
     void mouseDown(const juce::MouseEvent& event) override
     {
+        std::cout<<"mouseDown"<<std::endl;
         juce::Button::mouseDown(event);
         isOn = !isOn;
         repaint();
+        onClick();
     }
 
     bool isOn = true;
@@ -76,7 +80,6 @@ class NodeButton : public juce::Component {
 
     void mouseDown(const juce::MouseEvent& e) override { onClick(); }
 };
-
 
 
 class TraverserButton : public juce::Component {

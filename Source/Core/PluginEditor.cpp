@@ -7,7 +7,7 @@
 */
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "Util/PluginContext.h"
+#include "../Util/PluginContext.h"
 
 
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
@@ -19,14 +19,14 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     canvas       = std::make_unique<NodeCanvas>(); ComponentContext::canvas = canvas.get();
     titleBar     = std::make_unique<Titlebar>();
     port         = std::make_unique<DynamicPort>(canvas.get());
-    
-    titleBar->toggled = [this](){ canvas->start = !canvas->start; canvas->setProcessorPlayblack(canvas->start); };
+
+    ComponentContext::processor->canvas = canvas.get();
 
     addAndMakeVisible(port.get());
     addAndMakeVisible(titleBar.get());
 
     setResizable(true,false);
-    setSize (400, 300);
+    setSize (700, 500);
 }
 
 SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor() {}

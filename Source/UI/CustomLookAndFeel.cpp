@@ -31,7 +31,7 @@ void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas) 
 
 void CustomLookAndFeel::drawTitleBar(juce::Graphics &g, const Titlebar &titleBar)
 {
-    auto bounds = titleBar.getLocalBounds().toFloat().withTrimmedBottom(1.0f);
+    auto bounds = titleBar.getLocalBounds().toFloat().withTrimmedBottom(2.0f);
 
     juce::Path rectPath;
     rectPath.addRectangle(bounds);
@@ -119,34 +119,45 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     auto* a = nodeArrow.startNode;
     auto* b = nodeArrow.endNode;
 
-    auto aBounds = a->getBounds(); auto bBounds = b->getBounds();
+    auto aBounds = a->getBounds();
+    auto bBounds = b->getBounds();
 
-    // Arrow size
-    float arrowLength = 10.0f; float arrowWidth = 5.0f;
-    int radius = b->getBounds().getWidth()/2;
+    float arrowLength = 10.0f;
+    float arrowWidth = 5.0f;
+    int radius = bBounds.getWidth() / 2;
 
     g.setColour(arrowColour);
+
     int x1 = aBounds.getCentreX() - nodeArrow.getX();
     int y1 = aBounds.getCentreY() - nodeArrow.getY();
     int x2 = bBounds.getCentreX() - nodeArrow.getX();
     int y2 = bBounds.getCentreY() - nodeArrow.getY();
+
+    // Add wobble offsets
+    float wobbleAmplitude = 3.0f; // tweak as desired
+    float wobbleOffsetX = std::sin(nodeArrow.wobblePhase) * wobbleAmplitude;
+    float wobbleOffsetY = std::cos(nodeArrow.wobblePhase) * wobbleAmplitude;
+
+    x1 += int(wobbleOffsetX);
+    y1 += int(wobbleOffsetY);
+    x2 += int(wobbleOffsetX);
+    y2 += int(wobbleOffsetY);
 
     // Calculate direction vector
     float dx = float(x2 - x1);
     float dy = float(y2 - y1);
     float length = std::sqrt(dx*dx + dy*dy);
 
-    // Normalize direction
     float nx = dx / length;
     float ny = dy / length;
 
-    x2 = x2 - nx*radius;
-    y2 = y2 - ny*radius;
+    x2 = x2 - nx * radius;
+    y2 = y2 - ny * radius;
 
     // Draw main line
     g.drawLine(x1, y1, x2, y2, 2.0f);
 
-    // Calculate the two points for the arrowhead lines
+    // Arrowhead points
     float leftX = x2 - arrowLength * nx + arrowWidth * ny;
     float leftY = y2 - arrowLength * ny - arrowWidth * nx;
 
@@ -163,8 +174,7 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
     auto area = button.getLocalBounds().reduced(5);
     g.setColour(buttonColour);
 
-    if (button.isOn)
-    {
+    if (button.isOn){
         // Draw play triangle ( > )
         juce::Path playButton;
         playButton.startNewSubPath((float)area.getX(), (float)area.getY());
@@ -173,8 +183,7 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
         playButton.closeSubPath();
         g.fillPath(playButton);
     }
-    else
-    {
+    else {
         // Draw pause bars ( | | )
         int barWidth = area.getWidth() / 5;
         int gap = barWidth;

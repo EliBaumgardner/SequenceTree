@@ -1,7 +1,7 @@
 // NodeCanvas.cpp
 #include "../Util/PluginContext.h"
 #include "NodeCanvas.h"
-#include "../PluginProcessor.h"
+#include "../Core/PluginProcessor.h"
 
 // Canvas Related Functions //
 NodeCanvas::NodeCanvas() { setLookAndFeel(ComponentContext::lookAndFeel); }
@@ -96,16 +96,21 @@ void NodeCanvas::removeLinePoints(Node* node)
     }
 }
 
-void NodeCanvas::updateLinePoints(Node* movedNode) {
-
-    for (NodeArrow* arrow : nodeArrows) {
+void NodeCanvas::updateLinePoints(Node* movedNode)
+{
+    for (NodeArrow* arrow : nodeArrows)
+    {
 
         if (arrow->startNode != movedNode && arrow->endNode != movedNode) continue;
 
         juce::Point start = movedNode->getBounds().getCentre();
         juce::Point end = arrow->endNode->getBounds().getCentre();
 
-        if (arrow->startNode != movedNode){ start = arrow->endNode->getBounds().getCentre(); end = arrow->startNode->getBounds().getCentre(); }
+        if (arrow->startNode != movedNode)
+        {
+            start = arrow->endNode->getBounds().getCentre();
+            end = arrow->startNode->getBounds().getCentre();
+        }
 
         juce::Rectangle arrowBounds = juce::Rectangle<int>::leftTopRightBottom(
             std::min(start.x,end.x),
@@ -113,6 +118,9 @@ void NodeCanvas::updateLinePoints(Node* movedNode) {
             std::max(start.x,end.x),
             std::max(start.y,end.y)
             ).expanded(2);
+
+        // arrow->startNode.nodeData.midiNoteData.setProperty()
+        // arrowBounds.getWidth();
 
         arrow->setBounds(arrowBounds);
         arrow->repaint();

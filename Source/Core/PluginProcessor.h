@@ -8,15 +8,16 @@
 
 #pragma once
 
-#include "Util/PluginModules.h"
+#include "../Util/PluginModules.h"
+#include "../Util/PluginContext.h"
 
 //==============================================================================
 /**
 */
 #include <memory>
 #include <atomic>
-#include "Util/RTData.h"
-#include "Node/NodeCanvas.h"
+#include "../Util/RTData.h"
+#include "../Node/NodeCanvas.h"
 
 class SequenceTreeAudioProcessorEditor;
 
@@ -63,13 +64,12 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
-    
-    void pushNote(RTNode node, int traversalId,juce::MidiBuffer& midiMessages);
 
     void clearOldEvents(RTNode node, int traversalId);
 
     void setNewGraph(std::shared_ptr<RTGraph> graph);
-    void scheduleNodeHighlight(const RTNode& node,bool shouldHighlight);
+
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     NodeCanvas* canvas;
     
@@ -82,6 +82,10 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
 
     std::atomic<bool> isPlaying = false;
 
+    juce::AudioProcessorValueTreeState valueTreeState;
+
+
+
 
     /////                        TRAVERSAL LOGIC                       /////
 
@@ -92,6 +96,7 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
         std::unordered_map<int,int> counts;
         std::vector<int> traversers;
 
+        bool isFirstEvent = false;
         bool isLooping = false;
         int rootId = 0;
         int targetId = 0;
@@ -150,7 +155,6 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
 
         const RTNode& getRelayNode(int relayNodeId) { return ( *std::atomic_load(&audioProcessor->globalNodes) )[relayNodeId]; }
 
-
         bool shouldTraverse()
         {
             switch (state) {
@@ -161,13 +165,14 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
             }
         }
 
-        void handleNodeEvent() {
+        void handleNodeEvent()
+        {
 
             switch (state) {
                 case TraversalState::Start : {
                     state = TraversalState::Active;
                     targetId = rootId;
-                    audioProcessor->scheduleNodeHighlight(getTargetNode(), true);
+                    audioProcessor->eventManager.highlightNode(getTargetNode(), true);
                     break;
                 }
                 case TraversalState::Active: {
@@ -175,40 +180,40 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
 
                     for (int traverserId : traversers) {
                         auto& traverserNode = (*std::atomic_load(&audioProcessor->globalNodes))[traverserId];
-                        audioProcessor->scheduleNodeHighlight(traverserNode,   true);
+                        audioProcessor->eventManager.highlightNode(traverserNode,   true);
                     }
 
                     switch (state) {
                         case TraversalState::Active: {
-                            audioProcessor->scheduleNodeHighlight(getLastNode()  ,  false);
-                            audioProcessor->scheduleNodeHighlight(getTargetNode(),   true);
+                            audioProcessor->eventManager.highlightNode(getLastNode()  ,  false);
+                            audioProcessor->eventManager.highlightNode(getTargetNode(),   true);
                             break;
                         }
                         case TraversalState::Reset: {
-                            audioProcessor->scheduleNodeHighlight(getTargetNode(),   false);
-                            audioProcessor->scheduleNodeHighlight(getRootNode()  ,    true);
+                            audioProcessor->eventManager.highlightNode(getTargetNode(),   false);
+                            audioProcessor->eventManager.highlightNode(getRootNode()  ,    true);
                             targetId = rootId;
                             state = TraversalState::Active;
                             break;
                         }
                         case TraversalState::End: {
-                            audioProcessor->scheduleNodeHighlight(getTargetNode()   ,false);
-                            audioProcessor->scheduleNodeHighlight(getReferenceNode(),false);
+                            audioProcessor->eventManager.highlightNode(getTargetNode()   ,false);
+                            audioProcessor->eventManager.highlightNode(getReferenceNode(),false);
                         }
                     }
                     break;
                 }
                 case TraversalState::End: {
-                    audioProcessor->scheduleNodeHighlight(getReferenceNode(),false);
-                    audioProcessor->scheduleNodeHighlight(getTargetNode(),   false);
+                    audioProcessor->eventManager.highlightNode(getReferenceNode(),false);
+                    audioProcessor->eventManager.highlightNode(getTargetNode(),   false);
                     break;
                 }
             }
         }
 
-        void handleRelayNodeEvent(int relayNodeId) {
-
-            audioProcessor->scheduleNodeHighlight((*std::atomic_load(&audioProcessor->globalNodes) )[relayNodeId], false);
+        void handleRelayNodeEvent(int relayNodeId)
+        {
+           audioProcessor->eventManager.highlightNode((*std::atomic_load(&audioProcessor->globalNodes) )[relayNodeId], false);
         }
 
 
@@ -228,60 +233,108 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
         struct ActiveNote{ MidiEvent event; int traversalId = 0; int remainingSamples; RTNode noteNode; };
 
         std::vector<ActiveNote> activeNotes;
+
         SequenceTreeAudioProcessor* processor;
         EventManager(SequenceTreeAudioProcessor* p) : processor(p) {}
 
-        void handleEventStream(int sample, juce::MidiBuffer& midiMessages) {
-
+        void handleEventStream(int sample, juce::MidiBuffer& midiMessages)
+        {
             auto& loadedTraversals = *std::atomic_load(&traversals);
             auto& loadedGlobalNodes = *std::atomic_load(&processor->globalNodes);
 
             for (int i = activeNotes.size() - 1; i >= 0; --i) {
+
+                if (loadedTraversals.empty()){
+                  DBG("First Note Not Already Made!");
+                   handleFirstTraversal(sample,midiMessages); continue;
+                }
+
                 ActiveNote& note = activeNotes[i];
 
                 if (--note.remainingSamples > 0) { continue; }
-                midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), sample);
-                if (note.traversalId == -1)      { activeNotes.erase(activeNotes.begin() + i); continue; }
 
-                int traversalId = note.traversalId;
+                DBG("Note End Reached at Sample:" + juce::String(sample));
+
+                midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch),sample);
+
+                if (note.traversalId == -1) {
+                    DBG("Note Discarded at Sample:" + juce::String(sample));
+                    activeNotes.erase(activeNotes.begin() + i);
+                    continue;
+                }
+
+                auto tempNote = note;
+                activeNotes.erase(activeNotes.begin() + i);
+
+                int traversalId = tempNote.traversalId;
 
                 auto it = loadedTraversals.find(traversalId);
-                if (it == loadedTraversals.end()) { continue;  }
-
+                if (it == loadedTraversals.end()) {
+                    DBG("TRAVERSAL NOT FOUND! SKIPPING TRAVERSAL");
+                    continue;  }
                 TraversalLogic& traversal = it->second;
 
-                switch (note.noteNode.nodeType) {
+                switch (tempNote.noteNode.nodeType) {
 
                     case RTNode::NodeType::Node: {
+
                         traversal.handleNodeEvent();
                         if (traversal.shouldTraverse()) {
-                            pushNote(traversal.getTargetNode(), traversalId, midiMessages);
-                            for (int traverserId : traversal.traversers) { pushNote(loadedGlobalNodes.at(traverserId), traversalId, midiMessages); }
+                            pushNote(traversal.getTargetNode(), traversalId, midiMessages, sample);
+                            for (int traverserId : traversal.traversers) {
+                                pushNote(loadedGlobalNodes.at(traverserId), traversalId, midiMessages,sample);
+                            }
                         }
                         break;
                     }
                     case RTNode::NodeType::RelayNode : {
-                        traversal.handleRelayNodeEvent(note.noteNode.nodeID);
-                        if (traversal.shouldTraverse()) { pushConnectorNotes(note.noteNode.nodeID, midiMessages); }
+                        traversal.handleRelayNodeEvent(tempNote.noteNode.nodeID);
+                        if (traversal.shouldTraverse()) { pushConnectorNotes(tempNote.noteNode.nodeID, midiMessages, sample); }
                         break;
                     }
                     case RTNode::NodeType::Counter : { break; }
                 }
-
-                activeNotes.erase(activeNotes.begin() + i);
             }
         }
 
-        void pushNote(RTNode node, int traversalId,juce::MidiBuffer& midiMessages)
+        void handleFirstTraversal(int sample, juce::MidiBuffer& midiMessages)
         {
+            auto& loadedGlobalNodes = *std::atomic_load(&processor->globalNodes);
+            auto& loadedTraversals = *std::atomic_load(&traversals);
 
+            loadedTraversals.insert({1,TraversalLogic(1,processor)});
+            TraversalLogic& traversal = loadedTraversals.at(1);
+            traversal.targetId = traversal.rootId;
+            traversal.state = TraversalLogic::TraversalState::Active;
+            traversal.isLooping = true;
+
+            RTNode& rootNode = (loadedGlobalNodes)[traversal.rootId];
+            highlightNode(rootNode,true);
+
+            int traversalId = rootNode.nodeID;
+            pushNote(rootNode,traversalId,midiMessages,sample);
+        }
+
+        void pushNote(RTNode node, int traversalId,juce::MidiBuffer& midiMessages,int sample)
+        {
             int pitch = 63, velocity = 63, duration = 1000;
 
-            if (!node.notes.empty()) {
-                const RTNote& note = node.notes[0];
+            if (!node.notes.empty())
+            {   const RTNote& note = node.notes[0];
                 pitch = note.pitch;
                 velocity = note.velocity;
                 duration = note.duration;
+
+                if (velocity <= 0)
+                {   velocity = 63;
+
+                    DBG("NOTE OFF MESSAGE SENT TO PUSHNOTE!");
+                }
+
+            }
+            else
+            {
+                DBG("NO NODE NOTES FOUND!");
             }
 
             ActiveNote newNote;
@@ -293,10 +346,11 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
             newNote.noteNode = node;
 
             activeNotes.push_back(newNote);
-            midiMessages.addEvent(juce::MidiMessage::noteOn(1, pitch, (juce::uint8)velocity), 0);
+            midiMessages.addEvent(juce::MidiMessage::noteOn(1, pitch, (juce::uint8)velocity), sample);
         }
 
-        void pushConnectorNotes(int traverserId, juce::MidiBuffer& midiMessages) {
+        void pushConnectorNotes(int traverserId, juce::MidiBuffer& midiMessages, int sample)
+        {
 
             auto& loadedGlobalNodes = *std::atomic_load(&processor->globalNodes);
             auto& loadedTraversals = *std::atomic_load(&traversals);
@@ -316,8 +370,9 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
                 newTraversal.targetId = connectorId;
                 newTraversal.state = TraversalLogic::TraversalState::Active;
                 highlightNode(newTraversal.getTargetNode(),true);
-                pushNote(connector,connector.graphID,midiMessages);
+                pushNote(connector,connector.graphID,midiMessages, sample);
             }
+
         }
 
         void clearOldEvents(int traversalId) {
@@ -333,11 +388,6 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
             pendingAsyncCalls.fetch_add(1, std::memory_order_relaxed);
 
             juce::MessageManager::callAsync([this, nodeID, shouldHighlight, graphID]() {
-
-                if(processor->canvas->nodeMaps.find(graphID) == processor->canvas->nodeMaps.end()){
-                    return;
-                }
-
                 auto& nodeMap = processor->canvas->nodeMaps[graphID];
 
                 auto it = nodeMap.find(nodeID);

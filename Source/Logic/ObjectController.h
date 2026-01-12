@@ -36,10 +36,12 @@ class ObjectController : public juce::MouseListener {
         void mouseUp(const juce::MouseEvent& e) override;
 
         void setObjects(Node* node);
+        void handleNodeRelease();
     
     private:
-    
+
         NodeCanvas* nodeCanvas = nullptr;
+
         Node* node = nullptr;
         Node* childNode = nullptr;
         Node* connectorNode = nullptr;

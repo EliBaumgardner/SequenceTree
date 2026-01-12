@@ -43,14 +43,11 @@ class NodeCanvas : public juce::Component {
         void setProcessorPlayblack(bool isPlaying);
     
         enum class ControllerMode { Node, Counter,Traverser };
-
-
-    // Object Variables //
-
         ControllerMode controllerMode;
+
         std::unique_ptr<ObjectController> controller;
-    
         Node* root = nullptr;
+
         juce::OwnedArray<Node> canvasNodes;
         juce::OwnedArray<NodeArrow> nodeArrows;
 
@@ -63,9 +60,10 @@ class NodeCanvas : public juce::Component {
         juce::String infoText;
         juce::Point<int> lastPosition;
 
-
-    // Primative Variables //
-
         bool start = false;
         bool controllerMade = false;
+
+        juce::ValueTree canvasTree;
+        juce::ValueTree canvasNodesTree;
+
 };

@@ -25,7 +25,6 @@ class Counter : public Node {
 
     int count;
     juce::Colour outlineColour = juce::Colours::black;
-
 };
 
 #endif //SEQUENCETREE_COUNTER_H

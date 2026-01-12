@@ -13,18 +13,19 @@
 
 class Node;
 
-class NodeArrow : public juce::Component, juce::ComponentListener {
-
+class NodeArrow : public juce::Component, juce::ComponentListener
+{
 public:
 
   NodeArrow(Node* startNode, Node* endNode);
   void paint (juce::Graphics& g) override;
-  void resized() override;
-
-  void updatePosition();
+  void animate();
 
   Node* startNode = nullptr;
-  Node* endNode = nullptr;
+  Node* endNode   = nullptr;
+  juce::Animator animator;
+  juce::VBlankAnimatorUpdater updater;
 
-  juce::Colour arrowColour = juce::Colours::black;
+  float myAlpha = 0;
+  int wobblePhase = 0;
 };

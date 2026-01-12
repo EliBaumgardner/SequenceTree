@@ -8,8 +8,8 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "Node/Node.h"
-#include "Node/NodeData.h"
+#include "../Node/Node.h"
+#include "../Node/NodeData.h"
 
 //==============================================================================
 SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
@@ -23,7 +23,9 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
                      #endif
                        )
 #endif
+, valueTreeState(*this,nullptr,"STATE",createParameterLayout())
 {
+
 }
 
 SequenceTreeAudioProcessor::~SequenceTreeAudioProcessor()
@@ -96,17 +98,36 @@ void SequenceTreeAudioProcessor::changeProgramName (int index, const juce::Strin
 //==============================================================================
 void SequenceTreeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-        
-    TempoInfo.currentSampleRate = sampleRate;
+    //
+    // TempoInfo.currentSampleRate = sampleRate;
+    //
+    // double beatsPerSecond = TempoInfo.bpm / 60.0;
+    // TempoInfo.samplesPerBeat = static_cast<int> (sampleRate / beatsPerSecond);
+    //
+    // int stepsPerBeat = 4; // 16th notes
+    // TempoInfo.stepLengthInSamples = TempoInfo.samplesPerBeat / stepsPerBeat;
+    //
+    // TempoInfo.currentStep = 0;
+    // TempoInfo.samplesIntoStep = 0;
 
-    double beatsPerSecond = TempoInfo.bpm / 60.0;
-    TempoInfo.samplesPerBeat = static_cast<int> (sampleRate / beatsPerSecond);
-
-    int stepsPerBeat = 4; // 16th notes
-    TempoInfo.stepLengthInSamples = TempoInfo.samplesPerBeat / stepsPerBeat;
-
-    TempoInfo.currentStep = 0;
-    TempoInfo.samplesIntoStep = 0;
+    // juce::AudioPlayHead::CurrentPositionInfo posInfo;
+    // if (auto* ph = getPlayHead())
+    // {
+    //     DBG("Audio playback found");
+    //     if (ph->getCurrentPosition(posInfo))
+    //     {
+    //         TempoInfo.currentSampleRate = getSampleRate(); // keep your sample rate
+    //
+    //         DBG("Tempo: " + juce::String(TempoInfo.bpm));
+    //         DBG("Sample Rate: " + juce::String(TempoInfo.currentSampleRate));
+    //     }
+    //     else {
+    //         DBG("ERROR: CURRENT AUDIO PLAYBACK POSITION NOT FOUND");
+    //     }
+    // }
+    // else {
+    //     DBG("Audio playback not found");
+    // }
     
 }
 
@@ -185,92 +206,40 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     juce::ScopedNoDenormals noDenormals;
     auto numSamples = buffer.getNumSamples();
+
     buffer.clear();
+    midiMessages.clear();
 
     if (loadedTraversals->empty()) {
-
         loadedTraversals->insert({1,TraversalLogic(1,this)});
         TraversalLogic& traversal = loadedTraversals->at(1);
+        traversal.isFirstEvent = true;
         traversal.targetId = traversal.rootId;
         traversal.state = TraversalLogic::TraversalState::Active;
         traversal.isLooping = true;
 
         RTNode& rootNode = (*loadedGlobalNodes)[traversal.rootId];
-        scheduleNodeHighlight(rootNode,true);
+        eventManager.highlightNode(rootNode,true);
 
         int traversalId = rootNode.nodeID;
-        pushNote(rootNode,traversalId,midiMessages);
+        eventManager.pushNote(rootNode,traversalId,midiMessages,0);
      }
 
-    for (int sample = 0; sample < numSamples; ++sample) {
-        eventManager.handleEventStream(sample,midiMessages);
-    }
+    for (int sample = 0; sample < numSamples; ++sample) { eventManager.handleEventStream(sample,midiMessages); }
+
 }
 
-
-//Pushes notes into a buffer that is read by processBlock, where a midi event is created
-void SequenceTreeAudioProcessor::pushNote(RTNode node, int traversalId,juce::MidiBuffer& midiMessages)
+void SequenceTreeAudioProcessor::clearOldEvents(RTNode node, int traversalId)
 {
-
-    int pitch = 63, velocity = 63, duration = 1000;
-
-    if (!node.notes.empty()) {
-        const RTNote& note = node.notes[0];
-        pitch = note.pitch;
-        velocity = note.velocity;
-        duration = note.duration;
-    }
-
-    EventManager::ActiveNote newNote;
-    newNote.traversalId = traversalId;
-    newNote.event.pitch = pitch;
-    newNote.event.velocity = velocity;
-    newNote.event.duration = duration;
-    newNote.remainingSamples = static_cast<int>((duration / 1000.0) * TempoInfo.currentSampleRate);
-    newNote.noteNode = node;
-
-    eventManager.activeNotes.push_back(newNote);
-    midiMessages.addEvent(juce::MidiMessage::noteOn(1, pitch, (juce::uint8)velocity), 0);
-}
-
-void SequenceTreeAudioProcessor::clearOldEvents(RTNode node, int traversalId) {
-
     for (int i = eventManager.activeNotes.size()-1; i >= 0; --i) {
         EventManager::ActiveNote& note = eventManager.activeNotes[i];
-        if (note.traversalId == traversalId ) { note.traversalId = -1; std::cout<<"disabling old event"<<std::endl;}
+        if (note.traversalId == traversalId ) { note.traversalId = -1; }
     }
-}
-
-//Asynchronous node highlighting scheduled for editor
-void SequenceTreeAudioProcessor::scheduleNodeHighlight(const RTNode& node, bool shouldHighlight) {
-
-    int nodeID = node.nodeID;
-    int graphID = node.graphID;
-    //pendingAsyncCalls.fetch_add(1, std::memory_order_relaxed);
-
-    juce::MessageManager::callAsync([this, nodeID, shouldHighlight, graphID]() {
-
-        if(canvas->nodeMaps.find(graphID) == canvas->nodeMaps.end()){
-            return;
-        }
-
-        auto& nodeMap = canvas->nodeMaps[graphID];
-
-        auto it = nodeMap.find(nodeID);
-        if (it != nodeMap.end()) {
-            Node* foundNode = nullptr;
-            foundNode = it->second;
-            foundNode->setHighlightVisual(shouldHighlight);
-        }
-
-        //pendingAsyncCalls.fetch_sub(1, std::memory_order_relaxed);
-    });
 }
 
 //Adds a new graph to the processor and inserts/deletes nodes based on graph
-void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
-
-    ////////  1. Placeholder structures to modify data and atomic swap  ////////
+void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)
+{
     std::shared_ptr<std::unordered_map<int,RTNode>> newGlobalNodes;
     std::shared_ptr<RTGraphs> newRTGraphs;
     std::shared_ptr<std::unordered_map<int,TraversalLogic>> newTraversals;
@@ -305,4 +274,18 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph) {
     std::atomic_store(&globalNodes, newGlobalNodes);
     std::atomic_store(&eventManager.traversals, newTraversals);
 
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::createParameterLayout()
+{
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "gain",
+        "Gain",
+        juce::NormalisableRange<float>(0.0f, 1.0f),
+        0.5f
+    ));
+
+    return { params.begin(), params.end() };
 }

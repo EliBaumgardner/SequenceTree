@@ -24,19 +24,7 @@ void ObjectController::mouseExit(const juce::MouseEvent& e){ node->setHoverVisua
 
 void ObjectController::mouseUp(const juce::MouseEvent& e)
 {
-    if (hasConnection && connectorNode != nullptr) {
-
-        if (auto traverser = dynamic_cast<RelayNode*>(node)) { node->nodeData.removeConnector(childNode); node->nodeData.addConnector(connectorNode);}
-        else { node->nodeData.removeChild(childNode);  node->nodeData.addChild(connectorNode); }
-
-        nodeCanvas->removeNode(childNode);
-
-        nodeCanvas->addLinePoints(node,connectorNode);
-        nodeCanvas->updateLinePoints(node);
-        nodeCanvas->makeRTGraph(node);
-    }
-
-    isDragStart = true; childNode = nullptr; connectorNode = nullptr;
+    handleNodeRelease();
 }
 
 void ObjectController::mouseDown(const juce::MouseEvent& e)
@@ -59,12 +47,14 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e)
 
     const auto position = e.getEventRelativeTo(node->getParentComponent()).position;
 
-    if (!e.mods.isShiftDown()){
+    if (e.mods.isShiftDown()){
+
         node->setCentrePosition(position.toInt());
         node->nodeData.nodeData.setProperty("x", node->getX(), nullptr);
         node->nodeData.nodeData.setProperty("y", node->getY(), nullptr);
         nodeCanvas->updateLinePoints(node);
         nodeCanvas->repaint();
+        isDragStart = false;
         return;
     }
 
@@ -95,25 +85,27 @@ void ObjectController::mouseDrag(const juce::MouseEvent& e)
 
     node->setSelectVisual(false);
 
-    childNode->setCentrePosition(position.toInt());
-    childNode->setSize(40, 40);
-    childNode->nodeData.nodeData.setProperty("x", childNode->getX(), nullptr);
-    childNode->nodeData.nodeData.setProperty("y", childNode->getY(), nullptr);
+    if (childNode != nullptr) {
+        childNode->setCentrePosition(position.toInt());
+        childNode->setSize(40, 40);
+        childNode->nodeData.nodeData.setProperty("x", childNode->getX(), nullptr);
+        childNode->nodeData.nodeData.setProperty("y", childNode->getY(), nullptr);
 
-    auto* target = dynamic_cast<Node*>(nodeCanvas->getComponentAt(position.x, position.y));
+        auto* target = dynamic_cast<Node*>(nodeCanvas->getComponentAt(position.x, position.y));
 
-    hasConnection = target && target != childNode && target != node && target != node->parent;
+        hasConnection = target && target != childNode && target != node && target != node->parent;
 
-    connectorNode = hasConnection ? target : nullptr;
-    childNode->setVisible(!hasConnection);
+        connectorNode = hasConnection ? target : nullptr;
+        childNode->setVisible(!hasConnection);
 
-    if (hasConnection && abs(deltaX) < 3 && abs(deltaY) < 3) {
-        auto point = target->localPointToGlobal(target->getLocalBounds().getCentre().toFloat());
-        juce::Desktop::getInstance().setMousePosition(point.toInt());
+        if (hasConnection && abs(deltaX) < 3 && abs(deltaY) < 3) {
+            auto point = target->localPointToGlobal(target->getLocalBounds().getCentre().toFloat());
+            juce::Desktop::getInstance().setMousePosition(point.toInt());
+        }
+
+        nodeCanvas->updateLinePoints(childNode);
+        nodeCanvas->repaint();
     }
-
-    nodeCanvas->updateLinePoints(childNode);
-    nodeCanvas->repaint();
 }
 
 void ObjectController::setObjects(Node* node)
@@ -125,4 +117,25 @@ void ObjectController::setObjects(Node* node)
         this->node = node;
         this->node->addMouseListener(this,true);
     }
+}
+
+void ObjectController::handleNodeRelease() {
+
+    std::cout<<"mouse up handled"<<std::endl;
+
+    if (hasConnection && connectorNode != nullptr) {
+
+        std::cout<<"node connection hanlded"<<std::endl;
+        if (auto traverser = dynamic_cast<RelayNode*>(node)) { node->nodeData.removeConnector(childNode); node->nodeData.addConnector(connectorNode);}
+        else                                                 { node->nodeData.removeChild(childNode);  node->nodeData.addChild(connectorNode); }
+
+        nodeCanvas->removeNode(childNode);
+
+        nodeCanvas->addLinePoints(node,connectorNode);
+        nodeCanvas->updateLinePoints(node);
+        nodeCanvas->makeRTGraph(node);
+    }
+
+    isDragStart = true; childNode = nullptr; connectorNode = nullptr;
+
 }

@@ -19,7 +19,11 @@ Titlebar::Titlebar()
     addAndMakeVisible(buttonPane);
     addAndMakeVisible(displaySelector);
 
-    playButton.onClick = [=](){ toggled(); };
+    playButton.onClick = [=]() {
+        std::cout<<"playbutton clicked"<<std::endl;
+        ComponentContext::canvas->start = !ComponentContext::canvas->start;
+        ComponentContext::canvas->setProcessorPlayblack(ComponentContext::canvas->start);
+    };
 }
 
 void Titlebar::paint(juce::Graphics& g)

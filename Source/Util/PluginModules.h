@@ -9,5 +9,7 @@
 #include <juce_graphics/juce_graphics.h>                   // For Image, Colour, RectanglePlacement, etc.
 #include <juce_core/juce_core.h>                           // For general JUCE utilities like jmap, jlimit
 #include <juce_audio_processors/juce_audio_processors.h>   // For Audio Processor
+#include <juce_animation/juce_animation.h>
+
 
 #endif //SEQUENCETREE_PLUGINMODULES_H
