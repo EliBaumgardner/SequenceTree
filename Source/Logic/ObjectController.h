@@ -25,30 +25,34 @@ class NodeData;
 
 class ObjectController : public juce::MouseListener {
     
-    public:
-    
-        ObjectController(Node* node);
+public:
 
-        void mouseEnter(const juce::MouseEvent& e) override;
-        void mouseExit(const juce::MouseEvent& e) override;
-        void mouseDrag(const juce::MouseEvent& e) override;
-        void mouseDown(const juce::MouseEvent& e) override;
-        void mouseUp(const juce::MouseEvent& e) override;
+    ObjectController(Node* node);
 
-        void setObjects(Node* node);
-        void handleNodeRelease();
-    
-    private:
+    void mouseEnter(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
+    void mouseDrag(const juce::MouseEvent& e) override;
+    void mouseDown(const juce::MouseEvent& e) override;
+    void mouseUp(const juce::MouseEvent& e) override;
 
-        NodeCanvas* nodeCanvas = nullptr;
+    void dragNode(juce::Point<float> position);
+    void addNode();
+    void connectNode(int deltaX, int deltaY, juce::Point<float> position);
 
-        Node* node = nullptr;
-        Node* childNode = nullptr;
-        Node* connectorNode = nullptr;
+    void setObjects(Node* node);
+    void handleNodeRelease();
 
-        bool isDragStart = true;
-        bool hasConnection = false;
+private:
 
-        int lastX = 0;
-        int lastY = 0;
+    NodeCanvas* nodeCanvas = nullptr;
+
+    Node* node = nullptr;
+    Node* childNode = nullptr;
+    Node* connectorNode = nullptr;
+
+    bool isDragStart = true;
+    bool hasConnection = false;
+
+    int lastX = 0;
+    int lastY = 0;
 };

@@ -41,8 +41,9 @@ NodeData::NodeData() : nodeData("NodeData"), midiNoteData("MidiNoteData"), midiC
     midiCCData.setProperty(channelID,0,nullptr);
     midiCCData.setProperty(ccNumberID,0,nullptr);
     midiCCData.setProperty(ccValueID,0,nullptr);
-    
 
+    if (ComponentContext::canvas != nullptr) { ComponentContext::canvas->canvasTree.addChild(nodeData,-1,&ComponentContext::undoManager); }
+    else { DBG("NODE CREATED WITHOUT CANVAS!")}
 }
 
 NodeData::~NodeData() {
@@ -51,9 +52,17 @@ NodeData::~NodeData() {
     propertyValues.clear();
 }
 
-void NodeData::addChild(Node* child){ children.add(child); }
+void NodeData::addChild(Node* child)
+{
+    children.add(child);
+    juce::ValueTree tree("NodeData");
+    nodeData.addChild(tree, -1, &ComponentContext::undoManager);
+}
 
-void NodeData::removeChild(Node* child){ children.removeFirstMatchingValue(child); }
+void NodeData::removeChild(Node* child) {
+    children.removeFirstMatchingValue(child);
+    for (juce::ValueTree childTree : nodeData->ch)
+}
 
 void NodeData::addConnector(Node* connector) { connectors.add(connector);  connector->isConnector = true;}
 
@@ -84,26 +93,39 @@ void NodeData::bindEditor(juce::TextEditor& editor, const juce::Identifier prope
 void NodeData::createTree(juce::String type)
 {
     if(type == "MidiNoteData"){
+
+        std::cout<<"created midi tree"<<std::endl;
+
         juce::ValueTree tree("MidiNoteData");
         tree.setProperty(channelID,0,nullptr);
         tree.setProperty(pitchID,63,nullptr);
         tree.setProperty(velocityID,63,nullptr);
         tree.setProperty(durationID,1000,nullptr);
+
         midiNotes.add(tree);
-        
+
+        nodeData.addChild(tree,-1,&ComponentContext::undoManager);
+
         tree.addListener(&listener);
-        
         listener.onChanged = [this](){ ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root); };
     }
     else {
+
+        std::cout<<"created midi CC tree"<<std::endl;
+
         juce::ValueTree tree("MidiCCData");
         tree.setProperty(nameID,0,nullptr);
         tree.setProperty(channelID,0,nullptr);
         tree.setProperty(ccNumberID,0,nullptr);
         tree.setProperty(ccValueID,0,nullptr);
+
         midiCCs.add(tree);
+        nodeData.addChild(tree,-1,&ComponentContext::undoManager);
+
+        tree.addListener(&listener);
+        listener.onChanged = [this](){ ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root); };
     }
-    
+
     ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root);
 }
 

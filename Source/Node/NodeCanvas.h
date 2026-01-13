@@ -34,9 +34,10 @@ class NodeCanvas : public juce::Component {
         void removeLinePoints(Node* node);
     
         void setSelectionMode(NodeBox::DisplayMode mode);
-        void removeNode(Node* node);
 
+        void removeNode(Node* node);
         void addRootNode(Node* root);
+
         void makeRTGraph(Node* root);
         void destroyRTGraph(Node* root);
     
@@ -63,7 +64,5 @@ class NodeCanvas : public juce::Component {
         bool start = false;
         bool controllerMade = false;
 
-        juce::ValueTree canvasTree;
-        juce::ValueTree canvasNodesTree;
-
+        juce::ValueTree canvasTree {"CanvasTree"};
 };
