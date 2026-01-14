@@ -41,6 +41,7 @@ class NodeData{
         static const juce::Identifier countID;
         static const juce::Identifier countLimitID;
         static const juce::Identifier colourID;
+        static const juce::Identifier nodeID;
         
         static const juce::Identifier pitchID;
         static const juce::Identifier velocityID;

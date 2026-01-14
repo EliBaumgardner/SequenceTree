@@ -27,7 +27,7 @@ void ObjectController::mouseDown(const juce::MouseEvent& e)
 {
     for (auto canvasNode : nodeCanvas->canvasNodes){ if(canvasNode != node){ canvasNode->setSelectVisual(false); } }
 
-    if(e.mods.isRightButtonDown() && e.mods.isShiftDown()){ nodeCanvas->removeNode(node); }
+    if(e.mods.isRightButtonDown() && e.mods.isShiftDown()){ node->parent->nodeData.removeChild(node); nodeCanvas->removeNode(node); }
     else { node->setSelectVisual(); }
 }
 
@@ -70,7 +70,7 @@ void ObjectController::addNode()
         case NodeCanvas::ControllerMode::Node     : childNode = new Node();      break;
         case NodeCanvas::ControllerMode::Counter  : childNode = new Counter();   break;
         case NodeCanvas::ControllerMode::Traverser: childNode = new RelayNode(); break;
-        default: DBG("INVALID CONTROLLER MODE SELECTED") return;
+        default: DBG("INVALID CONTROLLER MODE SELECTED"); return;
     }
 
     nodeCanvas->canvasNodes.add(childNode);
@@ -78,8 +78,16 @@ void ObjectController::addNode()
 
     nodeCanvas->addAndMakeVisible(childNode);
 
-    if (auto parent = dynamic_cast<RelayNode*>(node)) { node->nodeData.addConnector(childNode); childNode->root = childNode; nodeCanvas->makeRTGraph(node->root); }
-    else { childNode->root = node->root; node->nodeData.addChild(childNode); }
+    if (auto parent = dynamic_cast<RelayNode*>(node)) {
+        node->nodeData.addConnector(childNode);
+        childNode->root = childNode;
+        nodeCanvas->makeRTGraph(node->root);
+
+    }
+    else {
+        childNode->root = node->root;
+        node->nodeData.addChild(childNode);
+    }
 
     nodeCanvas->makeRTGraph(childNode->root);
     nodeCanvas->addLinePoints(node, childNode);

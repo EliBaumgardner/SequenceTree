@@ -12,6 +12,7 @@ const juce::Identifier NodeData::radiusID { "radius" };
 const juce::Identifier NodeData::countID { "count" };
 const juce::Identifier NodeData::countLimitID { "countLimit" };
 const juce::Identifier NodeData::colourID { "colour" };
+const juce::Identifier NodeData::nodeID { "nodeID" };
 
 const juce::Identifier NodeData::pitchID { "pitch" };
 const juce::Identifier NodeData::velocityID { "velocity" };
@@ -31,6 +32,7 @@ NodeData::NodeData() : nodeData("NodeData"), midiNoteData("MidiNoteData"), midiC
     nodeData.setProperty(countID,0,nullptr);
     nodeData.setProperty(countLimitID,1,nullptr);
     nodeData.setProperty(colourID,0,nullptr);
+    nodeData.setProperty(nodeID,2,nullptr);
 
     midiNoteData.setProperty(channelID,0,nullptr);
     midiNoteData.setProperty(pitchID,0,nullptr);
@@ -43,7 +45,7 @@ NodeData::NodeData() : nodeData("NodeData"), midiNoteData("MidiNoteData"), midiC
     midiCCData.setProperty(ccValueID,0,nullptr);
 
     if (ComponentContext::canvas != nullptr) { ComponentContext::canvas->canvasTree.addChild(nodeData,-1,&ComponentContext::undoManager); }
-    else { DBG("NODE CREATED WITHOUT CANVAS!")}
+    else { DBG("NODE CREATED WITHOUT CANVAS!"); }
 }
 
 NodeData::~NodeData() {
@@ -61,7 +63,14 @@ void NodeData::addChild(Node* child)
 
 void NodeData::removeChild(Node* child) {
     children.removeFirstMatchingValue(child);
-    for (juce::ValueTree childTree : nodeData->ch)
+
+    for (int i = nodeData.getNumChildren()-1; i >= 0; i--) {
+        juce::ValueTree childNodeTree = nodeData.getChild(i);
+        if (childNodeTree.getType() != juce::Identifier("NodeData")) { continue; }
+
+        int childID = (int)childNodeTree.getProperty("nodeID");
+        if (childID == child->nodeID) { nodeData.removeChild(i,&ComponentContext::undoManager); }
+    }
 }
 
 void NodeData::addConnector(Node* connector) { connectors.add(connector);  connector->isConnector = true;}

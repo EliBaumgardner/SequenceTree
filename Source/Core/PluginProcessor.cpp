@@ -11,6 +11,7 @@
 #include "../Node/Node.h"
 #include "../Node/NodeData.h"
 
+
 //==============================================================================
 SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -96,40 +97,7 @@ void SequenceTreeAudioProcessor::changeProgramName (int index, const juce::Strin
 }
 
 //==============================================================================
-void SequenceTreeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
-{
-    //
-    // TempoInfo.currentSampleRate = sampleRate;
-    //
-    // double beatsPerSecond = TempoInfo.bpm / 60.0;
-    // TempoInfo.samplesPerBeat = static_cast<int> (sampleRate / beatsPerSecond);
-    //
-    // int stepsPerBeat = 4; // 16th notes
-    // TempoInfo.stepLengthInSamples = TempoInfo.samplesPerBeat / stepsPerBeat;
-    //
-    // TempoInfo.currentStep = 0;
-    // TempoInfo.samplesIntoStep = 0;
-
-    // juce::AudioPlayHead::CurrentPositionInfo posInfo;
-    // if (auto* ph = getPlayHead())
-    // {
-    //     DBG("Audio playback found");
-    //     if (ph->getCurrentPosition(posInfo))
-    //     {
-    //         TempoInfo.currentSampleRate = getSampleRate(); // keep your sample rate
-    //
-    //         DBG("Tempo: " + juce::String(TempoInfo.bpm));
-    //         DBG("Sample Rate: " + juce::String(TempoInfo.currentSampleRate));
-    //     }
-    //     else {
-    //         DBG("ERROR: CURRENT AUDIO PLAYBACK POSITION NOT FOUND");
-    //     }
-    // }
-    // else {
-    //     DBG("Audio playback not found");
-    // }
-    
-}
+void SequenceTreeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) { }
 
 void SequenceTreeAudioProcessor::releaseResources()
 {
@@ -177,9 +145,13 @@ juce::AudioProcessorEditor* SequenceTreeAudioProcessor::createEditor()
 //==============================================================================
 void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    juce::ValueTree editorTree = canvas->canvasTree;
+
+    // Serialize the tree to XML
+    std::unique_ptr<juce::XmlElement> xml(editorTree.createXml());
+
+    // Write XML to the host-provided memory block
+    copyXmlToBinary(*xml, destData);
 }
 
 void SequenceTreeAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
@@ -192,7 +164,6 @@ void SequenceTreeAudioProcessor::setStateInformation (const void* data, int size
 // This creates new instances of the plugin.
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-
     return new SequenceTreeAudioProcessor();
 }
 

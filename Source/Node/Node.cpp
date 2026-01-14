@@ -104,12 +104,10 @@ void Node::setDisplayMode(NodeBox::DisplayMode mode)
     midiTree.setProperty("velocity", 60, nullptr);
     midiTree.setProperty("duration", 500, nullptr);
     
-    if (nodeData.midiNotes.isEmpty()) {
-    nodeData.midiNotes.add(midiTree);
-}
-else if (nodeData.midiNotes.size() == 1) {
-    midiTree = nodeData.midiNotes.getLast();
-}
+    if (nodeData.midiNotes.isEmpty())       { nodeData.midiNotes.add(midiTree);        }
+    else if (nodeData.midiNotes.size() == 1){ midiTree = nodeData.midiNotes.getLast(); }
+
+    nodeData.nodeData.addChild(midiTree,-1,&ComponentContext::undoManager);
 
     switch (mode){
     case NodeBox::DisplayMode::Pitch:

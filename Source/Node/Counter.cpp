@@ -84,7 +84,6 @@ void Counter::paint(juce::Graphics& g) {
 
 void Counter::setDisplayMode(NodeBox::DisplayMode mode){
 
-
     juce::ValueTree midiTree("MidiNoteData");
 
     midiTree.setProperty("pitch",60,nullptr);
