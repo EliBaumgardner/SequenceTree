@@ -11,8 +11,8 @@
 #include "../Util/PluginModules.h"
 
 #include "PluginProcessor.h"
-#include "../Node/NodeCanvas.h"
-#include "../Node/Node.h"
+#include "Node/NodeCanvas.h"
+#include "Node/Node.h"
 #include "../Logic/DynamicPort.h"
 #include "../UI/Titlebar.h"
 #include "../UI/CustomLookAndFeel.h"

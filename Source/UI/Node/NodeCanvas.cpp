@@ -8,7 +8,10 @@ NodeCanvas::NodeCanvas() { setLookAndFeel(ComponentContext::lookAndFeel); }
 
 void NodeCanvas::paint(juce::Graphics& g)
 {
-    if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawCanvas(g,*this); }
+    if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel()))
+    {
+        customLookAndFeel->drawCanvas(g,*this);
+    }
 }
 
 
@@ -32,7 +35,8 @@ void NodeCanvas::removeNode(Node* node)
 
 void NodeCanvas::setSelectionMode(NodeBox::DisplayMode mode)
 {
-    for(int i = 0; i < canvasNodes.size(); i++) {
+    for(int i = 0; i < canvasNodes.size(); i++)
+    {
         canvasNodes[i]->setDisplayMode(mode);
         canvasNodes[i]->editor.get()->formatDisplay(mode);
     }
@@ -44,7 +48,7 @@ void NodeCanvas::setSelectionMode(NodeBox::DisplayMode mode)
 
 void NodeCanvas::mouseDown(const juce::MouseEvent& e)
 {
-    if (!e.mods.isLeftButtonDown() || controllerMode != ControllerMode::Node || !e.mods.isShiftDown()) { return;}
+    if (!e.mods.isLeftButtonDown() || controllerMode != ControllerMode::Node || !e.mods.isShiftDown()) { return; }
 
     Node* root = new Node();
     canvasNodes.add(root);
@@ -87,10 +91,10 @@ void NodeCanvas::addLinePoints(Node* startNode, Node* endNode) {
 
 void NodeCanvas::removeLinePoints(Node* node)
 {
-    for (int i = nodeArrows.size() - 1; i >= 0; i--) {
+    for (int i = nodeArrows.size() - 1; i >= 0; i--)
+    {
         NodeArrow* nodeArrow = nodeArrows[i];
-        if (nodeArrow->startNode != node && nodeArrow->endNode != node)
-            continue;
+        if (nodeArrow->startNode != node && nodeArrow->endNode != node) { continue; }
 
         nodeArrows.remove(i);
     }
@@ -101,7 +105,7 @@ void NodeCanvas::updateLinePoints(Node* movedNode)
     for (NodeArrow* arrow : nodeArrows)
     {
 
-        if (arrow->startNode != movedNode && arrow->endNode != movedNode) continue;
+        if (arrow->startNode != movedNode && arrow->endNode != movedNode) { continue; }
 
         juce::Point start = movedNode->getBounds().getCentre();
         juce::Point end = arrow->endNode->getBounds().getCentre();
@@ -133,6 +137,7 @@ void NodeCanvas::updateLinePoints(Node* movedNode)
 
 void NodeCanvas::makeRTGraph(Node* root)
 {
+    std::cout<<"making graph"<<std::endl;
     auto rtGraph = std::make_shared<RTGraph>();
     rtGraph->graphID = root->nodeID;
 
@@ -178,7 +183,7 @@ void NodeCanvas::makeRTGraph(Node* root)
     }
 
     for(auto& [id, node] : nodeMap){
-        for(auto& child : node->nodeData.children){ rtGraph->nodeMap[id].children.push_back(child->nodeID); }
+        for (auto& child : node->nodeData.children)       { rtGraph->nodeMap[id].children.push_back(child->nodeID); }
         for (auto& connector : node->nodeData.connectors) { rtGraph->nodeMap[id].connectors.push_back(connector->nodeID); }
     }
 
@@ -198,8 +203,58 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
     start = isPlaying;
     ComponentContext::processor->isPlaying.store(start);
 
-    for(auto& [graphID,graph] : rtGraphs){
+    for(auto& [graphID,graph] : rtGraphs) {
         graph.get()->traversalRequested = start;
         ComponentContext::processor->setNewGraph(graph);
     }
+}
+
+void NodeCanvas::setValueTreeState(juce::ValueTree stateTree)
+{
+    clearCanvas();
+
+    for (int i = 0 ; i < stateTree.getNumChildren(); i++) {
+
+        juce::ValueTree treeChild = stateTree.getChild(i);
+
+        int xPos = treeChild.getProperty("x");
+        int yPos = treeChild.getProperty("y");
+        int radius = treeChild.getProperty("radius");
+        int count = treeChild.getProperty("count");
+        int countLimit = treeChild.getProperty("countLimit");
+        int nodeID = treeChild.getProperty("nodeID");
+
+
+        if (treeChild.getType() == juce::Identifier("NodeData")) {
+
+            auto canvasNode = new Node();
+
+            canvasNodes.add(canvasNode);
+            canvasNode->setCentrePosition(xPos, yPos);
+
+            std::cout<<"X Position: "<<xPos<<std::endl;
+            std::cout<<"Y Position: "<<yPos<<std::endl;
+            std::cout<<"Radius: "<<radius<<std::endl;
+
+            canvasNode->setSize(radius*2, radius*2);
+
+            canvasNode->nodeData.nodeData.setProperty("x",xPos,nullptr);
+            canvasNode->nodeData.nodeData.setProperty("y",yPos,nullptr);
+            canvasNode->nodeData.nodeData.setProperty("radius",canvasNode->getWidth(),nullptr);
+
+            canvasNode->nodeData.nodeData.setProperty("count",count,nullptr);
+            canvasNode->nodeData.nodeData.setProperty("countLimit",countLimit,nullptr);
+            canvasNode->nodeData.nodeData.setProperty("nodeID",nodeID,nullptr);
+            addAndMakeVisible(canvasNode);
+        }
+    }
+    canvasTree.removeAllChildren(nullptr);
+}
+
+void NodeCanvas::clearCanvas()
+{
+    if (canvasNodes.isEmpty()) { DBG("CLEAR CANVAS CALLED ON EMPTY CANVAS"); return; }
+
+    nodeArrows.clear();
+    canvasNodes.clear();
 }

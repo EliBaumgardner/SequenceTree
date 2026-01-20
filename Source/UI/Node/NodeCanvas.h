@@ -42,6 +42,10 @@ class NodeCanvas : public juce::Component {
         void destroyRTGraph(Node* root);
     
         void setProcessorPlayblack(bool isPlaying);
+
+        void setValueTreeState(juce::ValueTree stateTree);
+
+        void clearCanvas();
     
         enum class ControllerMode { Node, Counter,Traverser };
         ControllerMode controllerMode;

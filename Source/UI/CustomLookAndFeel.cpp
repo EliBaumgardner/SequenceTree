@@ -3,8 +3,8 @@
 //
 
 #include "CustomLookAndFeel.h"
-#include "../Node/NodeCanvas.h"
-#include "../Node/Node.h"
+#include "Node/NodeCanvas.h"
+#include "Node/Node.h"
 #include "Titlebar.h"
 #include "DynamicEditor.h"
 #include "TitleBarButtons.h"

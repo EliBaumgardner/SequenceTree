@@ -27,6 +27,7 @@ juce_add_binary_data(MyBinaryData SOURCES  assets/Node.png assets/Counter.png as
 
 target_include_directories(SequenceTree PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}/juce_binarydata_MyBinaryData
+        ${CMAKE_CURRENT_SOURCE_DIR}/Source/UI
 )
 
 target_compile_definitions(SequenceTree PRIVATE
@@ -38,18 +39,18 @@ target_sources(SequenceTree PRIVATE
         Source/UI/ColourSelector.cpp
         Source/UI/DynamicEditor.cpp
         Source/Logic/DynamicPort.cpp
-        Source/Node/Node.cpp
-        Source/Node/NodeArrow.cpp
-        Source/Node/NodeBox.cpp
-        Source/Node/NodeCanvas.cpp
+        Source/UI/Node/Node.cpp
+        Source/UI/Node/NodeArrow.cpp
+        Source/UI/Node/NodeBox.cpp
+        Source/UI/Node/NodeCanvas.cpp
         Source/Logic/ObjectController.cpp
-        Source/Node/NodeData.cpp
+        Source/UI/Node/NodeData.cpp
         Source/UI/PianoRoll.cpp
         Source/Core/PluginEditor.cpp
         Source/Core/PluginProcessor.cpp
         Source/UI/TitleBar.cpp
-        Source/Node/Counter.cpp
-        Source/Node/RelayNode.cpp
+        Source/UI/Node/Counter.cpp
+        Source/UI/Node/RelayNode.cpp
         Source/UI/CustomLookAndFeel.cpp
 )
 

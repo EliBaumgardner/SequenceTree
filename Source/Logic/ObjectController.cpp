@@ -8,12 +8,12 @@
   ==============================================================================
 */
 
-#include "../Node/NodeCanvas.h"
-#include "../Node/Node.h"
-#include "../Node/NodeData.h"
+#include "Node/NodeCanvas.h"
+#include "Node/Node.h"
+#include "Node/NodeData.h"
 #include "ObjectController.h"
-#include "../Node/Counter.h"
-#include "../Node/RelayNode.h"
+#include "Node/Counter.h"
+#include "Node/RelayNode.h"
 #include "../UI/DynamicEditor.h"
 
 
@@ -92,6 +92,7 @@ void ObjectController::addNode()
     nodeCanvas->makeRTGraph(childNode->root);
     nodeCanvas->addLinePoints(node, childNode);
     childNode->toBack();
+    childNode->nodeData.nodeData.setProperty("radius",childNode->getWidth()/2,nullptr);
 }
 
 void ObjectController::connectNode(int deltaX, int deltaY, const juce::Point<float> position)

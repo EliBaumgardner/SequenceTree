@@ -10,7 +10,7 @@
 
 #include "DynamicEditor.h"
 #include "../Util/PluginContext.h"
-#include "../Node/NodeCanvas.h"
+#include "Node/NodeCanvas.h"
 
 
 DynamicEditor::DynamicEditor()

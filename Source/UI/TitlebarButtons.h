@@ -7,7 +7,7 @@
 
 #include "../Util/PluginModules.h"
 #include "../Util/PluginContext.h"
-#include "../Node/NodeCanvas.h"
+#include "Node/NodeCanvas.h"
 
 static constexpr float buttonBoundsReduction = 3.0f;
 static constexpr float buttonBorderThickness = 2.0f;

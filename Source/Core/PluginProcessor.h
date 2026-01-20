@@ -17,7 +17,7 @@
 #include <memory>
 #include <atomic>
 #include "../Util/RTData.h"
-#include "../Node/NodeCanvas.h"
+#include "Node/NodeCanvas.h"
 
 class SequenceTreeAudioProcessorEditor;
 

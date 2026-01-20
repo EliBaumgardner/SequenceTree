@@ -8,8 +8,8 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "../Node/Node.h"
-#include "../Node/NodeData.h"
+#include "Node/Node.h"
+#include "Node/NodeData.h"
 
 
 //==============================================================================
@@ -147,17 +147,24 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
 {
     juce::ValueTree editorTree = canvas->canvasTree;
 
-    // Serialize the tree to XML
     std::unique_ptr<juce::XmlElement> xml(editorTree.createXml());
 
-    // Write XML to the host-provided memory block
     copyXmlToBinary(*xml, destData);
 }
 
 void SequenceTreeAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+
+    if (xmlState == nullptr)     { DBG("INVALID STATE DATA"); return; }
+
+    juce::ValueTree restoredTree = juce::ValueTree::fromXml (*xmlState);
+
+    if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
+
+    juce::MessageManager::callAsync([this,restoredTree]() {
+        canvas->setValueTreeState(restoredTree);
+    });
 }
 
 //==============================================================================
