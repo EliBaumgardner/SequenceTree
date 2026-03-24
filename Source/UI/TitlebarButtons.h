@@ -269,4 +269,108 @@ class TempoDisplay : public juce::Component {
     }
 };
 
+class UndoButton : public juce::Component {
+
+    bool isDown = false;
+    public:
+
+    std::function<void()> onClick;
+    UndoButton() { setLookAndFeel(ComponentContext::lookAndFeel); }
+
+    void paint(juce::Graphics& g) override
+    {
+        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawUndoButton(g, *this,isDown); }
+    }
+
+    void mouseDown(const juce::MouseEvent &event) override
+    {
+        isDown = true;
+        onClick();
+        repaint();
+    }
+
+    void mouseUp(const juce::MouseEvent &event) override {
+        isDown = false;
+        onClick();
+        repaint();
+    };
+
+};
+
+class RedoButton : public juce::Component {
+
+public:
+
+    bool isDown = false;
+
+    std::function<void()> onClick;
+    RedoButton() { setLookAndFeel(ComponentContext::lookAndFeel); }
+
+    void paint(juce::Graphics& g) override
+    {
+        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawRedoButton(g, *this,isDown); }
+    }
+
+    void mouseDown(const juce::MouseEvent &event) override
+    {
+        isDown = true;
+        onClick();
+        repaint();
+    }
+
+    void mouseUp(const juce::MouseEvent &event) override {
+        isDown = false;
+        onClick();
+        repaint();
+    };
+
+};
+
+class UndoRedoPane : public juce::Component {
+
+public:
+
+    UndoButton undoButton;
+    RedoButton redoButton;
+
+    UndoRedoPane()
+    {
+        setLookAndFeel(ComponentContext::lookAndFeel);
+        addAndMakeVisible(undoButton);
+        addAndMakeVisible(redoButton);
+
+        undoButton.onClick = [=]() {
+            ComponentContext::undoManager.undo();
+            std::cout<<"Undobutton clicked"<<std::endl;
+        };
+
+        redoButton.onClick = [=]() {
+            std::cout<<"Redobutton clicked"<<std::endl;
+        };
+
+    }
+
+    void paint(juce::Graphics& g) override
+    {
+        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawUndoRedoPane(g, *this); }
+    }
+
+    void resized() override
+    {
+
+        auto bounds = getLocalBounds().reduced(2.0f);
+        int buttonSize = bounds.getHeight();
+        int numButtons = 2;
+        float totalButtonWidth = buttonSize * numButtons;
+
+        float spacing = (bounds.getWidth() - totalButtonWidth) / (numButtons + 1);
+
+        int x = static_cast<int>(bounds.getX() + spacing);
+        undoButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
+
+        x += buttonSize + spacing;
+        redoButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
+    }
+};
+
 #endif //SEQUENCETREE_TITLEBARBUTTONS_H

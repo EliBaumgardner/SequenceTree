@@ -18,6 +18,7 @@ Titlebar::Titlebar()
     addAndMakeVisible(tempoDisplay);
     addAndMakeVisible(buttonPane);
     addAndMakeVisible(displaySelector);
+    addAndMakeVisible(undoRedoPane);
 
     playButton.onClick = [=]() {
         std::cout<<"playbutton clicked"<<std::endl;
@@ -40,6 +41,7 @@ void Titlebar::resized()
     int tempoDisplayWidth = bounds.getWidth() / 8;
     int buttonPaneWidth = bounds.getWidth() / 8;
     int displaySelectorWidth = bounds.getWidth() / 8;
+    int undoRedoPaneWidth = bounds.getWidth() / 8;
 
     auto area = bounds;
 
@@ -47,6 +49,9 @@ void Titlebar::resized()
     area.removeFromLeft(spacing);
 
     tempoDisplay.setBounds(area.removeFromLeft(tempoDisplayWidth));
+    area.removeFromLeft(spacing);
+
+    undoRedoPane.setBounds(area.removeFromLeft(undoRedoPaneWidth));
     area.removeFromLeft(spacing);
 
     displaySelector.setBounds(area.removeFromRight(displaySelectorWidth));

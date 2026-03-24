@@ -38,7 +38,6 @@ void NodeBox::refit(){
         font.setHeight(height);
         setFont(font);
         applyFontToAllText(font);
-    
 }
 
 void NodeBox::bindEditor(juce::ValueTree tree, const juce::Identifier propertyID){

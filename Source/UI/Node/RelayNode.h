@@ -18,8 +18,6 @@ public:
     RelayNode();
     void resized() override;
     void paint(juce::Graphics& g) override;
-    void setDisplayMode(NodeBox::DisplayMode mode);
-
 
 private:
 

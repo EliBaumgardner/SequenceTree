@@ -34,4 +34,6 @@ private:
 
     TempoDisplay tempoDisplay;
     PlayButton playButton;
+
+    UndoRedoPane undoRedoPane;
 };

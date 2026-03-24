@@ -27,6 +27,11 @@ class SyncButton;
 
 class DynamicEditor;
 
+class UndoButton;
+class RedoButton;
+
+class UndoRedoPane;
+
 class CustomLookAndFeel : public juce::LookAndFeel_V4
 {
 
@@ -51,6 +56,12 @@ public:
     virtual void drawNodeButton     (juce::Graphics& g, const NodeButton& nodeButton);
     virtual void drawTraverserButton(juce::Graphics& g, const TraverserButton& traverserButton);
     virtual void drawTempoDisplay   (juce::Graphics& g, const TempoDisplay& tempoDisplay);
+
+    virtual void drawUndoButton     (juce::Graphics& g, const UndoButton& undoButton, bool isButtonDown);
+    virtual void drawRedoButton     (juce::Graphics& g, const RedoButton& redoButton, bool isButtonDown);
+    virtual void drawUndoRedoPane   (juce::Graphics& g, const UndoRedoPane& undoRedoPane);
+
+
 private:
 
     juce::Colour dropShadowColour = juce::Colours::black;

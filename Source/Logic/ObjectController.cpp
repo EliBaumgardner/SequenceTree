@@ -79,18 +79,23 @@ void ObjectController::addNode()
     nodeCanvas->addAndMakeVisible(childNode);
 
     if (auto parent = dynamic_cast<RelayNode*>(node)) {
-        node->nodeData.addConnector(childNode);
         childNode->root = childNode;
+        node->nodeData.addConnector(childNode);
         nodeCanvas->makeRTGraph(node->root);
-
     }
     else {
-        childNode->root = node->root;
         node->nodeData.addChild(childNode);
+        childNode->root = node->root;
     }
+
+    if (node == nullptr) {DBG("NODE IS NULL");}
+    if (node->root == nullptr) {DBG("Node HAS NULL ROOT");}
+    if (childNode == nullptr) { DBG("CHILD NODE NULL");}
+    if (childNode->root == nullptr) { DBG("CHILD HAS NULL ROOT");}
 
     nodeCanvas->makeRTGraph(childNode->root);
     nodeCanvas->addLinePoints(node, childNode);
+
     childNode->toBack();
     childNode->nodeData.nodeData.setProperty("radius",childNode->getWidth()/2,nullptr);
 }
@@ -123,7 +128,6 @@ void ObjectController::setObjects(Node* node)
     if (node == childNode) { return; }
 
     if ( node != this->node || node == nodeCanvas->canvasNodes.getFirst() && node != nullptr){
-        this->node->removeMouseListener(this);
         this->node = node;
         this->node->addMouseListener(this,true);
     }
@@ -131,7 +135,6 @@ void ObjectController::setObjects(Node* node)
 
 void ObjectController::handleNodeRelease()
 {
-
     if (hasConnection && connectorNode != nullptr) {
 
         if (auto traverser = dynamic_cast<RelayNode*>(node)) { node->nodeData.removeConnector(childNode); node->nodeData.addConnector(connectorNode);}
@@ -141,9 +144,9 @@ void ObjectController::handleNodeRelease()
 
         nodeCanvas->addLinePoints(node,connectorNode);
         nodeCanvas->updateLinePoints(node);
+
         nodeCanvas->makeRTGraph(node);
     }
 
     isDragStart = true; childNode = nullptr; connectorNode = nullptr;
-
 }

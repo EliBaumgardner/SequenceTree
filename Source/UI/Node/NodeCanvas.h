@@ -18,7 +18,7 @@
 #include "RelayNode.h"
 #include "../Logic/DynamicPort.h"
 
-class NodeCanvas : public juce::Component {
+class NodeCanvas : public juce::Component, public juce::ValueTree::Listener {
     
     public:
     
@@ -33,7 +33,7 @@ class NodeCanvas : public juce::Component {
         void updateLinePoints(Node* movedNode);
         void removeLinePoints(Node* node);
     
-        void setSelectionMode(NodeBox::DisplayMode mode);
+        void setSelectionMode(NodeBox::DisplayMode mode) const;
 
         void removeNode(Node* node);
         void addRootNode(Node* root);
@@ -43,9 +43,13 @@ class NodeCanvas : public juce::Component {
     
         void setProcessorPlayblack(bool isPlaying);
 
-        void setValueTreeState(juce::ValueTree stateTree);
+        void setValueTreeState(const juce::ValueTree& stateTree);
 
         void clearCanvas();
+
+        void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
+        void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
+        void valueTreePropertyChanged(juce::ValueTree &tree, const juce::Identifier &property) override;
     
         enum class ControllerMode { Node, Counter,Traverser };
         ControllerMode controllerMode;

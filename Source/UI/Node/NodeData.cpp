@@ -5,6 +5,7 @@
 
 const juce::Identifier NodeData::nameID { "name" };
 const juce::Identifier NodeData::channelID { "channel" };
+const juce::Identifier NodeData::nodeType { "nodeType" };
 
 const juce::Identifier NodeData::xID { "x" };
 const juce::Identifier NodeData::yID { "y" };
@@ -23,42 +24,32 @@ const juce::Identifier NodeData::ccNumberID { "ccNumber" };
 
 
 
-NodeData::NodeData() : nodeData("NodeData"), midiNoteData("MidiNoteData"), midiCCData("MidiCCData"){
-    
-    nodeData.setProperty(nameID,"node",nullptr);
-    nodeData.setProperty(xID, 0, nullptr);
-    nodeData.setProperty(yID,0,nullptr);
-    nodeData.setProperty(radiusID,0, nullptr);
-    nodeData.setProperty(countID,0,nullptr);
-    nodeData.setProperty(countLimitID,1,nullptr);
-    nodeData.setProperty(colourID,0,nullptr);
-    nodeData.setProperty(nodeID,2,nullptr);
+NodeData::NodeData() : nodeData("NodeData"), nodeConnectors ("NodeConnectors"), nodeChildren("NodeChildren"), midiNotes("MidiNotes") {
 
-    midiNoteData.setProperty(channelID,0,nullptr);
-    midiNoteData.setProperty(pitchID,0,nullptr);
-    midiNoteData.setProperty(velocityID,0,nullptr);
-    midiNoteData.setProperty(durationID,0,nullptr);
 
-    midiCCData.setProperty(nameID,0,nullptr);
-    midiCCData.setProperty(channelID,0,nullptr);
-    midiCCData.setProperty(ccNumberID,0,nullptr);
-    midiCCData.setProperty(ccValueID,0,nullptr);
+    nodeData.addChild(nodeConnectors, -1, nullptr);
+    nodeData.addChild(nodeChildren, -1, nullptr);
+    nodeData.addChild(midiNotes, -1, nullptr);
 
-    if (ComponentContext::canvas != nullptr) { ComponentContext::canvas->canvasTree.addChild(nodeData,-1,&ComponentContext::undoManager); }
+    if (ComponentContext::canvas != nullptr) { ComponentContext::canvas->canvasTree.addChild(nodeData,-1,nullptr); }
     else { DBG("NODE CREATED WITHOUT CANVAS!"); }
 }
 
 NodeData::~NodeData() {
     for (auto& val : propertyValues)
-        val = juce::Value(); // unbind
+        val = juce::Value();
     propertyValues.clear();
 }
 
 void NodeData::addChild(Node* child)
 {
+    DBG("child node added to nodeData");
     children.add(child);
+
     juce::ValueTree tree("NodeData");
-    nodeData.addChild(tree, -1, &ComponentContext::undoManager);
+    tree.setProperty("nodeID",child->nodeID,nullptr);
+    tree.setProperty("nodeType",child->nodeData.nodeData.getProperty("nodeType"),nullptr );
+    nodeData.addChild(tree, -1, nullptr);
 }
 
 void NodeData::removeChild(Node* child) {
@@ -69,41 +60,28 @@ void NodeData::removeChild(Node* child) {
         if (childNodeTree.getType() != juce::Identifier("NodeData")) { continue; }
 
         int childID = (int)childNodeTree.getProperty("nodeID");
-        if (childID == child->nodeID) { nodeData.removeChild(i,&ComponentContext::undoManager); }
+        if (childID == child->nodeID) { nodeData.removeChild(i,nullptr); }
     }
 }
 
-void NodeData::addConnector(Node* connector) { connectors.add(connector);  connector->isConnector = true;}
+void NodeData::addConnector(Node* connector) {
+    connectors.add(connector);  connector->isConnector = true;
+    juce::ValueTree tree("NodeData");
+    tree.setProperty("nodeID",connector->nodeID,nullptr);
+    tree.setProperty("nodeType",connector->nodeData.nodeData.getProperty("nodeType"), nullptr);
+    nodeData.addChild(tree, -1, nullptr);
+}
 
 void NodeData::removeConnector(Node* connector) { connectors.removeFirstMatchingValue(connector); }
 
-void NodeData::bindEditor(juce::TextEditor& editor, const juce::Identifier propertyID, juce::String treeType){
-    
-    std::cout<<"binding"<<std::endl;
-    
-    juce::Value propertyValue;
-    propertyValues.add(propertyValue);
-    juce::ValueTree* selectedTree = nullptr;
-    
-    if(treeType == "NodeData"){
-        selectedTree = &nodeData;
-    }
-    else if(treeType == "MidiNoteData"){
-        selectedTree = &midiNoteData;
-    }
-    else if(treeType == "MidiCCData"){
-        selectedTree = &midiCCData;
-    }
-    
-    propertyValue.referTo(selectedTree->getPropertyAsValue(propertyID,nullptr));
-    editor.getTextValue().referTo(propertyValue);
-}
-
 void NodeData::createTree(juce::String type)
 {
+
+    DBG("CREATING TREE");
+
     if(type == "MidiNoteData"){
 
-        std::cout<<"created midi tree"<<std::endl;
+        DBG("CREATING MIDI TREE");
 
         juce::ValueTree tree("MidiNoteData");
         tree.setProperty(channelID,0,nullptr);
@@ -111,32 +89,35 @@ void NodeData::createTree(juce::String type)
         tree.setProperty(velocityID,63,nullptr);
         tree.setProperty(durationID,1000,nullptr);
 
-        midiNotes.add(tree);
-
-        nodeData.addChild(tree,-1,&ComponentContext::undoManager);
+        midiNotes.addChild(tree, -1, nullptr);
 
         tree.addListener(&listener);
-        listener.onChanged = [this](){ ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root); };
-    }
-    else {
-
-        std::cout<<"created midi CC tree"<<std::endl;
-
-        juce::ValueTree tree("MidiCCData");
-        tree.setProperty(nameID,0,nullptr);
-        tree.setProperty(channelID,0,nullptr);
-        tree.setProperty(ccNumberID,0,nullptr);
-        tree.setProperty(ccValueID,0,nullptr);
-
-        midiCCs.add(tree);
-        nodeData.addChild(tree,-1,&ComponentContext::undoManager);
-
-        tree.addListener(&listener);
-        listener.onChanged = [this](){ ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root); };
+        listener.onChanged = [this](){ ComponentContext::canvas->makeRTGraph(nullptr); };
     }
 
     ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root);
 }
 
-void NodeData::setNode(Node* node){ this->node = node; };
+void NodeData::setProperty(juce::Identifier propertyID, juce::String propertyValue, juce::String type)
+{
+    DBG("setPropertyFunction Called");
 
+
+
+    if (type == "NodeData")
+    {
+        DBG("setPropertyFunction Called with NodeData");
+        nodeData.setProperty(propertyID,propertyValue, nullptr);
+        DBG(nodeData.getProperty(propertyID).toString());
+    }
+    else if (type == "NodeConnectors") {
+        DBG("setPropertyFunction Called with NodeConnectors");
+        nodeConnectors.setProperty(propertyID, propertyValue, nullptr);
+        DBG(nodeConnectors.getProperty(propertyID).toString());
+    }
+};
+
+void NodeData::setNode(Node* node)
+{
+    this->node = node;
+};

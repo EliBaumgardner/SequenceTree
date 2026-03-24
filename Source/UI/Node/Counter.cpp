@@ -6,32 +6,32 @@
 
 Counter::Counter() {
 
-    editor = std::make_unique<NodeBox>(this);
-
-    addAndMakeVisible(upButton);
-    addAndMakeVisible(downButton);
-    addAndMakeVisible(editor.get());
-
-    nodeData.setNode(this);
-    //nodeController = std::make_unique<ObjectController>(this);
-    //this->addMouseListener(nodeController.get(), true);
-
-    editor.get()->setColour(juce::TextEditor::textColourId, juce::Colours::white);
-    editor.get()->bindEditor(nodeData.nodeData,"countLimit");
-
-    upButton.onChanged = [this](){
-        double value = editor.get()->bindValue.toString().getDoubleValue();
-        value += 1;
-        editor.get()->bindValue.setValue(value);
-        editor.get()->formatDisplay(editor.get()->mode);
-    };
-
-    downButton.onChanged = [this](){
-        double value = editor.get()->bindValue.toString().getDoubleValue();
-        value -= 1;
-        editor.get()->bindValue.setValue(value);
-        editor.get()->formatDisplay(editor.get()->mode);
-    };
+    // editor = std::make_unique<NodeBox>(this);
+    //
+    // addAndMakeVisible(upButton);
+    // addAndMakeVisible(downButton);
+    // addAndMakeVisible(editor.get());
+    //
+    // nodeData.setNode(this);
+    // //nodeController = std::make_unique<ObjectController>(this);
+    // //this->addMouseListener(nodeController.get(), true);
+    //
+    // editor.get()->setColour(juce::TextEditor::textColourId, juce::Colours::white);
+    // editor.get()->bindEditor(nodeData.nodeData,"countLimit");
+    //
+    // upButton.onChanged = [this](){
+    //     double value = editor.get()->bindValue.toString().getDoubleValue();
+    //     value += 1;
+    //     editor.get()->bindValue.setValue(value);
+    //     editor.get()->formatDisplay(editor.get()->mode);
+    // };
+    //
+    // downButton.onChanged = [this](){
+    //     double value = editor.get()->bindValue.toString().getDoubleValue();
+    //     value -= 1;
+    //     editor.get()->bindValue.setValue(value);
+    //     editor.get()->formatDisplay(editor.get()->mode);
+    // };
 }
 
 void Counter::resized() {
@@ -90,11 +90,11 @@ void Counter::setDisplayMode(NodeBox::DisplayMode mode){
     midiTree.setProperty("velocity", 60, nullptr);
     midiTree.setProperty("duration", 500, nullptr);
 
-    if(nodeData.midiNotes.isEmpty()){
-        nodeData.midiNotes.add(midiTree);
+    if(nodeData.midiNotes.getNumChildren() == 0){
+        nodeData.midiNotes.addChild(midiTree, -1, nullptr);
     }
-    else if(nodeData.midiNotes.size() == 1) {
-        midiTree = nodeData.midiNotes.getLast();
+    else if(nodeData.midiNotes.getNumChildren() == 1) {
+        midiTree = nodeData.midiNotes.getChild(0);
     }
 
     if(mode == NodeBox::DisplayMode::Pitch){

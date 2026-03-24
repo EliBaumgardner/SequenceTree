@@ -6,32 +6,35 @@
 
 RelayNode::RelayNode() {
 
-    editor = std::make_unique<NodeBox>(this);
-
-    addAndMakeVisible(upButton);
-    addAndMakeVisible(downButton);
-    addAndMakeVisible(editor.get());
-
-    nodeData.setNode(this);
-    //nodeController = std::make_unique<ObjectController>(this);
-    //this->addMouseListener(nodeController.get(), true);
-
-    editor.get()->setColour(juce::TextEditor::textColourId, juce::Colours::white);
-    editor.get()->bindEditor(nodeData.nodeData,"countLimit");
-
-    upButton.onChanged = [this](){
-        double value = editor.get()->bindValue.toString().getDoubleValue();
-        value += 1;
-        editor.get()->bindValue.setValue(value);
-        editor.get()->formatDisplay(editor.get()->mode);
-    };
-
-    downButton.onChanged = [this](){
-        double value = editor.get()->bindValue.toString().getDoubleValue();
-        value -= 1;
-        editor.get()->bindValue.setValue(value);
-        editor.get()->formatDisplay(editor.get()->mode);
-    };
+    std::cout<<nodeID<<std::endl;
+    nodeData.setProperty("nodeType","RelayNode", "NodeData");
+    // std::cout<<"relay intiliazed"<<std::endl;
+    // editor = std::make_unique<NodeBox>(this);
+    //
+    // addAndMakeVisible(upButton);
+    // addAndMakeVisible(downButton);
+    // addAndMakeVisible(editor.get());
+    //
+    // nodeData.setNode(this);
+    // //nodeController = std::make_unique<ObjectController>(this);
+    // //this->addMouseListener(nodeController.get(), true);
+    //
+    // editor.get()->setColour(juce::TextEditor::textColourId, juce::Colours::white);
+    // editor.get()->bindEditor(nodeData.nodeData,"countLimit");
+    //
+    // upButton.onChanged = [this](){
+    //     double value = editor.get()->bindValue.toString().getDoubleValue();
+    //     value += 1;
+    //     editor.get()->bindValue.setValue(value);
+    //     editor.get()->formatDisplay(editor.get()->mode);
+    // };
+    //
+    // downButton.onChanged = [this](){
+    //     double value = editor.get()->bindValue.toString().getDoubleValue();
+    //     value -= 1;
+    //     editor.get()->bindValue.setValue(value);
+    //     editor.get()->formatDisplay(editor.get()->mode);
+    // };
 }
 
 void RelayNode::resized() {
@@ -106,39 +109,3 @@ void RelayNode::paint(juce::Graphics& g)
     }
 }
 
-void RelayNode::setDisplayMode(NodeBox::DisplayMode mode){
-
-
-    juce::ValueTree midiTree("MidiNoteData");
-
-    midiTree.setProperty("pitch",60,nullptr);
-    midiTree.setProperty("velocity", 60, nullptr);
-    midiTree.setProperty("duration", 500, nullptr);
-
-    if(nodeData.midiNotes.isEmpty()){
-        nodeData.midiNotes.add(midiTree);
-    }
-    else if(nodeData.midiNotes.size() == 1) {
-        midiTree = nodeData.midiNotes.getLast();
-    }
-
-    if(mode == NodeBox::DisplayMode::Pitch){
-        // editor.get()->bindEditor(midiTree, "pitch");
-        // editor.get()->formatDisplay(NodeBox::DisplayMode::Pitch);
-    }
-
-    if(mode == NodeBox::DisplayMode::Velocity){
-        // editor.get()->bindEditor(midiTree, "velocity");
-        // editor.get()->formatDisplay(NodeBox::DisplayMode::Velocity);
-    }
-
-    if(mode == NodeBox::DisplayMode::Duration){
-        editor.get()->bindEditor(midiTree, "duration");
-        editor.get()->formatDisplay(NodeBox::DisplayMode::Duration);
-    }
-
-    if(mode == NodeBox::DisplayMode::CountLimit){
-        editor.get()->bindEditor(nodeData.nodeData,"countLimit");
-        editor.get()->formatDisplay(NodeBox::DisplayMode::CountLimit);
-    }
-}

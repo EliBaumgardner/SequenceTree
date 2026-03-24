@@ -10,6 +10,7 @@
 
 #include "Node.h"
 #include "NodeCanvas.h"
+#include "../../../../../../../../Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Headers/Components.h"
 #include "../Logic/ObjectController.h"
 
 int Node::globalNodeID = 0;
@@ -17,6 +18,10 @@ int Node::globalNodeID = 0;
 
 Node::Node() : nodeID(++globalNodeID)
 {
+    nodeData.setNode(this);
+
+    nodeData.nodeData.setProperty("nodeID",nodeID,nullptr);
+    nodeData.nodeData.setProperty("countLimit", 1, nullptr);
     setLookAndFeel(ComponentContext::lookAndFeel);
 
     upButton.setInterceptsMouseClicks(true,false);
@@ -32,8 +37,6 @@ Node::Node() : nodeID(++globalNodeID)
 
     addAndMakeVisible(editor.get());
     editor->toBack();
-
-    nodeData.setNode(this);
 
     upButton.onChanged = [this](){
         double value = editor->bindValue.toString().getDoubleValue();
@@ -67,7 +70,7 @@ void Node::resized()
     editor->setBounds(editorArea);
     editor->setJustification(juce::Justification::centred);
     
-    nodeData.nodeData.setProperty("x",getX(),nullptr);
+    nodeData.nodeData.setProperty("x",getX(), nullptr);
     nodeData.nodeData.setProperty("y",getY(),nullptr);
     nodeData.nodeData.setProperty("radius", getWidth()/2,nullptr);
 }
@@ -98,16 +101,17 @@ void Node::setHighlightVisual(bool isHighlighted){
 
 void Node::setDisplayMode(NodeBox::DisplayMode mode)
 {
+
+    DBG("SETTING NODE DISPLAY MODE");
+
     juce::ValueTree midiTree("MidiNoteData");
     
     midiTree.setProperty("pitch",60,nullptr);
     midiTree.setProperty("velocity", 60, nullptr);
     midiTree.setProperty("duration", 500, nullptr);
     
-    if (nodeData.midiNotes.isEmpty())       { nodeData.midiNotes.add(midiTree);        }
-    else if (nodeData.midiNotes.size() == 1){ midiTree = nodeData.midiNotes.getLast(); }
-
-    nodeData.nodeData.addChild(midiTree,-1,&ComponentContext::undoManager);
+    if (nodeData.midiNotes.getNumChildren() == 0)       { nodeData.midiNotes.addChild(midiTree, -1, nullptr);        }
+    else if (nodeData.midiNotes.getNumChildren() == 1){ midiTree = nodeData.midiNotes.getChild(0); }
 
     switch (mode){
     case NodeBox::DisplayMode::Pitch:
@@ -137,9 +141,7 @@ void Node::setDisplayMode(NodeBox::DisplayMode mode)
 
 void Node::mouseEnter(const juce::MouseEvent &e)
 {
-
     if (ComponentContext::canvas->controller != nullptr) {
-
 
         ComponentContext::canvas->controller->setObjects(this);
         //addMouseListener(ComponentContext::canvas->controller.get(),true);

@@ -175,7 +175,6 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
     g.setColour(buttonColour);
 
     if (button.isOn){
-        // Draw play triangle ( > )
         juce::Path playButton;
         playButton.startNewSubPath((float)area.getX(), (float)area.getY());
         playButton.lineTo((float)area.getRight(), (float)area.getCentreY());
@@ -184,7 +183,6 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
         g.fillPath(playButton);
     }
     else {
-        // Draw pause bars ( | | )
         int barWidth = area.getWidth() / 5;
         int gap = barWidth;
         int barHeight = area.getHeight();
@@ -225,4 +223,41 @@ void CustomLookAndFeel::drawTraverserButton(juce::Graphics& g, const TraverserBu
     triangle.closeSubPath();
 
     g.fillPath(triangle);
+}
+
+void CustomLookAndFeel::drawUndoButton(juce::Graphics &g, const UndoButton &undoButton, bool isButtonDown)
+{
+    auto area = undoButton.getLocalBounds().reduced(5);
+
+    if (isButtonDown) { g.setColour(lightColour3.darker()); }
+    else              { g.setColour(lightColour3);   }
+
+    juce::Path path;
+    path.startNewSubPath((float)area.getRight(), (float)area.getY());
+    path.lineTo((float)area.getX(), (float)area.getCentreY());
+    path.lineTo((float)area.getRight(), (float)area.getBottom());
+    path.closeSubPath();
+    g.fillPath(path);
+}
+
+void CustomLookAndFeel::drawRedoButton(juce::Graphics &g, const RedoButton &redoButton, bool isButtonDown)
+{
+    auto area = redoButton.getLocalBounds().reduced(5);
+
+    if (isButtonDown) { g.setColour(lightColour3.darker()); }
+    else              { g.setColour(lightColour3);   }
+
+    juce::Path playButton;
+    playButton.startNewSubPath((float)area.getX(), (float)area.getY());
+    playButton.lineTo((float)area.getRight(), (float)area.getCentreY());
+    playButton.lineTo((float)area.getX(), (float)area.getBottom());
+    playButton.closeSubPath();
+    g.fillPath(playButton);
+}
+
+void CustomLookAndFeel::drawUndoRedoPane(juce::Graphics &g,const UndoRedoPane& undoRedoPane)
+{
+    auto bounds = undoRedoPane.getLocalBounds().reduced(2.0f).toFloat();
+    g.setColour(buttonColour);
+    g.fillRect(bounds);
 }

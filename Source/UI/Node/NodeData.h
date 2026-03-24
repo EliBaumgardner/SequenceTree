@@ -27,21 +27,29 @@ class NodeData{
         NodeData();
     
         ~NodeData();
-            
+
+        enum class TreeType {
+
+        };
+
         juce::ValueTree nodeData;
-        juce::ValueTree midiNoteData;
-        juce::ValueTree midiCCData;
+
+        juce::ValueTree nodeConnectors;
+        juce::ValueTree nodeChildren;
+        juce::ValueTree midiNotes;
+
         
         static const juce::Identifier nameID;
         static const juce::Identifier channelID;
+        static const juce::Identifier nodeType;
+        static const juce::Identifier countID;
+        static const juce::Identifier countLimitID;
+        static const juce::Identifier nodeID;
         
         static const juce::Identifier xID;
         static const juce::Identifier yID;
         static const juce::Identifier radiusID;
-        static const juce::Identifier countID;
-        static const juce::Identifier countLimitID;
         static const juce::Identifier colourID;
-        static const juce::Identifier nodeID;
         
         static const juce::Identifier pitchID;
         static const juce::Identifier velocityID;
@@ -50,8 +58,7 @@ class NodeData{
         static const juce::Identifier ccValueID;
         static const juce::Identifier ccNumberID;
         
-        juce::Array<juce::ValueTree> midiNotes;
-        juce::Array<juce::ValueTree> midiCCs;
+
         juce::Array<juce::Value> propertyValues;
 
         juce::Array<Node*> children;
@@ -65,9 +72,9 @@ class NodeData{
 
         void addConnector(Node* connector);
         void removeConnector(Node* connector);
-    
-        void bindEditor(juce::TextEditor& editor, const juce::Identifier propertyID,juce::String treeType);
+
         void createTree(juce::String type);
+        void setProperty(juce::Identifier propertyID, juce::String propertyValue, juce::String type);
 
         private:
     
