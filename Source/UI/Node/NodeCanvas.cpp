@@ -67,7 +67,6 @@ void NodeCanvas::mouseDown(const juce::MouseEvent& e)
 {
     jassert(ComponentContext::nodeController != nullptr);
     jassert(ComponentContext::valueTreeState != nullptr);
-    jassert(ComponentContext::undoManager != nullptr);
 
     ValueTreeState& valueTreeState = *ComponentContext::valueTreeState;
     NodeController& nodeController = *ComponentContext::nodeController;
@@ -77,14 +76,14 @@ void NodeCanvas::mouseDown(const juce::MouseEvent& e)
         return;
     }
 
-    juce::ValueTree valueTree = valueTreeState.addRootNode(undoManager);
+    juce::ValueTree valueTree = valueTreeState.addRootNode(&undoManager);
     int rootId = valueTree.getProperty(ValueTreeState::Id);
 
     int xPosition = valueTree.getProperty(ValueTreeState::XPosition);
     int yPosition = valueTree.getProperty(ValueTreeState::YPosition);
     int radius = valueTree.getProperty(ValueTreeState::Radius);
 
-    valueTreeState.setNodePosition(rootId, xPosition, yPosition,radius,undoManager);
+    valueTreeState.setNodePosition(rootId, xPosition, yPosition,radius,&undoManager);
 }
 
 void NodeCanvas::addRootNode(int nodeId) {

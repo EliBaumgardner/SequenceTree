@@ -29,6 +29,10 @@ void NodeController::mouseUp(const juce::MouseEvent& e)    { handleNodeRelease()
 
 void NodeController::mouseDown(const juce::MouseEvent& e)
 {
+
+    if (auto* component = dynamic_cast<NodeCanvas*>(e.eventComponent)) {
+
+    }
     int nodeId = selectedNode->nodeID;
 
     juce::ValueTree nodeMap = ComponentContext::valueTreeState->nodeMap;
@@ -88,7 +92,7 @@ void NodeController::addNode()
     {
         case NodeControllerMode::Node     : childNode = new Node();      break;
         case NodeControllerMode::Connector  : childNode = new Counter();   break;
-        default: DBG("INVALID CONTROLLER MODE SELECTED"); return;
+        default: jassertfalse;
     }
 
     nodeCanvas->canvasNodes.add(childNode);

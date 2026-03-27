@@ -347,12 +347,11 @@ public:
         addAndMakeVisible(redoButton);
 
         undoButton.onClick = [=]() {
-            ComponentContext::undoManager.undo();
-            std::cout<<"Undobutton clicked"<<std::endl;
+            ComponentContext::undoManager->undo();
         };
 
         redoButton.onClick = [=]() {
-            std::cout<<"Redobutton clicked"<<std::endl;
+
         };
 
     }
