@@ -37,13 +37,13 @@ target_compile_definitions(SequenceTree PRIVATE
 
 target_sources(SequenceTree PRIVATE
         Source/UI/ColourSelector.cpp
-        Source/UI/DynamicEditor.cpp
+        Source/UI/CustomTextEditor.cpp
         Source/Logic/DynamicPort.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/NodeArrow.cpp
         Source/UI/Node/NodeBox.cpp
         Source/UI/Node/NodeCanvas.cpp
-        Source/Logic/ObjectController.cpp
+        Source/Logic/NodeController.cpp
         Source/UI/Node/NodeData.cpp
         Source/UI/PianoRoll.cpp
         Source/Core/PluginEditor.cpp

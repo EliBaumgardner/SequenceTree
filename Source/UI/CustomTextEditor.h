@@ -1,7 +1,7 @@
 /*
   ==============================================================================
 
-    DynamicEditor.h
+    CustomTextEditor.h
     Created: 18 May 2025 10:55:47am
     Author:  Eli Baimgardner
 
@@ -13,11 +13,11 @@
 #include "../Util/PluginContext.h"
 #include "../Util/PluginModules.h"
 
-class DynamicEditor : public juce::TextEditor {
+class CustomTextEditor : public juce::TextEditor {
     
     public:
     
-        DynamicEditor();
+        CustomTextEditor();
         void paint(juce::Graphics& g) override;
         void refit();
         void mouseDown(const juce::MouseEvent& e) override;

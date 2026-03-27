@@ -21,9 +21,11 @@ Titlebar::Titlebar()
     addAndMakeVisible(undoRedoPane);
 
     playButton.onClick = [=]() {
-        std::cout<<"playbutton clicked"<<std::endl;
-        ComponentContext::canvas->start = !ComponentContext::canvas->start;
-        ComponentContext::canvas->setProcessorPlayblack(ComponentContext::canvas->start);
+        NodeCanvas& canvas = *ComponentContext::canvas;
+        jassert(&canvas);
+
+        canvas.start = !canvas.start;
+        canvas.setProcessorPlayblack(canvas.start);
     };
 }
 

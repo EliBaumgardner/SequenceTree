@@ -16,6 +16,7 @@
 #include "../Logic/DynamicPort.h"
 #include "../UI/Titlebar.h"
 #include "../UI/CustomLookAndFeel.h"
+#include "../Util/ValueTreeState.h"
 
 
 //==============================================================================
@@ -25,7 +26,9 @@ class SequenceTreeAudioProcessor;
 
 class SequenceTreeAudioProcessorEditor  : public juce::AudioProcessorEditor
 {
+
 public:
+
     SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor&);
     ~SequenceTreeAudioProcessorEditor() override;
 
@@ -37,9 +40,12 @@ public:
 private:
     SequenceTreeAudioProcessor& audioProcessor;
     
-    std::unique_ptr<NodeCanvas>   canvas       = nullptr;
-    std::unique_ptr<Titlebar>     titleBar     = nullptr;
-    std::unique_ptr<DynamicPort>  port         = nullptr;
+    std::unique_ptr<NodeCanvas>     canvas         = nullptr;
+    std::unique_ptr<NodeController> nodeController   = nullptr;
+    std::unique_ptr<ValueTreeState> valueTreeState = nullptr;
+    std::unique_ptr<Titlebar>       titleBar       = nullptr;
+    std::unique_ptr<DynamicPort>    port           = nullptr;
+
     CustomLookAndFeel lookAndFeel;
     
     float menuWidthRatio = 0.25f;

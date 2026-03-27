@@ -23,11 +23,16 @@ class NodeMenu;
 
 class NodeData;
 
-class ObjectController : public juce::MouseListener {
+class ValueTreeState;
+
+
+
+class NodeController : public juce::MouseListener {
     
 public:
 
-    ObjectController(Node* node);
+
+    NodeController();
 
     void mouseEnter(const juce::MouseEvent& e) override;
     void mouseExit(const juce::MouseEvent& e) override;
@@ -42,11 +47,14 @@ public:
     void setObjects(Node* node);
     void handleNodeRelease();
 
+    enum class NodeControllerMode {Node,Connector};
+    NodeControllerMode nodeControllerMode;
+
 private:
 
     NodeCanvas* nodeCanvas = nullptr;
 
-    Node* node = nullptr;
+    Node* selectedNode = nullptr;
     Node* childNode = nullptr;
     Node* connectorNode = nullptr;
 

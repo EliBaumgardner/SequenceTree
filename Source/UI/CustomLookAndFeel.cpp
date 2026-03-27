@@ -6,7 +6,7 @@
 #include "Node/NodeCanvas.h"
 #include "Node/Node.h"
 #include "Titlebar.h"
-#include "DynamicEditor.h"
+#include "CustomTextEditor.h"
 #include "TitleBarButtons.h"
 
 CustomLookAndFeel::CustomLookAndFeel()
@@ -15,9 +15,9 @@ CustomLookAndFeel::CustomLookAndFeel()
     barDropShadow  = juce::DropShadow(dropShadowColour.withAlpha(0.4f),6,juce::Point<int>(3,3));
 }
 
-void CustomLookAndFeel::drawEditor(juce::Graphics &g, DynamicEditor& editor)
+void CustomLookAndFeel::drawEditor(juce::Graphics &g, CustomTextEditor& editor)
 {
-    if (auto* dynamicEditor = dynamic_cast<DynamicEditor*>(&editor)) {
+    if (auto* dynamicEditor = dynamic_cast<CustomTextEditor*>(&editor)) {
         dynamicEditor->setColour(juce::TextEditor::backgroundColourId, editorColour);
         dynamicEditor->setColour(juce::TextEditor::outlineColourId, editorColour);
         dynamicEditor->setColour(juce::TextEditor::textColourId, textColour); // choose text color
@@ -211,7 +211,7 @@ void CustomLookAndFeel::drawNodeButton(juce::Graphics &g, const NodeButton& node
     g.fillEllipse(bounds);
 }
 
-void CustomLookAndFeel::drawTraverserButton(juce::Graphics& g, const TraverserButton& traverserButton)
+void CustomLookAndFeel::drawTraverserButton(juce::Graphics& g, const ConnectorButton& traverserButton)
 {
     auto bounds = traverserButton.getLocalBounds().toFloat().reduced(2.0f);
     g.setColour(traverserButton.isSelected ? lightColour3.darker() : lightColour3);

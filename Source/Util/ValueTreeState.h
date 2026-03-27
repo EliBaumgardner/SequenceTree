@@ -19,20 +19,26 @@ class ValueTreeState {
 public:
 
     static const juce::Identifier CanvasData;
-    static const juce::Identifier NodeTreesData;
+    static const juce::Identifier NodeMap;
+    static const juce::Identifier NodeTreeMap;
+
+    static const juce::Identifier NodeTreeIds;
     static const juce::Identifier NodeTreeData;
 
     static const juce::Identifier RootNodeData;
     static const juce::Identifier NodeData;
     static const juce::Identifier ConnectorData;
 
-    static const juce::Identifier NodeChildrenData;
-    static const juce::Identifier ConnectorChildrenData;
+    static const juce::Identifier NodeChildrenIds;
 
     static const juce::Identifier MidiNotesData;
     static const juce::Identifier MidiNoteData;
 
     static const juce::Identifier Id;
+
+    static const juce::Identifier NodeId;
+    static const juce::Identifier NodeTreeId;
+
     static const juce::Identifier CountLimit;
     static const juce::Identifier Count;
     static const juce::Identifier XPosition;
@@ -40,29 +46,42 @@ public:
     static const juce::Identifier Radius;
     static const juce::Identifier ColourId;
 
+    static inline juce::ValueTree canvasData    {CanvasData};
+    static inline juce::ValueTree nodeTreeIds   {NodeTreeIds };
+    static inline juce::ValueTree nodeMap       {NodeMap};
+    static inline juce::ValueTree nodeTreeMap   {NodeTreeMap};
 
-    juce::ValueTree canvasData    {CanvasData};
-    juce::ValueTree nodeTrees     {NodeTreesData };
-
+    struct NodePosition {
+        int xPosition;
+        int yPosition;
+        int radius;
+    };
 
     ValueTreeState();
-    juce::ValueTree addNodeTree (juce::UndoManager& undoManager);
-    juce::ValueTree addRootNode (juce::UndoManager& undoManager);
-    void addRootNode (juce::ValueTree parentNode, juce::UndoManager& undoManager);
-    void addNode     (juce::ValueTree parentNode, juce::UndoManager& undoManager);
-    void addConnector(juce::ValueTree parentNode,juce::UndoManager& undoManager);
-    void addMidiNote (juce::ValueTree node, juce::ValueTree midiNote,juce::UndoManager& undoManager);
 
-    juce::ValueTree getNode     (int nodeId);
-    juce::ValueTree getConnector(int connectorId);
-    juce::ValueTree getMidiNotes(int nodeId);
-    juce::ValueTree getNodeTree (int nodeId);
+    static juce::ValueTree addNodeTree (juce::UndoManager& undoManager);
+    static juce::ValueTree addRootNode (juce::UndoManager& undoManager);
 
-    bool isRootNode  (int nodeId);
-    bool isConnector (int nodeId);
+    static void addRootNode    (int parentNodeId, juce::UndoManager& undoManager);
+    static void addNode        (int parentNodeId, juce::UndoManager& undoManager);
+    static void addConnector   (int parentNodeId,juce::UndoManager& undoManager);
+    static void addMidiNote    (juce::ValueTree node, juce::ValueTree midiNote,juce::UndoManager& undoManager);
 
-    int nodeIdIncrement { 0 };
-    int treeIdIncrement { 0 };
+    static void removeRootNode (int rootNodeId, juce::UndoManager& undoManager);
+    static void removeNode     (int nodeId, juce::UndoManager& undoManager);
+    static void removeNodeTree (int treeId, juce::UndoManager& undoManager);
+
+    static void setNodePosition (int nodeId, int x, int y, int radius,juce::UndoManager& undoManager);
+
+    static bool isRootNode (int nodeId);
+
+    static NodePosition    getNodePosition (int nodeId);
+    static juce::ValueTree getNode         (int nocdId);
+    static juce::ValueTree getMidiNotes    (int nodeId);
+    static juce::ValueTree getNodeTree     (int treeId);
+
+    static inline int nodeIdIncrement {0};
+
 };
 
 

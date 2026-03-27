@@ -16,11 +16,19 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     ComponentContext::processor = &p;
     ComponentContext::lookAndFeel = &lookAndFeel;
 
-    canvas       = std::make_unique<NodeCanvas>(); ComponentContext::canvas = canvas.get();
-    titleBar     = std::make_unique<Titlebar>();
-    port         = std::make_unique<DynamicPort>(canvas.get());
+    canvas         = std::make_unique<NodeCanvas>();
+    nodeController = std::make_unique<NodeController>();
+    valueTreeState = std::make_unique<ValueTreeState>();
+    titleBar       = std::make_unique<Titlebar>();
+    port           = std::make_unique<DynamicPort>(canvas.get());
 
     ComponentContext::processor->canvas = canvas.get();
+    ComponentContext::canvas = canvas.get();
+    ComponentContext::valueTreeState    = valueTreeState.get();
+    ComponentContext::nodeController   = nodeController.get();
+
+    valueTreeState.get()->canvasData.addListener(canvas.get());
+
 
     addAndMakeVisible(port.get());
     addAndMakeVisible(titleBar.get());

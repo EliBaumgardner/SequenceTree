@@ -76,26 +76,26 @@ void NodeData::removeConnector(Node* connector) { connectors.removeFirstMatching
 
 void NodeData::createTree(juce::String type)
 {
-
-    DBG("CREATING TREE");
-
-    if(type == "MidiNoteData"){
-
-        DBG("CREATING MIDI TREE");
-
-        juce::ValueTree tree("MidiNoteData");
-        tree.setProperty(channelID,0,nullptr);
-        tree.setProperty(pitchID,63,nullptr);
-        tree.setProperty(velocityID,63,nullptr);
-        tree.setProperty(durationID,1000,nullptr);
-
-        midiNotes.addChild(tree, -1, nullptr);
-
-        tree.addListener(&listener);
-        listener.onChanged = [this](){ ComponentContext::canvas->makeRTGraph(nullptr); };
-    }
-
-    ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root);
+    //
+    // DBG("CREATING TREE");
+    //
+    // if(type == "MidiNoteData"){
+    //
+    //     DBG("CREATING MIDI TREE");
+    //
+    //     juce::ValueTree tree("MidiNoteData");
+    //     tree.setProperty(channelID,0,nullptr);
+    //     tree.setProperty(pitchID,63,nullptr);
+    //     tree.setProperty(velocityID,63,nullptr);
+    //     tree.setProperty(durationID,1000,nullptr);
+    //
+    //     midiNotes.addChild(tree, -1, nullptr);
+    //
+    //     tree.addListener(&listener);
+    //     listener.onChanged = [this](){ ComponentContext::canvas->makeRTGraph(nullptr); };
+    // }
+    //
+    // ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root);
 }
 
 void NodeData::setProperty(juce::Identifier propertyID, juce::String propertyValue, juce::String type)

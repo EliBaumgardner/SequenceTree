@@ -13,7 +13,7 @@
 #include "../UI/CustomLookAndFeel.h"
 #include "../Util/PluginModules.h"
 #include "NodeBox.h"
-#include "../Logic/ObjectController.h"
+#include "../Logic/NodeController.h"
 #include "NodeData.h"
 
 class NodeController;

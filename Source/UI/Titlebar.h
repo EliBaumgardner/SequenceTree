@@ -11,7 +11,7 @@
 #pragma once
 
 #include "CustomLookAndFeel.h"
-#include "DynamicEditor.h"
+#include "CustomTextEditor.h"
 #include "../Util/PluginModules.h"
 #include "../Util/PluginContext.h"
 #include "TitleBarButtons.h"

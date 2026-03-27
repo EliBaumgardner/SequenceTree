@@ -82,13 +82,13 @@ class NodeButton : public juce::Component {
 };
 
 
-class TraverserButton : public juce::Component {
+class ConnectorButton : public juce::Component {
     public:
 
     std::function<void()> onClick;
     bool isSelected = false;
 
-    TraverserButton() { setLookAndFeel(ComponentContext::lookAndFeel); }
+    ConnectorButton() { setLookAndFeel(ComponentContext::lookAndFeel); }
     void paint(juce::Graphics& g) override
     {
         if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) {
@@ -106,33 +106,40 @@ class ButtonPane : public juce::Component {
     public:
 
     NodeButton nodeButton;
-    TraverserButton traverserButton;
+    ConnectorButton connectorButton;
 
     ButtonPane()
     {
         setLookAndFeel(ComponentContext::lookAndFeel);
         addAndMakeVisible(nodeButton);
-        addAndMakeVisible(traverserButton);
+        addAndMakeVisible(connectorButton);
 
-        nodeButton.onClick = [this]() {
+        NodeController& nodeController = *ComponentContext::nodeController;
+
+        nodeButton.onClick = [this,&nodeController]() {
+
+            jassert(&nodeController);
 
             nodeButton.isSelected = true;
             nodeButton.repaint();
 
-            traverserButton.isSelected = false;
-            traverserButton.repaint();
+            connectorButton.isSelected = false;
+            connectorButton.repaint();
 
-            ComponentContext::canvas->controllerMode = NodeCanvas::ControllerMode::Node;
+            nodeController.nodeControllerMode = NodeController::NodeControllerMode::Node;
         };
 
-        traverserButton.onClick = [this]() {
-            traverserButton.isSelected = true;
-            traverserButton.repaint();
+        connectorButton.onClick = [this, &nodeController]() {
+
+            jassert(&nodeController);
+
+            connectorButton.isSelected = true;
+            connectorButton.repaint();
 
             nodeButton.isSelected = false;
             nodeButton.repaint();
 
-            ComponentContext::canvas->controllerMode = NodeCanvas::ControllerMode::Traverser;
+            nodeController.nodeControllerMode = NodeController::NodeControllerMode::Connector;
         };
     }
 
@@ -154,7 +161,7 @@ class ButtonPane : public juce::Component {
         nodeButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
 
         x += buttonSize + spacing;
-        traverserButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
+        connectorButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
     }
 };
 
@@ -184,7 +191,7 @@ class DisplayMenu : public juce::Component {
     public:
 
     DisplayButton button;
-    DynamicEditor display;
+    CustomTextEditor display;
     juce::PopupMenu menu;
     juce::String selectedOption = "";
 
@@ -244,7 +251,7 @@ class TempoDisplay : public juce::Component {
     public:
 
     SyncButton syncButton;
-    DynamicEditor editor;
+    CustomTextEditor editor;
 
     TempoDisplay()
     {

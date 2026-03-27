@@ -1,19 +1,19 @@
 /*
   ==============================================================================
 
-    DynamicEditor.cpp
+    CustomTextEditor.cpp
     Created: 18 May 2025 10:55:47am
     Author:  Eli Baimgardner
 
   ==============================================================================
 */
 
-#include "DynamicEditor.h"
+#include "CustomTextEditor.h"
 #include "../Util/PluginContext.h"
 #include "Node/NodeCanvas.h"
 
 
-DynamicEditor::DynamicEditor()
+CustomTextEditor::CustomTextEditor()
 {
     setLookAndFeel(ComponentContext::lookAndFeel);
 
@@ -25,7 +25,7 @@ DynamicEditor::DynamicEditor()
     baseFont = juce::Font(getFont());
 }
 
-void DynamicEditor::refit()
+void CustomTextEditor::refit()
 {
         auto bounds = getLocalBounds().toFloat().reduced(4.0f);
         
@@ -42,18 +42,18 @@ void DynamicEditor::refit()
         applyFontToAllText(font);
 }
 
-void DynamicEditor::paint(juce::Graphics& g)
+void CustomTextEditor::paint(juce::Graphics& g)
 {
     if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawEditor(g,*this); }
 }
 
-void DynamicEditor::mouseDown(const juce::MouseEvent& e)
+void CustomTextEditor::mouseDown(const juce::MouseEvent& e)
 {
     TextEditor::mouseDown(e);
     onTextChange();
 }
 
-void DynamicEditor::formatDisplay(DisplayMode mode)
+void CustomTextEditor::formatDisplay(DisplayMode mode)
 {
     juce::String displayValue = bindValue.toString();
     double value = displayValue.getDoubleValue();

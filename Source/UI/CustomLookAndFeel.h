@@ -18,14 +18,14 @@ class DisplayMenu;
 class DisplayButton;
 
 class NodeButton;
-class TraverserButton;
+class ConnectorButton;
 
 class PlayButton;
 
 class TempoDisplay;
 class SyncButton;
 
-class DynamicEditor;
+class CustomTextEditor;
 
 class UndoButton;
 class RedoButton;
@@ -39,7 +39,7 @@ public:
 
     CustomLookAndFeel();
 
-    virtual void drawEditor         (juce::Graphics& g, DynamicEditor& editor);
+    virtual void drawEditor         (juce::Graphics& g, CustomTextEditor& editor);
     virtual void drawCanvas         (juce::Graphics& g, const NodeCanvas& canvas);
 
     virtual void drawTitleBar       (juce::Graphics& g, const Titlebar& titleBar);
@@ -54,7 +54,7 @@ public:
     virtual void drawPlayButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const PlayButton& button);
     virtual void drawSyncButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const SyncButton& button);
     virtual void drawNodeButton     (juce::Graphics& g, const NodeButton& nodeButton);
-    virtual void drawTraverserButton(juce::Graphics& g, const TraverserButton& traverserButton);
+    virtual void drawTraverserButton(juce::Graphics& g, const ConnectorButton& traverserButton);
     virtual void drawTempoDisplay   (juce::Graphics& g, const TempoDisplay& tempoDisplay);
 
     virtual void drawUndoButton     (juce::Graphics& g, const UndoButton& undoButton, bool isButtonDown);

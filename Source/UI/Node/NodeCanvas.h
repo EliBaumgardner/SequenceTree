@@ -18,6 +18,8 @@
 #include "RelayNode.h"
 #include "../Logic/DynamicPort.h"
 
+
+
 class NodeCanvas : public juce::Component, public juce::ValueTree::Listener {
     
     public:
@@ -36,7 +38,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener {
         void setSelectionMode(NodeBox::DisplayMode mode) const;
 
         void removeNode(Node* node);
-        void addRootNode(Node* root);
+        void addRootNode(int nodeId);
 
         void makeRTGraph(Node* root);
         void destroyRTGraph(Node* root);
@@ -50,12 +52,6 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener {
         void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
         void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
         void valueTreePropertyChanged(juce::ValueTree &tree, const juce::Identifier &property) override;
-    
-        enum class ControllerMode { Node, Counter,Traverser };
-        ControllerMode controllerMode;
-
-        std::unique_ptr<ObjectController> controller;
-        Node* root = nullptr;
 
         juce::OwnedArray<Node> canvasNodes;
         juce::OwnedArray<NodeArrow> nodeArrows;
@@ -67,10 +63,8 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener {
 
         juce::Colour canvasColour = juce::Colours::white;
         juce::String infoText;
-        juce::Point<int> lastPosition;
 
         bool start = false;
-        bool controllerMade = false;
 
         juce::ValueTree canvasTree {"CanvasTree"};
 };

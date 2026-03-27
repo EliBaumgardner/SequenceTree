@@ -11,7 +11,7 @@
 #include "Node.h"
 #include "NodeCanvas.h"
 #include "../../../../../../../../Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Headers/Components.h"
-#include "../Logic/ObjectController.h"
+#include "../Logic/NodeController.h"
 
 int Node::globalNodeID = 0;
 
@@ -141,10 +141,8 @@ void Node::setDisplayMode(NodeBox::DisplayMode mode)
 
 void Node::mouseEnter(const juce::MouseEvent &e)
 {
-    if (ComponentContext::canvas->controller != nullptr) {
+    jassert(ComponentContext::nodeController != nullptr);
 
-        ComponentContext::canvas->controller->setObjects(this);
-        //addMouseListener(ComponentContext::canvas->controller.get(),true);
-    }
+    ComponentContext::nodeController->setObjects(this);
 }
 
