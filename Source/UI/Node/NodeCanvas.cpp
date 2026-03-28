@@ -65,55 +65,57 @@ void NodeCanvas::setSelectionMode(NodeBox::DisplayMode mode) const {
 
 void NodeCanvas::mouseDown(const juce::MouseEvent& e)
 {
-    jassert(ComponentContext::nodeController != nullptr);
-    jassert(ComponentContext::valueTreeState != nullptr);
+    std::cout<<"nodeCanvas is attached to wrong listener"<<std::endl;
 
-    ValueTreeState& valueTreeState = *ComponentContext::valueTreeState;
-    NodeController& nodeController = *ComponentContext::nodeController;
-    juce::UndoManager& undoManager = *ComponentContext::undoManager;
-
-    if (!e.mods.isLeftButtonDown() || nodeController.nodeControllerMode != NodeController::NodeControllerMode::Node || !e.mods.isShiftDown()) {
-        return;
-    }
-
-    juce::ValueTree valueTree = valueTreeState.addRootNode(&undoManager);
-    int rootId = valueTree.getProperty(ValueTreeState::Id);
-
-    int xPosition = valueTree.getProperty(ValueTreeState::XPosition);
-    int yPosition = valueTree.getProperty(ValueTreeState::YPosition);
-    int radius = valueTree.getProperty(ValueTreeState::Radius);
-
-    valueTreeState.setNodePosition(rootId, xPosition, yPosition,radius,&undoManager);
+    // jassert(ComponentContext::nodeController != nullptr);
+    // jassert(ComponentContext::valueTreeState != nullptr);
+    //
+    // ValueTreeState& valueTreeState = *ComponentContext::valueTreeState;
+    // NodeController& nodeController = *ComponentContext::nodeController;
+    // juce::UndoManager& undoManager = *ComponentContext::undoManager;
+    //
+    // if (!e.mods.isLeftButtonDown() || nodeController.nodeControllerMode != NodeController::NodeControllerMode::Node || !e.mods.isShiftDown()) {
+    //     return;
+    // }
+    //
+    // juce::ValueTree valueTree = valueTreeState.addRootNode(&undoManager);
+    // int rootId = valueTree.getProperty(ValueTreeState::Id);
+    //
+    // int xPosition = valueTree.getProperty(ValueTreeState::XPosition);
+    // int yPosition = valueTree.getProperty(ValueTreeState::YPosition);
+    // int radius = valueTree.getProperty(ValueTreeState::Radius);
+    //
+    // valueTreeState.setNodePosition(rootId, xPosition, yPosition,radius,&undoManager);
 }
 
 void NodeCanvas::addRootNode(int nodeId) {
 
-    std::unique_ptr<Node> rootNode = std::make_unique<Node>();
-
-    ValueTreeState::NodePosition nodePosition = ValueTreeState::getNodePosition(nodeId);
-
-    int radius = nodePosition.radius;
-
-    int xPosition = nodePosition.xPosition - radius;
-    int yPosition = nodePosition.yPosition - radius;
-    int width = radius * 2;
-    int height = radius * 2;
-
-
-    rootNode->setBounds(xPosition, yPosition, width, height);
-
-    addAndMakeVisible(rootNode.get());
-    makeRTGraph(rootNode.get());
-
-    canvasNodes.add(rootNode.release());
+    // std::unique_ptr<Node> rootNode = std::make_unique<Node>();
+    //
+    // ValueTreeState::NodePosition nodePosition = ValueTreeState::getNodePosition(nodeId);
+    //
+    // int radius = nodePosition.radius;
+    //
+    // int xPosition = nodePosition.xPosition - radius;
+    // int yPosition = nodePosition.yPosition - radius;
+    // int width = radius * 2;
+    // int height = radius * 2;
+    //
+    //
+    // rootNode->setBounds(xPosition, yPosition, width, height);
+    //
+    // addAndMakeVisible(rootNode.get());
+    // makeRTGraph(rootNode.get());
+    //
+    // canvasNodes.add(rootNode.release());
 }
 
 void NodeCanvas::mouseDrag(const juce::MouseEvent& e)
 {
-    if (auto* parent = dynamic_cast<DynamicPort*>(getParentComponent())){
-        auto parentEvent = e.getEventRelativeTo(parent);
-        parent->mouseDrag(parentEvent);
-    }
+    // if (auto* parent = dynamic_cast<DynamicPort*>(getParentComponent())){
+    //     auto parentEvent = e.getEventRelativeTo(parent);
+    //     parent->mouseDrag(parentEvent);
+    // }
 }
 
 
@@ -205,8 +207,8 @@ void NodeCanvas::makeRTGraph(Node* root)
             rtNode.nodeID = id;
             rtNode.countLimit = static_cast<int>(current->nodeData.nodeData.getProperty("countLimit"));
 
-            if (auto traverser = dynamic_cast<RelayNode*>(current))      { rtNode.nodeType = RTNode::NodeType::RelayNode; }
-            if (auto parent = dynamic_cast<RelayNode*>(current->parent)) { rtNode.graphID = rtNode.nodeID; }
+            if (auto traverser = dynamic_cast<Connector*>(current))      { rtNode.nodeType = RTNode::NodeType::RelayNode; }
+            if (auto parent = dynamic_cast<Connector*>(current->parent)) { rtNode.graphID = rtNode.nodeID; }
 
             for(const auto& note : current->nodeData.midiNotes){
 
@@ -278,9 +280,9 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
     //
     //         Node* canvasNode;
     //
-    //         if (treeChild.getProperty("nodeType").toString() ==  "RelayNode") {
+    //         if (treeChild.getProperty("nodeType").toString() ==  "Connector") {
     //             DBG("created relay node");
-    //             canvasNode = new RelayNode();
+    //             canvasNode = new Connector();
     //         }
     //         else if (treeChild.getProperty("nodeType").toString() == "Node"){
     //             DBG("created node");
@@ -333,7 +335,7 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
     //
     //             bool isRoot = false;
     //
-    //             if (treeChild.getProperty("nodeType").toString() == "RelayNode") {
+    //             if (treeChild.getProperty("nodeType").toString() == "Connector") {
     //                 parentNode->nodeData.addConnector(childNode);
     //                 isRoot = true;
     //             }
@@ -398,21 +400,17 @@ void NodeCanvas::clearCanvas()
     canvasNodes.clear();
 }
 
-void NodeCanvas::valueTreeChildAdded(juce::ValueTree& parent,
-                                     juce::ValueTree& child)
+void NodeCanvas::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
 {
-    if (parent.getType() == ValueTreeState::NodeTreeData) {
-        if (child.getType() == ValueTreeState::NodeId) {
-
-        }
-    }
+    DBG("valueTreeChildAdded");
 }
 
-void NodeCanvas::valueTreeChildRemoved(juce::ValueTree& parent,juce::ValueTree& child, int childIndex){
-
-
+void NodeCanvas::valueTreeChildRemoved(juce::ValueTree& parent,juce::ValueTree& child, int childIndex)
+{
+    DBG("valueTreeChildRemoved");
 }
 
-void NodeCanvas::valueTreePropertyChanged(juce::ValueTree &tree, const juce::Identifier &property) {
-
+void NodeCanvas::valueTreePropertyChanged(juce::ValueTree &tree, const juce::Identifier &property)
+{
+    DBG("valueTreePropertyChanged");
 }

@@ -27,6 +27,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     ComponentContext::valueTreeState    = valueTreeState.get();
     ComponentContext::nodeController   = nodeController.get();
 
+    canvas->addMouseListener(nodeController.get(),false);
     valueTreeState.get()->canvasData.addListener(canvas.get());
 
 

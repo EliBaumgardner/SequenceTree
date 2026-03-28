@@ -15,7 +15,7 @@
 #include "../Util/RTData.h"
 #include "NodeBox.h"
 #include "NodeArrow.h"
-#include "RelayNode.h"
+#include "Connector.h"
 #include "../Logic/DynamicPort.h"
 
 

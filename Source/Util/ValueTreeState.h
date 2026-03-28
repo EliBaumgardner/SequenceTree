@@ -11,8 +11,7 @@
 
 #pragma once
 
-
-#include "NodeFactory.h"
+#include "NodePosition.h"
 #include "../Util/PluginModules.h"
 
 
@@ -38,6 +37,7 @@ public:
     static const juce::Identifier MidiNoteData;
 
     static const juce::Identifier Id;
+    static const juce::Identifier NodeRootId;
 
     static const juce::Identifier NodeId;
     static const juce::Identifier NodeTreeId;
@@ -62,19 +62,19 @@ public:
     static juce::ValueTree addRootNode (juce::UndoManager* undoManager);
 
     static juce::ValueTree addRootNode    (juce::ValueTree parentNode, juce::UndoManager* undoManager);
-    static juce::ValueTree addNode        (const juce::ValueTree& parentTree, juce::UndoManager* undoManager);
+    static juce::ValueTree addNode        (const juce::ValueTree& parentNode, juce::UndoManager* undoManager);
     static void addConnector   (int parentNodeId,juce::UndoManager* undoManager);
     static void addMidiNote    (juce::ValueTree node, juce::ValueTree midiNote,juce::UndoManager* undoManager);
 
     static void removeRootNode (int rootNodeId, juce::UndoManager* undoManager);
-    static void removeNode     (int nodeId, juce::UndoManager* undoManager);
+    static void removeNode     (juce::ValueTree& node, juce::UndoManager* undoManager);
     static void removeNodeTree (int treeId, juce::UndoManager* undoManager);
 
-    static void setNodePosition (int nodeId, NodeFactory::NodePosition,juce::UndoManager* undoManager);
+    static void setNodePosition (juce::ValueTree node, NodePosition nodePosition,juce::UndoManager* undoManager);
 
     static bool isRootNode (int nodeId);
 
-    static NodeFactory::NodePosition    getNodePosition (int nodeId);
+    static NodePosition    getNodePosition (int nodeId);
     static juce::ValueTree getNode         (int nocdId);
     static juce::ValueTree getMidiNotes    (int nodeId);
     static juce::ValueTree getNodeTree     (int treeId);

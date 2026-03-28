@@ -29,6 +29,8 @@ const juce::Identifier ValueTreeState::MidiNoteData         {"MidiNoteData"};
 
                                 //PROPERTIES//
 const juce::Identifier ValueTreeState::Id                   {"Id"};
+const juce::Identifier ValueTreeState::NodeRootId           {"NodeRootId"};
+
 const juce::Identifier ValueTreeState::NodeTreeId           {"NodeTreeId"};
 const juce::Identifier ValueTreeState::NodeId               {"NodeId"};
 
@@ -75,8 +77,10 @@ juce::ValueTree ValueTreeState::addRootNode(juce::UndoManager* undoManager)
     rootNode.addChild(midiNotesData, -1, undoManager);
     rootNode.addChild(nodeChildrenIds, -1, undoManager);
 
+    rootNode.setProperty(NodeRootId,newTreeId , undoManager);
     rootNode.setProperty(Id, newTreeId,undoManager);
     rootNodeId.setProperty(Id,newTreeId,undoManager);
+
 
     nodeMap.addChild(rootNode,-1, undoManager);
 
@@ -120,12 +124,14 @@ juce::ValueTree ValueTreeState::addNode(const juce::ValueTree& parentNode,juce::
 
     node.addChild(nodeChildrenIds, -1, undoManager);
     node.addChild(midiNotesData, -1, undoManager);
+    node.setProperty(NodeRootId,parentNode.getProperty(NodeRootId),undoManager);
 
     nodeIdIncrement = nodeIdIncrement + 1;
+
     nodeId.setProperty(Id,nodeIdIncrement,undoManager);
     node.setProperty(Id,nodeIdIncrement,undoManager);
-    nodeMap.addChild(node,-1,undoManager);
 
+    nodeMap.addChild(node,-1,undoManager);
     parentNode.getChildWithName(NodeChildrenIds).addChild(nodeId, -1, undoManager);
 
     return node;
@@ -138,11 +144,12 @@ void ValueTreeState::addConnector(int parentNodeId,juce::UndoManager* undoManage
     jassert(parentNode.getType() == NodeData || parentNode.getType() == RootNodeData || parentNode.getType() == ConnectorData);
 
     juce::ValueTree connectorId {NodeId};
-
     juce::ValueTree connector   {ConnectorData};
 
     nodeIdIncrement = nodeIdIncrement + 1;
+
     connector.setProperty(Id,nodeIdIncrement,undoManager);
+    connector.setProperty(NodeRootId,parentNode.getProperty(NodeRootId),undoManager);
     connectorId.setProperty(Id,nodeIdIncrement,undoManager);
     nodeMap.addChild(connector,-1, undoManager);
 
@@ -184,9 +191,9 @@ void ValueTreeState::removeRootNode(int rootNodeId, juce::UndoManager* undoManag
     nodeMap.removeChild(rootNode,undoManager);
 }
 
-void ValueTreeState::removeNode(int nodeId, juce::UndoManager* undoManager)
+void ValueTreeState::removeNode(juce::ValueTree& node, juce::UndoManager* undoManager)
 {
-    juce::ValueTree node = getNode(nodeId);
+    int nodeId = node.getProperty(Id);
     jassert(node.isValid());
 
     for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
@@ -218,9 +225,8 @@ juce::ValueTree ValueTreeState::getMidiNotes(int nodeId)
 
 }
 
-void ValueTreeState::setNodePosition(int nodeId, NodeFactory::NodePosition nodePosition, juce::UndoManager* undoManager)
+void ValueTreeState::setNodePosition(juce::ValueTree node, NodePosition nodePosition, juce::UndoManager* undoManager)
 {
-    juce::ValueTree node = getNode(nodeId);
     jassert(node.isValid());
 
     int xPosition = nodePosition.xPosition;
@@ -233,7 +239,7 @@ void ValueTreeState::setNodePosition(int nodeId, NodeFactory::NodePosition nodeP
     node.setProperty(Radius, radius, undoManager);
 }
 
-NodeFactory::NodePosition ValueTreeState::getNodePosition(int nodeId)
+NodePosition ValueTreeState::getNodePosition(int nodeId)
 {
     juce::ValueTree node = getNode(nodeId);
     jassert(node.isValid());
@@ -242,7 +248,7 @@ NodeFactory::NodePosition ValueTreeState::getNodePosition(int nodeId)
     int nodeYPosition = node.getProperty(YPosition);
     int nodeRadius    = node.getProperty(Radius);
 
-    NodeFactory::NodePosition nodePosition;
+    NodePosition nodePosition;
     nodePosition.xPosition = nodeXPosition;
     nodePosition.yPosition = nodeYPosition;
     nodePosition.radius    = nodeRadius;

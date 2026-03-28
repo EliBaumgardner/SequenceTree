@@ -143,6 +143,6 @@ void Node::mouseEnter(const juce::MouseEvent &e)
 {
     jassert(ComponentContext::nodeController != nullptr);
 
-    ComponentContext::nodeController->setObjects(this);
+    ComponentContext::nodeController->setObjects(*this);
 }
 

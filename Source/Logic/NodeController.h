@@ -11,6 +11,7 @@
 #pragma once
 #include "../Util/PluginModules.h"
 #include "../Util/PluginContext.h"
+#include "../Util/NodePosition.h"
 
 
 class NodeCanvas;
@@ -23,7 +24,8 @@ class NodeMenu;
 
 class NodeData;
 
-class ValueTreeState;
+
+class NodeFactory;
 
 
 
@@ -40,11 +42,11 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
 
-    void dragNode(juce::Point<float> position);
-    void addNode();
+    void dragNode(Node* node, NodePosition nodePosition);
+    void addNode(Node* parentNode,NodePosition nodePosition, juce::UndoManager* undoManager);
     void connectNode(int deltaX, int deltaY, juce::Point<float> position);
 
-    void setObjects(Node* node);
+    void setObjects(juce::Component& component);
     void handleNodeRelease();
 
     enum class NodeControllerMode {Node,Connector};
@@ -54,8 +56,6 @@ private:
 
     NodeCanvas* nodeCanvas = nullptr;
 
-    Node* selectedNode = nullptr;
-    Node* childNode = nullptr;
     Node* connectorNode = nullptr;
 
     bool isDragStart = true;

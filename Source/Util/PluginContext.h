@@ -12,8 +12,6 @@
 
 #include <juce_data_structures/juce_data_structures.h>
 
-#include "../Util/ValueTreeState.h"
-
 class SequenceTreeAudioProcessor;
 class NodeCanvas;
 class CustomLookAndFeel;

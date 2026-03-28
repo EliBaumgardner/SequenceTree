@@ -18,8 +18,8 @@ CustomTextEditor::CustomTextEditor()
     setLookAndFeel(ComponentContext::lookAndFeel);
 
     onTextChange = [this](){
-        if(tree.hasType("MidiNoteData")){ ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root); }
-        refit();
+        // if(tree.hasType("MidiNoteData")){ ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root); }
+        // refit();
     };
 
     baseFont = juce::Font(getFont());

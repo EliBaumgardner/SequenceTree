@@ -2,12 +2,12 @@
 // Created by Eli Baumgardner on 10/7/25.
 //
 
-#include "RelayNode.h"
+#include "Connector.h"
 
-RelayNode::RelayNode() {
+Connector::Connector() {
 
     std::cout<<nodeID<<std::endl;
-    nodeData.setProperty("nodeType","RelayNode", "NodeData");
+    nodeData.setProperty("nodeType","Connector", "NodeData");
     // std::cout<<"relay intiliazed"<<std::endl;
     // editor = std::make_unique<NodeBox>(this);
     //
@@ -37,7 +37,7 @@ RelayNode::RelayNode() {
     // };
 }
 
-void RelayNode::resized() {
+void Connector::resized() {
     auto editorArea = getLocalBounds().reduced(10.0f);
 
     upButton.setBounds(editorArea.removeFromTop(4.0f));
@@ -52,7 +52,7 @@ void RelayNode::resized() {
     nodeData.nodeData.setProperty("radius", getWidth()/2,nullptr);
 }
 
-void RelayNode::paint(juce::Graphics& g)
+void Connector::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
 

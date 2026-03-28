@@ -11,11 +11,11 @@
 
 class NodeCanvas;
 
-class RelayNode : public Node {
+class Connector : public Node {
 
 public:
 
-    RelayNode();
+    Connector();
     void resized() override;
     void paint(juce::Graphics& g) override;
 

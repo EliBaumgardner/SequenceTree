@@ -13,8 +13,9 @@
 #include "Node/NodeData.h"
 #include "NodeController.h"
 #include "Node/Counter.h"
-#include "Node/RelayNode.h"
-#include "../Util/ValueTreeState.h"
+#include "Node/Connector.h"
+#include "NodeFactory.h"
+
 
 
 
@@ -23,152 +24,222 @@ NodeController::NodeController() : nodeCanvas(ComponentContext::canvas) {
 
 }
 
-void NodeController::mouseEnter(const juce::MouseEvent& e) { selectedNode->setHoverVisual(true);  }
-void NodeController::mouseExit(const juce::MouseEvent& e)  { selectedNode->setHoverVisual(false); }
-void NodeController::mouseUp(const juce::MouseEvent& e)    { handleNodeRelease(); }
+void NodeController::mouseEnter(const juce::MouseEvent& e)
+{
+    juce::Component* component = e.eventComponent;
+    if (Node* node = dynamic_cast<Node*>(component)) {
+        node->setHoverVisual(true);
+    }
+}
+void NodeController::mouseExit(const juce::MouseEvent& e)
+{
+    juce::Component* component = e.eventComponent;
+    if (Node* node = dynamic_cast<Node*>(component)) {
+        node->setHoverVisual(false);
+    }
+}
+void NodeController::mouseUp(const juce::MouseEvent& e)
+{
+    handleNodeRelease();
+}
 
 void NodeController::mouseDown(const juce::MouseEvent& e)
 {
+    juce::Component* component = e.eventComponent;
+    juce::UndoManager* undoManager = ComponentContext::undoManager;
 
-    if (auto* component = dynamic_cast<NodeCanvas*>(e.eventComponent)) {
 
+    if (NodeCanvas* canvas = dynamic_cast<NodeCanvas*>(component)) {
+
+        NodePosition nodePosition;
+
+        nodePosition.xPosition = e.x;
+        nodePosition.yPosition = e.y;
+        nodePosition.radius    = 20;
+
+        NodeFactory::createRootNode(nodePosition,undoManager);
     }
-    int nodeId = selectedNode->nodeID;
+    else if (Node* node= dynamic_cast<Node*>(component) ) {
 
-    juce::ValueTree nodeMap = ComponentContext::valueTreeState->nodeMap;
-    juce::ValueTree selectedNodeValueTree = nodeMap.getChildWithProperty(ValueTreeState::Id, nodeId);
+        node->setHoverVisual(true);
 
-    for (auto canvasNode : nodeCanvas->canvasNodes) {
+        for (Node* canvasNode : nodeCanvas->canvasNodes) {
 
-        if(canvasNode != selectedNode) {
-            canvasNode->setSelectVisual(false);
+            if(canvasNode != node) {
+                canvasNode->setSelectVisual(false);
+            }
+        }
+
+        if(e.mods.isRightButtonDown() && e.mods.isShiftDown()) {
+
+            NodeFactory::destroyNode(*node, undoManager);
+            // selectedNode->parent->nodeData.removeChild(selectedNode);
+            // nodeCanvas->removeNode(selectedNode);
+        }
+        else {
+            node->setSelectVisual();
         }
     }
-
-    if(e.mods.isRightButtonDown() && e.mods.isShiftDown()) {
-
-        ComponentContext::valueTreeState->removeNode(nodeId, *ComponentContext::undoManager);
-        selectedNode->parent->nodeData.removeChild(selectedNode);
-        nodeCanvas->removeNode(selectedNode);
-    }
-    else { selectedNode->setSelectVisual(); }
 }
 
 void NodeController::mouseDrag(const juce::MouseEvent& e)
 {
-    if (e.getDistanceFromDragStart() < 5 || !e.mods.isLeftButtonDown()) { return; }
 
-    int deltaX = e.x - lastX;
-    int deltaY = e.y - lastY;
-    lastX = e.x;
-    lastY = e.y;
+    juce::Component* component = e.eventComponent;
+    juce::UndoManager* undoManager = ComponentContext::undoManager;
 
-    const auto position = e.getEventRelativeTo(selectedNode->getParentComponent()).position;
 
-    if (e.mods.isShiftDown()) { dragNode(position);             return; }
-    if (isDragStart)          { isDragStart = false; addNode(); return; }
 
-    selectedNode->setSelectVisual(false);
+    if (NodeCanvas* nodeCanvas = dynamic_cast<NodeCanvas*>(component)) {
 
-    if (childNode != nullptr) { connectNode(deltaX, deltaY, position); }
+    }
+    else if (Node* node = dynamic_cast<Node*>(component)) {
+
+        NodePosition nodePosition;
+
+        nodePosition.xPosition = e.x;
+        nodePosition.yPosition = e.y;
+        nodePosition.radius    = 20;
+
+        if (e.getDistanceFromDragStart() < 5 || !e.mods.isLeftButtonDown()) {
+            return;
+        }
+
+        const auto position = e.getEventRelativeTo(node->getParentComponent()).position;
+
+        if (e.mods.isShiftDown()){
+            dragNode(node,nodePosition);
+            return;
+        }
+        if (isDragStart) {
+            isDragStart = false;
+            addNode(node,nodePosition,undoManager); return;
+        }
+
+        node->setSelectVisual(false);
+
+        // if (childNode != nullptr) {
+        //     int deltaX = e.x - lastX;
+        //     int deltaY = e.y - lastY;
+        //     lastX = e.x;
+        //     lastY = e.y;
+        //
+        //     connectNode(deltaX, deltaY, position);
+        // }
+    }
 }
 
-void NodeController::dragNode(const juce::Point<float> position)
+void NodeController::dragNode(Node* node, NodePosition nodePosition)
 {
     isDragStart = false;
 
-    selectedNode->setCentrePosition(position.toInt());
+    int radius    = node->getWidth()/2;
 
-    selectedNode->nodeData.nodeData.setProperty("x", selectedNode->getX(), nullptr);
-    selectedNode->nodeData.nodeData.setProperty("y", selectedNode->getY(), nullptr);
+    juce::ValueTree nodeValueTree = ValueTreeState::getNode(node->nodeID);
 
-    nodeCanvas->updateLinePoints(selectedNode);
-    nodeCanvas->repaint();
+    ValueTreeState::setNodePosition(nodeValueTree,nodePosition,nullptr);
+
+    // selectedNode->nodeData.nodeData.setProperty("x", selectedNode->getX(), nullptr);
+    // selectedNode->nodeData.nodeData.setProperty("y", selectedNode->getY(), nullptr);
+    //
+    // nodeCanvas->updateLinePoints(selectedNode);
+    // nodeCanvas->repaint();
 }
 
-void NodeController::addNode()
+void NodeController::addNode(Node* parentNode,NodePosition nodePosition,juce::UndoManager* undoManager)
 {
-    switch (nodeControllerMode)
-    {
-        case NodeControllerMode::Node     : childNode = new Node();      break;
-        case NodeControllerMode::Connector  : childNode = new Counter();   break;
-        default: jassertfalse;
+    // switch (nodeControllerMode)
+    // {
+    //     case NodeControllerMode::Node       : childNode = new Node();      break;
+    //     case NodeControllerMode::Connector  : childNode = new Counter();   break;
+    //     default: jassertfalse;
+    // }
+
+    // nodeCanvas->canvasNodes.add(childNode);
+    // childNode->parent = node;
+    //
+    // nodeCanvas->addAndMakeVisible(childNode);
+
+    int parentId = parentNode->getComponentID().getIntValue();
+
+    juce::ValueTree parentNodeValueTree = ValueTreeState::getNode(parentId);
+    int rootNodeId = parentNodeValueTree.getProperty(ValueTreeState::NodeRootId);
+
+    if (Connector* parentConnector = dynamic_cast<Connector*>(parentNode)) {
+
+        NodeFactory::createRootNode(*parentConnector,nodePosition,undoManager);
+
+        // childNode->root = childNode;
+        // selectedNode->nodeData.addConnector(childNode);
+        // nodeCanvas->makeRTGraph(selectedNode->root);
     }
+    else if (Node* nodeParent = dynamic_cast<Node*>(parentNode)){
 
-    nodeCanvas->canvasNodes.add(childNode);
-    childNode->parent = selectedNode;
-
-    nodeCanvas->addAndMakeVisible(childNode);
-
-    if (auto parent = dynamic_cast<RelayNode*>(selectedNode)) {
-        childNode->root = childNode;
-        selectedNode->nodeData.addConnector(childNode);
-        nodeCanvas->makeRTGraph(selectedNode->root);
+        NodeFactory::createNode(*nodeParent,nodePosition, undoManager);
+        // selectedNode->nodeData.addChild(childNode);
+        // childNode->root = selectedNode->root;
     }
-    else {
-        selectedNode->nodeData.addChild(childNode);
-        childNode->root = selectedNode->root;
-    }
+    //
+    // if (selectedNode == nullptr) {DBG("NODE IS NULL");}
+    // if (selectedNode->root == nullptr) {DBG("Node HAS NULL ROOT");}
+    // if (childNode == nullptr) { DBG("CHILD NODE NULL");}
+    // if (childNode->root == nullptr) { DBG("CHILD HAS NULL ROOT");}
 
-    if (selectedNode == nullptr) {DBG("NODE IS NULL");}
-    if (selectedNode->root == nullptr) {DBG("Node HAS NULL ROOT");}
-    if (childNode == nullptr) { DBG("CHILD NODE NULL");}
-    if (childNode->root == nullptr) { DBG("CHILD HAS NULL ROOT");}
-
-    nodeCanvas->makeRTGraph(childNode->root);
-    nodeCanvas->addLinePoints(selectedNode, childNode);
-
-    childNode->toBack();
-    childNode->nodeData.nodeData.setProperty("radius",childNode->getWidth()/2,nullptr);
+    // nodeCanvas->makeRTGraph(childNode->root);
+    // nodeCanvas->addLinePoints(selectedNode, childNode);
+    //
+    // childNode->toBack();
+    // childNode->nodeData.nodeData.setProperty("radius",childNode->getWidth()/2,nullptr);
 }
 
 void NodeController::connectNode(int deltaX, int deltaY, const juce::Point<float> position)
 {
-    childNode->setCentrePosition(position.toInt());
-    childNode->setSize(40, 40);
-    childNode->nodeData.nodeData.setProperty("x", childNode->getX(), nullptr);
-    childNode->nodeData.nodeData.setProperty("y", childNode->getY(), nullptr);
-
-    auto* target = dynamic_cast<Node*>(nodeCanvas->getComponentAt(position.x, position.y));
-
-    hasConnection = target && target != childNode && target != selectedNode && target != selectedNode->parent;
-
-    connectorNode = hasConnection ? target : nullptr;
-    childNode->setVisible(!hasConnection);
-
-    if (hasConnection && abs(deltaX) < 3 && abs(deltaY) < 3) {
-        auto point = target->localPointToGlobal(target->getLocalBounds().getCentre().toFloat());
-        juce::Desktop::getInstance().setMousePosition(point.toInt());
-    }
-
-    nodeCanvas->updateLinePoints(childNode);
-    nodeCanvas->repaint();
+    // childNode->setCentrePosition(position.toInt());
+    // childNode->setSize(40, 40);
+    // childNode->nodeData.nodeData.setProperty("x", childNode->getX(), nullptr);
+    // childNode->nodeData.nodeData.setProperty("y", childNode->getY(), nullptr);
+    //
+    // auto* target = dynamic_cast<Node*>(nodeCanvas->getComponentAt(position.x, position.y));
+    //
+    // hasConnection = target && target != childNode && target != selectedNode && target != selectedNode->parent;
+    //
+    // connectorNode = hasConnection ? target : nullptr;
+    // childNode->setVisible(!hasConnection);
+    //
+    // if (hasConnection && abs(deltaX) < 3 && abs(deltaY) < 3) {
+    //     auto point = target->localPointToGlobal(target->getLocalBounds().getCentre().toFloat());
+    //     juce::Desktop::getInstance().setMousePosition(point.toInt());
+    // }
+    //
+    // nodeCanvas->updateLinePoints(childNode);
+    // nodeCanvas->repaint();
 }
 
-void NodeController::setObjects(Node* node)
+void NodeController::setObjects(juce::Component& component)
 {
-    if (node == childNode) { return; }
 
-    if ( node != this->selectedNode || node == nodeCanvas->canvasNodes.getFirst() && node != nullptr){
-        this->selectedNode = node;
-        this->selectedNode->addMouseListener(this,true);
-    }
+    // if (node == childNode) { return; }
+    //
+    // if ( node != this->selectedNode || node == nodeCanvas->canvasNodes.getFirst() && node != nullptr){
+    //     this->selectedNode = node;
+    //     this->selectedNode->addMouseListener(this,true);
+    // }
 }
 
 void NodeController::handleNodeRelease()
 {
-    if (hasConnection && connectorNode != nullptr) {
+    // if (hasConnection && connectorNode != nullptr) {
+    //
+    //     if (auto traverser = dynamic_cast<Connector*>(selectedNode)) { selectedNode->nodeData.removeConnector(childNode); selectedNode->nodeData.addConnector(connectorNode);}
+    //     else                                                 { selectedNode->nodeData.removeChild(childNode);  selectedNode->nodeData.addChild(connectorNode); }
+    //
+    //     nodeCanvas->removeNode(childNode);
+    //
+    //     nodeCanvas->addLinePoints(selectedNode,connectorNode);
+    //     nodeCanvas->updateLinePoints(selectedNode);
+    //
+    //     nodeCanvas->makeRTGraph(selectedNode);
+    // }
 
-        if (auto traverser = dynamic_cast<RelayNode*>(selectedNode)) { selectedNode->nodeData.removeConnector(childNode); selectedNode->nodeData.addConnector(connectorNode);}
-        else                                                 { selectedNode->nodeData.removeChild(childNode);  selectedNode->nodeData.addChild(connectorNode); }
-
-        nodeCanvas->removeNode(childNode);
-
-        nodeCanvas->addLinePoints(selectedNode,connectorNode);
-        nodeCanvas->updateLinePoints(selectedNode);
-
-        nodeCanvas->makeRTGraph(selectedNode);
-    }
-
-    isDragStart = true; childNode = nullptr; connectorNode = nullptr;
+    isDragStart = true;
 }
