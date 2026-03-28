@@ -65,7 +65,6 @@ void NodeCanvas::setSelectionMode(NodeBox::DisplayMode mode) const {
 
 void NodeCanvas::mouseDown(const juce::MouseEvent& e)
 {
-    std::cout<<"nodeCanvas is attached to wrong listener"<<std::endl;
 
     // jassert(ComponentContext::nodeController != nullptr);
     // jassert(ComponentContext::valueTreeState != nullptr);
@@ -402,7 +401,48 @@ void NodeCanvas::clearCanvas()
 
 void NodeCanvas::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
 {
-    DBG("valueTreeChildAdded");
+    int parentId = parent.getProperty(ValueTreeState::Id);
+    int childId = child.getProperty(ValueTreeState::Id);
+    DBG("VALUETREE CHILD ADDED: " + std::to_string(parentId) + " " + std::to_string(childId) + "");
+    if (parent.getType() == ValueTreeState::NodeMap)
+    {
+        DBG("NODE TREE CHILD ADDED");
+        if (child.getType() == ValueTreeState::RootNodeData) {
+
+            std::unique_ptr<Node> childNode = std::make_unique<Node>();
+            childNode->setComponentID(std::to_string(childId));
+
+            NodePosition nodePosition = ValueTreeState::getNodePosition(childId);
+            int xPosition = nodePosition.xPosition;
+            int yPosition = nodePosition.yPosition;
+            int radius = nodePosition.radius;
+
+            addAndMakeVisible(childNode.get());
+            childNode.get()->setBounds(100, 100, 40, 40);
+            childNode.get()->repaint();
+            canvasNodes.add(childNode.release());
+
+        }
+    }
+    else if (parent.getType() == ValueTreeState::NodeData)
+    {
+        DBG("NODE DATA CHILD ADDED");
+
+    }
+    else if (parent.getType() == ValueTreeState::RootNodeData)
+    {
+        DBG("ROOT NODE DATA CHILD ADDED");
+
+    }
+    else if (parent.getType() == ValueTreeState::ConnectorData)
+    {
+        DBG("CONNECTOR DATA CHILD ADDED");
+    }
+    else {
+        DBG(parent.getType());
+        DBG(child.getType());
+    }
+
 }
 
 void NodeCanvas::valueTreeChildRemoved(juce::ValueTree& parent,juce::ValueTree& child, int childIndex)

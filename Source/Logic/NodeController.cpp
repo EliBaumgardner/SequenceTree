@@ -45,19 +45,23 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
 
 void NodeController::mouseDown(const juce::MouseEvent& e)
 {
+
+
     juce::Component* component = e.eventComponent;
     juce::UndoManager* undoManager = ComponentContext::undoManager;
 
 
     if (NodeCanvas* canvas = dynamic_cast<NodeCanvas*>(component)) {
 
-        NodePosition nodePosition;
+        if (e.mods.isShiftDown() && e.mods.isLeftButtonDown()) {
+            NodePosition nodePosition;
 
-        nodePosition.xPosition = e.x;
-        nodePosition.yPosition = e.y;
-        nodePosition.radius    = 20;
+            nodePosition.xPosition = e.x;
+            nodePosition.yPosition = e.y;
+            nodePosition.radius    = 20;
 
-        NodeFactory::createRootNode(nodePosition,undoManager);
+            NodeFactory::createRootNode(nodePosition,undoManager);
+        }
     }
     else if (Node* node= dynamic_cast<Node*>(component) ) {
 
@@ -163,7 +167,7 @@ void NodeController::addNode(Node* parentNode,NodePosition nodePosition,juce::Un
     int parentId = parentNode->getComponentID().getIntValue();
 
     juce::ValueTree parentNodeValueTree = ValueTreeState::getNode(parentId);
-    int rootNodeId = parentNodeValueTree.getProperty(ValueTreeState::NodeRootId);
+    int rootNodeId = parentNodeValueTree.getProperty(ValueTreeState::RootNodeId);
 
     if (Connector* parentConnector = dynamic_cast<Connector*>(parentNode)) {
 

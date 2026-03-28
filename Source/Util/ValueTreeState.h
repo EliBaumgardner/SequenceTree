@@ -37,7 +37,7 @@ public:
     static const juce::Identifier MidiNoteData;
 
     static const juce::Identifier Id;
-    static const juce::Identifier NodeRootId;
+    static const juce::Identifier RootNodeId;
 
     static const juce::Identifier NodeId;
     static const juce::Identifier NodeTreeId;
@@ -49,10 +49,10 @@ public:
     static const juce::Identifier Radius;
     static const juce::Identifier ColourId;
 
-    static inline juce::ValueTree canvasData    {CanvasData};
-    static inline juce::ValueTree nodeTreeIds   {NodeTreeIds };
-    static inline juce::ValueTree nodeMap       {NodeMap};
-    static inline juce::ValueTree nodeTreeMap   {NodeTreeMap};
+    static juce::ValueTree canvasData;
+    static juce::ValueTree nodeTreeIds;
+    static juce::ValueTree nodeMap;
+    static juce::ValueTree nodeTreeMap;
 
 
 

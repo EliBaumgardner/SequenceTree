@@ -19,7 +19,6 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     canvas         = std::make_unique<NodeCanvas>();
     nodeController = std::make_unique<NodeController>();
     valueTreeState = std::make_unique<ValueTreeState>();
-    titleBar       = std::make_unique<Titlebar>();
     port           = std::make_unique<DynamicPort>(canvas.get());
 
     ComponentContext::processor->canvas = canvas.get();
@@ -27,11 +26,16 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     ComponentContext::valueTreeState    = valueTreeState.get();
     ComponentContext::nodeController   = nodeController.get();
 
+    titleBar       = std::make_unique<Titlebar>();
+
     canvas->addMouseListener(nodeController.get(),false);
     valueTreeState.get()->canvasData.addListener(canvas.get());
+    valueTreeState.get()->nodeMap.addListener(canvas.get());
+    valueTreeState.get()->nodeTreeMap.addListener(canvas.get());
 
 
     addAndMakeVisible(port.get());
+    addAndMakeVisible(canvas.get());
     addAndMakeVisible(titleBar.get());
 
     setResizable(true,false);

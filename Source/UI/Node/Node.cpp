@@ -18,6 +18,8 @@ int Node::globalNodeID = 0;
 
 Node::Node() : nodeID(++globalNodeID)
 {
+
+    DBG("NODE CREATED");
     nodeData.setNode(this);
 
     nodeData.nodeData.setProperty("nodeID",nodeID,nullptr);
@@ -55,8 +57,10 @@ Node::Node() : nodeID(++globalNodeID)
 
 void Node::paint(juce::Graphics& g)
 {
+    DBG("NODE PAINT TRIGGERED");
     if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) {
         customLookAndFeel->drawNode(g,*this);
+        DBG("NODE PAINTED");
     }
 }
 
