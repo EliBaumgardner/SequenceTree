@@ -35,7 +35,6 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
 
     addAndMakeVisible(port.get());
-    addAndMakeVisible(canvas.get());
     addAndMakeVisible(titleBar.get());
 
     setResizable(true,false);

@@ -20,16 +20,21 @@
 
 
 
-class NodeCanvas : public juce::Component, public juce::ValueTree::Listener {
+
+class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, public juce::AsyncUpdater {
     
     public:
-    
+
+        enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved};
+
+        struct AsyncUpdate {
+            AsyncUpdateType type;
+            int nodeId;
+        };
+
         NodeCanvas();
-    
+
         void paint(juce::Graphics& g) override;
-    
-        void mouseDown(const juce::MouseEvent& e) override;
-        void mouseDrag(const juce::MouseEvent& e) override;
 
         void addLinePoints(Node* startNode, Node* endNode);
         void updateLinePoints(Node* movedNode);
@@ -37,8 +42,9 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener {
     
         void setSelectionMode(NodeBox::DisplayMode mode) const;
 
-        void removeNode(Node* node);
-        void addRootNode(int nodeId);
+        void addNodeToCanvas(int nodeId);
+        void removeNodeFromCanvas(int nodeId);
+        void setNodePosition(int nodeId);
 
         void makeRTGraph(Node* root);
         void destroyRTGraph(Node* root);
@@ -49,15 +55,18 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener {
 
         void clearCanvas();
 
+        void handleAsyncUpdate() override;
+
         void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
         void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
-        void valueTreePropertyChanged(juce::ValueTree &tree, const juce::Identifier &property) override;
+        void valueTreePropertyChanged(juce::ValueTree &tree, const juce::Identifier &propertyIdentifier) override;
 
         juce::OwnedArray<Node> canvasNodes;
         juce::OwnedArray<NodeArrow> nodeArrows;
 
-        using nodeMap  = std::unordered_map<int, Node*>;
-        std::unordered_map<int,nodeMap> nodeMaps;
+
+        std::unordered_map<int, Node*> nodeMap;
+        std::unordered_map<int,std::unordered_map<int, Node*>> nodeMaps;
         std::unordered_map<int, std::shared_ptr<RTGraph>> rtGraphs;
         std::shared_ptr<RTGraph> lastGraph;
 
@@ -67,4 +76,6 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener {
         bool start = false;
 
         juce::ValueTree canvasTree {"CanvasTree"};
+
+        std::vector<AsyncUpdate> asyncUpdates;
 };

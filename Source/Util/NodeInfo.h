@@ -10,4 +10,7 @@ struct NodePosition {
     int yPosition;
     int radius;
 };
+
+enum class NodeType { Node, Connector, Root};
+
 #endif //SEQUENCETREE_NODEPOSITION_H

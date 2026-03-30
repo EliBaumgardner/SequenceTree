@@ -11,7 +11,7 @@
 #pragma once
 #include "../Util/PluginModules.h"
 #include "../Util/PluginContext.h"
-#include "../Util/NodePosition.h"
+#include "../Util/NodeInfo.h"
 
 
 class NodeCanvas;

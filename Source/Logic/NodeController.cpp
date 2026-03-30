@@ -78,7 +78,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
             NodeFactory::destroyNode(*node, undoManager);
             // selectedNode->parent->nodeData.removeChild(selectedNode);
-            // nodeCanvas->removeNode(selectedNode);
+            // nodeCanvas->removeNodeFromCanvas(selectedNode);
         }
         else {
             node->setSelectVisual();
@@ -92,12 +92,21 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
     juce::Component* component = e.eventComponent;
     juce::UndoManager* undoManager = ComponentContext::undoManager;
 
-
-
     if (NodeCanvas* nodeCanvas = dynamic_cast<NodeCanvas*>(component)) {
+
+        DBG("canvas is being dragged");
+        auto grandParent = component->getParentComponent()->getParentComponent();
+
+        if (auto* dynamicPort = dynamic_cast<DynamicPort*>(grandParent)){
+
+            auto parentEvent = e.getEventRelativeTo(dynamicPort);
+            dynamicPort->mouseDrag(parentEvent);
+        }
 
     }
     else if (Node* node = dynamic_cast<Node*>(component)) {
+
+        DBG("Node is being dragged");
 
         NodePosition nodePosition;
 
@@ -237,7 +246,7 @@ void NodeController::handleNodeRelease()
     //     if (auto traverser = dynamic_cast<Connector*>(selectedNode)) { selectedNode->nodeData.removeConnector(childNode); selectedNode->nodeData.addConnector(connectorNode);}
     //     else                                                 { selectedNode->nodeData.removeChild(childNode);  selectedNode->nodeData.addChild(connectorNode); }
     //
-    //     nodeCanvas->removeNode(childNode);
+    //     nodeCanvas->removeNodeFromCanvas(childNode);
     //
     //     nodeCanvas->addLinePoints(selectedNode,connectorNode);
     //     nodeCanvas->updateLinePoints(selectedNode);

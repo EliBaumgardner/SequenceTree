@@ -3,13 +3,10 @@
 DynamicPort::DynamicPort(juce::Component* content)
     : component(content)
 {
-    
-    std::cout<<"panning"<<std::endl;
+
     setViewedComponent(component, false);
     component->setSize(3000, 3000); // set an initial large size for panning
     centerInComponent();
-    
-    addChildComponent(component);
 }
 
 DynamicPort::~DynamicPort(){
@@ -18,6 +15,7 @@ DynamicPort::~DynamicPort(){
 
 void DynamicPort::mouseDown(const juce::MouseEvent& e)
 {
+
     lastMousePosition = e.getPosition();
     
     zoomPoint = e.getPosition();
