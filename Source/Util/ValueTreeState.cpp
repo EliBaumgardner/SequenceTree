@@ -10,7 +10,7 @@
 // Created by Eli Baumgardner on 3/21/26.
 //
 
-                                //VALUE TREES//
+
 const juce::Identifier ValueTreeState::CanvasData           {"CanvasData"};
 const juce::Identifier ValueTreeState::NodeMap              {"NodeMap"};
 const juce::Identifier ValueTreeState::NodeTreeMap          {"NodeTreeMap"};
@@ -22,12 +22,12 @@ const juce::Identifier ValueTreeState::RootNodeData         {"RootNodeData"};
 const juce::Identifier ValueTreeState::NodeData             {"NodeData"};
 const juce::Identifier ValueTreeState::ConnectorData        {"ConnectorData"};
 
-const juce::Identifier ValueTreeState::NodeChildrenIds     {"NodeChildrenIds"};
+const juce::Identifier ValueTreeState::NodeChildrenIds      {"NodeChildrenIds"};
 
 const juce::Identifier ValueTreeState::MidiNotesData        {"MidiNotesData"};
 const juce::Identifier ValueTreeState::MidiNoteData         {"MidiNoteData"};
 
-                                //PROPERTIES//
+
 const juce::Identifier ValueTreeState::Id                   {"Id"};
 const juce::Identifier ValueTreeState::RootNodeId           {"RootNodeId"};
 
@@ -42,10 +42,16 @@ const juce::Identifier ValueTreeState::YPosition            {"YPosition"};
 const juce::Identifier ValueTreeState::Radius               {"Radius"};
 const juce::Identifier ValueTreeState::ColourId             {"ColourId"};
 
+const juce::Identifier ValueTreeState::MidiPitch            {"MidiPitch"};
+const juce::Identifier ValueTreeState::MidiVelocity         {"MidiVelocity"};
+const juce::Identifier ValueTreeState::MidiDuration         {"MidiDuration"};
+
+
 juce::ValueTree ValueTreeState::canvasData    {CanvasData};
 juce::ValueTree ValueTreeState::nodeTreeIds   {NodeTreeIds};
 juce::ValueTree ValueTreeState::nodeMap       {NodeMap};
 juce::ValueTree ValueTreeState::nodeTreeMap   {NodeTreeMap};
+
 
 ValueTreeState::ValueTreeState() {
 
@@ -78,18 +84,19 @@ juce::ValueTree ValueTreeState::addRootNode(NodePosition nodePosition, juce::Und
     juce::ValueTree nodeChildrenIds   {NodeChildrenIds};
     juce::ValueTree midiNotesData     {MidiNotesData};
 
-    rootNode.addChild(midiNotesData, -1, undoManager);
-    rootNode.addChild(nodeChildrenIds, -1, undoManager);
+    rootNode.addChild     (midiNotesData, -1, undoManager);
+    rootNode.addChild     (nodeChildrenIds, -1, undoManager);
+    newTree.addChild      (rootNodeId, -1, undoManager);
 
     rootNode.setProperty(Id, newTreeId,undoManager);
+    rootNode.setProperty(Count,defaultNodeCount,undoManager);
+    rootNode.setProperty(CountLimit,defaultNodeCountLimit,undoManager);
+    rootNode.setProperty(RootNodeId,newTreeId,undoManager);
+
     rootNodeId.setProperty(Id,newTreeId,undoManager);
-    newTree.setProperty(RootNodeId,newTreeId,undoManager);
+    newTree.setProperty   (RootNodeId,newTreeId,undoManager);
 
-    newTree.addChild(rootNodeId, -1, undoManager);
-    nodeMap.addChild(rootNode,-1, undoManager);
-
-    setNodePosition(rootNode,nodePosition,undoManager);
-
+    nodeMap.addChild      (rootNode,-1, undoManager);
     return rootNode;
 }
 
@@ -138,12 +145,13 @@ juce::ValueTree ValueTreeState::addNode(int parentNodeId, NodePosition nodePosit
 
     node.setProperty(RootNodeId,rootId,undoManager);
     node.setProperty(Id,nodeIdIncrement,undoManager);
+    node.setProperty(Count,defaultNodeCount,undoManager);
+    node.setProperty(CountLimit,defaultNodeCountLimit,undoManager);
+
     nodeId.setProperty(Id,nodeIdIncrement,undoManager);
 
     parentNode.getChildWithName(NodeChildrenIds).addChild(nodeId, -1, undoManager);
     nodeMap.addChild(node,-1,undoManager);
-
-    setNodePosition(node,nodePosition,undoManager);
 
     return node;
 }
@@ -162,24 +170,32 @@ void ValueTreeState::addConnector(int parentNodeId, NodePosition nodePosition,ju
 
     connector.setProperty(Id,nodeIdIncrement,undoManager);
     connector.setProperty(RootNodeId,parentNode.getProperty(RootNodeId),undoManager);
+    connector.setProperty(Count,defaultNodeCount,undoManager);
+    connector.setProperty(CountLimit,defaultNodeCountLimit,undoManager);
 
     connectorId.setProperty(Id,nodeIdIncrement,undoManager);
 
     parentNode.getChildWithName(NodeChildrenIds).addChild(connectorId, -1, undoManager);
     nodeMap.addChild(connector,-1, undoManager);
 
-    setNodePosition(connector,nodePosition,undoManager);
 }
 
-void ValueTreeState::addMidiNote(juce::ValueTree node,juce::ValueTree midiNote,juce::UndoManager* undoManager)
+void ValueTreeState::setMidiValue(int nodeId,NodeNote note,juce::UndoManager* undoManager)
 {
+    juce::ValueTree node = getNode(nodeId);
+
     jassert(node.isValid());
-
     jassert(node.getType() == NodeData || node.getType() == ConnectorData || node.getType() == RootNodeData);
-    jassert(node.getChildWithName(MidiNotesData).getType() == MidiNotesData);
 
-    jassert(midiNote.isValid());
-    jassert(midiNote.getType() == MidiNoteData);
+    int pitch = note.pitch;
+    int velocity = note.velocity;
+    int duration = note.duration;
+
+    juce::ValueTree midiNote {MidiNoteData};
+
+    midiNote.setProperty(MidiPitch,pitch,undoManager);
+    midiNote.setProperty(MidiVelocity,velocity,undoManager);
+    midiNote.setProperty(MidiDuration,duration,undoManager);
 
     node.getChildWithName(MidiNotesData).addChild(midiNote, -1, undoManager);
 }
@@ -231,13 +247,13 @@ juce::ValueTree ValueTreeState::getNode(int nodeId)
 {
     juce::ValueTree node = nodeMap.getChildWithProperty(Id,nodeId);
     jassert(node.isValid());
+
     return node;
 }
 
 juce::ValueTree ValueTreeState::getMidiNotes(int nodeId)
 {
         return juce::ValueTree();
-
 }
 
 void ValueTreeState::setNodePosition(juce::ValueTree node, NodePosition nodePosition, juce::UndoManager* undoManager)
@@ -247,7 +263,6 @@ void ValueTreeState::setNodePosition(juce::ValueTree node, NodePosition nodePosi
     int xPosition = nodePosition.xPosition;
     int yPosition = nodePosition.yPosition;
     int radius    = nodePosition.radius;
-
 
     node.setProperty(XPosition, xPosition, undoManager);
     node.setProperty(YPosition, yPosition, undoManager);
@@ -271,17 +286,14 @@ NodePosition ValueTreeState::getNodePosition(int nodeId)
     return nodePosition;
 }
 
-bool ValueTreeState::isRootNode(int nodeId)
-{
-   juce::ValueTree node = getNode(nodeId);
-    jassert(node.isValid());
-    bool isRootNode;
-    if (node.getType() == RootNodeData) {
-        isRootNode = true;
+juce::ValueTree ValueTreeState::getNodeParent(int nodeId) {
+    for(int i = 0; i < nodeMap.getNumChildren(); ++i) {
+        juce::ValueTree node = nodeMap.getChild(i);
+        juce::ValueTree nodeChildrenIds = node.getChildWithName(NodeChildrenIds);
+        juce::ValueTree nodeChildId = nodeChildrenIds.getChildWithProperty(Id, nodeId);
+        if (nodeChildId.isValid()) {
+            return node;
+        }
     }
-    else {
-        isRootNode = false;
-    }
-
-    return isRootNode;
+    return juce::ValueTree();
 }

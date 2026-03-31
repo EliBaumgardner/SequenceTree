@@ -25,10 +25,9 @@ void NodeCanvas::paint(juce::Graphics& g)
 }
 
 void NodeCanvas::handleAsyncUpdate() {
-
     for (auto& asyncUpdate  : asyncUpdates) {
-
         int nodeId = asyncUpdate.nodeId;
+        DBG("NodeID from asyncUpdate:" + 5);
         AsyncUpdateType updateType = asyncUpdate.type;
 
         if (updateType == AsyncUpdateType::NodeAdded) {
@@ -46,7 +45,6 @@ void NodeCanvas::handleAsyncUpdate() {
 
 void NodeCanvas::addNodeToCanvas(int nodeId)
 {
-
     juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
     std::unique_ptr<Node> childNode = nullptr;
 
@@ -62,16 +60,31 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
 
     childNode->setComponentID(std::to_string(nodeId));
 
+    juce::ValueTree nodeParent = ValueTreeState::getNodeParent(nodeId);
+
+    if (nodeParent.isValid()) {
+        int parentNodeId = nodeParent.getProperty(ValueTreeState::Id);
+        auto parentNodePair = nodeMap.find(parentNodeId);
+        jassert(parentNodePair != nodeMap.end());
+        Node* parentNode = parentNodePair->second;
+        addLinePoints(parentNode,childNode.get());
+    }
+
     nodeMap[nodeId] = childNode.get();
 
     addAndMakeVisible(childNode.get());
+    childNode->toFront(false);
 
     canvasNodes.add(childNode.release());
+
+    makeRTGraph(nodeValueTree);
 }
 
 void NodeCanvas::removeNodeFromCanvas(int nodeId)
 {
     auto nodePair = nodeMap.find(nodeId);
+    juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
+
     jassert(nodePair != nodeMap.end());
 
     auto& node = nodePair->second;
@@ -81,7 +94,7 @@ void NodeCanvas::removeNodeFromCanvas(int nodeId)
     removeLinePoints(node);
     canvasNodes.removeObject(node);
 
-    makeRTGraph(temp);
+    makeRTGraph(nodeValueTree);
     repaint();
 }
 
@@ -143,67 +156,97 @@ void NodeCanvas::updateLinePoints(Node* movedNode)
 
 // processor-related Functions //
 
-void NodeCanvas::makeRTGraph(Node* root)
+void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
 {
     //CONVERT GRAPH TO FORM THAT TAKES VALUE TREE INSTEAD
     DBG("MAKING RT GRAPH");
 
-    if (root == nullptr) { DBG("ROOT NODE IS NULL"); }
+    jassert(nodeValueTree.isValid());
+
+    int rootNodeId = nodeValueTree.getProperty(ValueTreeState::RootNodeId);
+    juce::ValueTree rootNodeValueTree = ValueTreeState::getNode(rootNodeId);
 
     auto rtGraph = std::make_shared<RTGraph>();
 
-    rtGraph->graphID = root->nodeID;
+    rtGraph->graphID = rootNodeId;
 
-    std::unordered_map<int,Node*> nodeMap;
 
-    std::vector<Node*> stack = {root};
+    std::unordered_map<int,juce::ValueTree> tempNodeMap;
+
+    std::vector<juce::ValueTree> stack = {rootNodeValueTree};
 
     while(!stack.empty()){
 
-        Node* current = stack.back();
+        juce::ValueTree currentValueTree = stack.back();
+        juce::ValueTree nodeValueTreeChildren = currentValueTree.getChildWithName(ValueTreeState::NodeChildrenIds);
+        juce::ValueTree nodeMidiNotes = currentValueTree.getChildWithName(ValueTreeState::MidiNotesData);
+        juce::ValueTree nodeParentValueTree = ValueTreeState::getNodeParent(currentValueTree.getProperty(ValueTreeState::Id));
+
+        juce::Identifier nodeType = currentValueTree.getType();
+        juce::Identifier nodeParentType = nodeParentValueTree.getType();
+
         stack.pop_back();
-        int id = current->nodeID;
 
-        if(nodeMap.count(id) == false){
+        int nodeId = currentValueTree.getProperty(ValueTreeState::Id);
+        int graphId = currentValueTree.getProperty(ValueTreeState::RootNodeId);
+        int countLimit = currentValueTree.getProperty(ValueTreeState::CountLimit);
 
-            nodeMap[id] = current;
+        if(tempNodeMap.count(nodeId) == false){
+
+            tempNodeMap[nodeId] = currentValueTree;
 
             RTNode rtNode;
-            rtNode.graphID = rtGraph->graphID;
-            rtNode.nodeID = id;
-            rtNode.countLimit = static_cast<int>(current->nodeData.nodeData.getProperty("countLimit"));
+            rtNode.graphID = graphId;
+            rtNode.nodeID = nodeId;
+            rtNode.countLimit = countLimit;;
 
-            if (auto traverser = dynamic_cast<Connector*>(current))      { rtNode.nodeType = RTNode::NodeType::RelayNode; }
-            if (auto parent = dynamic_cast<Connector*>(current->parent)) { rtNode.graphID = rtNode.nodeID; }
+            if (nodeType == ValueTreeState::NodeData || nodeType == ValueTreeState::RootNodeData) {rtNode.nodeType = RTNode::NodeType::Node;}
+            if (nodeType == ValueTreeState::ConnectorData )                                       { rtNode.nodeType = RTNode::NodeType::RelayNode; }
+            if (nodeParentType == ValueTreeState::ConnectorData)                                  { rtNode.graphID = rtNode.nodeID; }
 
-            for(const auto& note : current->nodeData.midiNotes){
-
+            for (int i = 0; i < nodeMidiNotes.getNumChildren(); i++) {
+                juce::ValueTree note = nodeMidiNotes.getChild(i);
                 RTNote rtNote;
 
-                float pitch = static_cast<float>(note.getProperty("pitch"));
-                float velocity = static_cast<float>(note.getProperty("velocity"));
-                float duration = static_cast<float>(note.getProperty("duration"));
+                int pitch   = note.getProperty(ValueTreeState::MidiPitch);
+                int velocity= note.getProperty(ValueTreeState::MidiVelocity);
+                int duration= note.getProperty(ValueTreeState::MidiDuration);
 
-                rtNote.pitch = pitch;
+                rtNote.pitch    = pitch;
                 rtNote.velocity = velocity;
                 rtNote.duration = duration;
                 rtNode.notes.push_back(std::move(rtNote));
             }
 
-            rtGraph->nodeMap[id] = std::move(rtNode);
+            rtGraph->nodeMap[nodeId] = std::move(rtNode);
 
-            for(auto child : current->nodeData.children){ stack.push_back(child); }
+            for (int i = 0; i < nodeValueTreeChildren.getNumChildren(); i++) {
+                juce::ValueTree child = nodeValueTreeChildren.getChild(i);
+                stack.push_back(child);
+            }
         }
     }
 
-    for(auto& [id, node] : nodeMap){
-        for (auto& child : node->nodeData.children)       { rtGraph->nodeMap[id].children.push_back(child->nodeID); }
-        for (auto& connector : node->nodeData.connectors) { rtGraph->nodeMap[id].connectors.push_back(connector->nodeID); }
+
+    for(auto& [id, nodeValueTree] : tempNodeMap){
+        juce::ValueTree nodeValueTreeChildren = nodeValueTree.getChildWithName(ValueTreeState::NodeChildrenIds);
+
+        for (int i = 0; i < nodeValueTreeChildren.getNumChildren(); i++) {
+            juce::ValueTree child = nodeValueTreeChildren.getChild(i);
+            int childId = child.getProperty(ValueTreeState::Id);
+
+            if (child.getType() == ValueTreeState::NodeData || child.getType() == ValueTreeState::RootNodeData) {
+                rtGraph->nodeMap[id].children.push_back(childId);
+            }
+            else if (child.getType() == ValueTreeState::ConnectorData) {
+                rtGraph->nodeMap[id].connectors.push_back(childId);
+            }
+        }
     }
 
     rtGraph->traversalRequested = start;
 
-    nodeMaps[rtGraph->graphID] = nodeMap;
+    nodeMaps[rtGraph->graphID] = tempNodeMap;
     rtGraphs[rtGraph->graphID] = rtGraph;
     lastGraph = rtGraph;
 
@@ -225,6 +268,7 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
 
 void NodeCanvas::setNodePosition(int nodeId)
 {
+    DBG("setting node position");
     NodePosition nodePosition = ValueTreeState::getNodePosition(nodeId);
 
     int xPosition = nodePosition.xPosition;
@@ -236,6 +280,8 @@ void NodeCanvas::setNodePosition(int nodeId)
 
     auto node = nodePair->second;
     node->setBounds(xPosition,yPosition,radius,radius);
+
+    updateLinePoints(node);
 }
 
 void NodeCanvas::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
@@ -247,8 +293,9 @@ void NodeCanvas::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& c
                 || child.getType() == ValueTreeState::RootNodeData);
 
             AsyncUpdate asyncUpdate;
-            asyncUpdate.type = AsyncUpdateType::NodeAdded;
-            asyncUpdate.nodeId = child.getProperty(ValueTreeState::Id);
+            asyncUpdate.type         = AsyncUpdateType::NodeAdded;
+            asyncUpdate.nodeId    = child.getProperty(ValueTreeState::Id);
+            asyncUpdate.rootNodeId= child.getProperty(ValueTreeState::RootNodeId);
 
             asyncUpdates.push_back(asyncUpdate);
             triggerAsyncUpdate();

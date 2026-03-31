@@ -388,7 +388,7 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
             pendingAsyncCalls.fetch_add(1, std::memory_order_relaxed);
 
             juce::MessageManager::callAsync([this, nodeID, shouldHighlight, graphID]() {
-                auto& nodeMap = processor->canvas->nodeMaps[graphID];
+                auto& nodeMap = processor->canvas->nodeMap;
 
                 auto it = nodeMap.find(nodeID);
                 if (it != nodeMap.end()) {

@@ -28,7 +28,8 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     titleBar       = std::make_unique<Titlebar>();
 
-    canvas->addMouseListener(nodeController.get(),false);
+    canvas->addMouseListener(nodeController.get(),true);
+
     valueTreeState.get()->canvasData.addListener(canvas.get());
     valueTreeState.get()->nodeMap.addListener(canvas.get());
     valueTreeState.get()->nodeTreeMap.addListener(canvas.get());

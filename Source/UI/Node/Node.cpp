@@ -78,6 +78,7 @@ void Node::resized()
 
 void Node::setHoverVisual(bool isHovered)
 {
+    DBG("setting hover visual");
     this->isHovered = isHovered;
     repaint();
 }
@@ -138,12 +139,5 @@ void Node::setDisplayMode(NodeBox::DisplayMode mode)
     default:
         break;
     }
-}
-
-void Node::mouseEnter(const juce::MouseEvent &e)
-{
-    jassert(ComponentContext::nodeController != nullptr);
-
-    ComponentContext::nodeController->setObjects(*this);
 }
 

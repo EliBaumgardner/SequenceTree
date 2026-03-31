@@ -18,8 +18,8 @@ class NodeCanvas;
 
 class NodeBox : public juce::TextEditor {
     
-    public:
-    
+public:
+
     NodeBox(Node* node);
     void paint(juce::Graphics& g) override;
     void refit();
@@ -37,12 +37,11 @@ class NodeBox : public juce::TextEditor {
     DisplayMode mode;
     juce::Value bindValue;
     
-    private:
+private:
     
     Node* node = nullptr;
     
     juce::Font baseFont;
 
     juce::ValueTree tree;
-    
 };

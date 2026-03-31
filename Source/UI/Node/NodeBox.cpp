@@ -11,6 +11,22 @@
 #include "NodeBox.h"
 #include "NodeCanvas.h"
 #include "Node.h"
+#include "../Util/ValueTreeState.h"
+
+ static const juce::String pitchNames[] = {
+    juce::String(L"C"),
+    juce::String(L"C♯"),
+    juce::String(L"D"),
+    juce::String(L"D♯"),
+    juce::String(L"E"),
+    juce::String(L"F"),
+    juce::String(L"F♯"),
+    juce::String(L"G"),
+    juce::String(L"G♯"),
+    juce::String(L"A"),
+    juce::String(L"A♯"),
+    juce::String(L"B")
+};
 
 NodeBox::NodeBox(Node* node) : node(node) {
     
@@ -48,58 +64,44 @@ void NodeBox::bindEditor(juce::ValueTree tree, const juce::Identifier propertyID
     
 }
 
-void NodeBox::formatDisplay(DisplayMode mode){
-    
+void NodeBox::formatDisplay(DisplayMode mode) {
+
     this->mode = mode;
+
     juce::String displayValue = bindValue.toString();
-    
     double value = displayValue.getDoubleValue();
     
     juce::String display;
+    int nodeId = node->getComponentID().getIntValue();
+
+    juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
     
-    if (mode == DisplayMode::Pitch)
-    {
+    if (mode == DisplayMode::Pitch){
         int midiNote = juce::jlimit(0, 127, (int)value);
 
         int pitchValue = midiNote % 12;
         int octave = (midiNote / 12) - 1;
 
-        juce::String pitchNames[] = {
-            juce::String(L"C"),
-            juce::String(L"C♯"),
-            juce::String(L"D"),
-            juce::String(L"D♯"),
-            juce::String(L"E"),
-            juce::String(L"F"),
-            juce::String(L"F♯"),
-            juce::String(L"G"),
-            juce::String(L"G♯"),
-            juce::String(L"A"),
-            juce::String(L"A♯"),
-            juce::String(L"B")
-        };
-
         display = pitchNames[pitchValue] + juce::String(octave);
     }
 
-    
     if(mode == DisplayMode::Velocity){
         int velocity = (int)value;
         display = juce::String(velocity);
     }
-    
+
     if(mode == DisplayMode::Duration){
         display = juce::String(value);
     }
-    
+
     if(mode == DisplayMode::CountLimit){
         display = juce::String(value);
     }
     
     setText(display);
     refit();
-    
-    ComponentContext::canvas->makeRTGraph(node->root);
+
+    ComponentContext::canvas->makeRTGraph(nodeValueTree);
 }
 
 int NodeBox::noteToNumber(juce::String string){

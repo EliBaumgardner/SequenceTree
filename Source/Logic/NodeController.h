@@ -33,24 +33,18 @@ class NodeController : public juce::MouseListener {
     
 public:
 
+    enum class NodeControllerMode {Node,Connector};
+    NodeControllerMode nodeControllerMode;
 
     NodeController();
 
     void mouseEnter(const juce::MouseEvent& e) override;
-    void mouseExit(const juce::MouseEvent& e) override;
-    void mouseDrag(const juce::MouseEvent& e) override;
-    void mouseDown(const juce::MouseEvent& e) override;
-    void mouseUp(const juce::MouseEvent& e) override;
+    void mouseExit (const juce::MouseEvent& e) override;
+    void mouseDrag (const juce::MouseEvent& e) override;
+    void mouseDown (const juce::MouseEvent& e) override;
+    void mouseUp   (const juce::MouseEvent& e) override;
 
-    void dragNode(Node* node, NodePosition nodePosition);
-    void addNode(Node* parentNode,NodePosition nodePosition, juce::UndoManager* undoManager);
     void connectNode(int deltaX, int deltaY, juce::Point<float> position);
-
-    void setObjects(juce::Component& component);
-    void handleNodeRelease();
-
-    enum class NodeControllerMode {Node,Connector};
-    NodeControllerMode nodeControllerMode;
 
 private:
 
@@ -60,6 +54,8 @@ private:
 
     bool isDragStart = true;
     bool hasConnection = false;
+
+    juce::ValueTree draggedNodeTree;
 
     int lastX = 0;
     int lastY = 0;

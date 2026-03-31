@@ -28,7 +28,6 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
-    void mouseEnter(const juce::MouseEvent& e) override;
 
     void setHoverVisual(bool isHovered);
     void setSelectVisual(bool isSelected);

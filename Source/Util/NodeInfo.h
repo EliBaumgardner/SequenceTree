@@ -11,6 +11,12 @@ struct NodePosition {
     int radius;
 };
 
+struct NodeNote {
+    int pitch;
+    int velocity;
+    int duration;
+};
+
 enum class NodeType { Node, Connector, Root};
 
 #endif //SEQUENCETREE_NODEPOSITION_H

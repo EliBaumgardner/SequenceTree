@@ -19,30 +19,48 @@ public:
 
     static void createRootNode(const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
-        juce::ValueTree rootNode = ValueTreeState::addRootNode(nodePosition,undoManager);
+        juce::ValueTree rootNodeValueTree = ValueTreeState::addRootNode(nodePosition,undoManager);
+        int rootId = rootNodeValueTree.getProperty(ValueTreeState::Id);
+
+        ValueTreeState::setNodePosition(rootNodeValueTree,nodePosition,undoManager);
+
+        setDefaultNodeNote(rootId, undoManager);
     }
 
-    static void createRootNode(const Node& parentNode, const NodePosition& nodePosition, juce::UndoManager* undoManager)
+    static void createRootNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
-        int parentNodeId = parentNode.nodeID;
-
         juce::ValueTree rootNodeValueTree = ValueTreeState::addRootNode(parentNodeId,nodePosition,undoManager);
+        int rootId = rootNodeValueTree.getProperty(ValueTreeState::Id);
+
+        ValueTreeState::setNodePosition(rootNodeValueTree,nodePosition,undoManager);
+
+        setDefaultNodeNote(rootId, undoManager);
     }
 
-    static void createNode(const Node& parentNode, const NodePosition& nodePosition, juce::UndoManager* undoManager)
+    void createNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
-        int parentNodeId = parentNode.nodeID;
-
         juce::ValueTree childNodeValueTree = ValueTreeState::addNode(parentNodeId,nodePosition,undoManager);
+        int nodeId = childNodeValueTree.getProperty(ValueTreeState::Id);
+
+        setDefaultNodeNote(nodeId, undoManager);
     }
 
-    static void destroyNode(const Node& node, juce::UndoManager* undoManager)
+    static void destroyNode(const int nodeId, juce::UndoManager* undoManager)
     {
-        int nodeId = node.nodeID;
-
         ValueTreeState::removeNode(nodeId,undoManager);
     }
 
+private:
+
+    static void setDefaultNodeNote(int nodeId, juce::UndoManager *undoManager)
+    {
+        NodeNote note;
+        note.pitch = 60;
+        note.velocity = 60;
+        note.duration = 1000;
+
+        ValueTreeState::setMidiValue(nodeId,note,undoManager);
+    }
 };
 
 #endif //SEQUENCETREE_NODEFACTORY_H

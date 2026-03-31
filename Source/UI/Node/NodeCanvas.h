@@ -30,6 +30,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         struct AsyncUpdate {
             AsyncUpdateType type;
             int nodeId;
+            int rootNodeId;
         };
 
         NodeCanvas();
@@ -46,7 +47,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         void removeNodeFromCanvas(int nodeId);
         void setNodePosition(int nodeId);
 
-        void makeRTGraph(Node* root);
+        void makeRTGraph(const juce::ValueTree& nodeValueTree);
         void destroyRTGraph(Node* root);
     
         void setProcessorPlayblack(bool isPlaying);
@@ -66,7 +67,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
 
 
         std::unordered_map<int, Node*> nodeMap;
-        std::unordered_map<int,std::unordered_map<int, Node*>> nodeMaps;
+        std::unordered_map<int,std::unordered_map<int, juce::ValueTree>> nodeMaps;
         std::unordered_map<int, std::shared_ptr<RTGraph>> rtGraphs;
         std::shared_ptr<RTGraph> lastGraph;
 
