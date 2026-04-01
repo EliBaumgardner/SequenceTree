@@ -62,7 +62,6 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
         void valueTreePropertyChanged(juce::ValueTree &tree, const juce::Identifier &propertyIdentifier) override;
 
-        juce::OwnedArray<Node> canvasNodes;
         juce::OwnedArray<NodeArrow> nodeArrows;
 
 

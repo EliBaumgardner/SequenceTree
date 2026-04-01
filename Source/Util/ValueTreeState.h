@@ -96,8 +96,8 @@ public:
     static juce::ValueTree getNodeTree     (int treeId);
 
     static inline int nodeIdIncrement       {0};
-    static inline int defaultNodeCount      {0};
-    static inline int defaultNodeCountLimit {0};
+    static inline int defaultNodeCount      {1};
+    static inline int defaultNodeCountLimit {1};
 };
 
 

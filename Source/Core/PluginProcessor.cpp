@@ -145,9 +145,9 @@ juce::AudioProcessorEditor* SequenceTreeAudioProcessor::createEditor()
 //==============================================================================
 void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    juce::ValueTree editorTree = canvas->canvasTree;
+    juce::ValueTree canvasTree = ValueTreeState::nodeMap;
 
-    std::unique_ptr<juce::XmlElement> xml(editorTree.createXml());
+    std::unique_ptr<juce::XmlElement> xml(canvasTree.createXml());
 
     copyXmlToBinary(*xml, destData);
 }
@@ -162,9 +162,9 @@ void SequenceTreeAudioProcessor::setStateInformation (const void* data, int size
 
     if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
 
-    juce::MessageManager::callAsync([this,restoredTree]() {
-        canvas->canvasTree.removeAllChildren(nullptr);
-        canvas->setValueTreeState(restoredTree);
+    juce::MessageManager::callAsync([this]() {
+        ValueTreeState::nodeMap.removeAllChildren(nullptr);
+        canvas->setValueTreeState(ValueTreeState::nodeMap);
     });
 }
 
