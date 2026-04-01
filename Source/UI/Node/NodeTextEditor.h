@@ -1,7 +1,7 @@
 /*
   ==============================================================================
 
-    NodeBox.h
+    NodeTextEditor.h
     Created: 1 Sep 2025 1:28:52pm
     Author:  Eli Baimgardner
 
@@ -10,31 +10,32 @@
 
 #pragma once
 
-#include "../Util/PluginModules.h"
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "../Util/NodeInfo.h"
 
 class Node;
 
 class NodeCanvas;
 
-class NodeBox : public juce::TextEditor {
+class NodeTextEditor : public juce::TextEditor {
     
 public:
 
-    NodeBox(Node* node);
+    NodeTextEditor(Node* node);
     void paint(juce::Graphics& g) override;
     void refit();
     void bindEditor(juce::ValueTree tree, const juce::Identifier propertyID);
     
     enum class DisplayMode {Pitch, Velocity, Duration, CountLimit};
     
-    void formatDisplay(DisplayMode mode);
+    void formatDisplay(NodeDisplayMode mode);
     int noteToNumber(juce::String string);
     
     void makeBoundsVisible(bool isBoundsVisible);
     
     void mouseDrag(const juce::MouseEvent& e) override;
     
-    DisplayMode mode;
+    NodeDisplayMode mode;
     juce::Value bindValue;
     
 private:
@@ -43,5 +44,5 @@ private:
     
     juce::Font baseFont;
 
-    juce::ValueTree tree;
+    juce::ValueTree nodeTree;
 };

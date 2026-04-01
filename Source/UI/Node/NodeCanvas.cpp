@@ -1,9 +1,10 @@
 // NodeCanvas.cpp
-#include "../Util/PluginContext.h"
+
 #include "NodeCanvas.h"
 
 #include <stack>
 
+#include "CustomLookAndFeel.h"
 #include "../../Util/ValueTreeState.h"
 #include "../Core/PluginProcessor.h"
 
@@ -48,15 +49,15 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
     juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
     std::unique_ptr<Node> childNode = nullptr;
 
-    if (nodeValueTree.getType() == ValueTreeState::RootNodeData) {
-        childNode = std::make_unique<Node>();
-    }
-    if (nodeValueTree.getType() == ValueTreeState::NodeData) {
+    if (nodeValueTree.getType() == ValueTreeState::RootNodeData
+        || nodeValueTree.getType() == ValueTreeState::NodeData) {
         childNode = std::make_unique<Node>();
     }
     else if (nodeValueTree.getType() == (ValueTreeState::ConnectorData)) {
         childNode = std::make_unique<Connector>();
     }
+
+    jassert(childNode);
 
     childNode->setComponentID(std::to_string(nodeId));
 
@@ -94,19 +95,19 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
 
 void NodeCanvas::removeNodeFromCanvas(int nodeId)
 {
-    auto nodePair = nodeMap.find(nodeId);
-    juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
-
-    jassert(nodePair != nodeMap.end());
-
-    auto& node = nodePair->second;
-    Node* temp = node->root;
-
-    nodeMaps[node->root->nodeID].erase(node->nodeID);
-    removeLinePoints(node);
-
-    makeRTGraph(nodeValueTree);
-    repaint();
+    // auto nodePair = nodeMap.find(nodeId);
+    // juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
+    //
+    // jassert(nodePair != nodeMap.end());
+    //
+    // auto& node = nodePair->second;
+    // Node* temp = node->root;
+    //
+    // nodeMaps[node->root->nodeId].erase(node->nodeId);
+    // removeLinePoints(node);
+    //
+    // makeRTGraph(nodeValueTree);
+    // repaint();
 }
 
 void NodeCanvas::setNodePosition(int nodeId)
@@ -349,16 +350,12 @@ void NodeCanvas::valueTreePropertyChanged(juce::ValueTree &tree, const juce::Ide
    }
 }
 
-void NodeCanvas::setSelectionMode(NodeBox::DisplayMode mode) const {
+void NodeCanvas::setSelectionMode(NodeDisplayMode mode) const {
 
-    for(int i = 0; i < nodeMap.size(); i++)
+    for (auto& [nodeId, node] : nodeMap)
     {
-        auto nodePair = nodeMap.find(i);
-        jassert(nodePair == nodeMap.end());
-        Node* node = nodePair->second;
-
         node->setDisplayMode(mode);
-        node->editor.get()->formatDisplay(mode);
+        node->nodeTextEditor->formatDisplay(mode);
     }
 }
 

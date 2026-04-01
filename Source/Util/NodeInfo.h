@@ -19,4 +19,6 @@ struct NodeNote {
 
 enum class NodeType { Node, Connector, Root};
 
+enum class NodeDisplayMode {Pitch, Velocity,Duration,CountLimit};
+
 #endif //SEQUENCETREE_NODEPOSITION_H

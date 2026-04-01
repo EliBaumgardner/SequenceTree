@@ -1,14 +1,14 @@
 /*
   ==============================================================================
 `
-    NodeBox.cpp
+    NodeTextEditor.cpp
     Created: 1 Sep 2025 1:28:52pm
     Author:  Eli Baimgardner
 
   ==============================================================================
 */
 
-#include "NodeBox.h"
+#include "NodeTextEditor.h"
 #include "NodeCanvas.h"
 #include "Node.h"
 #include "../Util/ValueTreeState.h"
@@ -28,19 +28,22 @@
     juce::String(L"B")
 };
 
-NodeBox::NodeBox(Node* node) : node(node) {
+NodeTextEditor::NodeTextEditor(Node* node) : node(node) {
     
     makeBoundsVisible(false);
     setReadOnly(true);
+
+    setInterceptsMouseClicks(false,false);
+    setColour(juce::TextEditor::textColourId, juce::Colours::white);
     
     baseFont = juce::Font(getFont());
 }
 
-void NodeBox::paint(juce::Graphics& g) {
+void NodeTextEditor::paint(juce::Graphics& g) {
     TextEditor::paint(g);
 }
 
-void NodeBox::refit(){
+void NodeTextEditor::refit(){
         auto bounds = getLocalBounds().toFloat().reduced(4.0f);
         
         float length = baseFont.getStringWidthFloat(getText());
@@ -56,27 +59,33 @@ void NodeBox::refit(){
         applyFontToAllText(font);
 }
 
-void NodeBox::bindEditor(juce::ValueTree tree, const juce::Identifier propertyID){
+void NodeTextEditor::bindEditor(juce::ValueTree tree, const juce::Identifier propertyID){
     
-    this->tree = tree;
+    this->nodeTree = tree;
     
     bindValue.referTo(tree.getPropertyAsValue(propertyID,nullptr));
     
 }
 
-void NodeBox::formatDisplay(DisplayMode mode) {
+void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
 
+    DBG("formatting display");
     this->mode = mode;
 
     juce::String displayValue = bindValue.toString();
     double value = displayValue.getDoubleValue();
     
     juce::String display;
+
+    if (node == nullptr) {
+        DBG("Node is nullptr");
+    }
+
     int nodeId = node->getComponentID().getIntValue();
 
     juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
-    
-    if (mode == DisplayMode::Pitch){
+
+    if (mode == NodeDisplayMode::Pitch){
         int midiNote = juce::jlimit(0, 127, (int)value);
 
         int pitchValue = midiNote % 12;
@@ -85,16 +94,16 @@ void NodeBox::formatDisplay(DisplayMode mode) {
         display = pitchNames[pitchValue] + juce::String(octave);
     }
 
-    if(mode == DisplayMode::Velocity){
+    if(mode == NodeDisplayMode::Velocity){
         int velocity = (int)value;
         display = juce::String(velocity);
     }
 
-    if(mode == DisplayMode::Duration){
+    if(mode == NodeDisplayMode::Duration){
         display = juce::String(value);
     }
 
-    if(mode == DisplayMode::CountLimit){
+    if(mode == NodeDisplayMode::CountLimit){
         display = juce::String(value);
     }
     
@@ -104,7 +113,7 @@ void NodeBox::formatDisplay(DisplayMode mode) {
     ComponentContext::canvas->makeRTGraph(nodeValueTree);
 }
 
-int NodeBox::noteToNumber(juce::String string){
+int NodeTextEditor::noteToNumber(juce::String string){
     
     //note  //accidental  //octave
     
@@ -139,7 +148,7 @@ int NodeBox::noteToNumber(juce::String string){
     return midiNumber;
 }
 
-void NodeBox::makeBoundsVisible(bool isBoundsVisible){
+void NodeTextEditor::makeBoundsVisible(bool isBoundsVisible){
     
     //set whether the textbox has visible boundaries
     if(isBoundsVisible){
@@ -161,7 +170,7 @@ void NodeBox::makeBoundsVisible(bool isBoundsVisible){
     repaint();
 }
 
-void NodeBox::mouseDrag(const juce::MouseEvent& e){
+void NodeTextEditor::mouseDrag(const juce::MouseEvent& e){
     int distanceFromStart = e.getDistanceFromDragStartY();
     
     if(distanceFromStart > 10){

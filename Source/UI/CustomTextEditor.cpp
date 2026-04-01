@@ -11,6 +11,7 @@
 #include "CustomTextEditor.h"
 #include "../Util/PluginContext.h"
 #include "Node/NodeCanvas.h"
+#include "../UI/CustomLookAndFeel.h"
 
 
 CustomTextEditor::CustomTextEditor()

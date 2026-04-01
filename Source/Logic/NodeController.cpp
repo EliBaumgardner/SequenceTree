@@ -10,7 +10,6 @@
 
 #include "Node/NodeCanvas.h"
 #include "Node/Node.h"
-#include "Node/NodeData.h"
 #include "NodeController.h"
 #include "Node/Counter.h"
 #include "Node/Connector.h"

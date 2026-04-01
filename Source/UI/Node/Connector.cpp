@@ -6,10 +6,10 @@
 
 Connector::Connector() {
 
-    std::cout<<nodeID<<std::endl;
-    nodeData.setProperty("nodeType","Connector", "NodeData");
+    // std::cout<<nodeId<<std::endl;
+    // nodeData.setProperty("nodeType","Connector", "NodeData");
     // std::cout<<"relay intiliazed"<<std::endl;
-    // editor = std::make_unique<NodeBox>(this);
+    // editor = std::make_unique<NodeTextEditor>(this);
     //
     // addAndMakeVisible(upButton);
     // addAndMakeVisible(downButton);
@@ -43,13 +43,9 @@ void Connector::resized() {
     upButton.setBounds(editorArea.removeFromTop(4.0f));
     downButton.setBounds(editorArea.removeFromBottom(4.0f));
 
-    editor.get()->setBounds(editorArea);
-    editor.get()->setJustification(juce::Justification::centred);
+    nodeTextEditor.get()->setBounds(editorArea);
+    nodeTextEditor.get()->setJustification(juce::Justification::centred);
     //editor.refit();
-
-    nodeData.nodeData.setProperty("x",getX(),nullptr);
-    nodeData.nodeData.setProperty("y",getY(),nullptr);
-    nodeData.nodeData.setProperty("radius", getWidth()/2,nullptr);
 }
 
 void Connector::paint(juce::Graphics& g)

@@ -7,7 +7,7 @@
 
 #include "../Util/PluginModules.h"
 #include "Node.h"
-#include "NodeBox.h"
+#include "NodeTextEditor.h"
 
 class NodeCanvas;
 

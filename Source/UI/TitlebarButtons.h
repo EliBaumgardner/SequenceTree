@@ -8,6 +8,7 @@
 #include "../Util/PluginModules.h"
 #include "../Util/PluginContext.h"
 #include "Node/NodeCanvas.h"
+#include "../Logic/NodeController.h"
 
 static constexpr float buttonBoundsReduction = 3.0f;
 static constexpr float buttonBorderThickness = 2.0f;
@@ -214,10 +215,10 @@ class DisplayMenu : public juce::Component {
                 repaint();
                 switch (result)
                 {
-                    case 1: selectedOption = "show pitch"; ComponentContext::canvas->setSelectionMode(NodeBox::DisplayMode::Pitch); break;
-                    case 2: selectedOption = "show velocity"; ComponentContext::canvas->setSelectionMode(NodeBox::DisplayMode::Velocity); break;
-                    case 3: selectedOption = "show duration"; ComponentContext::canvas->setSelectionMode(NodeBox::DisplayMode::Duration); break;
-                    case 4: selectedOption = "show countLimit"; ComponentContext::canvas->setSelectionMode(NodeBox::DisplayMode::CountLimit); break;
+                    case 1: selectedOption = "show pitch";      ComponentContext::canvas->setSelectionMode(NodeDisplayMode::Pitch); break;
+                    case 2: selectedOption = "show velocity";   ComponentContext::canvas->setSelectionMode(NodeDisplayMode::Velocity); break;
+                    case 3: selectedOption = "show duration";   ComponentContext::canvas->setSelectionMode(NodeDisplayMode::Duration); break;
+                    case 4: selectedOption = "show countLimit"; ComponentContext::canvas->setSelectionMode(NodeDisplayMode::CountLimit); break;
                     default: break;
                 }
                 resized();

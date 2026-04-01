@@ -9,6 +9,7 @@
 */
 #include "NodeArrow.h"
 #include "Node.h"
+#include "../CustomLookAndFeel.h"
 
 NodeArrow::NodeArrow(Node* startNode, Node* endNode) : startNode(startNode), endNode(endNode), updater(this),
 

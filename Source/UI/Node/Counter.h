@@ -7,7 +7,7 @@
 
 #include "../Util/PluginModules.h"
 #include "Node.h"
-#include "NodeBox.h"
+#include "NodeTextEditor.h"
 
 class NodeCanvas;
 
@@ -18,7 +18,7 @@ class Counter : public Node {
     Counter();
     void resized() override;
     void paint(juce::Graphics& g) override;
-    void setDisplayMode(NodeBox::DisplayMode mode);
+    void setDisplayMode(NodeTextEditor::DisplayMode mode);
 
 
     private:

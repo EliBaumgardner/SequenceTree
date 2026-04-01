@@ -10,13 +10,14 @@
 
 #pragma once
 
-#include "../UI/CustomLookAndFeel.h"
-#include "../Util/PluginModules.h"
-#include "NodeBox.h"
-#include "../Logic/NodeController.h"
-#include "NodeData.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 
-class NodeController;
+#include "../Util/ValueTreeState.h"
+#include "../Util/NodeInfo.h"
+#include "Buttons/IncrementButton.h""
+
+
+class NodeTextEditor;
 
 class  NodeCanvas;
 
@@ -26,104 +27,28 @@ public:
 
     Node();
 
-    void paint(juce::Graphics& g) override;
+    void paint  (juce::Graphics& g) override;
     void resized() override;
 
-    void setHoverVisual(bool isHovered);
-    void setSelectVisual(bool isSelected);
-    void setSelectVisual();
+    void setHoverVisual    (bool isHovered);
+    void setSelectVisual   (bool isSelected);
+    void setSelectVisual   ();
     void setHighlightVisual(bool isHighlighted);
 
-    void setDisplayMode(NodeBox::DisplayMode mode);
+    void setDisplayMode(NodeDisplayMode mode);
 
+    juce::ValueTree nodeValueTree;
+    juce::ValueTree midiNoteData;
 
-    //**   GENERAL VARIABLES   **//
+    NodeDisplayMode mode;
+    std::unique_ptr<NodeTextEditor> nodeTextEditor = nullptr;
 
-
-    Node* parent = nullptr;
-    Node* root   = nullptr;
-
-    NodeData nodeData;
-
-    NodeBox::DisplayMode mode;
-    std::unique_ptr<NodeBox> editor = nullptr;
+    IncrementButton upButton { true };
+    IncrementButton downButton { false };
 
     juce::Colour nodeColour = juce::Colour::fromRGB(91,86,76);
 
     bool isHovered     = false;
     bool isSelected    = false;
     bool isHighlighted = false;
-    bool isRoot        = false;
-
-    int nodeID = 0;
-    static int globalNodeID;
-
-
-
-
-    //**   BUTTON CLASSES   **//
-
-    class IncrementButton : public juce::Component {
-
-        public:
-
-        bool increment;
-        std::function<void()> onChanged;
-
-        IncrementButton(bool increment) : increment(increment) {
-
-        }
-
-        void paint(juce::Graphics& g) override {
-
-            auto bounds = getLocalBounds().toFloat();
-            auto w = bounds.getWidth();
-            auto h = bounds.getHeight();
-
-            if(increment == true){
-                juce::Path path;
-
-                path.startNewSubPath(0, h);
-                path.lineTo(w / 2, 0);
-                path.lineTo(w, h);
-                path.closeSubPath();
-
-                g.setColour(juce::Colours::white);
-                g.fillPath(path);
-
-                g.setColour(juce::Colours::black);
-                g.strokePath(path, juce::PathStrokeType(1.0f));
-            }
-            else {
-                juce::Path path;
-
-                path.startNewSubPath(0,0);
-                path.lineTo(w/2,h);
-                path.lineTo(w,0);
-                path.closeSubPath();
-
-                g.setColour(juce::Colours::white);
-                g.fillPath(path);
-
-                g.setColour(juce::Colours::black);
-                g.strokePath(path, juce::PathStrokeType(1.0f));
-            }
-        }
-
-        void mouseDown(const juce::MouseEvent& e) override {
-
-            onChanged();
-        }
-    };
-
-
-
-    //**   BUTTON RELATED VARIABLES   **//
-
-    IncrementButton upButton { true };
-    IncrementButton downButton { false };
-
-    bool isConnector = false;
-    bool isARoot     = false;
-
 };

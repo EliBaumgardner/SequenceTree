@@ -10,13 +10,14 @@
 
 #pragma once
 
-#include "../Util/PluginModules.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 #include "Node.h"
 #include "../Util/RTData.h"
-#include "NodeBox.h"
+#include "NodeTextEditor.h"
 #include "NodeArrow.h"
 #include "Connector.h"
 #include "../Logic/DynamicPort.h"
+#include "../Util/NodeInfo.h"
 
 
 
@@ -41,7 +42,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         void updateLinePoints(Node* movedNode);
         void removeLinePoints(Node* node);
     
-        void setSelectionMode(NodeBox::DisplayMode mode) const;
+        void setSelectionMode(NodeDisplayMode mode) const;
 
         void addNodeToCanvas(int nodeId);
         void removeNodeFromCanvas(int nodeId);

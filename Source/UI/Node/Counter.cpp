@@ -6,7 +6,7 @@
 
 Counter::Counter() {
 
-    // editor = std::make_unique<NodeBox>(this);
+    // editor = std::make_unique<NodeTextEditor>(this);
     //
     // addAndMakeVisible(upButton);
     // addAndMakeVisible(downButton);
@@ -40,13 +40,10 @@ void Counter::resized() {
     upButton.setBounds(editorArea.removeFromTop(4.0f));
     downButton.setBounds(editorArea.removeFromBottom(4.0f));
 
-    editor.get()->setBounds(editorArea);
-    editor.get()->setJustification(juce::Justification::centred);
+    nodeTextEditor.get()->setBounds(editorArea);
+    nodeTextEditor.get()->setJustification(juce::Justification::centred);
     //editor.refit();
 
-    nodeData.nodeData.setProperty("x",getX(),nullptr);
-    nodeData.nodeData.setProperty("y",getY(),nullptr);
-    nodeData.nodeData.setProperty("radius", getWidth()/2,nullptr);
 }
 
 void Counter::paint(juce::Graphics& g) {
@@ -82,38 +79,38 @@ void Counter::paint(juce::Graphics& g) {
     }
 }
 
-void Counter::setDisplayMode(NodeBox::DisplayMode mode){
-
-    juce::ValueTree midiTree("MidiNoteData");
-
-    midiTree.setProperty("pitch",60,nullptr);
-    midiTree.setProperty("velocity", 60, nullptr);
-    midiTree.setProperty("duration", 500, nullptr);
-
-    if(nodeData.midiNotes.getNumChildren() == 0){
-        nodeData.midiNotes.addChild(midiTree, -1, nullptr);
-    }
-    else if(nodeData.midiNotes.getNumChildren() == 1) {
-        midiTree = nodeData.midiNotes.getChild(0);
-    }
-
-    if(mode == NodeBox::DisplayMode::Pitch){
-        // editor.get()->bindEditor(midiTree, "pitch");
-        // editor.get()->formatDisplay(NodeBox::DisplayMode::Pitch);
-    }
-
-    if(mode == NodeBox::DisplayMode::Velocity){
-        // editor.get()->bindEditor(midiTree, "velocity");
-        // editor.get()->formatDisplay(NodeBox::DisplayMode::Velocity);
-    }
-
-    if(mode == NodeBox::DisplayMode::Duration){
-        editor.get()->bindEditor(midiTree, "duration");
-        editor.get()->formatDisplay(NodeBox::DisplayMode::Duration);
-    }
-
-    if(mode == NodeBox::DisplayMode::CountLimit){
-        editor.get()->bindEditor(nodeData.nodeData,"countLimit");
-        editor.get()->formatDisplay(NodeBox::DisplayMode::CountLimit);
-    }
+void Counter::setDisplayMode(NodeTextEditor::DisplayMode mode){
+    //
+    // juce::ValueTree midiTree("MidiNoteData");
+    //
+    // midiTree.setProperty("pitch",60,nullptr);
+    // midiTree.setProperty("velocity", 60, nullptr);
+    // midiTree.setProperty("duration", 500, nullptr);
+    //
+    // if(nodeData.midiNotes.getNumChildren() == 0){
+    //     nodeData.midiNotes.addChild(midiTree, -1, nullptr);
+    // }
+    // else if(nodeData.midiNotes.getNumChildren() == 1) {
+    //     midiTree = nodeData.midiNotes.getChild(0);
+    // }
+    //
+    // if(mode == NodeTextEditor::DisplayMode::Pitch){
+    //     // editor.get()->bindEditor(midiTree, "pitch");
+    //     // editor.get()->formatDisplay(NodeTextEditor::DisplayMode::Pitch);
+    // }
+    //
+    // if(mode == NodeTextEditor::DisplayMode::Velocity){
+    //     // editor.get()->bindEditor(midiTree, "velocity");
+    //     // editor.get()->formatDisplay(NodeTextEditor::DisplayMode::Velocity);
+    // }
+    //
+    // if(mode == NodeTextEditor::DisplayMode::Duration){
+    //     nodeTextEditor.get()->bindEditor(midiTree, "duration");
+    //     nodeTextEditor.get()->formatDisplay(NodeTextEditor::DisplayMode::Duration);
+    // }
+    //
+    // if(mode == NodeTextEditor::DisplayMode::CountLimit){
+    //     nodeTextEditor.get()->bindEditor(nodeData.nodeData,"countLimit");
+    //     nodeTextEditor.get()->formatDisplay(NodeTextEditor::DisplayMode::CountLimit);
+    // }
 }

@@ -41,10 +41,9 @@ target_sources(SequenceTree PRIVATE
         Source/Logic/DynamicPort.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/NodeArrow.cpp
-        Source/UI/Node/NodeBox.cpp
+        Source/UI/Node/NodeTextEditor.cpp
         Source/UI/Node/NodeCanvas.cpp
         Source/Logic/NodeController.cpp
-        Source/UI/Node/NodeData.cpp
         Source/UI/PianoRoll.cpp
         Source/Core/PluginEditor.cpp
         Source/Core/PluginProcessor.cpp

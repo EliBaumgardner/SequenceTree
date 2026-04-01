@@ -10,19 +10,12 @@
 
 #include "Node.h"
 #include "NodeCanvas.h"
-#include "../../../../../../../../Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Headers/Components.h"
-#include "../Logic/NodeController.h"
-
-int Node::globalNodeID = 0;
+#include "../UI/CustomLookAndFeel.h"
 
 
-Node::Node() : nodeID(++globalNodeID)
+
+Node::Node()
 {
-
-    nodeData.setNode(this);
-
-    nodeData.nodeData.setProperty("nodeID",nodeID,nullptr);
-    nodeData.nodeData.setProperty("countLimit", 1, nullptr);
     setLookAndFeel(ComponentContext::lookAndFeel);
 
     upButton.setInterceptsMouseClicks(true,false);
@@ -31,26 +24,25 @@ Node::Node() : nodeID(++globalNodeID)
     downButton.setInterceptsMouseClicks(true,false);
     addAndMakeVisible(downButton);
 
-    editor = std::make_unique<NodeBox>(this);
-    editor->setInterceptsMouseClicks(false,false);
-    editor->setColour(juce::TextEditor::textColourId, juce::Colours::white);
-    editor->bindEditor(nodeData.nodeData,"countLimit");
+    nodeTextEditor = std::make_unique<NodeTextEditor>(this);
+    nodeTextEditor->bindEditor(midiNoteData,ValueTreeState::MidiPitch);
 
-    addAndMakeVisible(editor.get());
-    editor->toBack();
+    addAndMakeVisible(nodeTextEditor.get());
+    nodeTextEditor->toBack();
 
     upButton.onChanged = [this](){
-        double value = editor->bindValue.toString().getDoubleValue();
-        value += 1;
-        editor->bindValue.setValue(value);
-        editor->formatDisplay(editor->mode);
+        double editorValue = nodeTextEditor->bindValue.toString().getDoubleValue();
+
+        editorValue += 1;
+        nodeTextEditor->bindValue.setValue(editorValue);
+        nodeTextEditor->formatDisplay(mode);
     };
-    
+
     downButton.onChanged = [this](){
-        double value = editor->bindValue.toString().getDoubleValue();
-        value -= 1;
-        editor->bindValue.setValue(value);
-        editor->formatDisplay(editor->mode);
+        double editorValue = nodeTextEditor->bindValue.toString().getDoubleValue();
+        editorValue -= 1;
+        nodeTextEditor->bindValue.setValue(editorValue);
+        nodeTextEditor->formatDisplay(mode);
     };
 }
 
@@ -68,12 +60,8 @@ void Node::resized()
     upButton.setBounds(editorArea.removeFromTop(4.0f));
     downButton.setBounds(editorArea.removeFromBottom(4.0f));
     
-    editor->setBounds(editorArea);
-    editor->setJustification(juce::Justification::centred);
-    
-    nodeData.nodeData.setProperty("x",getX(), nullptr);
-    nodeData.nodeData.setProperty("y",getY(),nullptr);
-    nodeData.nodeData.setProperty("radius", getWidth()/2,nullptr);
+    nodeTextEditor->setBounds(editorArea);
+    nodeTextEditor->setJustification(juce::Justification::centred);
 }
 
 void Node::setHoverVisual(bool isHovered)
@@ -101,43 +89,32 @@ void Node::setHighlightVisual(bool isHighlighted){
     repaint();
 }
 
-void Node::setDisplayMode(NodeBox::DisplayMode mode)
+void Node::setDisplayMode(NodeDisplayMode mode)
 {
-
-    DBG("SETTING NODE DISPLAY MODE");
-
-    juce::ValueTree midiTree("MidiNoteData");
-    
-    midiTree.setProperty("pitch",60,nullptr);
-    midiTree.setProperty("velocity", 60, nullptr);
-    midiTree.setProperty("duration", 500, nullptr);
-    
-    if (nodeData.midiNotes.getNumChildren() == 0)       { nodeData.midiNotes.addChild(midiTree, -1, nullptr);        }
-    else if (nodeData.midiNotes.getNumChildren() == 1){ midiTree = nodeData.midiNotes.getChild(0); }
-
     switch (mode){
-    case NodeBox::DisplayMode::Pitch:
-        editor->bindEditor(midiTree, "pitch");
-        editor->formatDisplay(NodeBox::DisplayMode::Pitch);
-        break;
 
-    case NodeBox::DisplayMode::Velocity:
-        editor->bindEditor(midiTree, "velocity");
-        editor->formatDisplay(NodeBox::DisplayMode::Velocity);
-        break;
+        case NodeDisplayMode::Pitch:
+            nodeTextEditor->bindEditor(nodeValueTree, ValueTreeState::MidiPitch);
+            nodeTextEditor->formatDisplay(NodeDisplayMode::Pitch);
+            break;
 
-    case NodeBox::DisplayMode::Duration:
-        editor->bindEditor(midiTree, "duration");
-        editor->formatDisplay(NodeBox::DisplayMode::Duration);
-        break;
+        case NodeDisplayMode::Velocity:
+            nodeTextEditor->bindEditor(nodeValueTree, ValueTreeState::MidiVelocity);
+            nodeTextEditor->formatDisplay(NodeDisplayMode::Velocity);
+            break;
 
-    case NodeBox::DisplayMode::CountLimit:
-        editor->bindEditor(nodeData.nodeData, "countLimit");
-        editor->formatDisplay(NodeBox::DisplayMode::CountLimit);
-        break;
+        case NodeDisplayMode::Duration:
+            nodeTextEditor->bindEditor(nodeValueTree, ValueTreeState::MidiDuration);
+            nodeTextEditor->formatDisplay(NodeDisplayMode::Duration);
+            break;
 
-    default:
-        break;
+        case NodeDisplayMode::CountLimit:
+            nodeTextEditor->bindEditor(nodeValueTree, ValueTreeState::CountLimit);
+            nodeTextEditor->formatDisplay(NodeDisplayMode::CountLimit);
+            break;
+
+        default:
+            break;
     }
 }
 
