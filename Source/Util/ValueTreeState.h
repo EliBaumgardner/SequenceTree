@@ -12,66 +12,11 @@
 #pragma once
 
 #include "NodeInfo.h"
-#include "../Util/PluginModules.h"
-
-
+#include <juce_gui_basics/juce_gui_basics.h>
 
 class ValueTreeState {
 
 public:
-
-    //ValueTree Identifiers
-
-    static const juce::Identifier CanvasData;
-    static const juce::Identifier NodeMap;
-    static const juce::Identifier NodeTreeMap;
-
-    static const juce::Identifier NodeTreeIds;
-    static const juce::Identifier NodeTreeData;
-
-    static const juce::Identifier RootNodeData;
-    static const juce::Identifier NodeData;
-    static const juce::Identifier ConnectorData;
-
-    static const juce::Identifier NodeChildrenIds;
-
-    static const juce::Identifier MidiNotesData;
-    static const juce::Identifier MidiNoteData;
-
-    //Id Property Identifiers
-
-    static const juce::Identifier Id;
-
-    static const juce::Identifier RootNodeId;
-    static const juce::Identifier NodeId;
-    static const juce::Identifier NodeTreeId;
-
-    //Node Property Identifiers
-
-    static const juce::Identifier CountLimit;
-    static const juce::Identifier Count;
-
-    static const juce::Identifier XPosition;
-    static const juce::Identifier YPosition;
-    static const juce::Identifier Radius;
-    static const juce::Identifier ColourId;
-
-    static const juce::Identifier MidiPitch;
-    static const juce::Identifier MidiVelocity;
-    static const juce::Identifier MidiDuration;
-
-    //Static ValueTrees
-
-    static juce::ValueTree canvasData;
-
-    static juce::ValueTree nodeTreeIds;
-    static juce::ValueTree nodeMap;
-    static juce::ValueTree nodeTreeMap;
-
-
-
-
-    //Functions
 
     ValueTreeState();
 
@@ -94,6 +39,12 @@ public:
     static juce::ValueTree getNodeParent   (int nodeId);
     static juce::ValueTree getMidiNotes    (int nodeId);
     static juce::ValueTree getNodeTree     (int treeId);
+
+    static juce::ValueTree canvasData;
+    static juce::ValueTree nodeTreeIds;
+    static juce::ValueTree nodeMap;
+    static juce::ValueTree nodeTreeMap;
+    static juce::ValueTree nodeArrows;
 
     static inline int nodeIdIncrement       {0};
     static inline int defaultNodeCount      {1};

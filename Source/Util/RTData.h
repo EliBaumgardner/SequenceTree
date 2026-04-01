@@ -10,8 +10,12 @@
 
 #pragma once
 
-class Node;
-class NodeData;
+#include <vector>
+#include <unordered_map>
+#include <functional>  // for std::hash
+#include <utility>     // for std::pair
+#include <string>      // if you use std::string
+
 
 // RT POD structures for data stored in GUI //
 

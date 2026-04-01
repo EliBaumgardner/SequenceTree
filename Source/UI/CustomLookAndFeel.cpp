@@ -8,6 +8,7 @@
 #include "Titlebar.h"
 #include "CustomTextEditor.h"
 #include "TitleBarButtons.h"
+#include "Node/NodeArrow.h"
 
 CustomLookAndFeel::CustomLookAndFeel()
 {
@@ -116,8 +117,8 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g,const Node& node)
 
 void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeArrow)
 {
-    auto* a = nodeArrow.startNode;
-    auto* b = nodeArrow.endNode;
+    auto* a = nodeArrow.parentNode;
+    auto* b = nodeArrow.childNode;
 
     auto aBounds = a->getBounds();
     auto bBounds = b->getBounds();
@@ -132,16 +133,6 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     int y1 = aBounds.getCentreY() - nodeArrow.getY();
     int x2 = bBounds.getCentreX() - nodeArrow.getX();
     int y2 = bBounds.getCentreY() - nodeArrow.getY();
-
-    // Add wobble offsets
-    float wobbleAmplitude = 3.0f; // tweak as desired
-    float wobbleOffsetX = std::sin(nodeArrow.wobblePhase) * wobbleAmplitude;
-    float wobbleOffsetY = std::cos(nodeArrow.wobblePhase) * wobbleAmplitude;
-
-    x1 += int(wobbleOffsetX);
-    y1 += int(wobbleOffsetY);
-    x2 += int(wobbleOffsetX);
-    y2 += int(wobbleOffsetY);
 
     // Calculate direction vector
     float dx = float(x2 - x1);

@@ -8,10 +8,13 @@
   ==============================================================================
 */
 
-#include "NodeTextEditor.h"
+
 #include "NodeCanvas.h"
 #include "Node.h"
 #include "../Util/ValueTreeState.h"
+#include "../Util/PluginContext.h"
+
+#include "NodeTextEditor.h"
 
  static const juce::String pitchNames[] = {
     juce::String(L"C"),

@@ -8,7 +8,7 @@
   ==============================================================================
 */
 
-#include "../Util/PluginModules.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 #include "../Util/PluginContext.h"
 
 class Node;
@@ -17,15 +17,15 @@ class NodeArrow : public juce::Component, juce::ComponentListener
 {
 public:
 
-  NodeArrow(Node* startNode, Node* endNode);
+  NodeArrow(Node* parentNode, Node* childNode);
   void paint (juce::Graphics& g) override;
-  void animate();
+  void setArrowBounds(Node* movedNode);
+  void bindToProperty(juce::ValueTree tree, const juce::Identifier propertyID);
 
-  Node* startNode = nullptr;
-  Node* endNode   = nullptr;
-  juce::Animator animator;
-  juce::VBlankAnimatorUpdater updater;
+  Node* parentNode = nullptr;
+  Node* childNode   = nullptr;
 
-  float myAlpha = 0;
-  int wobblePhase = 0;
+  juce::ValueTree nodeTree;
+  juce::Value bindValue;
+
 };

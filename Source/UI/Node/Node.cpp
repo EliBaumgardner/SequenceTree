@@ -7,10 +7,16 @@
 
   ==============================================================================
 */
+#include "../Util/ValueTreeState.h"
+#include "NodeTextEditor.h"
+#include "../Util/ValueTreeIdentifiers.h"
+#include "../Util/PluginContext.h"
+#include "../UI/CustomLookAndFeel.h"
+#include "NodeCanvas.h"
+
 
 #include "Node.h"
-#include "NodeCanvas.h"
-#include "../UI/CustomLookAndFeel.h"
+
 
 
 
@@ -25,7 +31,7 @@ Node::Node()
     addAndMakeVisible(downButton);
 
     nodeTextEditor = std::make_unique<NodeTextEditor>(this);
-    nodeTextEditor->bindEditor(midiNoteData,ValueTreeState::MidiPitch);
+    nodeTextEditor->bindEditor(midiNoteData,ValueTreeIdentifiers::MidiPitch);
 
     addAndMakeVisible(nodeTextEditor.get());
     nodeTextEditor->toBack();
@@ -35,14 +41,14 @@ Node::Node()
 
         editorValue += 1;
         nodeTextEditor->bindValue.setValue(editorValue);
-        nodeTextEditor->formatDisplay(mode);
+        nodeTextEditor->formatDisplay(nodeTextEditor->mode);
     };
 
     downButton.onChanged = [this](){
         double editorValue = nodeTextEditor->bindValue.toString().getDoubleValue();
         editorValue -= 1;
         nodeTextEditor->bindValue.setValue(editorValue);
-        nodeTextEditor->formatDisplay(mode);
+        nodeTextEditor->formatDisplay(nodeTextEditor->mode);
     };
 }
 
@@ -91,30 +97,30 @@ void Node::setHighlightVisual(bool isHighlighted){
 
 void Node::setDisplayMode(NodeDisplayMode mode)
 {
+    this->mode = mode;
+
     switch (mode){
 
         case NodeDisplayMode::Pitch:
-            nodeTextEditor->bindEditor(nodeValueTree, ValueTreeState::MidiPitch);
-            nodeTextEditor->formatDisplay(NodeDisplayMode::Pitch);
+            nodeTextEditor->bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
             break;
 
         case NodeDisplayMode::Velocity:
-            nodeTextEditor->bindEditor(nodeValueTree, ValueTreeState::MidiVelocity);
-            nodeTextEditor->formatDisplay(NodeDisplayMode::Velocity);
+            nodeTextEditor->bindEditor(midiNoteData, ValueTreeIdentifiers::MidiVelocity);
             break;
 
         case NodeDisplayMode::Duration:
-            nodeTextEditor->bindEditor(nodeValueTree, ValueTreeState::MidiDuration);
-            nodeTextEditor->formatDisplay(NodeDisplayMode::Duration);
+            nodeTextEditor->bindEditor(midiNoteData, ValueTreeIdentifiers::MidiDuration);
             break;
 
         case NodeDisplayMode::CountLimit:
-            nodeTextEditor->bindEditor(nodeValueTree, ValueTreeState::CountLimit);
-            nodeTextEditor->formatDisplay(NodeDisplayMode::CountLimit);
+            nodeTextEditor->bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
             break;
 
         default:
             break;
     }
+
+    nodeTextEditor->formatDisplay(mode);
 }
 

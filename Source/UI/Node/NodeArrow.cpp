@@ -11,31 +11,41 @@
 #include "Node.h"
 #include "../CustomLookAndFeel.h"
 
-NodeArrow::NodeArrow(Node* startNode, Node* endNode) : startNode(startNode), endNode(endNode), updater(this),
-
-  animator (animator = juce::ValueAnimatorBuilder{}
-
-  .withValueChangedCallback([this](float newValue){
-    wobblePhase = newValue * 2.0f * juce::float_Pi;  // convert to 0 -> 2π
-      this->repaint();
-    }).withDurationMs(2000.0).build()
-  )
-
-{
-
+NodeArrow::NodeArrow(Node* startNode, Node* endNode) : parentNode(startNode), childNode(endNode){
   setLookAndFeel(ComponentContext::lookAndFeel);
-  // updater.addAnimator(animator);
-  //
-  // animator.start();
 }
 
-void NodeArrow::paint(juce::Graphics &g)
-{
-  if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawNodeArrow(g,*this); }
+void NodeArrow::paint(juce::Graphics &g) {
+  if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) {
+    customLookAndFeel->drawNodeArrow(g,*this);
+  }
 }
 
+void NodeArrow::setArrowBounds(Node* movedNode) {
 
-void NodeArrow::animate()
-{
+  juce::Point<int> start;
+  juce::Point<int> end;
+
+  if (childNode == movedNode) {
+    end = childNode->getBounds().getCentre();
+    start = parentNode->getBounds().getCentre();
+  }
+  else if (parentNode == movedNode) {
+    end = parentNode->getBounds().getCentre();
+    start = parentNode->getBounds().getCentre();
+  }
+
+  juce::Rectangle arrowBounds = juce::Rectangle<int>::leftTopRightBottom(
+        std::min(start.x,end.x),
+        std::min(start.y,end.y),
+        std::max(start.x,end.x),
+        std::max(start.y,end.y)
+        ).expanded(2);
+
+  setBounds(arrowBounds);
+  repaint();
+}
+
+void NodeArrow::bindToProperty(juce::ValueTree tree, const juce::Identifier propertyID) {
 
 }

@@ -18,12 +18,9 @@
 #include <atomic>
 #include "../Util/RTData.h"
 #include "Node/NodeCanvas.h"
+#include "Node/Node.h"
 
 class SequenceTreeAudioProcessorEditor;
-
-class Node;
-
-class NodeData;
 
 class SequenceTreeAudioProcessor  : public juce::AudioProcessor
 {

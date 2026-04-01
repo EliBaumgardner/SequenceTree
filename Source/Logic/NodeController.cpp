@@ -131,7 +131,7 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
                     draggedNodeTree = ValueTreeState::addRootNode(nodeId, nodePosition, undoManager);
                 }
                 else {
-                    draggedNodeTree = ValueTreeState::addNode(nodeId,nodePosition, undoManager);
+                    draggedNodeTree = NodeFactory::createNode(nodeId,nodePosition, undoManager);
                 }
             }
             else if (nodeControllerMode == NodeControllerMode::Connector) {

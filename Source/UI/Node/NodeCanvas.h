@@ -10,17 +10,14 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "Node.h"
+
+
 #include "../Util/RTData.h"
-#include "NodeTextEditor.h"
-#include "NodeArrow.h"
-#include "Connector.h"
 #include "../Logic/DynamicPort.h"
 #include "../Util/NodeInfo.h"
 
-
-
+class Node;
+class NodeArrow;
 
 class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, public juce::AsyncUpdater {
     
@@ -35,6 +32,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         };
 
         NodeCanvas();
+        ~NodeCanvas();
 
         void paint(juce::Graphics& g) override;
 
@@ -64,7 +62,6 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         void valueTreePropertyChanged(juce::ValueTree &tree, const juce::Identifier &propertyIdentifier) override;
 
         juce::OwnedArray<NodeArrow> nodeArrows;
-
 
         std::unordered_map<int, Node*> nodeMap;
         std::unordered_map<int,std::unordered_map<int, juce::ValueTree>> nodeMaps;

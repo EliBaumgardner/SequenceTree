@@ -12,7 +12,6 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../Util/ValueTreeState.h"
 #include "../Util/NodeInfo.h"
 #include "Buttons/IncrementButton.h""
 
@@ -43,11 +42,12 @@ public:
     NodeDisplayMode mode;
     std::unique_ptr<NodeTextEditor> nodeTextEditor = nullptr;
 
-    IncrementButton upButton { true };
+    IncrementButton upButton   { true };
     IncrementButton downButton { false };
 
     juce::Colour nodeColour = juce::Colour::fromRGB(91,86,76);
 
+    int nodeId;
     bool isHovered     = false;
     bool isSelected    = false;
     bool isHighlighted = false;

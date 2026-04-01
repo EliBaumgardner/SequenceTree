@@ -7,9 +7,7 @@
 
 #pragma once
 
-
-
-#include "Node/Node.h"
+#include "../Util/ValueTreeIdentifiers.h""
 #include "../Util/PluginContext.h"
 #include "../Util/ValueTreeState.h"
 
@@ -20,7 +18,7 @@ public:
     static void createRootNode(const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
         juce::ValueTree rootNodeValueTree = ValueTreeState::addRootNode(nodePosition,undoManager);
-        int rootId = rootNodeValueTree.getProperty(ValueTreeState::Id);
+        int rootId = rootNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
         ValueTreeState::setNodePosition(rootNodeValueTree,nodePosition,undoManager);
 
@@ -30,19 +28,21 @@ public:
     static void createRootNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
         juce::ValueTree rootNodeValueTree = ValueTreeState::addRootNode(parentNodeId,nodePosition,undoManager);
-        int rootId = rootNodeValueTree.getProperty(ValueTreeState::Id);
+        int rootId = rootNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
         ValueTreeState::setNodePosition(rootNodeValueTree,nodePosition,undoManager);
 
         setDefaultNodeNote(rootId, undoManager);
     }
 
-    void createNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
+    static juce::ValueTree createNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
         juce::ValueTree childNodeValueTree = ValueTreeState::addNode(parentNodeId,nodePosition,undoManager);
-        int nodeId = childNodeValueTree.getProperty(ValueTreeState::Id);
+        int nodeId = childNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
         setDefaultNodeNote(nodeId, undoManager);
+
+        return childNodeValueTree;
     }
 
     static void destroyNode(const int nodeId, juce::UndoManager* undoManager)

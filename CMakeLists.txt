@@ -52,7 +52,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Node/Connector.cpp
         Source/UI/CustomLookAndFeel.cpp
         Source/Util/ValueTreeState.cpp
-
+        Source/Util/ValueTreeIdentifiers.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE
