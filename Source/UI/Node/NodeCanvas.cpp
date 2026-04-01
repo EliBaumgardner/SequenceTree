@@ -27,7 +27,7 @@ void NodeCanvas::paint(juce::Graphics& g)
 void NodeCanvas::handleAsyncUpdate() {
     for (auto& asyncUpdate  : asyncUpdates) {
         int nodeId = asyncUpdate.nodeId;
-        DBG("NodeID from asyncUpdate:" + 5);
+
         AsyncUpdateType updateType = asyncUpdate.type;
 
         if (updateType == AsyncUpdateType::NodeAdded) {
@@ -65,15 +65,31 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
     if (nodeParent.isValid()) {
         int parentNodeId = nodeParent.getProperty(ValueTreeState::Id);
         auto parentNodePair = nodeMap.find(parentNodeId);
-        jassert(parentNodePair != nodeMap.end());
-        Node* parentNode = parentNodePair->second;
-        addLinePoints(parentNode,childNode.get());
+        if (parentNodePair != nodeMap.end()) {
+            Node* parentNode = parentNodePair->second;
+            addLinePoints(parentNode, childNode.get());
+        }
     }
+
 
     addAndMakeVisible(childNode.get());
     nodeMap[nodeId] = childNode.release();
 
     makeRTGraph(nodeValueTree);
+
+    int rootNodeId = nodeValueTree.getProperty(ValueTreeState::RootNodeId);
+    juce::ValueTree connectorParent = ValueTreeState::getNodeParent(rootNodeId);
+
+    if (connectorParent.isValid()) {
+
+        int connectorRootId = connectorParent.getProperty(ValueTreeState::RootNodeId);
+
+        juce::ValueTree connectorRootTree = ValueTreeState::getNode(connectorRootId);
+
+        if (connectorRootTree.isValid()) {
+            makeRTGraph(connectorRootTree);
+        }
+    }
 }
 
 void NodeCanvas::removeNodeFromCanvas(int nodeId)
@@ -93,8 +109,23 @@ void NodeCanvas::removeNodeFromCanvas(int nodeId)
     repaint();
 }
 
+void NodeCanvas::setNodePosition(int nodeId)
+{
+    NodePosition nodePosition = ValueTreeState::getNodePosition(nodeId);
 
-//linePoint Functions//
+    int xPosition = nodePosition.xPosition;
+    int yPosition = nodePosition.yPosition;
+    int radius = nodePosition.radius;
+
+    auto nodePair = nodeMap.find(nodeId);
+    jassert(nodePair != nodeMap.end());
+
+    auto node = nodePair->second;
+    node->setCentrePosition(xPosition,yPosition);
+    node->setSize(radius*2,radius*2);
+
+    updateLinePoints(node);
+}
 
 void NodeCanvas::addLinePoints(Node* startNode, Node* endNode) {
 
@@ -121,7 +152,10 @@ void NodeCanvas::updateLinePoints(Node* movedNode)
     for (NodeArrow* arrow : nodeArrows)
     {
 
-        if (arrow->startNode != movedNode && arrow->endNode != movedNode) { continue; }
+        if (arrow->startNode != movedNode && arrow->endNode != movedNode) {
+            DBG("NODE ARROW NOT LOCATED");
+            continue;
+        }
 
         juce::Point start = movedNode->getBounds().getCentre();
         juce::Point end = arrow->endNode->getBounds().getCentre();
@@ -196,8 +230,8 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
             rtNode.countLimit = countLimit;;
 
             if (nodeType == ValueTreeState::NodeData || nodeType == ValueTreeState::RootNodeData) {rtNode.nodeType = RTNode::NodeType::Node;}
-            if (nodeType == ValueTreeState::ConnectorData )                                       { rtNode.nodeType = RTNode::NodeType::RelayNode; }
-            if (nodeParentType == ValueTreeState::ConnectorData)                                  { rtNode.graphID = rtNode.nodeID; }
+            if (nodeType == ValueTreeState::ConnectorData ) { rtNode.nodeType = RTNode::NodeType::RelayNode; }
+            if (nodeParentType == ValueTreeState::ConnectorData) { rtNode.graphID = rtNode.nodeID; }
 
             for (int i = 0; i < nodeMidiNotes.getNumChildren(); i++) {
                 juce::ValueTree note = nodeMidiNotes.getChild(i);
@@ -229,6 +263,7 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
 
     for (auto& [id, nodeVT] : tempNodeMap) {
         juce::ValueTree nodeChildrenIds = nodeVT.getChildWithName(ValueTreeState::NodeChildrenIds);
+        bool isConnector = nodeVT.getType() == ValueTreeState::ConnectorData;
 
         for (int i = 0; i < nodeChildrenIds.getNumChildren(); i++) {
             juce::ValueTree childIdTree = nodeChildrenIds.getChild(i);
@@ -237,10 +272,13 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
             juce::ValueTree childDataTree = ValueTreeState::getNode(childId);
             if (!childDataTree.isValid()) { continue; }
 
-            if (childDataTree.getType() == ValueTreeState::NodeData
-             || childDataTree.getType() == ValueTreeState::RootNodeData) {
+            if (childDataTree.getType() == ValueTreeState::RootNodeData && isConnector) {
+                rtGraph->nodeMap[id].connectors.push_back(childId);
+            }
+            else if (childDataTree.getType() == ValueTreeState::NodeData
+                  || childDataTree.getType() == ValueTreeState::RootNodeData) {
                 rtGraph->nodeMap[id].children.push_back(childId);
-             }
+                  }
             else if (childDataTree.getType() == ValueTreeState::ConnectorData) {
                 rtGraph->nodeMap[id].connectors.push_back(childId);
             }
@@ -267,25 +305,6 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
         graph.get()->traversalRequested = start;
         ComponentContext::processor->setNewGraph(graph);
     }
-}
-
-void NodeCanvas::setNodePosition(int nodeId)
-{
-    DBG("setting node position");
-    NodePosition nodePosition = ValueTreeState::getNodePosition(nodeId);
-
-    int xPosition = nodePosition.xPosition;
-    int yPosition = nodePosition.yPosition;
-    int radius = nodePosition.radius;
-
-    auto nodePair = nodeMap.find(nodeId);
-    jassert(nodePair != nodeMap.end());
-
-    auto node = nodePair->second;
-    node->setCentrePosition(xPosition,yPosition);
-    node->setSize(radius*2,radius*2);
-
-    updateLinePoints(node);
 }
 
 void NodeCanvas::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)

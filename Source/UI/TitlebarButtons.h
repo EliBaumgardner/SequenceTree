@@ -30,7 +30,6 @@ public:
 
     void mouseDown(const juce::MouseEvent& event) override
     {
-        std::cout<<"mouseDown"<<std::endl;
         juce::Button::mouseDown(event);
         isOn = !isOn;
         repaint();

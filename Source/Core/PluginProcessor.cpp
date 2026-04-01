@@ -162,7 +162,7 @@ void SequenceTreeAudioProcessor::setStateInformation (const void* data, int size
 
     if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
 
-    juce::MessageManager::callAsync([this]() {
+    juce::MessageManager::callAsync([this,restoredTree]() {
         ValueTreeState::nodeMap.removeAllChildren(nullptr);
         canvas->setValueTreeState(ValueTreeState::nodeMap);
     });

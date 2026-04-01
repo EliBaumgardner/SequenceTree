@@ -127,7 +127,17 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
 
         if (isDragStart) {
             isDragStart = false;
-            draggedNodeTree = ValueTreeState::addNode(nodeId,nodePosition, undoManager);
+            if (nodeControllerMode == NodeControllerMode::Node) {
+                if (auto parent = dynamic_cast<Connector*>(node)) {
+                    draggedNodeTree = ValueTreeState::addRootNode(nodeId, nodePosition, undoManager);
+                }
+                else {
+                    draggedNodeTree = ValueTreeState::addNode(nodeId,nodePosition, undoManager);
+                }
+            }
+            else if (nodeControllerMode == NodeControllerMode::Connector) {
+                draggedNodeTree = ValueTreeState::addConnector(nodeId, nodePosition, undoManager);
+            }
             return;
         }
 

@@ -156,7 +156,7 @@ juce::ValueTree ValueTreeState::addNode(int parentNodeId, NodePosition nodePosit
     return node;
 }
 
-void ValueTreeState::addConnector(int parentNodeId, NodePosition nodePosition,juce::UndoManager* undoManager)
+juce::ValueTree ValueTreeState::addConnector(int parentNodeId, NodePosition nodePosition,juce::UndoManager* undoManager)
 {
     juce::ValueTree parentNode = getNode(parentNodeId);
 
@@ -165,6 +165,7 @@ void ValueTreeState::addConnector(int parentNodeId, NodePosition nodePosition,ju
 
     juce::ValueTree connectorId {NodeId};
     juce::ValueTree connector   {ConnectorData};
+    juce::ValueTree connectorChildrenIds {NodeChildrenIds};
 
     nodeIdIncrement = nodeIdIncrement + 1;
 
@@ -175,9 +176,11 @@ void ValueTreeState::addConnector(int parentNodeId, NodePosition nodePosition,ju
 
     connectorId.setProperty(Id,nodeIdIncrement,undoManager);
 
+    connector.addChild(connectorChildrenIds,-1,undoManager);
     parentNode.getChildWithName(NodeChildrenIds).addChild(connectorId, -1, undoManager);
     nodeMap.addChild(connector,-1, undoManager);
 
+    return connector;
 }
 
 void ValueTreeState::setMidiValue(int nodeId,NodeNote note,juce::UndoManager* undoManager)

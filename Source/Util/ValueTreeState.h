@@ -80,7 +80,7 @@ public:
 
     static juce::ValueTree addRootNode    (int parentNodeId, NodePosition nodePosition, juce::UndoManager* undoManager);
     static juce::ValueTree addNode        (int parentNodeId, NodePosition nodePosition, juce::UndoManager* undoManager);
-    static void addConnector              (int parentNodeId,NodePosition nodePosition, juce::UndoManager* undoManager);
+    static juce::ValueTree addConnector              (int parentNodeId,NodePosition nodePosition, juce::UndoManager* undoManager);
     static void setMidiValue              (int nodeId, NodeNote note, juce::UndoManager* undoManager);
 
     static void removeRootNode (int rootNodeId, juce::UndoManager* undoManager);

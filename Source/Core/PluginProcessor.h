@@ -123,22 +123,42 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
             int count = ++counts[targetId];
             auto itTarget = loadedGlobalNodes->find(targetId);
 
-            if (itTarget->second.children.empty()) {
-                if (isLooping)  { state = TraversalState::Reset; return; }
+            if (itTarget->second.children.empty() && itTarget->second.connectors.empty()) {
+                if (isLooping) { state = TraversalState::Reset; return; }
                 state = TraversalState::End; return;
             }
 
             int maxLimit = 0;
 
             for (int childIndex : itTarget->second.children) {
-
                 auto itChild = loadedGlobalNodes->find(childIndex);
                 auto childNode = itChild->second;
                 int limit = childNode.countLimit;
 
                 switch (childNode.nodeType) {
-                    case(RTNode::NodeType::Node) : { if (count % limit == 0 && limit > maxLimit) { targetId = childIndex; maxLimit = limit; } break; }
-                    case(RTNode::NodeType::RelayNode) : { if (count % limit == 0) { traversers.push_back(childIndex); } break; }
+                    case(RTNode::NodeType::Node): {
+                        if (count % limit == 0 && limit > maxLimit) {
+                            targetId = childIndex;
+                            maxLimit = limit;
+                        }
+                        break;
+                    }
+                    case(RTNode::NodeType::RelayNode): {
+                        if (count % limit == 0) {
+                            traversers.push_back(childIndex);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            for (int connectorIndex : itTarget->second.connectors) {
+                auto itConnector = loadedGlobalNodes->find(connectorIndex);
+                if (itConnector == loadedGlobalNodes->end()) { continue; }
+                auto connectorNode = itConnector->second;
+                int limit = connectorNode.countLimit;
+                if (count % limit == 0) {
+                    traversers.push_back(connectorIndex);
                 }
             }
 
