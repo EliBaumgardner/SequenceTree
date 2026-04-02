@@ -10,11 +10,13 @@
 
 #pragma once
 
-#include "CustomLookAndFeel.h"
-#include "CustomTextEditor.h"
+
 #include "../Util/PluginModules.h"
-#include "../Util/PluginContext.h"
-#include "TitleBarButtons.h"
+#include "Buttons/PlayButton.h"
+#include "Buttons/ButtonPane.h"
+#include "Buttons/DisplayMenu.h"
+#include "Buttons/TempoDisplay.h"
+#include "Buttons/UndoRedoPane.h"
 
 class Titlebar : public juce::Component {
     

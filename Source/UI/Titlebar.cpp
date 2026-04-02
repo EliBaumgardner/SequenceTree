@@ -8,6 +8,11 @@
   ==============================================================================
 */
 
+
+#include "Node/NodeCanvas.h"
+#include "CustomLookAndFeel.h"
+#include "../Util/PluginContext.h"
+
 #include "Titlebar.h"
 
 

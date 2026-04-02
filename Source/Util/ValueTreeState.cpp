@@ -11,13 +11,17 @@
 // Created by Eli Baumgardner on 3/21/26.
 //
 
-juce::ValueTree ValueTreeState::canvasData    {ValueTreeIdentifiers::CanvasData};
-juce::ValueTree ValueTreeState::nodeTreeIds   {ValueTreeIdentifiers::NodeTreeIds};
-juce::ValueTree ValueTreeState::nodeMap       {ValueTreeIdentifiers::NodeMap};
-juce::ValueTree ValueTreeState::nodeTreeMap   {ValueTreeIdentifiers::NodeTreeMap};
+juce::ValueTree ValueTreeState::canvasData;
+juce::ValueTree ValueTreeState::nodeTreeIds;
+juce::ValueTree ValueTreeState::nodeMap;
+juce::ValueTree ValueTreeState::nodeTreeMap;
 
 ValueTreeState::ValueTreeState() {
 
+    canvasData   = juce::ValueTree(ValueTreeIdentifiers::CanvasData);
+    nodeTreeIds  = juce::ValueTree(ValueTreeIdentifiers::NodeTreeIds);
+    nodeMap      = juce::ValueTree(ValueTreeIdentifiers::NodeMap);
+    nodeTreeMap  = juce::ValueTree(ValueTreeIdentifiers::NodeTreeMap);
     canvasData.addChild(nodeTreeIds, -1, nullptr);
 }
 

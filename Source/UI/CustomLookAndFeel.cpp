@@ -7,7 +7,6 @@
 #include "Node/Node.h"
 #include "Titlebar.h"
 #include "CustomTextEditor.h"
-#include "TitleBarButtons.h"
 #include "Node/NodeArrow.h"
 
 CustomLookAndFeel::CustomLookAndFeel()
