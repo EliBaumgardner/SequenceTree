@@ -118,7 +118,7 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
             return;
         }
 
-        if (e.mods.isShiftDown()) {
+        if (!e.mods.isShiftDown()) {
             juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
             ValueTreeState::setNodePosition(nodeValueTree,nodePosition,undoManager);
             return;

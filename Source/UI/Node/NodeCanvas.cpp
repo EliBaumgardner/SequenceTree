@@ -143,17 +143,21 @@ void NodeCanvas::setNodePosition(int nodeId)
 
 void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
 {
-    auto arrow = std::make_unique<NodeArrow>(parentNode, childNode);
+    int childNodeId = childNode->getComponentID().getIntValue();
 
+    juce::ValueTree childNodeValueTree  = ValueTreeState::getNode(childNodeId);
+    juce::ValueTree childMidiNotesData = ValueTreeState::getMidiNotes(childNodeId);
+    juce::ValueTree childMidiNoteData  = childMidiNotesData.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+
+    auto arrow = std::make_unique<NodeArrow>(parentNode, childNode);
 
     addAndMakeVisible(arrow.get());
 
     arrow->toBack();
     arrow->setInterceptsMouseClicks(false,false);
 
-
-    //nodeArrowMap[{parentNode,childNode}] = arrow.get();
-    //nodeArrows.add(arrow.get());
+    arrow->bindToProperty(childMidiNoteData, ValueTreeIdentifiers::MidiDuration);
+    nodeArrows.add(arrow.release());
 }
 
 void NodeCanvas::removeLinePoints(Node* node)
@@ -176,16 +180,6 @@ void NodeCanvas::updateLinePoints(Node* movedNode)
         }
 
         arrow->setArrowBounds(movedNode);
-
-        int nodeId = arrow->childNode->getComponentID().getIntValue();
-        juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
-
-        NodeNote note;
-        note.pitch = 60;
-        note.duration = 1000;
-        note.velocity = 60;
-
-        ValueTreeState::setMidiValue(nodeId,note, ComponentContext::undoManager);
     }
 }
 

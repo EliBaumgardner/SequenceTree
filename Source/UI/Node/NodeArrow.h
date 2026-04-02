@@ -13,7 +13,7 @@
 
 class Node;
 
-class NodeArrow : public juce::Component, juce::ComponentListener
+class NodeArrow : public juce::Component, juce::Value::Listener
 {
 public:
 
@@ -21,11 +21,11 @@ public:
   void paint (juce::Graphics& g) override;
   void setArrowBounds(Node* movedNode);
   void bindToProperty(juce::ValueTree tree, const juce::Identifier propertyID);
+  void valueChanged(juce::Value&) override;
 
   Node* parentNode = nullptr;
   Node* childNode   = nullptr;
 
-  juce::ValueTree nodeTree;
+  juce::ValueTree boundNodeValueTree;
   juce::Value bindValue;
-
 };

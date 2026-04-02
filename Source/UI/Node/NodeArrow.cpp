@@ -13,6 +13,8 @@
 
 NodeArrow::NodeArrow(Node* startNode, Node* endNode) : parentNode(startNode), childNode(endNode){
   setLookAndFeel(ComponentContext::lookAndFeel);
+
+  bindValue.addListener(this);
 }
 
 void NodeArrow::paint(juce::Graphics &g) {
@@ -42,10 +44,23 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
         std::max(start.y,end.y)
         ).expanded(2);
 
+  int duration = arrowBounds.getWidth() * 10;
+
+  if ((int)bindValue.getValue() != duration) {
+    bindValue.setValue(duration);
+  }
+
+  bindValue.setValue(duration);
+
   setBounds(arrowBounds);
   repaint();
 }
 
 void NodeArrow::bindToProperty(juce::ValueTree tree, const juce::Identifier propertyID) {
+  boundNodeValueTree = tree;
+  bindValue.referTo(tree.getPropertyAsValue(propertyID,nullptr));
+}
 
+void NodeArrow::valueChanged(juce::Value&) {
+  setArrowBounds(childNode);
 }
