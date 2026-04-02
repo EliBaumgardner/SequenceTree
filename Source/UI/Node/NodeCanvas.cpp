@@ -189,7 +189,7 @@ void NodeCanvas::setNodePosition(int nodeId)
 
     updateLinePoints(node);
 
-    moveDescendants(nodeValueTree, nodePosition);
+    // moveDescendants(nodeValueTree, nodePosition);
 }
 
 
