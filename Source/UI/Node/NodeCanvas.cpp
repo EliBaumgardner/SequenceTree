@@ -123,23 +123,76 @@ void NodeCanvas::removeNodeFromCanvas(int nodeId)
     // repaint();
 }
 
-void NodeCanvas::setNodePosition(int nodeId)
-{
+void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, NodePosition nodePositon) {
+    //get all desendants of node
+    //calculate x and y diffirence from parent
+    //offset bounds and update linepoints
+
+
+    juce::ValueTree nodeValueTreeChildren = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+    int nodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
     NodePosition nodePosition = ValueTreeState::getNodePosition(nodeId);
 
     int xPosition = nodePosition.xPosition;
     int yPosition = nodePosition.yPosition;
-    int radius = nodePosition.radius;
+    int radius    = nodePosition.radius;
 
     auto nodePair = nodeMap.find(nodeId);
     jassert(nodePair != nodeMap.end());
 
     auto node = nodePair->second;
-    node->setCentrePosition(xPosition,yPosition);
-    node->setSize(radius*2,radius*2);
+    node->setSize(radius*2, radius*2);
+    node->setCentrePosition(xPosition, yPosition);
 
     updateLinePoints(node);
+
+    for (int i = 0; i < nodeValueTreeChildren.getNumChildren(); i++) {
+        juce::ValueTree childIdTree = nodeValueTreeChildren.getChild(i);
+        int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
+        juce::ValueTree childNodeTree = ValueTreeState::getNode(childId);
+
+        NodePosition childNodePosition = ValueTreeState::getNodePosition(childId);
+
+        int childXPosition = childNodePosition.xPosition;
+        int childYPosition = childNodePosition.yPosition;
+
+        int nodeOffsetX = xPosition - childXPosition;
+        int nodeOffsetY = yPosition - childYPosition;
+
+        int childXPositionOffset = childXPosition + nodeOffsetX;
+        int childYPositionOffset = childYPosition + nodeOffsetY;
+
+        childNodePosition.xPosition = childXPositionOffset;
+        childNodePosition.yPosition = childYPositionOffset;
+
+        ValueTreeState::setNodePosition(childNodeTree, childNodePosition,ComponentContext::undoManager);
+
+        moveDescendants(childNodeTree, nodePosition);
+    }
 }
+
+void NodeCanvas::setNodePosition(int nodeId)
+{
+    juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
+    NodePosition nodePosition = ValueTreeState::getNodePosition(nodeId);
+
+    int xPosition = nodePosition.xPosition;
+    int yPosition = nodePosition.yPosition;
+    int radius    = nodePosition.radius;
+
+    auto nodePair = nodeMap.find(nodeId);
+    jassert(nodePair != nodeMap.end());
+
+    auto node = nodePair->second;
+    node->setSize(radius*2, radius*2);
+    node->setCentrePosition(xPosition, yPosition);
+
+    updateLinePoints(node);
+
+    moveDescendants(nodeValueTree, nodePosition);
+}
+
+
 
 void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
 {

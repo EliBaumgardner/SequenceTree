@@ -10,7 +10,6 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Util/PluginContext.h"
-
 class Node;
 
 class NodeArrow : public juce::Component, juce::Value::Listener
@@ -28,4 +27,7 @@ public:
 
   juce::ValueTree boundNodeValueTree;
   juce::Value bindValue;
+
+  bool isUpdatingFromBounds = false;
+  bool isUpdatingFromPosition = false;
 };

@@ -44,6 +44,9 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
 
         void addNodeToCanvas(int nodeId);
         void removeNodeFromCanvas(int nodeId);
+
+        void moveDescendants(juce::ValueTree nodeValueTree, NodePosition nodePosition);
+
         void setNodePosition(int nodeId);
 
         void makeRTGraph(const juce::ValueTree& nodeValueTree);
