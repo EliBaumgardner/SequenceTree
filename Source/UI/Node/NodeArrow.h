@@ -19,6 +19,8 @@ public:
   NodeArrow(Node* parentNode, Node* childNode);
   void paint (juce::Graphics& g) override;
   void setArrowBounds(Node* movedNode);
+
+  void updateBoundProperty(int boundValue);
   void bindToProperty(juce::ValueTree tree, const juce::Identifier propertyID);
   void valueChanged(juce::Value&) override;
 
@@ -28,6 +30,10 @@ public:
   juce::ValueTree boundNodeValueTree;
   juce::Value bindValue;
 
-  bool isUpdatingFromBounds = false;
-  bool isUpdatingFromPosition = false;
+  static inline const float growthFactor {25.0f};
+
+  float length = 0;
+
+  bool updateFromBindValue= false;
+
 };

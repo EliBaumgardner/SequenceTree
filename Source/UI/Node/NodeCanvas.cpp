@@ -174,7 +174,7 @@ void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, NodePosition nod
 void NodeCanvas::setNodePosition(int nodeId)
 {
     juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
-    NodePosition nodePosition = ValueTreeState::getNodePosition(nodeId);
+    NodePosition nodePosition     = ValueTreeState::getNodePosition(nodeId);
 
     int xPosition = nodePosition.xPosition;
     int yPosition = nodePosition.yPosition;
@@ -184,32 +184,30 @@ void NodeCanvas::setNodePosition(int nodeId)
     jassert(nodePair != nodeMap.end());
 
     auto node = nodePair->second;
-    node->setSize(radius*2, radius*2);
+
+    node->setSize(radius * 2, radius * 2);
     node->setCentrePosition(xPosition, yPosition);
-
     updateLinePoints(node);
-
-    // moveDescendants(nodeValueTree, nodePosition);
 }
 
 
 
 void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
 {
-    int childNodeId = childNode->getComponentID().getIntValue();
+    int parentNodeId = parentNode->getComponentID().getIntValue();
 
-    juce::ValueTree childNodeValueTree  = ValueTreeState::getNode(childNodeId);
-    juce::ValueTree childMidiNotesData = ValueTreeState::getMidiNotes(childNodeId);
-    juce::ValueTree childMidiNoteData  = childMidiNotesData.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+    juce::ValueTree parentNodeValueTree  = ValueTreeState::getNode(parentNodeId);
+    juce::ValueTree parentMidiNotesData = ValueTreeState::getMidiNotes(parentNodeId);
+    juce::ValueTree parentMidiNoteData  = parentMidiNotesData.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
 
     auto arrow = std::make_unique<NodeArrow>(parentNode, childNode);
-
+    parentNode->nodeArrow = arrow.get();
     addAndMakeVisible(arrow.get());
 
     arrow->toBack();
     arrow->setInterceptsMouseClicks(false,false);
 
-    arrow->bindToProperty(childMidiNoteData, ValueTreeIdentifiers::MidiDuration);
+    arrow->bindToProperty(parentMidiNoteData, ValueTreeIdentifiers::MidiDuration);
     nodeArrows.add(arrow.release());
 }
 
@@ -228,10 +226,15 @@ void NodeCanvas::updateLinePoints(Node* movedNode)
 {
     for (NodeArrow* arrow : nodeArrows)
     {
-        if (arrow->parentNode != movedNode && arrow->childNode != movedNode) {
+        NodeDisplayMode mode = movedNode->mode;
+        Node* parentNode = arrow->parentNode;
+        Node* childNode  = arrow->childNode;
+        if (parentNode != movedNode && childNode != movedNode) {
             continue;
         }
 
+        parentNode->nodeTextEditor->formatDisplay(mode);
+        childNode->nodeTextEditor->formatDisplay(mode);
         arrow->setArrowBounds(movedNode);
     }
 }
@@ -381,13 +384,16 @@ void NodeCanvas::valueTreeChildRemoved(juce::ValueTree& parent,juce::ValueTree& 
 
 void NodeCanvas::valueTreePropertyChanged(juce::ValueTree &tree, const juce::Identifier &propertyIdentifier)
 {
+    juce::Identifier nodeType = tree.getType();
+
    if (propertyIdentifier == ValueTreeIdentifiers::XPosition
        || propertyIdentifier == ValueTreeIdentifiers::YPosition
-       || propertyIdentifier == ValueTreeIdentifiers::Radius)
+       || propertyIdentifier == ValueTreeIdentifiers::Radius
+       )
    {
-       jassert(tree.getType() == ValueTreeIdentifiers::NodeData
-                || tree.getType() == ValueTreeIdentifiers::ConnectorData
-                || tree.getType() == ValueTreeIdentifiers::RootNodeData);
+       jassert(nodeType == ValueTreeIdentifiers::NodeData
+       || nodeType == ValueTreeIdentifiers::ConnectorData
+       || nodeType == ValueTreeIdentifiers::RootNodeData);
 
        AsyncUpdate asyncUpdate;
        asyncUpdate.type = AsyncUpdateType::NodeMoved;
@@ -396,6 +402,12 @@ void NodeCanvas::valueTreePropertyChanged(juce::ValueTree &tree, const juce::Ide
        asyncUpdates.push_back(asyncUpdate);
        triggerAsyncUpdate();
    }
+    else if (propertyIdentifier == ValueTreeIdentifiers::MidiDuration) {
+        juce::ValueTree noteNode = tree.getParent().getParent();
+        AsyncUpdate asyncUpdate;
+        asyncUpdate.type = AsyncUpdateType::NodeMoved;
+        asyncUpdate.nodeId = noteNode.getProperty(ValueTreeIdentifiers::Id);
+    }
 }
 
 void NodeCanvas::setSelectionMode(NodeDisplayMode mode) const {
@@ -403,7 +415,6 @@ void NodeCanvas::setSelectionMode(NodeDisplayMode mode) const {
     for (auto& [nodeId, node] : nodeMap)
     {
         node->setDisplayMode(mode);
-        node->nodeTextEditor->formatDisplay(mode);
     }
 }
 

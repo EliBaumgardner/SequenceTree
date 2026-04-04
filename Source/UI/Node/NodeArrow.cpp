@@ -8,6 +8,7 @@
   ==============================================================================
 */
 #include "../Util/ValueTreeState.h"
+#include "../Util/ValueTreeIdentifiers.h""
 #include "NodeArrow.h"
 
 #include "Node.h"
@@ -28,25 +29,23 @@ void NodeArrow::paint(juce::Graphics &g) {
 void NodeArrow::setArrowBounds(Node* movedNode) {
 
   juce::Point<int> start = parentNode->getBounds().getCentre();
-  juce::Point<int> end   = childNode->getBounds().getCentre();
+  juce::Point<int >end   = childNode->getBounds().getCentre();
 
-  float dx = (float)(end.x - start.x);
-  float dy = (float)(end.y - start.y);
-  float euclideanLength = std::sqrt(dx * dx + dy * dy);
+  int left = std::min(start.x, end.x);
+  int top = std::min(start.y, end.y);
+  int right = std::max(start.x, end.x);
+  int bottom = std::max(start.y,end.y);
 
-  int duration = (int)(euclideanLength * 10.0f);
+  float dx = end.x - start.x;
+  float dy = end.y - start.y;
 
-  juce::Rectangle arrowBounds = juce::Rectangle<int>::leftTopRightBottom(
-      std::min(start.x, end.x),
-      std::min(start.y, end.y),
-      std::max(start.x, end.x),
-      std::max(start.y, end.y)
-  ).expanded(2);
+  length = std::sqrt(dx*dx + dy*dy);
 
-  isUpdatingFromBounds = true;
+  int duration = (int)(length * growthFactor);
+
   bindValue.setValue(duration);
-  isUpdatingFromBounds = false;
 
+  juce::Rectangle arrowBounds = juce::Rectangle<int>::leftTopRightBottom(left, top, right, bottom).expanded(2);
   setBounds(arrowBounds);
   repaint();
 }
@@ -57,39 +56,55 @@ void NodeArrow::bindToProperty(juce::ValueTree tree, const juce::Identifier prop
 }
 
 void NodeArrow::valueChanged(juce::Value&) {
-  if (isUpdatingFromBounds) return;
+  if (!updateFromBindValue) {
+    return;
+  }
 
-  int duration = (int)bindValue.getValue();
-  float newLength = (float)duration / 10.0f;
+  DBG("Value Changed");
 
-  juce::Point<int> start    = parentNode->getBounds().getCentre();
-  juce::Point<int> childPos = childNode->getBounds().getCentre();
+  updateFromBindValue = false;
 
-  float dx = (float)(childPos.x - start.x);
-  float dy = (float)(childPos.y - start.y);
+  int duration = bindValue.getValue();
+
+
+  juce::Point<int> start = parentNode->getBounds().getCentre();
+  juce::Point<int> end   = childNode->getBounds().getCentre();
+
+  float dx = end.x - start.x;
+  float dy = end.y - start.y;
+
   float currentLength = std::sqrt(dx * dx + dy * dy);
 
-  if (currentLength < 1.0f) return;
+  jassert(currentLength > 0);
 
-  float nx = dx / currentLength;
-  float ny = dy / currentLength;
+  float unitX = dx / currentLength;
+  float unitY = dy / currentLength;
 
-  int newChildX = start.x + (int)(nx * newLength);
-  int newChildY = start.y + (int)(ny * newLength);
+  float newLength = duration / growthFactor;
 
-  isUpdatingFromBounds = true;
-  childNode->setCentrePosition(newChildX, newChildY);
+  float newDx = unitX * newLength;
+  float newDy = unitY * newLength;
 
-  // Calculate arrow bounds directly without triggering setArrowBounds again
-  juce::Point<int> end = childNode->getBounds().getCentre();
-  juce::Rectangle arrowBounds = juce::Rectangle<int>::leftTopRightBottom(
-      std::min(start.x, end.x),
-      std::min(start.y, end.y),
-      std::max(start.x, end.x),
-      std::max(start.y, end.y)
-  ).expanded(2);
+  juce::Point<int> newEnd(
+      start.x + (int)newDx,
+      start.y + (int)newDy
+  );
 
+  juce::ValueTree parentNodeTree = ValueTreeState::getNode(parentNode->getComponentID().getIntValue());
+  juce::ValueTree childNodeTree  = ValueTreeState::getNode(childNode->getComponentID().getIntValue());
+
+  int left = std::min(start.x, newEnd.x);
+  int top = std::min(start.y, newEnd.y);
+  int right = std::max(start.x, newEnd.x);
+  int bottom = std::max(start.y, newEnd.y);
+
+  juce::Rectangle arrowBounds = juce::Rectangle<int>::leftTopRightBottom(left, top, right, bottom).expanded(2);
   setBounds(arrowBounds);
-  repaint();
-  isUpdatingFromBounds = false;
+
+  childNodeTree.setProperty(ValueTreeIdentifiers::XPosition, newEnd.x, nullptr);
+  childNodeTree.setProperty(ValueTreeIdentifiers::YPosition, newEnd.y, nullptr);
+}
+
+void NodeArrow::updateBoundProperty(int boundValue) {
+  bindValue.setValue(boundValue);
 }

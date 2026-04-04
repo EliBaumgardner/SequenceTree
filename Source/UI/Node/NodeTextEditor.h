@@ -17,7 +17,7 @@ class Node;
 
 class NodeCanvas;
 
-class NodeTextEditor : public juce::TextEditor {
+class NodeTextEditor : public juce::TextEditor, public juce::TextEditor::Listener {
     
 public:
 
@@ -25,6 +25,7 @@ public:
     void paint(juce::Graphics& g) override;
     void refit();
     void bindEditor(juce::ValueTree tree, const juce::Identifier propertyID);
+    void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
     
     enum class DisplayMode {Pitch, Velocity, Duration, CountLimit};
     

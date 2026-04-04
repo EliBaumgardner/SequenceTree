@@ -13,6 +13,7 @@
 #include "../Util/PluginContext.h"
 #include "../UI/CustomLookAndFeel.h"
 #include "NodeCanvas.h"
+#include "../UI/Node/NodeArrow.h"
 
 
 #include "Node.h"
@@ -37,18 +38,12 @@ Node::Node()
     nodeTextEditor->toBack();
 
     upButton.onChanged = [this](){
-        double editorValue = nodeTextEditor->bindValue.toString().getDoubleValue();
+        incrementNodeTextEditorValue(1);
 
-        editorValue += 1;
-        nodeTextEditor->bindValue.setValue(editorValue);
-        nodeTextEditor->formatDisplay(nodeTextEditor->mode);
     };
 
     downButton.onChanged = [this](){
-        double editorValue = nodeTextEditor->bindValue.toString().getDoubleValue();
-        editorValue -= 1;
-        nodeTextEditor->bindValue.setValue(editorValue);
-        nodeTextEditor->formatDisplay(nodeTextEditor->mode);
+        incrementNodeTextEditorValue(-1);
     };
 }
 
@@ -72,7 +67,6 @@ void Node::resized()
 
 void Node::setHoverVisual(bool isHovered)
 {
-    DBG("setting hover visual");
     this->isHovered = isHovered;
     repaint();
 }
@@ -124,3 +118,14 @@ void Node::setDisplayMode(NodeDisplayMode mode)
     nodeTextEditor->formatDisplay(mode);
 }
 
+void Node::incrementNodeTextEditorValue(int incrementValue) {
+    if (nodeArrow == nullptr) {
+        return;
+    }
+    nodeArrow->updateFromBindValue = true;
+    double editorValue = nodeTextEditor->bindValue.toString().getDoubleValue();
+    editorValue += incrementValue;
+
+    nodeTextEditor->bindValue.setValue(editorValue);
+    nodeTextEditor->formatDisplay(nodeTextEditor->mode);
+}

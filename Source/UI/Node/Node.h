@@ -16,6 +16,8 @@
 #include "Buttons/IncrementButton.h""
 
 
+class NodeArrow;
+
 class NodeTextEditor;
 
 class  NodeCanvas;
@@ -35,6 +37,9 @@ public:
     void setHighlightVisual(bool isHighlighted);
 
     void setDisplayMode(NodeDisplayMode mode);
+    void incrementNodeTextEditorValue(int incrementValue);
+
+    NodeArrow* nodeArrow = nullptr;
 
     juce::ValueTree nodeValueTree;
     juce::ValueTree midiNoteData;

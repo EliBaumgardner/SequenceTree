@@ -11,8 +11,10 @@
 
 #include "NodeCanvas.h"
 #include "Node.h"
+#include "NodeArrow.h"
 #include "../Util/ValueTreeState.h"
 #include "../Util/PluginContext.h"
+
 
 #include "NodeTextEditor.h"
 
@@ -32,9 +34,10 @@
 };
 
 NodeTextEditor::NodeTextEditor(Node* node) : node(node) {
-    
+
+    addListener(this);
     makeBoundsVisible(false);
-    setReadOnly(true);
+    setReadOnly(false);
 
     setInterceptsMouseClicks(false,false);
     setColour(juce::TextEditor::textColourId, juce::Colours::white);
@@ -72,17 +75,14 @@ void NodeTextEditor::bindEditor(juce::ValueTree tree, const juce::Identifier pro
 
 void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
 
-    DBG("formatting display");
+    jassert(node);
+
     this->mode = mode;
 
     juce::String displayValue = bindValue.toString();
     double value = displayValue.getDoubleValue();
     
     juce::String display;
-
-    if (node == nullptr) {
-        DBG("Node is nullptr");
-    }
 
     int nodeId = node->getComponentID().getIntValue();
 
@@ -175,7 +175,7 @@ void NodeTextEditor::makeBoundsVisible(bool isBoundsVisible){
 
 void NodeTextEditor::mouseDrag(const juce::MouseEvent& e){
     int distanceFromStart = e.getDistanceFromDragStartY();
-    
+
     if(distanceFromStart > 10){
         
         int attenuate = juce::jlimit(0, 127,distanceFromStart);
@@ -186,4 +186,15 @@ void NodeTextEditor::mouseDrag(const juce::MouseEvent& e){
         
         formatDisplay(mode);
     }
+}
+
+void NodeTextEditor::textEditorReturnKeyPressed(juce::TextEditor &editor) {
+
+    DBG("return key pressed");
+    node->nodeArrow->updateFromBindValue = true;
+
+    int text = editor.getText().getIntValue();
+
+    node->nodeArrow->bindValue.setValue(text);
+
 }
