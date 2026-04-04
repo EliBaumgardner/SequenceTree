@@ -45,7 +45,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         void addNodeToCanvas(int nodeId);
         void removeNodeFromCanvas(int nodeId);
 
-        void moveDescendants(juce::ValueTree nodeValueTree, NodePosition nodePosition);
+        void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY);
 
         void setNodePosition(int nodeId);
 

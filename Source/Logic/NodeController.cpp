@@ -88,7 +88,6 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
 void NodeController::mouseDrag(const juce::MouseEvent& e)
 {
-
     juce::Component* component = e.eventComponent;
     juce::UndoManager* undoManager = ComponentContext::undoManager;
 
@@ -97,22 +96,20 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         auto grandParent = component->getParentComponent()->getParentComponent();
 
         if (auto* dynamicPort = dynamic_cast<DynamicPort*>(grandParent)){
-
             auto parentEvent = e.getEventRelativeTo(dynamicPort);
             dynamicPort->mouseDrag(parentEvent);
         }
-
     }
     else if (Node* node = dynamic_cast<Node*>(component)) {
 
         int nodeId = node->getComponentID().getIntValue();
-        NodePosition nodePosition;
+        NodePosition newPosition;
 
         auto pos = e.getEventRelativeTo(node->getParentComponent());
 
-        nodePosition.xPosition = pos.x;
-        nodePosition.yPosition = pos.y;
-        nodePosition.radius    = 20;
+        newPosition.xPosition = pos.x;
+        newPosition.yPosition = pos.y;
+        newPosition.radius    = 20;
 
         if (e.getDistanceFromDragStart() < 5 || !e.mods.isLeftButtonDown()) {
             return;
@@ -120,7 +117,15 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
 
         if (!e.mods.isShiftDown()) {
             juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
-            ValueTreeState::setNodePosition(nodeValueTree,nodePosition,undoManager);
+
+            NodePosition oldPosition = ValueTreeState::getNodePosition(nodeId);
+
+            int deltaX = newPosition.xPosition - oldPosition.xPosition;
+            int deltaY = newPosition.yPosition - oldPosition.yPosition;
+
+            ValueTreeState::setNodePosition(nodeValueTree, newPosition, undoManager);
+
+            ComponentContext::canvas->moveDescendants(nodeValueTree, deltaX, deltaY);
             return;
         }
 
@@ -128,30 +133,21 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
             isDragStart = false;
             if (nodeControllerMode == NodeControllerMode::Node) {
                 if (auto parent = dynamic_cast<Connector*>(node)) {
-                    draggedNodeTree = ValueTreeState::addRootNode(nodeId, nodePosition, undoManager);
+                    draggedNodeTree = ValueTreeState::addRootNode(nodeId, newPosition, undoManager);
                 }
                 else {
-                    draggedNodeTree = NodeFactory::createNode(nodeId,nodePosition, undoManager);
+                    draggedNodeTree = NodeFactory::createNode(nodeId, newPosition, undoManager);
                 }
             }
             else if (nodeControllerMode == NodeControllerMode::Connector) {
-                draggedNodeTree = ValueTreeState::addConnector(nodeId, nodePosition, undoManager);
+                draggedNodeTree = ValueTreeState::addConnector(nodeId, newPosition, undoManager);
             }
             return;
         }
 
         if (draggedNodeTree.isValid()) {
-            ValueTreeState::setNodePosition(draggedNodeTree, nodePosition, undoManager);
+            ValueTreeState::setNodePosition(draggedNodeTree, newPosition, undoManager);
         }
-
-        // if (childNode != nullptr) {
-        //     int deltaX = e.x - lastX;
-        //     int deltaY = e.y - lastY;
-        //     lastX = e.x;
-        //     lastY = e.y;
-        //
-        //     connectNode(deltaX, deltaY, position);
-        // }
     }
 }
 

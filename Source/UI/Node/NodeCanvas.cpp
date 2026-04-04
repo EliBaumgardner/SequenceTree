@@ -123,51 +123,21 @@ void NodeCanvas::removeNodeFromCanvas(int nodeId)
     // repaint();
 }
 
-void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, NodePosition nodePositon) {
-    //get all desendants of node
-    //calculate x and y diffirence from parent
-    //offset bounds and update linepoints
-
-
+void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY)
+{
     juce::ValueTree nodeValueTreeChildren = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-    int nodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
-    NodePosition nodePosition = ValueTreeState::getNodePosition(nodeId);
-
-    int xPosition = nodePosition.xPosition;
-    int yPosition = nodePosition.yPosition;
-    int radius    = nodePosition.radius;
-
-    auto nodePair = nodeMap.find(nodeId);
-    jassert(nodePair != nodeMap.end());
-
-    auto node = nodePair->second;
-    node->setSize(radius*2, radius*2);
-    node->setCentrePosition(xPosition, yPosition);
-
-    updateLinePoints(node);
 
     for (int i = 0; i < nodeValueTreeChildren.getNumChildren(); i++) {
         juce::ValueTree childIdTree = nodeValueTreeChildren.getChild(i);
         int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
         juce::ValueTree childNodeTree = ValueTreeState::getNode(childId);
 
-        NodePosition childNodePosition = ValueTreeState::getNodePosition(childId);
+        NodePosition childPosition = ValueTreeState::getNodePosition(childId);
+        childPosition.xPosition += deltaX;
+        childPosition.yPosition += deltaY;
 
-        int childXPosition = childNodePosition.xPosition;
-        int childYPosition = childNodePosition.yPosition;
-
-        int nodeOffsetX = xPosition - childXPosition;
-        int nodeOffsetY = yPosition - childYPosition;
-
-        int childXPositionOffset = childXPosition + nodeOffsetX;
-        int childYPositionOffset = childYPosition + nodeOffsetY;
-
-        childNodePosition.xPosition = childXPositionOffset;
-        childNodePosition.yPosition = childYPositionOffset;
-
-        ValueTreeState::setNodePosition(childNodeTree, childNodePosition,ComponentContext::undoManager);
-
-        moveDescendants(childNodeTree, nodePosition);
+        ValueTreeState::setNodePosition(childNodeTree, childPosition, ComponentContext::undoManager);
+        moveDescendants(childNodeTree, deltaX, deltaY);
     }
 }
 
@@ -188,6 +158,7 @@ void NodeCanvas::setNodePosition(int nodeId)
     node->setSize(radius * 2, radius * 2);
     node->setCentrePosition(xPosition, yPosition);
     updateLinePoints(node);
+
 }
 
 
@@ -226,9 +197,10 @@ void NodeCanvas::updateLinePoints(Node* movedNode)
 {
     for (NodeArrow* arrow : nodeArrows)
     {
-        NodeDisplayMode mode = movedNode->mode;
         Node* parentNode = arrow->parentNode;
         Node* childNode  = arrow->childNode;
+        NodeDisplayMode mode = movedNode->mode;
+
         if (parentNode != movedNode && childNode != movedNode) {
             continue;
         }
