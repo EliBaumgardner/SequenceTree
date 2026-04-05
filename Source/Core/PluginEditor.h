@@ -39,6 +39,7 @@ public:
 
 private:
     SequenceTreeAudioProcessor& audioProcessor;
+    juce::UndoManager undoManager;
     
     std::unique_ptr<NodeCanvas>     canvas         = nullptr;
     std::unique_ptr<NodeController> nodeController   = nullptr;

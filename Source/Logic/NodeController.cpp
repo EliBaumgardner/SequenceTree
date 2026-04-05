@@ -14,6 +14,8 @@
 #include "Node/Counter.h"
 #include "Node/Connector.h"
 #include "NodeFactory.h"
+#include "DynamicPort.h"
+#include "../Util/ValueTreeIdentifiers.h"
 
 
 
@@ -39,6 +41,11 @@ void NodeController::mouseExit(const juce::MouseEvent& e)
 }
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
+    if (draggedNodeTree.isValid())
+    {
+        int nodeId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
+        ComponentContext::canvas->triggerArrowSnapForNode(nodeId);
+    }
     draggedNodeTree = juce::ValueTree();
     isDragStart = true;
 }
@@ -53,6 +60,13 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
     if (NodeCanvas* canvas = dynamic_cast<NodeCanvas*>(component)) {
 
+        // Forward mouseDown to DynamicPort so it can record lastMousePosition
+        // for the first drag-to-pan delta calculation.
+        auto parent = component->getParentComponent();
+        if (auto* dynamicPort = dynamic_cast<DynamicPort*>(parent)) {
+            dynamicPort->mouseDown(e.getEventRelativeTo(dynamicPort));
+        }
+
         if (e.mods.isShiftDown() && e.mods.isLeftButtonDown()) {
             NodePosition nodePosition;
 
@@ -60,6 +74,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
             nodePosition.yPosition = e.y;
             nodePosition.radius    = 20;
 
+            undoManager->beginNewTransaction();
             NodeFactory::createRootNode(nodePosition,undoManager);
         }
     }
@@ -76,6 +91,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
         if(e.mods.isRightButtonDown() && e.mods.isShiftDown()) {
 
+            undoManager->beginNewTransaction();
             NodeFactory::destroyNode(nodeId, undoManager);
             // selectedNode->parent->nodeData.removeChild(selectedNode);
             // nodeCanvas->removeNodeFromCanvas(selectedNode);
@@ -93,9 +109,9 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
 
     if (NodeCanvas* nodeCanvas = dynamic_cast<NodeCanvas*>(component)) {
 
-        auto grandParent = component->getParentComponent()->getParentComponent();
+        auto parent = component->getParentComponent();
 
-        if (auto* dynamicPort = dynamic_cast<DynamicPort*>(grandParent)){
+        if (auto* dynamicPort = dynamic_cast<DynamicPort*>(parent)){
             auto parentEvent = e.getEventRelativeTo(dynamicPort);
             dynamicPort->mouseDrag(parentEvent);
         }
@@ -116,6 +132,11 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         }
 
         if (!e.mods.isShiftDown()) {
+            if (isDragStart) {
+                isDragStart = false;
+                undoManager->beginNewTransaction();
+            }
+
             juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
 
             NodePosition oldPosition = ValueTreeState::getNodePosition(nodeId);
@@ -131,9 +152,10 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
 
         if (isDragStart) {
             isDragStart = false;
+            undoManager->beginNewTransaction();
             if (nodeControllerMode == NodeControllerMode::Node) {
                 if (auto parent = dynamic_cast<Connector*>(node)) {
-                    draggedNodeTree = ValueTreeState::addRootNode(nodeId, newPosition, undoManager);
+                    draggedNodeTree = NodeFactory::createRootNode(nodeId, newPosition, undoManager);
                 }
                 else {
                     draggedNodeTree = NodeFactory::createNode(nodeId, newPosition, undoManager);

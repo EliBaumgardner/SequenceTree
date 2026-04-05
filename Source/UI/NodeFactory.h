@@ -20,19 +20,23 @@ public:
         juce::ValueTree rootNodeValueTree = ValueTreeState::addRootNode(nodePosition,undoManager);
         int rootId = rootNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
+
         ValueTreeState::setNodePosition(rootNodeValueTree,nodePosition,undoManager);
 
         setDefaultNodeNote(rootId, undoManager);
     }
 
-    static void createRootNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
+    static juce::ValueTree createRootNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
+
         juce::ValueTree rootNodeValueTree = ValueTreeState::addRootNode(parentNodeId,nodePosition,undoManager);
         int rootId = rootNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
         ValueTreeState::setNodePosition(rootNodeValueTree,nodePosition,undoManager);
 
         setDefaultNodeNote(rootId, undoManager);
+
+        return rootNodeValueTree;
     }
 
     static juce::ValueTree createNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)

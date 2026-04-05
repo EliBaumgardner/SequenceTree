@@ -128,35 +128,42 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
 
     g.setColour(arrowColour);
 
-    int x1 = aBounds.getCentreX() - nodeArrow.getX();
-    int y1 = aBounds.getCentreY() - nodeArrow.getY();
-    int x2 = bBounds.getCentreX() - nodeArrow.getX();
-    int y2 = bBounds.getCentreY() - nodeArrow.getY();
+    float x1 = float(aBounds.getCentreX() - nodeArrow.getX());
+    float y1 = float(aBounds.getCentreY() - nodeArrow.getY());
+    float tx2 = float(bBounds.getCentreX() - nodeArrow.getX());
+    float ty2 = float(bBounds.getCentreY() - nodeArrow.getY());
+
+    // Apply rubber-band spring animation: interpolate endpoint toward child
+    float x2 = x1 + (tx2 - x1) * nodeArrow.animT;
+    float y2 = y1 + (ty2 - y1) * nodeArrow.animT;
 
     // Calculate direction vector
-    float dx = float(x2 - x1);
-    float dy = float(y2 - y1);
+    float dx = x2 - x1;
+    float dy = y2 - y1;
     float length = std::sqrt(dx*dx + dy*dy);
+
+    if (length < 1.0f) return;
 
     float nx = dx / length;
     float ny = dy / length;
 
-    x2 = x2 - nx * radius;
-    y2 = y2 - ny * radius;
+    x2 = x2 - nx * float(radius);
+    y2 = y2 - ny * float(radius);
 
     // Draw main line
     g.drawLine(x1, y1, x2, y2, 2.0f);
 
-    // Arrowhead points
-    float leftX = x2 - arrowLength * nx + arrowWidth * ny;
-    float leftY = y2 - arrowLength * ny - arrowWidth * nx;
+    // Arrowhead points — only draw when arrow is mostly extended
+    if (nodeArrow.animT > 0.3f)
+    {
+        float leftX  = x2 - arrowLength * nx + arrowWidth * ny;
+        float leftY  = y2 - arrowLength * ny - arrowWidth * nx;
+        float rightX = x2 - arrowLength * nx - arrowWidth * ny;
+        float rightY = y2 - arrowLength * ny + arrowWidth * nx;
 
-    float rightX = x2 - arrowLength * nx - arrowWidth * ny;
-    float rightY = y2 - arrowLength * ny + arrowWidth * nx;
-
-    // Draw arrowhead lines
-    g.drawLine(x2, y2, leftX, leftY, 1.0f);
-    g.drawLine(x2, y2, rightX, rightY, 1.0f);
+        g.drawLine(x2, y2, leftX, leftY, 1.0f);
+        g.drawLine(x2, y2, rightX, rightY, 1.0f);
+    }
 }
 
 void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const PlayButton &button)

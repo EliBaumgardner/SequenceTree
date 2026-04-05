@@ -32,7 +32,6 @@ public:
 
     void mouseUp(const juce::MouseEvent &event) override {
         isDown = false;
-        onClick();
         repaint();
     };
 

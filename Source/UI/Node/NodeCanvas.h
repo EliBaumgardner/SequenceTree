@@ -57,6 +57,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         void setValueTreeState(const juce::ValueTree& stateTree);
 
         void clearCanvas();
+        void triggerArrowSnapForNode(int nodeId);
 
         void handleAsyncUpdate() override;
 

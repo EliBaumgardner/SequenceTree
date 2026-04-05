@@ -9,6 +9,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "Node/Node.h"
+#include "../Util/ValueTreeIdentifiers.h"
 
 
 
@@ -162,9 +163,24 @@ void SequenceTreeAudioProcessor::setStateInformation (const void* data, int size
 
     if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
 
-    juce::MessageManager::callAsync([this,restoredTree]() {
+    juce::MessageManager::callAsync([this, restoredTree]() {
+        // Suppress the ValueTree listener while rebuilding to avoid double-adding nodes
+        ValueTreeState::nodeMap.removeListener(canvas);
         ValueTreeState::nodeMap.removeAllChildren(nullptr);
+
+        for (int i = 0; i < restoredTree.getNumChildren(); ++i)
+            ValueTreeState::nodeMap.addChild(restoredTree.getChild(i).createCopy(), -1, nullptr);
+
+        // Advance nodeIdIncrement past all restored IDs to avoid future collisions
+        int maxId = 0;
+        for (int i = 0; i < ValueTreeState::nodeMap.getNumChildren(); ++i) {
+            int id = ValueTreeState::nodeMap.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+            if (id > maxId) maxId = id;
+        }
+        ValueTreeState::nodeIdIncrement = maxId;
+
         canvas->setValueTreeState(ValueTreeState::nodeMap);
+        ValueTreeState::nodeMap.addListener(canvas);
     });
 }
 

@@ -31,7 +31,6 @@ class UndoButton : public juce::Component {
 
     void mouseUp(const juce::MouseEvent &event) override {
         isDown = false;
-        onClick();
         repaint();
     };
 

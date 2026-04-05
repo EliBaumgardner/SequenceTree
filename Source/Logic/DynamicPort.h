@@ -1,24 +1,32 @@
 #pragma once
 #include "../Util/PluginModules.h"
 
-class DynamicPort : public juce::Viewport
+class DynamicPort : public juce::Component
 {
 public:
-    DynamicPort(juce::Component* content);
+    explicit DynamicPort(juce::Component* content);
     ~DynamicPort() override;
 
-    void mouseDown(const juce::MouseEvent& e) override;
-    void mouseDrag(const juce::MouseEvent& e) override;
-    void setZoom(float newZoom);
-    
-    void centerInComponent();
+    void paint(juce::Graphics&) override {}
+    void resized() override;
+
+    void mouseDown    (const juce::MouseEvent& e) override;
+    void mouseDrag    (const juce::MouseEvent& e) override;
+    void mouseWheelMove(const juce::MouseEvent& e,
+                        const juce::MouseWheelDetails& wheel) override;
+    void mouseMagnify (const juce::MouseEvent& e, float scaleFactor) override;
+
+    void setZoom(float newZoom, juce::Point<float> pivotInParent);
+    void centerOnCanvas();
 
 private:
-    juce::Component* component = nullptr;
+    void applyTransform();
 
-    float zoom = 1.0f;
+    juce::Component* component       = nullptr;
+    float            zoom            = 1.0f;
+    float            translateX      = 0.0f;
+    float            translateY      = 0.0f;
+    bool             centeredOnce    = false;
 
     juce::Point<int> lastMousePosition;
-    
-    juce::Point<int> zoomPoint;
 };

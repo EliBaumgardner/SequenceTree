@@ -108,19 +108,14 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
 
 void NodeCanvas::removeNodeFromCanvas(int nodeId)
 {
-    // auto nodePair = nodeMap.find(nodeId);
-    // juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
-    //
-    // jassert(nodePair != nodeMap.end());
-    //
-    // auto& node = nodePair->second;
-    // Node* temp = node->root;
-    //
-    // nodeMaps[node->root->nodeId].erase(node->nodeId);
-    // removeLinePoints(node);
-    //
-    // makeRTGraph(nodeValueTree);
-    // repaint();
+    auto nodePair = nodeMap.find(nodeId);
+    if (nodePair == nodeMap.end()) return;
+
+    Node* node = nodePair->second;
+    removeLinePoints(node);
+    removeChildComponent(node);
+    delete node;
+    nodeMap.erase(nodeId);
 }
 
 void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY)
@@ -349,9 +344,16 @@ void NodeCanvas::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& c
     }
 }
 
-void NodeCanvas::valueTreeChildRemoved(juce::ValueTree& parent,juce::ValueTree& child, int childIndex)
+void NodeCanvas::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex)
 {
-    DBG("valueTreeChildRemoved");
+    if (parent.getType() == ValueTreeIdentifiers::NodeMap)
+    {
+        AsyncUpdate asyncUpdate;
+        asyncUpdate.type   = AsyncUpdateType::NodeRemoved;
+        asyncUpdate.nodeId = child.getProperty(ValueTreeIdentifiers::Id);
+        asyncUpdates.push_back(asyncUpdate);
+        triggerAsyncUpdate();
+    }
 }
 
 void NodeCanvas::valueTreePropertyChanged(juce::ValueTree &tree, const juce::Identifier &propertyIdentifier)
@@ -390,11 +392,30 @@ void NodeCanvas::setSelectionMode(NodeDisplayMode mode) const {
     }
 }
 
+void NodeCanvas::triggerArrowSnapForNode(int nodeId)
+{
+    auto nodePair = nodeMap.find(nodeId);
+    if (nodePair == nodeMap.end()) return;
+    Node* node = nodePair->second;
+
+    for (NodeArrow* arrow : nodeArrows)
+    {
+        if (arrow->childNode == node)
+        {
+            arrow->triggerSnapAnimation();
+            return;
+        }
+    }
+}
+
 void NodeCanvas::clearCanvas()
 {
-    if (nodeMap.empty()) { DBG("CLEAR CANVAS CALLED ON EMPTY CANVAS"); return; }
-
     nodeArrows.clear();
+
+    for (auto& [nodeId, node] : nodeMap) {
+        removeChildComponent(node);
+        delete node;
+    }
     nodeMap.clear();
 }
 
@@ -419,7 +440,11 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         juce::ValueTree nodeValueTreeChildren = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
         juce::Identifier treeType = nodeValueTree.getType();
 
-        auto canvasNode = std::make_unique<Node>();
+        std::unique_ptr<Node> canvasNode;
+        if (treeType == ValueTreeIdentifiers::ConnectorData)
+            canvasNode = std::make_unique<Connector>();
+        else
+            canvasNode = std::make_unique<Node>();
 
         int xPosition = nodeValueTree.getProperty      (ValueTreeIdentifiers::XPosition);
         int yPosition = nodeValueTree.getProperty      (ValueTreeIdentifiers::YPosition);
@@ -440,6 +465,10 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
 
             nodePairs.push_back(nodePair);
         }
+
+        juce::ValueTree midiNotes = nodeValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
+        canvasNode->nodeValueTree = nodeValueTree;
+        canvasNode->midiNoteData  = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
 
         canvasNode->setCentrePosition(xPosition, yPosition);
         canvasNode->setSize(radius*2, radius*2);
@@ -465,10 +494,9 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         updateLinePoints(parentNode);
     }
 
-    for (int i = 0; i < rootNodeMap.size(); i++) {
-
-        juce::ValueTree rootNodeValueTree = rootNodeMap[i];
-        makeRTGraph(rootNodeValueTree);
+    for (auto& [id, rootNodeValueTree] : rootNodeMap) {
+        if (rootNodeValueTree.isValid())
+            makeRTGraph(rootNodeValueTree);
     }
 
 }

@@ -108,3 +108,27 @@ void NodeArrow::valueChanged(juce::Value&) {
 void NodeArrow::updateBoundProperty(int boundValue) {
   bindValue.setValue(boundValue);
 }
+
+void NodeArrow::triggerSnapAnimation()
+{
+    animT        = 0.0f;
+    animVelocity = 0.0f;
+    startTimerHz(60);
+}
+
+void NodeArrow::timerCallback()
+{
+    constexpr float stiffness = 0.28f;
+    constexpr float damping   = 0.68f;
+
+    animVelocity += (1.0f - animT) * stiffness;
+    animVelocity *= damping;
+    animT        += animVelocity;
+
+    if (std::abs(animT - 1.0f) < 0.001f && std::abs(animVelocity) < 0.001f)
+    {
+        animT = 1.0f;
+        stopTimer();
+    }
+    repaint();
+}

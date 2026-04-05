@@ -6,6 +6,7 @@
 
 #include "ValueTreeState.h"
 #include "ValueTreeIdentifiers.h"
+#include "PluginContext.h"
 
 //
 // Created by Eli Baumgardner on 3/21/26.
@@ -43,6 +44,8 @@ juce::ValueTree ValueTreeState::addNodeTree(juce::UndoManager* undoManager)
 
 juce::ValueTree ValueTreeState::addRootNode(NodePosition nodePosition, juce::UndoManager* undoManager)
 {
+
+
     juce::ValueTree newTree = addNodeTree(undoManager);
     int newTreeId = newTree.getProperty(ValueTreeIdentifiers::ValueTreeIdentifiers::Id);
 
@@ -69,6 +72,7 @@ juce::ValueTree ValueTreeState::addRootNode(NodePosition nodePosition, juce::Und
 
 juce::ValueTree ValueTreeState::addRootNode(int parentNodeId,NodePosition nodePosition, juce::UndoManager* undoManager)
 {
+
     juce::ValueTree parentNode = getNode(parentNodeId);
 
     jassert(parentNode.isValid());
@@ -89,6 +93,7 @@ juce::ValueTree ValueTreeState::addRootNode(int parentNodeId,NodePosition nodePo
 
 juce::ValueTree ValueTreeState::addNode(int parentNodeId, NodePosition nodePosition, juce::UndoManager* undoManager)
 {
+
     juce::ValueTree parentNode = getNode(parentNodeId);
 
     jassert(parentNode.isValid());
@@ -197,6 +202,11 @@ void ValueTreeState::removeNode(int nodeId, juce::UndoManager* undoManager)
     juce::ValueTree node = getNode(nodeId);
     jassert(node.isValid());
 
+    // Remove the node from nodeMap first. On undo, this is the LAST step restored,
+    // so when addNodeToCanvas runs it can already find the parent via getNodeParent.
+    nodeMap.removeChild(node, undoManager);
+
+    // Remove the child ID reference from the parent.
     for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
         juce::ValueTree mapNode = nodeMap.getChild(i);
         juce::ValueTree mapNodeChildrenIds = mapNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
@@ -204,6 +214,7 @@ void ValueTreeState::removeNode(int nodeId, juce::UndoManager* undoManager)
 
         if (mapNodeChildId.isValid()) {
             mapNodeChildrenIds.removeChild(mapNodeChildId, undoManager);
+            break;
         }
     }
 }

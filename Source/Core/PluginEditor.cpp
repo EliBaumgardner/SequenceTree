@@ -14,6 +14,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 : AudioProcessorEditor(p),audioProcessor (p)
 {
     ComponentContext::processor = &p;
+    ComponentContext::undoManager = &undoManager;
     ComponentContext::lookAndFeel = &lookAndFeel;
 
     canvas         = std::make_unique<NodeCanvas>();
@@ -42,7 +43,16 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     setSize (700, 500);
 }
 
-SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor() {}
+SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
+{
+    // Remove canvas as a ValueTree listener before it is destroyed.
+    // The static ValueTree members survive the editor lifetime, so without
+    // this, the next editor construction reassigns them and fires listener
+    // callbacks on the already-deleted canvas (dangling pointer → crash).
+    ValueTreeState::canvasData.removeListener(canvas.get());
+    ValueTreeState::nodeMap.removeListener(canvas.get());
+    ValueTreeState::nodeTreeMap.removeListener(canvas.get());
+}
 
 
 void SequenceTreeAudioProcessorEditor::paint (juce::Graphics& g) { g.fillAll(juce::Colours::white); }

@@ -29,7 +29,7 @@ public:
         };
 
         redoButton.onClick = [=]() {
-
+            ComponentContext::undoManager->redo();
         };
 
     }
