@@ -13,6 +13,7 @@
 
 #include "../Util/PluginModules.h"
 #include "Buttons/PlayButton.h"
+#include "Buttons/ResetButton.h"
 #include "Buttons/ButtonPane.h"
 #include "Buttons/DisplayMenu.h"
 #include "Buttons/TempoDisplay.h"
@@ -35,7 +36,8 @@ private:
     DisplayMenu displaySelector;
 
     TempoDisplay tempoDisplay;
-    PlayButton playButton;
+    PlayButton   playButton;
+    ResetButton  resetButton;
 
     UndoRedoPane undoRedoPane;
 };

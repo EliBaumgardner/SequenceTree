@@ -162,7 +162,6 @@ void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
 {
     int parentNodeId = parentNode->getComponentID().getIntValue();
 
-    juce::ValueTree parentNodeValueTree  = ValueTreeState::getNode(parentNodeId);
     juce::ValueTree parentMidiNotesData = ValueTreeState::getMidiNotes(parentNodeId);
     juce::ValueTree parentMidiNoteData  = parentMidiNotesData.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
 

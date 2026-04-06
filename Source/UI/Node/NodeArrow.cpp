@@ -43,7 +43,7 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
 
   childNode->incomingAngle = std::atan2(dy, dx);
 
-  int duration = (int)(length * durationAmount);
+  int duration = (int)(std::abs(dx) * durationAmount);
 
   bindValue.setValue(duration);
 

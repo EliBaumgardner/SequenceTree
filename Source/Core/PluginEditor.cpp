@@ -45,10 +45,6 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
 SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
 {
-    // Remove canvas as a ValueTree listener before it is destroyed.
-    // The static ValueTree members survive the editor lifetime, so without
-    // this, the next editor construction reassigns them and fires listener
-    // callbacks on the already-deleted canvas (dangling pointer → crash).
     ValueTreeState::canvasData.removeListener(canvas.get());
     ValueTreeState::nodeMap.removeListener(canvas.get());
     ValueTreeState::nodeTreeMap.removeListener(canvas.get());
