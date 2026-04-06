@@ -23,6 +23,8 @@ class TempoDisplay : public juce::Component {
         setLookAndFeel(ComponentContext::lookAndFeel);
         addAndMakeVisible(syncButton);
         addAndMakeVisible(editor);
+
+        editor.setText("1.0", false);
     }
 
     void paint(juce::Graphics& g) override

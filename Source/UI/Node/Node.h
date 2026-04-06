@@ -22,7 +22,7 @@ class NodeTextEditor;
 
 class  NodeCanvas;
 
-class Node : public juce::Component {
+class Node : public juce::Component, public juce::Timer {
     
 public:
 
@@ -35,6 +35,7 @@ public:
     void setSelectVisual   (bool isSelected);
     void setSelectVisual   ();
     void setHighlightVisual(bool isHighlighted);
+    void timerCallback() override;
 
     void setDisplayMode(NodeDisplayMode mode);
     void incrementNodeTextEditorValue(int incrementValue);
@@ -58,4 +59,5 @@ public:
     bool isHovered     = false;
     bool isSelected    = false;
     bool isHighlighted = false;
+    float pulsePhase   = 1.0f;
 };

@@ -29,27 +29,62 @@ void NodeArrow::paint(juce::Graphics &g) {
 void NodeArrow::setArrowBounds(Node* movedNode) {
 
   juce::Point<int> start = parentNode->getBounds().getCentre();
-  juce::Point<int >end   = childNode->getBounds().getCentre();
+  juce::Point<int> end   = childNode->getBounds().getCentre();
 
-  int left = std::min(start.x, end.x);
-  int top = std::min(start.y, end.y);
-  int right = std::max(start.x, end.x);
-  int bottom = std::max(start.y,end.y);
-
-  float dx = end.x - start.x;
-  float dy = end.y - start.y;
+  float dx = float(end.x - start.x);
+  float dy = float(end.y - start.y);
 
   length = std::sqrt(dx*dx + dy*dy);
 
   childNode->incomingAngle = std::atan2(dy, dx);
 
   int duration = (int)(std::abs(dx) * durationAmount);
-
   bindValue.setValue(duration);
-
-  juce::Rectangle arrowBounds = juce::Rectangle<int>::leftTopRightBottom(left, top, right, bottom).expanded(25);
-
   textEditor.setText(juce::String(duration));
+
+  // Build the curve in canvas coordinates to get the true bounding box.
+  int parentRadius = parentNode->getWidth() / 2;
+  int childRadius  = childNode->getWidth()  / 2;
+
+  float dirX = (length > 0.0f) ? dx / length : 1.0f;
+  float dirY = (length > 0.0f) ? dy / length : 0.0f;
+
+  float arrowEndX = float(end.x) - dirX * float(childRadius);
+  float arrowEndY = float(end.y) - dirY * float(childRadius);
+
+  float connDirX = std::cos(parentNode->incomingAngle);
+  float connDirY = std::sin(parentNode->incomingAngle);
+
+  float startX = float(start.x) + float(parentRadius) * connDirX;
+  float startY = float(start.y) + float(parentRadius) * connDirY;
+
+  float toEndX   = arrowEndX - startX;
+  float toEndY   = arrowEndY - startY;
+  float toEndLen = std::sqrt(toEndX*toEndX + toEndY*toEndY);
+
+  juce::Path curvePath;
+  if (toEndLen > 1.0f)
+  {
+    float toEndDirX    = toEndX / toEndLen;
+    float toEndDirY    = toEndY / toEndLen;
+    float tangentLen   = toEndLen * 0.4f;
+
+    float cp1X = startX + tangentLen * connDirX;
+    float cp1Y = startY + tangentLen * connDirY;
+    float cp2X = arrowEndX - tangentLen * toEndDirX;
+    float cp2Y = arrowEndY - tangentLen * toEndDirY;
+
+    curvePath.startNewSubPath(startX, startY);
+    curvePath.cubicTo(cp1X, cp1Y, cp2X, cp2Y, arrowEndX, arrowEndY);
+  }
+  else
+  {
+    curvePath.startNewSubPath(float(start.x), float(start.y));
+    curvePath.lineTo(arrowEndX, arrowEndY);
+  }
+
+  // Expand enough for stroke (2px), arrowhead (~12px), and label text (~30px).
+  auto arrowBounds = curvePath.getBounds().expanded(40.0f).toNearestInt();
 
   setBounds(arrowBounds);
   repaint();

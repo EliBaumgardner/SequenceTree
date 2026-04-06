@@ -54,6 +54,12 @@ private:
 
     bool isDragStart = true;
     bool hasConnection = false;
+    bool isDraggingValue = false;
+
+    double dragStartValue = 0.0;
+    Node* draggingValueNode = nullptr;
+
+    juce::Point<float> dragParentCenter;
 
     juce::ValueTree draggedNodeTree;
 

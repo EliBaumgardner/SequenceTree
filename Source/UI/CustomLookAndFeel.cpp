@@ -6,6 +6,7 @@
 #include "Buttons/ResetButton.h"
 #include "Node/NodeCanvas.h"
 #include "Node/Node.h"
+#include "../Util/ValueTreeIdentifiers.h"
 #include "Titlebar.h"
 #include "CustomTextEditor.h"
 #include "Node/NodeArrow.h"
@@ -30,7 +31,33 @@ void CustomLookAndFeel::drawEditor(juce::Graphics &g, CustomTextEditor& editor)
     }
 }
 
-void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas) { g.fillAll(canvasColour); }
+void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
+{
+    g.fillAll(canvasColour);
+
+    if (!canvas.showGrid) return;
+
+    float spacing = canvas.gridSpacing;
+    if (spacing < 15.0f) return;
+
+    auto bounds = canvas.getLocalBounds().toFloat();
+    float ox = canvas.gridOrigin.x;
+    float oy = canvas.gridOrigin.y;
+
+    g.setColour(juce::Colour(0x22000000));
+
+    float startX = ox - std::ceil((ox - bounds.getX()) / spacing) * spacing;
+    for (float x = startX; x <= bounds.getRight(); x += spacing)
+        g.drawVerticalLine(int(x), bounds.getY(), bounds.getBottom());
+
+    float startY = oy - std::ceil((oy - bounds.getY()) / spacing) * spacing;
+    for (float y = startY; y <= bounds.getBottom(); y += spacing)
+        g.drawHorizontalLine(int(y), bounds.getX(), bounds.getRight());
+
+    // Highlight the parent origin point
+    g.setColour(juce::Colour(0x55000000));
+    g.drawEllipse(ox - 4.0f, oy - 4.0f, 8.0f, 8.0f, 1.5f);
+}
 
 void CustomLookAndFeel::drawTitleBar(juce::Graphics &g, const Titlebar &titleBar)
 {
@@ -97,8 +124,15 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g,const Node& node)
     auto circleHover = bounds.reduced(4.5f);
     auto circleFill = bounds.reduced(5.5f);
 
-    g.setColour(node.isHighlighted ? node.nodeColour.darker() : node.nodeColour);
-    g.fillEllipse(circleFill);
+    float velocity = (float)(int)node.midiNoteData.getProperty(ValueTreeIdentifiers::MidiVelocity, 100);
+    float brightnessFactor = juce::jmap(velocity, 0.0f, 127.0f, 0.4f, 1.6f);
+    juce::Colour nodeColour = node.nodeColour.withMultipliedBrightness(brightnessFactor);
+
+    float pulseExpansion = 4.0f * std::sin(node.pulsePhase * juce::MathConstants<float>::pi);
+    auto pulsedFill = circleFill.expanded(pulseExpansion);
+
+    g.setColour(node.isHighlighted ? nodeColour.darker() : nodeColour);
+    g.fillEllipse(pulsedFill);
 
     if (node.isHovered) { g.drawEllipse(circleHover, 2.0f); }
 

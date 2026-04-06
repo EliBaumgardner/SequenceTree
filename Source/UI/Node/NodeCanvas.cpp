@@ -74,7 +74,7 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
     childNode->setComponentID(std::to_string(nodeId));
     childNode->nodeValueTree = nodeValueTree;
     childNode->midiNoteData = midiNote;
-
+    childNode->setDisplayMode(NodeDisplayMode::Pitch);
 
     if (nodeParent.isValid()) {
         int parentNodeId = nodeParent.getProperty(ValueTreeIdentifiers::Id);
@@ -468,6 +468,7 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         juce::ValueTree midiNotes = nodeValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
         canvasNode->nodeValueTree = nodeValueTree;
         canvasNode->midiNoteData  = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+        canvasNode->setDisplayMode(NodeDisplayMode::Pitch);
 
         canvasNode->setCentrePosition(xPosition, yPosition);
         canvasNode->setSize(radius*2, radius*2);

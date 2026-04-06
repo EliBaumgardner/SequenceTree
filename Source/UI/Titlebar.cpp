@@ -38,6 +38,17 @@ Titlebar::Titlebar()
     resetButton.onClick = [=]() {
         ComponentContext::processor->resetRequested.store(true);
     };
+
+    auto applyMultiplier = [this]() {
+        double value = tempoDisplay.editor.getText().getDoubleValue();
+        if (value > 0.0)
+            ComponentContext::processor->tempoMultiplier.store(value);
+        else
+            tempoDisplay.editor.setText(juce::String(ComponentContext::processor->tempoMultiplier.load()), false);
+    };
+
+    tempoDisplay.editor.onReturnKey = applyMultiplier;
+    tempoDisplay.editor.onFocusLost = applyMultiplier;
 }
 
 void Titlebar::paint(juce::Graphics& g)

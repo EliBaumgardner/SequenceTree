@@ -111,10 +111,6 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
         display = juce::String(velocity);
     }
 
-    if(mode == NodeDisplayMode::Duration){
-        display = juce::String(value);
-    }
-
     if(mode == NodeDisplayMode::CountLimit){
         display = juce::String(value);
     }
@@ -122,6 +118,7 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
     setText(display);
     refit();
 
+    node->repaint();
     ComponentContext::canvas->makeRTGraph(nodeValueTree);
 }
 
@@ -182,20 +179,6 @@ void NodeTextEditor::makeBoundsVisible(bool isBoundsVisible){
     repaint();
 }
 
-void NodeTextEditor::mouseDrag(const juce::MouseEvent& e){
-    int distanceFromStart = e.getDistanceFromDragStartY();
-
-    if(distanceFromStart > 10){
-        
-        int attenuate = juce::jlimit(0, 127,distanceFromStart);
-        
-        int midiValue = static_cast<int>(bindValue.getValue()) + attenuate;
-        
-        bindValue.setValue(midiValue);
-        
-        formatDisplay(mode);
-    }
-}
 
 void NodeTextEditor::textEditorReturnKeyPressed(juce::TextEditor &editor) {
 

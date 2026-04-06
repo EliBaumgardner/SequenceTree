@@ -30,8 +30,7 @@ class DisplayMenu : public juce::Component {
 
         menu.addItem(1, "show pitch");
         menu.addItem(2, "show velocity");
-        menu.addItem(3, "show duration");
-        menu.addItem(4, "show countLimit");
+        menu.addItem(3, "show countLimit");
 
         button.onClick = [this]() {
             button.isSelected = true;
@@ -44,8 +43,7 @@ class DisplayMenu : public juce::Component {
                 {
                     case 1: selectedOption = "show pitch";      ComponentContext::canvas->setSelectionMode(NodeDisplayMode::Pitch); break;
                     case 2: selectedOption = "show velocity";   ComponentContext::canvas->setSelectionMode(NodeDisplayMode::Velocity); break;
-                    case 3: selectedOption = "show duration";   ComponentContext::canvas->setSelectionMode(NodeDisplayMode::Duration); break;
-                    case 4: selectedOption = "show countLimit"; ComponentContext::canvas->setSelectionMode(NodeDisplayMode::CountLimit); break;
+                    case 3: selectedOption = "show countLimit"; ComponentContext::canvas->setSelectionMode(NodeDisplayMode::CountLimit); break;
                     default: break;
                 }
                 resized();
