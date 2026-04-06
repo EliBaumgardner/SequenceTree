@@ -53,6 +53,8 @@ public:
     juce::Colour nodeColour = juce::Colour::fromRGB(91,86,76);
 
     int nodeId;
+    NodeType nodeType    = NodeType::Node;
+    float incomingAngle  = 0.0f;
     bool isHovered     = false;
     bool isSelected    = false;
     bool isHighlighted = false;

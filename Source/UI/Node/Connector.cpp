@@ -5,6 +5,7 @@
 #include "Connector.h"
 
 Connector::Connector() {
+    nodeType = NodeType::Connector;
 
     // std::cout<<nodeId<<std::endl;
     // nodeData.setProperty("nodeType","Connector", "NodeData");
@@ -51,6 +52,13 @@ void Connector::resized() {
 void Connector::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
+
+    juce::Graphics::ScopedSaveState savedState(g);
+    g.addTransform(juce::AffineTransform::rotation(
+        incomingAngle + juce::MathConstants<float>::halfPi,
+        bounds.getCentreX(),
+        bounds.getCentreY()
+    ));
 
     // Outer triangle (border)
     juce::Point<float> p1(bounds.getCentreX(), bounds.getY());

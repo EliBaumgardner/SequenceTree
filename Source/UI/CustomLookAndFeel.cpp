@@ -8,6 +8,8 @@
 #include "Titlebar.h"
 #include "CustomTextEditor.h"
 #include "Node/NodeArrow.h"
+#include "Node/NodeTextEditor.h"
+#include "Node/CustomTextCaret.h"
 
 CustomLookAndFeel::CustomLookAndFeel()
 {
@@ -114,56 +116,146 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g,const Node& node)
     }
 }
 
-void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeArrow)
+void CustomLookAndFeel::drawNodeArrowText(juce::Graphics &g, const NodeArrow &nodeArrow, const juce::TextEditor &editor,TextCords textCord) {
+
+    int parentX = textCord.parentNodeX;
+    int parentY = textCord.parentNodeY;
+    int childX  = textCord.childNodeX;
+    int childY  = textCord.childNodeY;
+    int arrowEndX = textCord.newX;
+    int arrowEndY = textCord.newY;
+
+
+    juce::String labelText = editor.getText();
+    if (labelText.isNotEmpty() && nodeArrow.animT > 0.8f)
+    {
+        float midX = (parentX + childX) * 0.5f;
+        float midY = (parentY + childY) * 0.5f;
+        float angle = std::atan2(arrowEndY - parentY, arrowEndX - parentX);
+
+        const float halfPi = juce::MathConstants<float>::halfPi;
+        while (angle >  halfPi) angle -= juce::MathConstants<float>::pi;
+        while (angle <= -halfPi) angle += juce::MathConstants<float>::pi;
+
+        juce::Graphics::ScopedSaveState savedState(g);
+
+        g.addTransform(juce::AffineTransform::rotation(angle).translated(midX, midY));
+
+        g.setFont(juce::Font(10.0f));
+        g.setColour(juce::Colours::darkgrey);
+
+        float textW = 60.0f;
+        float textH = 12.0f;
+
+        g.drawText(labelText, -textW * 0.5f, -(textH * 0.5f + 2.0f), textW, textH,
+                   juce::Justification::centred, true);
+    }
+}
+
+void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeArrow, const juce::TextEditor& editor)
 {
     auto* a = nodeArrow.parentNode;
     auto* b = nodeArrow.childNode;
 
-    auto aBounds = a->getBounds();
-    auto bBounds = b->getBounds();
+    auto parentNodeBounds = a->getBounds();
+    auto childNodeBounds  = b->getBounds();
 
-    float arrowLength = 10.0f;
-    float arrowWidth = 5.0f;
-    int radius = bBounds.getWidth() / 2;
+    float arrowLength  = 10.0f;
+    float arrowWidth   = 5.0f;
+    int   childRadius  = childNodeBounds.getWidth()  / 2;
+    int   parentRadius = parentNodeBounds.getWidth() / 2;
 
     g.setColour(arrowColour);
 
-    float x1 = float(aBounds.getCentreX() - nodeArrow.getX());
-    float y1 = float(aBounds.getCentreY() - nodeArrow.getY());
-    float tx2 = float(bBounds.getCentreX() - nodeArrow.getX());
-    float ty2 = float(bBounds.getCentreY() - nodeArrow.getY());
+    float parentCenterX = float(parentNodeBounds.getCentreX() - nodeArrow.getX());
+    float parentCenterY = float(parentNodeBounds.getCentreY() - nodeArrow.getY());
+    float childCenterX  = float(childNodeBounds.getCentreX()  - nodeArrow.getX());
+    float childCenterY  = float(childNodeBounds.getCentreY()  - nodeArrow.getY());
 
-    // Apply rubber-band spring animation: interpolate endpoint toward child
-    float x2 = x1 + (tx2 - x1) * nodeArrow.animT;
-    float y2 = y1 + (ty2 - y1) * nodeArrow.animT;
+    float arrowEndX = parentCenterX + (childCenterX - parentCenterX) * nodeArrow.animT;
+    float arrowEndY = parentCenterY + (childCenterY - parentCenterY) * nodeArrow.animT;
 
-    // Calculate direction vector
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    float length = std::sqrt(dx*dx + dy*dy);
+    float deltaX = arrowEndX - parentCenterX;
+    float deltaY = arrowEndY - parentCenterY;
+    float length = std::sqrt(deltaX * deltaX + deltaY * deltaY);
 
     if (length < 1.0f) return;
 
-    float nx = dx / length;
-    float ny = dy / length;
+    float dirX = deltaX / length;
+    float dirY = deltaY / length;
 
-    x2 = x2 - nx * float(radius);
-    y2 = y2 - ny * float(radius);
+    arrowEndX -= dirX * float(childRadius);
+    arrowEndY -= dirY * float(childRadius);
 
-    // Draw main line
-    g.drawLine(x1, y1, x2, y2, 2.0f);
+    bool isConnectorArrow = a->nodeType == NodeType::Connector
+                         || b->nodeType == NodeType::Connector;
 
-    // Arrowhead points — only draw when arrow is mostly extended
+    juce::Path linePath;
+
+    if (a->nodeType == NodeType::Connector || a->nodeType == NodeType::Node)
+    {
+        float connectorDirX = std::cos(a->incomingAngle);
+        float connectorDirY = std::sin(a->incomingAngle);
+
+        float startX = parentCenterX + float(parentRadius) * connectorDirX;
+        float startY = parentCenterY + float(parentRadius) * connectorDirY;
+
+        float toEndX   = arrowEndX - startX;
+        float toEndY   = arrowEndY - startY;
+        float toEndLen = std::sqrt(toEndX * toEndX + toEndY * toEndY);
+
+        if (toEndLen < 1.0f) return;
+
+        float toEndDirX     = toEndX / toEndLen;
+        float toEndDirY     = toEndY / toEndLen;
+        float tangentLength = toEndLen * 0.4f;
+
+        float cp1X = startX + tangentLength * connectorDirX;
+        float cp1Y = startY + tangentLength * connectorDirY;
+        float cp2X = arrowEndX - tangentLength * toEndDirX;
+        float cp2Y = arrowEndY - tangentLength * toEndDirY;
+
+        linePath.startNewSubPath(startX, startY);
+        linePath.cubicTo(cp1X, cp1Y, cp2X, cp2Y, arrowEndX, arrowEndY);
+
+        dirX = toEndDirX;
+        dirY = toEndDirY;
+    }
+    else
+    {
+        linePath.startNewSubPath(parentCenterX, parentCenterY);
+        linePath.lineTo(arrowEndX, arrowEndY);
+    }
+
+    if (isConnectorArrow)
+    {
+        juce::PathStrokeType stroke(2.0f);
+        float dashLengths[] = { 6.0f, 10.0f };
+        stroke.createDashedStroke(linePath, linePath, dashLengths, 2);
+    }
+
+    g.strokePath(linePath, juce::PathStrokeType(2.0f));
+
     if (nodeArrow.animT > 0.3f)
     {
-        float leftX  = x2 - arrowLength * nx + arrowWidth * ny;
-        float leftY  = y2 - arrowLength * ny - arrowWidth * nx;
-        float rightX = x2 - arrowLength * nx - arrowWidth * ny;
-        float rightY = y2 - arrowLength * ny + arrowWidth * nx;
+        float leftX  = arrowEndX - arrowLength * dirX + arrowWidth * dirY;
+        float leftY  = arrowEndY - arrowLength * dirY - arrowWidth * dirX;
+        float rightX = arrowEndX - arrowLength * dirX - arrowWidth * dirY;
+        float rightY = arrowEndY - arrowLength * dirY + arrowWidth * dirX;
 
-        g.drawLine(x2, y2, leftX, leftY, 1.0f);
-        g.drawLine(x2, y2, rightX, rightY, 1.0f);
+        g.drawLine(arrowEndX, arrowEndY, leftX, leftY, 1.0f);
+        g.drawLine(arrowEndX, arrowEndY, rightX, rightY, 1.0f);
     }
+
+    TextCords textCords;
+    textCords.parentNodeX = parentCenterX;
+    textCords.parentNodeY = parentCenterY;
+    textCords.childNodeX = childCenterX;
+    textCords.childNodeY = childCenterY;
+    textCords.newX = arrowEndX;
+    textCords.newY = arrowEndY;
+
+    drawNodeArrowText(g, nodeArrow, editor, textCords);
 }
 
 void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const PlayButton &button)
@@ -257,4 +349,14 @@ void CustomLookAndFeel::drawUndoRedoPane(juce::Graphics &g,const UndoRedoPane& u
     auto bounds = undoRedoPane.getLocalBounds().reduced(2.0f).toFloat();
     g.setColour(buttonColour);
     g.fillRect(bounds);
+}
+
+void CustomLookAndFeel::drawNodeTextEditor(juce::Graphics &g, NodeTextEditor &nodeTextEditor) {
+}
+
+juce::CaretComponent* CustomLookAndFeel::createCaretComponent(juce::Component* keyFocusOwner) {
+    auto* caret = new CustomTextCaret(keyFocusOwner);
+    caret->caretColour = darkColour1;
+    caret->caretWidth  = 1.0f;
+    return caret;
 }

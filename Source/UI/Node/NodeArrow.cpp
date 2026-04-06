@@ -22,7 +22,7 @@ NodeArrow::NodeArrow(Node* startNode, Node* endNode) : parentNode(startNode), ch
 
 void NodeArrow::paint(juce::Graphics &g) {
   if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) {
-    customLookAndFeel->drawNodeArrow(g,*this);
+    customLookAndFeel->drawNodeArrow(g,*this, textEditor);
   }
 }
 
@@ -41,11 +41,16 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
 
   length = std::sqrt(dx*dx + dy*dy);
 
-  int duration = (int)(length * growthFactor);
+  childNode->incomingAngle = std::atan2(dy, dx);
+
+  int duration = (int)(length * durationAmount);
 
   bindValue.setValue(duration);
 
-  juce::Rectangle arrowBounds = juce::Rectangle<int>::leftTopRightBottom(left, top, right, bottom).expanded(2);
+  juce::Rectangle arrowBounds = juce::Rectangle<int>::leftTopRightBottom(left, top, right, bottom).expanded(25);
+
+  textEditor.setText(juce::String(duration));
+
   setBounds(arrowBounds);
   repaint();
 }
@@ -56,53 +61,53 @@ void NodeArrow::bindToProperty(juce::ValueTree tree, const juce::Identifier prop
 }
 
 void NodeArrow::valueChanged(juce::Value&) {
-  if (!updateFromBindValue) {
-    return;
-  }
-
-  DBG("Value Changed");
-
-  updateFromBindValue = false;
-
-  int duration = bindValue.getValue();
-
-
-  juce::Point<int> start = parentNode->getBounds().getCentre();
-  juce::Point<int> end   = childNode->getBounds().getCentre();
-
-  float dx = end.x - start.x;
-  float dy = end.y - start.y;
-
-  float currentLength = std::sqrt(dx * dx + dy * dy);
-
-  jassert(currentLength > 0);
-
-  float unitX = dx / currentLength;
-  float unitY = dy / currentLength;
-
-  float newLength = duration / growthFactor;
-
-  float newDx = unitX * newLength;
-  float newDy = unitY * newLength;
-
-  juce::Point<int> newEnd(
-      start.x + (int)newDx,
-      start.y + (int)newDy
-  );
-
-  juce::ValueTree parentNodeTree = ValueTreeState::getNode(parentNode->getComponentID().getIntValue());
-  juce::ValueTree childNodeTree  = ValueTreeState::getNode(childNode->getComponentID().getIntValue());
-
-  int left = std::min(start.x, newEnd.x);
-  int top = std::min(start.y, newEnd.y);
-  int right = std::max(start.x, newEnd.x);
-  int bottom = std::max(start.y, newEnd.y);
-
-  juce::Rectangle arrowBounds = juce::Rectangle<int>::leftTopRightBottom(left, top, right, bottom).expanded(2);
-  setBounds(arrowBounds);
-
-  childNodeTree.setProperty(ValueTreeIdentifiers::XPosition, newEnd.x, nullptr);
-  childNodeTree.setProperty(ValueTreeIdentifiers::YPosition, newEnd.y, nullptr);
+  // if (!updateFromBindValue) {
+  //   return;
+  // }
+  //
+  // DBG("Value Changed");
+  //
+  // updateFromBindValue = false;
+  //
+  // int duration = bindValue.getValue();
+  //
+  //
+  // juce::Point<int> start = parentNode->getBounds().getCentre();
+  // juce::Point<int> end   = childNode->getBounds().getCentre();
+  //
+  // float dx = end.x - start.x;
+  // float dy = end.y - start.y;
+  //
+  // float currentLength = std::sqrt(dx * dx + dy * dy);
+  //
+  // jassert(currentLength > 0);
+  //
+  // float unitX = dx / currentLength;
+  // float unitY = dy / currentLength;
+  //
+  // float newLength = duration / durationAmount;
+  //
+  // float newDx = unitX * newLength;
+  // float newDy = unitY * newLength;
+  //
+  // juce::Point<int> newEnd(
+  //     start.x + (int)newDx,
+  //     start.y + (int)newDy
+  // );
+  //
+  // juce::ValueTree parentNodeTree = ValueTreeState::getNode(parentNode->getComponentID().getIntValue());
+  // juce::ValueTree childNodeTree  = ValueTreeState::getNode(childNode->getComponentID().getIntValue());
+  //
+  // int left = std::min(start.x, newEnd.x);
+  // int top = std::min(start.y, newEnd.y);
+  // int right = std::max(start.x, newEnd.x);
+  // int bottom = std::max(start.y, newEnd.y);
+  //
+  // juce::Rectangle arrowBounds = juce::Rectangle<int>::leftTopRightBottom(left, top, right, bottom).expanded(2);
+  // setBounds(arrowBounds);
+  //
+  // childNodeTree.setProperty(ValueTreeIdentifiers::XPosition, newEnd.x, nullptr);
+  // childNodeTree.setProperty(ValueTreeIdentifiers::YPosition, newEnd.y, nullptr);
 }
 
 void NodeArrow::updateBoundProperty(int boundValue) {
@@ -118,8 +123,8 @@ void NodeArrow::triggerSnapAnimation()
 
 void NodeArrow::timerCallback()
 {
-    constexpr float stiffness = 0.28f;
-    constexpr float damping   = 0.68f;
+    constexpr float stiffness = 0.20f;
+    constexpr float damping   = 0.30f;
 
     animVelocity += (1.0f - animT) * stiffness;
     animVelocity *= damping;

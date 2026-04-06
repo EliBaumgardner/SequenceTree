@@ -21,14 +21,15 @@ class NodeTextEditor : public juce::TextEditor, public juce::TextEditor::Listene
     
 public:
 
+    enum class DisplayMode {Pitch, Velocity, Duration, CountLimit};
+
     NodeTextEditor(Node* node);
     void paint(juce::Graphics& g) override;
     void refit();
-    void bindEditor(juce::ValueTree tree, const juce::Identifier propertyID);
+
     void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
-    
-    enum class DisplayMode {Pitch, Velocity, Duration, CountLimit};
-    
+
+    void bindEditor(juce::ValueTree tree, const juce::Identifier propertyID);
     void formatDisplay(NodeDisplayMode mode);
     int noteToNumber(juce::String string);
     

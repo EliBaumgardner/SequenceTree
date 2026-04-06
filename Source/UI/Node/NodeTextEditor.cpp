@@ -14,6 +14,7 @@
 #include "NodeArrow.h"
 #include "../Util/ValueTreeState.h"
 #include "../Util/PluginContext.h"
+#include "../UI/CustomLookAndFeel.h"
 
 
 #include "NodeTextEditor.h"
@@ -35,9 +36,13 @@
 
 NodeTextEditor::NodeTextEditor(Node* node) : node(node) {
 
+
+    setLookAndFeel(ComponentContext::lookAndFeel);
+
     addListener(this);
     makeBoundsVisible(false);
     setReadOnly(false);
+    setCaretVisible(true);
 
     setInterceptsMouseClicks(false,false);
     setColour(juce::TextEditor::textColourId, juce::Colours::white);
@@ -47,6 +52,10 @@ NodeTextEditor::NodeTextEditor(Node* node) : node(node) {
 
 void NodeTextEditor::paint(juce::Graphics& g) {
     TextEditor::paint(g);
+    if (auto customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) {
+        customLookAndFeel->drawNodeTextEditor(g,*this);
+    }
+
 }
 
 void NodeTextEditor::refit(){
@@ -191,6 +200,10 @@ void NodeTextEditor::mouseDrag(const juce::MouseEvent& e){
 void NodeTextEditor::textEditorReturnKeyPressed(juce::TextEditor &editor) {
 
     DBG("return key pressed");
+
+    if (node->nodeArrow == nullptr)
+        return;
+
     node->nodeArrow->updateFromBindValue = true;
 
     int text = editor.getText().getIntValue();
