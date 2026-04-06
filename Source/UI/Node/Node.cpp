@@ -84,8 +84,24 @@ void Node::setSelectVisual(){
 }
 
 void Node::setHighlightVisual(bool isHighlighted){
-    
+
     this->isHighlighted = isHighlighted;
+
+    if (isHighlighted) {
+        pulsePhase = 0.0f;
+        startTimerHz(60);
+    }
+
+    repaint();
+}
+
+void Node::timerCallback()
+{
+    pulsePhase += 0.07f;
+    if (pulsePhase >= 1.0f) {
+        pulsePhase = 1.0f;
+        stopTimer();
+    }
     repaint();
 }
 
@@ -101,10 +117,6 @@ void Node::setDisplayMode(NodeDisplayMode mode)
 
         case NodeDisplayMode::Velocity:
             nodeTextEditor->bindEditor(midiNoteData, ValueTreeIdentifiers::MidiVelocity);
-            break;
-
-        case NodeDisplayMode::Duration:
-            nodeTextEditor->bindEditor(midiNoteData, ValueTreeIdentifiers::MidiDuration);
             break;
 
         case NodeDisplayMode::CountLimit:

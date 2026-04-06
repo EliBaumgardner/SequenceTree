@@ -41,6 +41,15 @@ void NodeController::mouseExit(const juce::MouseEvent& e)
 }
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
+    if (isDraggingValue) {
+        isDraggingValue = false;
+        draggingValueNode = nullptr;
+        return;
+    }
+
+    ComponentContext::canvas->showGrid = false;
+    ComponentContext::canvas->repaint();
+
     if (draggedNodeTree.isValid())
     {
         int nodeId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
@@ -78,6 +87,16 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     }
     else if (Node* node= dynamic_cast<Node*>(component) ) {
 
+        if (node->nodeTextEditor != nullptr) {
+            auto localPos = e.getEventRelativeTo(node->nodeTextEditor.get()).getPosition();
+            if (node->nodeTextEditor->getLocalBounds().contains(localPos)) {
+                isDraggingValue = true;
+                dragStartValue = node->nodeTextEditor->bindValue.toString().getDoubleValue();
+                draggingValueNode = node;
+                return;
+            }
+        }
+
         node->setHoverVisual(true);
         int nodeId = node->getComponentID().getIntValue();
 
@@ -100,6 +119,15 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
 void NodeController::mouseDrag(const juce::MouseEvent& e)
 {
+    if (isDraggingValue && draggingValueNode != nullptr) {
+        int yOffset = e.getOffsetFromDragStart().y; // positive = down
+        int delta = -yOffset / 3;                   // up = positive, down = negative
+        double newValue = dragStartValue + delta;
+        draggingValueNode->nodeTextEditor->bindValue.setValue(newValue);
+        draggingValueNode->nodeTextEditor->formatDisplay(draggingValueNode->nodeTextEditor->mode);
+        return;
+    }
+
     juce::Component* component = e.eventComponent;
     juce::UndoManager* undoManager = ComponentContext::undoManager;
 
@@ -149,6 +177,12 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         if (isDragStart) {
             isDragStart = false;
             undoManager->beginNewTransaction();
+
+            dragParentCenter = node->getBounds().getCentre().toFloat();
+            ComponentContext::canvas->gridOrigin  = dragParentCenter;
+            ComponentContext::canvas->gridSpacing = 50.0f;
+            ComponentContext::canvas->showGrid    = true;
+
             if (nodeControllerMode == NodeControllerMode::Node) {
                 if (auto parent = dynamic_cast<Connector*>(node)) {
                     draggedNodeTree = NodeFactory::createRootNode(nodeId, newPosition, undoManager);
@@ -164,6 +198,21 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         }
 
         if (draggedNodeTree.isValid()) {
+            float spacing = ComponentContext::canvas->gridSpacing;
+            float dx = float(newPosition.xPosition) - dragParentCenter.x;
+            float dy = float(newPosition.yPosition) - dragParentCenter.y;
+
+            // Snap X and Y independently to the nearest grid point.
+            const float snapThreshold = 12.0f;
+            float snappedX = dragParentCenter.x + std::round(dx / spacing) * spacing;
+            float snappedY = dragParentCenter.y + std::round(dy / spacing) * spacing;
+
+            if (std::abs(float(newPosition.xPosition) - snappedX) < snapThreshold)
+                newPosition.xPosition = int(snappedX);
+            if (std::abs(float(newPosition.yPosition) - snappedY) < snapThreshold)
+                newPosition.yPosition = int(snappedY);
+
+            ComponentContext::canvas->repaint();
             ValueTreeState::setNodePosition(draggedNodeTree, newPosition, undoManager);
         }
     }

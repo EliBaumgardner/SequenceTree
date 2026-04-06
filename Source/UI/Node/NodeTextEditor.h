@@ -35,8 +35,6 @@ public:
     
     void makeBoundsVisible(bool isBoundsVisible);
     
-    void mouseDrag(const juce::MouseEvent& e) override;
-    
     NodeDisplayMode mode;
     juce::Value bindValue;
     

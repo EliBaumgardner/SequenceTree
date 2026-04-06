@@ -212,8 +212,10 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     if(isPlaying.load() == false){ return; }
 
-    std::shared_ptr<std::unordered_map<int,RTNode>>loadedGlobalNodes = std::atomic_load(&globalNodes);
-    std::shared_ptr<std::unordered_map<int,TraversalLogic>> loadedTraversals = std::atomic_load(&eventManager.traversals);
+    auto loadedGlobalNodes = std::atomic_load(&globalNodes);
+    auto loadedTraversals  = std::atomic_load(&eventManager.traversals);
+    NodeMap& nodes         = *loadedGlobalNodes;
+    auto& traversals       = *loadedTraversals;
 
     juce::ScopedNoDenormals noDenormals;
     auto numSamples = buffer.getNumSamples();
@@ -221,22 +223,22 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     buffer.clear();
     midiMessages.clear();
 
-    if (loadedTraversals->empty()) {
-        loadedTraversals->insert({1,TraversalLogic(1,this)});
-        TraversalLogic& traversal = loadedTraversals->at(1);
+    if (traversals.empty()) {
+        traversals.insert({1,TraversalLogic(1,this)});
+        TraversalLogic& traversal = traversals.at(1);
         traversal.isFirstEvent = true;
         traversal.targetId = traversal.rootId;
         traversal.state = TraversalLogic::TraversalState::Active;
         traversal.isLooping = true;
 
-        RTNode& rootNode = (*loadedGlobalNodes)[traversal.rootId];
+        RTNode& rootNode = nodes[traversal.rootId];
         eventManager.highlightNode(rootNode,true);
 
         int traversalId = rootNode.nodeID;
         eventManager.pushNote(rootNode,traversalId,midiMessages,0);
-     }
+    }
 
-    for (int sample = 0; sample < numSamples; ++sample) { eventManager.handleEventStream(sample,midiMessages); }
+    for (int sample = 0; sample < numSamples; ++sample) { eventManager.handleEventStream(sample, midiMessages, nodes, traversals); }
 
 }
 
@@ -248,7 +250,6 @@ void SequenceTreeAudioProcessor::clearOldEvents(RTNode node, int traversalId)
     }
 }
 
-//Adds a new graph to the processor and inserts/deletes nodes based on graph
 void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)
 {
     std::shared_ptr<std::unordered_map<int,RTNode>> newGlobalNodes;

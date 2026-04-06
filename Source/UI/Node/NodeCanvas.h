@@ -77,6 +77,10 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
 
         bool start = false;
 
+        bool showGrid = false;
+        juce::Point<float> gridOrigin { 0.0f, 0.0f };
+        float gridSpacing = 50.0f;
+
         juce::ValueTree canvasTree {"CanvasTree"};
 
         std::vector<AsyncUpdate> asyncUpdates;
