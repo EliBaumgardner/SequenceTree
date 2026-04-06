@@ -60,8 +60,6 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
     if (NodeCanvas* canvas = dynamic_cast<NodeCanvas*>(component)) {
 
-        // Forward mouseDown to DynamicPort so it can record lastMousePosition
-        // for the first drag-to-pan delta calculation.
         auto parent = component->getParentComponent();
         if (auto* dynamicPort = dynamic_cast<DynamicPort*>(parent)) {
             dynamicPort->mouseDown(e.getEventRelativeTo(dynamicPort));
@@ -93,8 +91,6 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
             undoManager->beginNewTransaction();
             NodeFactory::destroyNode(nodeId, undoManager);
-            // selectedNode->parent->nodeData.removeChild(selectedNode);
-            // nodeCanvas->removeNodeFromCanvas(selectedNode);
         }
         else {
             node->setSelectVisual();
@@ -131,7 +127,7 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
             return;
         }
 
-        if (!e.mods.isShiftDown()) {
+        if (e.mods.isShiftDown()) {
             if (isDragStart) {
                 isDragStart = false;
                 undoManager->beginNewTransaction();

@@ -53,6 +53,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/CustomLookAndFeel.cpp
         Source/Util/ValueTreeState.cpp
         Source/Util/ValueTreeIdentifiers.cpp
+        Source/UI/Node/CustomTextCaret.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE

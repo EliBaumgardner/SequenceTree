@@ -10,6 +10,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Util/PluginContext.h"
+
 class Node;
 
 class NodeArrow : public juce::Component, juce::Value::Listener, juce::Timer
@@ -34,12 +35,14 @@ public:
   juce::ValueTree boundNodeValueTree;
   juce::Value bindValue;
 
-  static inline const float growthFactor {25.0f};
+  static inline const float durationAmount {5.0f};
 
   float length = 0;
-  float animT  = 1.0f;   // 0 = arrow at parent, 1 = arrow at child (final)
+  float animT  = 1.0f;
 
   bool updateFromBindValue= false;
+
+  juce::TextEditor textEditor;
 
 private:
   float animVelocity = 0.0f;

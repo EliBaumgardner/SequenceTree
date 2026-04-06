@@ -18,38 +18,29 @@ public:
 
     void paint(juce::Graphics& g) override {
 
-        auto bounds = getLocalBounds().toFloat();
+        auto bounds = getLocalBounds().toFloat().reduced(4.0f, 1.0f);
         auto w = bounds.getWidth();
         auto h = bounds.getHeight();
+        auto x = bounds.getX();
+        auto y = bounds.getY();
 
-        if(increment == true){
-            juce::Path path;
-
-            path.startNewSubPath(0, h);
-            path.lineTo(w / 2, 0);
-            path.lineTo(w, h);
-            path.closeSubPath();
-
-            g.setColour(juce::Colours::white);
-            g.fillPath(path);
-
-            g.setColour(juce::Colours::black);
-            g.strokePath(path, juce::PathStrokeType(1.0f));
+        juce::Path path;
+        if (increment)
+        {
+            path.startNewSubPath(x,       y + h);
+            path.lineTo          (x + w * 0.5f, y);
+            path.lineTo          (x + w,  y + h);
         }
-        else {
-            juce::Path path;
-
-            path.startNewSubPath(0,0);
-            path.lineTo(w/2,h);
-            path.lineTo(w,0);
-            path.closeSubPath();
-
-            g.setColour(juce::Colours::white);
-            g.fillPath(path);
-
-            g.setColour(juce::Colours::black);
-            g.strokePath(path, juce::PathStrokeType(1.0f));
+        else
+        {
+            path.startNewSubPath(x,       y);
+            path.lineTo          (x + w * 0.5f, y + h);
+            path.lineTo          (x + w,  y);
         }
+        path.closeSubPath();
+
+        g.setColour(juce::Colours::black);
+        g.fillPath(path);
     }
 
     void mouseDown(const juce::MouseEvent& e) override {

@@ -26,6 +26,7 @@ class TempoDisplay;
 class SyncButton;
 
 class CustomTextEditor;
+class NodeTextEditor;
 
 class UndoButton;
 class RedoButton;
@@ -37,19 +38,34 @@ class CustomLookAndFeel : public juce::LookAndFeel_V4
 
 public:
 
+    struct TextCords {
+        int parentNodeX;
+        int parentNodeY;
+        int childNodeX;
+        int childNodeY;
+        int newX;
+        int newY;
+    };
+
     CustomLookAndFeel();
 
     virtual void drawEditor         (juce::Graphics& g, CustomTextEditor& editor);
+    virtual void drawNodeTextEditor (juce::Graphics& g, NodeTextEditor& editor);
+    juce::CaretComponent* createCaretComponent(juce::Component* keyFocusOwner) override;
+
     virtual void drawCanvas         (juce::Graphics& g, const NodeCanvas& canvas);
 
     virtual void drawTitleBar       (juce::Graphics& g, const Titlebar& titleBar);
 
-    virtual void drawDisplayMenu(juce::Graphics& g, const DisplayMenu& displaySelector);
-    virtual void drawButtonPane   (juce::Graphics& g, const ButtonPane& selectionBar);
+    virtual void drawDisplayMenu    (juce::Graphics& g, const DisplayMenu& displaySelector);
+    virtual void drawButtonPane     (juce::Graphics& g, const ButtonPane& selectionBar);
     virtual void drawDisplayButton  (juce::Graphics& g, const DisplayButton& displayButton);
 
     virtual void drawNode           (juce::Graphics& g, const Node& node);
-    virtual void drawNodeArrow      (juce::Graphics& g, const NodeArrow& nodeArrow);
+
+    void drawNodeArrowText          (juce::Graphics &g, const NodeArrow &nodeArrow, const juce::TextEditor &editor, TextCords textCords);
+
+    virtual void drawNodeArrow      (juce::Graphics& g, const NodeArrow& nodeArrow, const juce::TextEditor& editor);
 
     virtual void drawPlayButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const PlayButton& button);
     virtual void drawSyncButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const SyncButton& button);
