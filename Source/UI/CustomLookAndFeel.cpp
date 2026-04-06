@@ -3,6 +3,7 @@
 //
 
 #include "CustomLookAndFeel.h"
+#include "Buttons/ResetButton.h"
 #include "Node/NodeCanvas.h"
 #include "Node/Node.h"
 #include "Titlebar.h"
@@ -349,6 +350,14 @@ void CustomLookAndFeel::drawUndoRedoPane(juce::Graphics &g,const UndoRedoPane& u
     auto bounds = undoRedoPane.getLocalBounds().reduced(2.0f).toFloat();
     g.setColour(buttonColour);
     g.fillRect(bounds);
+}
+
+void CustomLookAndFeel::drawResetButton(juce::Graphics &g, const ResetButton &resetButton, bool isButtonDown)
+{
+    auto area = resetButton.getLocalBounds().toFloat().reduced(5.0f);
+
+    g.setColour(isButtonDown ? lightColour3.darker() : lightColour3);
+    g.fillRect(area);
 }
 
 void CustomLookAndFeel::drawNodeTextEditor(juce::Graphics &g, NodeTextEditor &nodeTextEditor) {

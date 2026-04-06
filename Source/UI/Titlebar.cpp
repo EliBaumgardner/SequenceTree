@@ -12,6 +12,7 @@
 #include "Node/NodeCanvas.h"
 #include "CustomLookAndFeel.h"
 #include "../Util/PluginContext.h"
+#include "../Core/PluginProcessor.h"
 
 #include "Titlebar.h"
 
@@ -20,6 +21,7 @@ Titlebar::Titlebar()
 {
     setLookAndFeel(ComponentContext::lookAndFeel);
     addAndMakeVisible(playButton);
+    addAndMakeVisible(resetButton);
     addAndMakeVisible(tempoDisplay);
     addAndMakeVisible(buttonPane);
     addAndMakeVisible(displaySelector);
@@ -31,6 +33,10 @@ Titlebar::Titlebar()
 
         canvas.start = !canvas.start;
         canvas.setProcessorPlayblack(canvas.start);
+    };
+
+    resetButton.onClick = [=]() {
+        ComponentContext::processor->resetRequested.store(true);
     };
 }
 
@@ -53,6 +59,9 @@ void Titlebar::resized()
     auto area = bounds;
 
     playButton.setBounds(area.removeFromLeft(buttonSize));
+    area.removeFromLeft(spacing);
+
+    resetButton.setBounds(area.removeFromLeft(buttonSize));
     area.removeFromLeft(spacing);
 
     tempoDisplay.setBounds(area.removeFromLeft(tempoDisplayWidth));

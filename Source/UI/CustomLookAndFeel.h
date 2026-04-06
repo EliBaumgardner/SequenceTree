@@ -32,6 +32,7 @@ class UndoButton;
 class RedoButton;
 
 class UndoRedoPane;
+class ResetButton;
 
 class CustomLookAndFeel : public juce::LookAndFeel_V4
 {
@@ -76,6 +77,7 @@ public:
     virtual void drawUndoButton     (juce::Graphics& g, const UndoButton& undoButton, bool isButtonDown);
     virtual void drawRedoButton     (juce::Graphics& g, const RedoButton& redoButton, bool isButtonDown);
     virtual void drawUndoRedoPane   (juce::Graphics& g, const UndoRedoPane& undoRedoPane);
+    virtual void drawResetButton    (juce::Graphics& g, const ResetButton& resetButton, bool isButtonDown);
 
 
 private:

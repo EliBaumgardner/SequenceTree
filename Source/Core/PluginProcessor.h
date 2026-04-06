@@ -77,7 +77,8 @@ class SequenceTreeAudioProcessor  : public juce::AudioProcessor
 
     std::shared_ptr<std::unordered_map<int,RTNode>> globalNodes = nullptr;
 
-    std::atomic<bool> isPlaying = false;
+    std::atomic<bool> isPlaying      = false;
+    std::atomic<bool> resetRequested = false;
 
     juce::AudioProcessorValueTreeState valueTreeState;
 

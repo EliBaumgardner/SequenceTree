@@ -119,10 +119,6 @@ void Node::setDisplayMode(NodeDisplayMode mode)
 }
 
 void Node::incrementNodeTextEditorValue(int incrementValue) {
-    if (nodeArrow == nullptr) {
-        return;
-    }
-    nodeArrow->updateFromBindValue = true;
     double editorValue = nodeTextEditor->bindValue.toString().getDoubleValue();
     editorValue += incrementValue;
 

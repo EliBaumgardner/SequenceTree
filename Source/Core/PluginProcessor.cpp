@@ -194,6 +194,22 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 
 void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    if (resetRequested.exchange(false))
+    {
+        for (auto& note : eventManager.activeNotes)
+            midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), 0);
+
+        eventManager.activeNotes.clear();
+
+        auto emptyTraversals = std::make_shared<std::unordered_map<int, TraversalLogic>>();
+        std::atomic_store(&eventManager.traversals, emptyTraversals);
+
+        juce::MessageManager::callAsync([this]() {
+            for (auto& [nodeId, node] : canvas->nodeMap)
+                node->setHighlightVisual(false);
+        });
+    }
+
     if(isPlaying.load() == false){ return; }
 
     std::shared_ptr<std::unordered_map<int,RTNode>>loadedGlobalNodes = std::atomic_load(&globalNodes);
