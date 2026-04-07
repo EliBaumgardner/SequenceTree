@@ -55,6 +55,7 @@ void NodeCanvas::handleAsyncUpdate() {
 void NodeCanvas::addNodeToCanvas(int nodeId)
 {
     juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
+    if (!nodeValueTree.isValid()) return;
     juce::ValueTree nodeParent = ValueTreeState::getNodeParent(nodeId);
     juce::ValueTree midiNotes  = ValueTreeState::getMidiNotes(nodeId);
     juce::ValueTree midiNote = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
@@ -161,12 +162,14 @@ void NodeCanvas::setNodePosition(int nodeId)
 void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
 {
     int parentNodeId = parentNode->getComponentID().getIntValue();
+    int childNodeId  = childNode->getComponentID().getIntValue();
 
     juce::ValueTree parentMidiNotesData = ValueTreeState::getMidiNotes(parentNodeId);
     juce::ValueTree parentMidiNoteData  = parentMidiNotesData.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
 
     auto arrow = std::make_unique<NodeArrow>(parentNode, childNode);
-    parentNode->nodeArrow = arrow.get();
+
+    parentNode->nodeArrows[childNodeId] = arrow.get();
     addAndMakeVisible(arrow.get());
 
     arrow->toBack();
@@ -209,6 +212,7 @@ void NodeCanvas::updateLinePoints(Node* movedNode)
 
 void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
 {
+
     jassert(nodeValueTree.isValid());
 
     int rootNodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
@@ -245,7 +249,15 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
             RTNode rtNode;
             rtNode.graphID = graphId;
             rtNode.nodeID = nodeId;
-            rtNode.countLimit = countLimit;;
+            rtNode.countLimit = countLimit;
+
+            auto nodeIt = nodeMap.find(nodeId);
+            if (nodeIt != nodeMap.end()) {
+                Node* nodeFromTree = nodeIt->second;
+                for (auto& [childId, nodeArrow] : nodeFromTree->nodeArrows)
+                    rtNode.durationMap[childId] = nodeArrow->duration;
+            }
+
 
             if (nodeType == ValueTreeIdentifiers::NodeData || nodeType == ValueTreeIdentifiers::RootNodeData) {rtNode.nodeType = RTNode::NodeType::Node;}
             if (nodeType == ValueTreeIdentifiers::ConnectorData ) { rtNode.nodeType = RTNode::NodeType::RelayNode; }
@@ -420,6 +432,9 @@ void NodeCanvas::clearCanvas()
 
 void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
 {
+    asyncUpdates.clear();
+    cancelPendingUpdate();
+
     clearCanvas();
 
     std::unordered_map<int,juce::ValueTree> rootNodeMap;
@@ -468,11 +483,11 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         juce::ValueTree midiNotes = nodeValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
         canvasNode->nodeValueTree = nodeValueTree;
         canvasNode->midiNoteData  = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+        canvasNode->setComponentID(std::to_string(nodeId));
         canvasNode->setDisplayMode(NodeDisplayMode::Pitch);
 
         canvasNode->setCentrePosition(xPosition, yPosition);
         canvasNode->setSize(radius*2, radius*2);
-        canvasNode->setComponentID(std::to_string(nodeId));
 
         addAndMakeVisible(canvasNode.get());
 

@@ -39,6 +39,7 @@ public:
 
   float length = 0;
   float animT  = 1.0f;
+  int duration = 0;
 
   bool updateFromBindValue= false;
 

@@ -235,7 +235,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         eventManager.highlightNode(rootNode,true);
 
         int traversalId = rootNode.nodeID;
-        eventManager.pushNote(rootNode,traversalId,midiMessages,0);
+        eventManager.pushNote(rootNode,traversalId,midiMessages,0,nodes,traversals);
     }
 
     for (int sample = 0; sample < numSamples; ++sample) { eventManager.handleEventStream(sample, midiMessages, nodes, traversals); }
