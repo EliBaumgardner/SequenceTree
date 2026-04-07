@@ -38,7 +38,7 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
 
   childNode->incomingAngle = std::atan2(dy, dx);
 
-  int duration = (int)(std::abs(dx) * durationAmount);
+  duration = (int)(std::abs(dx) * durationAmount);
   bindValue.setValue(duration);
   textEditor.setText(juce::String(duration));
 

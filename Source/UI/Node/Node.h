@@ -41,6 +41,7 @@ public:
     void incrementNodeTextEditorValue(int incrementValue);
 
     NodeArrow* nodeArrow = nullptr;
+    std::unordered_map<int, NodeArrow*> nodeArrows;
 
     juce::ValueTree nodeValueTree;
     juce::ValueTree midiNoteData;
