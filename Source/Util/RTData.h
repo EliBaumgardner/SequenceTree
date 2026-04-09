@@ -32,7 +32,7 @@ struct RTNode {
     int parentId = 0;
     int countLimit = 0;
 
-    enum class NodeType {Node, RelayNode, Counter};
+    enum class NodeType {Node, Connector, Counter};
 
     NodeType nodeType = NodeType::Node;
 

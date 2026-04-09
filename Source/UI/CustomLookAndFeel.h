@@ -19,6 +19,7 @@ class DisplayButton;
 
 class NodeButton;
 class ConnectorButton;
+class ModulatorButton;
 
 class PlayButton;
 
@@ -70,8 +71,11 @@ public:
 
     virtual void drawPlayButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const PlayButton& button);
     virtual void drawSyncButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const SyncButton& button);
+
     virtual void drawNodeButton     (juce::Graphics& g, const NodeButton& nodeButton);
     virtual void drawTraverserButton(juce::Graphics& g, const ConnectorButton& traverserButton);
+    virtual void drawModulatorButton(juce::Graphics& g, const ModulatorButton& modulatorButton);
+
     virtual void drawTempoDisplay   (juce::Graphics& g, const TempoDisplay& tempoDisplay);
 
     virtual void drawUndoButton     (juce::Graphics& g, const UndoButton& undoButton, bool isButtonDown);

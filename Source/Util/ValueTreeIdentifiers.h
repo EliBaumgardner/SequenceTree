@@ -22,6 +22,8 @@ public:
     static const juce::Identifier RootNodeData;
     static const juce::Identifier NodeData;
     static const juce::Identifier ConnectorData;
+    static const juce::Identifier ModulatorData;
+    static const juce::Identifier ModulatorRootData;
 
     static const juce::Identifier NodeChildrenIds;
 
@@ -49,6 +51,14 @@ public:
     static const juce::Identifier MidiPitch;
     static const juce::Identifier MidiVelocity;
     static const juce::Identifier MidiDuration;
+
+    static const juce::Identifier ModAmount;
+
+    static const juce::Identifier ModulationType;
+    static const juce::Identifier PitchMod;
+    static const juce::Identifier VelocityMod;
+    static const juce::Identifier DurationMod;
+
 
     //Static ValueTrees
 };

@@ -57,8 +57,9 @@ public:
     int nodeId;
     NodeType nodeType    = NodeType::Node;
     float incomingAngle  = 0.0f;
-    bool isHovered     = false;
-    bool isSelected    = false;
-    bool isHighlighted = false;
-    float pulsePhase   = 1.0f;
+    bool isHovered           = false;
+    bool isSelected          = false;
+    bool isHighlighted       = false;
+    bool pendingHighlightOff = false;
+    float pulsePhase         = 1.0f;
 };

@@ -18,7 +18,7 @@ class NodeCanvas;
 
 class Node;
 
-class Counter;
+class Modulator;
 
 class NodeMenu;
 
@@ -33,7 +33,7 @@ class NodeController : public juce::MouseListener {
     
 public:
 
-    enum class NodeControllerMode {Node,Connector};
+    enum class NodeControllerMode {Node,Connector,Modulator};
     NodeControllerMode nodeControllerMode;
 
     NodeController();
@@ -42,6 +42,9 @@ public:
     void mouseExit (const juce::MouseEvent& e) override;
     void mouseDrag (const juce::MouseEvent& e) override;
     void mouseDown (const juce::MouseEvent& e) override;
+
+    void snapToGrid(juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree);
+
     void mouseUp   (const juce::MouseEvent& e) override;
 
     void connectNode(int deltaX, int deltaY, juce::Point<float> position);

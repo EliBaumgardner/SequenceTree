@@ -11,7 +11,7 @@
 #include "Node/NodeCanvas.h"
 #include "Node/Node.h"
 #include "NodeController.h"
-#include "Node/Counter.h"
+#include "Node/Modulator.h"
 #include "Node/Connector.h"
 #include "NodeFactory.h"
 #include "DynamicPort.h"
@@ -44,17 +44,17 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
     if (isDraggingValue) {
         isDraggingValue = false;
         draggingValueNode = nullptr;
-        return;
+    } else {
+        ComponentContext::canvas->showGrid = false;
+        ComponentContext::canvas->repaint();
+
+        if (draggedNodeTree.isValid())
+        {
+            int nodeId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
+            ComponentContext::canvas->triggerArrowSnapForNode(nodeId);
+        }
     }
 
-    ComponentContext::canvas->showGrid = false;
-    ComponentContext::canvas->repaint();
-
-    if (draggedNodeTree.isValid())
-    {
-        int nodeId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
-        ComponentContext::canvas->triggerArrowSnapForNode(nodeId);
-    }
     draggedNodeTree = juce::ValueTree();
     isDragStart = true;
 }
@@ -87,6 +87,12 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     }
     else if (Node* node= dynamic_cast<Node*>(component) ) {
 
+        dragParentCenter = node->getBounds().getCentre().toFloat();
+        ComponentContext::canvas->gridOrigin  = dragParentCenter;
+        ComponentContext::canvas->gridSpacing = 50.0f;
+        ComponentContext::canvas->showGrid    = true;
+        ComponentContext::canvas->repaint();
+
         if (node->nodeTextEditor != nullptr) {
             auto localPos = e.getEventRelativeTo(node->nodeTextEditor.get()).getPosition();
             if (node->nodeTextEditor->getLocalBounds().contains(localPos)) {
@@ -117,11 +123,28 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     }
 }
 
+void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree) {
+    float spacing = ComponentContext::canvas->gridSpacing;
+    float dx = float(newPosition.xPosition) - dragParentCenter.x;
+    float dy = float(newPosition.yPosition) - dragParentCenter.y;
+
+    const float snapThreshold = 12.0f;
+    float snappedX = dragParentCenter.x + std::round(dx / spacing) * spacing;
+    float snappedY = dragParentCenter.y + std::round(dy / spacing) * spacing;
+
+    if (std::abs(float(newPosition.xPosition) - snappedX) < snapThreshold)
+        newPosition.xPosition = int(snappedX);
+    if (std::abs(float(newPosition.yPosition) - snappedY) < snapThreshold)
+        newPosition.yPosition = int(snappedY);
+
+    ValueTreeState::setNodePosition(draggedNodeTree, newPosition, undoManager);
+}
+
 void NodeController::mouseDrag(const juce::MouseEvent& e)
 {
     if (isDraggingValue && draggingValueNode != nullptr) {
-        int yOffset = e.getOffsetFromDragStart().y; // positive = down
-        int delta = -yOffset / 3;                   // up = positive, down = negative
+        int yOffset = e.getOffsetFromDragStart().y;
+        int delta = -yOffset / 3;
         double newValue = dragStartValue + delta;
         draggingValueNode->nodeTextEditor->bindValue.setValue(newValue);
         draggingValueNode->nodeTextEditor->formatDisplay(draggingValueNode->nodeTextEditor->mode);
@@ -155,20 +178,19 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
             return;
         }
 
-        if (e.mods.isShiftDown()) {
+        if (!e.mods.isShiftDown()) {
             if (isDragStart) {
                 isDragStart = false;
                 undoManager->beginNewTransaction();
             }
 
             juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
-
             NodePosition oldPosition = ValueTreeState::getNodePosition(nodeId);
+
+            snapToGrid(undoManager, newPosition, nodeValueTree);
 
             int deltaX = newPosition.xPosition - oldPosition.xPosition;
             int deltaY = newPosition.yPosition - oldPosition.yPosition;
-
-            ValueTreeState::setNodePosition(nodeValueTree, newPosition, undoManager);
 
             ComponentContext::canvas->moveDescendants(nodeValueTree, deltaX, deltaY);
             return;
@@ -177,11 +199,6 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         if (isDragStart) {
             isDragStart = false;
             undoManager->beginNewTransaction();
-
-            dragParentCenter = node->getBounds().getCentre().toFloat();
-            ComponentContext::canvas->gridOrigin  = dragParentCenter;
-            ComponentContext::canvas->gridSpacing = 50.0f;
-            ComponentContext::canvas->showGrid    = true;
 
             if (nodeControllerMode == NodeControllerMode::Node) {
                 if (auto parent = dynamic_cast<Connector*>(node)) {
@@ -192,28 +209,21 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
                 }
             }
             else if (nodeControllerMode == NodeControllerMode::Connector) {
-                draggedNodeTree = ValueTreeState::addConnector(nodeId, newPosition, undoManager);
+                draggedNodeTree = NodeFactory::createConnector(nodeId, newPosition, undoManager);
+            }
+            else if (nodeControllerMode == NodeControllerMode::Modulator) {
+                if (node->nodeValueTree.getType() == ValueTreeIdentifiers::ModulatorRootData) {
+                    draggedNodeTree = NodeFactory::createModulator(nodeId, newPosition, undoManager);
+                }
+                else {
+                    draggedNodeTree = NodeFactory::createModulatorRoot(nodeId, newPosition, undoManager);
+                }
             }
             return;
         }
 
         if (draggedNodeTree.isValid()) {
-            float spacing = ComponentContext::canvas->gridSpacing;
-            float dx = float(newPosition.xPosition) - dragParentCenter.x;
-            float dy = float(newPosition.yPosition) - dragParentCenter.y;
-
-            // Snap X and Y independently to the nearest grid point.
-            const float snapThreshold = 12.0f;
-            float snappedX = dragParentCenter.x + std::round(dx / spacing) * spacing;
-            float snappedY = dragParentCenter.y + std::round(dy / spacing) * spacing;
-
-            if (std::abs(float(newPosition.xPosition) - snappedX) < snapThreshold)
-                newPosition.xPosition = int(snappedX);
-            if (std::abs(float(newPosition.yPosition) - snappedY) < snapThreshold)
-                newPosition.yPosition = int(snappedY);
-
-            ComponentContext::canvas->repaint();
-            ValueTreeState::setNodePosition(draggedNodeTree, newPosition, undoManager);
+            snapToGrid(undoManager, newPosition, draggedNodeTree);
         }
     }
 }

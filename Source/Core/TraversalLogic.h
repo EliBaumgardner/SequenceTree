@@ -9,6 +9,13 @@ class SequenceTreeAudioProcessor;
 class TraversalLogic {
 public:
 
+
+    struct traversalModulation {
+        int pitchModulation;
+        int velocityModulation;
+        int durationModulation;
+    };
+
     std::unordered_map<int, int> counts;
     std::vector<int> traversers;
 
@@ -20,7 +27,7 @@ public:
     int  referenceTargetId = 0;
 
     enum class TraversalState { Start, Active, End, Reset };
-    enum class EventType      { Node, RelayNode, Counter  };
+    enum class EventType      { Node, Connector, Counter  };
 
     TraversalState state = TraversalState::Start;
 

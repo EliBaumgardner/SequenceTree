@@ -13,6 +13,9 @@
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
 : AudioProcessorEditor(p),audioProcessor (p)
 {
+    if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
+        window->setFullScreen (true);
+
     ComponentContext::processor = &p;
     ComponentContext::undoManager = &undoManager;
     ComponentContext::lookAndFeel = &lookAndFeel;

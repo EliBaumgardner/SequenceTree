@@ -17,7 +17,8 @@ struct NodeNote {
     int duration;
 };
 
-enum class NodeType { Node, Connector, Root};
+enum class ModulationType {Pitch,Velocity,Duration};
+enum class NodeType { Node, Connector, Root, Modulator};
 
 enum class NodeDisplayMode {Pitch, Velocity,Duration,CountLimit};
 

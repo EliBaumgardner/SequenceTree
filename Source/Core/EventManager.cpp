@@ -7,17 +7,37 @@ void EventManager::handleEventStream(int sample, juce::MidiBuffer& midiMessages,
 {
     for (int i = static_cast<int>(activeNotes.size()) - 1; i >= 0; --i) {
 
-        if (traversalMap.empty()) {
-            DBG("First Note Not Already Made!");
-            handleFirstTraversal(sample, midiMessages, nodes, traversalMap);
+        ActiveNote& note = activeNotes[i];
+
+        // If this note's node was deleted from the graph, stop it and restart from root
+        if (nodes.find(note.noteNode.nodeID) == nodes.end()) {
+            if (note.noteNode.nodeType != RTNode::NodeType::Connector)
+                midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), sample);
+
+            int deletedTraversalId = note.traversalId;
+            activeNotes.erase(activeNotes.begin() + i);
+
+            if (deletedTraversalId != -1) {
+                auto traversalIt = traversalMap.find(deletedTraversalId);
+                if (traversalIt != traversalMap.end()) {
+                    TraversalLogic& traversal = traversalIt->second;
+                    auto rootIt = nodes.find(traversal.rootId);
+                    if (rootIt != nodes.end()) {
+                        traversal.targetId = traversal.rootId;
+                        traversal.state    = TraversalLogic::TraversalState::Active;
+                        highlightNode(rootIt->second, true);
+                        pushNote(rootIt->second, deletedTraversalId, midiMessages, sample, nodes, traversalMap);
+                    }
+                }
+            }
             continue;
         }
 
-        ActiveNote& note = activeNotes[i];
         if (--note.remainingSamples > 0) { continue; }
 
         DBG("Note End Reached at Sample:" + juce::String(sample));
-        midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), sample);
+        if (note.noteNode.nodeType != RTNode::NodeType::Connector)
+            midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), sample);
 
         if (note.traversalId == -1) {
             DBG("Note Discarded at Sample:" + juce::String(sample));
@@ -38,12 +58,14 @@ void EventManager::handleEventStream(int sample, juce::MidiBuffer& midiMessages,
 
         switch (tempNote.noteNode.nodeType) {
             case RTNode::NodeType::Node: {
+                if (nodes.find(traversal.targetId) == nodes.end()) break;
                 traversal.handleNodeEvent(nodes);
-                if (traversal.shouldTraverse())
+                if (traversal.shouldTraverse() && nodes.find(traversal.targetId) != nodes.end())
                     pushNote(traversal.getTargetNode(nodes), traversalId, midiMessages, sample, nodes, traversalMap);
                 break;
             }
-            case RTNode::NodeType::RelayNode: {
+            case RTNode::NodeType::Connector: {
+                if (nodes.find(tempNote.noteNode.nodeID) == nodes.end()) break;
                 traversal.handleRelayNodeEvent(tempNote.noteNode.nodeID, nodes);
                 if (traversal.shouldTraverse())
                     pushConnectorNotes(tempNote.noteNode.nodeID, midiMessages, sample, nodes, traversalMap);
@@ -54,20 +76,6 @@ void EventManager::handleEventStream(int sample, juce::MidiBuffer& midiMessages,
     }
 }
 
-void EventManager::handleFirstTraversal(int sample, juce::MidiBuffer& midiMessages, NodeMap& nodes, std::unordered_map<int, TraversalLogic>& traversalMap)
-{
-    traversalMap.insert({1, TraversalLogic(1, processor)});
-    TraversalLogic& traversal = traversalMap.at(1);
-    traversal.targetId  = traversal.rootId;
-    traversal.state     = TraversalLogic::TraversalState::Active;
-    traversal.isLooping = true;
-
-    RTNode& rootNode   = nodes[traversal.rootId];
-    int     traversalId = rootNode.nodeID;
-
-    highlightNode(rootNode, true);
-    pushNote(rootNode, traversalId, midiMessages, sample, nodes, traversalMap);
-}
 
 void EventManager::pushNote(RTNode node, int traversalId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, std::unordered_map<int, TraversalLogic>& traversalMap)
 {
@@ -85,9 +93,7 @@ void EventManager::pushNote(RTNode node, int traversalId, juce::MidiBuffer& midi
         velocity = static_cast<int>(note.velocity);
         duration = static_cast<int>(note.duration);
 
-        if (node.nodeType == RTNode::NodeType::RelayNode) {
-            // Duration comes from the parent node's arrow to this relay node.
-            // targetId is still the parent here — advance() hasn't run yet.
+        if (node.nodeType == RTNode::NodeType::Connector) {
             auto tIt = traversalMap.find(traversalId);
             if (tIt != traversalMap.end()) {
                 auto parentIt = nodes.find(tIt->second.targetId);
@@ -105,10 +111,8 @@ void EventManager::pushNote(RTNode node, int traversalId, juce::MidiBuffer& midi
 
         if (velocity <= 0) {
             velocity = 63;
-            DBG("NOTE OFF MESSAGE SENT TO PUSHNOTE!");
+
         }
-    } else {
-        DBG("NO NODE NOTES FOUND!");
     }
 
     ActiveNote newNote;
@@ -120,7 +124,8 @@ void EventManager::pushNote(RTNode node, int traversalId, juce::MidiBuffer& midi
     newNote.noteNode           = node;
 
     activeNotes.push_back(newNote);
-    midiMessages.addEvent(juce::MidiMessage::noteOn(1, pitch, static_cast<juce::uint8>(velocity)), sample);
+    if (node.nodeType != RTNode::NodeType::Connector)
+        midiMessages.addEvent(juce::MidiMessage::noteOn(1, pitch, static_cast<juce::uint8>(velocity)), sample);
 
     // When pushing a regular node, immediately push any relay notes that will fire during it.
     // They use the arrow duration from this node to each relay (independent of this note's length).
@@ -139,22 +144,33 @@ void EventManager::pushNote(RTNode node, int traversalId, juce::MidiBuffer& midi
 
 void EventManager::pushConnectorNotes(int traverserId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, std::unordered_map<int, TraversalLogic>& traversalMap)
 {
-    auto& traverser = nodes[traverserId];
+    auto traverserIt = nodes.find(traverserId);
+    if (traverserIt == nodes.end()) return;
+    const RTNode& traverser = traverserIt->second;
 
     for (int connectorId : traverser.connectors) {
-        auto& connector = nodes[connectorId];
+        auto connectorIt = nodes.find(connectorId);
+        if (connectorIt == nodes.end()) continue;
+        const RTNode& connector = connectorIt->second;
 
         if (traversalMap.find(connector.graphID) != traversalMap.end()) {
-            highlightNode(nodes.at(traversalMap.at(connector.graphID).targetId), false);
+            auto& existingTraversal = traversalMap.at(connector.graphID);
+            auto  oldTargetIt       = nodes.find(existingTraversal.targetId);
+            if (oldTargetIt != nodes.end())
+                highlightNode(oldTargetIt->second, false);
             clearOldEvents(connector.graphID);
         } else {
             traversalMap.insert({connector.graphID, TraversalLogic(connector.graphID, processor)});
         }
 
-        auto& newTraversal      = traversalMap.at(connector.graphID);
-        newTraversal.targetId   = connectorId;
-        newTraversal.state      = TraversalLogic::TraversalState::Active;
-        highlightNode(newTraversal.getTargetNode(nodes), true);
+        auto& newTraversal    = traversalMap.at(connector.graphID);
+        newTraversal.targetId = connectorId;
+        newTraversal.state    = TraversalLogic::TraversalState::Active;
+
+        auto newTargetIt = nodes.find(newTraversal.targetId);
+        if (newTargetIt != nodes.end())
+            highlightNode(newTargetIt->second, true);
+
         pushNote(connector, connector.graphID, midiMessages, sample, nodes, traversalMap);
     }
 }

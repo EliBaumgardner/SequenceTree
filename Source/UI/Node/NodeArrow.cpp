@@ -39,7 +39,8 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
   childNode->incomingAngle = std::atan2(dy, dx);
 
   duration = (int)(std::abs(dx) * durationAmount);
-  bindValue.setValue(duration);
+  if (boundNodeValueTree.isValid())
+      bindValue.setValue(duration);
   textEditor.setText(juce::String(duration));
 
   // Build the curve in canvas coordinates to get the true bounding box.
@@ -54,6 +55,19 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
 
   float connDirX = std::cos(parentNode->incomingAngle);
   float connDirY = std::sin(parentNode->incomingAngle);
+
+  // If exit direction points away from child, use the direct direction instead
+  // to prevent the Bezier from looping back and creating huge bounds.
+  {
+      float roughX = arrowEndX - float(start.x);
+      float roughY = arrowEndY - float(start.y);
+      float roughLen = std::sqrt(roughX * roughX + roughY * roughY);
+      if (roughLen > 1.0f && connDirX * (roughX / roughLen) + connDirY * (roughY / roughLen) < 0.0f)
+      {
+          connDirX = roughX / roughLen;
+          connDirY = roughY / roughLen;
+      }
+  }
 
   float startX = float(start.x) + float(parentRadius) * connDirX;
   float startY = float(start.y) + float(parentRadius) * connDirY;
