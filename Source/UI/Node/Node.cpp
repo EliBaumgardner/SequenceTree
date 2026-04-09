@@ -83,16 +83,22 @@ void Node::setSelectVisual(){
     repaint();
 }
 
-void Node::setHighlightVisual(bool isHighlighted){
-
-    this->isHighlighted = isHighlighted;
-
-    if (isHighlighted) {
+void Node::setHighlightVisual(bool h)
+{
+    if (h) {
+        pendingHighlightOff = false;
+        isHighlighted = true;
         pulsePhase = 0.0f;
         startTimerHz(60);
+        repaint();
+    } else {
+        if (isTimerRunning()) {
+            pendingHighlightOff = true;
+        } else {
+            isHighlighted = false;
+            repaint();
+        }
     }
-
-    repaint();
 }
 
 void Node::timerCallback()
@@ -101,6 +107,10 @@ void Node::timerCallback()
     if (pulsePhase >= 1.0f) {
         pulsePhase = 1.0f;
         stopTimer();
+        if (pendingHighlightOff) {
+            pendingHighlightOff = false;
+            isHighlighted = false;
+        }
     }
     repaint();
 }

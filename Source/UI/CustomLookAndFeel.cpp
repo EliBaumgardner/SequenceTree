@@ -3,6 +3,7 @@
 //
 
 #include "CustomLookAndFeel.h"
+#include "Buttons/ModulatorButton.h"
 #include "Buttons/ResetButton.h"
 #include "Node/NodeCanvas.h"
 #include "Node/Node.h"
@@ -232,6 +233,18 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         float connectorDirX = std::cos(a->incomingAngle);
         float connectorDirY = std::sin(a->incomingAngle);
 
+        // If exit direction points away from child, fall back to direct direction.
+        {
+            float roughX = arrowEndX - parentCenterX;
+            float roughY = arrowEndY - parentCenterY;
+            float roughLen = std::sqrt(roughX * roughX + roughY * roughY);
+            if (roughLen > 1.0f && connectorDirX * (roughX / roughLen) + connectorDirY * (roughY / roughLen) < 0.0f)
+            {
+                connectorDirX = roughX / roughLen;
+                connectorDirY = roughY / roughLen;
+            }
+        }
+
         float startX = parentCenterX + float(parentRadius) * connectorDirX;
         float startY = parentCenterY + float(parentRadius) * connectorDirY;
 
@@ -348,6 +361,17 @@ void CustomLookAndFeel::drawTraverserButton(juce::Graphics& g, const ConnectorBu
 
     g.fillPath(triangle);
 }
+
+void CustomLookAndFeel::drawModulatorButton(juce::Graphics &g, const ModulatorButton &modulatorButton) {
+    auto bounds = modulatorButton.getLocalBounds().toFloat().reduced(2.0f);
+    g.setColour(modulatorButton.isSelected ? lightColour3.darker() : lightColour3);
+
+    auto rect = bounds;
+
+    g.fillRect(rect);
+    g.drawRect(rect, 1.0f);
+}
+
 
 void CustomLookAndFeel::drawUndoButton(juce::Graphics &g, const UndoButton &undoButton, bool isButtonDown)
 {

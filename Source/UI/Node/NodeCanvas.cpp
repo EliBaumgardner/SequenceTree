@@ -13,6 +13,8 @@
 #include "Connector.h"
 #include "NodeCanvas.h"
 
+#include "Modulator.h"
+
 
 // Canvas Related Functions //
 NodeCanvas::NodeCanvas()
@@ -44,6 +46,19 @@ void NodeCanvas::handleAsyncUpdate() {
         }
         else if (updateType == AsyncUpdateType::NodeRemoved) {
             removeNodeFromCanvas(nodeId);
+
+            int rootNodeId = asyncUpdate.rootNodeId;
+            if (rootNodeId != nodeId) {
+                // Non-root deleted — root still exists, rebuild its graph without the deleted node
+                juce::ValueTree rootTree = ValueTreeState::getNode(rootNodeId);
+                if (rootTree.isValid())
+                    makeRTGraph(rootTree);
+            } else {
+                // Root itself deleted — push an empty graph to clear it from the audio thread
+                auto emptyGraph = std::make_shared<RTGraph>();
+                emptyGraph->graphID = rootNodeId;
+                ComponentContext::processor->setNewGraph(emptyGraph);
+            }
         }
         else if (updateType == AsyncUpdateType::NodeMoved) {
             setNodePosition(nodeId);
@@ -55,7 +70,9 @@ void NodeCanvas::handleAsyncUpdate() {
 void NodeCanvas::addNodeToCanvas(int nodeId)
 {
     juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
-    if (!nodeValueTree.isValid()) return;
+
+    jassert(nodeValueTree.isValid());
+
     juce::ValueTree nodeParent = ValueTreeState::getNodeParent(nodeId);
     juce::ValueTree midiNotes  = ValueTreeState::getMidiNotes(nodeId);
     juce::ValueTree midiNote = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
@@ -66,8 +83,14 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
         || nodeValueTree.getType() == ValueTreeIdentifiers::NodeData) {
         childNode = std::make_unique<Node>();
     }
-    else if (nodeValueTree.getType() == (ValueTreeIdentifiers::ConnectorData)) {
+    else if (nodeValueTree.getType() == ValueTreeIdentifiers::ConnectorData) {
         childNode = std::make_unique<Connector>();
+    }
+    else if (nodeValueTree.getType() == ValueTreeIdentifiers::ModulatorData) {
+        childNode = std::make_unique<Modulator>();
+    }
+    else if (nodeValueTree.getType() == ValueTreeIdentifiers::ModulatorRootData) {
+        childNode = std::make_unique<Modulator>();
     }
 
     jassert(childNode);
@@ -90,6 +113,7 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
     addAndMakeVisible(childNode.get());
     nodeMap[nodeId] = childNode.release();
 
+    setNodePosition(nodeId);
     makeRTGraph(nodeValueTree);
 
     int rootNodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
@@ -175,7 +199,11 @@ void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
     arrow->toBack();
     arrow->setInterceptsMouseClicks(false,false);
 
-    arrow->bindToProperty(parentMidiNoteData, ValueTreeIdentifiers::MidiDuration);
+    // Only bind duration to the parent's MidiDuration when the child is a regular node.
+    // Connector children are structural — their arrow distance should not overwrite the
+    // parent's note duration; the parent always plays for its own musical length.
+    if (parentMidiNoteData.isValid() && childNode->nodeType != NodeType::Connector)
+        arrow->bindToProperty(parentMidiNoteData, ValueTreeIdentifiers::MidiDuration);
     nodeArrows.add(arrow.release());
 }
 
@@ -260,7 +288,7 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
 
 
             if (nodeType == ValueTreeIdentifiers::NodeData || nodeType == ValueTreeIdentifiers::RootNodeData) {rtNode.nodeType = RTNode::NodeType::Node;}
-            if (nodeType == ValueTreeIdentifiers::ConnectorData ) { rtNode.nodeType = RTNode::NodeType::RelayNode; }
+            if (nodeType == ValueTreeIdentifiers::ConnectorData ) { rtNode.nodeType = RTNode::NodeType::Connector; }
             if (nodeParentType == ValueTreeIdentifiers::ConnectorData) { rtNode.graphID = rtNode.nodeID; }
 
             for (int i = 0; i < nodeMidiNotes.getNumChildren(); i++) {
@@ -343,7 +371,9 @@ void NodeCanvas::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& c
     {
             jassert(child.getType() == ValueTreeIdentifiers::NodeData
                 || child.getType() == ValueTreeIdentifiers::ConnectorData
-                || child.getType() == ValueTreeIdentifiers::RootNodeData);
+                || child.getType() == ValueTreeIdentifiers::RootNodeData
+                || child.getType() == ValueTreeIdentifiers::ModulatorRootData
+                || child.getType() == ValueTreeIdentifiers::ModulatorData);
 
             AsyncUpdate asyncUpdate;
             asyncUpdate.type         = AsyncUpdateType::NodeAdded;
@@ -360,8 +390,9 @@ void NodeCanvas::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree&
     if (parent.getType() == ValueTreeIdentifiers::NodeMap)
     {
         AsyncUpdate asyncUpdate;
-        asyncUpdate.type   = AsyncUpdateType::NodeRemoved;
-        asyncUpdate.nodeId = child.getProperty(ValueTreeIdentifiers::Id);
+        asyncUpdate.type       = AsyncUpdateType::NodeRemoved;
+        asyncUpdate.nodeId     = child.getProperty(ValueTreeIdentifiers::Id);
+        asyncUpdate.rootNodeId = child.getProperty(ValueTreeIdentifiers::RootNodeId);
         asyncUpdates.push_back(asyncUpdate);
         triggerAsyncUpdate();
     }
@@ -378,7 +409,9 @@ void NodeCanvas::valueTreePropertyChanged(juce::ValueTree &tree, const juce::Ide
    {
        jassert(nodeType == ValueTreeIdentifiers::NodeData
        || nodeType == ValueTreeIdentifiers::ConnectorData
-       || nodeType == ValueTreeIdentifiers::RootNodeData);
+       || nodeType == ValueTreeIdentifiers::RootNodeData
+       || nodeType == ValueTreeIdentifiers::ModulatorRootData
+       || nodeType == ValueTreeIdentifiers::ModulatorData);
 
        AsyncUpdate asyncUpdate;
        asyncUpdate.type = AsyncUpdateType::NodeMoved;
@@ -486,8 +519,8 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         canvasNode->setComponentID(std::to_string(nodeId));
         canvasNode->setDisplayMode(NodeDisplayMode::Pitch);
 
-        canvasNode->setCentrePosition(xPosition, yPosition);
         canvasNode->setSize(radius*2, radius*2);
+        canvasNode->setCentrePosition(xPosition, yPosition);
 
         addAndMakeVisible(canvasNode.get());
 

@@ -2,13 +2,13 @@
 // Created by Eli Baumgardner on 10/6/25.
 //
 
-#include "Counter.h"
+#include "Modulator.h"
 
-Counter::Counter() {
+Modulator::Modulator() {
 
 }
 
-void Counter::resized() {
+void Modulator::resized() {
     auto editorArea = getLocalBounds().reduced(10.0f);
 
     upButton.setBounds(editorArea.removeFromTop(4.0f));
@@ -16,11 +16,9 @@ void Counter::resized() {
 
     nodeTextEditor.get()->setBounds(editorArea);
     nodeTextEditor.get()->setJustification(juce::Justification::centred);
-    //editor.refit();
-
 }
 
-void Counter::paint(juce::Graphics& g) {
+void Modulator::paint(juce::Graphics& g) {
 
     auto bounds = getLocalBounds().toFloat();
     auto squareBorder = bounds.reduced(2.5f);
@@ -30,7 +28,6 @@ void Counter::paint(juce::Graphics& g) {
 
     g.setColour(juce::Colours::black);
     g.drawRect(squareBorder, 1.0f);
-
 
     g.setColour(isHighlighted ? nodeColour.darker() : nodeColour);
     g.fillRect(squareFill);
@@ -53,6 +50,6 @@ void Counter::paint(juce::Graphics& g) {
     }
 }
 
-void Counter::setDisplayMode(NodeTextEditor::DisplayMode mode){
+void Modulator::setDisplayMode(NodeTextEditor::DisplayMode mode){
 
 }

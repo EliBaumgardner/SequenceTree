@@ -214,8 +214,11 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     auto loadedGlobalNodes = std::atomic_load(&globalNodes);
     auto loadedTraversals  = std::atomic_load(&eventManager.traversals);
-    NodeMap& nodes         = *loadedGlobalNodes;
-    auto& traversals       = *loadedTraversals;
+
+    if (!loadedGlobalNodes || !loadedTraversals) return;
+
+    NodeMap& nodes   = *loadedGlobalNodes;
+    auto& traversals = *loadedTraversals;
 
     juce::ScopedNoDenormals noDenormals;
     auto numSamples = buffer.getNumSamples();
@@ -224,18 +227,27 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     midiMessages.clear();
 
     if (traversals.empty()) {
-        traversals.insert({1,TraversalLogic(1,this)});
-        TraversalLogic& traversal = traversals.at(1);
+        // Find the root node of the main graph (lowest-ID node where nodeID == graphID)
+        int rootId = -1;
+        for (const auto& [nodeId, node] : nodes) {
+            if (node.nodeID == node.graphID) {
+                if (rootId == -1 || nodeId < rootId)
+                    rootId = nodeId;
+            }
+        }
+        if (rootId == -1) return;
+
+        traversals.insert({rootId, TraversalLogic(rootId, this)});
+        TraversalLogic& traversal = traversals.at(rootId);
         traversal.isFirstEvent = true;
-        traversal.targetId = traversal.rootId;
-        traversal.state = TraversalLogic::TraversalState::Active;
+        traversal.targetId  = rootId;
+        traversal.state     = TraversalLogic::TraversalState::Active;
         traversal.isLooping = true;
 
-        RTNode& rootNode = nodes[traversal.rootId];
-        eventManager.highlightNode(rootNode,true);
-
-        int traversalId = rootNode.nodeID;
-        eventManager.pushNote(rootNode,traversalId,midiMessages,0,nodes,traversals);
+        RTNode& rootNode    = nodes.at(rootId);
+        int     traversalId = rootNode.nodeID;
+        eventManager.highlightNode(rootNode, true);
+        eventManager.pushNote(rootNode, traversalId, midiMessages, 0, nodes, traversals);
     }
 
     for (int sample = 0; sample < numSamples; ++sample) { eventManager.handleEventStream(sample, midiMessages, nodes, traversals); }

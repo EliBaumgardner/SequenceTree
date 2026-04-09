@@ -20,21 +20,24 @@ public:
 
     ValueTreeState();
 
-    static juce::ValueTree addNodeTree (juce::UndoManager* undoManager);
-    static juce::ValueTree addRootNode (NodePosition nodePosition,juce::UndoManager* undoManager);
+    static juce::ValueTree addNodeTree     (juce::UndoManager* undoManager);
+    static juce::ValueTree addRootNode     (juce::UndoManager* undoManager);
 
-    static juce::ValueTree addRootNode    (int parentNodeId, NodePosition nodePosition, juce::UndoManager* undoManager);
-    static juce::ValueTree addNode        (int parentNodeId, NodePosition nodePosition, juce::UndoManager* undoManager);
-    static juce::ValueTree addConnector              (int parentNodeId,NodePosition nodePosition, juce::UndoManager* undoManager);
-    static void setMidiValue              (int nodeId, NodeNote note, juce::UndoManager* undoManager);
+    static juce::ValueTree addRootNode     (int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addNode         (int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addConnector    (int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addModulatorRoot(int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addModulator    (int parentNodeId, juce::UndoManager* undoManager);
 
     static void removeRootNode (int rootNodeId, juce::UndoManager* undoManager);
     static void removeNode     (int nodeId, juce::UndoManager* undoManager);
     static void removeNodeTree (int treeId, juce::UndoManager* undoManager);
 
     static void setNodePosition (juce::ValueTree node, NodePosition nodePosition,juce::UndoManager* undoManager);
+    static void setMidiValue    (int nodeId, NodeNote note, juce::UndoManager* undoManager);
 
     static NodePosition    getNodePosition (int nodeId);
+    static juce::ValueTree getRootNode     (int nodeId);
     static juce::ValueTree getNode         (int nocdId);
     static juce::ValueTree getNodeParent   (int nodeId);
     static juce::ValueTree getMidiNotes    (int nodeId);
@@ -49,6 +52,7 @@ public:
     static inline int nodeIdIncrement       {0};
     static inline int defaultNodeCount      {1};
     static inline int defaultNodeCountLimit {1};
+    static inline int defaultModAmount      {1};
 };
 
 

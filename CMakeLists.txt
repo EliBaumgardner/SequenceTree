@@ -50,7 +50,7 @@ target_sources(SequenceTree PRIVATE
         Source/Core/TraversalLogic.cpp
         Source/Core/EventManager.cpp
         Source/UI/TitleBar.cpp
-        Source/UI/Node/Counter.cpp
+        Source/UI/Node/Modulator.cpp
         Source/UI/Node/Connector.cpp
         Source/UI/CustomLookAndFeel.cpp
         Source/Util/ValueTreeState.cpp

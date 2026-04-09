@@ -12,8 +12,10 @@ const juce::Identifier ValueTreeIdentifiers::NodeTreeIds          {"NodeTreeIds"
 const juce::Identifier ValueTreeIdentifiers::NodeTreeData         {"NodeTreeData"};
 
 const juce::Identifier ValueTreeIdentifiers::RootNodeData         {"RootNodeData"};
+const juce::Identifier ValueTreeIdentifiers::ModulatorRootData    {"ModulatorRootData"};
 const juce::Identifier ValueTreeIdentifiers::NodeData             {"NodeData"};
 const juce::Identifier ValueTreeIdentifiers::ConnectorData        {"ConnectorData"};
+const juce::Identifier ValueTreeIdentifiers::ModulatorData        {"ModulatorData"};
 
 const juce::Identifier ValueTreeIdentifiers::NodeChildrenIds      {"NodeChildrenIds"};
 
@@ -38,3 +40,9 @@ const juce::Identifier ValueTreeIdentifiers::ColourId             {"ColourId"};
 const juce::Identifier ValueTreeIdentifiers::MidiPitch            {"MidiPitch"};
 const juce::Identifier ValueTreeIdentifiers::MidiVelocity         {"MidiVelocity"};
 const juce::Identifier ValueTreeIdentifiers::MidiDuration         {"MidiDuration"};
+
+const juce::Identifier ValueTreeIdentifiers::ModAmount            {"ModAmount"};
+const juce::Identifier ValueTreeIdentifiers::ModulationType       {"ModulationType"};
+const juce::Identifier ValueTreeIdentifiers::PitchMod             {"PitchMod"};
+const juce::Identifier ValueTreeIdentifiers::VelocityMod          {"VelocityMod"};
+const juce::Identifier ValueTreeIdentifiers::DurationMod          {"DurationMod"};

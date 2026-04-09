@@ -52,64 +52,56 @@ void Connector::resized() {
 void Connector::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
+    float cx = bounds.getCentreX();
+    float cy = bounds.getCentreY();
 
-    juce::Graphics::ScopedSaveState savedState(g);
-    g.addTransform(juce::AffineTransform::rotation(
-        incomingAngle + juce::MathConstants<float>::halfPi,
-        bounds.getCentreX(),
-        bounds.getCentreY()
-    ));
+    // Use circumscribed circle so all rotation angles stay within bounds.
+    // Shrink slightly so the stroke doesn't clip at the component edge.
+    float r = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f - 2.0f;
 
-    // Outer triangle (border)
-    juce::Point<float> p1(bounds.getCentreX(), bounds.getY());
-    juce::Point<float> p2(bounds.getRight(), bounds.getBottom());
-    juce::Point<float> p3(bounds.getX(), bounds.getBottom());
+    // Build equilateral triangle by placing vertices on the circumscribed circle,
+    // rotated so the tip points in the direction of incomingAngle.
+    float baseAngle = incomingAngle;
+    constexpr float twoPiOver3 = juce::MathConstants<float>::twoPi / 3.0f;
 
-    juce::Path triangleBorder;
-    triangleBorder.addTriangle(p1, p2, p3);
+    juce::Point<float> p1 { cx + r * std::cos(baseAngle),
+                             cy + r * std::sin(baseAngle) };
+    juce::Point<float> p2 { cx + r * std::cos(baseAngle + twoPiOver3),
+                             cy + r * std::sin(baseAngle + twoPiOver3) };
+    juce::Point<float> p3 { cx + r * std::cos(baseAngle + 2.0f * twoPiOver3),
+                             cy + r * std::sin(baseAngle + 2.0f * twoPiOver3) };
 
-    // Inner triangle (fill) - scaled uniformly inside border
-    auto scaleFactor = 0.85f; // 85% of outer triangle
-    auto center = bounds.getCentre();
-
-    auto scalePoint = [&](juce::Point<float> p) {
-        return center + (p - center) * scaleFactor;
-    };
-
-    juce::Path triangleFill;
-    triangleFill.addTriangle(scalePoint(p1), scalePoint(p2), scalePoint(p3));
-
-    // Hover triangle
-    juce::Path triangleHover;
-    triangleHover.addTriangle(scalePoint(p1) + juce::Point<float>(0,0), // same scaled points
-                              scalePoint(p2),
-                              scalePoint(p3));
-
-    // Selection triangle
-    juce::Path triangleSelect;
-    triangleSelect.addTriangle(scalePoint(p1), scalePoint(p2), scalePoint(p3));
-
-    // Draw border
-    g.setColour(juce::Colours::black);
-    g.strokePath(triangleBorder, juce::PathStrokeType(1.0f));
+    juce::Path triangle;
+    triangle.addTriangle(p1, p2, p3);
 
     // Fill
     g.setColour(isHighlighted ? nodeColour.darker() : nodeColour);
-    g.fillPath(triangleFill);
+    g.fillPath(triangle);
+
+    // Outline — drawn after fill so it sits exactly on the triangle edge
+    g.setColour(juce::Colours::black);
+    g.strokePath(triangle, juce::PathStrokeType(1.5f,
+        juce::PathStrokeType::mitered,
+        juce::PathStrokeType::rounded));
 
     // Hover
     if (isHovered)
-        g.strokePath(triangleHover, juce::PathStrokeType(2.0f));
+    {
+        g.setColour(juce::Colours::white.withAlpha(0.25f));
+        g.strokePath(triangle, juce::PathStrokeType(3.0f,
+            juce::PathStrokeType::mitered,
+            juce::PathStrokeType::rounded));
+    }
 
     // Selection
     if (isSelected)
     {
+        juce::Path dashedPath;
         juce::PathStrokeType stroke(0.325f);
         float dashLengths[] = { 2.935f, 2.935f };
-        stroke.createDashedStroke(triangleSelect, triangleSelect, dashLengths, 2);
-
+        stroke.createDashedStroke(dashedPath, triangle, dashLengths, 2);
         g.setColour(juce::Colours::black);
-        g.strokePath(triangleSelect, stroke);
+        g.fillPath(dashedPath);
     }
 }
 
