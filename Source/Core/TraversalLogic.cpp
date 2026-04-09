@@ -31,14 +31,16 @@ void TraversalLogic::advance(NodeMap& nodes)
         int   limit     = childNode.countLimit;
 
         switch (childNode.nodeType) {
-            case RTNode::NodeType::Node: {
+            case RTNode::NodeType::Node:
+            case RTNode::NodeType::Modulator: {
                 if (count % limit == 0 && limit > maxLimit) {
                     targetId = childIndex;
                     maxLimit = limit;
                 }
                 break;
             }
-            case RTNode::NodeType::Connector: {
+            case RTNode::NodeType::Connector:
+            case RTNode::NodeType::ModulatorRoot: {
                 if (count % limit == 0)
                     traversers.push_back(childIndex);
                 break;
@@ -75,7 +77,7 @@ RTNode* TraversalLogic::peekNextTarget(NodeMap& nodes)
         const auto& childNode = itChild->second;
         int limit = childNode.countLimit;
 
-        if (childNode.nodeType == RTNode::NodeType::Node && count % limit == 0 && limit > maxLimit) {
+        if ((childNode.nodeType == RTNode::NodeType::Node || childNode.nodeType == RTNode::NodeType::Modulator) && count % limit == 0 && limit > maxLimit) {
             peekTargetId = childIndex;
             maxLimit     = limit;
         }
@@ -102,7 +104,8 @@ std::vector<int> TraversalLogic::peekTraversers(NodeMap& nodes)
         auto itChild = nodes.find(childIndex);
         if (itChild == nodes.end()) continue;
         const auto& childNode = itChild->second;
-        if (childNode.nodeType == RTNode::NodeType::Connector && count % childNode.countLimit == 0)
+        if ((childNode.nodeType == RTNode::NodeType::Connector || childNode.nodeType == RTNode::NodeType::ModulatorRoot)
+            && count % childNode.countLimit == 0)
             result.push_back(childIndex);
     }
 
@@ -176,7 +179,7 @@ void TraversalLogic::handleNodeEvent(NodeMap& nodes)
     }
 }
 
-void TraversalLogic::handleRelayNodeEvent(int relayNodeId, const NodeMap& nodes) const
+void TraversalLogic::handleConnectorNodeEvent(int relayNodeId, const NodeMap& nodes) const
 {
     auto it = nodes.find(relayNodeId);
     if (it != nodes.end())

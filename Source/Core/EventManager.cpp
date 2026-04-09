@@ -9,10 +9,11 @@ void EventManager::handleEventStream(int sample, juce::MidiBuffer& midiMessages,
 
         ActiveNote& note = activeNotes[i];
 
-        // If this note's node was deleted from the graph, stop it and restart from root
         if (nodes.find(note.noteNode.nodeID) == nodes.end()) {
-            if (note.noteNode.nodeType != RTNode::NodeType::Connector)
+            if (note.noteNode.nodeType != RTNode::NodeType::Connector
+                && note.noteNode.nodeType != RTNode::NodeType::ModulatorRoot) {
                 midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), sample);
+            }
 
             int deletedTraversalId = note.traversalId;
             activeNotes.erase(activeNotes.begin() + i);
@@ -35,12 +36,13 @@ void EventManager::handleEventStream(int sample, juce::MidiBuffer& midiMessages,
 
         if (--note.remainingSamples > 0) { continue; }
 
-        DBG("Note End Reached at Sample:" + juce::String(sample));
-        if (note.noteNode.nodeType != RTNode::NodeType::Connector)
+
+        if (note.noteNode.nodeType != RTNode::NodeType::Connector
+            && note.noteNode.nodeType != RTNode::NodeType::ModulatorRoot) {
             midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), sample);
+        }
 
         if (note.traversalId == -1) {
-            DBG("Note Discarded at Sample:" + juce::String(sample));
             activeNotes.erase(activeNotes.begin() + i);
             continue;
         }
@@ -51,27 +53,36 @@ void EventManager::handleEventStream(int sample, juce::MidiBuffer& midiMessages,
         int traversalId = tempNote.traversalId;
         auto it = traversalMap.find(traversalId);
         if (it == traversalMap.end()) {
-            DBG("TRAVERSAL NOT FOUND! SKIPPING TRAVERSAL");
             continue;
         }
         TraversalLogic& traversal = it->second;
 
         switch (tempNote.noteNode.nodeType) {
-            case RTNode::NodeType::Node: {
-                if (nodes.find(traversal.targetId) == nodes.end()) break;
+            case RTNode::NodeType::Node:
+            case RTNode::NodeType::Modulator: {
+                if (nodes.find(traversal.targetId) == nodes.end())
+                    break;
                 traversal.handleNodeEvent(nodes);
                 if (traversal.shouldTraverse() && nodes.find(traversal.targetId) != nodes.end())
                     pushNote(traversal.getTargetNode(nodes), traversalId, midiMessages, sample, nodes, traversalMap);
                 break;
             }
             case RTNode::NodeType::Connector: {
-                if (nodes.find(tempNote.noteNode.nodeID) == nodes.end()) break;
-                traversal.handleRelayNodeEvent(tempNote.noteNode.nodeID, nodes);
+                if (nodes.find(tempNote.noteNode.nodeID) == nodes.end())
+                    break;
+                traversal.handleConnectorNodeEvent(tempNote.noteNode.nodeID, nodes);
                 if (traversal.shouldTraverse())
                     pushConnectorNotes(tempNote.noteNode.nodeID, midiMessages, sample, nodes, traversalMap);
                 break;
             }
-            case RTNode::NodeType::Counter: { break; }
+            case RTNode::NodeType::ModulatorRoot: {
+                if (nodes.find(tempNote.noteNode.nodeID) == nodes.end())
+                    break;
+                traversal.handleConnectorNodeEvent(tempNote.noteNode.nodeID, nodes);
+                if (traversal.shouldTraverse())
+                    pushModulatorNotes(tempNote.noteNode.nodeID, midiMessages, sample, nodes, traversalMap);
+                break;
+            }
         }
     }
 }
@@ -80,9 +91,12 @@ void EventManager::handleEventStream(int sample, juce::MidiBuffer& midiMessages,
 void EventManager::pushNote(RTNode node, int traversalId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, std::unordered_map<int, TraversalLogic>& traversalMap)
 {
     RTNode* nextTargetNode = nullptr;
+
     auto it = traversalMap.find(traversalId);
-    if (it != traversalMap.end())
+
+    if (it != traversalMap.end()) {
         nextTargetNode = it->second.peekNextTarget(nodes);
+    }
 
     int pitch = 63, velocity = 63, duration = 1000;
 
@@ -93,7 +107,8 @@ void EventManager::pushNote(RTNode node, int traversalId, juce::MidiBuffer& midi
         velocity = static_cast<int>(note.velocity);
         duration = static_cast<int>(note.duration);
 
-        if (node.nodeType == RTNode::NodeType::Connector) {
+        if (node.nodeType == RTNode::NodeType::Connector
+            || node.nodeType == RTNode::NodeType::ModulatorRoot) {
             auto tIt = traversalMap.find(traversalId);
             if (tIt != traversalMap.end()) {
                 auto parentIt = nodes.find(tIt->second.targetId);
@@ -111,7 +126,6 @@ void EventManager::pushNote(RTNode node, int traversalId, juce::MidiBuffer& midi
 
         if (velocity <= 0) {
             velocity = 63;
-
         }
     }
 
@@ -124,12 +138,12 @@ void EventManager::pushNote(RTNode node, int traversalId, juce::MidiBuffer& midi
     newNote.noteNode           = node;
 
     activeNotes.push_back(newNote);
-    if (node.nodeType != RTNode::NodeType::Connector)
+    if (node.nodeType != RTNode::NodeType::Connector
+        && node.nodeType != RTNode::NodeType::ModulatorRoot) {
         midiMessages.addEvent(juce::MidiMessage::noteOn(1, pitch, static_cast<juce::uint8>(velocity)), sample);
+    }
 
-    // When pushing a regular node, immediately push any relay notes that will fire during it.
-    // They use the arrow duration from this node to each relay (independent of this note's length).
-    if (node.nodeType == RTNode::NodeType::Node) {
+    if (node.nodeType == RTNode::NodeType::Node || node.nodeType == RTNode::NodeType::Modulator) {
         auto tIt = traversalMap.find(traversalId);
         if (tIt != traversalMap.end()) {
             for (int relayId : tIt->second.peekTraversers(nodes)) {
@@ -173,6 +187,32 @@ void EventManager::pushConnectorNotes(int traverserId, juce::MidiBuffer& midiMes
 
         pushNote(connector, connector.graphID, midiMessages, sample, nodes, traversalMap);
     }
+}
+
+void EventManager::pushModulatorNotes(int modulatorRootId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, std::unordered_map<int, TraversalLogic>& traversalMap)
+{
+    auto rootIt = nodes.find(modulatorRootId);
+    if (rootIt == nodes.end()) return;
+
+    int graphId = rootIt->second.graphID; // equals modulatorRootId (self-rooted)
+
+    if (traversalMap.find(graphId) != traversalMap.end()) {
+        auto& existingTraversal = traversalMap.at(graphId);
+        auto  oldTargetIt       = nodes.find(existingTraversal.targetId);
+        if (oldTargetIt != nodes.end())
+            highlightNode(oldTargetIt->second, false);
+        clearOldEvents(graphId);
+    } else {
+        traversalMap.insert({graphId, TraversalLogic(graphId, processor)});
+    }
+
+    auto& traversal    = traversalMap.at(graphId);
+    traversal.targetId = modulatorRootId;
+    traversal.state    = TraversalLogic::TraversalState::Active;
+
+    traversal.handleNodeEvent(nodes); // advances past the structural root to the first child
+    if (traversal.shouldTraverse() && nodes.find(traversal.targetId) != nodes.end())
+        pushNote(traversal.getTargetNode(nodes), graphId, midiMessages, sample, nodes, traversalMap);
 }
 
 void EventManager::clearOldEvents(int traversalId)

@@ -28,6 +28,7 @@ public:
     void handleEventStream (int sample, juce::MidiBuffer& midiMessages, NodeMap& nodes, std::unordered_map<int, TraversalLogic>& traversalMap);
     void pushNote          (RTNode node, int traversalId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, std::unordered_map<int, TraversalLogic>& traversalMap);
     void pushConnectorNotes  (int traverserId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, std::unordered_map<int, TraversalLogic>& traversalMap);
+    void pushModulatorNotes (int modulatorId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, std::unordered_map<int, TraversalLogic>& traversalMap);
     void clearOldEvents      (int traversalId);
     void highlightNode       (const RTNode& node, bool shouldHighlight);
 };
