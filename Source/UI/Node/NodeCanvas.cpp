@@ -49,12 +49,12 @@ void NodeCanvas::handleAsyncUpdate() {
 
             int rootNodeId = asyncUpdate.rootNodeId;
             if (rootNodeId != nodeId) {
-                // Non-root deleted — root still exists, rebuild its graph without the deleted node
+
                 juce::ValueTree rootTree = ValueTreeState::getNode(rootNodeId);
                 if (rootTree.isValid())
                     makeRTGraph(rootTree);
             } else {
-                // Root itself deleted — push an empty graph to clear it from the audio thread
+
                 auto emptyGraph = std::make_shared<RTGraph>();
                 emptyGraph->graphID = rootNodeId;
                 ComponentContext::processor->setNewGraph(emptyGraph);
@@ -199,9 +199,6 @@ void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
     arrow->toBack();
     arrow->setInterceptsMouseClicks(false,false);
 
-    // Only bind duration to the parent's MidiDuration when the child is a regular node.
-    // Connector children are structural — their arrow distance should not overwrite the
-    // parent's note duration; the parent always plays for its own musical length.
     if (parentMidiNoteData.isValid() && childNode->nodeType != NodeType::Connector)
         arrow->bindToProperty(parentMidiNoteData, ValueTreeIdentifiers::MidiDuration);
     nodeArrows.add(arrow.release());
@@ -288,7 +285,9 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
 
 
             if (nodeType == ValueTreeIdentifiers::NodeData || nodeType == ValueTreeIdentifiers::RootNodeData) {rtNode.nodeType = RTNode::NodeType::Node;}
-            if (nodeType == ValueTreeIdentifiers::ConnectorData ) { rtNode.nodeType = RTNode::NodeType::Connector; }
+            if (nodeType == ValueTreeIdentifiers::ConnectorData) { rtNode.nodeType = RTNode::NodeType::Connector; }
+            if (nodeType == ValueTreeIdentifiers::ModulatorRootData) { rtNode.nodeType = RTNode::NodeType::ModulatorRoot; }
+            if (nodeType == ValueTreeIdentifiers::ModulatorData) { rtNode.nodeType = RTNode::NodeType::Modulator; }
             if (nodeParentType == ValueTreeIdentifiers::ConnectorData) { rtNode.graphID = rtNode.nodeID; }
 
             for (int i = 0; i < nodeMidiNotes.getNumChildren(); i++) {
@@ -336,9 +335,15 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
             else if (childDataTree.getType() == ValueTreeIdentifiers::NodeData
                   || childDataTree.getType() == ValueTreeIdentifiers::RootNodeData) {
                 rtGraph->nodeMap[id].children.push_back(childId);
-                  }
+            }
             else if (childDataTree.getType() == ValueTreeIdentifiers::ConnectorData) {
                 rtGraph->nodeMap[id].connectors.push_back(childId);
+            }
+            else if (childDataTree.getType() == ValueTreeIdentifiers::ModulatorRootData) {
+                rtGraph->nodeMap[id].connectors.push_back(childId);
+            }
+            else if (childDataTree.getType() == ValueTreeIdentifiers::ModulatorData) {
+                rtGraph->nodeMap[id].children.push_back(childId);
             }
         }
     }

@@ -27,7 +27,7 @@ public:
     int  referenceTargetId = 0;
 
     enum class TraversalState { Start, Active, End, Reset };
-    enum class EventType      { Node, Connector, Counter  };
+    enum class EventType      { Node, Connector, Modulator };
 
     TraversalState state = TraversalState::Start;
 
@@ -47,5 +47,5 @@ public:
 
     bool shouldTraverse() const;
     void handleNodeEvent(NodeMap& nodes);
-    void handleRelayNodeEvent(int relayNodeId, const NodeMap& nodes) const;
+    void handleConnectorNodeEvent(int relayNodeId, const NodeMap& nodes) const;
 };
