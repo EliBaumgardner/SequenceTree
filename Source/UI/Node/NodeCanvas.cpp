@@ -379,7 +379,7 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
             int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
 
             juce::ValueTree childDataTree = ValueTreeState::getNode(childId);
-            if (!childDataTree.isValid()) continue;
+            if (!childDataTree.isValid()) DBG("INVALID CHILD FOUND");
 
             rtGraph->nodeMap[id].children.push_back(childId);
         }
@@ -425,17 +425,23 @@ void NodeCanvas::updateDurationMap(int nodeId)
     juce::ValueTree parentVT = ValueTreeState::getNodeParent(nodeId);
     if (parentVT.isValid())
     {
+        DBG("node parent found");
         int parentId = parentVT.getProperty(ValueTreeIdentifiers::Id);
         auto parentIt = nodeMap.find(parentId);
         if (parentIt != nodeMap.end())
         {
+            DBG("parent node in node map");
             Node* parentNode = parentIt->second;
             auto globalParentIt = newSnap->globalNodes->find(parentId);
             if (globalParentIt != newSnap->globalNodes->end())
             {
+                DBG("parent node in global node map");
                 globalParentIt->second.durationMap.clear();
-                for (auto& [childId, arrow] : parentNode->nodeArrows)
+                for (auto& [childId, arrow] : parentNode->nodeArrows) {
                     globalParentIt->second.durationMap[childId] = arrow->duration;
+                    std::cout << "childId: " << childId << " duration: " << arrow->duration << std::endl;
+                    DBG("parent node duration map updated");
+                }
             }
         }
     }

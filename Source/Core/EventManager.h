@@ -66,4 +66,6 @@ private:
     static bool isNodeAudible(RTNode::NodeType nodeType);
 
     void resetTraversal(int graphId, int newTargetId, NodeMap& nodes, TraversalMap& traversalMap);
+
+    void handleOrphanNotes(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversalMap);
 };
