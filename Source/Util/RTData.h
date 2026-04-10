@@ -35,7 +35,6 @@ struct RTNode {
 
     std::vector<RTNote> notes;
     std::vector<int> children;
-    std::vector<int> connectors;
     std::unordered_map<int, int> durationMap;
 
     int graphID = 0;

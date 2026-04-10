@@ -17,7 +17,7 @@ void TraversalLogic::advance(NodeMap& nodes)
         return;
     }
 
-    if (itTarget->second.children.empty() && itTarget->second.connectors.empty()) {
+    if (itTarget->second.children.empty()) {
         state = isLooping ? TraversalState::Reset : TraversalState::End;
         return;
     }
@@ -47,14 +47,6 @@ void TraversalLogic::advance(NodeMap& nodes)
             }
             default: break;
         }
-    }
-
-    for (int connectorIndex : itTarget->second.connectors) {
-        auto itConnector = nodes.find(connectorIndex);
-        if (itConnector == nodes.end()) { continue; }
-        int limit = itConnector->second.countLimit;
-        if (count % limit == 0)
-            traversers.push_back(connectorIndex);
     }
 
     if (targetId == lastTargetId)
@@ -114,14 +106,6 @@ std::vector<int> TraversalLogic::peekTraversers(NodeMap& nodes)
         if ((childNode.nodeType == RTNode::NodeType::Connector || childNode.nodeType == RTNode::NodeType::ModulatorRoot)
             && count % childNode.countLimit == 0)
             childrenIndices.push_back(childIndex);
-    }
-
-    for (int connectorIndex : targetIdIterator->second.connectors) {
-        auto itConnector = nodes.find(connectorIndex);
-        jassert(itConnector != nodes.end());
-
-        if (count % itConnector->second.countLimit == 0)
-            childrenIndices.push_back(connectorIndex);
     }
 
     return childrenIndices;

@@ -54,6 +54,13 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
 
     draggedNodeTree = juce::ValueTree();
     isDragStart = true;
+
+    NodeCanvas* canvas = ComponentContext::canvas;
+    if (canvas->showGrid)
+    {
+        canvas->showGrid = false;
+        canvas->repaint();
+    }
 }
 
 void NodeController::mouseDown(const juce::MouseEvent& e)
@@ -171,10 +178,15 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
             return;
         }
 
-        if (!e.mods.isShiftDown()) {
+        if (!e.mods.isShiftDown() && !draggedNodeTree.isValid()) {
             if (isDragStart) {
                 isDragStart = false;
                 undoManager->beginNewTransaction();
+                if (ComponentContext::canvas->gridOriginSet)
+                {
+                    ComponentContext::canvas->showGrid = true;
+                    ComponentContext::canvas->repaint();
+                }
             }
 
             juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
@@ -192,6 +204,11 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         if (isDragStart) {
             isDragStart = false;
             undoManager->beginNewTransaction();
+            if (ComponentContext::canvas->gridOriginSet)
+            {
+                ComponentContext::canvas->showGrid = true;
+                ComponentContext::canvas->repaint();
+            }
 
             if (nodeControllerMode == NodeControllerMode::Node) {
                 if (auto parent = dynamic_cast<Connector*>(node)) {

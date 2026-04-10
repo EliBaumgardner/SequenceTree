@@ -68,10 +68,14 @@ public:
     NodeCanvas* canvas;
 
     using RTGraphs = std::unordered_map<int, std::shared_ptr<RTGraph>>;
-    std::shared_ptr<RTGraphs> rtGraphs     = nullptr;
-    std::shared_ptr<NodeMap>  globalNodes  = nullptr;
 
-    int numGraphs = 0;
+    struct AudioSnapshot
+    {
+        std::shared_ptr<NodeMap>  globalNodes;
+        std::shared_ptr<RTGraphs> rtGraphs;
+    };
+
+    std::shared_ptr<AudioSnapshot> audioSnapshot;
 
     std::atomic<bool>   isPlaying       = false;
     std::atomic<bool>   resetRequested  = false;

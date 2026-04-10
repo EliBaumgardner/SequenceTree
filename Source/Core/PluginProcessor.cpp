@@ -196,29 +196,36 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 {
     if (resetRequested.exchange(false))
     {
+        // Push highlight-off before clearing, so the FIFO gets the commands
         for (auto& note : eventManager.activeNotes)
+        {
             midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), 0);
+            eventManager.highlightNode(note.noteNode, false);
+        }
 
         eventManager.activeNotes.clear();
+        eventManager.traversals.clear();
 
-        auto emptyTraversals = std::make_shared<std::unordered_map<int, TraversalLogic>>();
-        std::atomic_store(&eventManager.traversals, emptyTraversals);
-
-        juce::MessageManager::callAsync([this]() {
-            for (auto& [nodeId, node] : canvas->nodeMap)
-                node->setHighlightVisual(false);
-        });
+        canvas->triggerAsyncUpdate();
     }
 
     if(isPlaying.load() == false){ return; }
 
-    auto loadedGlobalNodes = std::atomic_load(&globalNodes);
-    auto loadedTraversals  = std::atomic_load(&eventManager.traversals);
+    auto snap = std::atomic_load(&audioSnapshot);
+    if (!snap || !snap->globalNodes) return;
 
-    if (!loadedGlobalNodes || !loadedTraversals) return;
+    NodeMap& nodes       = *snap->globalNodes;
+    TraversalMap& traversals = eventManager.traversals;
 
-    NodeMap& nodes   = *loadedGlobalNodes;
-    auto& traversals = *loadedTraversals;
+    // Reconcile traversal counts with current node set
+    for (const auto& [nodeId, node] : nodes)
+        for (auto& [id, traverser] : traversals)
+            if (!traverser.counts.count(nodeId))
+                traverser.counts[nodeId] = 0;
+
+    for (auto& [id, traverser] : traversals)
+        for (auto it = traverser.counts.begin(); it != traverser.counts.end(); )
+            it = (nodes.find(it->first) == nodes.end()) ? traverser.counts.erase(it) : std::next(it);
 
     juce::ScopedNoDenormals noDenormals;
     auto numSamples = buffer.getNumSamples();
@@ -227,15 +234,14 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     midiMessages.clear();
 
     if (traversals.empty()) {
-
         int rootId = -1;
         for (const auto& [nodeId, node] : nodes) {
-            if (rootId == -1 || nodeId < rootId) {
-                rootId = nodeId;
+            if (node.nodeID == node.graphID) {
+                if (rootId == -1 || nodeId < rootId)
+                    rootId = nodeId;
             }
         }
-
-        jassert(rootId != -1);
+        if (rootId == -1) return;
 
         traversals.insert({rootId, TraversalLogic(rootId, this)});
         TraversalLogic& traversal = traversals.at(rootId);
@@ -250,7 +256,10 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         eventManager.pushNote(rootNode, traversalId, midiMessages, 0, nodes, traversals);
     }
 
-    for (int sample = 0; sample < numSamples; ++sample) { eventManager.handleEventStream(sample, midiMessages, nodes, traversals); }
+    eventManager.processEvents(numSamples, midiMessages, nodes, traversals);
+
+    if (eventManager.highlightFifo.getNumReady() > 0)
+        canvas->triggerAsyncUpdate();
 
 }
 
@@ -264,40 +273,30 @@ void SequenceTreeAudioProcessor::clearOldEvents(RTNode node, int traversalId)
 
 void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)
 {
-    std::shared_ptr<std::unordered_map<int,RTNode>> newGlobalNodes;
-    std::shared_ptr<RTGraphs> newRTGraphs;
-    std::shared_ptr<std::unordered_map<int,TraversalLogic>> newTraversals;
+    auto oldSnap = std::atomic_load(&audioSnapshot);
 
-    if (globalNodes != nullptr) { newGlobalNodes = std::make_shared<std::unordered_map<int,RTNode>>(*globalNodes);}
-    else                        { newGlobalNodes = std::make_shared<std::unordered_map<int,RTNode>>(); }
+    auto newSnap = std::make_shared<AudioSnapshot>();
+    newSnap->globalNodes = (oldSnap && oldSnap->globalNodes)
+        ? std::make_shared<NodeMap>(*oldSnap->globalNodes)
+        : std::make_shared<NodeMap>();
+    newSnap->rtGraphs = (oldSnap && oldSnap->rtGraphs)
+        ? std::make_shared<RTGraphs>(*oldSnap->rtGraphs)
+        : std::make_shared<RTGraphs>();
 
-    if (rtGraphs != nullptr)    { newRTGraphs = std::make_shared<RTGraphs>(*rtGraphs); }
-    else                        { newRTGraphs = std::make_shared<RTGraphs>(); }
+    (*newSnap->rtGraphs)[graph->graphID] = graph;
 
-    if (eventManager.traversals != nullptr)  { newTraversals = std::make_shared<std::unordered_map<int,TraversalLogic>>(*eventManager.traversals);}
-    else                        { newTraversals = std::make_shared<std::unordered_map<int,TraversalLogic>>(); }
-
-    (*newRTGraphs)[graph->graphID] = graph;
-
-    for (const auto& [nodeId, node] : graph->nodeMap) {
-        for (auto& [id,traverser]: *newTraversals ) { if (!traverser.counts.count(nodeId)) { traverser.counts[nodeId] = 0; } }
-        (*newGlobalNodes)[nodeId] = node;
-    }
+    for (const auto& [nodeId, node] : graph->nodeMap)
+        (*newSnap->globalNodes)[nodeId] = node;
 
     std::vector<int> staleIds;
-    for (const auto& [nodeId,node] : *newGlobalNodes) {
-        if (node.graphID == graph->graphID) { if (!graph->nodeMap.count(nodeId)) { staleIds.push_back(nodeId); } }
-    }
+    for (const auto& [nodeId, node] : *newSnap->globalNodes)
+        if (node.graphID == graph->graphID && !graph->nodeMap.count(nodeId))
+            staleIds.push_back(nodeId);
 
-    for (int id : staleIds) {
-        newGlobalNodes->erase(id);
-        for (auto& [id,traverser] : *newTraversals) { traverser.counts.erase(id); }
-    }
+    for (int id : staleIds)
+        newSnap->globalNodes->erase(id);
 
-    std::atomic_store(&rtGraphs, newRTGraphs);
-    std::atomic_store(&globalNodes, newGlobalNodes);
-    std::atomic_store(&eventManager.traversals, newTraversals);
-
+    std::atomic_store(&audioSnapshot, newSnap);
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::createParameterLayout()
