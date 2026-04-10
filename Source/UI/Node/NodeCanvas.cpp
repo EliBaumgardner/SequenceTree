@@ -114,6 +114,16 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
     nodeMap[nodeId] = childNode.release();
 
     setNodePosition(nodeId);
+
+    if (!gridOriginSet && nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
+        NodePosition pos = ValueTreeState::getNodePosition(nodeId);
+        gridOrigin    = { (float)pos.xPosition, (float)pos.yPosition };
+        gridSpacing   = 50.0f;
+        showGrid      = true;
+        gridOriginSet = true;
+        repaint();
+    }
+
     makeRTGraph(nodeValueTree);
 
     int rootNodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
@@ -123,10 +133,11 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
 
         int connectorRootId = connectorParent.getProperty(ValueTreeIdentifiers::RootNodeId);
 
-        juce::ValueTree connectorRootTree = ValueTreeState::getNode(connectorRootId);
-
-        if (connectorRootTree.isValid()) {
-            makeRTGraph(connectorRootTree);
+        if (connectorRootId != 0) {
+            juce::ValueTree connectorRootTree = ValueTreeState::getNode(connectorRootId);
+            if (connectorRootTree.isValid()) {
+                makeRTGraph(connectorRootTree);
+            }
         }
     }
 }
@@ -163,15 +174,17 @@ void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int 
 
 void NodeCanvas::setNodePosition(int nodeId)
 {
+    auto nodePair = nodeMap.find(nodeId);
+    if (nodePair == nodeMap.end()) return;
+
     juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
-    NodePosition nodePosition     = ValueTreeState::getNodePosition(nodeId);
+    if (!nodeValueTree.isValid()) return;
+
+    NodePosition nodePosition = ValueTreeState::getNodePosition(nodeId);
 
     int xPosition = nodePosition.xPosition;
     int yPosition = nodePosition.yPosition;
     int radius    = nodePosition.radius;
-
-    auto nodePair = nodeMap.find(nodeId);
-    jassert(nodePair != nodeMap.end());
 
     auto node = nodePair->second;
 
@@ -241,7 +254,9 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
     jassert(nodeValueTree.isValid());
 
     int rootNodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
+    if (rootNodeId == 0) return;
     juce::ValueTree rootNodeValueTree = ValueTreeState::getNode(rootNodeId);
+    if (!rootNodeValueTree.isValid()) return;
 
     auto rtGraph = std::make_shared<RTGraph>();
 
@@ -283,12 +298,24 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
                     rtNode.durationMap[childId] = nodeArrow->duration;
             }
 
-
-            if (nodeType == ValueTreeIdentifiers::NodeData || nodeType == ValueTreeIdentifiers::RootNodeData) {rtNode.nodeType = RTNode::NodeType::Node;}
-            if (nodeType == ValueTreeIdentifiers::ConnectorData) { rtNode.nodeType = RTNode::NodeType::Connector; }
-            if (nodeType == ValueTreeIdentifiers::ModulatorRootData) { rtNode.nodeType = RTNode::NodeType::ModulatorRoot; }
-            if (nodeType == ValueTreeIdentifiers::ModulatorData) { rtNode.nodeType = RTNode::NodeType::Modulator; }
-            if (nodeParentType == ValueTreeIdentifiers::ConnectorData) { rtNode.graphID = rtNode.nodeID; }
+            if (nodeType == ValueTreeIdentifiers::NodeData) {
+                rtNode.nodeType = RTNode::NodeType::Node;
+            }
+            if (nodeType == ValueTreeIdentifiers::RootNodeData) {
+                rtNode.nodeType = RTNode::NodeType::RootNode;
+            }
+            if (nodeType == ValueTreeIdentifiers::ConnectorData) {
+                rtNode.nodeType = RTNode::NodeType::Connector;
+            }
+            if (nodeType == ValueTreeIdentifiers::ModulatorRootData) {
+                rtNode.nodeType = RTNode::NodeType::ModulatorRoot;
+            }
+            if (nodeType == ValueTreeIdentifiers::ModulatorData) {
+                rtNode.nodeType = RTNode::NodeType::Modulator;
+            }
+            if (nodeParentType == ValueTreeIdentifiers::ConnectorData) {
+                rtNode.graphID = rtNode.nodeID;
+            }
 
             for (int i = 0; i < nodeMidiNotes.getNumChildren(); i++) {
                 juce::ValueTree note = nodeMidiNotes.getChild(i);
@@ -466,6 +493,8 @@ void NodeCanvas::clearCanvas()
         delete node;
     }
     nodeMap.clear();
+    gridOriginSet = false;
+    showGrid = false;
 }
 
 void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
@@ -545,6 +574,16 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
 
         addLinePoints(parentNode,childNode);
         updateLinePoints(parentNode);
+    }
+
+    if (!gridOriginSet && !rootNodeMap.empty()) {
+        auto it = rootNodeMap.begin();
+        int firstRootId = it->first;
+        NodePosition pos = ValueTreeState::getNodePosition(firstRootId);
+        gridOrigin    = { (float)pos.xPosition, (float)pos.yPosition };
+        gridSpacing   = 50.0f;
+        showGrid      = true;
+        gridOriginSet = true;
     }
 
     for (auto& [id, rootNodeValueTree] : rootNodeMap) {

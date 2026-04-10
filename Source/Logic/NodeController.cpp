@@ -45,9 +45,6 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
         isDraggingValue = false;
         draggingValueNode = nullptr;
     } else {
-        ComponentContext::canvas->showGrid = false;
-        ComponentContext::canvas->repaint();
-
         if (draggedNodeTree.isValid())
         {
             int nodeId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
@@ -88,10 +85,6 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     else if (Node* node= dynamic_cast<Node*>(component) ) {
 
         dragParentCenter = node->getBounds().getCentre().toFloat();
-        ComponentContext::canvas->gridOrigin  = dragParentCenter;
-        ComponentContext::canvas->gridSpacing = 50.0f;
-        ComponentContext::canvas->showGrid    = true;
-        ComponentContext::canvas->repaint();
 
         if (node->nodeTextEditor != nullptr) {
             auto localPos = e.getEventRelativeTo(node->nodeTextEditor.get()).getPosition();

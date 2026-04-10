@@ -91,12 +91,11 @@ void EventManager::handleEventStream(int sample, juce::MidiBuffer& midiMessages,
 void EventManager::pushNote(RTNode node, int traversalId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, std::unordered_map<int, TraversalLogic>& traversalMap)
 {
     RTNode* nextTargetNode = nullptr;
+    auto traversalIterator = traversalMap.find(traversalId);
 
-    auto it = traversalMap.find(traversalId);
+    jassert(traversalIterator != traversalMap.end());
 
-    if (it != traversalMap.end()) {
-        nextTargetNode = it->second.peekNextTarget(nodes);
-    }
+    nextTargetNode = traversalIterator->second.peekNextTarget(nodes);
 
     int pitch = 63, velocity = 63, duration = 1000;
 
@@ -107,21 +106,10 @@ void EventManager::pushNote(RTNode node, int traversalId, juce::MidiBuffer& midi
         velocity = static_cast<int>(note.velocity);
         duration = static_cast<int>(note.duration);
 
-        if (node.nodeType == RTNode::NodeType::Connector
-            || node.nodeType == RTNode::NodeType::ModulatorRoot) {
-            auto tIt = traversalMap.find(traversalId);
-            if (tIt != traversalMap.end()) {
-                auto parentIt = nodes.find(tIt->second.targetId);
-                if (parentIt != nodes.end()) {
-                    auto dIt = parentIt->second.durationMap.find(node.nodeID);
-                    if (dIt != parentIt->second.durationMap.end())
-                        duration = dIt->second;
-                }
-            }
-        } else if (nextTargetNode != nullptr) {
-            auto durationIt = node.durationMap.find(nextTargetNode->nodeID);
-            if (durationIt != node.durationMap.end())
-                duration = durationIt->second;
+        if (nextTargetNode != nullptr) {
+            auto durationIterator = node.durationMap.find(nextTargetNode->nodeID);
+            if (durationIterator != node.durationMap.end())
+                duration = durationIterator->second;
         }
 
         if (velocity <= 0) {
@@ -143,16 +131,15 @@ void EventManager::pushNote(RTNode node, int traversalId, juce::MidiBuffer& midi
         midiMessages.addEvent(juce::MidiMessage::noteOn(1, pitch, static_cast<juce::uint8>(velocity)), sample);
     }
 
-    if (node.nodeType == RTNode::NodeType::Node || node.nodeType == RTNode::NodeType::Modulator) {
-        auto tIt = traversalMap.find(traversalId);
-        if (tIt != traversalMap.end()) {
-            for (int relayId : tIt->second.peekTraversers(nodes)) {
-                auto relayIt = nodes.find(relayId);
-                if (relayIt == nodes.end()) continue;
-                highlightNode(relayIt->second, true);
-                pushNote(relayIt->second, traversalId, midiMessages, sample, nodes, traversalMap);
-            }
+    if (node.nodeType == RTNode::NodeType::Node) {
+
+        for (int relayId : traversalIterator->second.peekTraversers(nodes)) {
+            auto relayIt = nodes.find(relayId);
+            if (relayIt == nodes.end()) continue;
+            highlightNode(relayIt->second, true);
+            pushNote(relayIt->second, traversalId, midiMessages, sample, nodes, traversalMap);
         }
+
     }
 }
 
@@ -191,6 +178,7 @@ void EventManager::pushConnectorNotes(int traverserId, juce::MidiBuffer& midiMes
 
 void EventManager::pushModulatorNotes(int modulatorRootId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, std::unordered_map<int, TraversalLogic>& traversalMap)
 {
+
     auto rootIt = nodes.find(modulatorRootId);
     if (rootIt == nodes.end()) return;
 

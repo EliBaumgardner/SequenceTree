@@ -93,30 +93,38 @@ RTNode* TraversalLogic::peekNextTarget(NodeMap& nodes)
 
 std::vector<int> TraversalLogic::peekTraversers(NodeMap& nodes)
 {
-    auto itTarget = nodes.find(targetId);
-    if (itTarget == nodes.end()) return {};
+    auto targetIdIterator = nodes.find(targetId);
 
-    auto cIt2 = counts.find(targetId);
-    int count = (cIt2 != counts.end() ? cIt2->second : 0) + 1;
-    std::vector<int> result;
+    jassert(targetIdIterator != nodes.end());
 
-    for (int childIndex : itTarget->second.children) {
+    auto countIterator = counts.find(targetId);
+    int count = 1;
+
+    if (countIterator != counts.end()) {
+        count = countIterator->second;
+    }
+
+    std::vector<int> childrenIndices;
+
+    for (int childIndex : targetIdIterator->second.children) {
         auto itChild = nodes.find(childIndex);
-        if (itChild == nodes.end()) continue;
+        jassert(itChild != nodes.end());
+
         const auto& childNode = itChild->second;
         if ((childNode.nodeType == RTNode::NodeType::Connector || childNode.nodeType == RTNode::NodeType::ModulatorRoot)
             && count % childNode.countLimit == 0)
-            result.push_back(childIndex);
+            childrenIndices.push_back(childIndex);
     }
 
-    for (int connectorIndex : itTarget->second.connectors) {
+    for (int connectorIndex : targetIdIterator->second.connectors) {
         auto itConnector = nodes.find(connectorIndex);
-        if (itConnector == nodes.end()) continue;
+        jassert(itConnector != nodes.end());
+
         if (count % itConnector->second.countLimit == 0)
-            result.push_back(connectorIndex);
+            childrenIndices.push_back(connectorIndex);
     }
 
-    return result;
+    return childrenIndices;
 }
 
 const RTNode& TraversalLogic::getTargetNode   (const NodeMap& nodes) const { return nodes.at(targetId);          }

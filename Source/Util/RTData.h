@@ -29,7 +29,7 @@ struct RTNode {
     int parentId = 0;
     int countLimit = 0;
 
-    enum class NodeType {Node, Connector, Modulator, ModulatorRoot};
+    enum class NodeType {RootNode, Node, Connector, Modulator, ModulatorRoot};
 
     NodeType nodeType = NodeType::Node;
 
