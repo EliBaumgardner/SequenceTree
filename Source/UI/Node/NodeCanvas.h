@@ -23,7 +23,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
     
     public:
 
-        enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved};
+        enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved,DurationOnly};
 
         struct AsyncUpdate {
             AsyncUpdateType type;
@@ -50,6 +50,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         void setNodePosition(int nodeId);
 
         void makeRTGraph(const juce::ValueTree& nodeValueTree);
+        void updateDurationMap(int nodeId);
         void destroyRTGraph(Node* root);
     
         void setProcessorPlayblack(bool isPlaying);
@@ -60,6 +61,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         void triggerArrowSnapForNode(int nodeId);
 
         void handleAsyncUpdate() override;
+        void drainHighlightFifo();
 
         void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
         void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;

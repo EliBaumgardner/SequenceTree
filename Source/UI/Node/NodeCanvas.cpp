@@ -12,6 +12,7 @@
 #include "Node.h"
 #include "Connector.h"
 #include "NodeCanvas.h"
+#include "../Core/EventManager.h"
 
 #include "Modulator.h"
 
@@ -36,6 +37,8 @@ void NodeCanvas::paint(juce::Graphics& g)
 }
 
 void NodeCanvas::handleAsyncUpdate() {
+    drainHighlightFifo();
+
     for (auto& asyncUpdate  : asyncUpdates) {
         int nodeId = asyncUpdate.nodeId;
 
@@ -62,9 +65,34 @@ void NodeCanvas::handleAsyncUpdate() {
         }
         else if (updateType == AsyncUpdateType::NodeMoved) {
             setNodePosition(nodeId);
+            updateDurationMap(nodeId);
+        }
+        else if (updateType == AsyncUpdateType::DurationOnly) {
+            updateDurationMap(nodeId);
         }
     }
     asyncUpdates.clear();
+}
+
+void NodeCanvas::drainHighlightFifo()
+{
+    auto& em = ComponentContext::processor->eventManager;
+    const auto scope = em.highlightFifo.read(em.highlightFifo.getNumReady());
+
+    for (int i = 0; i < scope.blockSize1; ++i)
+    {
+        auto& cmd = em.highlightBuffer[static_cast<size_t>(scope.startIndex1 + i)];
+        auto it = nodeMap.find(cmd.nodeId);
+        if (it != nodeMap.end())
+            it->second->setHighlightVisual(cmd.shouldHighlight);
+    }
+    for (int i = 0; i < scope.blockSize2; ++i)
+    {
+        auto& cmd = em.highlightBuffer[static_cast<size_t>(scope.startIndex2 + i)];
+        auto it = nodeMap.find(cmd.nodeId);
+        if (it != nodeMap.end())
+            it->second->setHighlightVisual(cmd.shouldHighlight);
+    }
 }
 
 void NodeCanvas::addNodeToCanvas(int nodeId)
@@ -119,9 +147,7 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
         NodePosition pos = ValueTreeState::getNodePosition(nodeId);
         gridOrigin    = { (float)pos.xPosition, (float)pos.yPosition };
         gridSpacing   = 50.0f;
-        showGrid      = true;
         gridOriginSet = true;
-        repaint();
     }
 
     makeRTGraph(nodeValueTree);
@@ -347,31 +373,15 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
 
     for (auto& [id, nodeVT] : tempNodeMap) {
         juce::ValueTree nodeChildrenIds = nodeVT.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-        bool isConnector = nodeVT.getType() == ValueTreeIdentifiers::ConnectorData;
 
         for (int i = 0; i < nodeChildrenIds.getNumChildren(); i++) {
             juce::ValueTree childIdTree = nodeChildrenIds.getChild(i);
             int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
 
             juce::ValueTree childDataTree = ValueTreeState::getNode(childId);
-            if (!childDataTree.isValid()) { continue; }
+            if (!childDataTree.isValid()) continue;
 
-            if (childDataTree.getType() == ValueTreeIdentifiers::RootNodeData && isConnector) {
-                rtGraph->nodeMap[id].connectors.push_back(childId);
-            }
-            else if (childDataTree.getType() == ValueTreeIdentifiers::NodeData
-                  || childDataTree.getType() == ValueTreeIdentifiers::RootNodeData) {
-                rtGraph->nodeMap[id].children.push_back(childId);
-            }
-            else if (childDataTree.getType() == ValueTreeIdentifiers::ConnectorData) {
-                rtGraph->nodeMap[id].connectors.push_back(childId);
-            }
-            else if (childDataTree.getType() == ValueTreeIdentifiers::ModulatorRootData) {
-                rtGraph->nodeMap[id].connectors.push_back(childId);
-            }
-            else if (childDataTree.getType() == ValueTreeIdentifiers::ModulatorData) {
-                rtGraph->nodeMap[id].children.push_back(childId);
-            }
+            rtGraph->nodeMap[id].children.push_back(childId);
         }
     }
 
@@ -382,6 +392,55 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
     lastGraph = rtGraph;
 
     ComponentContext::processor->setNewGraph(rtGraph);
+}
+
+void NodeCanvas::updateDurationMap(int nodeId)
+{
+    auto* processor = ComponentContext::processor;
+    auto snap = std::atomic_load(&processor->audioSnapshot);
+    if (!snap || !snap->globalNodes) return;
+
+    // Find the node and its parent — we need to update duration maps for both
+    auto nodeIt = nodeMap.find(nodeId);
+    if (nodeIt == nodeMap.end()) return;
+    Node* node = nodeIt->second;
+
+    juce::ValueTree nodeVT = ValueTreeState::getNode(nodeId);
+    if (!nodeVT.isValid()) return;
+
+    auto newSnap = std::make_shared<SequenceTreeAudioProcessor::AudioSnapshot>();
+    newSnap->globalNodes = std::make_shared<NodeMap>(*snap->globalNodes);
+    newSnap->rtGraphs    = snap->rtGraphs;
+
+    // Update this node's outgoing durations
+    auto globalNodeIt = newSnap->globalNodes->find(nodeId);
+    if (globalNodeIt != newSnap->globalNodes->end())
+    {
+        globalNodeIt->second.durationMap.clear();
+        for (auto& [childId, arrow] : node->nodeArrows)
+            globalNodeIt->second.durationMap[childId] = arrow->duration;
+    }
+
+    // Update parent's duration pointing to this node (incoming arrow)
+    juce::ValueTree parentVT = ValueTreeState::getNodeParent(nodeId);
+    if (parentVT.isValid())
+    {
+        int parentId = parentVT.getProperty(ValueTreeIdentifiers::Id);
+        auto parentIt = nodeMap.find(parentId);
+        if (parentIt != nodeMap.end())
+        {
+            Node* parentNode = parentIt->second;
+            auto globalParentIt = newSnap->globalNodes->find(parentId);
+            if (globalParentIt != newSnap->globalNodes->end())
+            {
+                globalParentIt->second.durationMap.clear();
+                for (auto& [childId, arrow] : parentNode->nodeArrows)
+                    globalParentIt->second.durationMap[childId] = arrow->duration;
+            }
+        }
+    }
+
+    std::atomic_store(&processor->audioSnapshot, newSnap);
 }
 
 void NodeCanvas::destroyRTGraph(Node* root) { }
@@ -455,8 +514,11 @@ void NodeCanvas::valueTreePropertyChanged(juce::ValueTree &tree, const juce::Ide
     else if (propertyIdentifier == ValueTreeIdentifiers::MidiDuration) {
         juce::ValueTree noteNode = tree.getParent().getParent();
         AsyncUpdate asyncUpdate;
-        asyncUpdate.type = AsyncUpdateType::NodeMoved;
+        asyncUpdate.type = AsyncUpdateType::DurationOnly;
         asyncUpdate.nodeId = noteNode.getProperty(ValueTreeIdentifiers::Id);
+
+        asyncUpdates.push_back(asyncUpdate);
+        triggerAsyncUpdate();
     }
 }
 
@@ -582,7 +644,6 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         NodePosition pos = ValueTreeState::getNodePosition(firstRootId);
         gridOrigin    = { (float)pos.xPosition, (float)pos.yPosition };
         gridSpacing   = 50.0f;
-        showGrid      = true;
         gridOriginSet = true;
     }
 
