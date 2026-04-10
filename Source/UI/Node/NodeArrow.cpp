@@ -39,8 +39,6 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
   childNode->incomingAngle = std::atan2(dy, dx);
 
   duration = (int)(std::abs(dx) * durationAmount);
-  if (boundNodeValueTree.isValid())
-      bindValue.setValue(duration);
   textEditor.setText(juce::String(duration));
 
   // Build the curve in canvas coordinates to get the true bounding box.

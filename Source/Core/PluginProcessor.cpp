@@ -227,15 +227,15 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     midiMessages.clear();
 
     if (traversals.empty()) {
-        // Find the root node of the main graph (lowest-ID node where nodeID == graphID)
+
         int rootId = -1;
         for (const auto& [nodeId, node] : nodes) {
-            if (node.nodeID == node.graphID) {
-                if (rootId == -1 || nodeId < rootId)
-                    rootId = nodeId;
+            if (rootId == -1 || nodeId < rootId) {
+                rootId = nodeId;
             }
         }
-        if (rootId == -1) return;
+
+        jassert(rootId != -1);
 
         traversals.insert({rootId, TraversalLogic(rootId, this)});
         TraversalLogic& traversal = traversals.at(rootId);
