@@ -6,6 +6,7 @@
 #define SEQUENCETREE_ROOTARROW_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "../Node/ValueEditor.h"
 
 class RootRectangle : public juce::Component {
 
@@ -15,7 +16,7 @@ public:
     void resized() override;
     void paint(juce::Graphics& g) override;
 
-
+    ValueEditor loopLimitEditor;
 };
 
 

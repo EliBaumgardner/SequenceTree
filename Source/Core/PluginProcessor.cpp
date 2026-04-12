@@ -241,6 +241,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     TraversalMap& traversals = eventManager.traversals;
 
     updateTraversalCounts(nodes, traversals);
+    syncTraversalLoopLimits(traversals, *snap->rtGraphs, midiMessages, nodes);
 
     juce::ScopedNoDenormals noDenormals;
     const int numSamples = buffer.getNumSamples();
@@ -249,7 +250,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     midiMessages.clear();
 
     if (traversals.empty()) {
-        if (initializeTraversalForRootNode(midiMessages, nodes, traversals) == false) {
+        if (initializeTraversalForRootNode(midiMessages, nodes, traversals, *snap->rtGraphs) == false) {
             return;
         }
     }
@@ -262,7 +263,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
 }
 
-bool SequenceTreeAudioProcessor::initializeTraversalForRootNode(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversals) {
+bool SequenceTreeAudioProcessor::initializeTraversalForRootNode(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversals, RTGraphs &rtGraphs) {
     int rootId = -1;
     bool rootFound;
 
@@ -288,12 +289,48 @@ bool SequenceTreeAudioProcessor::initializeTraversalForRootNode(juce::MidiBuffer
     traversal.state     = TraversalLogic::TraversalState::Active;
     traversal.isLooping = true;
 
+    auto rtGraphIt = rtGraphs.find(rootId);
+    if (rtGraphIt != rtGraphs.end())
+        traversal.loopLimit = rtGraphIt->second->loopLimit;
+
     RTNode& rootNode    = nodes.at(rootId);
     int     traversalId = rootNode.nodeID;
     eventManager.highlightNode(rootNode, true);
     eventManager.pushNote(rootNode, traversalId, midiMessages, 0, nodes, traversals);
 
     return rootFound;
+}
+
+void SequenceTreeAudioProcessor::syncTraversalLoopLimits(TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages, NodeMap &nodes)
+{
+    for (auto& [traversalId, traversal] : traversals)
+    {
+        auto rtGraphIt = rtGraphs.find(traversalId);
+        if (rtGraphIt == rtGraphs.end()) continue;
+
+        int newLoopLimit = rtGraphIt->second->loopLimit;
+        if (newLoopLimit == traversal.loopLimit) continue;
+
+        traversal.loopLimit = newLoopLimit;
+
+        // If the traversal stopped because it hit the old limit, check whether
+        // the new limit allows more loops. If so, reactivate from the root.
+        if (traversal.state == TraversalLogic::TraversalState::End) {
+            if (newLoopLimit == 0 || traversal.loopCount < newLoopLimit) {
+                traversal.targetId = traversal.rootId;
+                traversal.state    = TraversalLogic::TraversalState::Active;
+
+                // Push a note on the root to restart the note pipeline.
+                // Without this, processEvents has no active note to expire and
+                // the traversal would sit in Active state but never advance.
+                auto rootIt = nodes.find(traversal.rootId);
+                if (rootIt != nodes.end()) {
+                    eventManager.highlightNode(rootIt->second, true);
+                    eventManager.pushNote(rootIt->second, traversalId, midiMessages, 0, nodes, traversals);
+                }
+            }
+        }
+    }
 }
 
 void SequenceTreeAudioProcessor::clearOldEvents(RTNode node, int traversalId)

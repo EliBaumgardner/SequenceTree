@@ -49,9 +49,10 @@ public:
     static juce::ValueTree nodeTreeMap;
     static juce::ValueTree nodeArrows;
 
-    static inline int nodeIdIncrement       {0};
+    static inline int nodeIdIncrement        {0};
     static inline int defaultNodeCount      {1};
     static inline int defaultNodeCountLimit {1};
+    static inline int defaultRootLoopLimit  {0};  // 0 = loop infinitely
     static inline int defaultModAmount      {1};
 };
 

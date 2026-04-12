@@ -215,8 +215,21 @@ void NodeCanvas::setNodePosition(int nodeId)
 
     auto node = nodePair->second;
 
-    node->setSize(radius * 2, radius * 2);
-    node->setCentrePosition(xPosition, yPosition);
+    if (node->nodeType == NodeType::Root)
+    {
+        // Extend the component left by loopLimitRectangleWidth so the rectangle
+        // fits outside the circle without clipping. The circle centre stays at
+        // (xPosition, yPosition) — see RootNode::getNodeCentre().
+        const int rw = RootNode::loopLimitRectangleWidth;
+        node->setSize(radius * 2 + rw, radius * 2);
+        node->setTopLeftPosition(xPosition - radius - rw, yPosition - radius);
+    }
+    else
+    {
+        node->setSize(radius * 2, radius * 2);
+        node->setCentrePosition(xPosition, yPosition);
+    }
+
     updateLinePoints(node);
 
 }
@@ -287,7 +300,8 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
 
     auto rtGraph = std::make_shared<RTGraph>();
 
-    rtGraph->graphID = rootNodeId;
+    rtGraph->graphID   = rootNodeId;
+    rtGraph->loopLimit = rootNodeValueTree.getProperty(ValueTreeIdentifiers::LoopLimit, 0);
 
     std::unordered_map<int,juce::ValueTree> tempNodeMap;
 

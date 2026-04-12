@@ -26,8 +26,8 @@ void NodeArrow::paint(juce::Graphics &g) {
 
 void NodeArrow::setArrowBounds(Node* movedNode) {
 
-  juce::Point<int> start = parentNode->getBounds().getCentre();
-  juce::Point<int> end   = childNode->getBounds().getCentre();
+  juce::Point<int> start = parentNode->getNodeCentre();
+  juce::Point<int> end   = childNode->getNodeCentre();
 
   float dx = float(end.x - start.x);
   float dy = float(end.y - start.y);
@@ -40,8 +40,10 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
   textEditor.setText(juce::String(duration));
 
   // Build the path in canvas coordinates to get the true bounding box.
-  int parentRadius = parentNode->getWidth() / 2;
-  int childRadius  = childNode->getWidth()  / 2;
+  // Use height/2 (= circle radius) rather than width/2 so that root nodes,
+  // whose component is wider than the circle, still produce correct arrow endpoints.
+  int parentRadius = parentNode->getHeight() / 2;
+  int childRadius  = childNode->getHeight()  / 2;
 
   float dirX = (length > 0.0f) ? dx / length : 1.0f;
   float dirY = (length > 0.0f) ? dy / length : 0.0f;

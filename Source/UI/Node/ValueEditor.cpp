@@ -70,10 +70,15 @@ void ValueEditor::textEditorFocusLost(juce::TextEditor&)
     commitValue();
 }
 
+void ValueEditor::setMinimumValue(int min)
+{
+    minValue = min;
+}
+
 void ValueEditor::commitValue()
 {
     int val = textEditor->getText().getIntValue();
-    if (val < 1) val = 1;
+    if (val < minValue) val = minValue;
     boundValue.setValue(val);
 
     // Notify the audio thread of the updated countLimit

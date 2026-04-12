@@ -44,12 +44,13 @@ struct RTNode {
 using NodeMap = std::unordered_map<int, RTNode>;
 
 struct RTGraph {
-    
+
     std::unordered_map<int, RTNode> nodeMap;
     std::atomic<bool> traversalRequested;
 
-    int rootID = 0;
-    int graphID = 0;
+    int rootID    = 0;
+    int graphID   = 0;
+    int loopLimit = 0;  // 0 = loop infinitely; N > 0 = stop after N full loops
 
     RTGraph() = default;
     

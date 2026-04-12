@@ -31,6 +31,7 @@ const juce::Identifier ValueTreeIdentifiers::NodeId               {"NodeId"};
 
 const juce::Identifier ValueTreeIdentifiers::CountLimit           {"CountLimit"};
 const juce::Identifier ValueTreeIdentifiers::Count                {"Count"};
+const juce::Identifier ValueTreeIdentifiers::LoopLimit            {"LoopLimit"};
 
 const juce::Identifier ValueTreeIdentifiers::XPosition            {"XPosition"};
 const juce::Identifier ValueTreeIdentifiers::YPosition            {"YPosition"};

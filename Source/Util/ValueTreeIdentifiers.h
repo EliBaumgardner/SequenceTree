@@ -42,6 +42,7 @@ public:
 
     static const juce::Identifier CountLimit;
     static const juce::Identifier Count;
+    static const juce::Identifier LoopLimit;
 
     static const juce::Identifier XPosition;
     static const juce::Identifier YPosition;

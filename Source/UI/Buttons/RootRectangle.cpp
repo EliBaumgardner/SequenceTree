@@ -8,6 +8,10 @@
 
 RootRectangle::RootRectangle() {
     setLookAndFeel(ComponentContext::lookAndFeel);
+
+    loopLimitEditor.setMinimumValue(0);
+    loopLimitEditor.setInterceptsMouseClicks(true, false);
+    addAndMakeVisible(loopLimitEditor);
 }
 
 void RootRectangle::paint(juce::Graphics &g) {
@@ -15,5 +19,5 @@ void RootRectangle::paint(juce::Graphics &g) {
 }
 
 void RootRectangle::resized() {
-
+    loopLimitEditor.setBounds(getLocalBounds());
 }
