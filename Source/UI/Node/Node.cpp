@@ -37,6 +37,9 @@ Node::Node()
     addAndMakeVisible(nodeTextEditor.get());
     nodeTextEditor->toBack();
 
+    countEditor.setInterceptsMouseClicks(true, false);
+    addAndMakeVisible(countEditor);
+
     upButton.onChanged = [this](){
         incrementNodeTextEditorValue(1);
 
@@ -55,12 +58,15 @@ void Node::paint(juce::Graphics& g)
 void Node::resized()
 {
     auto editorArea = getLocalBounds().reduced(10.0f);
-    
+
     upButton.setBounds(editorArea.removeFromTop(4.0f));
     downButton.setBounds(editorArea.removeFromBottom(4.0f));
-    
+
     nodeTextEditor->setBounds(editorArea);
     nodeTextEditor->setJustification(juce::Justification::centred);
+
+    // Float count editor at top-right corner, outside the circle
+    countEditor.setBounds(getWidth() - 18, 0, 18, 12);
 }
 
 void Node::setHoverVisual(bool isHovered)
@@ -116,6 +122,9 @@ void Node::timerCallback()
 void Node::setDisplayMode(NodeDisplayMode mode)
 {
     this->mode = mode;
+
+    if (nodeValueTree.isValid())
+        countEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
 
     switch (mode){
 

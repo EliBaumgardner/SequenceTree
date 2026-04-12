@@ -153,18 +153,6 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g,const Node& node)
         g.strokePath(dottedPath, stroke);
     }
 
-    // Count limit floating in top-right corner
-    if (node.nodeValueTree.isValid())
-    {
-        int countLimit = (int) node.nodeValueTree.getProperty(ValueTreeIdentifiers::CountLimit, 1);
-        auto fullBounds = node.getLocalBounds().toFloat();
-        g.setFont(juce::Font(9.0f));
-        g.setColour(juce::Colours::lightgrey.withAlpha(0.85f));
-        g.drawText(juce::String(countLimit),
-                   fullBounds.getRight() - 16.0f, fullBounds.getY(),
-                   16.0f, 12.0f,
-                   juce::Justification::centredRight, false);
-    }
 }
 
 void CustomLookAndFeel::drawRootNode(juce::Graphics& g,const RootNode& node) {
@@ -353,23 +341,46 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         stroke.createDashedStroke(linePath, linePath, dashLengths, 2);
     }
 
-    g.strokePath(linePath, juce::PathStrokeType(2.0f));
+    // Subtle engraved look: thin shadow/highlight offsets around the main stroke
+    juce::PathStrokeType lineStroke(2.0f);
+    auto shadowPath    = linePath;
+    auto highlightPath = linePath;
+    shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
+    highlightPath.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
+    g.setColour(arrowColour.darker(0.4f).withAlpha(0.35f));
+    g.strokePath(shadowPath,    lineStroke);
+    g.setColour(arrowColour.brighter(0.4f).withAlpha(0.18f));
+    g.strokePath(highlightPath, lineStroke);
+    g.setColour(arrowColour);
+    g.strokePath(linePath, lineStroke);
 
     if (nodeArrow.animT > 0.3f)
     {
-
         float leftX  = arrowEndX - arrowLength * dirX + arrowWidth * dirY;
         float leftY  = arrowEndY - arrowLength * dirY - arrowWidth * dirX;
         float rightX = arrowEndX - arrowLength * dirX - arrowWidth * dirY;
         float rightY = arrowEndY - arrowLength * dirY + arrowWidth * dirX;
 
+        // Engraved arrowhead: fill main, then shadow/highlight strokes around the outline
         juce::Path arrowHead;
         arrowHead.startNewSubPath(leftX, leftY);
         arrowHead.lineTo(arrowEndX, arrowEndY);
         arrowHead.lineTo(rightX, rightY);
         arrowHead.closeSubPath();
+
         g.setColour(arrowHeadColour);
         g.fillPath(arrowHead);
+
+        auto headShadow    = arrowHead;
+        auto headHighlight = arrowHead;
+        headShadow   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
+        headHighlight.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
+
+        juce::PathStrokeType headStroke(1.0f);
+        g.setColour(arrowHeadColour.darker(0.5f).withAlpha(0.4f));
+        g.strokePath(headShadow,    headStroke);
+        g.setColour(arrowHeadColour.brighter(0.4f).withAlpha(0.2f));
+        g.strokePath(headHighlight, headStroke);
     }
 
     TextCords textCords;

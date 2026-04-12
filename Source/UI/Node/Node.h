@@ -14,6 +14,7 @@
 
 #include "../Util/NodeInfo.h"
 #include "Buttons/IncrementButton.h""
+#include "ValueEditor.h"
 
 
 class NodeArrow;
@@ -51,6 +52,7 @@ public:
 
     IncrementButton upButton   { true };
     IncrementButton downButton { false };
+    ValueEditor countEditor;
 
     juce::Colour nodeColour = juce::Colour::fromRGB(91,86,76);
 
