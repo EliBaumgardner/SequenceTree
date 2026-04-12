@@ -26,6 +26,7 @@ NodeCanvas::NodeCanvas()
 }
 
 NodeCanvas::~NodeCanvas() {
+    hideSnapGhostArrow();
     nodeArrows.clear();
 }
 
@@ -217,9 +218,6 @@ void NodeCanvas::setNodePosition(int nodeId)
 
     if (node->nodeType == NodeType::Root)
     {
-        // Extend the component left by loopLimitRectangleWidth so the rectangle
-        // fits outside the circle without clipping. The circle centre stays at
-        // (xPosition, yPosition) — see RootNode::getNodeCentre().
         const int rw = RootNode::loopLimitRectangleWidth;
         node->setSize(radius * 2 + rw, radius * 2);
         node->setTopLeftPosition(xPosition - radius - rw, yPosition - radius);
@@ -252,7 +250,7 @@ void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
     arrow->toBack();
     arrow->setInterceptsMouseClicks(false,false);
 
-    if (parentMidiNoteData.isValid() && childNode->nodeType != NodeType::Connector)
+    if (parentMidiNoteData.isValid() && childNode->nodeType != NodeType::Connector && childNode->nodeType != NodeType::Root)
         arrow->bindToProperty(parentMidiNoteData, ValueTreeIdentifiers::MidiDuration);
     nodeArrows.add(arrow.release());
 }
@@ -562,8 +560,39 @@ void NodeCanvas::triggerArrowSnapForNode(int nodeId)
     }
 }
 
+void NodeCanvas::showSnapGhostArrow(Node* from, Node* to)
+{
+    if (snapGhostArrow != nullptr)
+    {
+        if (snapGhostArrow->parentNode == from && snapGhostArrow->childNode == to)
+            return;
+        removeChildComponent(snapGhostArrow);
+        delete snapGhostArrow;
+        snapGhostArrow = nullptr;
+    }
+
+    snapGhostArrow = new NodeArrow(from, to);
+    snapGhostArrow->isGhost = true;
+    snapGhostArrow->setInterceptsMouseClicks(false, false);
+    addAndMakeVisible(snapGhostArrow);
+    snapGhostArrow->toBack();
+    snapGhostArrow->setArrowBounds(from);
+    snapGhostArrow->triggerSnapAnimation();
+}
+
+void NodeCanvas::hideSnapGhostArrow()
+{
+    if (snapGhostArrow != nullptr)
+    {
+        removeChildComponent(snapGhostArrow);
+        delete snapGhostArrow;
+        snapGhostArrow = nullptr;
+    }
+}
+
 void NodeCanvas::clearCanvas()
 {
+    hideSnapGhostArrow();
     nodeArrows.clear();
 
     for (auto& [nodeId, node] : nodeMap) {

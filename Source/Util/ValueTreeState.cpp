@@ -222,6 +222,17 @@ juce::ValueTree ValueTreeState::addModulator(int parentNodeId, juce::UndoManager
 
     return modulatorNode;
 }
+void ValueTreeState::connectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager)
+{
+    juce::ValueTree parentNode = getNode(parentNodeId);
+
+    juce::ValueTree nodeChildrenIds = parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+    juce::ValueTree childId {ValueTreeIdentifiers::NodeId};
+    childId.setProperty(ValueTreeIdentifiers::Id, childNodeId, undoManager);
+    nodeChildrenIds.addChild(childId, -1, undoManager);
+}
+
 void ValueTreeState::removeNodeTree(int treeId, juce::UndoManager* undoManager)
 {
     juce::ValueTree nodeTree = nodeTreeMap.getChildWithProperty(ValueTreeIdentifiers::NodeTreeId,treeId);

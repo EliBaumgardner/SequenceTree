@@ -56,7 +56,7 @@ void EventManager::handleOrphanNotes(juce::MidiBuffer &midiMessages, NodeMap &no
         }
 
         // 2. if node is audible send note off//
-        if (isNodeAudible(activeNote.noteNode.nodeType)){
+        if (isNodeAudible(activeNote.noteNode.nodeType) && !activeNote.isConnectionTrigger){
             midiMessages.addEvent(juce::MidiMessage::noteOff(1, activeNote.event.pitch), 0);
         }
 
@@ -93,7 +93,14 @@ void EventManager::handleOrphanNotes(juce::MidiBuffer &midiMessages, NodeMap &no
 }
 
 void EventManager::handleNoteCreation(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversalMap, int priorityNoteDuration, EventManager::ActiveNote expiredNote, int traversalId, TraversalLogic &traversal, RTNode::NodeType type) {
-    if (type == RTNode::NodeType::RootNode
+    if (type == RTNode::NodeType::RootNode && expiredNote.isConnectionTrigger)
+    {
+        traversal.handleConnectorNodeEvent(expiredNote.noteNode.nodeID, nodes);
+
+        if (traversal.shouldTraverse())
+            pushRootNodeConnection(expiredNote.noteNode.nodeID, midiMessages, priorityNoteDuration, nodes, traversalMap);
+    }
+    else if (type == RTNode::NodeType::RootNode
         || type == RTNode::NodeType::Node
         || type == RTNode::NodeType::Modulator)
     {
@@ -154,7 +161,7 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
         ActiveNote& activeNote = activeNotes[smallestNoteIndex];
 
         // 3.  Send note-off in the future, when the note expires
-        if (isNodeAudible(activeNote.noteNode.nodeType)){
+        if (isNodeAudible(activeNote.noteNode.nodeType) && !activeNote.isConnectionTrigger){
             midiMessages.addEvent(juce::MidiMessage::noteOff(1, activeNote.event.pitch), priorityNoteDuration);
         }
 
@@ -260,7 +267,7 @@ void EventManager::pushNote(const RTNode& node, int traversalId, juce::MidiBuffe
         midiMessages.addEvent(juce::MidiMessage::noteOn(1, pitch, static_cast<juce::uint8>(velocity)), sample);
     }
 
-    // 5. push connectors
+    // 5. push connectors and root node connections
     if (node.nodeType == RTNode::NodeType::Node)
     {
         for (int connectorId : traversalIt->second.peekTraversers(nodes))
@@ -270,8 +277,28 @@ void EventManager::pushNote(const RTNode& node, int traversalId, juce::MidiBuffe
                 continue;
             }
 
-            highlightNode(connectorIterator->second, true);
-            pushNote(connectorIterator->second, traversalId, midiMessages, sample, nodes, traversalMap);
+            const RTNode& connectorNode = connectorIterator->second;
+            highlightNode(connectorNode, true);
+
+            if (connectorNode.nodeType == RTNode::NodeType::RootNode)
+            {
+                // Push a silent connection trigger — its duration is the arrow length from
+                // this node to the root node, after which traversal starts on that root's graph.
+                auto durIt = node.durationMap.find(connectorId);
+                int connectionDuration = (durIt != node.durationMap.end()) ? durIt->second : 1000;
+
+                ActiveNote triggerNote;
+                triggerNote.traversalId         = traversalId;
+                triggerNote.noteNode            = connectorNode;
+                triggerNote.isConnectionTrigger = true;
+                triggerNote.event.duration      = connectionDuration;
+                triggerNote.remainingSamples    = static_cast<int>((connectionDuration / 1000.0) * sampleRate / tempoMultiplier);
+                activeNotes.push_back(triggerNote);
+            }
+            else
+            {
+                pushNote(connectorNode, traversalId, midiMessages, sample, nodes, traversalMap);
+            }
         }
     }
 }
@@ -333,6 +360,32 @@ void EventManager::clearOldEvents(int traversalId)
             activeNotes[i].traversalId = -1;
         }
     }
+}
+
+void EventManager::pushRootNodeConnection(int rootNodeId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, TraversalMap& traversalMap)
+{
+    auto rootIt = nodes.find(rootNodeId);
+    if (rootIt == nodes.end()) return;
+
+    const RTNode& rootNode = rootIt->second;
+
+    resetTraversal(rootNode.graphID, rootNodeId, nodes, traversalMap);
+
+    // Apply the same loop settings a standalone root gets, so the connected tree
+    // loops as configured by its root rectangle.
+    TraversalLogic& traversal = traversalMap.at(rootNode.graphID);
+    traversal.isLooping = true;
+    traversal.loopCount = 0;
+
+    auto snap = std::atomic_load(&processor->audioSnapshot);
+    if (snap && snap->rtGraphs) {
+        auto rtGraphIt = snap->rtGraphs->find(rootNode.graphID);
+        if (rtGraphIt != snap->rtGraphs->end())
+            traversal.loopLimit = rtGraphIt->second->loopLimit;
+    }
+
+    highlightNode(rootNode, true);
+    pushNote(rootNode, rootNode.graphID, midiMessages, sample, nodes, traversalMap);
 }
 
 void EventManager::highlightNode(const RTNode& node, bool shouldHighlight)

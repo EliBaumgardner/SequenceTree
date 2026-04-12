@@ -10,6 +10,7 @@
 #include "PluginEditor.h"
 #include "Node/Node.h"
 #include "../Util/ValueTreeIdentifiers.h"
+#include <unordered_set>
 
 
 
@@ -267,8 +268,17 @@ bool SequenceTreeAudioProcessor::initializeTraversalForRootNode(juce::MidiBuffer
     int rootId = -1;
     bool rootFound;
 
+    // Build the set of node IDs that appear as children of other nodes.
+    // A root node in this set is a "linked root" — it will be started by a
+    // connection trigger from another tree and must NOT be auto-started here.
+    std::unordered_set<int> linkedRootIds;
     for (const auto& [nodeId, node] : nodes) {
-        if (node.nodeID == node.graphID) {
+        for (int childId : node.children)
+            linkedRootIds.insert(childId);
+    }
+
+    for (const auto& [nodeId, node] : nodes) {
+        if (node.nodeID == node.graphID && linkedRootIds.find(nodeId) == linkedRootIds.end()) {
             if (rootId == -1 || nodeId < rootId)
                 rootId = nodeId;
         }

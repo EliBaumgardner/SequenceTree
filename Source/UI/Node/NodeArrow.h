@@ -41,7 +41,8 @@ public:
   float animT  = 1.0f;
   int duration = 0;
 
-  bool updateFromBindValue= false;
+  bool updateFromBindValue = false;
+  bool isGhost = false;
 
   juce::TextEditor textEditor;
 

@@ -26,9 +26,10 @@ public:
     struct ActiveNote
     {
         MidiEvent event;
-        int       traversalId     = 0;
+        int       traversalId      = 0;
         int       remainingSamples = 0;
         RTNode    noteNode;
+        bool      isConnectionTrigger = false;
     };
 
     struct HighlightCommand
@@ -52,8 +53,9 @@ public:
 
     void processEvents       (int numSamples, juce::MidiBuffer& midiMessages, NodeMap& nodes, TraversalMap& traversalMap);
     void pushNote            (const RTNode& node, int traversalId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, TraversalMap& traversalMap);
-    void pushConnectorNotes  (int traverserId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, TraversalMap& traversalMap);
-    void pushModulatorNotes  (int modulatorRootId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, TraversalMap& traversalMap);
+    void pushConnectorNotes     (int traverserId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, TraversalMap& traversalMap);
+    void pushModulatorNotes     (int modulatorRootId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, TraversalMap& traversalMap);
+    void pushRootNodeConnection (int rootNodeId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, TraversalMap& traversalMap);
     void clearOldEvents      (int traversalId);
     void highlightNode       (const RTNode& node, bool shouldHighlight);
 
