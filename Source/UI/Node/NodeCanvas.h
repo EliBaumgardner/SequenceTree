@@ -17,6 +17,7 @@
 #include "../Util/NodeInfo.h"
 
 class Node;
+class RootNode;
 class NodeArrow;
 
 class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, public juce::AsyncUpdater {

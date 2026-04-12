@@ -8,7 +8,11 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 class NodeCanvas;
+
 class Node;
+class RootNode;
+class RootRectangle;
+
 class NodeArrow;
 
 class Titlebar;
@@ -51,37 +55,46 @@ public:
 
     CustomLookAndFeel();
 
-    virtual void drawEditor         (juce::Graphics& g, CustomTextEditor& editor);
-    virtual void drawNodeTextEditor (juce::Graphics& g, NodeTextEditor& editor);
+    static CustomLookAndFeel& get(juce::Component& c)
+    {
+        return static_cast<CustomLookAndFeel&>(c.getLookAndFeel());
+    }
+
+    void drawEditor         (juce::Graphics& g, CustomTextEditor& editor);
+    void drawNodeTextEditor (juce::Graphics& g, NodeTextEditor& editor);
     juce::CaretComponent* createCaretComponent(juce::Component* keyFocusOwner) override;
 
-    virtual void drawCanvas         (juce::Graphics& g, const NodeCanvas& canvas);
+    void drawCanvas         (juce::Graphics& g, const NodeCanvas& canvas);
 
-    virtual void drawTitleBar       (juce::Graphics& g, const Titlebar& titleBar);
+    void drawTitleBar       (juce::Graphics& g, const Titlebar& titleBar);
 
-    virtual void drawDisplayMenu    (juce::Graphics& g, const DisplayMenu& displaySelector);
-    virtual void drawButtonPane     (juce::Graphics& g, const ButtonPane& selectionBar);
-    virtual void drawDisplayButton  (juce::Graphics& g, const DisplayButton& displayButton);
+    void drawDisplayMenu    (juce::Graphics& g, const DisplayMenu& displaySelector);
+    void drawButtonPane     (juce::Graphics& g, const ButtonPane& selectionBar);
+    void drawDisplayButton  (juce::Graphics& g, const DisplayButton& displayButton);
 
-    virtual void drawNode           (juce::Graphics& g, const Node& node);
+    void drawNodeInteractionEffects(juce::Graphics &g, const Node &node, juce::Rectangle<float> bounds);
+
+    void drawNode           (juce::Graphics& g, const Node& node);
+    void drawRootNode       (juce::Graphics& g, const RootNode& node);
+    void drawRootNodeRectangle(juce::Graphics& g, const RootRectangle& rootRectangle);
 
     void drawNodeArrowText          (juce::Graphics &g, const NodeArrow &nodeArrow, const juce::TextEditor &editor, TextCords textCords);
 
-    virtual void drawNodeArrow      (juce::Graphics& g, const NodeArrow& nodeArrow, const juce::TextEditor& editor);
+    void drawNodeArrow      (juce::Graphics& g, const NodeArrow& nodeArrow, const juce::TextEditor& editor);
 
-    virtual void drawPlayButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const PlayButton& button);
-    virtual void drawSyncButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const SyncButton& button);
+    void drawPlayButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const PlayButton& button);
+    void drawSyncButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const SyncButton& button);
 
-    virtual void drawNodeButton     (juce::Graphics& g, const NodeButton& nodeButton);
-    virtual void drawTraverserButton(juce::Graphics& g, const ConnectorButton& traverserButton);
-    virtual void drawModulatorButton(juce::Graphics& g, const ModulatorButton& modulatorButton);
+    void drawNodeButton     (juce::Graphics& g, const NodeButton& nodeButton);
+    void drawTraverserButton(juce::Graphics& g, const ConnectorButton& traverserButton);
+    void drawModulatorButton(juce::Graphics& g, const ModulatorButton& modulatorButton);
 
-    virtual void drawTempoDisplay   (juce::Graphics& g, const TempoDisplay& tempoDisplay);
+    void drawTempoDisplay   (juce::Graphics& g, const TempoDisplay& tempoDisplay);
 
-    virtual void drawUndoButton     (juce::Graphics& g, const UndoButton& undoButton, bool isButtonDown);
-    virtual void drawRedoButton     (juce::Graphics& g, const RedoButton& redoButton, bool isButtonDown);
-    virtual void drawUndoRedoPane   (juce::Graphics& g, const UndoRedoPane& undoRedoPane);
-    virtual void drawResetButton    (juce::Graphics& g, const ResetButton& resetButton, bool isButtonDown);
+    void drawUndoButton     (juce::Graphics& g, const UndoButton& undoButton, bool isButtonDown);
+    void drawRedoButton     (juce::Graphics& g, const RedoButton& redoButton, bool isButtonDown);
+    void drawUndoRedoPane   (juce::Graphics& g, const UndoRedoPane& undoRedoPane);
+    void drawResetButton    (juce::Graphics& g, const ResetButton& resetButton, bool isButtonDown);
 
 
 private:
@@ -98,7 +111,8 @@ private:
     juce::Colour buttonColour = lightColour2;
     juce::Colour editorColour = lightColour2;
     juce::Colour textColour   = lightColour3;
-    juce::Colour arrowColour  = juce::Colours::black;
+    juce::Colour arrowColour  = darkColour2.darker();
+    juce::Colour arrowHeadColour = arrowColour;
 
     juce::DropShadow barDropShadow;
     juce::DropShadow nodeDropShadow;

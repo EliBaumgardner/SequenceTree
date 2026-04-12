@@ -82,7 +82,7 @@ class ButtonPane : public juce::Component {
 
     void paint(juce::Graphics& g) override
     {
-        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawButtonPane(g, *this);}
+        CustomLookAndFeel::get(*this).drawButtonPane(g, *this);
     }
 
     void resized () override

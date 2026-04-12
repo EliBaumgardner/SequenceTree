@@ -18,9 +18,7 @@ class ConnectorButton : public juce::Component {
     ConnectorButton() { setLookAndFeel(ComponentContext::lookAndFeel); }
     void paint(juce::Graphics& g) override
     {
-        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) {
-            customLookAndFeel->drawTraverserButton(g, *this);
-        }
+        CustomLookAndFeel::get(*this).drawTraverserButton(g, *this);
     }
 
     void mouseDown(const juce::MouseEvent& e) override { onClick(); }

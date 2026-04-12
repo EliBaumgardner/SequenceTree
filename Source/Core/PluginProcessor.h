@@ -35,6 +35,10 @@ public:
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 #endif
 
+    bool initializeTraversalForRootNode(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversals);
+
+    void updateTraversalCounts(NodeMap &nodes, TraversalMap &traversals);
+
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     //==============================================================================

@@ -52,9 +52,7 @@ NodeTextEditor::NodeTextEditor(Node* node) : node(node) {
 
 void NodeTextEditor::paint(juce::Graphics& g) {
     TextEditor::paint(g);
-    if (auto customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) {
-        customLookAndFeel->drawNodeTextEditor(g,*this);
-    }
+    CustomLookAndFeel::get(*this).drawNodeTextEditor(g, *this);
 
 }
 

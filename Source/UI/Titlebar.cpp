@@ -53,7 +53,7 @@ Titlebar::Titlebar()
 
 void Titlebar::paint(juce::Graphics& g)
 {
-    if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawTitleBar(g,*this); }
+    CustomLookAndFeel::get(*this).drawTitleBar(g, *this);
 }
 
 void Titlebar::resized()

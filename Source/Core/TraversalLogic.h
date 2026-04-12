@@ -17,7 +17,7 @@ public:
     };
 
     std::unordered_map<int, int> counts;
-    std::vector<int> traversers;
+    std::vector<int> traversalModifiers;
 
     bool isFirstEvent = false;
     bool isLooping    = false;

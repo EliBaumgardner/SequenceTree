@@ -40,6 +40,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/CustomTextEditor.cpp
         Source/Logic/DynamicPort.cpp
         Source/UI/Node/Node.cpp
+        Source/UI/Node/RootNode.cpp
         Source/UI/Node/NodeArrow.cpp
         Source/UI/Node/NodeTextEditor.cpp
         Source/UI/Node/NodeCanvas.cpp
@@ -56,6 +57,7 @@ target_sources(SequenceTree PRIVATE
         Source/Util/ValueTreeState.cpp
         Source/Util/ValueTreeIdentifiers.cpp
         Source/UI/Node/CustomTextCaret.cpp
+        Source/UI/Buttons/RootRectangle.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE

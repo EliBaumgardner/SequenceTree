@@ -49,9 +49,7 @@ Node::Node()
 
 void Node::paint(juce::Graphics& g)
 {
-    if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) {
-        customLookAndFeel->drawNode(g,*this);
-    }
+    CustomLookAndFeel::get(*this).drawNode(g, *this);
 }
 
 void Node::resized()
