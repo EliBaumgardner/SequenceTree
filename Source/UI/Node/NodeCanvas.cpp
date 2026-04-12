@@ -10,6 +10,7 @@
 #include "../Util/ValueTreeIdentifiers.h""
 
 #include "Node.h"
+#include "RootNode.h"
 #include "Connector.h"
 #include "NodeCanvas.h"
 #include "../Core/EventManager.h"
@@ -20,6 +21,7 @@
 // Canvas Related Functions //
 NodeCanvas::NodeCanvas()
 {
+    setPaintingIsUnclipped(true);
     setLookAndFeel(ComponentContext::lookAndFeel);
 }
 
@@ -30,10 +32,7 @@ NodeCanvas::~NodeCanvas() {
 
 void NodeCanvas::paint(juce::Graphics& g)
 {
-    if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel()))
-    {
-        customLookAndFeel->drawCanvas(g,*this);
-    }
+    CustomLookAndFeel::get(*this).drawCanvas(g, *this);
 }
 
 void NodeCanvas::handleAsyncUpdate() {
@@ -107,8 +106,10 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
 
     std::unique_ptr<Node> childNode = nullptr;
 
-    if (nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData
-        || nodeValueTree.getType() == ValueTreeIdentifiers::NodeData) {
+    if (nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
+        childNode = std::make_unique<RootNode>();
+    }
+    else if (nodeValueTree.getType() == ValueTreeIdentifiers::NodeData) {
         childNode = std::make_unique<Node>();
     }
     else if (nodeValueTree.getType() == ValueTreeIdentifiers::ConnectorData) {
@@ -400,7 +401,7 @@ void NodeCanvas::updateDurationMap(int nodeId)
     auto snap = std::atomic_load(&processor->audioSnapshot);
     if (!snap || !snap->globalNodes) return;
 
-    // Find the node and its parent — we need to update duration maps for both
+    // 1. Find the node and its parent
     auto nodeIt = nodeMap.find(nodeId);
     if (nodeIt == nodeMap.end()) return;
     Node* node = nodeIt->second;
@@ -412,7 +413,7 @@ void NodeCanvas::updateDurationMap(int nodeId)
     newSnap->globalNodes = std::make_shared<NodeMap>(*snap->globalNodes);
     newSnap->rtGraphs    = snap->rtGraphs;
 
-    // Update this node's outgoing durations
+    // 2. Update this node's outgoing durations
     auto globalNodeIt = newSnap->globalNodes->find(nodeId);
     if (globalNodeIt != newSnap->globalNodes->end())
     {
@@ -421,26 +422,21 @@ void NodeCanvas::updateDurationMap(int nodeId)
             globalNodeIt->second.durationMap[childId] = arrow->duration;
     }
 
-    // Update parent's duration pointing to this node (incoming arrow)
+    // 3. Update parent's duration pointing to this node (incoming arrow)
     juce::ValueTree parentVT = ValueTreeState::getNodeParent(nodeId);
     if (parentVT.isValid())
     {
-        DBG("node parent found");
         int parentId = parentVT.getProperty(ValueTreeIdentifiers::Id);
         auto parentIt = nodeMap.find(parentId);
         if (parentIt != nodeMap.end())
         {
-            DBG("parent node in node map");
             Node* parentNode = parentIt->second;
             auto globalParentIt = newSnap->globalNodes->find(parentId);
             if (globalParentIt != newSnap->globalNodes->end())
             {
-                DBG("parent node in global node map");
                 globalParentIt->second.durationMap.clear();
                 for (auto& [childId, arrow] : parentNode->nodeArrows) {
                     globalParentIt->second.durationMap[childId] = arrow->duration;
-                    std::cout << "childId: " << childId << " duration: " << arrow->duration << std::endl;
-                    DBG("parent node duration map updated");
                 }
             }
         }

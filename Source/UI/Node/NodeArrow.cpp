@@ -21,9 +21,7 @@ NodeArrow::NodeArrow(Node* startNode, Node* endNode) : parentNode(startNode), ch
 }
 
 void NodeArrow::paint(juce::Graphics &g) {
-  if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) {
-    customLookAndFeel->drawNodeArrow(g,*this, textEditor);
-  }
+  CustomLookAndFeel::get(*this).drawNodeArrow(g, *this, textEditor);
 }
 
 void NodeArrow::setArrowBounds(Node* movedNode) {
@@ -41,7 +39,7 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
   duration = (int)(std::abs(dx) * durationAmount);
   textEditor.setText(juce::String(duration));
 
-  // Build the curve in canvas coordinates to get the true bounding box.
+  // Build the path in canvas coordinates to get the true bounding box.
   int parentRadius = parentNode->getWidth() / 2;
   int childRadius  = childNode->getWidth()  / 2;
 
@@ -51,48 +49,77 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
   float arrowEndX = float(end.x) - dirX * float(childRadius);
   float arrowEndY = float(end.y) - dirY * float(childRadius);
 
-  float connDirX = std::cos(parentNode->incomingAngle);
-  float connDirY = std::sin(parentNode->incomingAngle);
-
-  // If exit direction points away from child, use the direct direction instead
-  // to prevent the Bezier from looping back and creating huge bounds.
-  {
-      float roughX = arrowEndX - float(start.x);
-      float roughY = arrowEndY - float(start.y);
-      float roughLen = std::sqrt(roughX * roughX + roughY * roughY);
-      if (roughLen > 1.0f && connDirX * (roughX / roughLen) + connDirY * (roughY / roughLen) < 0.0f)
-      {
-          connDirX = roughX / roughLen;
-          connDirY = roughY / roughLen;
-      }
-  }
-
-  float startX = float(start.x) + float(parentRadius) * connDirX;
-  float startY = float(start.y) + float(parentRadius) * connDirY;
-
-  float toEndX   = arrowEndX - startX;
-  float toEndY   = arrowEndY - startY;
-  float toEndLen = std::sqrt(toEndX*toEndX + toEndY*toEndY);
-
   juce::Path curvePath;
-  if (toEndLen > 1.0f)
+
+  if (parentNode->nodeType == NodeType::Connector)
   {
-    float toEndDirX    = toEndX / toEndLen;
-    float toEndDirY    = toEndY / toEndLen;
-    float tangentLen   = toEndLen * 0.4f;
+    float connDirX = std::cos(parentNode->incomingAngle);
+    float connDirY = std::sin(parentNode->incomingAngle);
 
-    float cp1X = startX + tangentLen * connDirX;
-    float cp1Y = startY + tangentLen * connDirY;
-    float cp2X = arrowEndX - tangentLen * toEndDirX;
-    float cp2Y = arrowEndY - tangentLen * toEndDirY;
+    {
+        float roughX = arrowEndX - float(start.x);
+        float roughY = arrowEndY - float(start.y);
+        float roughLen = std::sqrt(roughX * roughX + roughY * roughY);
+        if (roughLen > 1.0f && connDirX * (roughX / roughLen) + connDirY * (roughY / roughLen) < 0.0f)
+        {
+            connDirX = roughX / roughLen;
+            connDirY = roughY / roughLen;
+        }
+    }
 
-    curvePath.startNewSubPath(startX, startY);
-    curvePath.cubicTo(cp1X, cp1Y, cp2X, cp2Y, arrowEndX, arrowEndY);
+    float startX = float(start.x) + float(parentRadius) * connDirX;
+    float startY = float(start.y) + float(parentRadius) * connDirY;
+
+    float toEndX   = arrowEndX - startX;
+    float toEndY   = arrowEndY - startY;
+    float toEndLen = std::sqrt(toEndX*toEndX + toEndY*toEndY);
+
+    if (toEndLen > 1.0f)
+    {
+      float toEndDirX    = toEndX / toEndLen;
+      float toEndDirY    = toEndY / toEndLen;
+      float tangentLen   = toEndLen * 0.4f;
+
+      float cp1X = startX + tangentLen * connDirX;
+      float cp1Y = startY + tangentLen * connDirY;
+      float cp2X = arrowEndX - tangentLen * toEndDirX;
+      float cp2Y = arrowEndY - tangentLen * toEndDirY;
+
+      curvePath.startNewSubPath(startX, startY);
+      curvePath.cubicTo(cp1X, cp1Y, cp2X, cp2Y, arrowEndX, arrowEndY);
+    }
+    else
+    {
+      curvePath.startNewSubPath(float(start.x), float(start.y));
+      curvePath.lineTo(arrowEndX, arrowEndY);
+    }
   }
   else
   {
-    curvePath.startNewSubPath(float(start.x), float(start.y));
-    curvePath.lineTo(arrowEndX, arrowEndY);
+    float absDx = std::abs(dx);
+    float absDy = std::abs(dy);
+
+    if (absDx < 1.0f || absDy < 1.0f)
+    {
+      curvePath.startNewSubPath(float(start.x), float(start.y));
+      curvePath.lineTo(arrowEndX, arrowEndY);
+    }
+    else
+    {
+      float sign  = (dx >= 0.0f) ? 1.0f : -1.0f;
+      float perpX = -dirY * sign;
+      float perpY =  dirX * sign;
+      float segLen = std::sqrt(dx * dx + dy * dy);
+      float offset = segLen * 0.15f;
+
+      float cp1X = float(start.x) + dx * 0.33f + perpX * offset;
+      float cp1Y = float(start.y) + dy * 0.33f + perpY * offset;
+      float cp2X = float(start.x) + dx * 0.67f - perpX * offset;
+      float cp2Y = float(start.y) + dy * 0.67f - perpY * offset;
+
+      curvePath.startNewSubPath(float(start.x), float(start.y));
+      curvePath.cubicTo(cp1X, cp1Y, cp2X, cp2Y, arrowEndX, arrowEndY);
+    }
   }
 
   // Expand enough for stroke (2px), arrowhead (~12px), and label text (~30px).

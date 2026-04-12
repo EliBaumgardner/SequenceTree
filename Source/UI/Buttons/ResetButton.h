@@ -20,7 +20,7 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawResetButton(g, *this, isDown); }
+        CustomLookAndFeel::get(*this).drawResetButton(g, *this, isDown);
     }
 
     void mouseDown(const juce::MouseEvent& e) override

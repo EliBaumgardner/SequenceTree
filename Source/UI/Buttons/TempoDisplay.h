@@ -29,7 +29,7 @@ class TempoDisplay : public juce::Component {
 
     void paint(juce::Graphics& g) override
     {
-        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawTempoDisplay(g, *this); }
+        CustomLookAndFeel::get(*this).drawTempoDisplay(g, *this);
     }
 
     void resized() override

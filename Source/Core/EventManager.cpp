@@ -92,9 +92,39 @@ void EventManager::handleOrphanNotes(juce::MidiBuffer &midiMessages, NodeMap &no
     }
 }
 
+void EventManager::handleNoteCreation(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversalMap, int priorityNoteDuration, EventManager::ActiveNote expiredNote, int traversalId, TraversalLogic &traversal, RTNode::NodeType type) {
+    if (type == RTNode::NodeType::RootNode
+        || type == RTNode::NodeType::Node
+        || type == RTNode::NodeType::Modulator)
+    {
+        traversal.handleNodeEvent(nodes);
+
+        if (traversal.shouldTraverse() && nodes.find(traversal.targetId) != nodes.end()){
+            pushNote(traversal.getTargetNode(nodes), traversalId, midiMessages, priorityNoteDuration, nodes, traversalMap);
+        }
+
+    }
+    else if (type == RTNode::NodeType::Connector)
+    {
+        traversal.handleConnectorNodeEvent(expiredNote.noteNode.nodeID, nodes);
+
+        if (traversal.shouldTraverse()){
+            pushConnectorNotes(expiredNote.noteNode.nodeID, midiMessages, priorityNoteDuration, nodes, traversalMap);
+        }
+
+    }
+    else if (type == RTNode::NodeType::ModulatorRoot)
+    {
+        traversal.handleConnectorNodeEvent(expiredNote.noteNode.nodeID, nodes);
+
+        if (traversal.shouldTraverse()){
+            pushModulatorNotes(expiredNote.noteNode.nodeID, midiMessages, priorityNoteDuration, nodes, traversalMap);
+        }
+    }
+}
+
 void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages, NodeMap& nodes, TraversalMap& traversalMap)
 {
-
     /*this function handles timing the release and creation of midi notes by searching for the smallest note that fits in the buffer
      and using the remaining num of samples to trigger notes once they expire*/
 
@@ -155,34 +185,7 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
         jassert(nodes.find(traversal.targetId) != nodes.end());
 
         // 6. handle note creation depending the node type and the priority note duration left
-        if (type == RTNode::NodeType::RootNode
-            || type == RTNode::NodeType::Node
-            || type == RTNode::NodeType::Modulator)
-        {
-            traversal.handleNodeEvent(nodes);
-
-            if (traversal.shouldTraverse() && nodes.find(traversal.targetId) != nodes.end()){
-                pushNote(traversal.getTargetNode(nodes), traversalId, midiMessages, priorityNoteDuration, nodes, traversalMap);
-            }
-
-        }
-        else if (type == RTNode::NodeType::Connector)
-        {
-            traversal.handleConnectorNodeEvent(expiredNote.noteNode.nodeID, nodes);
-
-            if (traversal.shouldTraverse()){
-                pushConnectorNotes(expiredNote.noteNode.nodeID, midiMessages, priorityNoteDuration, nodes, traversalMap);
-            }
-
-        }
-        else if (type == RTNode::NodeType::ModulatorRoot)
-        {
-            traversal.handleConnectorNodeEvent(expiredNote.noteNode.nodeID, nodes);
-
-            if (traversal.shouldTraverse()){
-                pushModulatorNotes(expiredNote.noteNode.nodeID, midiMessages, priorityNoteDuration, nodes, traversalMap);
-            }
-        }
+        handleNoteCreation(midiMessages, nodes, traversalMap, priorityNoteDuration, expiredNote, traversalId, traversal, type);
     }
 
     // 7. decrement remaining samples of all active notes
@@ -192,7 +195,7 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
 
 void EventManager::pushNote(const RTNode& node, int traversalId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, TraversalMap& traversalMap)
 {
-    /* this function is responsible for pushing notes of Nodes */
+    /* this function is responsible for pushing Node Notes specifically */
 
     auto traversalIt = traversalMap.find(traversalId);
     jassert(traversalIt != traversalMap.end());
@@ -212,32 +215,26 @@ void EventManager::pushNote(const RTNode& node, int traversalId, juce::MidiBuffe
         velocity = static_cast<int>(noteData.velocity);
         duration = static_cast<int>(noteData.duration);
 
-    // 2. If next target node exists apply its associated duration value
-        if (node.nodeType == RTNode::NodeType::Connector)
-        {
-            DBG("connector");
-            if (!node.children.empty())
-            {
-                auto durationIt = node.durationMap.find(node.children[0]);
-                if (durationIt != node.durationMap.end()){
-                    DBG("found child");
-                    duration = durationIt->second;
-                }
-            }
-            else {
-                DBG("no children");
-            }
+        if (velocity <= 0){
+            velocity = 63;
         }
-        else if (nextTargetNode != nullptr)
+    }
+    // 2. If next target node exists apply its associated duration value, if the node is a connector it should find the root node
+    if (node.nodeType == RTNode::NodeType::Connector)
+    {
+        if (!node.children.empty())
         {
-            auto durationIt = node.durationMap.find(nextTargetNode->nodeID);
+            auto durationIt = node.durationMap.find(node.children[0]);
             if (durationIt != node.durationMap.end()){
                 duration = durationIt->second;
             }
         }
-
-        if (velocity <= 0){
-            velocity = 63;
+    }
+    else if (nextTargetNode != nullptr)
+    {
+        auto durationIt = node.durationMap.find(nextTargetNode->nodeID);
+        if (durationIt != node.durationMap.end()){
+            duration = durationIt->second;
         }
     }
 
@@ -282,6 +279,7 @@ void EventManager::pushNote(const RTNode& node, int traversalId, juce::MidiBuffe
 void EventManager::pushConnectorNotes(int traverserId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, TraversalMap& traversalMap)
 {
     auto traverserIt = nodes.find(traverserId);
+
     if (traverserIt == nodes.end()){
         return;
     }

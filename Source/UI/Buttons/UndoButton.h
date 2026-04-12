@@ -19,7 +19,7 @@ class UndoButton : public juce::Component {
 
     void paint(juce::Graphics& g) override
     {
-        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawUndoButton(g, *this,isDown); }
+        CustomLookAndFeel::get(*this).drawUndoButton(g, *this, isDown);
     }
 
     void mouseDown(const juce::MouseEvent &event) override

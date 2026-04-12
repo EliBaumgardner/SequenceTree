@@ -16,7 +16,7 @@ public:
 
     void paintButton(juce::Graphics& g, bool isMouseOver, bool isButtonDown) override
     {
-        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawSyncButton(g, isMouseOver, isButtonDown, *this); }
+        CustomLookAndFeel::get(*this).drawSyncButton(g, isMouseOver, isButtonDown, *this);
     }
 
     void mouseDown(const juce::MouseEvent& event) override

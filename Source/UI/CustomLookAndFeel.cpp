@@ -13,6 +13,7 @@
 #include "Node/NodeArrow.h"
 #include "Node/NodeTextEditor.h"
 #include "Node/CustomTextCaret.h"
+#include "Node/RootNode.h"
 
 CustomLookAndFeel::CustomLookAndFeel()
 {
@@ -22,14 +23,7 @@ CustomLookAndFeel::CustomLookAndFeel()
 
 void CustomLookAndFeel::drawEditor(juce::Graphics &g, CustomTextEditor& editor)
 {
-    if (auto* dynamicEditor = dynamic_cast<CustomTextEditor*>(&editor)) {
-        dynamicEditor->setColour(juce::TextEditor::backgroundColourId, editorColour);
-        dynamicEditor->setColour(juce::TextEditor::outlineColourId, editorColour);
-        dynamicEditor->setColour(juce::TextEditor::textColourId, textColour); // choose text color
-        dynamicEditor->setColour(juce::TextEditor::highlightColourId, juce::Colours::darkgrey); // optional for selection
-        dynamicEditor->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
-        dynamicEditor->TextEditor::paint(g);
-    }
+    editor.TextEditor::paint(g);
 }
 
 void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
@@ -114,25 +108,33 @@ void CustomLookAndFeel::drawDisplayButton(juce::Graphics &g, const DisplayButton
     g.fillPath(vPath);
 }
 
+void CustomLookAndFeel::drawNodeInteractionEffects(juce::Graphics &g, const Node &node, juce::Rectangle<float> bounds) {
+
+}
+
 void CustomLookAndFeel::drawNode(juce::Graphics& g,const Node& node)
 {
-    juce::Path nodePath;
-    nodePath.addEllipse(node.getLocalBounds().toFloat().reduced(6.0f));
-    nodeDropShadow.drawForPath(g, nodePath);
+    juce::Rectangle<float> bounds = node.getLocalBounds().toFloat().reduced(1.5);
+    juce::Rectangle<float> circleBounds = bounds.reduced(6.0f);
+    juce::Rectangle<float> circleFill = circleBounds.reduced(0.5f);
 
-    auto bounds = node.getLocalBounds().toFloat();
-    auto circleSelect = bounds.reduced(0.5f);
-    auto circleHover = bounds.reduced(4.5f);
-    auto circleFill = bounds.reduced(5.5f);
+    juce::Rectangle<float> circleSelect = bounds.reduced(4.0f);
+    juce::Rectangle<float> circleHover = bounds.reduced(5.5f);
+
+    juce::Path nodePath;
+    nodePath.addEllipse(circleBounds);
+    nodeDropShadow.drawForPath(g, nodePath);
 
     float velocity = (float)(int)node.midiNoteData.getProperty(ValueTreeIdentifiers::MidiVelocity, 100);
     float brightnessFactor = juce::jmap(velocity, 0.0f, 127.0f, 0.4f, 1.6f);
+
     juce::Colour nodeColour = node.nodeColour.withMultipliedBrightness(brightnessFactor);
 
     float pulseExpansion = 4.0f * std::sin(node.pulsePhase * juce::MathConstants<float>::pi);
     auto pulsedFill = circleFill.expanded(pulseExpansion);
 
     g.setColour(node.isHighlighted ? nodeColour.darker() : nodeColour);
+
     g.fillEllipse(pulsedFill);
 
     if (node.isHovered) { g.drawEllipse(circleHover, 2.0f); }
@@ -144,12 +146,39 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g,const Node& node)
 
         juce::PathStrokeType stroke(0.325f);
 
-        float dashLengths[] = { 2.935f, 2.935f };
+        float dashLengths[] = { 0.935f, 0.935f };
         stroke.createDashedStroke(dottedPath, dottedPath, dashLengths, 2);
 
         g.setColour(juce::Colours::black);
         g.strokePath(dottedPath, stroke);
     }
+
+    // Count limit floating in top-right corner
+    if (node.nodeValueTree.isValid())
+    {
+        int countLimit = (int) node.nodeValueTree.getProperty(ValueTreeIdentifiers::CountLimit, 1);
+        auto fullBounds = node.getLocalBounds().toFloat();
+        g.setFont(juce::Font(9.0f));
+        g.setColour(juce::Colours::lightgrey.withAlpha(0.85f));
+        g.drawText(juce::String(countLimit),
+                   fullBounds.getRight() - 16.0f, fullBounds.getY(),
+                   16.0f, 12.0f,
+                   juce::Justification::centredRight, false);
+    }
+}
+
+void CustomLookAndFeel::drawRootNode(juce::Graphics& g,const RootNode& node) {
+
+    drawNode(g, node);
+}
+
+void CustomLookAndFeel::drawRootNodeRectangle(juce::Graphics &g, const RootRectangle &rootRectangle) {
+
+    juce::Rectangle<float> rootBounds = rootRectangle.getLocalBounds().toFloat();
+
+    g.setColour(darkColour2);
+    g.fillRect(rootBounds);
+
 }
 
 void CustomLookAndFeel::drawNodeArrowText(juce::Graphics &g, const NodeArrow &nodeArrow, const juce::TextEditor &editor,TextCords textCord) {
@@ -196,8 +225,8 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     auto parentNodeBounds = a->getBounds();
     auto childNodeBounds  = b->getBounds();
 
-    float arrowLength  = 10.0f;
-    float arrowWidth   = 5.0f;
+    float arrowLength  = 12.0f;
+    float arrowWidth   = 6.0f;
     int   childRadius  = childNodeBounds.getWidth()  / 2;
     int   parentRadius = parentNodeBounds.getWidth() / 2;
 
@@ -228,7 +257,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
 
     juce::Path linePath;
 
-    if (a->nodeType == NodeType::Connector || a->nodeType == NodeType::Node)
+    if (a->nodeType == NodeType::Connector)
     {
         float connectorDirX = std::cos(a->incomingAngle);
         float connectorDirY = std::sin(a->incomingAngle);
@@ -271,8 +300,50 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     }
     else
     {
-        linePath.startNewSubPath(parentCenterX, parentCenterY);
-        linePath.lineTo(arrowEndX, arrowEndY);
+        float dx = arrowEndX - parentCenterX;
+        float dy = arrowEndY - parentCenterY;
+        float absDx = std::abs(dx);
+        float absDy = std::abs(dy);
+
+        // Straight line when nodes are aligned horizontally or vertically
+        if (absDx < 1.0f || absDy < 1.0f)
+        {
+            linePath.startNewSubPath(parentCenterX, parentCenterY);
+            linePath.lineTo(arrowEndX, arrowEndY);
+        }
+        else
+        {
+            // Gentle S-curve: a straight arrow, wiggled slightly.
+            // Perpendicular to the main direction, flipped when going left
+            // so the curve bows the same visual direction regardless of dx sign.
+            float sign  = (dx >= 0.0f) ? 1.0f : -1.0f;
+            float perpX = -dirY * 0.8f * sign;
+            float perpY =  dirX * 0.8f * sign;
+
+            // Subtle perpendicular offset for the S-shape
+            float segLen = std::sqrt(dx * dx + dy * dy);
+            float offset = segLen * 0.15f;
+
+            // Control points at 1/3 and 2/3 along the line,
+            // pushed to opposite sides of the straight path
+            float cp1X = parentCenterX + dx * 0.33f + perpX * offset;
+            float cp1Y = parentCenterY + dy * 0.33f + perpY * offset;
+            float cp2X = parentCenterX + dx * 0.67f - perpX * offset;
+            float cp2Y = parentCenterY + dy * 0.67f - perpY * offset;
+
+            linePath.startNewSubPath(parentCenterX, parentCenterY);
+            linePath.cubicTo(cp1X, cp1Y, cp2X, cp2Y, arrowEndX, arrowEndY);
+
+            // Arrowhead follows the "neck" — the tangent where the curve meets the tip
+            float neckX = arrowEndX - cp2X;
+            float neckY = arrowEndY - cp2Y;
+            float neckLen = std::sqrt(neckX * neckX + neckY * neckY);
+            if (neckLen > 0.0f)
+            {
+                dirX = neckX / neckLen;
+                dirY = neckY / neckLen;
+            }
+        }
     }
 
     if (isConnectorArrow)
@@ -286,13 +357,19 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
 
     if (nodeArrow.animT > 0.3f)
     {
+
         float leftX  = arrowEndX - arrowLength * dirX + arrowWidth * dirY;
         float leftY  = arrowEndY - arrowLength * dirY - arrowWidth * dirX;
         float rightX = arrowEndX - arrowLength * dirX - arrowWidth * dirY;
         float rightY = arrowEndY - arrowLength * dirY + arrowWidth * dirX;
 
-        g.drawLine(arrowEndX, arrowEndY, leftX, leftY, 1.0f);
-        g.drawLine(arrowEndX, arrowEndY, rightX, rightY, 1.0f);
+        juce::Path arrowHead;
+        arrowHead.startNewSubPath(leftX, leftY);
+        arrowHead.lineTo(arrowEndX, arrowEndY);
+        arrowHead.lineTo(rightX, rightY);
+        arrowHead.closeSubPath();
+        g.setColour(arrowHeadColour);
+        g.fillPath(arrowHead);
     }
 
     TextCords textCords;

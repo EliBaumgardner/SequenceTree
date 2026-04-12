@@ -16,8 +16,6 @@ class EventManager
 {
 public:
 
-    // ── Types ──
-
     struct MidiEvent
     {
         int pitch    = 0;
@@ -39,18 +37,16 @@ public:
         bool shouldHighlight = false;
     };
 
-    // ── State ──
+
 
     TraversalMap                   traversals;   // audio-thread-private, never accessed from GUI
     std::vector<ActiveNote>        activeNotes;
     SequenceTreeAudioProcessor*    processor;
 
-    // ── Lock-free highlight FIFO (audio thread writes, message thread reads) ──
     static constexpr int kHighlightFifoSize = 512;
     juce::AbstractFifo                                    highlightFifo { kHighlightFifoSize };
     std::array<HighlightCommand, kHighlightFifoSize>      highlightBuffer {};
 
-    // ── Interface ──
 
     explicit EventManager(SequenceTreeAudioProcessor* p);
 
@@ -68,4 +64,9 @@ private:
     void resetTraversal(int graphId, int newTargetId, NodeMap& nodes, TraversalMap& traversalMap);
 
     void handleOrphanNotes(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversalMap);
+
+    void handleNoteCreation(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversalMap,
+                            int priorityNoteDuration, ActiveNote expiredNote, int traversalId,
+                            TraversalLogic &traversal,
+                            RTNode::NodeType type);
 };

@@ -6,43 +6,50 @@ TraversalLogic::TraversalLogic(int root, SequenceTreeAudioProcessor* processor)
 
 void TraversalLogic::advance(NodeMap& nodes)
 {
-    traversers.clear();
+    traversalModifiers.clear();
 
     referenceTargetId = lastTargetId;
     lastTargetId      = targetId;
     int count         = ++counts[targetId];
-    auto itTarget     = nodes.find(targetId);
-    if (itTarget == nodes.end()) {
-        state = isLooping ? TraversalState::Reset : TraversalState::End;
-        return;
-    }
 
-    if (itTarget->second.children.empty()) {
-        state = isLooping ? TraversalState::Reset : TraversalState::End;
+    auto targetNodeIterator     = nodes.find(targetId);
+    std::vector<int> targetNodeChildren = targetNodeIterator->second.children;
+
+    if (targetNodeIterator == nodes.end() || targetNodeChildren.empty()) {
+        if (isLooping) {
+            state = TraversalState::Reset;
+        }
+        else {
+            state = TraversalState::End;
+        }
         return;
     }
 
     int maxLimit = 0;
 
-    for (int childIndex : itTarget->second.children) {
+    for (int childIndex : targetNodeChildren) {
         auto itChild = nodes.find(childIndex);
-        if (itChild == nodes.end()) continue;
+
+        if (itChild == nodes.end()) {
+            continue;
+        }
+
         auto& childNode = itChild->second;
-        int   limit     = childNode.countLimit;
+        int   countLimit     = childNode.countLimit;
 
         switch (childNode.nodeType) {
             case RTNode::NodeType::Node:
             case RTNode::NodeType::Modulator: {
-                if (count % limit == 0 && limit > maxLimit) {
+                if (count % countLimit == 0 && countLimit > maxLimit) {
                     targetId = childIndex;
-                    maxLimit = limit;
+                    maxLimit = countLimit;
                 }
                 break;
             }
             case RTNode::NodeType::Connector:
             case RTNode::NodeType::ModulatorRoot: {
-                if (count % limit == 0)
-                    traversers.push_back(childIndex);
+                if (count % countLimit == 0)
+                    traversalModifiers.push_back(childIndex);
                 break;
             }
             default: break;
@@ -123,8 +130,7 @@ bool TraversalLogic::shouldTraverse() const
     return state != TraversalState::End;
 }
 
-void TraversalLogic::handleNodeEvent(NodeMap& nodes)
-{
+void TraversalLogic::handleNodeEvent(NodeMap& nodes) {
     auto safeHighlight = [&](int nodeId, bool on) {
         auto it = nodes.find(nodeId);
         if (it != nodes.end()) audioProcessor->eventManager.highlightNode(it->second, on);

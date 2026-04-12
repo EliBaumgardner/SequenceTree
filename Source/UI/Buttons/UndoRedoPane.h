@@ -36,7 +36,7 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawUndoRedoPane(g, *this); }
+        CustomLookAndFeel::get(*this).drawUndoRedoPane(g, *this);
     }
 
     void resized() override

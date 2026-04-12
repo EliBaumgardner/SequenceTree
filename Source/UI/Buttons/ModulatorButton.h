@@ -22,9 +22,7 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) {
-            customLookAndFeel->drawModulatorButton(g, *this);
-        }
+        CustomLookAndFeel::get(*this).drawModulatorButton(g, *this);
     }
 
     void mouseDown(const juce::MouseEvent& e) override { onClick(); }

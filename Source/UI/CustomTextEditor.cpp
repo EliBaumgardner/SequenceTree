@@ -18,6 +18,12 @@ CustomTextEditor::CustomTextEditor()
 {
     setLookAndFeel(ComponentContext::lookAndFeel);
 
+    setColour(juce::TextEditor::backgroundColourId,     juce::Colour::fromRGB(162, 150, 131));
+    setColour(juce::TextEditor::outlineColourId,        juce::Colour::fromRGB(162, 150, 131));
+    setColour(juce::TextEditor::textColourId,           juce::Colour::fromRGB(217, 217, 217));
+    setColour(juce::TextEditor::highlightColourId,      juce::Colours::darkgrey);
+    setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
+
     onTextChange = [this](){
         // if(tree.hasType("MidiNoteData")){ ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root); }
         // refit();
@@ -45,7 +51,7 @@ void CustomTextEditor::refit()
 
 void CustomTextEditor::paint(juce::Graphics& g)
 {
-    if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawEditor(g,*this); }
+    CustomLookAndFeel::get(*this).drawEditor(g, *this);
 }
 
 void CustomTextEditor::mouseDown(const juce::MouseEvent& e)

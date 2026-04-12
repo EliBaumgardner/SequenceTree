@@ -20,7 +20,7 @@ class DisplayButton : public juce::Component {
 
     void paint(juce::Graphics& g) override
     {
-        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawDisplayButton(g, *this); }
+        CustomLookAndFeel::get(*this).drawDisplayButton(g, *this);
     }
 
     void mouseDown(const juce::MouseEvent& e) override { onClick(); }

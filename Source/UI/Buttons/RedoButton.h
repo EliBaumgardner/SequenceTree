@@ -20,7 +20,7 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        if (auto* customLookAndFeel = dynamic_cast<CustomLookAndFeel*>(&getLookAndFeel())) { customLookAndFeel->drawRedoButton(g, *this,isDown); }
+        CustomLookAndFeel::get(*this).drawRedoButton(g, *this, isDown);
     }
 
     void mouseDown(const juce::MouseEvent &event) override
