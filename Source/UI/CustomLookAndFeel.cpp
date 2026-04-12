@@ -227,6 +227,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     int   parentRadius = a->getHeight() / 2;
 
     g.setColour(arrowColour);
+    const float ghostAlpha = nodeArrow.isGhost ? 0.5f : 1.0f;
 
     float parentCenterX = float(parentCentre.x - nodeArrow.getX());
     float parentCenterY = float(parentCentre.y - nodeArrow.getY());
@@ -248,8 +249,9 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     arrowEndX -= dirX * float(childRadius);
     arrowEndY -= dirY * float(childRadius);
 
-    bool isConnectorArrow = a->nodeType == NodeType::Connector
-                         || b->nodeType == NodeType::Connector;
+    bool isConnectorArrow  = a->nodeType == NodeType::Connector
+                          || b->nodeType == NodeType::Connector;
+    bool isRootTargetArrow = b->nodeType == NodeType::Root;
 
     juce::Path linePath;
 
@@ -342,7 +344,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         }
     }
 
-    if (isConnectorArrow)
+    if (isConnectorArrow || isRootTargetArrow || nodeArrow.isGhost)
     {
         juce::PathStrokeType stroke(2.0f);
         float dashLengths[] = { 6.0f, 10.0f };
@@ -355,11 +357,11 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     auto highlightPath = linePath;
     shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
     highlightPath.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
-    g.setColour(arrowColour.darker(0.4f).withAlpha(0.35f));
+    g.setColour(arrowColour.darker(0.4f).withAlpha(0.35f * ghostAlpha));
     g.strokePath(shadowPath,    lineStroke);
-    g.setColour(arrowColour.brighter(0.4f).withAlpha(0.18f));
+    g.setColour(arrowColour.brighter(0.4f).withAlpha(0.18f * ghostAlpha));
     g.strokePath(highlightPath, lineStroke);
-    g.setColour(arrowColour);
+    g.setColour(arrowColour.withAlpha(ghostAlpha));
     g.strokePath(linePath, lineStroke);
 
     if (nodeArrow.animT > 0.3f)
@@ -376,7 +378,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         arrowHead.lineTo(rightX, rightY);
         arrowHead.closeSubPath();
 
-        g.setColour(arrowHeadColour);
+        g.setColour(arrowHeadColour.withAlpha(ghostAlpha));
         g.fillPath(arrowHead);
 
         auto headShadow    = arrowHead;

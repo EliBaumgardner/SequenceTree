@@ -60,6 +60,8 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
 
         void clearCanvas();
         void triggerArrowSnapForNode(int nodeId);
+        void showSnapGhostArrow(Node* from, Node* to);
+        void hideSnapGhostArrow();
 
         void handleAsyncUpdate() override;
         void drainHighlightFifo();
@@ -69,6 +71,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         void valueTreePropertyChanged(juce::ValueTree &tree, const juce::Identifier &propertyIdentifier) override;
 
         juce::OwnedArray<NodeArrow> nodeArrows;
+        NodeArrow* snapGhostArrow = nullptr;
 
         std::unordered_map<int, Node*> nodeMap;
         std::unordered_map<int,std::unordered_map<int, juce::ValueTree>> nodeMaps;

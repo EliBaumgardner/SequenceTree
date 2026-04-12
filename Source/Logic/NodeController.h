@@ -47,25 +47,29 @@ public:
 
     void mouseUp   (const juce::MouseEvent& e) override;
 
-    void connectNode(int deltaX, int deltaY, juce::Point<float> position);
+    void checkRootNodeSnap(const NodePosition& pos);
 
 private:
 
+    static constexpr float rootSnapThreshold = 60.0f;
+
     NodeCanvas* nodeCanvas = nullptr;
 
-    Node* connectorNode = nullptr;
+    Node* connectorNode  = nullptr;
+    Node* snapTargetRoot = nullptr;
 
-    bool isDragStart = true;
-    bool hasConnection = false;
+    bool isDragStart     = true;
+    bool hasConnection   = false;
     bool isDraggingValue = false;
 
-    double dragStartValue = 0.0;
-    Node* draggingValueNode = nullptr;
+    double dragStartValue    = 0.0;
+    Node*  draggingValueNode = nullptr;
 
     juce::Point<float> dragParentCenter;
 
     juce::ValueTree draggedNodeTree;
 
+    int snapSourceNodeId = -1;
     int lastX = 0;
     int lastY = 0;
 };

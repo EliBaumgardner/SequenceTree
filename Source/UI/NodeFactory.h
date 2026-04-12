@@ -39,6 +39,12 @@ public:
         return rootNodeValueTree;
     }
 
+    static juce::ValueTree createConnection(const int parentNodeId, const int childNodeId, juce::UndoManager* undoManager)
+    {
+        ValueTreeState::connectNodes(parentNodeId, childNodeId, undoManager);
+        return ValueTreeState::getNode(childNodeId);
+    }
+
     static juce::ValueTree createNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
         juce::ValueTree childNodeValueTree = ValueTreeState::addNode(parentNodeId, undoManager);

@@ -46,6 +46,7 @@ void TraversalLogic::advance(NodeMap& nodes)
                 }
                 break;
             }
+            case RTNode::NodeType::RootNode:
             case RTNode::NodeType::Connector:
             case RTNode::NodeType::ModulatorRoot: {
                 if (count % countLimit == 0)
@@ -110,7 +111,10 @@ std::vector<int> TraversalLogic::peekTraversers(NodeMap& nodes)
         jassert(itChild != nodes.end());
 
         const auto& childNode = itChild->second;
-        if ((childNode.nodeType == RTNode::NodeType::Connector || childNode.nodeType == RTNode::NodeType::ModulatorRoot)
+        bool isRootLink = childNode.nodeType == RTNode::NodeType::RootNode && childNode.nodeID != rootId;
+        if ((childNode.nodeType == RTNode::NodeType::Connector
+             || childNode.nodeType == RTNode::NodeType::ModulatorRoot
+             || isRootLink)
             && count % childNode.countLimit == 0)
             childrenIndices.push_back(childIndex);
     }
@@ -155,11 +159,9 @@ void TraversalLogic::handleNodeEvent(NodeMap& nodes) {
                 case TraversalState::Reset: {
                     loopCount++;
                     if (loopLimit > 0 && loopCount >= loopLimit) {
-                        // Reached the configured loop limit — stop traversal
                         safeHighlight(targetId, false);
                         state = TraversalState::End;
                     } else {
-                        // Loop back to root for another pass
                         safeHighlight(targetId, false);
                         safeHighlight(rootId,   true);
                         targetId = rootId;
