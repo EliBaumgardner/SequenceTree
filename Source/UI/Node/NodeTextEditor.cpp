@@ -110,7 +110,7 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
     }
 
     if(mode == NodeDisplayMode::CountLimit){
-        display = juce::String(value);
+        display = juce::String((int)value);
     }
     
     setText(display);

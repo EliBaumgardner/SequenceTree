@@ -43,6 +43,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Node/RootNode.cpp
         Source/UI/Node/NodeArrow.cpp
         Source/UI/Node/NodeTextEditor.cpp
+        Source/UI/Node/ValueEditor.cpp
         Source/UI/Node/NodeCanvas.cpp
         Source/Logic/NodeController.cpp
         Source/UI/PianoRoll.cpp
@@ -58,6 +59,7 @@ target_sources(SequenceTree PRIVATE
         Source/Util/ValueTreeIdentifiers.cpp
         Source/UI/Node/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp
+
 )
 
 target_link_libraries(SequenceTree PRIVATE
