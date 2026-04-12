@@ -31,13 +31,16 @@ public:
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
 
+    using RTGraphs = std::unordered_map<int, std::shared_ptr<RTGraph>>;
+
 #ifndef JucePlugin_PreferredChannelConfigurations
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 #endif
 
-    bool initializeTraversalForRootNode(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversals);
+    bool initializeTraversalForRootNode(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversals, RTGraphs &rtGraphs);
 
     void updateTraversalCounts(NodeMap &nodes, TraversalMap &traversals);
+    void syncTraversalLoopLimits(TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages, NodeMap &nodes);
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
@@ -70,8 +73,6 @@ public:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     NodeCanvas* canvas;
-
-    using RTGraphs = std::unordered_map<int, std::shared_ptr<RTGraph>>;
 
     struct AudioSnapshot
     {

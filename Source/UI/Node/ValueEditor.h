@@ -15,6 +15,7 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
 
     void bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID);
+    void setMinimumValue(int min);
 
 private:
     void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
@@ -24,5 +25,6 @@ private:
     juce::Value boundValue;
     juce::ValueTree boundTree;
     std::unique_ptr<juce::TextEditor> textEditor;
-    bool isEditing = false;
+    bool isEditing  = false;
+    int  minValue   = 1;
 };

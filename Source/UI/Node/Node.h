@@ -38,7 +38,11 @@ public:
     void setHighlightVisual(bool isHighlighted);
     void timerCallback() override;
 
-    void setDisplayMode(NodeDisplayMode mode);
+    // Returns the centre of the visual circle in canvas coordinates.
+    // Overridden by RootNode, whose component extends left for the loop limit rectangle.
+    virtual juce::Point<int> getNodeCentre() const { return getBounds().getCentre(); }
+
+    virtual void setDisplayMode(NodeDisplayMode mode);
     void incrementNodeTextEditorValue(int incrementValue);
 
     NodeArrow* nodeArrow = nullptr;

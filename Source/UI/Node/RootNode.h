@@ -20,10 +20,23 @@
 class RootNode : public Node {
 
     public:
+    // Width of the loop-limit rectangle that sits to the left of the circle.
+    // The component extends left by this amount so the rectangle fits without clipping.
+    static constexpr int loopLimitRectangleWidth = 10;
+
     RootNode();
     ~RootNode() override;
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void setDisplayMode(NodeDisplayMode mode) override;
+
+    juce::Point<int> getNodeCentre() const override
+    {
+        // Circle centre is loopLimitRectangleWidth pixels to the right of the component left edge,
+        // then R = getHeight()/2 more to the right to reach the circle centre.
+        return { getBounds().getX() + loopLimitRectangleWidth + getHeight() / 2,
+                 getBounds().getCentreY() };
+    }
 
     std::unique_ptr<RootRectangle> rootRectangle = nullptr;
 };

@@ -61,6 +61,7 @@ juce::ValueTree ValueTreeState::addRootNode(juce::UndoManager* undoManager)
     rootNode.setProperty(ValueTreeIdentifiers::Id, newTreeId,undoManager);
     rootNode.setProperty(ValueTreeIdentifiers::Count,defaultNodeCount,undoManager);
     rootNode.setProperty(ValueTreeIdentifiers::CountLimit,defaultNodeCountLimit,undoManager);
+    rootNode.setProperty(ValueTreeIdentifiers::LoopLimit,defaultRootLoopLimit,undoManager);
     rootNode.setProperty(ValueTreeIdentifiers::RootNodeId,newTreeId,undoManager);
 
     rootNodeId.setProperty(ValueTreeIdentifiers::Id,newTreeId,undoManager);

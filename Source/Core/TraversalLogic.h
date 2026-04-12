@@ -21,10 +21,12 @@ public:
 
     bool isFirstEvent = false;
     bool isLooping    = false;
-    int  rootId       = 0;
-    int  targetId     = 0;
-    int  lastTargetId = 0;
+    int  rootId            = 0;
+    int  targetId          = 0;
+    int  lastTargetId      = 0;
     int  referenceTargetId = 0;
+    int  loopCount         = 0;  // incremented each time the traversal resets to root
+    int  loopLimit         = 0;  // 0 = loop infinitely; N > 0 = stop after N full loops
 
     enum class TraversalState { Start, Active, End, Reset };
     enum class EventType      { Node, Connector, Modulator };

@@ -75,6 +75,7 @@ public:
     void drawNodeInteractionEffects(juce::Graphics &g, const Node &node, juce::Rectangle<float> bounds);
 
     void drawNode           (juce::Graphics& g, const Node& node);
+    void drawNode           (juce::Graphics& g, const Node& node, juce::Rectangle<float> circleBoundsOverride);
     void drawRootNode       (juce::Graphics& g, const RootNode& node);
     void drawRootNodeRectangle(juce::Graphics& g, const RootRectangle& rootRectangle);
 

@@ -153,10 +153,18 @@ void TraversalLogic::handleNodeEvent(NodeMap& nodes) {
                     break;
                 }
                 case TraversalState::Reset: {
-                    safeHighlight(targetId, false);
-                    safeHighlight(rootId,   true);
-                    targetId = rootId;
-                    state    = TraversalState::Active;
+                    loopCount++;
+                    if (loopLimit > 0 && loopCount >= loopLimit) {
+                        // Reached the configured loop limit — stop traversal
+                        safeHighlight(targetId, false);
+                        state = TraversalState::End;
+                    } else {
+                        // Loop back to root for another pass
+                        safeHighlight(targetId, false);
+                        safeHighlight(rootId,   true);
+                        targetId = rootId;
+                        state    = TraversalState::Active;
+                    }
                     break;
                 }
                 case TraversalState::End: {

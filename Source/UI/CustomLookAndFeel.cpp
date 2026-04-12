@@ -112,32 +112,35 @@ void CustomLookAndFeel::drawNodeInteractionEffects(juce::Graphics &g, const Node
 
 }
 
-void CustomLookAndFeel::drawNode(juce::Graphics& g,const Node& node)
+void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node)
 {
-    juce::Rectangle<float> bounds = node.getLocalBounds().toFloat().reduced(1.5);
-    juce::Rectangle<float> circleBounds = bounds.reduced(6.0f);
-    juce::Rectangle<float> circleFill = circleBounds.reduced(0.5f);
+    drawNode(g, node, node.getLocalBounds().toFloat());
+}
 
+void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rectangle<float> componentBounds)
+{
+    juce::Rectangle<float> bounds      = componentBounds.reduced(1.5f);
+    juce::Rectangle<float> circleBounds = bounds.reduced(6.0f);
+    juce::Rectangle<float> circleFill   = circleBounds.reduced(0.5f);
     juce::Rectangle<float> circleSelect = bounds.reduced(4.0f);
-    juce::Rectangle<float> circleHover = bounds.reduced(5.5f);
+    juce::Rectangle<float> circleHover  = bounds.reduced(5.5f);
 
     juce::Path nodePath;
     nodePath.addEllipse(circleBounds);
     nodeDropShadow.drawForPath(g, nodePath);
 
-    float velocity = (float)(int)node.midiNoteData.getProperty(ValueTreeIdentifiers::MidiVelocity, 100);
+    float velocity        = (float)(int)node.midiNoteData.getProperty(ValueTreeIdentifiers::MidiVelocity, 100);
     float brightnessFactor = juce::jmap(velocity, 0.0f, 127.0f, 0.4f, 1.6f);
 
     juce::Colour nodeColour = node.nodeColour.withMultipliedBrightness(brightnessFactor);
 
     float pulseExpansion = 4.0f * std::sin(node.pulsePhase * juce::MathConstants<float>::pi);
-    auto pulsedFill = circleFill.expanded(pulseExpansion);
+    auto  pulsedFill     = circleFill.expanded(pulseExpansion);
 
     g.setColour(node.isHighlighted ? nodeColour.darker() : nodeColour);
-
     g.fillEllipse(pulsedFill);
 
-    if (node.isHovered) { g.drawEllipse(circleHover, 2.0f); }
+    if (node.isHovered)   { g.drawEllipse(circleHover, 2.0f); }
 
     if (node.isSelected)
     {
@@ -145,26 +148,28 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g,const Node& node)
         dottedPath.addEllipse(circleSelect);
 
         juce::PathStrokeType stroke(0.325f);
-
         float dashLengths[] = { 0.935f, 0.935f };
         stroke.createDashedStroke(dottedPath, dottedPath, dashLengths, 2);
 
         g.setColour(juce::Colours::black);
         g.strokePath(dottedPath, stroke);
     }
-
 }
 
-void CustomLookAndFeel::drawRootNode(juce::Graphics& g,const RootNode& node) {
-
-    drawNode(g, node);
+void CustomLookAndFeel::drawRootNode(juce::Graphics& g, const RootNode& node)
+{
+    // The root node component extends left by loopLimitRectangleWidth to hold the
+    // loop-limit rectangle. Trim that offset so the circle is drawn in the right portion.
+    auto circleBounds = node.getLocalBounds().toFloat()
+                            .withTrimmedLeft((float)RootNode::loopLimitRectangleWidth);
+    drawNode(g, node, circleBounds);
 }
 
 void CustomLookAndFeel::drawRootNodeRectangle(juce::Graphics &g, const RootRectangle &rootRectangle) {
 
     juce::Rectangle<float> rootBounds = rootRectangle.getLocalBounds().toFloat();
 
-    g.setColour(darkColour2);
+    g.setColour(darkColour2.darker());
     g.fillRect(rootBounds);
 
 }
@@ -210,20 +215,23 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     auto* a = nodeArrow.parentNode;
     auto* b = nodeArrow.childNode;
 
-    auto parentNodeBounds = a->getBounds();
-    auto childNodeBounds  = b->getBounds();
+    // Use getNodeCentre() so that root nodes (whose component extends left
+    // for the loop-limit rectangle) report their actual circle centre.
+    // Use getHeight()/2 for the circle radius for the same reason.
+    auto parentCentre = a->getNodeCentre();
+    auto childCentre  = b->getNodeCentre();
 
     float arrowLength  = 12.0f;
     float arrowWidth   = 6.0f;
-    int   childRadius  = childNodeBounds.getWidth()  / 2;
-    int   parentRadius = parentNodeBounds.getWidth() / 2;
+    int   childRadius  = b->getHeight() / 2;
+    int   parentRadius = a->getHeight() / 2;
 
     g.setColour(arrowColour);
 
-    float parentCenterX = float(parentNodeBounds.getCentreX() - nodeArrow.getX());
-    float parentCenterY = float(parentNodeBounds.getCentreY() - nodeArrow.getY());
-    float childCenterX  = float(childNodeBounds.getCentreX()  - nodeArrow.getX());
-    float childCenterY  = float(childNodeBounds.getCentreY()  - nodeArrow.getY());
+    float parentCenterX = float(parentCentre.x - nodeArrow.getX());
+    float parentCenterY = float(parentCentre.y - nodeArrow.getY());
+    float childCenterX  = float(childCentre.x  - nodeArrow.getX());
+    float childCenterY  = float(childCentre.y  - nodeArrow.getY());
 
     float arrowEndX = parentCenterX + (childCenterX - parentCenterX) * nodeArrow.animT;
     float arrowEndY = parentCenterY + (childCenterY - parentCenterY) * nodeArrow.animT;
@@ -376,10 +384,10 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         headShadow   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
         headHighlight.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
 
-        juce::PathStrokeType headStroke(1.0f);
-        g.setColour(arrowHeadColour.darker(0.5f).withAlpha(0.4f));
+        juce::PathStrokeType headStroke(0.75f);
+        g.setColour(arrowHeadColour.darker(0.3f).withAlpha(0.2f));
         g.strokePath(headShadow,    headStroke);
-        g.setColour(arrowHeadColour.brighter(0.4f).withAlpha(0.2f));
+        g.setColour(arrowHeadColour.brighter(0.3f).withAlpha(0.1f));
         g.strokePath(headHighlight, headStroke);
     }
 
