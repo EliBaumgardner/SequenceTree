@@ -81,7 +81,6 @@ void ValueEditor::commitValue()
     if (val < minValue) val = minValue;
     boundValue.setValue(val);
 
-    // Notify the audio thread of the updated countLimit
     if (boundTree.isValid() && ComponentContext::canvas != nullptr)
         ComponentContext::canvas->makeRTGraph(boundTree);
 

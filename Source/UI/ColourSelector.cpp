@@ -10,7 +10,6 @@
 
 #include "ColourSelector.h"
 
-//Cursor//
 void Cursor::paint(juce::Graphics& g) {
   
     auto bounds = getLocalBounds().toFloat().reduced(0.1f);
@@ -22,7 +21,6 @@ void Cursor::paint(juce::Graphics& g) {
 }
 
 
-//Main Component//
 MainComponent::MainComponent() {
     
     addAndMakeVisible(cursor);
@@ -70,7 +68,6 @@ void MainComponent::mouseDrag(const juce::MouseEvent& event)
 
     if (image.isValid())
     {
-        // Map from component space to image space
         float imageX = juce::jmap<float>(event.x, 0.0f, (float)getWidth(), 0.0f, (float)image.getWidth());
         float imageY = juce::jmap<float>(event.y, 0.0f, (float)getHeight(), 0.0f, (float)image.getHeight());
 
@@ -93,11 +90,9 @@ void MainComponent::updateCursorPosition(juce::Colour selectedColour) {
     int y = (int)juce::jmap(s, 1.0f, 0.0f, 0.0f, (float)getHeight());
     
     cursor.setBounds(x,y,10,10);
-    //cursor.setCentrePosition(x,y);
 }
 
 
-//Main Window//
 MainWindow::MainWindow (const juce::String& name, juce::Colour backgroundColour, int requiredButtons, bool addToDesktop)
 : DocumentWindow (name, backgroundColour, requiredButtons, addToDesktop){
     
@@ -115,8 +110,6 @@ MainComponent* MainWindow::getContent() {
     return component;
 }
 
-
-//Selector Button Dispaly//
 
 ColourSelector::ColourSelector(){
 

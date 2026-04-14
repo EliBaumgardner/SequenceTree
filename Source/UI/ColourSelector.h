@@ -17,7 +17,6 @@
 /* Colour Selector Button that displays the selected colour and opens a pop up menu and cursor for colour selection; */
 
 
-//cursor for pop up menu
 class Cursor : public juce::Component
 {
     public:
@@ -27,7 +26,6 @@ class Cursor : public juce::Component
     
 };
 
-//pop up menu component
 class MainComponent : public juce::Component
 {
     public:
@@ -47,7 +45,6 @@ class MainComponent : public juce::Component
     juce::Image image;
 };
 
-//component for opening and closing pop up menu component
 class MainWindow : public juce::DocumentWindow
 {
     public:
@@ -64,7 +61,6 @@ class MainWindow : public juce::DocumentWindow
     MainComponent* component = nullptr;
 };
 
-//button that opens, closes, and displays pop up menu
 class ColourSelector : public juce::Component {
     
     public:

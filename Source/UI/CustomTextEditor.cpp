@@ -25,8 +25,6 @@ CustomTextEditor::CustomTextEditor()
     setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
 
     onTextChange = [this](){
-        // if(tree.hasType("MidiNoteData")){ ComponentContext::canvas->makeRTGraph(ComponentContext::canvas->root); }
-        // refit();
     };
 
     baseFont = juce::Font(getFont());
