@@ -65,6 +65,8 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
 
         void handleAsyncUpdate() override;
         void drainHighlightFifo();
+        void drainProgressFifo();
+        void resetAllArrowProgress();
 
         void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
         void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
@@ -83,7 +85,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
 
         bool start = false;
 
-        bool showGrid = false;
+        bool showGrid = true;
         bool gridOriginSet = false;
         juce::Point<float> gridOrigin { 0.0f, 0.0f };
         float gridSpacing = 50.0f;

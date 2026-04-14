@@ -37,6 +37,8 @@ Titlebar::Titlebar()
 
     resetButton.onClick = [=]() {
         ComponentContext::processor->resetRequested.store(true);
+        if (auto* canvas = ComponentContext::canvas)
+            canvas->resetAllArrowProgress();
     };
 
     auto applyMultiplier = [this]() {

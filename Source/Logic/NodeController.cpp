@@ -150,7 +150,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     }
     else if (Node* node= dynamic_cast<Node*>(component) ) {
 
-        dragParentCenter = node->getBounds().getCentre().toFloat();
+        dragParentCenter = node->getNodeCentre().toFloat();
 
         if (node->nodeTextEditor != nullptr) {
             auto localPos = e.getEventRelativeTo(node->nodeTextEditor.get()).getPosition();
@@ -183,13 +183,23 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 }
 
 void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree) {
-    float spacing = ComponentContext::canvas->gridSpacing;
-    float dx = float(newPosition.xPosition) - dragParentCenter.x;
-    float dy = float(newPosition.yPosition) - dragParentCenter.y;
+    NodeCanvas* canvas = ComponentContext::canvas;
 
+    if (!canvas->gridOriginSet) {
+        ValueTreeState::setNodePosition(draggedNodeTree, newPosition, undoManager);
+        return;
+    }
+
+    float spacing = canvas->gridSpacing;
+    float ox = canvas->gridOrigin.x;
+    float oy = canvas->gridOrigin.y;
     const float snapThreshold = 12.0f;
-    float snappedX = dragParentCenter.x + std::round(dx / spacing) * spacing;
-    float snappedY = dragParentCenter.y + std::round(dy / spacing) * spacing;
+
+    // Snap against the absolute global grid, not relative to dragParentCenter.
+    // newPosition is the canvas position that will be stored as the node's logical centre
+    // (circle centre for root nodes, bounding-box centre for regular nodes).
+    float snappedX = ox + std::round((float(newPosition.xPosition) - ox) / spacing) * spacing;
+    float snappedY = oy + std::round((float(newPosition.yPosition) - oy) / spacing) * spacing;
 
     if (std::abs(float(newPosition.xPosition) - snappedX) < snapThreshold)
         newPosition.xPosition = int(snappedX);

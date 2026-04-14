@@ -262,6 +262,14 @@ void EventManager::pushNote(const RTNode& node, int traversalId, juce::MidiBuffe
 
     activeNotes.push_back(newNote);
 
+    // 4a. notify GUI of arrow progress from current node to its next target
+    if (nextTargetNode != nullptr
+        && (node.nodeType == RTNode::NodeType::Node
+            || node.nodeType == RTNode::NodeType::RootNode
+            || node.nodeType == RTNode::NodeType::Modulator)){
+        pushProgress(node.nodeID, nextTargetNode->nodeID, duration);
+    }
+
     // 4. if node should produce MIDI then turn on here
     if (isNodeAudible(node.nodeType)){
         midiMessages.addEvent(juce::MidiMessage::noteOn(1, pitch, static_cast<juce::uint8>(velocity)), sample);
@@ -396,5 +404,16 @@ void EventManager::highlightNode(const RTNode& node, bool shouldHighlight)
     }
     else if (scope.blockSize2 > 0){
         highlightBuffer[static_cast<size_t>(scope.startIndex2)] = { node.nodeID, shouldHighlight };
+    }
+}
+
+void EventManager::pushProgress(int parentNodeId, int childNodeId, int durationMs)
+{
+    const auto scope = progressFifo.write(1);
+    if (scope.blockSize1 > 0){
+        progressBuffer[static_cast<size_t>(scope.startIndex1)] = { parentNodeId, childNodeId, durationMs };
+    }
+    else if (scope.blockSize2 > 0){
+        progressBuffer[static_cast<size_t>(scope.startIndex2)] = { parentNodeId, childNodeId, durationMs };
     }
 }

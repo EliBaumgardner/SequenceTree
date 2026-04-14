@@ -30,28 +30,28 @@ void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
 {
     g.fillAll(canvasColour);
 
-    if (!canvas.showGrid) return;
-
     float spacing = canvas.gridSpacing;
     if (spacing < 15.0f) return;
 
     auto bounds = canvas.getLocalBounds().toFloat();
-    float ox = canvas.gridOrigin.x;
-    float oy = canvas.gridOrigin.y;
+    float ox = canvas.gridOriginSet ? canvas.gridOrigin.x : bounds.getCentreX();
+    float oy = canvas.gridOriginSet ? canvas.gridOrigin.y : bounds.getCentreY();
 
-    g.setColour(juce::Colour(0x22000000));
+
+    const float armLen = 6.0f;
+    g.setColour(darkColour2.darker());
 
     float startX = ox - std::ceil((ox - bounds.getX()) / spacing) * spacing;
-    for (float x = startX; x <= bounds.getRight(); x += spacing)
-        g.drawVerticalLine(int(x), bounds.getY(), bounds.getBottom());
-
     float startY = oy - std::ceil((oy - bounds.getY()) / spacing) * spacing;
-    for (float y = startY; y <= bounds.getBottom(); y += spacing)
-        g.drawHorizontalLine(int(y), bounds.getX(), bounds.getRight());
 
-    // Highlight the parent origin point
-    g.setColour(juce::Colour(0x55000000));
-    g.drawEllipse(ox - 4.0f, oy - 4.0f, 8.0f, 8.0f, 1.5f);
+    for (float x = startX; x <= bounds.getRight(); x += spacing)
+    {
+        for (float y = startY; y <= bounds.getBottom(); y += spacing)
+        {
+            g.drawLine(x - armLen, y, x + armLen, y, 1.0f);
+            g.drawLine(x, y - armLen, x, y + armLen, 1.0f);
+        }
+    }
 }
 
 void CustomLookAndFeel::drawTitleBar(juce::Graphics &g, const Titlebar &titleBar)
@@ -210,14 +210,60 @@ void CustomLookAndFeel::drawNodeArrowText(juce::Graphics &g, const NodeArrow &no
     }
 }
 
+namespace {
+    // Walk a flattened path, cutting it off at `t` (0..1) of its total length.
+    // Returns a new Path containing only the segment 0..t.
+    juce::Path trimPathToFraction(const juce::Path& source, float t)
+    {
+        if (t <= 0.0f || source.isEmpty()) return {};
+        if (t >= 1.0f) return source;
+
+        float totalLength = 0.0f;
+        {
+            juce::PathFlatteningIterator it(source);
+            while (it.next())
+            {
+                const float dx = it.x2 - it.x1;
+                const float dy = it.y2 - it.y1;
+                totalLength += std::sqrt(dx * dx + dy * dy);
+            }
+        }
+        if (totalLength <= 0.0f) return {};
+
+        const float target = totalLength * t;
+        juce::Path  out;
+        bool        started     = false;
+        float       accumulated = 0.0f;
+
+        juce::PathFlatteningIterator it(source);
+        while (it.next())
+        {
+            const float dx     = it.x2 - it.x1;
+            const float dy     = it.y2 - it.y1;
+            const float segLen = std::sqrt(dx * dx + dy * dy);
+
+            if (! started) { out.startNewSubPath(it.x1, it.y1); started = true; }
+
+            if (accumulated + segLen >= target)
+            {
+                const float remain   = target - accumulated;
+                const float fraction = segLen > 0.0f ? remain / segLen : 0.0f;
+                out.lineTo(it.x1 + dx * fraction, it.y1 + dy * fraction);
+                return out;
+            }
+
+            out.lineTo(it.x2, it.y2);
+            accumulated += segLen;
+        }
+        return out;
+    }
+}
+
 void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeArrow, const juce::TextEditor& editor)
 {
     auto* a = nodeArrow.parentNode;
     auto* b = nodeArrow.childNode;
 
-    // Use getNodeCentre() so that root nodes (whose component extends left
-    // for the loop-limit rectangle) report their actual circle centre.
-    // Use getHeight()/2 for the circle radius for the same reason.
     auto parentCentre = a->getNodeCentre();
     auto childCentre  = b->getNodeCentre();
 
@@ -260,7 +306,6 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         float connectorDirX = std::cos(a->incomingAngle);
         float connectorDirY = std::sin(a->incomingAngle);
 
-        // If exit direction points away from child, fall back to direct direction.
         {
             float roughX = arrowEndX - parentCenterX;
             float roughY = arrowEndY - parentCenterY;
@@ -364,6 +409,29 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     g.setColour(arrowColour.withAlpha(ghostAlpha));
     g.strokePath(linePath, lineStroke);
 
+    // Progress-bar overlay: fill 0..progressT of the arrow path in a highlight colour
+    if (! nodeArrow.isGhost && nodeArrow.progressT > 0.0f)
+    {
+        juce::Path progressPath = trimPathToFraction(linePath, nodeArrow.progressT);
+        if (! progressPath.isEmpty())
+        {
+            juce::PathStrokeType progressStroke(3.0f,
+                                                juce::PathStrokeType::curved,
+                                                juce::PathStrokeType::rounded);
+
+            juce::Colour progressColour = lightColour1;
+
+            g.setColour(progressColour.withAlpha(0.25f));
+            g.strokePath(progressPath,
+                         juce::PathStrokeType(5.5f,
+                                              juce::PathStrokeType::curved,
+                                              juce::PathStrokeType::rounded));
+
+            g.setColour(progressColour);
+            g.strokePath(progressPath, progressStroke);
+        }
+    }
+
     if (nodeArrow.animT > 0.3f)
     {
         float leftX  = arrowEndX - arrowLength * dirX + arrowWidth * dirY;
@@ -371,7 +439,6 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         float rightX = arrowEndX - arrowLength * dirX - arrowWidth * dirY;
         float rightY = arrowEndY - arrowLength * dirY + arrowWidth * dirX;
 
-        // Engraved arrowhead: fill main, then shadow/highlight strokes around the outline
         juce::Path arrowHead;
         arrowHead.startNewSubPath(leftX, leftY);
         arrowHead.lineTo(arrowEndX, arrowEndY);
