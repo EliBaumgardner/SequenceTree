@@ -13,7 +13,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../Util/NodeInfo.h"
-#include "Buttons/IncrementButton.h""
+#include "Buttons/IncrementButton.h"
 #include "ValueEditor.h"
 
 

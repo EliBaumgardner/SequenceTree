@@ -25,11 +25,13 @@ void EventManager::resetTraversal(int graphId, int newTargetId, NodeMap& nodes, 
         TraversalLogic& existingTraversal = existingIt->second;
         auto oldTargetIt = nodes.find(existingTraversal.targetId);
 
-        if (oldTargetIt != nodes.end()){
+        if (oldTargetIt != nodes.end())
+        {
             highlightNode(oldTargetIt->second, false);
         }
 
         clearOldEvents(graphId);
+        existingTraversal.resetCounts();
     }
     else
     {
@@ -37,14 +39,13 @@ void EventManager::resetTraversal(int graphId, int newTargetId, NodeMap& nodes, 
     }
 
     TraversalLogic& traversal = traversalMap.at(graphId);
-    traversal.targetId        = newTargetId;
-    traversal.state           = TraversalLogic::TraversalState::Active;
+    traversal.targetId = newTargetId;
+    traversal.state    = TraversalLogic::TraversalState::Active;
 }
 
 
-void EventManager::handleOrphanNotes(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversalMap) {
-
-    /*this function removes active notes of deleted nodes and restart the traversal at its root (unless the root does not exist) */
+void EventManager::handleOrphanNotes(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversalMap)
+{
 
     for (int i = static_cast<int>(activeNotes.size()) - 1; i >= 0; --i)
     {
@@ -132,8 +133,6 @@ void EventManager::handleNoteCreation(juce::MidiBuffer &midiMessages, NodeMap &n
 
 void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages, NodeMap& nodes, TraversalMap& traversalMap)
 {
-    /*this function handles timing the release and creation of midi notes by searching for the smallest note that fits in the buffer
-     and using the remaining num of samples to trigger notes once they expire*/
 
     handleOrphanNotes(midiMessages, nodes, traversalMap);
 
@@ -260,12 +259,13 @@ void EventManager::pushNote(const RTNode& node, int traversalId, juce::MidiBuffe
 
     activeNotes.push_back(newNote);
 
-    // 4a. notify GUI of arrow progress from current node to its next target
     if (nextTargetNode != nullptr
         && (node.nodeType == RTNode::NodeType::Node
             || node.nodeType == RTNode::NodeType::RootNode
-            || node.nodeType == RTNode::NodeType::Modulator)){
-        pushProgress(node.nodeID, nextTargetNode->nodeID, duration);
+            || node.nodeType == RTNode::NodeType::Modulator))
+    {
+        const int wallClockDurationMs = static_cast<int>(duration / tempoMultiplier);
+        pushProgress(node.nodeID, nextTargetNode->nodeID, wallClockDurationMs);
     }
 
     // 4. if node should produce MIDI then turn on here
@@ -273,7 +273,6 @@ void EventManager::pushNote(const RTNode& node, int traversalId, juce::MidiBuffe
         midiMessages.addEvent(juce::MidiMessage::noteOn(1, pitch, static_cast<juce::uint8>(velocity)), sample);
     }
 
-    // 5. push connectors and root node connections
     if (node.nodeType == RTNode::NodeType::Node)
     {
         for (int connectorId : traversalIt->second.peekTraversers(nodes))
@@ -397,21 +396,33 @@ void EventManager::pushRootNodeConnection(int rootNodeId, juce::MidiBuffer& midi
 void EventManager::highlightNode(const RTNode& node, bool shouldHighlight)
 {
     const auto scope = highlightFifo.write(1);
-    if (scope.blockSize1 > 0){
+    if (scope.blockSize1 > 0)
+    {
         highlightBuffer[static_cast<size_t>(scope.startIndex1)] = { node.nodeID, shouldHighlight };
     }
-    else if (scope.blockSize2 > 0){
+    else if (scope.blockSize2 > 0)
+    {
         highlightBuffer[static_cast<size_t>(scope.startIndex2)] = { node.nodeID, shouldHighlight };
+    }
+    else
+    {
+        jassertfalse;
     }
 }
 
 void EventManager::pushProgress(int parentNodeId, int childNodeId, int durationMs)
 {
     const auto scope = progressFifo.write(1);
-    if (scope.blockSize1 > 0){
+    if (scope.blockSize1 > 0)
+    {
         progressBuffer[static_cast<size_t>(scope.startIndex1)] = { parentNodeId, childNodeId, durationMs };
     }
-    else if (scope.blockSize2 > 0){
+    else if (scope.blockSize2 > 0)
+    {
         progressBuffer[static_cast<size_t>(scope.startIndex2)] = { parentNodeId, childNodeId, durationMs };
+    }
+    else
+    {
+        jassertfalse;
     }
 }

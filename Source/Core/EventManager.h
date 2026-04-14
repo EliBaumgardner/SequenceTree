@@ -70,10 +70,9 @@ public:
     void clearOldEvents      (int traversalId);
     void highlightNode       (const RTNode& node, bool shouldHighlight);
     void pushProgress        (int parentNodeId, int childNodeId, int durationMs);
+    static bool isNodeAudible(RTNode::NodeType nodeType);
 
 private:
-
-    static bool isNodeAudible(RTNode::NodeType nodeType);
 
     void resetTraversal(int graphId, int newTargetId, NodeMap& nodes, TraversalMap& traversalMap);
 

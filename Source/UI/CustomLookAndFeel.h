@@ -55,6 +55,15 @@ public:
 
     CustomLookAndFeel();
 
+    void setColorIntensityFactor(float factor);
+    float getColorIntensityFactor() const { return colorIntensityFactor; }
+
+    juce::Colour applyIntensity(juce::Colour base) const;
+
+    juce::Colour getButtonColour() const { return buttonColour; }
+    juce::Colour getTextColour() const { return textColour; }
+    juce::Colour getBarColour() const { return barColour; }
+
     static CustomLookAndFeel& get(juce::Component& c)
     {
         return static_cast<CustomLookAndFeel&>(c.getLookAndFeel());
@@ -100,20 +109,30 @@ public:
 
 private:
 
-    juce::Colour dropShadowColour = juce::Colours::black;
-    juce::Colour darkColour1      = juce::Colour::fromRGB(40,40,38);
-    juce::Colour darkColour2      = juce::Colour::fromRGB(30,30,30);
-    juce::Colour lightColour1     = juce::Colour::fromRGB(195,174,132);
-    juce::Colour lightColour2     = juce::Colour::fromRGB(162,150,131);
-    juce::Colour lightColour3     = juce::Colour::fromRGB(217,217,217);
+    float colorIntensityFactor = 1.0f;
 
-    juce::Colour canvasColour = darkColour1;
-    juce::Colour barColour    = darkColour2;
-    juce::Colour buttonColour = lightColour2;
-    juce::Colour editorColour = lightColour2;
-    juce::Colour textColour   = lightColour3;
-    juce::Colour arrowColour  = darkColour2.darker();
-    juce::Colour arrowHeadColour = arrowColour;
+    juce::Colour dropShadowColour = juce::Colours::black;
+    juce::Colour baseDarkColour1      = juce::Colour::fromRGB(40,40,38);
+    juce::Colour baseDarkColour2      = juce::Colour::fromRGB(30,30,30);
+    juce::Colour baseLightColour1     = juce::Colour::fromRGB(195,174,132);
+    juce::Colour baseLightColour2     = juce::Colour::fromRGB(162,150,131);
+    juce::Colour baseLightColour3     = juce::Colour::fromRGB(217,217,217);
+
+    juce::Colour darkColour1;
+    juce::Colour darkColour2;
+    juce::Colour lightColour1;
+    juce::Colour lightColour2;
+    juce::Colour lightColour3;
+
+    juce::Colour canvasColour;
+    juce::Colour barColour;
+    juce::Colour buttonColour;
+    juce::Colour editorColour;
+    juce::Colour textColour;
+    juce::Colour arrowColour;
+    juce::Colour arrowHeadColour;
+
+    void updateColours();
 
     juce::DropShadow barDropShadow;
     juce::DropShadow nodeDropShadow;

@@ -50,4 +50,6 @@ public:
     bool shouldTraverse() const;
     void handleNodeEvent(NodeMap& nodes);
     void handleConnectorNodeEvent(int relayNodeId, const NodeMap& nodes) const;
+
+    void resetCounts() { counts.clear(); }
 };

@@ -18,9 +18,6 @@ CustomTextEditor::CustomTextEditor()
 {
     setLookAndFeel(ComponentContext::lookAndFeel);
 
-    setColour(juce::TextEditor::backgroundColourId,     juce::Colour::fromRGB(162, 150, 131));
-    setColour(juce::TextEditor::outlineColourId,        juce::Colour::fromRGB(162, 150, 131));
-    setColour(juce::TextEditor::textColourId,           juce::Colour::fromRGB(217, 217, 217));
     setColour(juce::TextEditor::highlightColourId,      juce::Colours::darkgrey);
     setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
 

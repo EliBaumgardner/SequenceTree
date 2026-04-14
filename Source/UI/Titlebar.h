@@ -18,6 +18,7 @@
 #include "Buttons/DisplayMenu.h"
 #include "Buttons/TempoDisplay.h"
 #include "Buttons/UndoRedoPane.h"
+#include "Buttons/ColorIntensityControl.h"
 
 class Titlebar : public juce::Component {
     
@@ -36,6 +37,7 @@ private:
     DisplayMenu displaySelector;
 
     TempoDisplay tempoDisplay;
+    ColorIntensityControl colorIntensityControl;
     PlayButton   playButton;
     ResetButton  resetButton;
 
