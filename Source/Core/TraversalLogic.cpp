@@ -90,36 +90,34 @@ RTNode* TraversalLogic::peekNextTarget(NodeMap& nodes)
     return (itPeek != nodes.end()) ? &itPeek->second : nullptr;
 }
 
-
 std::vector<int> TraversalLogic::peekTraversers(NodeMap& nodes)
 {
-    auto targetIdIterator = nodes.find(targetId);
-
-    jassert(targetIdIterator != nodes.end());
+    auto targetIterator = nodes.find(targetId);
+    jassert(targetIterator != nodes.end());
 
     auto countIterator = counts.find(targetId);
-    int count = 1;
+    int targetCount = (countIterator != counts.end()) ? countIterator->second : 1;
 
-    if (countIterator != counts.end()) {
-        count = countIterator->second;
+    std::vector<int> traverserIds;
+
+    for (int childId : targetIterator->second.children) {
+        auto childIterator = nodes.find(childId);
+        jassert(childIterator != nodes.end());
+
+        const RTNode& childNode = childIterator->second;
+        bool isCrossTreeRoot    = childNode.nodeType == RTNode::NodeType::RootNode
+                               && childNode.nodeID   != rootId;
+
+        bool isTraverser = childNode.nodeType == RTNode::NodeType::Connector
+                        || childNode.nodeType == RTNode::NodeType::ModulatorRoot
+                        || isCrossTreeRoot;
+
+        if (isTraverser && targetCount % childNode.countLimit == 0) {
+            traverserIds.push_back(childId);
+        }
     }
 
-    std::vector<int> childrenIndices;
-
-    for (int childIndex : targetIdIterator->second.children) {
-        auto itChild = nodes.find(childIndex);
-        jassert(itChild != nodes.end());
-
-        const auto& childNode = itChild->second;
-        bool isRootLink = childNode.nodeType == RTNode::NodeType::RootNode && childNode.nodeID != rootId;
-        if ((childNode.nodeType == RTNode::NodeType::Connector
-             || childNode.nodeType == RTNode::NodeType::ModulatorRoot
-             || isRootLink)
-            && count % childNode.countLimit == 0)
-            childrenIndices.push_back(childIndex);
-    }
-
-    return childrenIndices;
+    return traverserIds;
 }
 
 const RTNode& TraversalLogic::getTargetNode   (const NodeMap& nodes) const { return nodes.at(targetId);          }

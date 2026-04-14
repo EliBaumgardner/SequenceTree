@@ -8,7 +8,7 @@
   ==============================================================================
 */
 #include "../Util/ValueTreeState.h"
-#include "../Util/ValueTreeIdentifiers.h""
+#include "../Util/ValueTreeIdentifiers.h"
 #include "NodeArrow.h"
 
 #include "Node.h"
@@ -39,9 +39,6 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
   duration = (int)(std::abs(dx) * durationAmount);
   textEditor.setText(juce::String(duration));
 
-  // Build the path in canvas coordinates to get the true bounding box.
-  // Use height/2 (= circle radius) rather than width/2 so that root nodes,
-  // whose component is wider than the circle, still produce correct arrow endpoints.
   int parentRadius = parentNode->getHeight() / 2;
   int childRadius  = childNode->getHeight()  / 2;
 
@@ -124,7 +121,6 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
     }
   }
 
-  // Expand enough for stroke (2px), arrowhead (~12px), and label text (~30px).
   auto arrowBounds = curvePath.getBounds().expanded(40.0f).toNearestInt();
 
   setBounds(arrowBounds);
@@ -147,7 +143,7 @@ void NodeArrow::triggerSnapAnimation()
 {
     animT        = 0.0f;
     animVelocity = 0.0f;
-    ensureTimerRunning();
+    ensureAnimationTimerRunning();
 }
 
 void NodeArrow::startProgress(int durationMs)
@@ -156,7 +152,7 @@ void NodeArrow::startProgress(int durationMs)
     progressActive     = durationMs > 0;
     progressStartMs    = juce::Time::getMillisecondCounterHiRes();
     progressDurationMs = juce::jmax(1, durationMs);
-    ensureTimerRunning();
+    ensureAnimationTimerRunning();
     repaint();
 }
 
@@ -167,50 +163,60 @@ void NodeArrow::resetProgress()
     repaint();
 }
 
-void NodeArrow::ensureTimerRunning()
+void NodeArrow::ensureAnimationTimerRunning()
 {
     if (! isTimerRunning())
-        startTimerHz(60);
+        startTimerHz(animationTimerHz);
+}
+
+bool NodeArrow::isSnapSettled() const
+{
+    return std::abs(animT - 1.0f) < snapSettledEpsilon
+        && std::abs(animVelocity) < snapSettledEpsilon;
+}
+
+bool NodeArrow::advanceSnapAnimation()
+{
+    if (isSnapSettled()) return true;
+
+    animVelocity += (1.0f - animT) * snapSpringStiffness;
+    animVelocity *= snapSpringDamping;
+    animT        += animVelocity;
+
+    if (isSnapSettled())
+    {
+        animT        = 1.0f;
+        animVelocity = 0.0f;
+        return true;
+    }
+    return false;
+}
+
+bool NodeArrow::advanceProgressAnimation()
+{
+    if (! progressActive) return true;
+
+    const double currentTimeMs      = juce::Time::getMillisecondCounterHiRes();
+    const double elapsedMs          = currentTimeMs - progressStartMs;
+    const double normalisedProgress = elapsedMs / static_cast<double>(progressDurationMs);
+
+    if (normalisedProgress >= 1.0)
+    {
+        progressT      = 1.0f;
+        progressActive = false;
+        return true;
+    }
+
+    progressT = static_cast<float>(juce::jlimit(0.0, 1.0, normalisedProgress));
+    return false;
 }
 
 void NodeArrow::timerCallback()
 {
-    // Snap animation step
-    bool snapDone = (std::abs(animT - 1.0f) < 0.001f && std::abs(animVelocity) < 0.001f);
-    if (! snapDone)
-    {
-        constexpr float stiffness = 0.20f;
-        constexpr float damping   = 0.30f;
+    const bool snapDone     = advanceSnapAnimation();
+    const bool progressDone = advanceProgressAnimation();
 
-        animVelocity += (1.0f - animT) * stiffness;
-        animVelocity *= damping;
-        animT        += animVelocity;
-
-        if (std::abs(animT - 1.0f) < 0.001f && std::abs(animVelocity) < 0.001f)
-        {
-            animT    = 1.0f;
-            snapDone = true;
-        }
-    }
-
-    // Progress animation step
-    if (progressActive)
-    {
-        const double now = juce::Time::getMillisecondCounterHiRes();
-        const double t   = (now - progressStartMs) / (double) progressDurationMs;
-
-        if (t >= 1.0)
-        {
-            progressT      = 1.0f;
-            progressActive = false;
-        }
-        else
-        {
-            progressT = (float) juce::jlimit(0.0, 1.0, t);
-        }
-    }
-
-    if (snapDone && ! progressActive)
+    if (snapDone && progressDone)
         stopTimer();
 
     repaint();

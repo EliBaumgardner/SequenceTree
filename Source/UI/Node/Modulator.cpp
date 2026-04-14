@@ -3,6 +3,8 @@
 //
 
 #include "Modulator.h"
+#include "../CustomLookAndFeel.h"
+#include "../../Util/PluginContext.h"
 
 Modulator::Modulator() {
 
@@ -29,7 +31,8 @@ void Modulator::paint(juce::Graphics& g) {
     g.setColour(juce::Colours::black);
     g.drawRect(squareBorder, 1.0f);
 
-    g.setColour(isHighlighted ? nodeColour.darker() : nodeColour);
+    juce::Colour displayColour = ComponentContext::lookAndFeel->applyIntensity(nodeColour);
+    g.setColour(isHighlighted ? displayColour.darker() : displayColour);
     g.fillRect(squareFill);
 
     if (isHovered)

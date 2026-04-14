@@ -206,11 +206,19 @@ void SequenceTreeAudioProcessor::updateTraversalCounts(NodeMap &nodes, Traversal
 
 void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    juce::ScopedNoDenormals noDenormals;
+    const int numSamples = buffer.getNumSamples();
+
+    buffer.clear();
+    midiMessages.clear();
+
     if (resetRequested.exchange(false))
     {
         for (auto& note : eventManager.activeNotes)
         {
-            midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), 0);
+            if (EventManager::isNodeAudible(note.noteNode.nodeType) && !note.isConnectionTrigger)
+                midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), 0);
+
             eventManager.highlightNode(note.noteNode, false);
         }
 
@@ -235,12 +243,6 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     updateTraversalCounts(nodes, traversals);
     syncTraversalLoopLimits(traversals, *snap->rtGraphs, midiMessages, nodes);
-
-    juce::ScopedNoDenormals noDenormals;
-    const int numSamples = buffer.getNumSamples();
-
-    buffer.clear();
-    midiMessages.clear();
 
     if (traversals.empty()) {
         if (initializeTraversalForRootNode(midiMessages, nodes, traversals, *snap->rtGraphs) == false) {
@@ -336,11 +338,13 @@ void SequenceTreeAudioProcessor::syncTraversalLoopLimits(TraversalMap &traversal
     }
 }
 
-void SequenceTreeAudioProcessor::clearOldEvents(RTNode node, int traversalId)
+void SequenceTreeAudioProcessor::clearOldEvents(int traversalId)
 {
     for (int i = eventManager.activeNotes.size()-1; i >= 0; --i) {
         EventManager::ActiveNote& note = eventManager.activeNotes[i];
-        if (note.traversalId == traversalId ) { note.traversalId = -1; }
+        if (note.traversalId == traversalId) {
+            note.traversalId = -1;
+        }
     }
 }
 

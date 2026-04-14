@@ -17,12 +17,62 @@
 
 CustomLookAndFeel::CustomLookAndFeel()
 {
+    updateColours();
     nodeDropShadow = juce::DropShadow(dropShadowColour.withAlpha(0.4f),6,juce::Point<int>(3,3));
     barDropShadow  = juce::DropShadow(dropShadowColour.withAlpha(0.4f),6,juce::Point<int>(3,3));
 }
 
+void CustomLookAndFeel::setColorIntensityFactor(float factor)
+{
+    colorIntensityFactor = juce::jlimit(0.0f, 1.0f, factor);
+    updateColours();
+
+    if (ComponentContext::canvas)
+    {
+        if (auto* topLevel = ComponentContext::canvas->getTopLevelComponent())
+            topLevel->repaint();
+    }
+}
+
+juce::Colour CustomLookAndFeel::applyIntensity(juce::Colour base) const
+{
+    float distance        = std::abs(colorIntensityFactor - 0.5f) * 2.0f;
+    float hueShift        = (colorIntensityFactor - 0.5f) * 0.5f;
+    float saturationBoost = distance * 0.35f;
+    float newSaturation   = juce::jlimit(0.0f, 1.0f, base.getSaturation() + saturationBoost);
+
+    // Lift every colour as the slider moves from neutral, lifting darker colours most
+    float darkness        = 1.0f - base.getBrightness();
+    float brightnessLift  = distance * (0.10f + darkness * 0.25f);
+    float newBrightness   = juce::jlimit(0.0f, 1.0f, base.getBrightness() + brightnessLift);
+
+    return base.withRotatedHue(hueShift)
+               .withSaturation(newSaturation)
+               .withBrightness(newBrightness);
+}
+
+void CustomLookAndFeel::updateColours()
+{
+    darkColour1 = applyIntensity(baseDarkColour1);
+    darkColour2 = applyIntensity(baseDarkColour2);
+    lightColour1 = applyIntensity(baseLightColour1);
+    lightColour2 = applyIntensity(baseLightColour2);
+    lightColour3 = applyIntensity(baseLightColour3);
+
+    canvasColour = darkColour1;
+    barColour = darkColour2;
+    buttonColour = lightColour2;
+    editorColour = lightColour2;
+    textColour = lightColour3;
+    arrowColour = darkColour2.darker();
+    arrowHeadColour = arrowColour;
+}
+
 void CustomLookAndFeel::drawEditor(juce::Graphics &g, CustomTextEditor& editor)
 {
+    editor.setColour(juce::TextEditor::backgroundColourId, buttonColour);
+    editor.setColour(juce::TextEditor::outlineColourId, buttonColour);
+    editor.setColour(juce::TextEditor::textColourId, textColour);
     editor.TextEditor::paint(g);
 }
 
@@ -90,9 +140,9 @@ void CustomLookAndFeel::drawDisplayMenu(juce::Graphics &g, const DisplayMenu& di
 
 void CustomLookAndFeel::drawDisplayButton(juce::Graphics &g, const DisplayButton &displayButton)
 {
-    g.setColour(displayButton.isSelected ? lightColour3.darker() : lightColour3);
-
     auto bounds = displayButton.getLocalBounds().toFloat().reduced(5.0f);
+
+    g.setColour(displayButton.isSelected ? textColour.darker() : textColour);
 
     float triangleHeight = bounds.getHeight() * 0.9f;
     float centerY = bounds.getCentreY();
@@ -132,7 +182,7 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
     float velocity        = (float)(int)node.midiNoteData.getProperty(ValueTreeIdentifiers::MidiVelocity, 100);
     float brightnessFactor = juce::jmap(velocity, 0.0f, 127.0f, 0.4f, 1.6f);
 
-    juce::Colour nodeColour = node.nodeColour.withMultipliedBrightness(brightnessFactor);
+    juce::Colour nodeColour = applyIntensity(node.nodeColour).withMultipliedBrightness(brightnessFactor);
 
     float pulseExpansion = 4.0f * std::sin(node.pulsePhase * juce::MathConstants<float>::pi);
     auto  pulsedFill     = circleFill.expanded(pulseExpansion);
@@ -405,26 +455,84 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     g.setColour(arrowColour.withAlpha(ghostAlpha));
     g.strokePath(linePath, lineStroke);
 
-    // Progress-bar overlay: fill 0..progressT of the arrow path in a highlight colour
     if (! nodeArrow.isGhost && nodeArrow.progressT > 0.0f)
     {
-        juce::Path progressPath = trimPathToFraction(linePath, nodeArrow.progressT);
-        if (! progressPath.isEmpty())
+        float linePathLength = 0.0f;
         {
-            juce::PathStrokeType progressStroke(3.0f,
-                                                juce::PathStrokeType::curved,
-                                                juce::PathStrokeType::rounded);
+            juce::PathFlatteningIterator iterator(linePath);
+            while (iterator.next())
+            {
+                const float segmentDeltaX = iterator.x2 - iterator.x1;
+                const float segmentDeltaY = iterator.y2 - iterator.y1;
+                linePathLength += std::sqrt(segmentDeltaX * segmentDeltaX + segmentDeltaY * segmentDeltaY);
+            }
+        }
 
-            juce::Colour progressColour = lightColour1;
+        const float bodyLength        = juce::jmax(0.0f, linePathLength - arrowLength);
+        const float bodyFraction      = (linePathLength > 0.0f) ? bodyLength / linePathLength : 1.0f;
+        const float bodyProgressT     = juce::jmin(nodeArrow.progressT, bodyFraction);
+        const juce::Colour progressColour = lightColour1;
+
+        if (bodyProgressT > 0.0f)
+        {
+            juce::Path bodyProgressPath = trimPathToFraction(linePath, bodyProgressT);
+            if (! bodyProgressPath.isEmpty())
+            {
+                const juce::PathStrokeType bodyStroke(3.0f,
+                                                      juce::PathStrokeType::curved,
+                                                      juce::PathStrokeType::butt);
+                const juce::PathStrokeType bodyGlowStroke(5.5f,
+                                                          juce::PathStrokeType::curved,
+                                                          juce::PathStrokeType::butt);
+
+                g.setColour(progressColour.withAlpha(0.25f));
+                g.strokePath(bodyProgressPath, bodyGlowStroke);
+
+                g.setColour(progressColour);
+                g.strokePath(bodyProgressPath, bodyStroke);
+            }
+        }
+
+        if (nodeArrow.progressT > bodyFraction)
+        {
+            const float headFraction       = juce::jmax(1.0e-6f, 1.0f - bodyFraction);
+            const float headProgressT      = juce::jlimit(0.0f, 1.0f,
+                                                          (nodeArrow.progressT - bodyFraction) / headFraction);
+
+            const float headPerpendicularX =  dirY;
+            const float headPerpendicularY = -dirX;
+
+            const float headBaseX          = arrowEndX - arrowLength * dirX;
+            const float headBaseY          = arrowEndY - arrowLength * dirY;
+            const float headFrontX         = headBaseX + headProgressT * arrowLength * dirX;
+            const float headFrontY         = headBaseY + headProgressT * arrowLength * dirY;
+            const float headFrontHalfWidth = arrowWidth * (1.0f - headProgressT);
+
+            const float baseLeftX  = headBaseX + arrowWidth * headPerpendicularX;
+            const float baseLeftY  = headBaseY + arrowWidth * headPerpendicularY;
+            const float baseRightX = headBaseX - arrowWidth * headPerpendicularX;
+            const float baseRightY = headBaseY - arrowWidth * headPerpendicularY;
+            const float frontLeftX  = headFrontX + headFrontHalfWidth * headPerpendicularX;
+            const float frontLeftY  = headFrontY + headFrontHalfWidth * headPerpendicularY;
+            const float frontRightX = headFrontX - headFrontHalfWidth * headPerpendicularX;
+            const float frontRightY = headFrontY - headFrontHalfWidth * headPerpendicularY;
+
+            juce::Path headProgressPath;
+            headProgressPath.startNewSubPath(baseLeftX, baseLeftY);
+            headProgressPath.lineTo(frontLeftX, frontLeftY);
+            headProgressPath.lineTo(frontRightX, frontRightY);
+            headProgressPath.lineTo(baseRightX, baseRightY);
+            headProgressPath.closeSubPath();
+
+            const juce::PathStrokeType headGlowStroke(2.5f,
+                                                      juce::PathStrokeType::curved,
+                                                      juce::PathStrokeType::rounded);
 
             g.setColour(progressColour.withAlpha(0.25f));
-            g.strokePath(progressPath,
-                         juce::PathStrokeType(5.5f,
-                                              juce::PathStrokeType::curved,
-                                              juce::PathStrokeType::rounded));
+            g.strokePath(headProgressPath, headGlowStroke);
 
             g.setColour(progressColour);
-            g.strokePath(progressPath, progressStroke);
+            g.fillPath(headProgressPath);
         }
     }
 
@@ -498,8 +606,8 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
 void CustomLookAndFeel::drawSyncButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const SyncButton &button)
 {
     juce::Rectangle<float> bounds = button.getLocalBounds().toFloat().reduced(2.0f);
-    g.setColour(lightColour3);
-    g.fillEllipse(bounds);
+    g.setColour(textColour);
+    g.drawEllipse(bounds, 1.0f);
 }
 
 void CustomLookAndFeel::drawNodeButton(juce::Graphics &g, const NodeButton& nodeButton)

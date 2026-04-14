@@ -23,6 +23,7 @@ Titlebar::Titlebar()
     addAndMakeVisible(playButton);
     addAndMakeVisible(resetButton);
     addAndMakeVisible(tempoDisplay);
+    addAndMakeVisible(colorIntensityControl);
     addAndMakeVisible(buttonPane);
     addAndMakeVisible(displaySelector);
     addAndMakeVisible(undoRedoPane);
@@ -65,6 +66,7 @@ void Titlebar::resized()
 
     int buttonSize = std::min(bounds.getHeight(), bounds.getWidth() / 25);
     int tempoDisplayWidth = bounds.getWidth() / 8;
+    int colorIntensityWidth = bounds.getWidth() / 25;
     int buttonPaneWidth = bounds.getWidth() / 8;
     int displaySelectorWidth = bounds.getWidth() / 8;
     int undoRedoPaneWidth = bounds.getWidth() / 8;
@@ -78,6 +80,9 @@ void Titlebar::resized()
     area.removeFromLeft(spacing);
 
     tempoDisplay.setBounds(area.removeFromLeft(tempoDisplayWidth));
+    area.removeFromLeft(spacing);
+
+    colorIntensityControl.setBounds(area.removeFromLeft(colorIntensityWidth));
     area.removeFromLeft(spacing);
 
     undoRedoPane.setBounds(area.removeFromLeft(undoRedoPaneWidth));

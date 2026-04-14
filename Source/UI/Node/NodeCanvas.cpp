@@ -5,7 +5,7 @@
 #include "../Core/PluginProcessor.h"
 #include "NodeTextEditor.h"
 #include "NodeArrow.h"
-#include "../Util/ValueTreeIdentifiers.h""
+#include "../Util/ValueTreeIdentifiers.h"
 
 #include "Node.h"
 #include "RootNode.h"
@@ -295,7 +295,10 @@ void NodeCanvas::removeLinePoints(Node* node)
     for (int i = nodeArrows.size() - 1; i >= 0; i--)
     {
         NodeArrow* nodeArrow = nodeArrows[i];
-        if (nodeArrow->parentNode != node && nodeArrow->childNode != node) { continue; }
+        if (nodeArrow->parentNode != node && nodeArrow->childNode != node) continue;
+
+        const int childNodeId = nodeArrow->childNode->getComponentID().getIntValue();
+        nodeArrow->parentNode->nodeArrows.erase(childNodeId);
 
         nodeArrows.remove(i);
     }

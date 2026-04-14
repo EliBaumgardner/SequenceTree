@@ -37,15 +37,17 @@ public:
   juce::ValueTree boundNodeValueTree;
   juce::Value bindValue;
 
-  static inline const float durationAmount {5.0f};
+  static inline const float durationAmount      {5.0f};
+  static inline const int   animationTimerHz    {60};
+  static inline const float snapSpringStiffness {0.20f};
+  static inline const float snapSpringDamping   {0.30f};
+  static inline const float snapSettledEpsilon  {0.001f};
 
   float length = 0;
   float animT  = 1.0f;
   int duration = 0;
 
-  // Progress animation — drives a progress-bar fill along the arrow path while
-  // the parent node's note is ringing toward this child node.
-  float progressT     = 0.0f;
+  float progressT      = 0.0f;
   bool  progressActive = false;
 
   bool updateFromBindValue = false;
@@ -54,9 +56,12 @@ public:
   juce::TextEditor textEditor;
 
 private:
-  float  animVelocity      = 0.0f;
-  double progressStartMs   = 0.0;
+  float  animVelocity       = 0.0f;
+  double progressStartMs    = 0.0;
   int    progressDurationMs = 0;
 
-  void ensureTimerRunning();
+  void ensureAnimationTimerRunning();
+  bool advanceSnapAnimation();
+  bool advanceProgressAnimation();
+  bool isSnapSettled() const;
 };
