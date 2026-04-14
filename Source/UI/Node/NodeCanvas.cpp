@@ -38,6 +38,7 @@ void NodeCanvas::paint(juce::Graphics& g)
 
 void NodeCanvas::handleAsyncUpdate() {
     drainHighlightFifo();
+    drainProgressFifo();
 
     for (auto& asyncUpdate  : asyncUpdates) {
         int nodeId = asyncUpdate.nodeId;
@@ -72,6 +73,42 @@ void NodeCanvas::handleAsyncUpdate() {
         }
     }
     asyncUpdates.clear();
+}
+
+void NodeCanvas::drainProgressFifo()
+{
+    auto& em = ComponentContext::processor->eventManager;
+    const auto scope = em.progressFifo.read(em.progressFifo.getNumReady());
+
+    auto apply = [this](const EventManager::ProgressCommand& cmd)
+    {
+        auto parentIt = nodeMap.find(cmd.parentNodeId);
+        if (parentIt == nodeMap.end()) return;
+        Node* parentNode = parentIt->second;
+
+        // Reset progress on all sibling arrows from the same parent, then start this one.
+        // Keeps only the "currently-advancing" arrow lit per parent.
+        for (auto& [childId, arrow] : parentNode->nodeArrows)
+        {
+            if (arrow == nullptr) continue;
+            if (childId == cmd.childNodeId)
+                arrow->startProgress(cmd.durationMs);
+            else
+                arrow->resetProgress();
+        }
+    };
+
+    for (int i = 0; i < scope.blockSize1; ++i)
+        apply(em.progressBuffer[static_cast<size_t>(scope.startIndex1 + i)]);
+    for (int i = 0; i < scope.blockSize2; ++i)
+        apply(em.progressBuffer[static_cast<size_t>(scope.startIndex2 + i)]);
+}
+
+void NodeCanvas::resetAllArrowProgress()
+{
+    for (NodeArrow* arrow : nodeArrows)
+        if (arrow != nullptr)
+            arrow->resetProgress();
 }
 
 void NodeCanvas::drainHighlightFifo()
@@ -468,6 +505,9 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
         graph.get()->traversalRequested = start;
         ComponentContext::processor->setNewGraph(graph);
     }
+
+    if (! isPlaying)
+        resetAllArrowProgress();
 }
 
 void NodeCanvas::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
@@ -629,15 +669,16 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         juce::Identifier treeType = nodeValueTree.getType();
 
         std::unique_ptr<Node> canvasNode;
-        if (treeType == ValueTreeIdentifiers::ConnectorData)
+        if (treeType == ValueTreeIdentifiers::RootNodeData)
+            canvasNode = std::make_unique<RootNode>();
+        else if (treeType == ValueTreeIdentifiers::ConnectorData)
             canvasNode = std::make_unique<Connector>();
+        else if (treeType == ValueTreeIdentifiers::ModulatorData || treeType == ValueTreeIdentifiers::ModulatorRootData)
+            canvasNode = std::make_unique<Modulator>();
         else
             canvasNode = std::make_unique<Node>();
 
-        int xPosition = nodeValueTree.getProperty      (ValueTreeIdentifiers::XPosition);
-        int yPosition = nodeValueTree.getProperty      (ValueTreeIdentifiers::YPosition);
-        int radius    = nodeValueTree.getProperty      (ValueTreeIdentifiers::Radius);
-        int nodeId    = nodeValueTree.getProperty      (ValueTreeIdentifiers::Id);
+        int nodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
         if (treeType == ValueTreeIdentifiers::RootNodeData) {
             rootNodeMap[nodeId] = nodeValueTree;
@@ -660,12 +701,10 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         canvasNode->setComponentID(std::to_string(nodeId));
         canvasNode->setDisplayMode(NodeDisplayMode::Pitch);
 
-        canvasNode->setSize(radius*2, radius*2);
-        canvasNode->setCentrePosition(xPosition, yPosition);
-
         addAndMakeVisible(canvasNode.get());
-
         nodeMap[nodeId] = canvasNode.release();
+
+        setNodePosition(nodeId);
     }
 
     for (auto [parentNodeId,childNodeId] : nodePairs) {

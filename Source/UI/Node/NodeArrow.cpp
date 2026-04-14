@@ -194,22 +194,71 @@ void NodeArrow::triggerSnapAnimation()
 {
     animT        = 0.0f;
     animVelocity = 0.0f;
-    startTimerHz(60);
+    ensureTimerRunning();
+}
+
+void NodeArrow::startProgress(int durationMs)
+{
+    progressT          = 0.0f;
+    progressActive     = durationMs > 0;
+    progressStartMs    = juce::Time::getMillisecondCounterHiRes();
+    progressDurationMs = juce::jmax(1, durationMs);
+    ensureTimerRunning();
+    repaint();
+}
+
+void NodeArrow::resetProgress()
+{
+    progressT      = 0.0f;
+    progressActive = false;
+    repaint();
+}
+
+void NodeArrow::ensureTimerRunning()
+{
+    if (! isTimerRunning())
+        startTimerHz(60);
 }
 
 void NodeArrow::timerCallback()
 {
-    constexpr float stiffness = 0.20f;
-    constexpr float damping   = 0.30f;
-
-    animVelocity += (1.0f - animT) * stiffness;
-    animVelocity *= damping;
-    animT        += animVelocity;
-
-    if (std::abs(animT - 1.0f) < 0.001f && std::abs(animVelocity) < 0.001f)
+    // Snap animation step
+    bool snapDone = (std::abs(animT - 1.0f) < 0.001f && std::abs(animVelocity) < 0.001f);
+    if (! snapDone)
     {
-        animT = 1.0f;
-        stopTimer();
+        constexpr float stiffness = 0.20f;
+        constexpr float damping   = 0.30f;
+
+        animVelocity += (1.0f - animT) * stiffness;
+        animVelocity *= damping;
+        animT        += animVelocity;
+
+        if (std::abs(animT - 1.0f) < 0.001f && std::abs(animVelocity) < 0.001f)
+        {
+            animT    = 1.0f;
+            snapDone = true;
+        }
     }
+
+    // Progress animation step
+    if (progressActive)
+    {
+        const double now = juce::Time::getMillisecondCounterHiRes();
+        const double t   = (now - progressStartMs) / (double) progressDurationMs;
+
+        if (t >= 1.0)
+        {
+            progressT      = 1.0f;
+            progressActive = false;
+        }
+        else
+        {
+            progressT = (float) juce::jlimit(0.0, 1.0, t);
+        }
+    }
+
+    if (snapDone && ! progressActive)
+        stopTimer();
+
     repaint();
 }

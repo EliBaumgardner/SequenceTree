@@ -27,6 +27,8 @@ public:
   void valueChanged(juce::Value&) override;
 
   void triggerSnapAnimation();
+  void startProgress(int durationMs);
+  void resetProgress();
   void timerCallback() override;
 
   Node* parentNode = nullptr;
@@ -41,11 +43,20 @@ public:
   float animT  = 1.0f;
   int duration = 0;
 
+  // Progress animation — drives a progress-bar fill along the arrow path while
+  // the parent node's note is ringing toward this child node.
+  float progressT     = 0.0f;
+  bool  progressActive = false;
+
   bool updateFromBindValue = false;
   bool isGhost = false;
 
   juce::TextEditor textEditor;
 
 private:
-  float animVelocity = 0.0f;
+  float  animVelocity      = 0.0f;
+  double progressStartMs   = 0.0;
+  int    progressDurationMs = 0;
+
+  void ensureTimerRunning();
 };

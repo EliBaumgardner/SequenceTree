@@ -258,7 +258,8 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     eventManager.processEvents(numSamples, midiMessages, nodes, traversals);
 
-    if (eventManager.highlightFifo.getNumReady() > 0) {
+    if (eventManager.highlightFifo.getNumReady() > 0
+        || eventManager.progressFifo.getNumReady() > 0) {
         canvas->triggerAsyncUpdate();
     }
 
