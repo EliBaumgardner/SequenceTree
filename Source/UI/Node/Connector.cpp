@@ -16,7 +16,6 @@ void Connector::resized() {
 
     nodeTextEditor.get()->setBounds(editorArea);
     nodeTextEditor.get()->setJustification(juce::Justification::centred);
-    //editor.refit();
 }
 
 void Connector::paint(juce::Graphics& g)
@@ -44,17 +43,14 @@ void Connector::paint(juce::Graphics& g)
     juce::Path triangle;
     triangle.addTriangle(p1, p2, p3);
 
-    // Fill
     g.setColour(isHighlighted ? nodeColour.darker() : nodeColour);
     g.fillPath(triangle);
 
-    // Outline — drawn after fill so it sits exactly on the triangle edge
     g.setColour(juce::Colours::black);
     g.strokePath(triangle, juce::PathStrokeType(1.5f,
         juce::PathStrokeType::mitered,
         juce::PathStrokeType::rounded));
 
-    // Hover
     if (isHovered)
     {
         g.setColour(juce::Colours::white.withAlpha(0.25f));
@@ -63,7 +59,6 @@ void Connector::paint(juce::Graphics& g)
             juce::PathStrokeType::rounded));
     }
 
-    // Selection
     if (isSelected)
     {
         juce::Path dashedPath;

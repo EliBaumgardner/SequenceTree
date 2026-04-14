@@ -65,7 +65,6 @@ void Node::resized()
     nodeTextEditor->setBounds(editorArea);
     nodeTextEditor->setJustification(juce::Justification::centred);
 
-    // Float count editor at top-right corner, outside the circle
     countEditor.setBounds(getWidth() - 18, 0, 18, 12);
 }
 

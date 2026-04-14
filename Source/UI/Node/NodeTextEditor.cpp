@@ -121,9 +121,7 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
 }
 
 int NodeTextEditor::noteToNumber(juce::String string){
-    
-    //note  //accidental  //octave
-    
+
     char note = string[1];
     juce::juce_wchar accidental;
     char octave;
@@ -156,8 +154,7 @@ int NodeTextEditor::noteToNumber(juce::String string){
 }
 
 void NodeTextEditor::makeBoundsVisible(bool isBoundsVisible){
-    
-    //set whether the textbox has visible boundaries
+
     if(isBoundsVisible){
         setColour(juce::TextEditor::textColourId, juce::Colours::black);
         setOpaque(false);

@@ -158,8 +158,6 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
 
 void CustomLookAndFeel::drawRootNode(juce::Graphics& g, const RootNode& node)
 {
-    // The root node component extends left by loopLimitRectangleWidth to hold the
-    // loop-limit rectangle. Trim that offset so the circle is drawn in the right portion.
     auto circleBounds = node.getLocalBounds().toFloat()
                             .withTrimmedLeft((float)RootNode::loopLimitRectangleWidth);
     drawNode(g, node, circleBounds);
@@ -211,8 +209,6 @@ void CustomLookAndFeel::drawNodeArrowText(juce::Graphics &g, const NodeArrow &no
 }
 
 namespace {
-    // Walk a flattened path, cutting it off at `t` (0..1) of its total length.
-    // Returns a new Path containing only the segment 0..t.
     juce::Path trimPathToFraction(const juce::Path& source, float t)
     {
         if (t <= 0.0f || source.isEmpty()) return {};

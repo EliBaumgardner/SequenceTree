@@ -202,8 +202,6 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
 
 void EventManager::pushNote(const RTNode& node, int traversalId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, TraversalMap& traversalMap)
 {
-    /* this function is responsible for pushing Node Notes specifically */
-
     auto traversalIt = traversalMap.find(traversalId);
     jassert(traversalIt != traversalMap.end());
 
