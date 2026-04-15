@@ -31,7 +31,6 @@ void EventManager::resetTraversal(int graphId, int newTargetId, NodeMap& nodes, 
         }
 
         clearOldEvents(graphId);
-        existingTraversal.resetCounts();
     }
     else
     {

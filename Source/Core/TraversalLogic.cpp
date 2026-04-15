@@ -96,7 +96,7 @@ std::vector<int> TraversalLogic::peekTraversers(NodeMap& nodes)
     jassert(targetIterator != nodes.end());
 
     auto countIterator = counts.find(targetId);
-    int targetCount = (countIterator != counts.end()) ? countIterator->second : 1;
+    int targetCount = (countIterator != counts.end() ? countIterator->second : 0) + 1;
 
     std::vector<int> traverserIds;
 
