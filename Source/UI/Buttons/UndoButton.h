@@ -14,6 +14,7 @@ class UndoButton : public juce::Component {
     bool isDown = false;
     public:
 
+    bool isHovered = false;
     std::function<void()> onClick;
     UndoButton() { setLookAndFeel(ComponentContext::lookAndFeel); }
 
@@ -21,6 +22,9 @@ class UndoButton : public juce::Component {
     {
         CustomLookAndFeel::get(*this).drawUndoButton(g, *this, isDown);
     }
+
+    void mouseEnter(const juce::MouseEvent&) override { isHovered = true;  repaint(); }
+    void mouseExit (const juce::MouseEvent&) override { isHovered = false; repaint(); }
 
     void mouseDown(const juce::MouseEvent &event) override
     {

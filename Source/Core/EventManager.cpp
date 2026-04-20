@@ -264,7 +264,7 @@ void EventManager::pushNote(const RTNode& node, int traversalId, juce::MidiBuffe
             || node.nodeType == RTNode::NodeType::Modulator))
     {
         const int wallClockDurationMs = static_cast<int>(duration / tempoMultiplier);
-        pushProgress(node.nodeID, nextTargetNode->nodeID, wallClockDurationMs);
+        pushProgress(node.nodeID, nextTargetNode->nodeID, wallClockDurationMs, traversalIt->second.rootId);
     }
 
     // 4. if node should produce MIDI then turn on here
@@ -298,6 +298,9 @@ void EventManager::pushNote(const RTNode& node, int traversalId, juce::MidiBuffe
                 triggerNote.event.duration      = connectionDuration;
                 triggerNote.remainingSamples    = static_cast<int>((connectionDuration / 1000.0) * sampleRate / tempoMultiplier);
                 activeNotes.push_back(triggerNote);
+
+                const int wallClockConnectionMs = static_cast<int>(connectionDuration / tempoMultiplier);
+                pushProgress(node.nodeID, connectorId, wallClockConnectionMs, traversalIt->second.rootId);
             }
             else
             {
@@ -409,16 +412,16 @@ void EventManager::highlightNode(const RTNode& node, bool shouldHighlight)
     }
 }
 
-void EventManager::pushProgress(int parentNodeId, int childNodeId, int durationMs)
+void EventManager::pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId)
 {
     const auto scope = progressFifo.write(1);
     if (scope.blockSize1 > 0)
     {
-        progressBuffer[static_cast<size_t>(scope.startIndex1)] = { parentNodeId, childNodeId, durationMs };
+        progressBuffer[static_cast<size_t>(scope.startIndex1)] = { parentNodeId, childNodeId, durationMs, graphId };
     }
     else if (scope.blockSize2 > 0)
     {
-        progressBuffer[static_cast<size_t>(scope.startIndex2)] = { parentNodeId, childNodeId, durationMs };
+        progressBuffer[static_cast<size_t>(scope.startIndex2)] = { parentNodeId, childNodeId, durationMs, graphId };
     }
     else
     {

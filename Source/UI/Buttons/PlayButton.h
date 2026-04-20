@@ -15,7 +15,7 @@ public:
 
     std::function<void()> onClick;
 
-    PlayButton() : juce::Button("button") { setLookAndFeel(ComponentContext::lookAndFeel); }
+    PlayButton() : juce::Button("button") { setLookAndFeel(ComponentContext::lookAndFeel); setTooltip("Play / Pause"); }
 
     void paintButton(juce::Graphics& g, bool isMouseOver, bool isButtonDown) override
     {

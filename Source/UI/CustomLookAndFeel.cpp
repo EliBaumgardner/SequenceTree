@@ -70,8 +70,12 @@ void CustomLookAndFeel::updateColours()
 
 void CustomLookAndFeel::drawEditor(juce::Graphics &g, CustomTextEditor& editor)
 {
-    editor.setColour(juce::TextEditor::backgroundColourId, buttonColour);
-    editor.setColour(juce::TextEditor::outlineColourId, buttonColour);
+    auto bounds = editor.getLocalBounds().toFloat();
+    g.setColour(buttonColour);
+    g.fillRoundedRectangle(bounds, paneCornerRadius);
+
+    editor.setColour(juce::TextEditor::backgroundColourId, juce::Colours::transparentBlack);
+    editor.setColour(juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
     editor.setColour(juce::TextEditor::textColourId, textColour);
     editor.TextEditor::paint(g);
 }
@@ -106,27 +110,28 @@ void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
 
 void CustomLookAndFeel::drawTitleBar(juce::Graphics &g, const Titlebar &titleBar)
 {
-    auto bounds = titleBar.getLocalBounds().toFloat().withTrimmedBottom(2.0f);
+    auto bounds = titleBar.getLocalBounds().toFloat();
 
-    juce::Path rectPath;
-    rectPath.addRectangle(bounds);
-
-    barDropShadow.drawForPath(g, rectPath);
-
-    g.setColour(barColour);
+    juce::ColourGradient gradient(barColour.brighter(0.06f), 0, bounds.getY(),
+                                   barColour.darker(0.04f),  0, bounds.getBottom(), false);
+    g.setGradientFill(gradient);
     g.fillRect(bounds);
+
+    g.setColour(barColour.brighter(0.12f));
+    g.drawHorizontalLine((int)bounds.getY(), bounds.getX(), bounds.getRight());
+
+    g.setColour(juce::Colours::black.withAlpha(0.35f));
+    g.drawHorizontalLine((int)bounds.getBottom() - 1, bounds.getX(), bounds.getRight());
 }
 
 void CustomLookAndFeel::drawButtonPane(juce::Graphics &g, const ButtonPane& selectionBar)
 {
     auto bounds = selectionBar.getLocalBounds().reduced(2.0f).toFloat();
     g.setColour(buttonColour);
-    g.fillRect(bounds);
+    g.fillRoundedRectangle(bounds, paneCornerRadius);
 }
 
 void CustomLookAndFeel::drawTempoDisplay(juce::Graphics &g, const TempoDisplay &display) {
-    g.setColour(buttonColour);
-    g.fillAll();
 }
 
 
@@ -134,8 +139,7 @@ void CustomLookAndFeel::drawDisplayMenu(juce::Graphics &g, const DisplayMenu& di
 {
     auto bounds = displaySelector.getLocalBounds().toFloat().reduced(buttonBoundsReduction);
     g.setColour(buttonColour);
-    g.fillRect(bounds);
-
+    g.fillRoundedRectangle(bounds, paneCornerRadius);
 }
 
 void CustomLookAndFeel::drawDisplayButton(juce::Graphics &g, const DisplayButton &displayButton)
@@ -577,8 +581,15 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
 
 void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const PlayButton &button)
 {
+    auto bgArea = button.getLocalBounds().toFloat().reduced(2.0f);
+    if (isMouseOver)
+    {
+        g.setColour(buttonColour.withAlpha(0.45f));
+        g.fillEllipse(bgArea);
+    }
+
     auto area = button.getLocalBounds().reduced(5);
-    g.setColour(buttonColour);
+    g.setColour(isButtonDown ? lightColour3.darker() : (isMouseOver ? lightColour3 : buttonColour));
 
     if (button.isOn){
         juce::Path playButton;
@@ -605,7 +616,12 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
 
 void CustomLookAndFeel::drawSyncButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const SyncButton &button)
 {
-    juce::Rectangle<float> bounds = button.getLocalBounds().toFloat().reduced(2.0f);
+    auto bounds = button.getLocalBounds().toFloat().reduced(2.0f);
+    if (isMouseOver)
+    {
+        g.setColour(textColour.withAlpha(0.15f));
+        g.fillEllipse(bounds);
+    }
     g.setColour(textColour);
     g.drawEllipse(bounds, 1.0f);
 }
@@ -646,8 +662,9 @@ void CustomLookAndFeel::drawUndoButton(juce::Graphics &g, const UndoButton &undo
 {
     auto area = undoButton.getLocalBounds().reduced(5);
 
-    if (isButtonDown) { g.setColour(lightColour3.darker()); }
-    else              { g.setColour(lightColour3);   }
+    if (isButtonDown)          { g.setColour(lightColour3.darker()); }
+    else if (undoButton.isHovered) { g.setColour(lightColour3.brighter(0.2f)); }
+    else                       { g.setColour(lightColour3);   }
 
     juce::Path path;
     path.startNewSubPath((float)area.getRight(), (float)area.getY());
@@ -661,29 +678,36 @@ void CustomLookAndFeel::drawRedoButton(juce::Graphics &g, const RedoButton &redo
 {
     auto area = redoButton.getLocalBounds().reduced(5);
 
-    if (isButtonDown) { g.setColour(lightColour3.darker()); }
-    else              { g.setColour(lightColour3);   }
+    if (isButtonDown)          { g.setColour(lightColour3.darker()); }
+    else if (redoButton.isHovered) { g.setColour(lightColour3.brighter(0.2f)); }
+    else                       { g.setColour(lightColour3);   }
 
-    juce::Path playButton;
-    playButton.startNewSubPath((float)area.getX(), (float)area.getY());
-    playButton.lineTo((float)area.getRight(), (float)area.getCentreY());
-    playButton.lineTo((float)area.getX(), (float)area.getBottom());
-    playButton.closeSubPath();
-    g.fillPath(playButton);
+    juce::Path path;
+    path.startNewSubPath((float)area.getX(), (float)area.getY());
+    path.lineTo((float)area.getRight(), (float)area.getCentreY());
+    path.lineTo((float)area.getX(), (float)area.getBottom());
+    path.closeSubPath();
+    g.fillPath(path);
 }
 
 void CustomLookAndFeel::drawUndoRedoPane(juce::Graphics &g,const UndoRedoPane& undoRedoPane)
 {
     auto bounds = undoRedoPane.getLocalBounds().reduced(2.0f).toFloat();
     g.setColour(buttonColour);
-    g.fillRect(bounds);
+    g.fillRoundedRectangle(bounds, paneCornerRadius);
 }
 
 void CustomLookAndFeel::drawResetButton(juce::Graphics &g, const ResetButton &resetButton, bool isButtonDown)
 {
-    auto area = resetButton.getLocalBounds().toFloat().reduced(5.0f);
+    auto bgArea = resetButton.getLocalBounds().toFloat().reduced(2.0f);
+    if (resetButton.isHovered)
+    {
+        g.setColour(buttonColour.withAlpha(0.45f));
+        g.fillEllipse(bgArea);
+    }
 
-    g.setColour(isButtonDown ? lightColour3.darker() : lightColour3);
+    auto area = resetButton.getLocalBounds().toFloat().reduced(5.0f);
+    g.setColour(isButtonDown ? lightColour3.darker() : (resetButton.isHovered ? lightColour3.brighter(0.15f) : lightColour3));
     g.fillRect(area);
 }
 

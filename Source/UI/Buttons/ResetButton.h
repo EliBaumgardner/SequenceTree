@@ -15,6 +15,7 @@ class ResetButton : public juce::Component {
 
 public:
 
+    bool isHovered = false;
     std::function<void()> onClick;
     ResetButton() { setLookAndFeel(ComponentContext::lookAndFeel); }
 
@@ -22,6 +23,9 @@ public:
     {
         CustomLookAndFeel::get(*this).drawResetButton(g, *this, isDown);
     }
+
+    void mouseEnter(const juce::MouseEvent&) override { isHovered = true;  repaint(); }
+    void mouseExit (const juce::MouseEvent&) override { isHovered = false; repaint(); }
 
     void mouseDown(const juce::MouseEvent& e) override
     {

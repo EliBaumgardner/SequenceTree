@@ -12,7 +12,7 @@
 class SyncButton : public juce::Button {
 
 public:
-    SyncButton() : juce::Button("button") { setLookAndFeel(ComponentContext::lookAndFeel); }
+    SyncButton() : juce::Button("button") { setLookAndFeel(ComponentContext::lookAndFeel); setTooltip("Sync to host tempo"); }
 
     void paintButton(juce::Graphics& g, bool isMouseOver, bool isButtonDown) override
     {

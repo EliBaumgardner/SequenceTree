@@ -43,6 +43,7 @@ public:
         int parentNodeId = 0;
         int childNodeId  = 0;
         int durationMs   = 0;
+        int graphId      = 0;
     };
 
 
@@ -69,7 +70,7 @@ public:
     void pushRootNodeConnection (int rootNodeId, juce::MidiBuffer& midiMessages, int sample, NodeMap& nodes, TraversalMap& traversalMap);
     void clearOldEvents      (int traversalId);
     void highlightNode       (const RTNode& node, bool shouldHighlight);
-    void pushProgress        (int parentNodeId, int childNodeId, int durationMs);
+    void pushProgress        (int parentNodeId, int childNodeId, int durationMs, int graphId);
     static bool isNodeAudible(RTNode::NodeType nodeType);
 
 private:

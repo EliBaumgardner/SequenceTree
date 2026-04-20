@@ -132,6 +132,8 @@ private:
     juce::Colour arrowColour;
     juce::Colour arrowHeadColour;
 
+    static constexpr float paneCornerRadius = 4.0f;
+
     void updateColours();
 
     juce::DropShadow barDropShadow;
