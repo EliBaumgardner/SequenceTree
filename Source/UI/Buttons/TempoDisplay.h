@@ -34,10 +34,11 @@ class TempoDisplay : public juce::Component {
 
     void resized() override
     {
-        auto bounds = getLocalBounds();
-        int editorWidth = bounds.getWidth() * 3 / 4;
-        editor.setBounds(bounds.removeFromLeft(editorWidth));
-        syncButton.setBounds(bounds.reduced(1.0f));
+        auto bounds = getLocalBounds().reduced(2);
+        int syncSize = bounds.getHeight();
+        syncButton.setBounds(bounds.removeFromRight(syncSize));
+        bounds.removeFromRight(2);
+        editor.setBounds(bounds);
 
         editor.refit();
     }

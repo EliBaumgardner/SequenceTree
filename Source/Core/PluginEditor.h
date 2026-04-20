@@ -48,6 +48,7 @@ private:
     std::unique_ptr<DynamicPort>    port           = nullptr;
 
     CustomLookAndFeel lookAndFeel;
+    juce::TooltipWindow tooltipWindow { this, 400 };
     
     float menuWidthRatio = 0.25f;
     float menuHeightRatio = 0.25f;

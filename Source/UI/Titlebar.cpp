@@ -57,12 +57,25 @@ Titlebar::Titlebar()
 void Titlebar::paint(juce::Graphics& g)
 {
     CustomLookAndFeel::get(*this).drawTitleBar(g, *this);
+
+    auto& laf = CustomLookAndFeel::get(*this);
+    g.setColour(laf.getTextColour().withAlpha(0.12f));
+    float inset = getHeight() * 0.22f;
+
+    auto drawSep = [&](int x) {
+        g.drawVerticalLine(x, inset, getHeight() - inset);
+    };
+
+    drawSep((resetButton.getRight() + tempoDisplay.getX()) / 2);
+    drawSep((tempoDisplay.getRight() + colorIntensityControl.getX()) / 2);
+    drawSep((colorIntensityControl.getRight() + undoRedoPane.getX()) / 2);
+    drawSep((buttonPane.getRight() + displaySelector.getX()) / 2);
 }
 
 void Titlebar::resized()
 {
     auto bounds = getLocalBounds().reduced(4.0f);
-    int spacing = 6;
+    int spacing = 12;
 
     int buttonSize = std::min(bounds.getHeight(), bounds.getWidth() / 25);
     int tempoDisplayWidth = bounds.getWidth() / 8;

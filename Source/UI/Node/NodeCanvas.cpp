@@ -82,18 +82,17 @@ void NodeCanvas::drainProgressFifo()
     {
         auto parentIt = nodeMap.find(cmd.parentNodeId);
         if (parentIt == nodeMap.end()) return;
-        Node* parentNode = parentIt->second;
 
-        // Reset progress on all sibling arrows from the same parent, then start this one.
-        // Keeps only the "currently-advancing" arrow lit per parent.
-        for (auto& [childId, arrow] : parentNode->nodeArrows)
-        {
-            if (arrow == nullptr) continue;
-            if (childId == cmd.childNodeId)
-                arrow->startProgress(cmd.durationMs);
-            else
-                arrow->resetProgress();
-        }
+        // A new cycle through this graph — wipe the filled path from the previous cycle
+        // so only the current traversal's path stays visible.
+        if (cmd.parentNodeId == cmd.graphId)
+            resetGraphArrowProgress(cmd.graphId);
+
+        auto arrowIt = parentIt->second->nodeArrows.find(cmd.childNodeId);
+        if (arrowIt == parentIt->second->nodeArrows.end() || arrowIt->second == nullptr)
+            return;
+
+        arrowIt->second->startProgress(cmd.durationMs);
     };
 
     for (int i = 0; i < scope.blockSize1; ++i)
@@ -107,6 +106,21 @@ void NodeCanvas::resetAllArrowProgress()
     for (NodeArrow* arrow : nodeArrows)
         if (arrow != nullptr)
             arrow->resetProgress();
+}
+
+void NodeCanvas::resetGraphArrowProgress(int graphId)
+{
+    for (NodeArrow* arrow : nodeArrows)
+    {
+        if (arrow == nullptr || arrow->parentNode == nullptr) continue;
+
+        const int parentId = arrow->parentNode->getComponentID().getIntValue();
+        const juce::ValueTree arrowRoot = ValueTreeState::getRootNode(parentId);
+        if (! arrowRoot.isValid()) continue;
+
+        if (static_cast<int>(arrowRoot.getProperty(ValueTreeIdentifiers::Id)) == graphId)
+            arrow->resetProgress();
+    }
 }
 
 void NodeCanvas::drainHighlightFifo()

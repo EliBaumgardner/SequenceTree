@@ -14,6 +14,7 @@ class RedoButton : public juce::Component {
 public:
 
     bool isDown = false;
+    bool isHovered = false;
 
     std::function<void()> onClick;
     RedoButton() { setLookAndFeel(ComponentContext::lookAndFeel); }
@@ -22,6 +23,9 @@ public:
     {
         CustomLookAndFeel::get(*this).drawRedoButton(g, *this, isDown);
     }
+
+    void mouseEnter(const juce::MouseEvent&) override { isHovered = true;  repaint(); }
+    void mouseExit (const juce::MouseEvent&) override { isHovered = false; repaint(); }
 
     void mouseDown(const juce::MouseEvent &event) override
     {

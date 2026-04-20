@@ -67,6 +67,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         void drainHighlightFifo();
         void drainProgressFifo();
         void resetAllArrowProgress();
+        void resetGraphArrowProgress(int graphId);
 
         void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
         void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;

@@ -19,14 +19,13 @@ class ButtonPane : public juce::Component {
     public:
 
     NodeButton nodeButton;
-    ConnectorButton connectorButton;
     ModulatorButton modulatorButton;
 
     ButtonPane()
     {
         setLookAndFeel(ComponentContext::lookAndFeel);
         addAndMakeVisible(nodeButton);
-        addAndMakeVisible(connectorButton);
+        // addAndMakeVisible(connectorButton);
         addAndMakeVisible(modulatorButton);
 
         NodeController& nodeController = *ComponentContext::nodeController;
@@ -38,29 +37,10 @@ class ButtonPane : public juce::Component {
             nodeButton.isSelected = true;
             nodeButton.repaint();
 
-            connectorButton.isSelected = false;
-            connectorButton.repaint();
-
             modulatorButton.isSelected = false;
             modulatorButton.repaint();
 
             nodeController.nodeControllerMode = NodeController::NodeControllerMode::Node;
-        };
-
-        connectorButton.onClick = [this, &nodeController]() {
-
-            jassert(&nodeController);
-
-            connectorButton.isSelected = true;
-            connectorButton.repaint();
-
-            nodeButton.isSelected = false;
-            nodeButton.repaint();
-
-            modulatorButton.isSelected = false;
-            modulatorButton.repaint();
-
-            nodeController.nodeControllerMode = NodeController::NodeControllerMode::Connector;
         };
 
         modulatorButton.onClick = [this, &nodeController]() {
@@ -69,9 +49,6 @@ class ButtonPane : public juce::Component {
 
             modulatorButton.isSelected = true;
             modulatorButton.repaint();
-
-            connectorButton.isSelected = false;
-            connectorButton.repaint();
 
             nodeButton.isSelected = false;
             nodeButton.repaint();
@@ -89,7 +66,7 @@ class ButtonPane : public juce::Component {
     {
         auto bounds = getLocalBounds().reduced(2.0f);
         int buttonSize = bounds.getHeight();
-        int numButtons = 3;
+        int numButtons = 2;
         float totalButtonWidth = buttonSize * numButtons;
 
         float spacing = (bounds.getWidth() - totalButtonWidth) / (numButtons + 1);
@@ -97,8 +74,8 @@ class ButtonPane : public juce::Component {
         int x = static_cast<int>(bounds.getX() + spacing);
         nodeButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
 
-        x += buttonSize + spacing;
-        connectorButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
+        // x += buttonSize + spacing;
+        // connectorButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
 
         x += buttonSize + spacing;
         modulatorButton.setBounds(x, bounds.getY(), buttonSize,buttonSize);
