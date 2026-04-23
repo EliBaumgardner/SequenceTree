@@ -11,6 +11,7 @@ RootRectangle::RootRectangle() {
 
     loopLimitEditor.setMinimumValue(0);
     loopLimitEditor.setInterceptsMouseClicks(true, false);
+    loopLimitEditor.setTooltip("Loop Limit");
     addAndMakeVisible(loopLimitEditor);
 }
 

@@ -40,15 +40,14 @@ public:
 private:
     SequenceTreeAudioProcessor& audioProcessor;
     juce::UndoManager undoManager;
-    
+    CustomLookAndFeel lookAndFeel;
+    juce::TooltipWindow tooltipWindow { this, 400 };
+
     std::unique_ptr<NodeCanvas>     canvas         = nullptr;
     std::unique_ptr<NodeController> nodeController   = nullptr;
     std::unique_ptr<ValueTreeState> valueTreeState = nullptr;
     std::unique_ptr<Titlebar>       titleBar       = nullptr;
     std::unique_ptr<DynamicPort>    port           = nullptr;
-
-    CustomLookAndFeel lookAndFeel;
-    juce::TooltipWindow tooltipWindow { this, 400 };
     
     float menuWidthRatio = 0.25f;
     float menuHeightRatio = 0.25f;

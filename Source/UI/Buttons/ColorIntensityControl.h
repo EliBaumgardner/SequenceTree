@@ -10,6 +10,7 @@
 #include "../../Util/PluginContext.h"
 
 class ColorIntensityControl : public juce::Component,
+                              public juce::SettableTooltipClient,
                               public juce::TextEditor::Listener {
 
 public:
@@ -17,6 +18,7 @@ public:
     ColorIntensityControl()
     {
         setLookAndFeel(ComponentContext::lookAndFeel);
+        setTooltip("Color Intensity");
 
         textEditor = std::make_unique<juce::TextEditor>();
         textEditor->addListener(this);

@@ -135,7 +135,7 @@ bool TraversalLogic::shouldTraverse() const
 void TraversalLogic::handleNodeEvent(NodeMap& nodes) {
     auto safeHighlight = [&](int nodeId, bool on) {
         auto it = nodes.find(nodeId);
-        if (it != nodes.end()) audioProcessor->eventManager.highlightNode(it->second, on);
+        if (it != nodes.end()) audioProcessor->eventManager.bridge.highlightNode(it->second, on);
     };
 
     switch (state) {
@@ -189,5 +189,5 @@ void TraversalLogic::handleConnectorNodeEvent(int relayNodeId, const NodeMap& no
 {
     auto it = nodes.find(relayNodeId);
     if (it != nodes.end())
-        audioProcessor->eventManager.highlightNode(it->second, false);
+        audioProcessor->eventManager.bridge.highlightNode(it->second, false);
 }

@@ -53,3 +53,5 @@ public:
 
     void resetCounts() { counts.clear(); }
 };
+
+using TraversalMap = std::unordered_map<int, TraversalLogic>;

@@ -24,8 +24,7 @@ NodeCanvas::NodeCanvas()
 }
 
 NodeCanvas::~NodeCanvas() {
-    hideSnapGhostArrow();
-    nodeArrows.clear();
+    clearCanvas();
 }
 
 
@@ -75,10 +74,10 @@ void NodeCanvas::handleAsyncUpdate() {
 
 void NodeCanvas::drainProgressFifo()
 {
-    auto& em = ComponentContext::processor->eventManager;
-    const auto scope = em.progressFifo.read(em.progressFifo.getNumReady());
+    auto& bridge = ComponentContext::processor->eventManager.bridge;
+    const auto scope = bridge.progressFifo.read(bridge.progressFifo.getNumReady());
 
-    auto apply = [this](const EventManager::ProgressCommand& cmd)
+    auto apply = [this](const AudioUIBridge::ProgressCommand& cmd)
     {
         auto parentIt = nodeMap.find(cmd.parentNodeId);
         if (parentIt == nodeMap.end()) return;
@@ -96,9 +95,9 @@ void NodeCanvas::drainProgressFifo()
     };
 
     for (int i = 0; i < scope.blockSize1; ++i)
-        apply(em.progressBuffer[static_cast<size_t>(scope.startIndex1 + i)]);
+        apply(bridge.progressBuffer[static_cast<size_t>(scope.startIndex1 + i)]);
     for (int i = 0; i < scope.blockSize2; ++i)
-        apply(em.progressBuffer[static_cast<size_t>(scope.startIndex2 + i)]);
+        apply(bridge.progressBuffer[static_cast<size_t>(scope.startIndex2 + i)]);
 }
 
 void NodeCanvas::resetAllArrowProgress()
@@ -125,19 +124,19 @@ void NodeCanvas::resetGraphArrowProgress(int graphId)
 
 void NodeCanvas::drainHighlightFifo()
 {
-    auto& em = ComponentContext::processor->eventManager;
-    const auto scope = em.highlightFifo.read(em.highlightFifo.getNumReady());
+    auto& bridge = ComponentContext::processor->eventManager.bridge;
+    const auto scope = bridge.highlightFifo.read(bridge.highlightFifo.getNumReady());
 
     for (int i = 0; i < scope.blockSize1; ++i)
     {
-        auto& cmd = em.highlightBuffer[static_cast<size_t>(scope.startIndex1 + i)];
+        auto& cmd = bridge.highlightBuffer[static_cast<size_t>(scope.startIndex1 + i)];
         auto it = nodeMap.find(cmd.nodeId);
         if (it != nodeMap.end())
             it->second->setHighlightVisual(cmd.shouldHighlight);
     }
     for (int i = 0; i < scope.blockSize2; ++i)
     {
-        auto& cmd = em.highlightBuffer[static_cast<size_t>(scope.startIndex2 + i)];
+        auto& cmd = bridge.highlightBuffer[static_cast<size_t>(scope.startIndex2 + i)];
         auto it = nodeMap.find(cmd.nodeId);
         if (it != nodeMap.end())
             it->second->setHighlightVisual(cmd.shouldHighlight);

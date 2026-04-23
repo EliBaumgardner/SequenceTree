@@ -15,7 +15,6 @@
 #include "../Util/RTData.h"
 #include "Node/NodeCanvas.h"
 #include "Node/Node.h"
-#include "TraversalLogic.h"
 #include "EventManager.h"
 
 class SequenceTreeAudioProcessorEditor;

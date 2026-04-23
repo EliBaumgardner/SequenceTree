@@ -9,14 +9,14 @@
 #include "../CustomLookAndFeel.h"
 #include "../../Util/PluginContext.h"
 
-class DisplayButton : public juce::Component {
+class DisplayButton : public juce::Component, public juce::SettableTooltipClient {
 
     public:
 
     bool isSelected = false;
     std::function<void()> onClick;
 
-    DisplayButton() { setLookAndFeel(ComponentContext::lookAndFeel); };
+    DisplayButton() { setLookAndFeel(ComponentContext::lookAndFeel); setTooltip("Display Options"); };
 
     void paint(juce::Graphics& g) override
     {

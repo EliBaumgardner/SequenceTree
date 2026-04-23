@@ -10,7 +10,7 @@
 #include "../CustomLookAndFeel.h"
 #include "../../Util/PluginContext.h"
 
-class ModulatorButton : public juce::Component {
+class ModulatorButton : public juce::Component, public juce::SettableTooltipClient {
 
 public:
 
@@ -18,7 +18,7 @@ public:
 
     std::function<void()> onClick;
 
-    ModulatorButton() { setLookAndFeel(ComponentContext::lookAndFeel); }
+    ModulatorButton() { setLookAndFeel(ComponentContext::lookAndFeel); setTooltip("Modulator Mode"); }
 
     void paint(juce::Graphics& g) override
     {
