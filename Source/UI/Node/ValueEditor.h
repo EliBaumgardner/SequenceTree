@@ -6,7 +6,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-class ValueEditor : public juce::Component, public juce::TextEditor::Listener {
+class ValueEditor : public juce::Component,
+                    public juce::SettableTooltipClient,
+                    public juce::TextEditor::Listener {
 public:
     ValueEditor();
 

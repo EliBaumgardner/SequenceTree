@@ -38,6 +38,7 @@ Node::Node()
     nodeTextEditor->toBack();
 
     countEditor.setInterceptsMouseClicks(true, false);
+    countEditor.setTooltip("Count Limit");
     addAndMakeVisible(countEditor);
 
     upButton.onChanged = [this](){

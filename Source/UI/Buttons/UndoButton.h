@@ -9,14 +9,14 @@
 #include "../CustomLookAndFeel.h"
 #include "../../Util/PluginContext.h"
 
-class UndoButton : public juce::Component {
+class UndoButton : public juce::Component, public juce::SettableTooltipClient {
 
     bool isDown = false;
     public:
 
     bool isHovered = false;
     std::function<void()> onClick;
-    UndoButton() { setLookAndFeel(ComponentContext::lookAndFeel); }
+    UndoButton() { setLookAndFeel(ComponentContext::lookAndFeel); setTooltip("Undo"); }
 
     void paint(juce::Graphics& g) override
     {

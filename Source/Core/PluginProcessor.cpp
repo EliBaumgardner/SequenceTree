@@ -214,15 +214,15 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     if (resetRequested.exchange(false))
     {
-        for (auto& note : eventManager.activeNotes)
+        for (auto& note : eventManager.scheduler.activeNotes)
         {
-            if (EventManager::isNodeAudible(note.noteNode.nodeType) && !note.isConnectionTrigger)
+            if (NoteScheduler::isNodeAudible(note.noteNode.nodeType) && !note.isConnectionTrigger)
                 midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), 0);
 
-            eventManager.highlightNode(note.noteNode, false);
+            eventManager.bridge.highlightNode(note.noteNode, false);
         }
 
-        eventManager.activeNotes.clear();
+        eventManager.scheduler.activeNotes.clear();
         eventManager.traversals.clear();
 
         canvas->triggerAsyncUpdate();
@@ -252,8 +252,8 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     eventManager.processEvents(numSamples, midiMessages, nodes, traversals);
 
-    if (eventManager.highlightFifo.getNumReady() > 0
-        || eventManager.progressFifo.getNumReady() > 0) {
+    if (eventManager.bridge.highlightFifo.getNumReady() > 0
+        || eventManager.bridge.progressFifo.getNumReady() > 0) {
         canvas->triggerAsyncUpdate();
     }
 
@@ -300,8 +300,8 @@ bool SequenceTreeAudioProcessor::initializeTraversalForRootNode(juce::MidiBuffer
 
     RTNode& rootNode    = nodes.at(rootId);
     int     traversalId = rootNode.nodeID;
-    eventManager.highlightNode(rootNode, true);
-    eventManager.pushNote(rootNode, traversalId, midiMessages, 0, nodes, traversals);
+    eventManager.bridge.highlightNode(rootNode, true);
+    eventManager.dispatcher.pushNote(rootNode, traversalId, midiMessages, 0, nodes, traversals);
 
     return rootFound;
 }
@@ -330,8 +330,8 @@ void SequenceTreeAudioProcessor::syncTraversalLoopLimits(TraversalMap &traversal
                 // the traversal would sit in Active state but never advance.
                 auto rootIt = nodes.find(traversal.rootId);
                 if (rootIt != nodes.end()) {
-                    eventManager.highlightNode(rootIt->second, true);
-                    eventManager.pushNote(rootIt->second, traversalId, midiMessages, 0, nodes, traversals);
+                    eventManager.bridge.highlightNode(rootIt->second, true);
+                    eventManager.dispatcher.pushNote(rootIt->second, traversalId, midiMessages, 0, nodes, traversals);
                 }
             }
         }
@@ -340,12 +340,7 @@ void SequenceTreeAudioProcessor::syncTraversalLoopLimits(TraversalMap &traversal
 
 void SequenceTreeAudioProcessor::clearOldEvents(int traversalId)
 {
-    for (int i = eventManager.activeNotes.size()-1; i >= 0; --i) {
-        EventManager::ActiveNote& note = eventManager.activeNotes[i];
-        if (note.traversalId == traversalId) {
-            note.traversalId = -1;
-        }
-    }
+    eventManager.scheduler.clearTraversalNotes(traversalId);
 }
 
 void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)

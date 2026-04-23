@@ -11,7 +11,7 @@
 #include "../CustomTextEditor.h"
 #include "SyncButton.h"
 
-class TempoDisplay : public juce::Component {
+class TempoDisplay : public juce::Component, public juce::SettableTooltipClient {
 
     public:
 
@@ -21,6 +21,7 @@ class TempoDisplay : public juce::Component {
     TempoDisplay()
     {
         setLookAndFeel(ComponentContext::lookAndFeel);
+        setTooltip("Tempo Multiplier");
         addAndMakeVisible(syncButton);
         addAndMakeVisible(editor);
 

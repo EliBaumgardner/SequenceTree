@@ -50,6 +50,9 @@ target_sources(SequenceTree PRIVATE
         Source/Core/PluginEditor.cpp
         Source/Core/PluginProcessor.cpp
         Source/Core/TraversalLogic.cpp
+        Source/Core/AudioUIBridge.cpp
+        Source/Core/NoteScheduler.cpp
+        Source/Core/TraversalDispatcher.cpp
         Source/Core/EventManager.cpp
         Source/UI/TitleBar.cpp
         Source/UI/Node/Modulator.cpp
