@@ -7,12 +7,13 @@
 #include "CustomLookAndFeel.h"
 #include "../Util/ValueTreeIdentifiers.h"
 
-RootNode::RootNode() {
+RootNode::RootNode(ApplicationContext& context) : Node(context)
+{
     nodeType = NodeType::Root;
 
     setPaintingIsUnclipped(true);
 
-    rootRectangle = std::make_unique<RootRectangle>();
+    rootRectangle = std::make_unique<RootRectangle>(context);
     addAndMakeVisible(rootRectangle.get());
 }
 

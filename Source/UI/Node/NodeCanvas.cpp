@@ -17,10 +17,10 @@
 
 
 // Canvas Related Functions //
-NodeCanvas::NodeCanvas()
+NodeCanvas::NodeCanvas(ApplicationContext& context) : applicationContext(context)
 {
     setPaintingIsUnclipped(true);
-    setLookAndFeel(ComponentContext::lookAndFeel);
+    setLookAndFeel(applicationContext.lookAndFeel);
 }
 
 NodeCanvas::~NodeCanvas() {
@@ -36,6 +36,7 @@ void NodeCanvas::paint(juce::Graphics& g)
 void NodeCanvas::handleAsyncUpdate() {
     drainHighlightFifo();
     drainProgressFifo();
+    drainCountFifo();
 
     for (auto& asyncUpdate  : asyncUpdates) {
         int nodeId = asyncUpdate.nodeId;
@@ -58,7 +59,7 @@ void NodeCanvas::handleAsyncUpdate() {
 
                 auto emptyGraph = std::make_shared<RTGraph>();
                 emptyGraph->graphID = rootNodeId;
-                ComponentContext::processor->setNewGraph(emptyGraph);
+                applicationContext.processor->setNewGraph(emptyGraph);
             }
         }
         else if (updateType == AsyncUpdateType::NodeMoved) {
@@ -74,7 +75,7 @@ void NodeCanvas::handleAsyncUpdate() {
 
 void NodeCanvas::drainProgressFifo()
 {
-    auto& bridge = ComponentContext::processor->eventManager.bridge;
+    auto& bridge = applicationContext.processor->eventManager.bridge;
     const auto scope = bridge.progressFifo.read(bridge.progressFifo.getNumReady());
 
     auto apply = [this](const AudioUIBridge::ProgressCommand& cmd)
@@ -122,9 +123,31 @@ void NodeCanvas::resetGraphArrowProgress(int graphId)
     }
 }
 
+void NodeCanvas::drainCountFifo()
+{
+    auto& bridge = applicationContext.processor->eventManager.bridge;
+    const auto scope = bridge.countFifo.read(bridge.countFifo.getNumReady());
+
+    auto apply = [this](const AudioUIBridge::CountCommand& cmd)
+    {
+        auto it = nodeMap.find(cmd.nodeId);
+        if (it == nodeMap.end()) return;
+
+        Node* node = it->second;
+        node->displayCurrentCount = cmd.currentCount;
+        node->displayCountLimit   = juce::jmax(1, cmd.countLimit);
+        node->repaint();
+    };
+
+    for (int i = 0; i < scope.blockSize1; ++i)
+        apply(bridge.countBuffer[static_cast<size_t>(scope.startIndex1 + i)]);
+    for (int i = 0; i < scope.blockSize2; ++i)
+        apply(bridge.countBuffer[static_cast<size_t>(scope.startIndex2 + i)]);
+}
+
 void NodeCanvas::drainHighlightFifo()
 {
-    auto& bridge = ComponentContext::processor->eventManager.bridge;
+    auto& bridge = applicationContext.processor->eventManager.bridge;
     const auto scope = bridge.highlightFifo.read(bridge.highlightFifo.getNumReady());
 
     for (int i = 0; i < scope.blockSize1; ++i)
@@ -156,19 +179,19 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
     std::unique_ptr<Node> childNode = nullptr;
 
     if (nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
-        childNode = std::make_unique<RootNode>();
+        childNode = std::make_unique<RootNode>(applicationContext);
     }
     else if (nodeValueTree.getType() == ValueTreeIdentifiers::NodeData) {
-        childNode = std::make_unique<Node>();
+        childNode = std::make_unique<Node>(applicationContext);
     }
     else if (nodeValueTree.getType() == ValueTreeIdentifiers::ConnectorData) {
-        childNode = std::make_unique<Connector>();
+        childNode = std::make_unique<Connector>(applicationContext);
     }
     else if (nodeValueTree.getType() == ValueTreeIdentifiers::ModulatorData) {
-        childNode = std::make_unique<Modulator>();
+        childNode = std::make_unique<Modulator>(applicationContext);
     }
     else if (nodeValueTree.getType() == ValueTreeIdentifiers::ModulatorRootData) {
-        childNode = std::make_unique<Modulator>();
+        childNode = std::make_unique<Modulator>(applicationContext);
     }
 
     jassert(childNode);
@@ -243,7 +266,7 @@ void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int 
         childPosition.xPosition += deltaX;
         childPosition.yPosition += deltaY;
 
-        ValueTreeState::setNodePosition(childNodeTree, childPosition, ComponentContext::undoManager);
+        ValueTreeState::setNodePosition(childNodeTree, childPosition, applicationContext.undoManager);
         moveDescendants(childNodeTree, deltaX, deltaY);
     }
 }
@@ -290,7 +313,7 @@ void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
     juce::ValueTree parentMidiNotesData = ValueTreeState::getMidiNotes(parentNodeId);
     juce::ValueTree parentMidiNoteData  = parentMidiNotesData.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
 
-    auto arrow = std::make_unique<NodeArrow>(parentNode, childNode);
+    auto arrow = std::make_unique<NodeArrow>(parentNode, childNode, applicationContext);
 
     parentNode->nodeArrows[childNodeId] = arrow.get();
     addAndMakeVisible(arrow.get());
@@ -455,12 +478,12 @@ void NodeCanvas::makeRTGraph(const juce::ValueTree& nodeValueTree)
     rtGraphs[rtGraph->graphID] = rtGraph;
     lastGraph = rtGraph;
 
-    ComponentContext::processor->setNewGraph(rtGraph);
+    applicationContext.processor->setNewGraph(rtGraph);
 }
 
 void NodeCanvas::updateDurationMap(int nodeId)
 {
-    auto* processor = ComponentContext::processor;
+    auto* processor = applicationContext.processor;
     auto snap = std::atomic_load(&processor->audioSnapshot);
     if (!snap || !snap->globalNodes) return;
 
@@ -513,11 +536,11 @@ void NodeCanvas::destroyRTGraph(Node* root) { }
 void NodeCanvas::setProcessorPlayblack(bool isPlaying)
 {
     start = isPlaying;
-    ComponentContext::processor->isPlaying.store(start);
+    applicationContext.processor->isPlaying.store(start);
 
     for(auto& [graphID,graph] : rtGraphs) {
         graph.get()->traversalRequested = start;
-        ComponentContext::processor->setNewGraph(graph);
+        applicationContext.processor->setNewGraph(graph);
     }
 
     if (! isPlaying)
@@ -625,7 +648,7 @@ void NodeCanvas::showSnapGhostArrow(Node* from, Node* to)
         snapGhostArrow = nullptr;
     }
 
-    snapGhostArrow = new NodeArrow(from, to);
+    snapGhostArrow = new NodeArrow(from, to, applicationContext);
     snapGhostArrow->isGhost = true;
     snapGhostArrow->setInterceptsMouseClicks(false, false);
     addAndMakeVisible(snapGhostArrow);
@@ -684,13 +707,13 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
 
         std::unique_ptr<Node> canvasNode;
         if (treeType == ValueTreeIdentifiers::RootNodeData)
-            canvasNode = std::make_unique<RootNode>();
+            canvasNode = std::make_unique<RootNode>(applicationContext);
         else if (treeType == ValueTreeIdentifiers::ConnectorData)
-            canvasNode = std::make_unique<Connector>();
+            canvasNode = std::make_unique<Connector>(applicationContext);
         else if (treeType == ValueTreeIdentifiers::ModulatorData || treeType == ValueTreeIdentifiers::ModulatorRootData)
-            canvasNode = std::make_unique<Modulator>();
+            canvasNode = std::make_unique<Modulator>(applicationContext);
         else
-            canvasNode = std::make_unique<Node>();
+            canvasNode = std::make_unique<Node>(applicationContext);
 
         int nodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 

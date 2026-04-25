@@ -7,29 +7,32 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
+#include "../../Util/ApplicationContext.h"
 #include "UndoButton.h"
 #include "RedoButton.h"
 
 class UndoRedoPane : public juce::Component {
+
+    ApplicationContext& applicationContext;
 
 public:
 
     UndoButton undoButton;
     RedoButton redoButton;
 
-    UndoRedoPane()
+    UndoRedoPane(ApplicationContext& context)
+        : applicationContext(context), undoButton(context), redoButton(context)
     {
-        setLookAndFeel(ComponentContext::lookAndFeel);
+        setLookAndFeel(applicationContext.lookAndFeel);
         addAndMakeVisible(undoButton);
         addAndMakeVisible(redoButton);
 
-        undoButton.onClick = [=]() {
-            ComponentContext::undoManager->undo();
+        undoButton.onClick = [this]() {
+            applicationContext.undoManager->undo();
         };
 
-        redoButton.onClick = [=]() {
-            ComponentContext::undoManager->redo();
+        redoButton.onClick = [this]() {
+            applicationContext.undoManager->redo();
         };
 
     }

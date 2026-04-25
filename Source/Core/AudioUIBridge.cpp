@@ -21,3 +21,12 @@ void AudioUIBridge::pushProgress(int parentNodeId, int childNodeId, int duration
     else
         jassertfalse;
 }
+
+void AudioUIBridge::pushCount(int nodeId, int currentCount, int countLimit)
+{
+    const auto scope = countFifo.write(1);
+    if (scope.blockSize1 > 0)
+        countBuffer[static_cast<size_t>(scope.startIndex1)] = { nodeId, currentCount, countLimit };
+    else if (scope.blockSize2 > 0)
+        countBuffer[static_cast<size_t>(scope.startIndex2)] = { nodeId, currentCount, countLimit };
+}

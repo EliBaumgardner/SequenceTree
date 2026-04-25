@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
+#include "../../Util/ApplicationContext.h"
 
 class NodeButton : public juce::Component, public juce::SettableTooltipClient {
 
@@ -16,7 +16,7 @@ class NodeButton : public juce::Component, public juce::SettableTooltipClient {
     std::function<void()> onClick;
     bool isSelected = false;
 
-    NodeButton() { setLookAndFeel(ComponentContext::lookAndFeel); setTooltip("Node Mode"); }
+    NodeButton(ApplicationContext& context) { setLookAndFeel(context.lookAndFeel); setTooltip("Node Mode"); }
 
     void paint (juce::Graphics &g) override
     {

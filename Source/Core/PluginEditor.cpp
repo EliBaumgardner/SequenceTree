@@ -7,30 +7,29 @@
 */
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "../Util/PluginContext.h"
 
 
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
-: AudioProcessorEditor(p),audioProcessor (p)
+: AudioProcessorEditor(p), audioProcessor(p)
 {
     if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
         window->setFullScreen (true);
 
-    ComponentContext::processor = &p;
-    ComponentContext::undoManager = &undoManager;
-    ComponentContext::lookAndFeel = &lookAndFeel;
+    applicationContext.processor   = &p;
+    applicationContext.undoManager = &undoManager;
+    applicationContext.lookAndFeel = &lookAndFeel;
 
-    canvas         = std::make_unique<NodeCanvas>();
-    nodeController = std::make_unique<NodeController>();
+    canvas         = std::make_unique<NodeCanvas>(applicationContext);
+    nodeController = std::make_unique<NodeController>(applicationContext);
     valueTreeState = std::make_unique<ValueTreeState>();
     port           = std::make_unique<DynamicPort>(canvas.get());
 
-    ComponentContext::processor->canvas = canvas.get();
-    ComponentContext::canvas = canvas.get();
-    ComponentContext::valueTreeState    = valueTreeState.get();
-    ComponentContext::nodeController   = nodeController.get();
+    applicationContext.processor->canvas = canvas.get();
+    applicationContext.canvas            = canvas.get();
+    applicationContext.valueTreeState    = valueTreeState.get();
+    applicationContext.nodeController    = nodeController.get();
 
-    titleBar       = std::make_unique<Titlebar>();
+    titleBar = std::make_unique<Titlebar>(applicationContext);
 
     canvas->addMouseListener(nodeController.get(),true);
 

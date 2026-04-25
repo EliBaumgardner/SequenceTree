@@ -7,11 +7,12 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Node/ValueEditor.h"
+#include "../../Util/ApplicationContext.h"
 
 class RootRectangle : public juce::Component {
 
 public:
-    RootRectangle();
+    RootRectangle(ApplicationContext& context);
 
     void resized() override;
     void paint(juce::Graphics& g) override;

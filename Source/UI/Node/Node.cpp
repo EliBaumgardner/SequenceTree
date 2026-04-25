@@ -10,7 +10,6 @@
 #include "../Util/ValueTreeState.h"
 #include "NodeTextEditor.h"
 #include "../Util/ValueTreeIdentifiers.h"
-#include "../Util/PluginContext.h"
 #include "../UI/CustomLookAndFeel.h"
 #include "NodeCanvas.h"
 #include "../UI/Node/NodeArrow.h"
@@ -21,9 +20,9 @@
 
 
 
-Node::Node()
+Node::Node(ApplicationContext& context) : applicationContext(context), countEditor(context)
 {
-    setLookAndFeel(ComponentContext::lookAndFeel);
+    setLookAndFeel(applicationContext.lookAndFeel);
 
     upButton.setInterceptsMouseClicks(true,false);
     addAndMakeVisible(upButton);
@@ -31,7 +30,7 @@ Node::Node()
     downButton.setInterceptsMouseClicks(true,false);
     addAndMakeVisible(downButton);
 
-    nodeTextEditor = std::make_unique<NodeTextEditor>(this);
+    nodeTextEditor = std::make_unique<NodeTextEditor>(this, context);
     nodeTextEditor->bindEditor(midiNoteData,ValueTreeIdentifiers::MidiPitch);
 
     addAndMakeVisible(nodeTextEditor.get());

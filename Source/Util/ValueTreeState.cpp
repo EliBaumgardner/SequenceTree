@@ -6,7 +6,6 @@
 
 #include "ValueTreeState.h"
 #include "ValueTreeIdentifiers.h"
-#include "PluginContext.h"
 
 //
 // Created by Eli Baumgardner on 3/21/26.

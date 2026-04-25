@@ -15,7 +15,7 @@ class Modulator : public Node {
 
     public:
 
-    Modulator();
+    Modulator(ApplicationContext& context);
     void resized() override;
     void paint(juce::Graphics& g) override;
     void setDisplayMode(NodeTextEditor::DisplayMode mode);

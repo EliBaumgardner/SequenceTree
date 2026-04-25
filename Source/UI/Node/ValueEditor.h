@@ -5,12 +5,13 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "../Util/ApplicationContext.h"
 
 class ValueEditor : public juce::Component,
                     public juce::SettableTooltipClient,
                     public juce::TextEditor::Listener {
 public:
-    ValueEditor();
+    ValueEditor(ApplicationContext& context);
 
     void paint  (juce::Graphics& g) override;
     void resized() override;
@@ -24,6 +25,7 @@ private:
     void textEditorFocusLost      (juce::TextEditor& editor) override;
     void commitValue();
 
+    ApplicationContext& applicationContext;
     juce::Value boundValue;
     juce::ValueTree boundTree;
     std::unique_ptr<juce::TextEditor> textEditor;

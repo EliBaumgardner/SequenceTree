@@ -4,9 +4,9 @@
 
 #include "Connector.h"
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
 
-Connector::Connector() {
+Connector::Connector(ApplicationContext& context) : Node(context)
+{
     nodeType = NodeType::Connector;
 }
 
@@ -45,7 +45,7 @@ void Connector::paint(juce::Graphics& g)
     juce::Path triangle;
     triangle.addTriangle(p1, p2, p3);
 
-    juce::Colour displayColour = ComponentContext::lookAndFeel->applyIntensity(nodeColour);
+    juce::Colour displayColour = CustomLookAndFeel::get(*this).applyIntensity(nodeColour);
     g.setColour(isHighlighted ? displayColour.darker() : displayColour);
     g.fillPath(triangle);
 

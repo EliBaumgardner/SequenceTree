@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
+#include "../../Util/ApplicationContext.h"
 
 class UndoButton : public juce::Component, public juce::SettableTooltipClient {
 
@@ -16,7 +16,7 @@ class UndoButton : public juce::Component, public juce::SettableTooltipClient {
 
     bool isHovered = false;
     std::function<void()> onClick;
-    UndoButton() { setLookAndFeel(ComponentContext::lookAndFeel); setTooltip("Undo"); }
+    UndoButton(ApplicationContext& context) { setLookAndFeel(context.lookAndFeel); setTooltip("Undo"); }
 
     void paint(juce::Graphics& g) override
     {

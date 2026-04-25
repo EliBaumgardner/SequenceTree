@@ -14,10 +14,11 @@
 #include "Node.h"
 #include "../CustomLookAndFeel.h"
 
-NodeArrow::NodeArrow(Node* startNode, Node* endNode) : parentNode(startNode), childNode(endNode){
-  setLookAndFeel(ComponentContext::lookAndFeel);
-
-  bindValue.addListener(this);
+NodeArrow::NodeArrow(Node* startNode, Node* endNode, ApplicationContext& context)
+    : parentNode(startNode), childNode(endNode)
+{
+    setLookAndFeel(context.lookAndFeel);
+    bindValue.addListener(this);
 }
 
 void NodeArrow::paint(juce::Graphics &g) {

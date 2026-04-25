@@ -26,12 +26,6 @@ void CustomLookAndFeel::setColorIntensityFactor(float factor)
 {
     colorIntensityFactor = juce::jlimit(0.0f, 1.0f, factor);
     updateColours();
-
-    if (ComponentContext::canvas)
-    {
-        if (auto* topLevel = ComponentContext::canvas->getTopLevelComponent())
-            topLevel->repaint();
-    }
 }
 
 juce::Colour CustomLookAndFeel::applyIntensity(juce::Colour base) const
@@ -193,6 +187,33 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
 
     g.setColour(node.isHighlighted ? nodeColour.darker() : nodeColour);
     g.fillEllipse(pulsedFill);
+
+    if (node.displayCountLimit > 1)
+    {
+        const float twoPi      = juce::MathConstants<float>::twoPi;
+        const float startAngle = -juce::MathConstants<float>::halfPi;
+        const int   limit      = node.displayCountLimit;
+        const int   filled     = juce::jlimit(0, limit, node.displayCurrentCount);
+
+        const float segmentAngle = twoPi / static_cast<float>(limit);
+        const float gapAngle     = juce::jmin(0.08f, segmentAngle * 0.15f);
+        const float arcAngle     = segmentAngle - gapAngle;
+
+        auto ringBounds = bounds.reduced(2.0f);
+
+        for (int i = 0; i < limit; ++i)
+        {
+            float angleStart = startAngle + static_cast<float>(i) * segmentAngle + gapAngle * 0.5f;
+
+            juce::Path seg;
+            seg.addArc(ringBounds.getX(), ringBounds.getY(),
+                       ringBounds.getWidth(), ringBounds.getHeight(),
+                       angleStart, angleStart + arcAngle, true);
+
+            g.setColour(i < filled ? lightColour1 : lightColour1.withAlpha(0.15f));
+            g.strokePath(seg, juce::PathStrokeType(1.5f));
+        }
+    }
 
     if (node.isHovered)   { g.drawEllipse(circleHover, 2.0f); }
 

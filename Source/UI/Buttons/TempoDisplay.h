@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
+#include "../../Util/ApplicationContext.h"
 #include "../CustomTextEditor.h"
 #include "SyncButton.h"
 
@@ -18,9 +18,10 @@ class TempoDisplay : public juce::Component, public juce::SettableTooltipClient 
     SyncButton syncButton;
     CustomTextEditor editor;
 
-    TempoDisplay()
+    TempoDisplay(ApplicationContext& context)
+        : syncButton(context), editor(context)
     {
-        setLookAndFeel(ComponentContext::lookAndFeel);
+        setLookAndFeel(context.lookAndFeel);
         setTooltip("Tempo Multiplier");
         addAndMakeVisible(syncButton);
         addAndMakeVisible(editor);

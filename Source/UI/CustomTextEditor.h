@@ -10,14 +10,14 @@
 
 #pragma once
 
-#include "../Util/PluginContext.h"
 #include "../Util/PluginModules.h"
+#include "../Util/ApplicationContext.h"
 
 class CustomTextEditor : public juce::TextEditor {
-    
+
     public:
-    
-        CustomTextEditor();
+
+        CustomTextEditor(ApplicationContext& context);
         void paint(juce::Graphics& g) override;
         void refit();
         void mouseDown(const juce::MouseEvent& e) override;

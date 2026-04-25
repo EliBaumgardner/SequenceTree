@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
+#include "../../Util/ApplicationContext.h"
 
 class ConnectorButton : public juce::Component {
     public:
@@ -15,7 +15,7 @@ class ConnectorButton : public juce::Component {
     std::function<void()> onClick;
     bool isSelected = false;
 
-    ConnectorButton() { setLookAndFeel(ComponentContext::lookAndFeel); }
+    ConnectorButton(ApplicationContext& context) { setLookAndFeel(context.lookAndFeel); }
     void paint(juce::Graphics& g) override
     {
         CustomLookAndFeel::get(*this).drawTraverserButton(g, *this);

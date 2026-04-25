@@ -148,6 +148,30 @@ void TraversalLogic::handleNodeEvent(NodeMap& nodes) {
         case TraversalState::Active: {
             advance(nodes);
 
+            // Push count ring updates: reset the node that was just played, fill its children
+            {
+                auto& bridge = audioProcessor->eventManager.bridge;
+
+                // Reset lastTargetId's own ring (it has now played; cycle starts fresh)
+                bridge.pushCount(lastTargetId, 0, 1);
+
+                auto it = nodes.find(lastTargetId);
+                if (it != nodes.end())
+                {
+                    int parentCount = counts[lastTargetId];
+                    for (int childId : it->second.children)
+                    {
+                        auto childIt = nodes.find(childId);
+                        if (childIt != nodes.end())
+                        {
+                            int limit = childIt->second.countLimit;
+                            int fill  = (parentCount % limit == 0) ? limit : (parentCount % limit);
+                            bridge.pushCount(childId, fill, limit);
+                        }
+                    }
+                }
+            }
+
             switch (state) {
                 case TraversalState::Active: {
                     safeHighlight(lastTargetId, false);
