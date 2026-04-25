@@ -12,6 +12,7 @@
 
 
 #include "../Util/PluginModules.h"
+#include "../Util/ApplicationContext.h"
 #include "Buttons/PlayButton.h"
 #include "Buttons/ResetButton.h"
 #include "Buttons/ButtonPane.h"
@@ -21,10 +22,10 @@
 #include "Buttons/ColorIntensityControl.h"
 
 class Titlebar : public juce::Component {
-    
+
 public:
-    
-    Titlebar();
+
+    Titlebar(ApplicationContext& context);
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -33,13 +34,13 @@ public:
 
 private:
 
-    ButtonPane buttonPane;
-    DisplayMenu displaySelector;
+    ApplicationContext& applicationContext;
 
-    TempoDisplay tempoDisplay;
+    ButtonPane           buttonPane;
+    DisplayMenu          displaySelector;
+    TempoDisplay         tempoDisplay;
     ColorIntensityControl colorIntensityControl;
-    PlayButton   playButton;
-    ResetButton  resetButton;
-
-    UndoRedoPane undoRedoPane;
+    PlayButton           playButton;
+    ResetButton          resetButton;
+    UndoRedoPane         undoRedoPane;
 };

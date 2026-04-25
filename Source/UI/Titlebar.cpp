@@ -11,15 +11,22 @@
 
 #include "Node/NodeCanvas.h"
 #include "CustomLookAndFeel.h"
-#include "../Util/PluginContext.h"
 #include "../Core/PluginProcessor.h"
 
 #include "Titlebar.h"
 
 
-Titlebar::Titlebar()
+Titlebar::Titlebar(ApplicationContext& context)
+    : applicationContext(context),
+      buttonPane(context),
+      displaySelector(context),
+      tempoDisplay(context),
+      colorIntensityControl(context),
+      playButton(context),
+      resetButton(context),
+      undoRedoPane(context)
 {
-    setLookAndFeel(ComponentContext::lookAndFeel);
+    setLookAndFeel(applicationContext.lookAndFeel);
     addAndMakeVisible(playButton);
     addAndMakeVisible(resetButton);
     addAndMakeVisible(tempoDisplay);
@@ -28,26 +35,26 @@ Titlebar::Titlebar()
     addAndMakeVisible(displaySelector);
     addAndMakeVisible(undoRedoPane);
 
-    playButton.onClick = [=]() {
-        NodeCanvas& canvas = *ComponentContext::canvas;
+    playButton.onClick = [this]() {
+        NodeCanvas& canvas = *applicationContext.canvas;
         jassert(&canvas);
 
         canvas.start = !canvas.start;
         canvas.setProcessorPlayblack(canvas.start);
     };
 
-    resetButton.onClick = [=]() {
-        ComponentContext::processor->resetRequested.store(true);
-        if (auto* canvas = ComponentContext::canvas)
+    resetButton.onClick = [this]() {
+        applicationContext.processor->resetRequested.store(true);
+        if (auto* canvas = applicationContext.canvas)
             canvas->resetAllArrowProgress();
     };
 
     auto applyMultiplier = [this]() {
         double value = tempoDisplay.editor.getText().getDoubleValue();
         if (value > 0.0)
-            ComponentContext::processor->tempoMultiplier.store(value);
+            applicationContext.processor->tempoMultiplier.store(value);
         else
-            tempoDisplay.editor.setText(juce::String(ComponentContext::processor->tempoMultiplier.load()), false);
+            tempoDisplay.editor.setText(juce::String(applicationContext.processor->tempoMultiplier.load()), false);
     };
 
     tempoDisplay.editor.onReturnKey = applyMultiplier;

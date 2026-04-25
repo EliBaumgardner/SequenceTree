@@ -3,11 +3,11 @@
 //
 
 #include "RootRectangle.h"
-#include "../Util/PluginContext.h"
 #include "../UI/CustomLookAndFeel.h"
 
-RootRectangle::RootRectangle() {
-    setLookAndFeel(ComponentContext::lookAndFeel);
+RootRectangle::RootRectangle(ApplicationContext& context) : loopLimitEditor(context)
+{
+    setLookAndFeel(context.lookAndFeel);
 
     loopLimitEditor.setMinimumValue(0);
     loopLimitEditor.setInterceptsMouseClicks(true, false);

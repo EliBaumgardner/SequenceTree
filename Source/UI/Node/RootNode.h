@@ -24,7 +24,7 @@ class RootNode : public Node {
     // The component extends left by this amount so the rectangle fits without clipping.
     static constexpr int loopLimitRectangleWidth = 10;
 
-    RootNode();
+    RootNode(ApplicationContext& context);
     ~RootNode() override;
     void paint(juce::Graphics& g) override;
     void resized() override;

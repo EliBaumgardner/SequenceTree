@@ -12,18 +12,19 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Util/NodeInfo.h"
+#include "../Util/ApplicationContext.h"
 
 class Node;
 
 class NodeCanvas;
 
 class NodeTextEditor : public juce::TextEditor, public juce::TextEditor::Listener {
-    
+
 public:
 
     enum class DisplayMode {Pitch, Velocity, Duration, CountLimit};
 
-    NodeTextEditor(Node* node);
+    NodeTextEditor(Node* node, ApplicationContext& context);
     void paint(juce::Graphics& g) override;
     void refit();
 
@@ -39,9 +40,10 @@ public:
     juce::Value bindValue;
     
 private:
-    
-    Node* node = nullptr;
-    
+
+    Node*               node = nullptr;
+    ApplicationContext& applicationContext;
+
     juce::Font baseFont;
 
     juce::ValueTree nodeTree;

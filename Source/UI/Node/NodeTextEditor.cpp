@@ -13,7 +13,6 @@
 #include "Node.h"
 #include "NodeArrow.h"
 #include "../Util/ValueTreeState.h"
-#include "../Util/PluginContext.h"
 #include "../UI/CustomLookAndFeel.h"
 
 
@@ -34,10 +33,10 @@
     juce::String(L"B")
 };
 
-NodeTextEditor::NodeTextEditor(Node* node) : node(node) {
-
-
-    setLookAndFeel(ComponentContext::lookAndFeel);
+NodeTextEditor::NodeTextEditor(Node* node, ApplicationContext& context)
+    : node(node), applicationContext(context)
+{
+    setLookAndFeel(applicationContext.lookAndFeel);
 
     addListener(this);
     makeBoundsVisible(false);
@@ -117,7 +116,7 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
     refit();
 
     node->repaint();
-    ComponentContext::canvas->makeRTGraph(nodeValueTree);
+    applicationContext.canvas->makeRTGraph(nodeValueTree);
 }
 
 int NodeTextEditor::noteToNumber(juce::String string){

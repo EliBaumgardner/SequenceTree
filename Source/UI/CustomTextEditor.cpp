@@ -9,14 +9,13 @@
 */
 
 #include "CustomTextEditor.h"
-#include "../Util/PluginContext.h"
 #include "Node/NodeCanvas.h"
 #include "../UI/CustomLookAndFeel.h"
 
 
-CustomTextEditor::CustomTextEditor()
+CustomTextEditor::CustomTextEditor(ApplicationContext& context)
 {
-    setLookAndFeel(ComponentContext::lookAndFeel);
+    setLookAndFeel(context.lookAndFeel);
 
     setColour(juce::TextEditor::textColourId,           CustomLookAndFeel::get(*this).getTextColour());
     setColour(juce::TextEditor::highlightColourId,      juce::Colours::darkgrey);

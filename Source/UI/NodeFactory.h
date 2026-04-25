@@ -7,8 +7,7 @@
 
 #pragma once
 
-#include "../Util/ValueTreeIdentifiers.h""
-#include "../Util/PluginContext.h"
+#include "../Util/ValueTreeIdentifiers.h"
 #include "../Util/ValueTreeState.h"
 
 class NodeFactory

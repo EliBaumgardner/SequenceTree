@@ -7,12 +7,12 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
+#include "../../Util/ApplicationContext.h"
 
 class SyncButton : public juce::Button {
 
 public:
-    SyncButton() : juce::Button("button") { setLookAndFeel(ComponentContext::lookAndFeel); setTooltip("Sync to host tempo"); }
+    SyncButton(ApplicationContext& context) : juce::Button("button") { setLookAndFeel(context.lookAndFeel); setTooltip("Sync to host tempo"); }
 
     void paintButton(juce::Graphics& g, bool isMouseOver, bool isButtonDown) override
     {

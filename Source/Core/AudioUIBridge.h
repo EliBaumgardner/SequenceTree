@@ -30,6 +30,18 @@ public:
     juce::AbstractFifo                                progressFifo { kProgressFifoSize };
     std::array<ProgressCommand, kProgressFifoSize>    progressBuffer {};
 
+    struct CountCommand
+    {
+        int nodeId       = 0;
+        int currentCount = 0;
+        int countLimit   = 1;
+    };
+
+    static constexpr int kCountFifoSize = 512;
+    juce::AbstractFifo                             countFifo { kCountFifoSize };
+    std::array<CountCommand, kCountFifoSize>       countBuffer {};
+
     void highlightNode(const RTNode& node, bool shouldHighlight);
     void pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId);
+    void pushCount(int nodeId, int currentCount, int countLimit);
 };

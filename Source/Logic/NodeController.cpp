@@ -22,8 +22,8 @@
 
 
 
-NodeController::NodeController() : nodeCanvas(ComponentContext::canvas) {
-
+NodeController::NodeController(ApplicationContext& context) : applicationContext(context)
+{
 }
 
 void NodeController::mouseEnter(const juce::MouseEvent& e)
@@ -42,7 +42,7 @@ void NodeController::mouseExit(const juce::MouseEvent& e)
 }
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
-    NodeCanvas* canvas = ComponentContext::canvas;
+    NodeCanvas* canvas = applicationContext.canvas;
 
     if (isDraggingValue) {
         isDraggingValue = false;
@@ -61,7 +61,7 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
 
         int draggedNodeId = (int)draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
 
-        juce::UndoManager* undoManager = ComponentContext::undoManager;
+        juce::UndoManager* undoManager = applicationContext.undoManager;
         undoManager->undo();
 
         canvas->asyncUpdates.erase(
@@ -124,9 +124,9 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
 
 void NodeController::mouseDown(const juce::MouseEvent& e)
 {
-    NodeCanvas* nodeCanvas = ComponentContext::canvas;
+    NodeCanvas* nodeCanvas = applicationContext.canvas;
     juce::Component* component = e.eventComponent;
-    juce::UndoManager* undoManager = ComponentContext::undoManager;
+    juce::UndoManager* undoManager = applicationContext.undoManager;
 
     jassert(nodeCanvas);
 
@@ -183,7 +183,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 }
 
 void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree) {
-    NodeCanvas* canvas = ComponentContext::canvas;
+    NodeCanvas* canvas = applicationContext.canvas;
 
     if (!canvas->gridOriginSet) {
         ValueTreeState::setNodePosition(draggedNodeTree, newPosition, undoManager);
@@ -221,7 +221,7 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
     }
 
     juce::Component* component = e.eventComponent;
-    juce::UndoManager* undoManager = ComponentContext::undoManager;
+    juce::UndoManager* undoManager = applicationContext.undoManager;
 
     if (NodeCanvas* nodeCanvas = dynamic_cast<NodeCanvas*>(component)) {
 
@@ -251,10 +251,10 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
             if (isDragStart) {
                 isDragStart = false;
                 undoManager->beginNewTransaction();
-                if (ComponentContext::canvas->gridOriginSet)
+                if (applicationContext.canvas->gridOriginSet)
                 {
-                    ComponentContext::canvas->showGrid = true;
-                    ComponentContext::canvas->repaint();
+                    applicationContext.canvas->showGrid = true;
+                    applicationContext.canvas->repaint();
                 }
             }
 
@@ -266,17 +266,17 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
             int deltaX = newPosition.xPosition - oldPosition.xPosition;
             int deltaY = newPosition.yPosition - oldPosition.yPosition;
 
-            ComponentContext::canvas->moveDescendants(nodeValueTree, deltaX, deltaY);
+            applicationContext.canvas->moveDescendants(nodeValueTree, deltaX, deltaY);
             return;
         }
 
         if (isDragStart) {
             isDragStart = false;
             undoManager->beginNewTransaction();
-            if (ComponentContext::canvas->gridOriginSet)
+            if (applicationContext.canvas->gridOriginSet)
             {
-                ComponentContext::canvas->showGrid = true;
-                ComponentContext::canvas->repaint();
+                applicationContext.canvas->showGrid = true;
+                applicationContext.canvas->repaint();
             }
 
             if (nodeControllerMode == NodeControllerMode::Node) {
@@ -313,7 +313,7 @@ void NodeController::checkRootNodeSnap(const NodePosition& pos)
 {
     if (snapSourceNodeId < 0 || !draggedNodeTree.isValid()) return;
 
-    NodeCanvas* canvas = ComponentContext::canvas;
+    NodeCanvas* canvas = applicationContext.canvas;
     juce::Point<int> dragPoint(pos.xPosition, pos.yPosition);
 
     Node* nearestRoot = nullptr;

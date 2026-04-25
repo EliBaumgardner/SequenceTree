@@ -4,10 +4,9 @@
 
 #include "Modulator.h"
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
 
-Modulator::Modulator() {
-
+Modulator::Modulator(ApplicationContext& context) : Node(context)
+{
 }
 
 void Modulator::resized() {
@@ -31,7 +30,7 @@ void Modulator::paint(juce::Graphics& g) {
     g.setColour(juce::Colours::black);
     g.drawRect(squareBorder, 1.0f);
 
-    juce::Colour displayColour = ComponentContext::lookAndFeel->applyIntensity(nodeColour);
+    juce::Colour displayColour = CustomLookAndFeel::get(*this).applyIntensity(nodeColour);
     g.setColour(isHighlighted ? displayColour.darker() : displayColour);
     g.fillRect(squareFill);
 

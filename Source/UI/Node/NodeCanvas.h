@@ -15,13 +15,14 @@
 #include "../Util/RTData.h"
 #include "../Logic/DynamicPort.h"
 #include "../Util/NodeInfo.h"
+#include "../Util/ApplicationContext.h"
 
 class Node;
 class RootNode;
 class NodeArrow;
 
 class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, public juce::AsyncUpdater {
-    
+
     public:
 
         enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved,DurationOnly};
@@ -32,7 +33,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
             int rootNodeId;
         };
 
-        NodeCanvas();
+        NodeCanvas(ApplicationContext& context);
         ~NodeCanvas();
 
         void paint(juce::Graphics& g) override;
@@ -66,6 +67,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         void handleAsyncUpdate() override;
         void drainHighlightFifo();
         void drainProgressFifo();
+        void drainCountFifo();
         void resetAllArrowProgress();
         void resetGraphArrowProgress(int graphId);
 
@@ -94,4 +96,7 @@ class NodeCanvas : public juce::Component, public juce::ValueTree::Listener, pub
         juce::ValueTree canvasTree {"CanvasTree"};
 
         std::vector<AsyncUpdate> asyncUpdates;
+
+    private:
+        ApplicationContext& applicationContext;
 };

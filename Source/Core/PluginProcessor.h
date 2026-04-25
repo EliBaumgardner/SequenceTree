@@ -9,7 +9,6 @@
 #pragma once
 
 #include "../Util/PluginModules.h"
-#include "../Util/PluginContext.h"
 #include <memory>
 #include <atomic>
 #include "../Util/RTData.h"

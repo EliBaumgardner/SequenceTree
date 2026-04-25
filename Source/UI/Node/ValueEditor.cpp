@@ -3,13 +3,12 @@
 //
 
 #include "ValueEditor.h"
-#include "../Util/PluginContext.h"
 #include "../CustomLookAndFeel.h"
 #include "NodeCanvas.h"
 
-ValueEditor::ValueEditor()
+ValueEditor::ValueEditor(ApplicationContext& context) : applicationContext(context)
 {
-    setLookAndFeel(ComponentContext::lookAndFeel);
+    setLookAndFeel(applicationContext.lookAndFeel);
 
     textEditor = std::make_unique<juce::TextEditor>();
     textEditor->addListener(this);
@@ -81,8 +80,8 @@ void ValueEditor::commitValue()
     if (val < minValue) val = minValue;
     boundValue.setValue(val);
 
-    if (boundTree.isValid() && ComponentContext::canvas != nullptr)
-        ComponentContext::canvas->makeRTGraph(boundTree);
+    if (boundTree.isValid() && applicationContext.canvas != nullptr)
+        applicationContext.canvas->makeRTGraph(boundTree);
 
     isEditing = false;
     textEditor->setVisible(false);

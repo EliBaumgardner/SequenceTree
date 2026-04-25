@@ -10,7 +10,7 @@
 
 #pragma once
 #include "../Util/PluginModules.h"
-#include "../Util/PluginContext.h"
+#include "../Util/ApplicationContext.h"
 #include "../Util/NodeInfo.h"
 
 
@@ -30,13 +30,13 @@ class NodeFactory;
 
 
 class NodeController : public juce::MouseListener {
-    
+
 public:
 
     enum class NodeControllerMode {Node,Connector,Modulator};
     NodeControllerMode nodeControllerMode;
 
-    NodeController();
+    NodeController(ApplicationContext& context);
 
     void mouseEnter(const juce::MouseEvent& e) override;
     void mouseExit (const juce::MouseEvent& e) override;
@@ -53,7 +53,7 @@ private:
 
     static constexpr float rootSnapThreshold = 60.0f;
 
-    NodeCanvas* nodeCanvas = nullptr;
+    ApplicationContext& applicationContext;
 
     Node* connectorNode  = nullptr;
     Node* snapTargetRoot = nullptr;

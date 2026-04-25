@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
+#include "../../Util/ApplicationContext.h"
 
 class DisplayButton : public juce::Component, public juce::SettableTooltipClient {
 
@@ -16,7 +16,7 @@ class DisplayButton : public juce::Component, public juce::SettableTooltipClient
     bool isSelected = false;
     std::function<void()> onClick;
 
-    DisplayButton() { setLookAndFeel(ComponentContext::lookAndFeel); setTooltip("Display Options"); };
+    DisplayButton(ApplicationContext& context) { setLookAndFeel(context.lookAndFeel); setTooltip("Display Options"); };
 
     void paint(juce::Graphics& g) override
     {

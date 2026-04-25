@@ -17,6 +17,7 @@
 #include "../UI/Titlebar.h"
 #include "../UI/CustomLookAndFeel.h"
 #include "../Util/ValueTreeState.h"
+#include "../Util/ApplicationContext.h"
 
 
 //==============================================================================
@@ -41,6 +42,7 @@ private:
     SequenceTreeAudioProcessor& audioProcessor;
     juce::UndoManager undoManager;
     CustomLookAndFeel lookAndFeel;
+    ApplicationContext applicationContext;
     juce::TooltipWindow tooltipWindow { this, 400 };
 
     std::unique_ptr<NodeCanvas>     canvas         = nullptr;

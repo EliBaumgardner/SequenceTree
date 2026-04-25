@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
+#include "../../Util/ApplicationContext.h"
 #include "../../Logic/NodeController.h"
 #include "NodeButton.h"
 #include "ConnectorButton.h"
@@ -16,21 +16,24 @@
 
 class ButtonPane : public juce::Component {
 
+    ApplicationContext& applicationContext;
+
     public:
 
     NodeButton nodeButton;
     ModulatorButton modulatorButton;
 
-    ButtonPane()
+    ButtonPane(ApplicationContext& context)
+        : applicationContext(context), nodeButton(context), modulatorButton(context)
     {
-        setLookAndFeel(ComponentContext::lookAndFeel);
+        setLookAndFeel(applicationContext.lookAndFeel);
         addAndMakeVisible(nodeButton);
         // addAndMakeVisible(connectorButton);
         addAndMakeVisible(modulatorButton);
 
-        NodeController& nodeController = *ComponentContext::nodeController;
+        NodeController& nodeController = *applicationContext.nodeController;
 
-        nodeButton.onClick = [this,&nodeController]() {
+        nodeButton.onClick = [this, &nodeController]() {
 
             jassert(&nodeController);
 

@@ -9,7 +9,7 @@
 */
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../Util/PluginContext.h"
+#include "../Util/ApplicationContext.h"
 
 class Node;
 
@@ -17,7 +17,7 @@ class NodeArrow : public juce::Component, juce::Value::Listener, juce::Timer
 {
 public:
 
-  NodeArrow(Node* parentNode, Node* childNode);
+  NodeArrow(Node* parentNode, Node* childNode, ApplicationContext& context);
   ~NodeArrow() override { stopTimer(); }
   void paint (juce::Graphics& g) override;
   void setArrowBounds(Node* movedNode);

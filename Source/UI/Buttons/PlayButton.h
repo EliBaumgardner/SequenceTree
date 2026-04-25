@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
+#include "../../Util/ApplicationContext.h"
 
 class PlayButton : public juce::Button {
 
@@ -15,7 +15,7 @@ public:
 
     std::function<void()> onClick;
 
-    PlayButton() : juce::Button("button") { setLookAndFeel(ComponentContext::lookAndFeel); setTooltip("Play / Pause"); }
+    PlayButton(ApplicationContext& context) : juce::Button("button") { setLookAndFeel(context.lookAndFeel); setTooltip("Play / Pause"); }
 
     void paintButton(juce::Graphics& g, bool isMouseOver, bool isButtonDown) override
     {

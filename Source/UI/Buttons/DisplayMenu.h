@@ -7,13 +7,15 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
+#include "../../Util/ApplicationContext.h"
 #include "../Node/NodeCanvas.h"
 #include "../CustomTextEditor.h"
 #include "DisplayButton.h"
 #include "ButtonConstants.h"
 
 class DisplayMenu : public juce::Component {
+
+    ApplicationContext& applicationContext;
 
     public:
 
@@ -22,9 +24,10 @@ class DisplayMenu : public juce::Component {
     juce::PopupMenu menu;
     juce::String selectedOption = "";
 
-    DisplayMenu()
+    DisplayMenu(ApplicationContext& context)
+        : applicationContext(context), button(context), display(context)
     {
-        setLookAndFeel(ComponentContext::lookAndFeel);
+        setLookAndFeel(applicationContext.lookAndFeel);
         addAndMakeVisible(display);
         addAndMakeVisible(button);
 
@@ -41,9 +44,9 @@ class DisplayMenu : public juce::Component {
                 repaint();
                 switch (result)
                 {
-                    case 1: selectedOption = "show pitch";      ComponentContext::canvas->setSelectionMode(NodeDisplayMode::Pitch); break;
-                    case 2: selectedOption = "show velocity";   ComponentContext::canvas->setSelectionMode(NodeDisplayMode::Velocity); break;
-                    case 3: selectedOption = "show countLimit"; ComponentContext::canvas->setSelectionMode(NodeDisplayMode::CountLimit); break;
+                    case 1: selectedOption = "show pitch";      applicationContext.canvas->setSelectionMode(NodeDisplayMode::Pitch); break;
+                    case 2: selectedOption = "show velocity";   applicationContext.canvas->setSelectionMode(NodeDisplayMode::Velocity); break;
+                    case 3: selectedOption = "show countLimit"; applicationContext.canvas->setSelectionMode(NodeDisplayMode::CountLimit); break;
                     default: break;
                 }
                 resized();

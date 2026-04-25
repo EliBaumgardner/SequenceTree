@@ -15,7 +15,7 @@ class Connector : public Node {
 
 public:
 
-    Connector();
+    Connector(ApplicationContext& context);
     void resized() override;
     void paint(juce::Graphics& g) override;
 

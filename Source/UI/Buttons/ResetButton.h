@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
+#include "../../Util/ApplicationContext.h"
 
 class ResetButton : public juce::Component, public juce::SettableTooltipClient {
 
@@ -17,7 +17,7 @@ public:
 
     bool isHovered = false;
     std::function<void()> onClick;
-    ResetButton() { setLookAndFeel(ComponentContext::lookAndFeel); setTooltip("Reset"); }
+    ResetButton(ApplicationContext& context) { setLookAndFeel(context.lookAndFeel); setTooltip("Reset"); }
 
     void paint(juce::Graphics& g) override
     {

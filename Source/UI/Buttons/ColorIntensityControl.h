@@ -7,17 +7,19 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../CustomLookAndFeel.h"
-#include "../../Util/PluginContext.h"
+#include "../../Util/ApplicationContext.h"
 
 class ColorIntensityControl : public juce::Component,
                               public juce::SettableTooltipClient,
                               public juce::TextEditor::Listener {
 
+    ApplicationContext& applicationContext;
+
 public:
 
-    ColorIntensityControl()
+    ColorIntensityControl(ApplicationContext& context) : applicationContext(context)
     {
-        setLookAndFeel(ComponentContext::lookAndFeel);
+        setLookAndFeel(applicationContext.lookAndFeel);
         setTooltip("Color Intensity");
 
         textEditor = std::make_unique<juce::TextEditor>();
@@ -41,7 +43,7 @@ public:
         {
             g.setFont(juce::Font(juce::FontOptions(9.0f)));
             g.setColour(juce::Colours::lightgrey.withAlpha(0.85f));
-            g.drawText(juce::String(ComponentContext::lookAndFeel->getColorIntensityFactor(), 2),
+            g.drawText(juce::String(applicationContext.lookAndFeel->getColorIntensityFactor(), 2),
                        getLocalBounds(), juce::Justification::centred, false);
         }
     }
@@ -54,7 +56,7 @@ public:
     void mouseDown(const juce::MouseEvent&) override
     {
         isDragging = false;
-        dragStartValue = ComponentContext::lookAndFeel->getColorIntensityFactor();
+        dragStartValue = applicationContext.lookAndFeel->getColorIntensityFactor();
     }
 
     void mouseDrag(const juce::MouseEvent& e) override
@@ -63,7 +65,10 @@ public:
         int yOffset = e.getOffsetFromDragStart().y;
         float delta = -yOffset * 0.005f;
         float newValue = juce::jlimit(0.0f, 1.0f, dragStartValue + delta);
-        ComponentContext::lookAndFeel->setColorIntensityFactor(newValue);
+        applicationContext.lookAndFeel->setColorIntensityFactor(newValue);
+        if (applicationContext.canvas != nullptr)
+            if (auto* topLevel = applicationContext.canvas->getTopLevelComponent())
+                topLevel->repaint();
         repaint();
     }
 
@@ -73,7 +78,7 @@ public:
         {
             isEditing = true;
             textEditor->setVisible(true);
-            textEditor->setText(juce::String(ComponentContext::lookAndFeel->getColorIntensityFactor(), 2),
+            textEditor->setText(juce::String(applicationContext.lookAndFeel->getColorIntensityFactor(), 2),
                                 juce::dontSendNotification);
             textEditor->grabKeyboardFocus();
             textEditor->selectAll();
@@ -89,7 +94,10 @@ private:
     void commitValue()
     {
         float value = textEditor->getText().getFloatValue();
-        ComponentContext::lookAndFeel->setColorIntensityFactor(value);
+        applicationContext.lookAndFeel->setColorIntensityFactor(value);
+        if (applicationContext.canvas != nullptr)
+            if (auto* topLevel = applicationContext.canvas->getTopLevelComponent())
+                topLevel->repaint();
 
         isEditing = false;
         textEditor->setVisible(false);

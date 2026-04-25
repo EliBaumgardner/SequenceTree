@@ -13,6 +13,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../Util/NodeInfo.h"
+#include "../Util/ApplicationContext.h"
 #include "Buttons/IncrementButton.h"
 #include "ValueEditor.h"
 
@@ -21,13 +22,13 @@ class NodeArrow;
 
 class NodeTextEditor;
 
-class  NodeCanvas;
+class NodeCanvas;
 
 class Node : public juce::Component, public juce::Timer {
-    
+
 public:
 
-    Node();
+    Node(ApplicationContext& context);
 
     void paint  (juce::Graphics& g) override;
     void resized() override;
@@ -68,4 +69,10 @@ public:
     bool isHighlighted       = false;
     bool pendingHighlightOff = false;
     float pulsePhase         = 1.0f;
+
+    int displayCurrentCount = 0;
+    int displayCountLimit   = 1;
+
+protected:
+    ApplicationContext& applicationContext;
 };
