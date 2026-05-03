@@ -3,8 +3,9 @@
 //
 
 #include "ValueEditor.h"
-#include "../CustomLookAndFeel.h"
-#include "NodeCanvas.h"
+#include "../Theme/CustomLookAndFeel.h"
+#include "../Canvas/NodeCanvas.h"
+#include "../../Graph/RTGraphBuilder.h"
 
 ValueEditor::ValueEditor(ApplicationContext& context) : applicationContext(context)
 {
@@ -80,8 +81,8 @@ void ValueEditor::commitValue()
     if (val < minValue) val = minValue;
     boundValue.setValue(val);
 
-    if (boundTree.isValid() && applicationContext.canvas != nullptr)
-        applicationContext.canvas->makeRTGraph(boundTree);
+    if (boundTree.isValid() && applicationContext.rtGraphBuilder != nullptr)
+        applicationContext.rtGraphBuilder->makeRTGraph(boundTree);
 
     isEditing = false;
     textEditor->setVisible(false);

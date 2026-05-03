@@ -7,12 +7,12 @@
 
   ==============================================================================
 */
-#include "../Util/ValueTreeState.h"
-#include "../Util/ValueTreeIdentifiers.h"
+#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
 #include "NodeArrow.h"
 
 #include "Node.h"
-#include "../CustomLookAndFeel.h"
+#include "../Theme/CustomLookAndFeel.h"
 
 NodeArrow::NodeArrow(Node* startNode, Node* endNode, ApplicationContext& context)
     : parentNode(startNode), childNode(endNode)

@@ -6,7 +6,7 @@
 #define SEQUENCETREE_UNDOBUTTON_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../CustomLookAndFeel.h"
+#include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/ApplicationContext.h"
 
 class UndoButton : public juce::Component, public juce::SettableTooltipClient {

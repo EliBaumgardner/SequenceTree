@@ -5,7 +5,7 @@
 #ifndef SEQUENCETREE_TRAVERSER_H
 #define SEQUENCETREE_TRAVERSER_H
 
-#include "../Util/PluginModules.h"
+#include "../../Util/PluginModules.h"
 #include "Node.h"
 #include "NodeTextEditor.h"
 

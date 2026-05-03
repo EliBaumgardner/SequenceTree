@@ -3,7 +3,7 @@
 //
 
 #include "Connector.h"
-#include "../CustomLookAndFeel.h"
+#include "../Theme/CustomLookAndFeel.h"
 
 Connector::Connector(ApplicationContext& context) : Node(context)
 {

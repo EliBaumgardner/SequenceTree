@@ -7,12 +7,12 @@
 
   ==============================================================================
 */
-#include "../Util/ValueTreeState.h"
+#include "../../Graph/ValueTreeState.h"
 #include "NodeTextEditor.h"
-#include "../Util/ValueTreeIdentifiers.h"
-#include "../UI/CustomLookAndFeel.h"
-#include "NodeCanvas.h"
-#include "../UI/Node/NodeArrow.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
+#include "../Theme/CustomLookAndFeel.h"
+#include "../Canvas/NodeCanvas.h"
+#include "NodeArrow.h"
 
 
 #include "Node.h"
@@ -40,12 +40,11 @@ Node::Node(ApplicationContext& context) : applicationContext(context), countEdit
     countEditor.setTooltip("Count Limit");
     addAndMakeVisible(countEditor);
 
-    upButton.onChanged = [this](){
+    upButton.onChanged = [this]() {
         incrementNodeTextEditorValue(1);
-
     };
 
-    downButton.onChanged = [this](){
+    downButton.onChanged = [this]() {
         incrementNodeTextEditorValue(-1);
     };
 }

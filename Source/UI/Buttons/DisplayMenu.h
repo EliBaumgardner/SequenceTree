@@ -6,10 +6,10 @@
 #define SEQUENCETREE_DISPLAYMENU_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../CustomLookAndFeel.h"
+#include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/ApplicationContext.h"
-#include "../Node/NodeCanvas.h"
-#include "../CustomTextEditor.h"
+#include "../Canvas/NodeCanvas.h"
+#include "../Theme/CustomTextEditor.h"
 #include "DisplayButton.h"
 #include "ButtonConstants.h"
 

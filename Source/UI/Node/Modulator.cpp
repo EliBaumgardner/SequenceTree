@@ -3,7 +3,6 @@
 //
 
 #include "Modulator.h"
-#include "../CustomLookAndFeel.h"
 
 Modulator::Modulator(ApplicationContext& context) : Node(context)
 {
@@ -30,9 +29,11 @@ void Modulator::paint(juce::Graphics& g) {
     g.setColour(juce::Colours::black);
     g.drawRect(squareBorder, 1.0f);
 
-    juce::Colour displayColour = CustomLookAndFeel::get(*this).applyIntensity(nodeColour);
-    g.setColour(isHighlighted ? displayColour.darker() : displayColour);
-    g.fillRect(squareFill);
+    float pulseExpansion = 4.0f * std::sin(pulsePhase * juce::MathConstants<float>::pi);
+    auto pulsedFill = isHighlighted ? squareFill.expanded(pulseExpansion) : squareFill;
+
+    g.setColour(isHighlighted ? nodeColour.darker() : nodeColour);
+    g.fillRect(pulsedFill);
 
     if (isHovered)
         g.drawRect(squareHover, 2.0f);
@@ -52,6 +53,3 @@ void Modulator::paint(juce::Graphics& g) {
     }
 }
 
-void Modulator::setDisplayMode(NodeTextEditor::DisplayMode mode){
-
-}

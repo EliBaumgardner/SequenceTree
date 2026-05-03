@@ -7,7 +7,7 @@
 
 
 #include "Node.h"
-#include "Buttons/RootRectangle.h"
+#include "../Buttons/RootRectangle.h"
 
 //TODO 1. implement CustomlookandFeel
 //TODO 2. refactor audio engine for root node

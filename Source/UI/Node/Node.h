@@ -12,9 +12,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../Util/NodeInfo.h"
-#include "../Util/ApplicationContext.h"
-#include "Buttons/IncrementButton.h"
+#include "../../Util/NodeInfo.h"
+#include "../../Util/ApplicationContext.h"
+#include "../Buttons/IncrementButton.h"
 #include "ValueEditor.h"
 
 
@@ -39,8 +39,6 @@ public:
     void setHighlightVisual(bool isHighlighted);
     void timerCallback() override;
 
-    // Returns the centre of the visual circle in canvas coordinates.
-    // Overridden by RootNode, whose component extends left for the loop limit rectangle.
     virtual juce::Point<int> getNodeCentre() const { return getBounds().getCentre(); }
 
     virtual void setDisplayMode(NodeDisplayMode mode);
@@ -59,7 +57,7 @@ public:
     IncrementButton downButton { false };
     ValueEditor countEditor;
 
-    juce::Colour nodeColour = juce::Colour::fromRGB(91,86,76);
+    juce::Colour nodeColour = juce::Colour::fromRGB(195,174,132).darker().darker().darker();
 
     int nodeId;
     NodeType nodeType    = NodeType::Node;

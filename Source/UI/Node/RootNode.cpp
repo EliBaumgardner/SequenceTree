@@ -4,8 +4,8 @@
 
 #include "RootNode.h"
 #include "NodeTextEditor.h"
-#include "CustomLookAndFeel.h"
-#include "../Util/ValueTreeIdentifiers.h"
+#include "../Theme/CustomLookAndFeel.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
 
 RootNode::RootNode(ApplicationContext& context) : Node(context)
 {
@@ -29,14 +29,10 @@ void RootNode::resized() {
 
     juce::Rectangle<int> bounds = getLocalBounds();
 
-    // Rectangle sits at the left edge, slim, vertically centred, just touching the circle.
-    // The circle fill starts at rw + 8px (due to 1.5 + 6.0 + 0.5 reductions in drawNode),
-    // so extend the rectangle width to meet the circle's left visual edge.
     int rectHeight = bounds.getHeight() / 2;
     int rectY      = (bounds.getHeight() - rectHeight) / 2;
     rootRectangle->setBounds(0, rectY, rw + 8, rectHeight);
 
-    // All node content (MIDI editor, buttons, count editor) lives in the circle area.
     juce::Rectangle<int> circleArea = bounds.withTrimmedLeft(rw);
 
     juce::Rectangle<int> editorArea = circleArea.reduced(10);

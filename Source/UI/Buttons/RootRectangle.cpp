@@ -3,7 +3,7 @@
 //
 
 #include "RootRectangle.h"
-#include "../UI/CustomLookAndFeel.h"
+#include "../Theme/CustomLookAndFeel.h"
 
 RootRectangle::RootRectangle(ApplicationContext& context) : loopLimitEditor(context)
 {

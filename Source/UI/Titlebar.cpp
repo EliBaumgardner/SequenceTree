@@ -9,9 +9,9 @@
 */
 
 
-#include "Node/NodeCanvas.h"
-#include "CustomLookAndFeel.h"
-#include "../Core/PluginProcessor.h"
+#include "Canvas/NodeCanvas.h"
+#include "Theme/CustomLookAndFeel.h"
+#include "../Plugin/PluginProcessor.h"
 
 #include "Titlebar.h"
 
@@ -30,7 +30,7 @@ Titlebar::Titlebar(ApplicationContext& context)
     addAndMakeVisible(playButton);
     addAndMakeVisible(resetButton);
     addAndMakeVisible(tempoDisplay);
-    addAndMakeVisible(colorIntensityControl);
+    //addAndMakeVisible(colorIntensityControl);
     addAndMakeVisible(buttonPane);
     addAndMakeVisible(displaySelector);
     addAndMakeVisible(undoRedoPane);
@@ -100,9 +100,6 @@ void Titlebar::resized()
     area.removeFromLeft(spacing);
 
     tempoDisplay.setBounds(area.removeFromLeft(tempoDisplayWidth));
-    area.removeFromLeft(spacing);
-
-    colorIntensityControl.setBounds(area.removeFromLeft(colorIntensityWidth));
     area.removeFromLeft(spacing);
 
     undoRedoPane.setBounds(area.removeFromLeft(undoRedoPaneWidth));

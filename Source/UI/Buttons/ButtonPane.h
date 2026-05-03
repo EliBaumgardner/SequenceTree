@@ -6,9 +6,9 @@
 #define SEQUENCETREE_BUTTONPANE_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../CustomLookAndFeel.h"
+#include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/ApplicationContext.h"
-#include "../../Logic/NodeController.h"
+#include "../../Input/NodeController.h"
 #include "NodeButton.h"
 #include "ConnectorButton.h"
 #include "ModulatorButton.h"

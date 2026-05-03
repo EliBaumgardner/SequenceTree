@@ -6,7 +6,7 @@
 #define SEQUENCETREE_UNDOREDOPANE_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../CustomLookAndFeel.h"
+#include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/ApplicationContext.h"
 #include "UndoButton.h"
 #include "RedoButton.h"
