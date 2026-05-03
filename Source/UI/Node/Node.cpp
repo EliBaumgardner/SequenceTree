@@ -76,12 +76,13 @@ void Node::setHoverVisual(bool isHovered)
 void Node::setSelectVisual(bool isSelected)
 {
     this->isSelected = isSelected;
+    if (onSelected) onSelected(this, isSelected);
     repaint();
 }
 
 void Node::setSelectVisual(){
-    
     isSelected = !isSelected;
+    if (onSelected) onSelected(this, isSelected);
     repaint();
 }
 

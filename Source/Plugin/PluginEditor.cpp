@@ -55,7 +55,8 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     applicationContext.valueTreeState    = valueTreeState.get();
     applicationContext.nodeController    = nodeController.get();
 
-    titleBar = std::make_unique<Titlebar>(applicationContext);
+    titleBar  = std::make_unique<Titlebar>(applicationContext);
+    bottomBar = std::make_unique<BottomBar>(applicationContext);
 
     canvas->addMouseListener(nodeController.get(),true);
 
@@ -66,6 +67,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     addAndMakeVisible(port.get());
     addAndMakeVisible(titleBar.get());
+    addAndMakeVisible(bottomBar.get());
 
     setResizable(true,false);
     setSize (700, 500);
@@ -88,8 +90,12 @@ void SequenceTreeAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds();
     port.get()->setBounds(bounds);
-    
-    auto titleHeight = static_cast<int>(bounds.getHeight() * 0.05f);
-    auto titleArea = bounds.removeFromTop(titleHeight);
-    titleBar->setBounds(titleArea);;
+
+    auto barHeight = static_cast<int>(bounds.getHeight() * 0.05f);
+
+    auto titleArea  = bounds.removeFromTop(barHeight);
+    auto bottomArea = bounds.removeFromBottom(barHeight);
+
+    titleBar ->setBounds(titleArea);
+    bottomBar->setBounds(bottomArea);
 }

@@ -16,6 +16,7 @@ class RootRectangle;
 class NodeArrow;
 
 class Titlebar;
+class BottomBar;
 class ButtonPane;
 
 class DisplayMenu;
@@ -76,6 +77,7 @@ public:
     void drawCanvas         (juce::Graphics& g, const NodeCanvas& canvas);
 
     void drawTitleBar       (juce::Graphics& g, const Titlebar& titleBar);
+    void drawBottomBar      (juce::Graphics& g, const BottomBar& bottomBar);
 
     void drawDisplayMenu    (juce::Graphics& g, const DisplayMenu& displaySelector);
     void drawButtonPane     (juce::Graphics& g, const ButtonPane& selectionBar);

@@ -37,6 +37,8 @@ public:
     void setSelectVisual   (bool isSelected);
     void setSelectVisual   ();
     void setHighlightVisual(bool isHighlighted);
+
+    std::function<void(Node*, bool)> onSelected;
     void timerCallback() override;
 
     virtual juce::Point<int> getNodeCentre() const { return getBounds().getCentre(); }

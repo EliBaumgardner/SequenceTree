@@ -218,6 +218,11 @@ Node* NodeCanvas::instantiateNodeFromTree(const juce::ValueTree& nodeValueTree)
     node->midiNoteData  = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
     node->setDisplayMode(NodeDisplayMode::Pitch);
 
+    node->onSelected = [this](Node* n, bool sel) {
+        if (applicationContext.onNodeSelected)
+            applicationContext.onNodeSelected(n, sel);
+    };
+
     addAndMakeVisible(node.get());
     Node* raw = node.release();
     nodeMap[nodeId] = raw;
@@ -240,6 +245,7 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
         int parentNodeId = nodeParent.getProperty(ValueTreeIdentifiers::Id);
         auto parentNodePair = nodeMap.find(parentNodeId);
         if (parentNodePair != nodeMap.end()) {
+            childNode->nodeColour = parentNodePair->second->nodeColour;
             addLinePoints(parentNodePair->second, childNode);
             updateLinePoints(childNode);
         }
