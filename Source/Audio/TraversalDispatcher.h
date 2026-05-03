@@ -28,6 +28,8 @@ public:
     void resetTraversal(int graphId, int newTargetId,
                         NodeMap& nodes, TraversalMap& traversalMap);
 
+    void applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes);
+
 private:
 
     void pushConnectorNotes(int traverserId, juce::MidiBuffer& midiMessages,
@@ -48,6 +50,19 @@ private:
                         juce::MidiBuffer& midiMessages,
                         double sampleRate, double tempoMultiplier,
                         const NodeMap& nodes);
+
+    void dispatchPrimaryArrow(const RTNode& node, const RTNode* nextTarget,
+                              int traversalId, int rootId, int wallClockMs);
+
+    void dispatchModulatorArrow(const RTNode* modulatorNode,
+                                const RTNode* nextModulatorTarget,
+                                int activeModulatorRootId,
+                                int rootId, int wallClockMs);
+
+    void dispatchCrossTree(const RTNode& node, int traversalId, int sample, int rootId,
+                           juce::MidiBuffer& midiMessages,
+                           double sampleRate, double tempoMultiplier,
+                           NodeMap& nodes, TraversalLogic& traversal);
 
     SequenceTreeAudioProcessor& processor;
     NoteScheduler&              scheduler;

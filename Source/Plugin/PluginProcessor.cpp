@@ -156,25 +156,8 @@ void SequenceTreeAudioProcessor::setStateInformation (const void* data, int size
 
     if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
 
-    juce::MessageManager::callAsync([this, restoredTree]() {
-        // Suppress the ValueTree listener while rebuilding to avoid double-adding nodes
-        ValueTreeState::nodeMap.removeListener(&canvas->treeListener);
-        ValueTreeState::nodeMap.removeAllChildren(nullptr);
-
-        for (int i = 0; i < restoredTree.getNumChildren(); ++i)
-            ValueTreeState::nodeMap.addChild(restoredTree.getChild(i).createCopy(), -1, nullptr);
-
-        // Advance nodeIdIncrement past all restored IDs to avoid future collisions
-        int maxId = 0;
-        for (int i = 0; i < ValueTreeState::nodeMap.getNumChildren(); ++i) {
-            int id = ValueTreeState::nodeMap.getChild(i).getProperty(ValueTreeIdentifiers::Id);
-            if (id > maxId) maxId = id;
-        }
-        ValueTreeState::nodeIdIncrement = maxId;
-
-        canvas->setValueTreeState(ValueTreeState::nodeMap);
-        ValueTreeState::nodeMap.addListener(&canvas->treeListener);
-    });
+    if (applyStateToUi)
+        applyStateToUi(restoredTree);
 }
 
 //==============================================================================
@@ -187,16 +170,16 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 void SequenceTreeAudioProcessor::updateTraversalCounts(NodeMap &nodes, TraversalMap &traversals) {
     for (const auto& [nodeId, node] : nodes) {
         for (auto& [id, traverser] : traversals) {
-            if (!traverser.counts.count(nodeId)) {
-                traverser.counts[nodeId] = 0;
+            if (!traverser.primary.counts.count(nodeId)) {
+                traverser.primary.counts[nodeId] = 0;
             }
         }
     }
 
     for (auto& [id, traverser] : traversals) {
-        for (auto it = traverser.counts.begin(); it != traverser.counts.end(); ) {
+        for (auto it = traverser.primary.counts.begin(); it != traverser.primary.counts.end(); ) {
             if (nodes.find(it->first) == nodes.end()) {
-                it = traverser.counts.erase(it);
+                it = traverser.primary.counts.erase(it);
             } else {
                 it = std::next(it);
             }
@@ -225,7 +208,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         eventManager.scheduler.activeNotes.clear();
         eventManager.traversals.clear();
 
-        canvas->triggerAsyncUpdate();
+        if (notifyUi) notifyUi();
     }
 
     if(isPlaying.load() == false) {
@@ -252,11 +235,12 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     eventManager.processEvents(numSamples, midiMessages, nodes, traversals);
 
-    if (eventManager.bridge.highlightFifo.getNumReady() > 0
-        || eventManager.bridge.progressFifo.getNumReady() > 0
-        || eventManager.bridge.arrowResetFifo.getNumReady() > 0
-        || eventManager.bridge.countFifo.getNumReady() > 0) {
-        canvas->triggerAsyncUpdate();
+    if (notifyUi
+        && (eventManager.bridge.highlightFifo.getNumReady() > 0
+         || eventManager.bridge.progressFifo.getNumReady() > 0
+         || eventManager.bridge.arrowResetFifo.getNumReady() > 0
+         || eventManager.bridge.countFifo.getNumReady() > 0)) {
+        notifyUi();
     }
 
 }
@@ -288,12 +272,12 @@ bool SequenceTreeAudioProcessor::initializeTraversalForRootNode(juce::MidiBuffer
         return rootFound;
     }
 
-    traversals.insert({rootId, TraversalLogic(rootId, this)});
+    traversals.insert({rootId, TraversalLogic(rootId, eventManager.bridge)});
     TraversalLogic& traversal = traversals.at(rootId);
-    traversal.isFirstEvent = true;
-    traversal.targetId  = rootId;
-    traversal.state     = TraversalLogic::TraversalState::Active;
-    traversal.isLooping = true;
+    traversal.isFirstEvent  = true;
+    traversal.primary.target = rootId;
+    traversal.state         = TraversalLogic::TraversalState::Active;
+    traversal.isLooping     = true;
 
     auto rtGraphIt = rtGraphs.find(rootId);
     if (rtGraphIt != rtGraphs.end()) {
@@ -322,8 +306,8 @@ void SequenceTreeAudioProcessor::syncTraversalLoopLimits(TraversalMap &traversal
 
         if (traversal.state == TraversalLogic::TraversalState::End) {
             if (newLoopLimit == 0 || traversal.loopCount < newLoopLimit) {
-                traversal.targetId = traversal.rootId;
-                traversal.state    = TraversalLogic::TraversalState::Active;
+                traversal.primary.target = traversal.rootId;
+                traversal.state          = TraversalLogic::TraversalState::Active;
 
                 auto rootIt = nodes.find(traversal.rootId);
                 if (rootIt != nodes.end()) {
