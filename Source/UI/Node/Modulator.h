@@ -5,7 +5,7 @@
 #ifndef SEQUENCETREE_MODULATOR_H
 #define SEQUENCETREE_MODULATOR_H
 
-#include "../Util/PluginModules.h"
+#include "../../Util/PluginModules.h"
 #include "Node.h"
 #include "NodeTextEditor.h"
 
@@ -18,12 +18,8 @@ class Modulator : public Node {
     Modulator(ApplicationContext& context);
     void resized() override;
     void paint(juce::Graphics& g) override;
-    void setDisplayMode(NodeTextEditor::DisplayMode mode);
-
 
     private:
-
-    int count;
     juce::Colour outlineColour = juce::Colours::black;
 };
 

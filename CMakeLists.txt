@@ -36,33 +36,34 @@ target_compile_definitions(SequenceTree PRIVATE
 )
 
 target_sources(SequenceTree PRIVATE
-        Source/UI/ColourSelector.cpp
-        Source/UI/CustomTextEditor.cpp
-        Source/Logic/DynamicPort.cpp
+        Source/Plugin/PluginProcessor.cpp
+        Source/Plugin/PluginEditor.cpp
+        Source/Audio/AudioUIBridge.cpp
+        Source/Audio/EventManager.cpp
+        Source/Audio/NoteScheduler.cpp
+        Source/Audio/TraversalLogic.cpp
+        Source/Audio/TraversalDispatcher.cpp
+        Source/Graph/RTGraphBuilder.cpp
+        Source/Graph/ValueTreeState.cpp
+        Source/Graph/ValueTreeIdentifiers.cpp
+        Source/Input/NodeController.cpp
+        Source/UI/Canvas/DynamicPort.cpp
+        Source/UI/Canvas/NodeCanvas.cpp
+        Source/UI/Canvas/NodeCanvasTreeListener.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
         Source/UI/Node/NodeArrow.cpp
         Source/UI/Node/NodeTextEditor.cpp
         Source/UI/Node/ValueEditor.cpp
-        Source/UI/Node/NodeCanvas.cpp
-        Source/Logic/NodeController.cpp
-        Source/UI/PianoRoll.cpp
-        Source/Core/PluginEditor.cpp
-        Source/Core/PluginProcessor.cpp
-        Source/Core/TraversalLogic.cpp
-        Source/Core/AudioUIBridge.cpp
-        Source/Core/NoteScheduler.cpp
-        Source/Core/TraversalDispatcher.cpp
-        Source/Core/EventManager.cpp
-        Source/UI/TitleBar.cpp
         Source/UI/Node/Modulator.cpp
         Source/UI/Node/Connector.cpp
-        Source/UI/CustomLookAndFeel.cpp
-        Source/Util/ValueTreeState.cpp
-        Source/Util/ValueTreeIdentifiers.cpp
-        Source/UI/Node/CustomTextCaret.cpp
+        Source/UI/Theme/CustomLookAndFeel.cpp
+        Source/UI/Theme/CustomTextEditor.cpp
+        Source/UI/Theme/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp
-
+        Source/UI/ColourSelector.cpp
+        Source/UI/PianoRoll.cpp
+        Source/UI/Titlebar.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE

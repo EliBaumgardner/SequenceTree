@@ -1,0 +1,94 @@
+/*
+  ==============================================================================
+
+    CustomTextEditor.cpp
+    Created: 18 May 2025 10:55:47am
+    Author:  Eli Baimgardner
+
+  ==============================================================================
+*/
+
+#include "CustomTextEditor.h"
+#include "../Canvas/NodeCanvas.h"
+#include "CustomLookAndFeel.h"
+
+
+CustomTextEditor::CustomTextEditor(ApplicationContext& context)
+{
+    setLookAndFeel(context.lookAndFeel);
+
+    setColour(juce::TextEditor::textColourId,           CustomLookAndFeel::get(*this).getTextColour());
+    setColour(juce::TextEditor::highlightColourId,      juce::Colours::darkgrey);
+    setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
+
+    onTextChange = [this](){
+    };
+
+    baseFont = juce::Font(getFont());
+}
+
+void CustomTextEditor::refit()
+{
+        auto bounds = getLocalBounds().toFloat().reduced(4.0f);
+        
+        float length = baseFont.getStringWidthFloat(getText());
+        float height = baseFont.getHeight();
+        float ratio = std::min(bounds.getWidth()/length,bounds.getHeight()/height);
+        
+        height *= ratio;
+        
+        auto font = baseFont;
+    
+        font.setHeight(height);
+        setFont(font);
+        applyFontToAllText(font);
+}
+
+void CustomTextEditor::paint(juce::Graphics& g)
+{
+    CustomLookAndFeel::get(*this).drawEditor(g, *this);
+}
+
+void CustomTextEditor::mouseDown(const juce::MouseEvent& e)
+{
+    TextEditor::mouseDown(e);
+    onTextChange();
+}
+
+void CustomTextEditor::formatDisplay(DisplayMode mode)
+{
+    juce::String displayValue = bindValue.toString();
+    double value = displayValue.getDoubleValue();
+
+    juce::String display;
+    
+    if(mode == DisplayMode::Pitch){
+        value += 1;
+        int valueRange = (int)value % 127;
+        int pitchValue = (int)valueRange % 11;
+        int octave = (valueRange+1) / 12;
+        
+        juce::String pitchNames[] = {
+            juce::String(L"C"),
+            juce::String(L"C♯"),
+            juce::String(L"D"),
+            juce::String(L"D♯"),
+            juce::String(L"E"),
+            juce::String(L"F"),
+            juce::String(L"F♯"),
+            juce::String(L"G"),
+            juce::String(L"G♯"),
+            juce::String(L"A"),
+            juce::String(L"A♯"),
+            juce::String(L"B")
+        };
+        display = pitchNames[pitchValue] + juce::String(octave);
+    }
+    
+    if(mode == DisplayMode::Velocity){ int velocity = (int)value; display = juce::String(velocity); }
+    
+    if(mode == DisplayMode::Duration){ display = juce::String(value); }
+    
+    setText(display);
+    refit();
+}

@@ -6,7 +6,7 @@
 #define SEQUENCETREE_REDOBUTTON_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../CustomLookAndFeel.h"
+#include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/ApplicationContext.h"
 
 class RedoButton : public juce::Component, public juce::SettableTooltipClient {

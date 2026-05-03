@@ -5,7 +5,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../Util/ApplicationContext.h"
+#include "../../Util/ApplicationContext.h"
 
 class ValueEditor : public juce::Component,
                     public juce::SettableTooltipClient,

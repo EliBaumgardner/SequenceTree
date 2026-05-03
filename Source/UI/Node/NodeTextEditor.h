@@ -11,8 +11,8 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../Util/NodeInfo.h"
-#include "../Util/ApplicationContext.h"
+#include "../../Util/NodeInfo.h"
+#include "../../Util/ApplicationContext.h"
 
 class Node;
 

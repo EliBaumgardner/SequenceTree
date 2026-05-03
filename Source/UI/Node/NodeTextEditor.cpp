@@ -9,11 +9,12 @@
 */
 
 
-#include "NodeCanvas.h"
+#include "../Canvas/NodeCanvas.h"
 #include "Node.h"
 #include "NodeArrow.h"
-#include "../Util/ValueTreeState.h"
-#include "../UI/CustomLookAndFeel.h"
+#include "../../Graph/ValueTreeState.h"
+#include "../Theme/CustomLookAndFeel.h"
+#include "../../Graph/RTGraphBuilder.h"
 
 
 #include "NodeTextEditor.h"
@@ -116,7 +117,7 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
     refit();
 
     node->repaint();
-    applicationContext.canvas->makeRTGraph(nodeValueTree);
+    applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);
 }
 
 int NodeTextEditor::noteToNumber(juce::String string){

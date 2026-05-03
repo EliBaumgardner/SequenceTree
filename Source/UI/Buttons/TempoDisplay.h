@@ -6,9 +6,9 @@
 #define SEQUENCETREE_TEMPODISPLAY_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../CustomLookAndFeel.h"
+#include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/ApplicationContext.h"
-#include "../CustomTextEditor.h"
+#include "../Theme/CustomTextEditor.h"
 #include "SyncButton.h"
 
 class TempoDisplay : public juce::Component, public juce::SettableTooltipClient {

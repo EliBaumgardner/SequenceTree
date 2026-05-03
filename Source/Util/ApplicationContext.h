@@ -18,6 +18,7 @@ class CustomLookAndFeel;
 class NodeController;
 class NodeFactory;
 class ValueTreeState;
+class RTGraphBuilder;
 
 struct ApplicationContext
 {
@@ -27,4 +28,5 @@ struct ApplicationContext
     juce::UndoManager*          undoManager    = nullptr;
     ValueTreeState*             valueTreeState = nullptr;
     NodeController*             nodeController = nullptr;
+    RTGraphBuilder*             rtGraphBuilder = nullptr;
 };
