@@ -19,6 +19,7 @@ class NodeController;
 class NodeFactory;
 class ValueTreeState;
 class RTGraphBuilder;
+class Node;
 
 struct ApplicationContext
 {
@@ -29,4 +30,6 @@ struct ApplicationContext
     ValueTreeState*             valueTreeState = nullptr;
     NodeController*             nodeController = nullptr;
     RTGraphBuilder*             rtGraphBuilder = nullptr;
+
+    std::function<void(Node*, bool)> onNodeSelected;
 };

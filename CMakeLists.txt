@@ -64,6 +64,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/ColourSelector.cpp
         Source/UI/PianoRoll.cpp
         Source/UI/Titlebar.cpp
+        Source/UI/BottomBar.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE

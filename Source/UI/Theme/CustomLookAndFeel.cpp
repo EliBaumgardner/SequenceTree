@@ -9,6 +9,7 @@
 #include "../Node/Node.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Titlebar.h"
+#include "../BottomBar.h"
 #include "CustomTextEditor.h"
 #include "../Node/NodeArrow.h"
 #include "../Node/NodeTextEditor.h"
@@ -111,6 +112,22 @@ void CustomLookAndFeel::drawTitleBar(juce::Graphics &g, const Titlebar &titleBar
     g.drawHorizontalLine((int)bounds.getY(), bounds.getX(), bounds.getRight());
 
     g.setColour(juce::Colours::black.withAlpha(0.35f));
+    g.drawHorizontalLine((int)bounds.getBottom() - 1, bounds.getX(), bounds.getRight());
+}
+
+void CustomLookAndFeel::drawBottomBar(juce::Graphics &g, const BottomBar &bottomBar)
+{
+    auto bounds = bottomBar.getLocalBounds().toFloat();
+
+    juce::ColourGradient gradient(barColour.darker(0.04f),  0, bounds.getY(),
+                                   barColour.brighter(0.06f), 0, bounds.getBottom(), false);
+    g.setGradientFill(gradient);
+    g.fillRect(bounds);
+
+    g.setColour(juce::Colours::black.withAlpha(0.35f));
+    g.drawHorizontalLine((int)bounds.getY(), bounds.getX(), bounds.getRight());
+
+    g.setColour(barColour.brighter(0.12f));
     g.drawHorizontalLine((int)bounds.getBottom() - 1, bounds.getX(), bounds.getRight());
 }
 
@@ -487,6 +504,8 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
 
     if (! nodeArrow.isGhost && nodeArrow.progressT > 0.0f)
     {
+        const juce::Colour progressColour = nodeArrow.parentNode->nodeColour.brighter(0.3f);
+
         float linePathLength = 0.0f;
         {
             juce::PathFlatteningIterator iterator(linePath);
@@ -514,10 +533,10 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
                                                           juce::PathStrokeType::curved,
                                                           juce::PathStrokeType::butt);
 
-                g.setColour(arrowProgressColour.withAlpha(0.25f));
+                g.setColour(progressColour.withAlpha(0.25f));
                 g.strokePath(bodyProgressPath, bodyGlowStroke);
 
-                g.setColour(arrowProgressColour);
+                g.setColour(progressColour);
                 g.strokePath(bodyProgressPath, bodyStroke);
             }
         }
@@ -557,10 +576,10 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
                                                       juce::PathStrokeType::curved,
                                                       juce::PathStrokeType::rounded);
 
-            g.setColour(arrowProgressColour.withAlpha(0.25f));
+            g.setColour(progressColour.withAlpha(0.25f));
             g.strokePath(headProgressPath, headGlowStroke);
 
-            g.setColour(arrowProgressColour);
+            g.setColour(progressColour);
             g.fillPath(headProgressPath);
         }
     }
