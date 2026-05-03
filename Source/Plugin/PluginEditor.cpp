@@ -7,6 +7,7 @@
 */
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "../Graph/ValueTreeIdentifiers.h"
 
 
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
@@ -25,8 +26,31 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     valueTreeState = std::make_unique<ValueTreeState>();
     port           = std::make_unique<DynamicPort>(canvas.get());
 
-    applicationContext.processor->canvas = canvas.get();
     applicationContext.canvas            = canvas.get();
+
+    audioProcessor.notifyUi = [canvasPtr = canvas.get()] {
+        if (canvasPtr) canvasPtr->triggerAsyncUpdate();
+    };
+
+    audioProcessor.applyStateToUi = [canvasPtr = canvas.get()](juce::ValueTree restoredTree) {
+        juce::MessageManager::callAsync([canvasPtr, restoredTree]() {
+            ValueTreeState::nodeMap.removeListener(&canvasPtr->treeListener);
+            ValueTreeState::nodeMap.removeAllChildren(nullptr);
+
+            for (int i = 0; i < restoredTree.getNumChildren(); ++i)
+                ValueTreeState::nodeMap.addChild(restoredTree.getChild(i).createCopy(), -1, nullptr);
+
+            int maxId = 0;
+            for (int i = 0; i < ValueTreeState::nodeMap.getNumChildren(); ++i) {
+                int id = ValueTreeState::nodeMap.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+                if (id > maxId) maxId = id;
+            }
+            ValueTreeState::nodeIdIncrement = maxId;
+
+            canvasPtr->setValueTreeState(ValueTreeState::nodeMap);
+            ValueTreeState::nodeMap.addListener(&canvasPtr->treeListener);
+        });
+    };
     applicationContext.rtGraphBuilder    = rtGraphBuilder.get();
     applicationContext.valueTreeState    = valueTreeState.get();
     applicationContext.nodeController    = nodeController.get();
@@ -49,6 +73,9 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
 SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
 {
+    audioProcessor.notifyUi       = nullptr;
+    audioProcessor.applyStateToUi = nullptr;
+
     ValueTreeState::canvasData.removeListener(&canvas->treeListener);
     ValueTreeState::nodeMap.removeListener(&canvas->treeListener);
     ValueTreeState::nodeTreeMap.removeListener(&canvas->treeListener);

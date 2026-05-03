@@ -11,9 +11,8 @@
 #include "../Util/PluginModules.h"
 #include <memory>
 #include <atomic>
+#include <functional>
 #include "../Graph/RTData.h"
-#include "../UI/Canvas/NodeCanvas.h"
-#include "../UI/Node/Node.h"
 #include "../Audio/EventManager.h"
 
 class SequenceTreeAudioProcessorEditor;
@@ -70,7 +69,8 @@ public:
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    NodeCanvas* canvas;
+    std::function<void()>                  notifyUi;
+    std::function<void(juce::ValueTree)>   applyStateToUi;
 
     struct AudioSnapshot
     {
