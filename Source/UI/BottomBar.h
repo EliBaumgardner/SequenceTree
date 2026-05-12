@@ -3,6 +3,7 @@
 #include "../Util/PluginModules.h"
 #include "../Util/ApplicationContext.h"
 #include "ColourSelector.h"
+#include "Node/ValueEditor.h"
 
 class BottomBar : public juce::Component
 {
@@ -15,4 +16,5 @@ public:
 private:
     ApplicationContext& applicationContext;
     ColourSelector colourSelector { applicationContext };
+    ValueEditor    radiusEditor   { applicationContext };
 };

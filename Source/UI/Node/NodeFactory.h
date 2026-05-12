@@ -25,25 +25,6 @@ public:
         setDefaultNodeNote(rootId, undoManager);
     }
 
-    static juce::ValueTree createRootNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
-    {
-
-        juce::ValueTree rootNodeValueTree = ValueTreeState::addRootNode(parentNodeId,undoManager);
-        int rootId = rootNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
-
-        ValueTreeState::setNodePosition(rootNodeValueTree,nodePosition,undoManager);
-
-        setDefaultNodeNote(rootId, undoManager);
-
-        return rootNodeValueTree;
-    }
-
-    static juce::ValueTree createConnection(const int parentNodeId, const int childNodeId, juce::UndoManager* undoManager)
-    {
-        ValueTreeState::connectNodes(parentNodeId, childNodeId, undoManager);
-        return ValueTreeState::getNode(childNodeId);
-    }
-
     static juce::ValueTree createNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
         juce::ValueTree childNodeValueTree = ValueTreeState::addNode(parentNodeId, undoManager);
@@ -55,12 +36,15 @@ public:
         return childNodeValueTree;
     }
 
-    static juce::ValueTree createConnector(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
+    static juce::ValueTree createAlternativeNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
-        juce::ValueTree connectorValueTree = ValueTreeState::addConnector(parentNodeId, undoManager);
-        ValueTreeState::setNodePosition(connectorValueTree, nodePosition, undoManager);
+        juce::ValueTree childNodeValueTree = ValueTreeState::addAlternativeNode(parentNodeId, undoManager);
+        int nodeId = childNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
-        return connectorValueTree;
+        ValueTreeState::setNodePosition(childNodeValueTree, nodePosition, undoManager);
+        setDefaultNodeNote(nodeId, undoManager);
+
+        return childNodeValueTree;
     }
 
     static juce::ValueTree createModulator(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager) {
@@ -77,7 +61,6 @@ public:
         return modulatorRootValueTree;
     }
 
-
     static void destroyNode(const int nodeId, juce::UndoManager* undoManager)
     {
         ValueTreeState::removeNode(nodeId,undoManager);
@@ -88,11 +71,12 @@ private:
     static void setDefaultNodeNote(int nodeId, juce::UndoManager *undoManager)
     {
         NodeNote note;
-        note.pitch = 60;
-        note.velocity = 60;
-        note.duration = 1000;
+        note.pitch       = 60;
+        note.velocity    = 60;
+        note.duration    = 1000;
+        note.midiChannel = ValueTreeState::defaultMidiChannel;
 
-        ValueTreeState::setMidiValue(nodeId,note,undoManager);
+        ValueTreeState::setMidiValue(nodeId, note, undoManager);
     }
 };
 

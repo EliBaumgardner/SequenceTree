@@ -23,7 +23,6 @@ class DisplayMenu;
 class DisplayButton;
 
 class NodeButton;
-class ConnectorButton;
 class ModulatorButton;
 
 class PlayButton;
@@ -98,7 +97,6 @@ public:
     void drawSyncButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const SyncButton& button);
 
     void drawNodeButton     (juce::Graphics& g, const NodeButton& nodeButton);
-    void drawTraverserButton(juce::Graphics& g, const ConnectorButton& traverserButton);
     void drawModulatorButton(juce::Graphics& g, const ModulatorButton& modulatorButton);
 
     void drawTempoDisplay   (juce::Graphics& g, const TempoDisplay& tempoDisplay);

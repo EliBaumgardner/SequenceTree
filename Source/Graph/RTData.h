@@ -17,22 +17,32 @@
 #include <string>      // if you use std::string
 
 struct RTNote {
-    
-    float pitch = 0;
-    float velocity = 0;
-    float duration = 0;
+
+    float pitch      = 0;
+    float velocity   = 0;
+    float duration   = 0;
+    int   midiChannel = 1;
 };
 
 struct RTNode {
 
+    int lastAlternativeId = -1;
+    int activeAlternativeId = -1;
+    int alternativeRootId = -1;
+
     int modulatorId = 0;
+
     int nodeID = 0;
     int parentId = 0;
     int countLimit = 0;
 
     bool isConnectedToModulator = false;
+    bool isAlternativeNode = false;
+    bool isLeafNode = false;
+    bool isAlternativeRoot = false;
 
-    enum class NodeType {RootNode, Node, Connector, Modulator, ModulatorRoot};
+
+    enum class NodeType {RootNode, Node, Alternative, Modulator, ModulatorRoot};
 
     NodeType nodeType = NodeType::Node;
 

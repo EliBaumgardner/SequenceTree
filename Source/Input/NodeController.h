@@ -33,25 +33,23 @@ class NodeController : public juce::MouseListener {
 
 public:
 
-    enum class NodeControllerMode {Node,Connector,Modulator};
+    enum class NodeControllerMode {Node, Modulator};
     NodeControllerMode nodeControllerMode;
 
     NodeController(ApplicationContext& context);
 
-    void mouseEnter(const juce::MouseEvent& e) override;
-    void mouseExit (const juce::MouseEvent& e) override;
-    void mouseDrag (const juce::MouseEvent& e) override;
-    void mouseDown (const juce::MouseEvent& e) override;
+    void mouseEnter          (const juce::MouseEvent& e) override;
+    void mouseExit           (const juce::MouseEvent& e) override;
+    void mouseDrag           (const juce::MouseEvent& e) override;
+    void mouseUp             (const juce::MouseEvent& e) override;
+    void mouseDown           (const juce::MouseEvent& e) override;
 
-    void snapToGrid(juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree);
+    void snapToGrid          (juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree);
 
-    void handleNodeDrag(juce::UndoManager *undoManager, int nodeId, NodePosition newPosition);
+    void handleNodeDrag      (juce::UndoManager *undoManager, int nodeId, NodePosition newPosition);
+    void handleNodeDragStart (juce::UndoManager *undoManager, Node *node, int nodeId, NodePosition newPosition, const juce::ModifierKeys& mods);
 
-    void handleNodeDragStart(juce::UndoManager *undoManager, Node *node, int nodeId, NodePosition newPosition);
-
-    void mouseUp   (const juce::MouseEvent& e) override;
-
-    void checkRootNodeSnap(const NodePosition& pos);
+    void checkRootNodeSnap   (const NodePosition& pos);
 
 private:
 
@@ -59,21 +57,20 @@ private:
 
     ApplicationContext& applicationContext;
 
-    Node* connectorNode  = nullptr;
-    Node* snapTargetRoot = nullptr;
+    Node* snapTargetRoot           = nullptr;
 
-    bool isDragStart     = true;
-    bool hasConnection   = false;
-    bool isDraggingValue = false;
+    bool isDragStart               = true;
+    bool hasConnection             = false;
+    bool isDraggingValue           = false;
 
-    double dragStartValue    = 0.0;
-    Node*  draggingValueNode = nullptr;
+    double dragStartValue          = 0.0;
+    Node*  draggingValueNode       = nullptr;
 
     juce::Point<float> dragParentCenter;
 
     juce::ValueTree draggedNodeTree;
 
     int snapSourceNodeId = -1;
-    int lastX = 0;
-    int lastY = 0;
+    int lastX            =  0;
+    int lastY            =  0;
 };

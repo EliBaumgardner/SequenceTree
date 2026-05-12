@@ -9,7 +9,6 @@
 
 #include "../Node/Node.h"
 #include "../Node/RootNode.h"
-#include "../Node/Connector.h"
 #include "NodeCanvas.h"
 #include "../../Audio/EventManager.h"
 #include "../../Graph/RTGraphBuilder.h"
@@ -198,11 +197,9 @@ Node* NodeCanvas::instantiateNodeFromTree(const juce::ValueTree& nodeValueTree)
     if (treeType == ValueTreeIdentifiers::RootNodeData) {
         node = std::make_unique<RootNode>(applicationContext);
     }
-    else if (treeType == ValueTreeIdentifiers::NodeData) {
+    else if (treeType == ValueTreeIdentifiers::NodeData
+          || treeType == ValueTreeIdentifiers::AlternativeNodeData) {
         node = std::make_unique<Node>(applicationContext);
-    }
-    else if (treeType == ValueTreeIdentifiers::ConnectorData) {
-        node = std::make_unique<Connector>(applicationContext);
     }
     else if (treeType == ValueTreeIdentifiers::ModulatorData
           || treeType == ValueTreeIdentifiers::ModulatorRootData) {
@@ -235,19 +232,33 @@ Node* NodeCanvas::instantiateNodeFromTree(const juce::ValueTree& nodeValueTree)
 void NodeCanvas::addNodeToCanvas(int nodeId)
 {
     juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
+    juce::ValueTree nodeParent = ValueTreeState::getNodeParent(nodeId);
+
     jassert(nodeValueTree.isValid());
 
     Node* childNode = instantiateNodeFromTree(nodeValueTree);
-
-    juce::ValueTree nodeParent = ValueTreeState::getNodeParent(nodeId);
 
     if (nodeParent.isValid()) {
         int parentNodeId = nodeParent.getProperty(ValueTreeIdentifiers::Id);
         auto parentNodePair = nodeMap.find(parentNodeId);
         if (parentNodePair != nodeMap.end()) {
-            childNode->nodeColour = parentNodePair->second->nodeColour;
-            addLinePoints(parentNodePair->second, childNode);
-            updateLinePoints(childNode);
+            Node* parentNode = parentNodePair->second;
+
+            Node* startNode;
+            Node* endNode;
+
+            if (nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
+                startNode = childNode;
+                endNode   = parentNode;
+            }
+            else {
+                startNode = parentNode;
+                endNode   = childNode;
+            }
+
+            endNode->nodeColour = startNode->nodeColour;
+            addLinePoints(startNode, endNode);
+            updateLinePoints(endNode);
         }
     }
 
@@ -259,18 +270,6 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
     }
 
     applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);
-
-    int rootNodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
-    juce::ValueTree connectorParent = ValueTreeState::getNodeParent(rootNodeId);
-
-    if (connectorParent.isValid()) {
-        int connectorRootId = connectorParent.getProperty(ValueTreeIdentifiers::RootNodeId);
-        if (connectorRootId != 0) {
-            juce::ValueTree connectorRootTree = ValueTreeState::getNode(connectorRootId);
-            if (connectorRootTree.isValid())
-                applicationContext.rtGraphBuilder->makeRTGraph(connectorRootTree);
-        }
-    }
 }
 
 void NodeCanvas::removeNodeFromCanvas(int nodeId)
@@ -353,7 +352,7 @@ void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
     arrow->toBack();
     arrow->setInterceptsMouseClicks(false,false);
 
-    if (parentMidiNoteData.isValid() && childNode->nodeType != NodeType::Connector && childNode->nodeType != NodeType::Root) {
+    if (parentMidiNoteData.isValid() && childNode->nodeType != NodeType::Root) {
         arrow->bindToProperty(parentMidiNoteData, ValueTreeIdentifiers::MidiDuration);
     }
 

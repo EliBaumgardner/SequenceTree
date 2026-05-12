@@ -14,6 +14,9 @@ public:
         std::unordered_map<int, int> counts;
         int target = 0;
         int last   = 0;
+
+        int alternativeTarget = -1;
+        int alternativeLast   = -1;
     };
 
     Walker primary;
@@ -23,13 +26,15 @@ public:
 
     bool isFirstEvent = false;
     bool isLooping    = false;
+
     int  rootId            = 0;
     int  referenceTargetId = 0;
-    int  loopCount         = 0;  // incremented each time the traversal resets to root
-    int  loopLimit         = 0;  // 0 = loop infinitely; N > 0 = stop after N full loops
+
+    int  loopCount         = 0;
+    int  loopLimit         = 0;
 
     enum class TraversalState { Start, Active, End, Reset };
-    enum class EventType      { Node, Connector, Modulator };
+    enum class EventType      { Node, Modulator,  };
 
     TraversalState state = TraversalState::Start;
 
@@ -46,6 +51,10 @@ public:
         int  referenceOffId = -1;
         int  rootForReset   = -1;
 
+        int leftAlternativeId    = -1;
+        int enteredAlternativeId = -1;
+        int referenceOffAlternativeId = -1;
+
         bool pushCounts        = false;
         int  countSourceNodeId = -1;
         int  countSourceCount  = 0;
@@ -55,13 +64,17 @@ public:
 
     StepResult handleNodeEvent(NodeMap& nodes);
 
+    void advanceAlternative(NodeMap &nodes, int count, int chosenNodeId);
+
     void advance(NodeMap& nodes);
     void advanceModulator(NodeMap& nodes);
+    int advanceAlternativeNode(NodeMap& nodes);
+
     RTNode* peekNextTarget(NodeMap& nodes);
 
     using ChildPredicate = bool (*)(RTNode::NodeType);
-    static int selectNextChild(const NodeMap& nodes, int parentId, int parentCount,
-                               ChildPredicate isEligible);
+    static int selectNextChild(const NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible);
+
     std::vector<int> peekCrossTreeNode(NodeMap& nodes);
     RTNode* peekModulators(NodeMap& nodes);
 
@@ -76,7 +89,9 @@ public:
 
     bool shouldTraverse() const;
 
-    void resetCounts() { primary.counts.clear(); }
+    void resetCounts() {
+        primary.counts.clear();
+    }
 };
 
 using TraversalMap = std::unordered_map<int, TraversalLogic>;

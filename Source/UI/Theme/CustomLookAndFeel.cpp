@@ -398,52 +398,10 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     arrowEndX -= dirX * float(childRadius);
     arrowEndY -= dirY * float(childRadius);
 
-    bool isConnectorArrow  = a->nodeType == NodeType::Connector || b->nodeType == NodeType::Connector;
     bool isRootTargetArrow = b->nodeType == NodeType::Root;
 
     juce::Path linePath;
 
-    if (a->nodeType == NodeType::Connector)
-    {
-        float connectorDirX = std::cos(a->incomingAngle);
-        float connectorDirY = std::sin(a->incomingAngle);
-
-        {
-            float roughX = arrowEndX - parentCenterX;
-            float roughY = arrowEndY - parentCenterY;
-            float roughLen = std::sqrt(roughX * roughX + roughY * roughY);
-            if (roughLen > 1.0f && connectorDirX * (roughX / roughLen) + connectorDirY * (roughY / roughLen) < 0.0f)
-            {
-                connectorDirX = roughX / roughLen;
-                connectorDirY = roughY / roughLen;
-            }
-        }
-
-        float startX = parentCenterX + float(parentRadius) * connectorDirX;
-        float startY = parentCenterY + float(parentRadius) * connectorDirY;
-
-        float toEndX   = arrowEndX - startX;
-        float toEndY   = arrowEndY - startY;
-        float toEndLen = std::sqrt(toEndX * toEndX + toEndY * toEndY);
-
-        if (toEndLen < 1.0f) return;
-
-        float toEndDirX     = toEndX / toEndLen;
-        float toEndDirY     = toEndY / toEndLen;
-        float tangentLength = toEndLen * 0.4f;
-
-        float cp1X = startX + tangentLength * connectorDirX;
-        float cp1Y = startY + tangentLength * connectorDirY;
-        float cp2X = arrowEndX - tangentLength * toEndDirX;
-        float cp2Y = arrowEndY - tangentLength * toEndDirY;
-
-        linePath.startNewSubPath(startX, startY);
-        linePath.cubicTo(cp1X, cp1Y, cp2X, cp2Y, arrowEndX, arrowEndY);
-
-        dirX = toEndDirX;
-        dirY = toEndDirY;
-    }
-    else
     {
         float dx = arrowEndX - parentCenterX;
         float dy = arrowEndY - parentCenterY;
@@ -483,7 +441,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         }
     }
 
-    if (isConnectorArrow || isRootTargetArrow || nodeArrow.isGhost)
+    if (isRootTargetArrow || nodeArrow.isGhost)
     {
         juce::PathStrokeType stroke(2.0f);
         float dashLengths[] = { 6.0f, 10.0f };
@@ -686,20 +644,6 @@ void CustomLookAndFeel::drawNodeButton(juce::Graphics &g, const NodeButton& node
         g.setColour(buttonColour);
     }
     g.fillEllipse(bounds);
-}
-
-void CustomLookAndFeel::drawTraverserButton(juce::Graphics& g, const ConnectorButton& traverserButton)
-{
-    // auto bounds = traverserButton.getLocalBounds().toFloat().reduced(2.0f);
-    // g.setColour(traverserButton.isSelected ? lightColour3.darker() : lightColour3);
-    //
-    // juce::Path triangle;
-    // triangle.startNewSubPath(bounds.getCentreX(), bounds.getY());
-    // triangle.lineTo(bounds.getRight(), bounds.getBottom());
-    // triangle.lineTo(bounds.getX(), bounds.getBottom());
-    // triangle.closeSubPath();
-    //
-    // g.fillPath(triangle);
 }
 
 void CustomLookAndFeel::drawModulatorButton(juce::Graphics &g, const ModulatorButton &modulatorButton) {

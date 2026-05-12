@@ -8,8 +8,7 @@ NoteScheduler::NoteScheduler(AudioUIBridge& b)
 
 bool NoteScheduler::isNodeAudible(RTNode::NodeType nodeType)
 {
-    return nodeType != RTNode::NodeType::Connector
-        && nodeType != RTNode::NodeType::ModulatorRoot;
+    return nodeType != RTNode::NodeType::ModulatorRoot;
 }
 
 void NoteScheduler::scheduleNote(const RTNode& node, int traversalId, int sample,
@@ -28,9 +27,10 @@ void NoteScheduler::scheduleNote(const RTNode& node, int traversalId, int sample
 
     if (!isConnectionTrigger && !node.notes.empty())
     {
-        const RTNote& noteData = node.notes[0];
-        newNote.event.pitch    = static_cast<int>(noteData.pitch);
-        newNote.event.velocity = static_cast<int>(noteData.velocity);
+        const RTNote& noteData       = node.notes[0];
+        newNote.event.pitch          = static_cast<int>(noteData.pitch);
+        newNote.event.velocity       = static_cast<int>(noteData.velocity);
+        newNote.event.midiChannel    = juce::jlimit(1, 16, noteData.midiChannel);
 
         if (newNote.event.velocity <= 0) {
             newNote.event.velocity = 63;
@@ -40,7 +40,7 @@ void NoteScheduler::scheduleNote(const RTNode& node, int traversalId, int sample
     activeNotes.push_back(newNote);
 
     if (!isConnectionTrigger && isNodeAudible(node.nodeType)) {
-        midiMessages.addEvent(juce::MidiMessage::noteOn(1, newNote.event.pitch,
+        midiMessages.addEvent(juce::MidiMessage::noteOn(newNote.event.midiChannel, newNote.event.pitch,
                               static_cast<juce::uint8>(newNote.event.velocity)), sample);
     }
 }
@@ -48,7 +48,7 @@ void NoteScheduler::scheduleNote(const RTNode& node, int traversalId, int sample
 void NoteScheduler::sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample)
 {
     if (isNodeAudible(note.noteNode.nodeType) && !note.isConnectionTrigger)
-        midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), sample);
+        midiMessages.addEvent(juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch), sample);
 }
 
 void NoteScheduler::removeNote(int index)
@@ -69,5 +69,5 @@ void NoteScheduler::clearTraversalNotes(int traversalId)
 void NoteScheduler::handleOrphanNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages)
 {
     if (isNodeAudible(note.noteNode.nodeType) && !note.isConnectionTrigger)
-        midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), 0);
+        midiMessages.addEvent(juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch), 0);
 }

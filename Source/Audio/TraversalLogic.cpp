@@ -10,6 +10,10 @@ static bool isModulatorChild(RTNode::NodeType t) {
     return t == RTNode::NodeType::Modulator || t == RTNode::NodeType::ModulatorRoot;
 }
 
+static bool isAlternativeChild(RTNode::NodeType t) {
+    return t == RTNode::NodeType::Alternative;
+}
+
 void TraversalLogic::advanceModulator(NodeMap& nodes) {
 
     if (activeModulatorRootId == -1 || modulator.target == -1) {
@@ -35,6 +39,36 @@ void TraversalLogic::advanceModulator(NodeMap& nodes) {
     }
 }
 
+int TraversalLogic::advanceAlternativeNode(NodeMap &nodes) {
+    int targetId = primary.target;
+    auto targetIt = nodes.find(targetId);
+
+    int activeAlternativeNodeId = targetIt->second.activeAlternativeId;
+
+    if (targetIt == nodes.end()) {
+        return 0;
+    }
+
+    int count = primary.counts[primary.target];
+    count = count + 1;
+
+    int chosen = 0;
+
+    if (activeAlternativeNodeId == -1) {
+        chosen = selectNextChild(nodes, targetId,count, &isAlternativeChild);
+        targetIt->second.activeAlternativeId = chosen;
+    }
+    else {
+        chosen = selectNextChild(nodes, activeAlternativeNodeId, count, &isAlternativeChild);
+        targetIt->second.activeAlternativeId = chosen;
+    }
+
+    if (chosen == -1) {
+        bridge->pushArrowReset(targetId);
+    }
+
+    return chosen;
+}
 
 int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int parentCount,
                                     ChildPredicate isEligible)
@@ -53,6 +87,9 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
         if (!isEligible(child.nodeType)) continue;
         if (child.countLimit <= 0) continue;
 
+        auto durIt = it->second.durationMap.find(childId);
+        if (durIt != it->second.durationMap.end() && durIt->second == 0) continue;
+
         if (parentCount % child.countLimit == 0 && child.countLimit > maxLimit) {
             chosen   = childId;
             maxLimit = child.countLimit;
@@ -70,22 +107,61 @@ static bool isAudibleChild(RTNode::NodeType t) {
     return t == RTNode::NodeType::Node;
 }
 
+void TraversalLogic::advanceAlternative(NodeMap& nodes, int count, int chosenNodeId) {
+    auto nextTargetIt = nodes.find(chosenNodeId);
+    if (nextTargetIt == nodes.end()) return;
+
+    RTNode& nextTargetNode = nextTargetIt->second;
+
+    if (nextTargetNode.alternativeRootId == -1) {
+        primary.alternativeTarget          = -1;
+        nextTargetNode.activeAlternativeId = -1;
+        return;
+    }
+
+    int currentAltId = nextTargetNode.activeAlternativeId;
+    int searchFrom   = (currentAltId == -1) ? chosenNodeId : currentAltId;
+    int chosen       = selectNextChild(nodes, searchFrom, count, &isAlternativeChild);
+
+    nextTargetNode.activeAlternativeId = chosen;
+    primary.alternativeTarget          = chosen;
+}
+
 void TraversalLogic::advance(NodeMap& nodes)
 {
-    referenceTargetId = primary.last;
-    primary.last      = primary.target;
-    int count         = ++primary.counts[primary.target];
+    int targetId            = primary.target;
+    int count               = ++primary.counts[targetId];
+    int chosenNodeId        = -1;
 
-    auto targetIt = nodes.find(primary.target);
+    referenceTargetId       = primary.last;
+    primary.last            = targetId;
+    primary.alternativeLast = primary.alternativeTarget;
 
+    auto targetIt = nodes.find(targetId);
     if (targetIt == nodes.end() || targetIt->second.children.empty()) {
         state = isLooping ? TraversalState::Reset : TraversalState::End;
         return;
     }
 
-    int chosen = selectNextChild(nodes, primary.target, count, &isAdvanceableChild);
-    if (chosen != -1) {
-        primary.target = chosen;
+    chosenNodeId = selectNextChild(nodes, targetId, count, &isAdvanceableChild);
+
+    if (chosenNodeId != -1) {
+        auto nextTargetIt = nodes.find(chosenNodeId);
+        if (nextTargetIt == nodes.end()) {
+            primary.alternativeTarget = -1;
+        }
+        else {
+            const RTNode& nextTargetNode = nextTargetIt->second;
+            primary.target = chosenNodeId;
+
+            if (nextTargetNode.alternativeRootId != -1) {
+                int nextCount = (primary.counts.count(chosenNodeId) ? primary.counts.at(chosenNodeId) : 0) + 1;
+                advanceAlternative(nodes, nextCount, chosenNodeId);
+            }
+            else {
+                primary.alternativeTarget = -1;
+            }
+        }
     }
 
     if (primary.target == primary.last) {
@@ -111,34 +187,32 @@ std::vector<int> TraversalLogic::peekCrossTreeNode(NodeMap& nodes)
 {
     std::vector<int> traverserIds;
 
-    auto targetIterator = nodes.find(primary.target);
-    if (targetIterator == nodes.end()) {
-        return traverserIds;
-    }
-
     auto countIterator = primary.counts.find(primary.target);
     int targetCount = (countIterator != primary.counts.end() ? countIterator->second : 0) + 1;
 
-    for (int childId : targetIterator->second.children) {
-        auto childIterator = nodes.find(childId);
-        if (childIterator == nodes.end()) {
-            continue;
-        }
+    auto scanHost = [&](int hostId) {
+        auto hostIterator = nodes.find(hostId);
+        if (hostIterator == nodes.end()) return;
 
-        RTNode::NodeType childNodeType = childIterator->second.nodeType;
-        const RTNode& childNode = childIterator->second;
+        for (int childId : hostIterator->second.children) {
+            auto childIterator = nodes.find(childId);
+            if (childIterator == nodes.end()) continue;
 
-        bool isCrossTreeNode = false;
+            const RTNode& childNode = childIterator->second;
 
-        if (childNodeType == RTNode::NodeType::RootNode ) {
-            if (childNode.nodeID != rootId) {
-                isCrossTreeNode = true;
+            if (childNode.nodeType != RTNode::NodeType::RootNode) continue;
+            if (childNode.nodeID == rootId) continue;
+            if (childNode.countLimit <= 0) continue;
+
+            if (targetCount % childNode.countLimit == 0) {
+                traverserIds.push_back(childId);
             }
         }
+    };
 
-        if (isCrossTreeNode && targetCount % childNode.countLimit == 0) {
-            traverserIds.push_back(childId);
-        }
+    scanHost(primary.target);
+    if (primary.alternativeTarget != -1) {
+        scanHost(primary.alternativeTarget);
     }
 
     return traverserIds;
@@ -187,7 +261,8 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(NodeMap& nodes) {
         case TraversalState::Active: {
             advance(nodes);
 
-            const int leftId          = primary.last;
+            const int leftAlternativeId = primary.alternativeLast;
+            const int leftId            = primary.last;
             const int leftParentCount = primary.counts[leftId];
 
             result.pushCounts        = true;
@@ -196,9 +271,13 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(NodeMap& nodes) {
 
             switch (state) {
                 case TraversalState::Active: {
-                    result.kind      = StepResult::Kind::Advanced;
-                    result.leftId    = leftId;
-                    result.enteredId = primary.target;
+                    result.kind                 = StepResult::Kind::Advanced;
+
+                    result.leftId               = leftId;
+                    result.leftAlternativeId    = leftAlternativeId;
+
+                    result.enteredId            = primary.target;
+                    result.enteredAlternativeId = primary.alternativeTarget;
                     break;
                 }
                 case TraversalState::Reset: {
@@ -207,20 +286,25 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(NodeMap& nodes) {
                         state          = TraversalState::End;
                         result.kind    = StepResult::Kind::Ended;
                         result.leftId  = primary.target;
+                        result.leftAlternativeId = primary.alternativeTarget;
                     } else {
-                        result.kind         = StepResult::Kind::LoopedToRoot;
-                        result.leftId       = primary.target;
-                        result.enteredId    = rootId;
-                        result.rootForReset = rootId;
-                        primary.target      = rootId;
-                        state               = TraversalState::Active;
+                        result.kind              = StepResult::Kind::LoopedToRoot;
+                        result.leftId            = primary.target;
+                        result.leftAlternativeId = primary.alternativeTarget;
+
+                        result.enteredId         = rootId;
+                        result.rootForReset      = rootId;
+                        primary.target           = rootId;
+                        primary.alternativeTarget = -1;
+                        state                    = TraversalState::Active;
                     }
                     break;
                 }
                 case TraversalState::End: {
-                    result.kind           = StepResult::Kind::Ended;
-                    result.leftId         = primary.target;
-                    result.referenceOffId = referenceTargetId;
+                    result.kind              = StepResult::Kind::Ended;
+                    result.leftId            = primary.target;
+                    result.leftAlternativeId = primary.alternativeTarget;
+                    result.referenceOffId    = referenceTargetId;
                     break;
                 }
                 default: break;
@@ -228,8 +312,9 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(NodeMap& nodes) {
             return result;
         }
         case TraversalState::End: {
-            result.kind           = StepResult::Kind::Ended;
-            result.leftId         = primary.target;
+            result.kind              = StepResult::Kind::Ended;
+            result.leftId            = primary.target;
+            result.leftAlternativeId = primary.alternativeTarget;
             result.referenceOffId = referenceTargetId;
             return result;
         }
