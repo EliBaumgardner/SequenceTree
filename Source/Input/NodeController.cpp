@@ -13,7 +13,6 @@
 #include "../UI/Node/NodeArrow.h"
 #include "NodeController.h"
 #include "../UI/Node/Modulator.h"
-#include "../UI/Node/Connector.h"
 #include "../UI/Node/NodeFactory.h"
 #include "../UI/Canvas/DynamicPort.h"
 #include "../Graph/ValueTreeIdentifiers.h"
@@ -172,7 +171,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
             }
         }
 
-        if(e.mods.isRightButtonDown() && e.mods.isShiftDown()) {
+       if(e.mods.isRightButtonDown() && e.mods.isShiftDown()) {
 
             undoManager->beginNewTransaction();
             NodeFactory::destroyNode(nodeId, undoManager);
@@ -183,7 +182,8 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     }
 }
 
-void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree) {
+void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree)
+{
     NodeCanvas* canvas = applicationContext.canvas;
 
     if (!canvas->gridOriginSet) {
@@ -246,14 +246,14 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
             return;
         }
 
-        if (!e.mods.isShiftDown() && !draggedNodeTree.isValid()) {
+        if (!e.mods.isShiftDown() && !e.mods.isCtrlDown() && !draggedNodeTree.isValid()) {
             handleNodeDrag(undoManager, nodeId, newPosition);
             return;
         }
 
         if (isDragStart) {
             isDragStart = false;
-            handleNodeDragStart(undoManager, node, nodeId, newPosition);
+            handleNodeDragStart(undoManager, node, nodeId, newPosition, e.mods);
             return;
         }
 
@@ -264,7 +264,7 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
     }
 }
 
-void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *node, int nodeId, NodePosition newPosition)
+void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *node, int nodeId, NodePosition newPosition, const juce::ModifierKeys& mods)
 {
     juce::Identifier nodeType =  node->nodeValueTree.getType();
 
@@ -278,24 +278,19 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
 
     snapSourceNodeId = nodeId;
 
+    const bool makeAlt = mods.isCtrlDown();
+
     if (nodeControllerMode == NodeControllerMode::Node) {
-        if (auto parent = dynamic_cast<Connector*>(node)) {
-            draggedNodeTree = NodeFactory::createRootNode(nodeId, newPosition, undoManager);
-        }
-        else {
+        if (makeAlt)
+            draggedNodeTree = NodeFactory::createAlternativeNode(nodeId, newPosition, undoManager);
+        else
             draggedNodeTree = NodeFactory::createNode(nodeId, newPosition, undoManager);
-        }
-    }
-    else if (nodeControllerMode == NodeControllerMode::Connector) {
-        draggedNodeTree = NodeFactory::createConnector(nodeId, newPosition, undoManager);
     }
     else if (nodeControllerMode == NodeControllerMode::Modulator) {
-        if (nodeType == ValueTreeIdentifiers::ModulatorRootData || nodeType == ValueTreeIdentifiers::ModulatorData) {
+        if (nodeType == ValueTreeIdentifiers::ModulatorRootData || nodeType == ValueTreeIdentifiers::ModulatorData)
             draggedNodeTree = NodeFactory::createModulator(nodeId, newPosition, undoManager);
-        }
-        else {
+        else
             draggedNodeTree = NodeFactory::createModulatorRoot(nodeId, newPosition, undoManager);
-        }
     }
 }
 

@@ -9,7 +9,7 @@ void NodeCanvasTreeListener::valueTreeChildAdded(juce::ValueTree& parent, juce::
     if (parent.getType() == ValueTreeIdentifiers::NodeMap)
     {
         jassert(child.getType() == ValueTreeIdentifiers::NodeData
-            || child.getType() == ValueTreeIdentifiers::ConnectorData
+            || child.getType() == ValueTreeIdentifiers::AlternativeNodeData
             || child.getType() == ValueTreeIdentifiers::RootNodeData
             || child.getType() == ValueTreeIdentifiers::ModulatorRootData
             || child.getType() == ValueTreeIdentifiers::ModulatorData);
@@ -43,7 +43,7 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
         || propertyIdentifier == ValueTreeIdentifiers::Radius)
     {
         jassert(nodeType == ValueTreeIdentifiers::NodeData
-            || nodeType == ValueTreeIdentifiers::ConnectorData
+            || nodeType == ValueTreeIdentifiers::AlternativeNodeData
             || nodeType == ValueTreeIdentifiers::RootNodeData
             || nodeType == ValueTreeIdentifiers::ModulatorRootData
             || nodeType == ValueTreeIdentifiers::ModulatorData);

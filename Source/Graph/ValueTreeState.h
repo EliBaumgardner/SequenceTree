@@ -23,11 +23,10 @@ public:
     static juce::ValueTree addNodeTree     (juce::UndoManager* undoManager);
     static juce::ValueTree addRootNode     (juce::UndoManager* undoManager);
 
-    static juce::ValueTree addRootNode     (int parentNodeId, juce::UndoManager* undoManager);
-    static juce::ValueTree addNode         (int parentNodeId, juce::UndoManager* undoManager);
-    static juce::ValueTree addConnector    (int parentNodeId, juce::UndoManager* undoManager);
-    static juce::ValueTree addModulatorRoot(int parentNodeId, juce::UndoManager* undoManager);
-    static juce::ValueTree addModulator    (int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addNode            (int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addAlternativeNode (int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addModulatorRoot   (int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addModulator       (int parentNodeId, juce::UndoManager* undoManager);
 
     static void connectNodes   (int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
     static void removeRootNode (int rootNodeId, juce::UndoManager* undoManager);
@@ -44,8 +43,6 @@ public:
     static juce::ValueTree getMidiNotes    (int nodeId);
     static juce::ValueTree getNodeTree     (int treeId);
 
-    static juce::ValueTree isConnectedToModulator(int nodeId);
-
     static juce::ValueTree canvasData;
     static juce::ValueTree nodeTreeIds;
     static juce::ValueTree nodeMap;
@@ -57,6 +54,7 @@ public:
     static inline int defaultNodeCountLimit {1};
     static inline int defaultRootLoopLimit  {0};  // 0 = loop infinitely
     static inline int defaultModAmount      {1};
+    static inline int defaultMidiChannel   {1};
 };
 
 

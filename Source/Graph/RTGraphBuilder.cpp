@@ -70,13 +70,15 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
         juce::ValueTree nodeParentValueTree = ValueTreeState::getNodeParent(currentValueTree.getProperty(ValueTreeIdentifiers::Id));
 
         juce::Identifier nodeType = currentValueTree.getType();
-        juce::Identifier nodeParentType = nodeParentValueTree.getType();
 
         stack.pop_back();
 
         int nodeId = currentValueTree.getProperty(ValueTreeIdentifiers::Id);
         int graphId = currentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
         int countLimit = currentValueTree.getProperty(ValueTreeIdentifiers::CountLimit);
+
+        bool isAlternativeNode = (nodeType == ValueTreeIdentifiers::AlternativeNodeData);
+
 
         if(tempNodeMap.count(nodeId) == false){
 
@@ -88,11 +90,30 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
             rtNode.graphID = graphId;
             rtNode.nodeID = nodeId;
 
+            rtNode.isAlternativeNode = isAlternativeNode;
+
             if (nodeParentValueTree.isValid()) {
-                rtNode.parentId = nodeParentValueTree.getProperty(ValueTreeIdentifiers::Id);
-                auto parentIt = rtGraph->nodeMap.find(rtNode.parentId);
+                int candidateParentId = nodeParentValueTree.getProperty(ValueTreeIdentifiers::Id);
+                auto parentIt = rtGraph->nodeMap.find(candidateParentId);
+
                 if (parentIt != rtGraph->nodeMap.end()) {
+                    rtNode.parentId = candidateParentId;
                     parentNode = &parentIt->second;
+
+                    if (isAlternativeNode) {
+                        if (parentNode->nodeType != RTNode::NodeType::Alternative) {
+                            rtNode.isAlternativeRoot = true;
+                            parentNode->alternativeRootId = nodeId;
+                            rtNode.alternativeRootId = nodeId;
+                        }
+                        else if (parentNode->nodeType == RTNode::NodeType::Alternative) {
+                            rtNode.isAlternativeNode = true;
+                            rtNode.alternativeRootId = parentNode->alternativeRootId;
+                        }
+                    }
+                    if (parentNode->isConnectedToModulator == true) {
+                        rtNode.isConnectedToModulator = true;
+                    }
                 }
             }
 
@@ -110,11 +131,11 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
             if (nodeType == ValueTreeIdentifiers::NodeData) {
                 rtNode.nodeType = RTNode::NodeType::Node;
             }
+            if (nodeType == ValueTreeIdentifiers::AlternativeNodeData) {
+                rtNode.nodeType = RTNode::NodeType::Alternative;
+            }
             if (nodeType == ValueTreeIdentifiers::RootNodeData) {
                 rtNode.nodeType = RTNode::NodeType::RootNode;
-            }
-            if (nodeType == ValueTreeIdentifiers::ConnectorData) {
-                rtNode.nodeType = RTNode::NodeType::Connector;
             }
             if (nodeType == ValueTreeIdentifiers::ModulatorRootData) {
                 rtNode.nodeType = RTNode::NodeType::ModulatorRoot;
@@ -122,28 +143,21 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
             if (nodeType == ValueTreeIdentifiers::ModulatorData) {
                 rtNode.nodeType = RTNode::NodeType::Modulator;
             }
-            if (nodeParentType == ValueTreeIdentifiers::ConnectorData) {
-                rtNode.graphID = rtNode.nodeID;
-            }
 
             for (int i = 0; i < nodeMidiNotes.getNumChildren(); i++) {
                 juce::ValueTree note = nodeMidiNotes.getChild(i);
                 RTNote rtNote;
 
-                int pitch   = note.getProperty(ValueTreeIdentifiers::MidiPitch);
-                int velocity= note.getProperty(ValueTreeIdentifiers::MidiVelocity);
-                int duration= note.getProperty(ValueTreeIdentifiers::MidiDuration);
+                int pitch       = note.getProperty(ValueTreeIdentifiers::MidiPitch);
+                int velocity    = note.getProperty(ValueTreeIdentifiers::MidiVelocity);
+                int duration    = note.getProperty(ValueTreeIdentifiers::MidiDuration);
+                int midiChannel = note.getProperty(ValueTreeIdentifiers::MidiChannel, ValueTreeState::defaultMidiChannel);
 
-                rtNote.pitch    = pitch;
-                rtNote.velocity = velocity;
-                rtNote.duration = duration;
+                rtNote.pitch       = pitch;
+                rtNote.velocity    = velocity;
+                rtNote.duration    = duration;
+                rtNote.midiChannel = juce::jlimit(1, 16, midiChannel);
                 rtNode.notes.push_back(std::move(rtNote));
-            }
-
-            if (parentNode != nullptr) {
-                if (parentNode->isConnectedToModulator == true) {
-                    rtNode.isConnectedToModulator = true;
-                }
             }
 
             for (int i = 0; i < nodeValueTreeChildren.getNumChildren(); i++) {
@@ -157,6 +171,10 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
 
                 jassert(childDataTree.isValid());
                 stack.push_back(childDataTree);
+            }
+
+            if (nodeValueTreeChildren.getNumChildren() == 0) {
+                rtNode.isLeafNode = true;
             }
 
             rtGraph->nodeMap[nodeId] = std::move(rtNode);

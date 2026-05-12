@@ -57,14 +57,17 @@ void Node::paint(juce::Graphics& g)
 void Node::resized()
 {
     auto editorArea = getLocalBounds().reduced(10.0f);
+    int  buttonH    = juce::jmax(2, (int)(editorArea.getHeight() * 0.2f));
 
-    upButton.setBounds(editorArea.removeFromTop(4.0f));
-    downButton.setBounds(editorArea.removeFromBottom(4.0f));
+    upButton.setBounds(editorArea.removeFromTop(buttonH));
+    downButton.setBounds(editorArea.removeFromBottom(buttonH));
 
     nodeTextEditor->setBounds(editorArea);
     nodeTextEditor->setJustification(juce::Justification::centred);
 
-    countEditor.setBounds(getWidth() - 18, 0, 18, 12);
+    int cw = (int)(getWidth()  * 0.45f);
+    int ch = (int)(getHeight() * 0.30f);
+    countEditor.setBounds(getWidth() - cw, 0, cw, ch);
 }
 
 void Node::setHoverVisual(bool isHovered)
@@ -137,6 +140,10 @@ void Node::setDisplayMode(NodeDisplayMode mode)
 
         case NodeDisplayMode::CountLimit:
             nodeTextEditor->bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
+            break;
+
+        case NodeDisplayMode::Channel:
+            nodeTextEditor->bindEditor(midiNoteData, ValueTreeIdentifiers::MidiChannel);
             break;
 
         default:

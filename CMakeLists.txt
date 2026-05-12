@@ -56,7 +56,6 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Node/NodeTextEditor.cpp
         Source/UI/Node/ValueEditor.cpp
         Source/UI/Node/Modulator.cpp
-        Source/UI/Node/Connector.cpp
         Source/UI/Theme/CustomLookAndFeel.cpp
         Source/UI/Theme/CustomTextEditor.cpp
         Source/UI/Theme/CustomTextCaret.cpp

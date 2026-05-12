@@ -72,37 +72,15 @@ juce::ValueTree ValueTreeState::addRootNode(juce::UndoManager* undoManager)
     return rootNode;
 }
 
-juce::ValueTree ValueTreeState::addRootNode(int parentNodeId, juce::UndoManager* undoManager)
-{
-    juce::ValueTree parentNode = getNode(parentNodeId);
-
-    jassert(parentNode.isValid());
-    jassert(parentNode.getType() == ValueTreeIdentifiers::ConnectorData );
-    jassert(parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getType() == ValueTreeIdentifiers::NodeChildrenIds);
-
-    juce::ValueTree rootNode = addRootNode(undoManager);
-    int rootId = rootNode.getProperty(ValueTreeIdentifiers::Id);
-
-    juce::ValueTree connectorChildId {ValueTreeIdentifiers::NodeId};
-
-    connectorChildId.setProperty(ValueTreeIdentifiers::Id,rootId,undoManager);
-
-    parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).addChild(connectorChildId, -1, undoManager);
-
-    return rootNode;
-}
-
 juce::ValueTree ValueTreeState::addNode(int parentNodeId, juce::UndoManager* undoManager)
 {
     juce::ValueTree parentNode = getNode(parentNodeId);
 
     jassert(parentNode.isValid());
-    jassert(parentNode.getType() == ValueTreeIdentifiers::NodeData || parentNode.getType() == ValueTreeIdentifiers::RootNodeData || parentNode.getType() == ValueTreeIdentifiers::ConnectorData);
+    jassert(parentNode.getType() == ValueTreeIdentifiers::NodeData
+         || parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData
+         || parentNode.getType() == ValueTreeIdentifiers::RootNodeData);
     jassert(parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getType() == ValueTreeIdentifiers::NodeChildrenIds);
-
-    if (parentNode.getType() == ValueTreeIdentifiers::ConnectorData) {
-        return addRootNode(parentNodeId, undoManager);
-    }
 
     int rootId = parentNode.getProperty(ValueTreeIdentifiers::RootNodeId);
     nodeIdIncrement = nodeIdIncrement + 1;
@@ -128,31 +106,38 @@ juce::ValueTree ValueTreeState::addNode(int parentNodeId, juce::UndoManager* und
     return node;
 }
 
-juce::ValueTree ValueTreeState::addConnector(int parentNodeId,juce::UndoManager* undoManager)
+juce::ValueTree ValueTreeState::addAlternativeNode(int parentNodeId, juce::UndoManager* undoManager)
 {
     juce::ValueTree parentNode = getNode(parentNodeId);
 
     jassert(parentNode.isValid());
-    jassert(parentNode.getType() == ValueTreeIdentifiers::NodeData || parentNode.getType() == ValueTreeIdentifiers::RootNodeData || parentNode.getType() == ValueTreeIdentifiers::ConnectorData);
+    jassert(parentNode.getType() == ValueTreeIdentifiers::NodeData
+         || parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData
+         || parentNode.getType() == ValueTreeIdentifiers::RootNodeData);
+    jassert(parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getType() == ValueTreeIdentifiers::NodeChildrenIds);
 
-    juce::ValueTree connectorId {ValueTreeIdentifiers::NodeId};
-    juce::ValueTree connector   {ValueTreeIdentifiers::ConnectorData};
-    juce::ValueTree connectorChildrenIds {ValueTreeIdentifiers::NodeChildrenIds};
-
+    int rootId = parentNode.getProperty(ValueTreeIdentifiers::RootNodeId);
     nodeIdIncrement = nodeIdIncrement + 1;
 
-    connector.setProperty(ValueTreeIdentifiers::Id,nodeIdIncrement,undoManager);
-    connector.setProperty(ValueTreeIdentifiers::RootNodeId,parentNode.getProperty(ValueTreeIdentifiers::RootNodeId),undoManager);
-    connector.setProperty(ValueTreeIdentifiers::Count,defaultNodeCount,undoManager);
-    connector.setProperty(ValueTreeIdentifiers::CountLimit,defaultNodeCountLimit,undoManager);
+    juce::ValueTree nodeId           {ValueTreeIdentifiers::NodeId};
+    juce::ValueTree node             {ValueTreeIdentifiers::AlternativeNodeData};
+    juce::ValueTree nodeChildrenIds  {ValueTreeIdentifiers::NodeChildrenIds};
+    juce::ValueTree midiNotesData    {ValueTreeIdentifiers::MidiNotesData};
 
-    connectorId.setProperty(ValueTreeIdentifiers::Id,nodeIdIncrement,undoManager);
+    node.addChild(nodeChildrenIds, -1, undoManager);
+    node.addChild(midiNotesData, -1, undoManager);
 
-    connector.addChild(connectorChildrenIds,-1,undoManager);
-    parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).addChild(connectorId, -1, undoManager);
-    nodeMap.addChild(connector,-1, undoManager);
+    node.setProperty(ValueTreeIdentifiers::RootNodeId, rootId, undoManager);
+    node.setProperty(ValueTreeIdentifiers::Id, nodeIdIncrement, undoManager);
+    node.setProperty(ValueTreeIdentifiers::Count, defaultNodeCount, undoManager);
+    node.setProperty(ValueTreeIdentifiers::CountLimit, defaultNodeCountLimit, undoManager);
 
-    return connector;
+    nodeId.setProperty(ValueTreeIdentifiers::Id, nodeIdIncrement, undoManager);
+
+    parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).addChild(nodeId, -1, undoManager);
+    nodeMap.addChild(node, -1, undoManager);
+
+    return node;
 }
 
 juce::ValueTree ValueTreeState::addModulatorRoot(int parentNodeId, juce::UndoManager *undoManager) {
@@ -162,7 +147,9 @@ juce::ValueTree ValueTreeState::addModulatorRoot(int parentNodeId, juce::UndoMan
     int nodeTreeId = nodeTree.getProperty(ValueTreeIdentifiers::Id);
 
     jassert(parentNode.isValid());
-    jassert(parentNode.getType() == ValueTreeIdentifiers::NodeData || parentNode.getType() == ValueTreeIdentifiers::RootNodeData);
+    jassert(parentNode.getType() == ValueTreeIdentifiers::NodeData
+         || parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData
+         || parentNode.getType() == ValueTreeIdentifiers::RootNodeData);
 
     int rootId = nodeTreeId;
 
@@ -178,8 +165,6 @@ juce::ValueTree ValueTreeState::addModulatorRoot(int parentNodeId, juce::UndoMan
     modulatorNode.setProperty(ValueTreeIdentifiers::CountLimit,defaultNodeCountLimit,undoManager);
 
     modulatorNodeId.setProperty(ValueTreeIdentifiers::Id,rootId,undoManager);
-
-    defaultModulatorType.setProperty(ValueTreeIdentifiers::ModAmount,defaultModAmount,undoManager);
 
     modulatorType.addChild(defaultModulatorType, -1, undoManager);
     modulatorNode.addChild(modulatorType,-1,undoManager);
@@ -214,7 +199,6 @@ juce::ValueTree ValueTreeState::addModulator(int parentNodeId, juce::UndoManager
     modulatorNode.setProperty(ValueTreeIdentifiers::RootNodeId,rootId,undoManager);
     modulatorNode.setProperty(ValueTreeIdentifiers::Id,nodeId,undoManager);
     modulatorNodeId.setProperty(ValueTreeIdentifiers::Id,nodeId,undoManager);
-    defaultModulatorType.setProperty(ValueTreeIdentifiers::ModAmount,defaultModAmount,undoManager);
 
     modulatorType.addChild(defaultModulatorType, -1, undoManager);
     modulatorNode.addChild(modulatorType,-1,undoManager);
@@ -296,7 +280,9 @@ void ValueTreeState::setMidiValue(int nodeId,NodeNote note,juce::UndoManager* un
     juce::ValueTree node = getNode(nodeId);
 
     jassert(node.isValid());
-    jassert(node.getType() == ValueTreeIdentifiers::NodeData || node.getType() == ValueTreeIdentifiers::ConnectorData || node.getType() == ValueTreeIdentifiers::ValueTreeIdentifiers::RootNodeData);
+    jassert(node.getType() == ValueTreeIdentifiers::NodeData
+         || node.getType() == ValueTreeIdentifiers::AlternativeNodeData
+         || node.getType() == ValueTreeIdentifiers::RootNodeData);
 
     int pitch = note.pitch;
     int velocity = note.velocity;
@@ -304,9 +290,10 @@ void ValueTreeState::setMidiValue(int nodeId,NodeNote note,juce::UndoManager* un
 
     juce::ValueTree midiNote {ValueTreeIdentifiers::MidiNoteData};
 
-    midiNote.setProperty(ValueTreeIdentifiers::MidiPitch,pitch,undoManager);
-    midiNote.setProperty(ValueTreeIdentifiers::MidiVelocity,velocity,undoManager);
-    midiNote.setProperty(ValueTreeIdentifiers::MidiDuration,duration,undoManager);
+    midiNote.setProperty(ValueTreeIdentifiers::MidiPitch,    pitch,            undoManager);
+    midiNote.setProperty(ValueTreeIdentifiers::MidiVelocity, velocity,         undoManager);
+    midiNote.setProperty(ValueTreeIdentifiers::MidiDuration, duration,         undoManager);
+    midiNote.setProperty(ValueTreeIdentifiers::MidiChannel,  note.midiChannel, undoManager);
 
     node.getChildWithName(ValueTreeIdentifiers::MidiNotesData).addChild(midiNote, -1, undoManager);
 }
@@ -370,12 +357,4 @@ juce::ValueTree ValueTreeState::getMidiNotes(int nodeId) {
     }
 
     return midiNotes;
-}
-
-juce::ValueTree ValueTreeState::isConnectedToModulator(int nodeId) {
-
-    juce::ValueTree node = getNode(nodeId);
-    int isConnectedToModulator = node.getProperty(ValueTreeIdentifiers::IsConnectedToModulator);
-
-    if (isConnectedToModulator == 0) {}
 }

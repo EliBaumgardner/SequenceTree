@@ -32,9 +32,6 @@ public:
 
 private:
 
-    void pushConnectorNotes(int traverserId, juce::MidiBuffer& midiMessages,
-                            int sample, NodeMap& nodes, TraversalMap& traversalMap);
-
     void pushModulatorNotes(int modulatorRootId, juce::MidiBuffer& midiMessages,
                             int sample, NodeMap& nodes, TraversalMap& traversalMap);
 

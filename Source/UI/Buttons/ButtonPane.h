@@ -10,7 +10,6 @@
 #include "../../Util/ApplicationContext.h"
 #include "../../Input/NodeController.h"
 #include "NodeButton.h"
-#include "ConnectorButton.h"
 #include "ModulatorButton.h"
 
 
@@ -28,7 +27,6 @@ class ButtonPane : public juce::Component {
     {
         setLookAndFeel(applicationContext.lookAndFeel);
         addAndMakeVisible(nodeButton);
-        // addAndMakeVisible(connectorButton);
         addAndMakeVisible(modulatorButton);
 
         NodeController& nodeController = *applicationContext.nodeController;
@@ -76,9 +74,6 @@ class ButtonPane : public juce::Component {
 
         int x = static_cast<int>(bounds.getX() + spacing);
         nodeButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
-
-        // x += buttonSize + spacing;
-        // connectorButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
 
         x += buttonSize + spacing;
         modulatorButton.setBounds(x, bounds.getY(), buttonSize,buttonSize);

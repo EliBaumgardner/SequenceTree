@@ -6,6 +6,7 @@
 
 Modulator::Modulator(ApplicationContext& context) : Node(context)
 {
+    nodeType = NodeType::Modulator;
 }
 
 void Modulator::resized() {

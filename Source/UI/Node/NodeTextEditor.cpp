@@ -109,10 +109,15 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
         display = juce::String(velocity);
     }
 
-    if(mode == NodeDisplayMode::CountLimit){
+    if (mode == NodeDisplayMode::CountLimit) {
         display = juce::String((int)value);
     }
-    
+
+    if (mode == NodeDisplayMode::Channel) {
+        int channel = juce::jlimit(1, 16, (int)value);
+        display = juce::String(channel);
+    }
+
     setText(display);
     refit();
 

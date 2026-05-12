@@ -38,7 +38,10 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
   childNode->incomingAngle = std::atan2(dy, dx);
 
   duration = (int)(std::abs(dx) * durationAmount);
-  textEditor.setText(juce::String(duration));
+  if (parentNode->nodeType == NodeType::Modulator)
+      textEditor.setText(juce::String(duration / 10) + "%");
+  else
+      textEditor.setText(juce::String(duration));
 
   int parentRadius = parentNode->getHeight() / 2;
   int childRadius  = childNode->getHeight()  / 2;
@@ -51,50 +54,6 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
 
   juce::Path curvePath;
 
-  if (parentNode->nodeType == NodeType::Connector)
-  {
-    float connDirX = std::cos(parentNode->incomingAngle);
-    float connDirY = std::sin(parentNode->incomingAngle);
-
-    {
-        float roughX = arrowEndX - float(start.x);
-        float roughY = arrowEndY - float(start.y);
-        float roughLen = std::sqrt(roughX * roughX + roughY * roughY);
-        if (roughLen > 1.0f && connDirX * (roughX / roughLen) + connDirY * (roughY / roughLen) < 0.0f)
-        {
-            connDirX = roughX / roughLen;
-            connDirY = roughY / roughLen;
-        }
-    }
-
-    float startX = float(start.x) + float(parentRadius) * connDirX;
-    float startY = float(start.y) + float(parentRadius) * connDirY;
-
-    float toEndX   = arrowEndX - startX;
-    float toEndY   = arrowEndY - startY;
-    float toEndLen = std::sqrt(toEndX*toEndX + toEndY*toEndY);
-
-    if (toEndLen > 1.0f)
-    {
-      float toEndDirX    = toEndX / toEndLen;
-      float toEndDirY    = toEndY / toEndLen;
-      float tangentLen   = toEndLen * 0.4f;
-
-      float cp1X = startX + tangentLen * connDirX;
-      float cp1Y = startY + tangentLen * connDirY;
-      float cp2X = arrowEndX - tangentLen * toEndDirX;
-      float cp2Y = arrowEndY - tangentLen * toEndDirY;
-
-      curvePath.startNewSubPath(startX, startY);
-      curvePath.cubicTo(cp1X, cp1Y, cp2X, cp2Y, arrowEndX, arrowEndY);
-    }
-    else
-    {
-      curvePath.startNewSubPath(float(start.x), float(start.y));
-      curvePath.lineTo(arrowEndX, arrowEndY);
-    }
-  }
-  else
   {
     float absDx = std::abs(dx);
     float absDy = std::abs(dy);

@@ -12,9 +12,10 @@ public:
 
     struct MidiEvent
     {
-        int pitch    = 0;
-        int velocity = 0;
-        int duration = 0;
+        int pitch       = 0;
+        int velocity    = 0;
+        int duration    = 0;
+        int midiChannel = 1;
     };
 
     struct ActiveNote

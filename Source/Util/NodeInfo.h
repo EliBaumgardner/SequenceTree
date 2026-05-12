@@ -15,11 +15,12 @@ struct NodeNote {
     int pitch;
     int velocity;
     int duration;
+    int midiChannel = 1;
 };
 
 enum class ModulationType {Pitch,Velocity,Duration};
-enum class NodeType { Node, Connector, Root, Modulator};
+enum class NodeType { Node, Root, Modulator};
 
-enum class NodeDisplayMode {Pitch, Velocity,Duration,CountLimit};
+enum class NodeDisplayMode {Pitch, Velocity, Duration, CountLimit, Channel};
 
 #endif //SEQUENCETREE_NODEPOSITION_H
