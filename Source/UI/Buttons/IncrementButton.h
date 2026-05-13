@@ -25,14 +25,12 @@ public:
         auto y = bounds.getY();
 
         juce::Path path;
-        if (increment)
-        {
+        if (increment) {
             path.startNewSubPath(x,       y + h);
             path.lineTo          (x + w * 0.5f, y);
             path.lineTo          (x + w,  y + h);
         }
-        else
-        {
+        else {
             path.startNewSubPath(x,       y);
             path.lineTo          (x + w * 0.5f, y + h);
             path.lineTo          (x + w,  y);

@@ -45,16 +45,19 @@ Titlebar::Titlebar(ApplicationContext& context)
 
     resetButton.onClick = [this]() {
         applicationContext.processor->resetRequested.store(true);
-        if (auto* canvas = applicationContext.canvas)
+        if (auto* canvas = applicationContext.canvas) {
             canvas->resetAllArrowProgress();
+        }
     };
 
     auto applyMultiplier = [this]() {
         double value = tempoDisplay.editor.getText().getDoubleValue();
-        if (value > 0.0)
+        if (value > 0.0) {
             applicationContext.processor->tempoMultiplier.store(value);
-        else
+        }
+        else {
             tempoDisplay.editor.setText(juce::String(applicationContext.processor->tempoMultiplier.load()), false);
+        }
     };
 
     tempoDisplay.editor.onReturnKey = applyMultiplier;

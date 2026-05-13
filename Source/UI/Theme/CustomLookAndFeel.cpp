@@ -76,7 +76,9 @@ void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
     g.fillAll(canvasColour);
 
     float spacing = canvas.gridSpacing;
-    if (spacing < 15.0f) return;
+    if (spacing < 15.0f) {
+        return;
+    }
 
     auto bounds = canvas.getLocalBounds().toFloat();
     float ox = canvas.gridOriginSet ? canvas.gridOrigin.x : bounds.getCentreX();
@@ -214,8 +216,7 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
 
     g.fillEllipse(pulsedFill);
 
-    if (node.displayCountLimit >= 1)
-    {
+    if (node.displayCountLimit >= 1) {
         const float twoPi      = juce::MathConstants<float>::twoPi;
         const float startAngle = -juce::MathConstants<float>::halfPi;
         const int   limit      = node.displayCountLimit;
@@ -247,10 +248,9 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
         }
     }
 
-    if (node.isHovered)   { g.drawEllipse(circleHover, 2.0f); }
+    if (node.isHovered) { g.drawEllipse(circleHover, 2.0f); }
 
-    if (node.isSelected)
-    {
+    if (node.isSelected) {
         juce::Path dottedPath;
         dottedPath.addEllipse(circleSelect);
 
@@ -290,8 +290,7 @@ void CustomLookAndFeel::drawNodeArrowText(juce::Graphics &g, const NodeArrow &no
 
 
     juce::String labelText = editor.getText();
-    if (labelText.isNotEmpty() && nodeArrow.animT > 0.8f)
-    {
+    if (labelText.isNotEmpty() && nodeArrow.animT > 0.8f) {
         float midX = (parentX + childX) * 0.5f;
         float midY = (parentY + childY) * 0.5f;
         float angle = std::atan2(arrowEndY - parentY, arrowEndX - parentX);
@@ -319,7 +318,9 @@ namespace {
     juce::Path trimPathToFraction(const juce::Path& source, float t)
     {
         if (t <= 0.0f || source.isEmpty()) return {};
-        if (t >= 1.0f) return source;
+        if (t >= 1.0f) {
+            return source;
+        }
 
         float totalLength = 0.0f;
         {
@@ -347,8 +348,7 @@ namespace {
 
             if (! started) { out.startNewSubPath(it.x1, it.y1); started = true; }
 
-            if (accumulated + segLen >= target)
-            {
+            if (accumulated + segLen >= target) {
                 const float remain   = target - accumulated;
                 const float fraction = segLen > 0.0f ? remain / segLen : 0.0f;
                 out.lineTo(it.x1 + dx * fraction, it.y1 + dy * fraction);
@@ -390,7 +390,9 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     float deltaY = arrowEndY - parentCenterY;
     float length = std::sqrt(deltaX * deltaX + deltaY * deltaY);
 
-    if (length < 1.0f) return;
+    if (length < 1.0f) {
+        return;
+    }
 
     float dirX = deltaX / length;
     float dirY = deltaY / length;
@@ -408,13 +410,11 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         float absDx = std::abs(dx);
         float absDy = std::abs(dy);
 
-        if (absDx < 1.0f || absDy < 1.0f)
-        {
+        if (absDx < 1.0f || absDy < 1.0f) {
             linePath.startNewSubPath(parentCenterX, parentCenterY);
             linePath.lineTo(arrowEndX, arrowEndY);
         }
-        else
-        {
+        else {
             float sign  = (dx >= 0.0f) ? 1.0f : -1.0f;
             float perpX = -dirY * 0.8f * sign;
             float perpY =  dirX * 0.8f * sign;
@@ -433,16 +433,14 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
             float neckX = arrowEndX - cp2X;
             float neckY = arrowEndY - cp2Y;
             float neckLen = std::sqrt(neckX * neckX + neckY * neckY);
-            if (neckLen > 0.0f)
-            {
+            if (neckLen > 0.0f) {
                 dirX = neckX / neckLen;
                 dirY = neckY / neckLen;
             }
         }
     }
 
-    if (isRootTargetArrow || nodeArrow.isGhost)
-    {
+    if (isRootTargetArrow || nodeArrow.isGhost) {
         juce::PathStrokeType stroke(2.0f);
         float dashLengths[] = { 6.0f, 10.0f };
         stroke.createDashedStroke(linePath, linePath, dashLengths, 2);
@@ -460,8 +458,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     g.setColour(arrowColour.withAlpha(ghostAlpha));
     g.strokePath(linePath, lineStroke);
 
-    if (! nodeArrow.isGhost && nodeArrow.progressT > 0.0f)
-    {
+    if (! nodeArrow.isGhost && nodeArrow.progressT > 0.0f) {
         const juce::Colour progressColour = nodeArrow.parentNode->nodeColour.brighter(0.3f);
 
         float linePathLength = 0.0f;
@@ -479,11 +476,9 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         const float bodyFraction      = (linePathLength > 0.0f) ? bodyLength / linePathLength : 1.0f;
         const float bodyProgressT     = juce::jmin(nodeArrow.progressT, bodyFraction);
 
-        if (bodyProgressT > 0.0f)
-        {
+        if (bodyProgressT > 0.0f) {
             juce::Path bodyProgressPath = trimPathToFraction(linePath, bodyProgressT);
-            if (! bodyProgressPath.isEmpty())
-            {
+            if (! bodyProgressPath.isEmpty()) {
                 const juce::PathStrokeType bodyStroke(3.0f,
                                                       juce::PathStrokeType::curved,
                                                       juce::PathStrokeType::butt);
@@ -499,8 +494,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
             }
         }
 
-        if (nodeArrow.progressT > bodyFraction)
-        {
+        if (nodeArrow.progressT > bodyFraction) {
             const float headFraction       = juce::jmax(1.0e-6f, 1.0f - bodyFraction);
             const float headProgressT      = juce::jlimit(0.0f, 1.0f,
                                                           (nodeArrow.progressT - bodyFraction) / headFraction);
@@ -542,8 +536,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         }
     }
 
-    if (nodeArrow.animT > 0.3f)
-    {
+    if (nodeArrow.animT > 0.3f) {
         float leftX  = arrowEndX - arrowLength * dirX + arrowWidth * dirY;
         float leftY  = arrowEndY - arrowLength * dirY - arrowWidth * dirX;
         float rightX = arrowEndX - arrowLength * dirX - arrowWidth * dirY;
@@ -585,19 +578,18 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
 {
     auto area = button.getLocalBounds().reduced(5);
 
-    if (isMouseOver)
-    {
+    if (isMouseOver) {
         g.setColour(buttonColour.brighter());
 
     }
-    else if (isButtonDown){
+    else if (isButtonDown) {
         g.setColour(buttonColour.darker());
     }
     else {
         g.setColour(buttonColour);
     }
 
-    if (button.isOn){
+    if (button.isOn) {
         juce::Path playButton;
         playButton.startNewSubPath((float)area.getX(), (float)area.getY());
         playButton.lineTo((float)area.getRight(), (float)area.getCentreY());
@@ -623,8 +615,7 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
 void CustomLookAndFeel::drawSyncButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const SyncButton &button)
 {
     auto bounds = button.getLocalBounds().toFloat().reduced(2.0f);
-    if (isMouseOver)
-    {
+    if (isMouseOver) {
         g.setColour(buttonColour.brighter());
     }
     else {
@@ -718,8 +709,7 @@ void CustomLookAndFeel::drawResetButton(juce::Graphics &g, const ResetButton &re
     if (isButtonDown) {
         g.setColour(buttonColour.darker());
     }
-    else if (resetButton.isHovered)
-    {
+    else if (resetButton.isHovered) {
         g.setColour(buttonColour.brighter());
     }
     else {

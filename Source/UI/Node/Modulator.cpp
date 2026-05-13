@@ -36,11 +36,11 @@ void Modulator::paint(juce::Graphics& g) {
     g.setColour(isHighlighted ? nodeColour.darker() : nodeColour);
     g.fillRect(pulsedFill);
 
-    if (isHovered)
+    if (isHovered) {
         g.drawRect(squareHover, 2.0f);
+    }
 
-    if (isSelected)
-    {
+    if (isSelected) {
         juce::Path dottedPath;
         dottedPath.addRectangle(squareSelect);
 

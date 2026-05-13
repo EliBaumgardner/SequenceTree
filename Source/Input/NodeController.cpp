@@ -48,8 +48,7 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
         isDraggingValue = false;
         draggingValueNode = nullptr;
     }
-    else if (snapTargetRoot != nullptr)
-    {
+    else if (snapTargetRoot != nullptr) {
         canvas->hideSnapGhostArrow();
 
         int rootNodeId = snapTargetRoot->getComponentID().getIntValue();
@@ -79,8 +78,7 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
         auto parentIterator = canvas->nodeMap.find(parentNodeId);
         auto rootIterator   = canvas->nodeMap.find(rootNodeId);
 
-        if (parentIterator != canvas->nodeMap.end() && rootIterator != canvas->nodeMap.end())
-        {
+        if (parentIterator != canvas->nodeMap.end() && rootIterator != canvas->nodeMap.end()) {
             canvas->addLinePoints(parentIterator->second, rootIterator->second);
             canvas->updateLinePoints(parentIterator->second);
 
@@ -91,8 +89,7 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
             }
 
             juce::ValueTree parentValueTree = ValueTreeState::getNode(parentNodeId);
-            if (parentValueTree.isValid())
-            {
+            if (parentValueTree.isValid()) {
                 int parentRootId = parentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
                 juce::ValueTree parentRootValueTree = ValueTreeState::getNode(parentRootId);
                 if (parentRootValueTree.isValid()) {
@@ -101,10 +98,8 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
             }
         }
     }
-    else
-    {
-        if (draggedNodeTree.isValid())
-        {
+    else {
+        if (draggedNodeTree.isValid()) {
             int nodeId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
             canvas->triggerArrowSnapForNode(nodeId);
         }
@@ -115,8 +110,7 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
     snapTargetRoot   = nullptr;
     snapSourceNodeId = -1;
 
-    if (canvas->showGrid)
-    {
+    if (canvas->showGrid) {
         canvas->showGrid = false;
         canvas->repaint();
     }
@@ -199,10 +193,12 @@ void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &ne
     float snappedX = ox + std::round((float(newPosition.xPosition) - ox) / spacing) * spacing;
     float snappedY = oy + std::round((float(newPosition.yPosition) - oy) / spacing) * spacing;
 
-    if (std::abs(float(newPosition.xPosition) - snappedX) < snapThreshold)
+    if (std::abs(float(newPosition.xPosition) - snappedX) < snapThreshold) {
         newPosition.xPosition = int(snappedX);
-    if (std::abs(float(newPosition.yPosition) - snappedY) < snapThreshold)
+    }
+    if (std::abs(float(newPosition.yPosition) - snappedY) < snapThreshold) {
         newPosition.yPosition = int(snappedY);
+    }
 
     ValueTreeState::setNodePosition(draggedNodeTree, newPosition, undoManager);
 }
@@ -225,7 +221,7 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
 
         auto parent = component->getParentComponent();
 
-        if (auto* dynamicPort = dynamic_cast<DynamicPort*>(parent)){
+        if (auto* dynamicPort = dynamic_cast<DynamicPort*>(parent)) {
             auto parentEvent = e.getEventRelativeTo(dynamicPort);
             dynamicPort->mouseDrag(parentEvent);
         }
@@ -270,8 +266,7 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
 
     undoManager->beginNewTransaction();
 
-    if (applicationContext.canvas->gridOriginSet)
-    {
+    if (applicationContext.canvas->gridOriginSet) {
         applicationContext.canvas->showGrid = true;
         applicationContext.canvas->repaint();
     }
@@ -281,16 +276,20 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
     const bool makeAlt = mods.isCtrlDown();
 
     if (nodeControllerMode == NodeControllerMode::Node) {
-        if (makeAlt)
+        if (makeAlt) {
             draggedNodeTree = NodeFactory::createAlternativeNode(nodeId, newPosition, undoManager);
-        else
+        }
+        else {
             draggedNodeTree = NodeFactory::createNode(nodeId, newPosition, undoManager);
+        }
     }
     else if (nodeControllerMode == NodeControllerMode::Modulator) {
-        if (nodeType == ValueTreeIdentifiers::ModulatorRootData || nodeType == ValueTreeIdentifiers::ModulatorData)
+        if (nodeType == ValueTreeIdentifiers::ModulatorRootData || nodeType == ValueTreeIdentifiers::ModulatorData) {
             draggedNodeTree = NodeFactory::createModulator(nodeId, newPosition, undoManager);
-        else
+        }
+        else {
             draggedNodeTree = NodeFactory::createModulatorRoot(nodeId, newPosition, undoManager);
+        }
     }
 }
 
@@ -299,8 +298,7 @@ void NodeController::handleNodeDrag(juce::UndoManager *undoManager, int nodeId, 
     if (isDragStart) {
         isDragStart = false;
         undoManager->beginNewTransaction();
-        if (applicationContext.canvas->gridOriginSet)
-        {
+        if (applicationContext.canvas->gridOriginSet) {
             applicationContext.canvas->showGrid = true;
             applicationContext.canvas->repaint();
         }
@@ -319,7 +317,9 @@ void NodeController::handleNodeDrag(juce::UndoManager *undoManager, int nodeId, 
 
 void NodeController::checkRootNodeSnap(const NodePosition& pos)
 {
-    if (snapSourceNodeId < 0 || !draggedNodeTree.isValid()) return;
+    if (snapSourceNodeId < 0 || !draggedNodeTree.isValid()) {
+        return;
+    }
 
     NodeCanvas* canvas = applicationContext.canvas;
     juce::Point<int> dragPoint(pos.xPosition, pos.yPosition);
@@ -329,36 +329,36 @@ void NodeController::checkRootNodeSnap(const NodePosition& pos)
 
     for (auto& [id, node] : canvas->nodeMap)
     {
-        if (node->nodeValueTree.getType() != ValueTreeIdentifiers::RootNodeData) continue;
-        if (id == snapSourceNodeId) continue;
+        if (node->nodeValueTree.getType() != ValueTreeIdentifiers::RootNodeData) {
+            continue;
+        }
+        if (id == snapSourceNodeId) {
+            continue;
+        }
 
         float dist = (float)dragPoint.getDistanceFrom(node->getNodeCentre());
-        if (dist < minDist)
-        {
+        if (dist < minDist) {
             minDist = dist;
             nearestRoot = node;
         }
     }
 
-    if (nearestRoot != nullptr)
-    {
-        if (snapTargetRoot != nearestRoot)
-        {
+    if (nearestRoot != nullptr) {
+        if (snapTargetRoot != nearestRoot) {
             snapTargetRoot = nearestRoot;
 
             int draggedId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
 
             auto draggedIt = canvas->nodeMap.find(draggedId);
-            if (draggedIt != canvas->nodeMap.end())
-            {
+            if (draggedIt != canvas->nodeMap.end()) {
                 draggedIt->second->setVisible(false);
 
                 auto sourceIt = canvas->nodeMap.find(snapSourceNodeId);
-                if (sourceIt != canvas->nodeMap.end())
-                {
+                if (sourceIt != canvas->nodeMap.end()) {
                     auto arrowIt = sourceIt->second->nodeArrows.find(draggedId);
-                    if (arrowIt != sourceIt->second->nodeArrows.end())
+                    if (arrowIt != sourceIt->second->nodeArrows.end()) {
                         arrowIt->second->setVisible(false);
+                    }
                 }
             }
 
@@ -368,24 +368,22 @@ void NodeController::checkRootNodeSnap(const NodePosition& pos)
             }
         }
     }
-    else if (snapTargetRoot != nullptr)
-    {
+    else if (snapTargetRoot != nullptr) {
         snapTargetRoot = nullptr;
 
         int draggedId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
 
         auto draggedIt = canvas->nodeMap.find(draggedId);
 
-        if (draggedIt != canvas->nodeMap.end())
-        {
+        if (draggedIt != canvas->nodeMap.end()) {
             draggedIt->second->setVisible(true);
 
             auto sourceIt = canvas->nodeMap.find(snapSourceNodeId);
-            if (sourceIt != canvas->nodeMap.end())
-            {
+            if (sourceIt != canvas->nodeMap.end()) {
                 auto arrowIt = sourceIt->second->nodeArrows.find(draggedId);
-                if (arrowIt != sourceIt->second->nodeArrows.end())
+                if (arrowIt != sourceIt->second->nodeArrows.end()) {
                     arrowIt->second->setVisible(true);
+                }
             }
         }
 

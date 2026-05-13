@@ -61,8 +61,9 @@ void NodeCanvas::handleAsyncUpdate() {
             if (rootNodeId != nodeId) {
 
                 juce::ValueTree rootTree = ValueTreeState::getNode(rootNodeId);
-                if (rootTree.isValid())
+                if (rootTree.isValid()) {
                     applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
+                }
             } else {
 
                 auto emptyGraph = std::make_shared<RTGraph>();
@@ -124,22 +125,28 @@ void NodeCanvas::drainArrowResetFifo() {
 void NodeCanvas::resetAllArrowProgress()
 {
     for (NodeArrow* arrow : nodeArrows)
-        if (arrow != nullptr)
+        if (arrow != nullptr) {
             arrow->resetProgress();
+        }
 }
 
 void NodeCanvas::resetGraphArrowProgress(int graphId)
 {
     for (NodeArrow* arrow : nodeArrows)
     {
-        if (arrow == nullptr || arrow->parentNode == nullptr) continue;
+        if (arrow == nullptr || arrow->parentNode == nullptr) {
+            continue;
+        }
 
         const int parentId = arrow->parentNode->getComponentID().getIntValue();
         const juce::ValueTree arrowRoot = ValueTreeState::getRootNode(parentId);
-        if (! arrowRoot.isValid()) continue;
+        if (! arrowRoot.isValid()) {
+            continue;
+        }
 
-        if (static_cast<int>(arrowRoot.getProperty(ValueTreeIdentifiers::Id)) == graphId)
+        if (static_cast<int>(arrowRoot.getProperty(ValueTreeIdentifiers::Id)) == graphId) {
             arrow->resetProgress();
+        }
     }
 }
 
@@ -151,7 +158,9 @@ void NodeCanvas::drainCountFifo()
     auto apply = [this](const AudioUIBridge::CountCommand& cmd)
     {
         auto it = nodeMap.find(cmd.nodeId);
-        if (it == nodeMap.end()) return;
+        if (it == nodeMap.end()) {
+            return;
+        }
 
         Node* node = it->second;
         node->displayCurrentCount = cmd.currentCount;
@@ -174,15 +183,17 @@ void NodeCanvas::drainHighlightFifo()
     {
         auto& cmd = bridge.highlightBuffer[static_cast<size_t>(scope.startIndex1 + i)];
         auto it = nodeMap.find(cmd.nodeId);
-        if (it != nodeMap.end())
+        if (it != nodeMap.end()) {
             it->second->setHighlightVisual(cmd.shouldHighlight);
+        }
     }
     for (int i = 0; i < scope.blockSize2; ++i)
     {
         auto& cmd = bridge.highlightBuffer[static_cast<size_t>(scope.startIndex2 + i)];
         auto it = nodeMap.find(cmd.nodeId);
-        if (it != nodeMap.end())
+        if (it != nodeMap.end()) {
             it->second->setHighlightVisual(cmd.shouldHighlight);
+        }
     }
 }
 
@@ -216,8 +227,9 @@ Node* NodeCanvas::instantiateNodeFromTree(const juce::ValueTree& nodeValueTree)
     node->setDisplayMode(NodeDisplayMode::Pitch);
 
     node->onSelected = [this](Node* n, bool sel) {
-        if (applicationContext.onNodeSelected)
+        if (applicationContext.onNodeSelected) {
             applicationContext.onNodeSelected(n, sel);
+        }
     };
 
     addAndMakeVisible(node.get());
@@ -275,7 +287,9 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
 void NodeCanvas::removeNodeFromCanvas(int nodeId)
 {
     auto nodePair = nodeMap.find(nodeId);
-    if (nodePair == nodeMap.end()) return;
+    if (nodePair == nodeMap.end()) {
+        return;
+    }
 
     Node* node = nodePair->second;
     removeLinePoints(node);
@@ -287,10 +301,14 @@ void NodeCanvas::removeNodeFromCanvas(int nodeId)
 void NodeCanvas::setNodePosition(int nodeId)
 {
     auto nodePair = nodeMap.find(nodeId);
-    if (nodePair == nodeMap.end()) return;
+    if (nodePair == nodeMap.end()) {
+        return;
+    }
 
     juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
-    if (!nodeValueTree.isValid()) return;
+    if (!nodeValueTree.isValid()) {
+        return;
+    }
 
     NodePosition nodePosition = ValueTreeState::getNodePosition(nodeId);
 
@@ -300,14 +318,12 @@ void NodeCanvas::setNodePosition(int nodeId)
 
     auto node = nodePair->second;
 
-    if (node->nodeType == NodeType::Root)
-    {
+    if (node->nodeType == NodeType::Root) {
         const int rw = RootNode::loopLimitRectangleWidth;
         node->setSize(radius * 2 + rw, radius * 2);
         node->setTopLeftPosition(xPosition - radius - rw, yPosition - radius);
     }
-    else
-    {
+    else {
         node->setSize(radius * 2, radius * 2);
         node->setCentrePosition(xPosition, yPosition);
     }
@@ -364,7 +380,9 @@ void NodeCanvas::removeLinePoints(Node* node)
     for (int i = nodeArrows.size() - 1; i >= 0; i--)
     {
         NodeArrow* nodeArrow = nodeArrows[i];
-        if (nodeArrow->parentNode != node && nodeArrow->childNode != node) continue;
+        if (nodeArrow->parentNode != node && nodeArrow->childNode != node) {
+            continue;
+        }
 
         const int childNodeId = nodeArrow->childNode->getComponentID().getIntValue();
         nodeArrow->parentNode->nodeArrows.erase(childNodeId);
@@ -403,8 +421,9 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
         applicationContext.processor->setNewGraph(graph);
     }
 
-    if (! isPlaying)
+    if (! isPlaying) {
         resetAllArrowProgress();
+    }
 }
 
 void NodeCanvas::setSelectionMode(NodeDisplayMode mode) const {
@@ -418,13 +437,14 @@ void NodeCanvas::setSelectionMode(NodeDisplayMode mode) const {
 void NodeCanvas::triggerArrowSnapForNode(int nodeId)
 {
     auto nodePair = nodeMap.find(nodeId);
-    if (nodePair == nodeMap.end()) return;
+    if (nodePair == nodeMap.end()) {
+        return;
+    }
     Node* node = nodePair->second;
 
     for (NodeArrow* arrow : nodeArrows)
     {
-        if (arrow->childNode == node)
-        {
+        if (arrow->childNode == node) {
             arrow->triggerSnapAnimation();
             return;
         }
@@ -433,10 +453,10 @@ void NodeCanvas::triggerArrowSnapForNode(int nodeId)
 
 void NodeCanvas::showSnapGhostArrow(Node* from, Node* to)
 {
-    if (snapGhostArrow != nullptr)
-    {
-        if (snapGhostArrow->parentNode == from && snapGhostArrow->childNode == to)
+    if (snapGhostArrow != nullptr) {
+        if (snapGhostArrow->parentNode == from && snapGhostArrow->childNode == to) {
             return;
+        }
         removeChildComponent(snapGhostArrow);
         delete snapGhostArrow;
         snapGhostArrow = nullptr;
@@ -453,8 +473,7 @@ void NodeCanvas::showSnapGhostArrow(Node* from, Node* to)
 
 void NodeCanvas::hideSnapGhostArrow()
 {
-    if (snapGhostArrow != nullptr)
-    {
+    if (snapGhostArrow != nullptr) {
         removeChildComponent(snapGhostArrow);
         delete snapGhostArrow;
         snapGhostArrow = nullptr;
@@ -498,8 +517,9 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         juce::ValueTree nodeValueTree = stateTree.getChild(i);
         int nodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
-        if (nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData)
+        if (nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
             rootNodeMap[nodeId] = nodeValueTree;
+        }
 
         juce::ValueTree nodeValueTreeChildren = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
         for (int j = 0; j < nodeValueTreeChildren.getNumChildren(); j++) {
@@ -535,8 +555,9 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
     }
 
     for (auto& [id, rootNodeValueTree] : rootNodeMap) {
-        if (rootNodeValueTree.isValid())
+        if (rootNodeValueTree.isValid()) {
             applicationContext.rtGraphBuilder->makeRTGraph(rootNodeValueTree);
+        }
     }
 
 }

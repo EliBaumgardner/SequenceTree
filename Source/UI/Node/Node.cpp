@@ -79,13 +79,17 @@ void Node::setHoverVisual(bool isHovered)
 void Node::setSelectVisual(bool isSelected)
 {
     this->isSelected = isSelected;
-    if (onSelected) onSelected(this, isSelected);
+    if (onSelected) {
+        onSelected(this, isSelected);
+    }
     repaint();
 }
 
-void Node::setSelectVisual(){
+void Node::setSelectVisual() {
     isSelected = !isSelected;
-    if (onSelected) onSelected(this, isSelected);
+    if (onSelected) {
+        onSelected(this, isSelected);
+    }
     repaint();
 }
 
@@ -125,10 +129,11 @@ void Node::setDisplayMode(NodeDisplayMode mode)
 {
     this->mode = mode;
 
-    if (nodeValueTree.isValid())
+    if (nodeValueTree.isValid()) {
         countEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
+    }
 
-    switch (mode){
+    switch (mode) {
 
         case NodeDisplayMode::Pitch:
             nodeTextEditor->bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);

@@ -30,9 +30,13 @@ void PresetSwatch::paint(juce::Graphics& g) {
 
 void PresetSwatch::mouseDown(const juce::MouseEvent& e) {
     if (e.mods.isRightButtonDown()) {
-        if (onSave) onSave();
+        if (onSave) {
+            onSave();
+        }
     } else if (isSet) {
-        if (onApply) onApply(colour);
+        if (onApply) {
+            onApply(colour);
+        }
     }
 }
 
@@ -50,7 +54,9 @@ MainComponent::MainComponent() {
         s->onApply = [this](juce::Colour c) {
             colour = c;
             updateCursorPosition(c);
-            if (colourPicked) colourPicked(c);
+            if (colourPicked) {
+                colourPicked(c);
+            }
         };
 
         s->onSave = [this, i, s]() {
@@ -82,8 +88,9 @@ void MainComponent::generateImage() {
 
 void MainComponent::paint(juce::Graphics& g) {
     int pickerH = getHeight() - presetRowHeight;
-    if (image.isValid())
+    if (image.isValid()) {
         g.drawImageWithin(image, 0, 0, getWidth(), pickerH, juce::RectanglePlacement::stretchToFit);
+    }
 
     g.setColour(juce::Colour(0xff2a2a2a));
     g.fillRect(0, pickerH, getWidth(), presetRowHeight);
@@ -104,12 +111,13 @@ void MainComponent::resized() {
 
 void MainComponent::mouseDrag(const juce::MouseEvent& event) {
     int pickerH = getHeight() - presetRowHeight;
-    if (event.y >= pickerH) return;
+    if (event.y >= pickerH) {
+        return;
+    }
 
     cursor.setCentrePosition(event.getPosition());
 
-    if (image.isValid())
-    {
+    if (image.isValid()) {
         float imageX = juce::jmap<float>(event.x, 0.0f, (float)getWidth(),  0.0f, (float)image.getWidth());
         float imageY = juce::jmap<float>(event.y, 0.0f, (float)pickerH,     0.0f, (float)image.getHeight());
 
@@ -117,7 +125,9 @@ void MainComponent::mouseDrag(const juce::MouseEvent& event) {
         int iy = juce::jlimit(0, image.getHeight() - 1, (int)imageY);
 
         colour = image.getPixelAt(ix, iy);
-        if (colourPicked) colourPicked(colour);
+        if (colourPicked) {
+            colourPicked(colour);
+        }
     }
 }
 
@@ -136,14 +146,14 @@ void MainComponent::updateCursorPosition(juce::Colour selectedColour) {
 
 
 MainWindow::MainWindow (const juce::String& name, juce::Colour backgroundColour, int requiredButtons, bool addToDesktop)
-: DocumentWindow (name, backgroundColour, requiredButtons, addToDesktop){
+: DocumentWindow (name, backgroundColour, requiredButtons, addToDesktop) {
     
     component = new MainComponent();
     setContentOwned(component, true);
     setResizable(true,true);
 }
 
-void MainWindow::closeButtonPressed(){
+void MainWindow::closeButtonPressed() {
     
     setVisible(false);
 }
@@ -175,9 +185,11 @@ void ColourSelector::paint(juce::Graphics& g) {
 
 void ColourSelector::mouseDown(const juce::MouseEvent& event) {
 
-    if (node == nullptr) return;
+    if (node == nullptr) {
+        return;
+    }
 
-    if(mainWindow != nullptr){
+    if(mainWindow != nullptr) {
         mainWindow.reset();
     }
     
@@ -188,7 +200,7 @@ void ColourSelector::mouseDown(const juce::MouseEvent& event) {
     mainWindow->getContent()->updateCursorPosition(colour);
     mainWindow->getContent()->colourPicked =[this](juce::Colour c) {
 
-        if(node != nullptr){
+        if(node != nullptr) {
             node->nodeColour = c;
             node->repaint();
             applyColourToDescendants(node, c);
@@ -199,7 +211,7 @@ void ColourSelector::mouseDown(const juce::MouseEvent& event) {
     };
 }
 
-void ColourSelector::setNode(Node* node){
+void ColourSelector::setNode(Node* node) {
 
     this->node = node;
 
@@ -211,7 +223,7 @@ void ColourSelector::setNode(Node* node){
     colour = node->nodeColour;
     repaint();
     
-    if(mainWindow != nullptr && mainWindow->getContent() != nullptr){
+    if(mainWindow != nullptr && mainWindow->getContent() != nullptr) {
         mainWindow->toFront(true);
         mainWindow->getContent()->updateCursorPosition(colour);
     }
@@ -220,17 +232,20 @@ void ColourSelector::setNode(Node* node){
 void ColourSelector::applyColourToDescendants(Node* n, juce::Colour c)
 {
     NodeCanvas* canvas = applicationContext.canvas;
-    if (canvas == nullptr) return;
+    if (canvas == nullptr) {
+        return;
+    }
 
     juce::ValueTree childrenIds = n->nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-    if (! childrenIds.isValid()) return;
+    if (! childrenIds.isValid()) {
+        return;
+    }
 
     for (int i = 0; i < childrenIds.getNumChildren(); ++i)
     {
         int childId = childrenIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
         auto it = canvas->nodeMap.find(childId);
-        if (it != canvas->nodeMap.end())
-        {
+        if (it != canvas->nodeMap.end()) {
             it->second->nodeColour = c;
             it->second->repaint();
             applyColourToDescendants(it->second, c);

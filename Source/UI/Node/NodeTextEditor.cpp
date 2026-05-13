@@ -56,7 +56,7 @@ void NodeTextEditor::paint(juce::Graphics& g) {
 
 }
 
-void NodeTextEditor::refit(){
+void NodeTextEditor::refit() {
         auto bounds = getLocalBounds().toFloat().reduced(4.0f);
         
         float length = baseFont.getStringWidthFloat(getText());
@@ -72,7 +72,7 @@ void NodeTextEditor::refit(){
         applyFontToAllText(font);
 }
 
-void NodeTextEditor::bindEditor(juce::ValueTree tree, const juce::Identifier propertyID){
+void NodeTextEditor::bindEditor(juce::ValueTree tree, const juce::Identifier propertyID) {
     
     this->nodeTree = tree;
     
@@ -95,7 +95,7 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
 
     juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
 
-    if (mode == NodeDisplayMode::Pitch){
+    if (mode == NodeDisplayMode::Pitch) {
         int midiNote = juce::jlimit(0, 127, (int)value);
 
         int pitchValue = midiNote % 12;
@@ -104,7 +104,7 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
         display = pitchNames[pitchValue] + juce::String(octave);
     }
 
-    if(mode == NodeDisplayMode::Velocity){
+    if(mode == NodeDisplayMode::Velocity) {
         int velocity = (int)value;
         display = juce::String(velocity);
     }
@@ -125,7 +125,7 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
     applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);
 }
 
-int NodeTextEditor::noteToNumber(juce::String string){
+int NodeTextEditor::noteToNumber(juce::String string) {
 
     char note = string[1];
     juce::juce_wchar accidental;
@@ -134,7 +134,7 @@ int NodeTextEditor::noteToNumber(juce::String string){
     int midiNumber = 0;
     int accidentalValue = 0;
     
-    if(string.length() > 2){
+    if(string.length() > 2) {
         accidental = string[2];
         octave = string[3];
         
@@ -158,9 +158,9 @@ int NodeTextEditor::noteToNumber(juce::String string){
     return midiNumber;
 }
 
-void NodeTextEditor::makeBoundsVisible(bool isBoundsVisible){
+void NodeTextEditor::makeBoundsVisible(bool isBoundsVisible) {
 
-    if(isBoundsVisible){
+    if(isBoundsVisible) {
         setColour(juce::TextEditor::textColourId, juce::Colours::black);
         setOpaque(false);
         setColour(juce::TextEditor::backgroundColourId, juce::Colours::white);
@@ -184,8 +184,9 @@ void NodeTextEditor::textEditorReturnKeyPressed(juce::TextEditor &editor) {
 
     DBG("return key pressed");
 
-    if (node->nodeArrow == nullptr)
+    if (node->nodeArrow == nullptr) {
         return;
+    }
 
     node->nodeArrow->updateFromBindValue = true;
 

@@ -39,8 +39,7 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        if (!isEditing)
-        {
+        if (!isEditing) {
             g.setFont(juce::Font(juce::FontOptions(9.0f)));
             g.setColour(juce::Colours::lightgrey.withAlpha(0.85f));
             g.drawText(juce::String(applicationContext.lookAndFeel->getColorIntensityFactor(), 2),
@@ -66,16 +65,17 @@ public:
         float delta = -yOffset * 0.005f;
         float newValue = juce::jlimit(0.0f, 1.0f, dragStartValue + delta);
         applicationContext.lookAndFeel->setColorIntensityFactor(newValue);
-        if (applicationContext.canvas != nullptr)
-            if (auto* topLevel = applicationContext.canvas->getTopLevelComponent())
+        if (applicationContext.canvas != nullptr) {
+            if (auto* topLevel = applicationContext.canvas->getTopLevelComponent()) {
                 topLevel->repaint();
+            }
+        }
         repaint();
     }
 
     void mouseUp(const juce::MouseEvent&) override
     {
-        if (!isDragging)
-        {
+        if (!isDragging) {
             isEditing = true;
             textEditor->setVisible(true);
             textEditor->setText(juce::String(applicationContext.lookAndFeel->getColorIntensityFactor(), 2),
@@ -95,9 +95,11 @@ private:
     {
         float value = textEditor->getText().getFloatValue();
         applicationContext.lookAndFeel->setColorIntensityFactor(value);
-        if (applicationContext.canvas != nullptr)
-            if (auto* topLevel = applicationContext.canvas->getTopLevelComponent())
+        if (applicationContext.canvas != nullptr) {
+            if (auto* topLevel = applicationContext.canvas->getTopLevelComponent()) {
                 topLevel->repaint();
+            }
+        }
 
         isEditing = false;
         textEditor->setVisible(false);
