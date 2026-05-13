@@ -6,8 +6,7 @@ NodeCanvasTreeListener::NodeCanvasTreeListener(NodeCanvas& canvasIn) : canvas(ca
 
 void NodeCanvasTreeListener::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
 {
-    if (parent.getType() == ValueTreeIdentifiers::NodeMap)
-    {
+    if (parent.getType() == ValueTreeIdentifiers::NodeMap) {
         jassert(child.getType() == ValueTreeIdentifiers::NodeData
             || child.getType() == ValueTreeIdentifiers::AlternativeNodeData
             || child.getType() == ValueTreeIdentifiers::RootNodeData
@@ -24,8 +23,7 @@ void NodeCanvasTreeListener::valueTreeChildAdded(juce::ValueTree& parent, juce::
 
 void NodeCanvasTreeListener::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int /*childIndex*/)
 {
-    if (parent.getType() == ValueTreeIdentifiers::NodeMap)
-    {
+    if (parent.getType() == ValueTreeIdentifiers::NodeMap) {
         NodeCanvas::AsyncUpdate update;
         update.type       = NodeCanvas::AsyncUpdateType::NodeRemoved;
         update.nodeId     = child.getProperty(ValueTreeIdentifiers::Id);
@@ -40,8 +38,7 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
 
     if (propertyIdentifier == ValueTreeIdentifiers::XPosition
         || propertyIdentifier == ValueTreeIdentifiers::YPosition
-        || propertyIdentifier == ValueTreeIdentifiers::Radius)
-    {
+        || propertyIdentifier == ValueTreeIdentifiers::Radius) {
         jassert(nodeType == ValueTreeIdentifiers::NodeData
             || nodeType == ValueTreeIdentifiers::AlternativeNodeData
             || nodeType == ValueTreeIdentifiers::RootNodeData
@@ -53,8 +50,7 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
         update.nodeId = tree.getProperty(ValueTreeIdentifiers::Id);
         canvas.enqueueAsyncUpdate(update);
     }
-    else if (propertyIdentifier == ValueTreeIdentifiers::MidiDuration)
-    {
+    else if (propertyIdentifier == ValueTreeIdentifiers::MidiDuration) {
         juce::ValueTree noteNode = tree.getParent().getParent();
         NodeCanvas::AsyncUpdate update;
         update.type   = NodeCanvas::AsyncUpdateType::DurationOnly;

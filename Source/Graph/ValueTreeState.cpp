@@ -352,7 +352,7 @@ juce::ValueTree ValueTreeState::getMidiNotes(int nodeId) {
     juce::ValueTree node = getNode(nodeId);
     juce::ValueTree midiNotes = node.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
 
-    if (!node.isValid() || !midiNotes.isValid()){
+    if (!node.isValid() || !midiNotes.isValid()) {
         return juce::ValueTree();
     }
 

@@ -112,12 +112,14 @@ bool SequenceTreeAudioProcessor::isBusesLayoutSupported (const BusesLayout& layo
     return true;
   #else
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo()) {
         return false;
+    }
 
    #if ! JucePlugin_IsSynth
-    if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+    if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet()) {
         return false;
+    }
    #endif
 
     return true;
@@ -150,14 +152,15 @@ void SequenceTreeAudioProcessor::setStateInformation (const void* data, int size
 {
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
 
-    if (xmlState == nullptr)     { DBG("INVALID STATE DATA"); return; }
+    if (xmlState == nullptr) { DBG("INVALID STATE DATA"); return; }
 
     juce::ValueTree restoredTree = juce::ValueTree::fromXml (*xmlState);
 
     if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
 
-    if (applyStateToUi)
+    if (applyStateToUi) {
         applyStateToUi(restoredTree);
+    }
 }
 
 //==============================================================================
@@ -195,12 +198,12 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     buffer.clear();
     midiMessages.clear();
 
-    if (resetRequested.exchange(false))
-    {
+    if (resetRequested.exchange(false)) {
         for (auto& note : eventManager.scheduler.activeNotes)
         {
-            if (NoteScheduler::isNodeAudible(note.noteNode.nodeType) && !note.isConnectionTrigger)
+            if (NoteScheduler::isNodeAudible(note.noteNode.nodeType) && !note.isConnectionTrigger) {
                 midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), 0);
+            }
 
             eventManager.bridge.highlightNode(note.noteNode, false);
         }
@@ -208,7 +211,9 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         eventManager.scheduler.activeNotes.clear();
         eventManager.traversals.clear();
 
-        if (notifyUi) notifyUi();
+        if (notifyUi) {
+            notifyUi();
+        }
     }
 
     if(isPlaying.load() == false) {
@@ -299,10 +304,14 @@ void SequenceTreeAudioProcessor::syncTraversalLoopLimits(TraversalMap &traversal
     for (auto& [traversalId, traversal] : traversals)
     {
         auto rtGraphIt = rtGraphs.find(traversalId);
-        if (rtGraphIt == rtGraphs.end()) continue;
+        if (rtGraphIt == rtGraphs.end()) {
+            continue;
+        }
 
         int newLoopLimit = rtGraphIt->second->loopLimit;
-        if (newLoopLimit == traversal.loopLimit) continue;
+        if (newLoopLimit == traversal.loopLimit) {
+            continue;
+        }
 
         traversal.loopLimit = newLoopLimit;
 
@@ -346,8 +355,9 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)
 
     std::vector<int> staleIds;
     for (const auto& [nodeId, node] : *newSnap->globalNodes)
-        if (node.graphID == graph->graphID && !graph->nodeMap.count(nodeId))
+        if (node.graphID == graph->graphID && !graph->nodeMap.count(nodeId)) {
             staleIds.push_back(nodeId);
+        }
 
     for (int id : staleIds)
         newSnap->globalNodes->erase(id);

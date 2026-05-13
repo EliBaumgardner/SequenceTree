@@ -38,10 +38,12 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
   childNode->incomingAngle = std::atan2(dy, dx);
 
   duration = (int)(std::abs(dx) * durationAmount);
-  if (parentNode->nodeType == NodeType::Modulator)
+  if (parentNode->nodeType == NodeType::Modulator) {
       textEditor.setText(juce::String(duration / 10) + "%");
-  else
+  }
+  else {
       textEditor.setText(juce::String(duration));
+  }
 
   int parentRadius = parentNode->getHeight() / 2;
   int childRadius  = childNode->getHeight()  / 2;
@@ -58,13 +60,11 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
     float absDx = std::abs(dx);
     float absDy = std::abs(dy);
 
-    if (absDx < 1.0f || absDy < 1.0f)
-    {
+    if (absDx < 1.0f || absDy < 1.0f) {
       curvePath.startNewSubPath(float(start.x), float(start.y));
       curvePath.lineTo(arrowEndX, arrowEndY);
     }
-    else
-    {
+    else {
       float sign  = (dx >= 0.0f) ? 1.0f : -1.0f;
       float perpX = -dirY * sign;
       float perpY =  dirX * sign;
@@ -125,8 +125,9 @@ void NodeArrow::resetProgress()
 
 void NodeArrow::ensureAnimationTimerRunning()
 {
-    if (! isTimerRunning())
+    if (! isTimerRunning()) {
         startTimerHz(animationTimerHz);
+    }
 }
 
 bool NodeArrow::isSnapSettled() const
@@ -137,14 +138,15 @@ bool NodeArrow::isSnapSettled() const
 
 bool NodeArrow::advanceSnapAnimation()
 {
-    if (isSnapSettled()) return true;
+    if (isSnapSettled()) {
+        return true;
+    }
 
     animVelocity += (1.0f - animT) * snapSpringStiffness;
     animVelocity *= snapSpringDamping;
     animT        += animVelocity;
 
-    if (isSnapSettled())
-    {
+    if (isSnapSettled()) {
         animT        = 1.0f;
         animVelocity = 0.0f;
         return true;
@@ -154,14 +156,15 @@ bool NodeArrow::advanceSnapAnimation()
 
 bool NodeArrow::advanceProgressAnimation()
 {
-    if (! progressActive) return true;
+    if (! progressActive) {
+        return true;
+    }
 
     const double currentTimeMs      = juce::Time::getMillisecondCounterHiRes();
     const double elapsedMs          = currentTimeMs - progressStartMs;
     const double normalisedProgress = elapsedMs / static_cast<double>(progressDurationMs);
 
-    if (normalisedProgress >= 1.0)
-    {
+    if (normalisedProgress >= 1.0) {
         progressT      = 1.0f;
         progressActive = false;
         return true;
@@ -176,8 +179,9 @@ void NodeArrow::timerCallback()
     const bool snapDone     = advanceSnapAnimation();
     const bool progressDone = advanceProgressAnimation();
 
-    if (snapDone && progressDone)
+    if (snapDone && progressDone) {
         stopTimer();
+    }
 
     repaint();
 }

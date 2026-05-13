@@ -74,22 +74,32 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
                                     ChildPredicate isEligible)
 {
     auto it = nodes.find(parentId);
-    if (it == nodes.end()) return -1;
+    if (it == nodes.end()) {
+        return -1;
+    }
 
     int chosen   = -1;
     int maxLimit = 0;
 
     for (int childId : it->second.children) {
         auto childIt = nodes.find(childId);
-        if (childIt == nodes.end()) continue;
+        if (childIt == nodes.end()) {
+            continue;
+        }
 
         const RTNode& child = childIt->second;
 
-        if (!isEligible(child.nodeType)) continue;
-        if (child.countLimit <= 0) continue;
+        if (!isEligible(child.nodeType)) {
+            continue;
+        }
+        if (child.countLimit <= 0) {
+            continue;
+        }
 
         auto durIt = it->second.durationMap.find(childId);
-        if (durIt != it->second.durationMap.end() && durIt->second == 0) continue;
+        if (durIt != it->second.durationMap.end() && durIt->second == 0) {
+            continue;
+        }
 
         if (parentCount % child.countLimit == 0 && child.countLimit > maxLimit) {
             chosen   = childId;
@@ -190,8 +200,9 @@ RTNode* TraversalLogic::peekNextTarget(NodeMap& nodes)
 
     int peekTargetId = selectNextChild(nodes, primary.target, count, &isAudibleChild);
 
-    if (peekTargetId == -1 || peekTargetId == primary.target)
+    if (peekTargetId == -1 || peekTargetId == primary.target) {
         return nullptr;
+    }
 
     auto itPeek = nodes.find(peekTargetId);
     return (itPeek != nodes.end()) ? &itPeek->second : nullptr;
@@ -206,17 +217,27 @@ std::vector<int> TraversalLogic::peekCrossTreeNode(NodeMap& nodes)
 
     auto scanHost = [&](int hostId) {
         auto hostIterator = nodes.find(hostId);
-        if (hostIterator == nodes.end()) return;
+        if (hostIterator == nodes.end()) {
+            return;
+        }
 
         for (int childId : hostIterator->second.children) {
             auto childIterator = nodes.find(childId);
-            if (childIterator == nodes.end()) continue;
+            if (childIterator == nodes.end()) {
+                continue;
+            }
 
             const RTNode& childNode = childIterator->second;
 
-            if (childNode.nodeType != RTNode::NodeType::RootNode) continue;
-            if (childNode.nodeID == rootId) continue;
-            if (childNode.countLimit <= 0) continue;
+            if (childNode.nodeType != RTNode::NodeType::RootNode) {
+                continue;
+            }
+            if (childNode.nodeID == rootId) {
+                continue;
+            }
+            if (childNode.countLimit <= 0) {
+                continue;
+            }
 
             if (targetCount % childNode.countLimit == 0) {
                 traverserIds.push_back(childId);
@@ -242,7 +263,9 @@ RTNode* TraversalLogic::peekModulators(NodeMap& nodes) {
     int count = (cIt != modulator.counts.end() ? cIt->second : 0) + 1;
 
     int peekId = selectNextChild(nodes, modulator.target, count, &isModulatorChild);
-    if (peekId == -1) return nullptr;
+    if (peekId == -1) {
+        return nullptr;
+    }
 
     auto peekIt = nodes.find(peekId);
     return (peekIt != nodes.end()) ? &peekIt->second : nullptr;

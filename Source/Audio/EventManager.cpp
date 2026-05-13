@@ -63,8 +63,7 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
 
         for (int i = 0; i < static_cast<int>(activeNotes.size()); ++i)
         {
-            if (activeNotes[i].remainingSamples < smallestNoteSamples)
-            {
+            if (activeNotes[i].remainingSamples < smallestNoteSamples) {
                 smallestNoteSamples = activeNotes[i].remainingSamples;
                 smallestNoteIndex   = i;
             }
@@ -79,8 +78,7 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
 
         scheduler.sendNoteOff(activeNote, midiMessages, priorityNoteDuration);
 
-        if (activeNote.traversalId == -1)
-        {
+        if (activeNote.traversalId == -1) {
             scheduler.removeNote(smallestNoteIndex);
             continue;
         }

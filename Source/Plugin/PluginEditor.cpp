@@ -13,8 +13,9 @@
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
 : AudioProcessorEditor(p), audioProcessor(p)
 {
-    if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
+    if (auto* window = findParentComponentOfClass<juce::DocumentWindow>()) {
         window->setFullScreen (true);
+    }
 
     applicationContext.processor   = &p;
     applicationContext.undoManager = &undoManager;
@@ -29,7 +30,9 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     applicationContext.canvas            = canvas.get();
 
     audioProcessor.notifyUi = [canvasPtr = canvas.get()] {
-        if (canvasPtr) canvasPtr->triggerAsyncUpdate();
+        if (canvasPtr) {
+            canvasPtr->triggerAsyncUpdate();
+        }
     };
 
     audioProcessor.applyStateToUi = [canvasPtr = canvas.get()](juce::ValueTree restoredTree) {
@@ -43,7 +46,9 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
             int maxId = 0;
             for (int i = 0; i < ValueTreeState::nodeMap.getNumChildren(); ++i) {
                 int id = ValueTreeState::nodeMap.getChild(i).getProperty(ValueTreeIdentifiers::Id);
-                if (id > maxId) maxId = id;
+                if (id > maxId) {
+                    maxId = id;
+                }
             }
             ValueTreeState::nodeIdIncrement = maxId;
 

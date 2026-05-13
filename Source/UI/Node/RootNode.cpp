@@ -47,6 +47,7 @@ void RootNode::resized() {
 void RootNode::setDisplayMode(NodeDisplayMode mode) {
     Node::setDisplayMode(mode);
 
-    if (nodeValueTree.isValid() && rootRectangle != nullptr)
+    if (nodeValueTree.isValid() && rootRectangle != nullptr) {
         rootRectangle->loopLimitEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::LoopLimit);
+    }
 }

@@ -21,7 +21,7 @@ CustomTextEditor::CustomTextEditor(ApplicationContext& context)
     setColour(juce::TextEditor::highlightColourId,      juce::Colours::darkgrey);
     setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
 
-    onTextChange = [this](){
+    onTextChange = [this]() {
     };
 
     baseFont = juce::Font(getFont());
@@ -62,7 +62,7 @@ void CustomTextEditor::formatDisplay(DisplayMode mode)
 
     juce::String display;
     
-    if(mode == DisplayMode::Pitch){
+    if(mode == DisplayMode::Pitch) {
         value += 1;
         int valueRange = (int)value % 127;
         int pitchValue = (int)valueRange % 11;
@@ -85,9 +85,9 @@ void CustomTextEditor::formatDisplay(DisplayMode mode)
         display = pitchNames[pitchValue] + juce::String(octave);
     }
     
-    if(mode == DisplayMode::Velocity){ int velocity = (int)value; display = juce::String(velocity); }
+    if(mode == DisplayMode::Velocity) { int velocity = (int)value; display = juce::String(velocity); }
     
-    if(mode == DisplayMode::Duration){ display = juce::String(value); }
+    if(mode == DisplayMode::Duration) { display = juce::String(value); }
     
     setText(display);
     refit();

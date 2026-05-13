@@ -15,7 +15,7 @@ void AudioUIBridge::highlightNode(const RTNode& node, bool shouldHighlight)
 void AudioUIBridge::pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId)
 {
     const auto scope = progressFifo.write(1);
-    if (scope.blockSize1 > 0){
+    if (scope.blockSize1 > 0) {
         progressBuffer[static_cast<size_t>(scope.startIndex1)] = { parentNodeId, childNodeId, durationMs, graphId };
     }
     else if (scope.blockSize2 > 0) {

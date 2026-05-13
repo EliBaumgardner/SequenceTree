@@ -28,8 +28,7 @@ ValueEditor::ValueEditor(ApplicationContext& context) : applicationContext(conte
 
 void ValueEditor::paint(juce::Graphics& g)
 {
-    if (!isEditing)
-    {
+    if (!isEditing) {
         g.setFont(juce::Font(juce::FontOptions(9.0f)));
         g.setColour(juce::Colours::lightgrey.withAlpha(0.85f));
         // Cast to int so it never shows as "2.0"
@@ -78,11 +77,14 @@ void ValueEditor::setMinimumValue(int min)
 void ValueEditor::commitValue()
 {
     int val = textEditor->getText().getIntValue();
-    if (val < minValue) val = minValue;
+    if (val < minValue) {
+        val = minValue;
+    }
     boundValue.setValue(val);
 
-    if (boundTree.isValid() && applicationContext.rtGraphBuilder != nullptr)
+    if (boundTree.isValid() && applicationContext.rtGraphBuilder != nullptr) {
         applicationContext.rtGraphBuilder->makeRTGraph(boundTree);
+    }
 
     isEditing = false;
     textEditor->setVisible(false);

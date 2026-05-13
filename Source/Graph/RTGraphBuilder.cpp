@@ -62,7 +62,7 @@ void RTGraphBuilder::makeRTGraph(const juce::ValueTree& nodeValueTree)
 void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::shared_ptr<RTGraph> rtGraph, std::unordered_map<int, juce::ValueTree>& tempNodeMap) {
     std::vector<juce::ValueTree> stack = {rootNodeValueTree};
 
-    while(!stack.empty()){
+    while(!stack.empty()) {
 
         juce::ValueTree currentValueTree = stack.back();
         juce::ValueTree nodeValueTreeChildren = currentValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
@@ -80,7 +80,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
         bool isAlternativeNode = (nodeType == ValueTreeIdentifiers::AlternativeNodeData);
 
 
-        if(tempNodeMap.count(nodeId) == false){
+        if(tempNodeMap.count(nodeId) == false) {
 
             tempNodeMap[nodeId] = currentValueTree;
 
@@ -206,38 +206,40 @@ void RTGraphBuilder::updateDurationMap(int nodeId)
 {
     auto* processor = applicationContext.processor;
     auto snap = std::atomic_load(&processor->audioSnapshot);
-    if (!snap || !snap->globalNodes) return;
+    if (!snap || !snap->globalNodes) {
+        return;
+    }
 
     auto nodeIt = canvas.nodeMap.find(nodeId);
-    if (nodeIt == canvas.nodeMap.end()) return;
+    if (nodeIt == canvas.nodeMap.end()) {
+        return;
+    }
     Node* node = nodeIt->second;
 
     juce::ValueTree nodeVT = ValueTreeState::getNode(nodeId);
-    if (!nodeVT.isValid()) return;
+    if (!nodeVT.isValid()) {
+        return;
+    }
 
     auto newSnap = std::make_shared<SequenceTreeAudioProcessor::AudioSnapshot>();
     newSnap->globalNodes = std::make_shared<NodeMap>(*snap->globalNodes);
     newSnap->rtGraphs    = snap->rtGraphs;
 
     auto globalNodeIt = newSnap->globalNodes->find(nodeId);
-    if (globalNodeIt != newSnap->globalNodes->end())
-    {
+    if (globalNodeIt != newSnap->globalNodes->end()) {
         globalNodeIt->second.durationMap.clear();
         for (auto& [childId, arrow] : node->nodeArrows)
             globalNodeIt->second.durationMap[childId] = arrow->duration;
     }
 
     juce::ValueTree parentVT = ValueTreeState::getNodeParent(nodeId);
-    if (parentVT.isValid())
-    {
+    if (parentVT.isValid()) {
         int parentId = parentVT.getProperty(ValueTreeIdentifiers::Id);
         auto parentIt = canvas.nodeMap.find(parentId);
-        if (parentIt != canvas.nodeMap.end())
-        {
+        if (parentIt != canvas.nodeMap.end()) {
             Node* parentNode = parentIt->second;
             auto globalParentIt = newSnap->globalNodes->find(parentId);
-            if (globalParentIt != newSnap->globalNodes->end())
-            {
+            if (globalParentIt != newSnap->globalNodes->end()) {
                 globalParentIt->second.durationMap.clear();
                 for (auto& [childId, arrow] : parentNode->nodeArrows) {
                     globalParentIt->second.durationMap[childId] = arrow->duration;

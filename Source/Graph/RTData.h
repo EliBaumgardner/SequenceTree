@@ -72,7 +72,7 @@ struct RTGraph {
     {}
     
     RTGraph& operator=(RTGraph&& other) noexcept {
-        if(this != &other){
+        if(this != &other) {
             nodeMap = std::move(other.nodeMap);
         }
         return *this;
