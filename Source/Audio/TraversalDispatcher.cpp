@@ -374,6 +374,8 @@ void TraversalDispatcher::pushRootNodeConnection(int rootNodeId, juce::MidiBuffe
             traversal.loopLimit = rtGraphIt->second->loopLimit;
     }
 
+    traversal.advanceAlternative(nodes, rootNodeId);
+
     bridge.highlightNode(*rootNode, true);
     pushNote(*rootNode, rootNode->graphID, midiMessages, sample, nodes, traversalMap);
 }

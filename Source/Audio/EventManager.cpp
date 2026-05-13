@@ -43,6 +43,7 @@ void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, NodeMap& no
 
         traversal.primary.target = traversal.rootId;
         traversal.state          = TraversalLogic::TraversalState::Active;
+        traversal.advanceAlternative(nodes, traversal.rootId);
         bridge.highlightNode(rootIt->second, true);
         dispatcher.pushNote(rootIt->second, orphanedTraversalId, midiMessages, 0, nodes, traversalMap);
     }
