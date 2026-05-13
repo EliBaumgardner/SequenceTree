@@ -64,7 +64,7 @@ public:
 
     StepResult handleNodeEvent(NodeMap& nodes);
 
-    void advanceAlternative(NodeMap &nodes, int count, int chosenNodeId);
+    void advanceAlternative(NodeMap &nodes, int parentId);
 
     void advance(NodeMap& nodes);
     void advanceModulator(NodeMap& nodes);

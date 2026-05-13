@@ -284,6 +284,8 @@ bool SequenceTreeAudioProcessor::initializeTraversalForRootNode(juce::MidiBuffer
         traversal.loopLimit = rtGraphIt->second->loopLimit;
     }
 
+    traversal.advanceAlternative(nodes, rootId);
+
     RTNode& rootNode    = nodes.at(rootId);
     int     traversalId = rootNode.nodeID;
     eventManager.bridge.highlightNode(rootNode, true);
@@ -308,6 +310,7 @@ void SequenceTreeAudioProcessor::syncTraversalLoopLimits(TraversalMap &traversal
             if (newLoopLimit == 0 || traversal.loopCount < newLoopLimit) {
                 traversal.primary.target = traversal.rootId;
                 traversal.state          = TraversalLogic::TraversalState::Active;
+                traversal.advanceAlternative(nodes, traversal.rootId);
 
                 auto rootIt = nodes.find(traversal.rootId);
                 if (rootIt != nodes.end()) {

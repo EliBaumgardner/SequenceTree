@@ -84,6 +84,7 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
         if (childIt == nodes.end()) continue;
 
         const RTNode& child = childIt->second;
+
         if (!isEligible(child.nodeType)) continue;
         if (child.countLimit <= 0) continue;
 
@@ -107,24 +108,45 @@ static bool isAudibleChild(RTNode::NodeType t) {
     return t == RTNode::NodeType::Node;
 }
 
-void TraversalLogic::advanceAlternative(NodeMap& nodes, int count, int chosenNodeId) {
-    auto nextTargetIt = nodes.find(chosenNodeId);
-    if (nextTargetIt == nodes.end()) return;
-
-    RTNode& nextTargetNode = nextTargetIt->second;
-
-    if (nextTargetNode.alternativeRootId == -1) {
-        primary.alternativeTarget          = -1;
-        nextTargetNode.activeAlternativeId = -1;
+void TraversalLogic::advanceAlternative(NodeMap& nodes, int parentId) {
+    auto parentIt = nodes.find(parentId);
+    if (parentIt == nodes.end()) {
+        primary.alternativeTarget = -1;
         return;
     }
 
-    int currentAltId = nextTargetNode.activeAlternativeId;
-    int searchFrom   = (currentAltId == -1) ? chosenNodeId : currentAltId;
-    int chosen       = selectNextChild(nodes, searchFrom, count, &isAlternativeChild);
+    RTNode& parent = parentIt->second;
 
-    nextTargetNode.activeAlternativeId = chosen;
-    primary.alternativeTarget          = chosen;
+    if (parent.alternativeRootId == -1) {
+        parent.activeAlternativeId = -1;
+        primary.alternativeTarget  = -1;
+        return;
+    }
+
+    int currentAltId = parent.activeAlternativeId;
+
+    if (currentAltId == -1) {
+        parent.activeAlternativeId = parentId;
+        primary.alternativeTarget  = -1;
+        return;
+    }
+
+    int count;
+    if (currentAltId == parentId) {
+        count = primary.counts[parentId];
+    } else {
+        count = ++primary.counts[currentAltId];
+    }
+
+    int chosen = selectNextChild(nodes, currentAltId, count, &isAlternativeChild);
+
+    if (chosen == -1) {
+        parent.activeAlternativeId = parentId;
+        primary.alternativeTarget  = -1;
+    } else {
+        parent.activeAlternativeId = chosen;
+        primary.alternativeTarget  = chosen;
+    }
 }
 
 void TraversalLogic::advance(NodeMap& nodes)
@@ -151,16 +173,8 @@ void TraversalLogic::advance(NodeMap& nodes)
             primary.alternativeTarget = -1;
         }
         else {
-            const RTNode& nextTargetNode = nextTargetIt->second;
             primary.target = chosenNodeId;
-
-            if (nextTargetNode.alternativeRootId != -1) {
-                int nextCount = (primary.counts.count(chosenNodeId) ? primary.counts.at(chosenNodeId) : 0) + 1;
-                advanceAlternative(nodes, nextCount, chosenNodeId);
-            }
-            else {
-                primary.alternativeTarget = -1;
-            }
+            advanceAlternative(nodes, chosenNodeId);
         }
     }
 
@@ -253,9 +267,11 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(NodeMap& nodes) {
         case TraversalState::Start: {
             state          = TraversalState::Active;
             primary.target = rootId;
+            advanceAlternative(nodes, rootId);
 
-            result.kind      = StepResult::Kind::EnteredRoot;
-            result.enteredId = primary.target;
+            result.kind                 = StepResult::Kind::EnteredRoot;
+            result.enteredId            = primary.target;
+            result.enteredAlternativeId = primary.alternativeTarget;
             return result;
         }
         case TraversalState::Active: {
@@ -292,11 +308,13 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(NodeMap& nodes) {
                         result.leftId            = primary.target;
                         result.leftAlternativeId = primary.alternativeTarget;
 
-                        result.enteredId         = rootId;
-                        result.rootForReset      = rootId;
                         primary.target           = rootId;
-                        primary.alternativeTarget = -1;
-                        state                    = TraversalState::Active;
+                        advanceAlternative(nodes, rootId);
+
+                        result.enteredId            = rootId;
+                        result.enteredAlternativeId = primary.alternativeTarget;
+                        result.rootForReset         = rootId;
+                        state                       = TraversalState::Active;
                     }
                     break;
                 }
