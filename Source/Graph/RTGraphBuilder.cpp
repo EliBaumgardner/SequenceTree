@@ -73,9 +73,10 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
 
         stack.pop_back();
 
-        int nodeId = currentValueTree.getProperty(ValueTreeIdentifiers::Id);
-        int graphId = currentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
-        int countLimit = currentValueTree.getProperty(ValueTreeIdentifiers::CountLimit);
+        int nodeId      = currentValueTree.getProperty(ValueTreeIdentifiers::Id);
+        int graphId     = currentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
+        int countLimit  = currentValueTree.getProperty(ValueTreeIdentifiers::CountLimit);
+        int repeatValue = currentValueTree.getProperty(ValueTreeIdentifiers::RepeatValue, ValueTreeState::defaultRepeatValue);
 
         bool isAlternativeNode = (nodeType == ValueTreeIdentifiers::AlternativeNodeData);
 
@@ -117,7 +118,8 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
                 }
             }
 
-            rtNode.countLimit = countLimit;
+            rtNode.countLimit  = countLimit;
+            rtNode.repeatValue = repeatValue;
 
             auto nodeIt = canvas.nodeMap.find(nodeId);
 

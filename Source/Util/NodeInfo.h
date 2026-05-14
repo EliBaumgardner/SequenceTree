@@ -21,6 +21,6 @@ struct NodeNote {
 enum class ModulationType {Pitch,Velocity,Duration};
 enum class NodeType { Node, Root, Modulator};
 
-enum class NodeDisplayMode {Pitch, Velocity, Duration, CountLimit, Channel};
+enum class NodeDisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue};
 
 #endif //SEQUENCETREE_NODEPOSITION_H

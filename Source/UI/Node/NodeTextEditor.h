@@ -18,7 +18,7 @@ class Node;
 
 class NodeCanvas;
 
-class NodeTextEditor : public juce::TextEditor, public juce::TextEditor::Listener {
+class NodeTextEditor : public juce::TextEditor, public juce::TextEditor::Listener, public juce::Value::Listener {
 
 public:
 
@@ -35,6 +35,8 @@ public:
     int noteToNumber(juce::String string);
     
     void makeBoundsVisible(bool isBoundsVisible);
+
+    void valueChanged(juce::Value&) override;
     
     NodeDisplayMode mode;
     juce::Value bindValue;

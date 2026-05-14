@@ -41,6 +41,7 @@ public:
     //Node Property Identifiers
 
     static const juce::Identifier CountLimit;
+    static const juce::Identifier RepeatValue;
     static const juce::Identifier Count;
     static const juce::Identifier LoopLimit;
 

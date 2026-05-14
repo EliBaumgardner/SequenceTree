@@ -310,12 +310,35 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
     else if (type == RTNode::NodeType::RootNode
           || type == RTNode::NodeType::Node
           ) {
-        applyStepResult(traversal.handleNodeEvent(nodes), nodes);
+        auto currentIt = nodes.find(traversal.primary.target);
+        int  repeatValue = 1;
 
-        if (traversal.shouldTraverse() && nodes.find(traversal.primary.target) != nodes.end()) {
-            pushNote(traversal.getTargetNode(nodes), traversalId, midiMessages,
+        if (currentIt != nodes.end()) {
+            const RTNode& currentNode = currentIt->second;
+            int activeAltId = currentNode.activeAlternativeId;
+
+            if (activeAltId != -1) {
+                auto altIt = nodes.find(activeAltId);
+                repeatValue = (altIt != nodes.end()) ? altIt->second.repeatValue : 1;
+            } else {
+                repeatValue = currentNode.repeatValue;
+            }
         }
+
+        traversal.repeatCount++;
+
+        if (traversal.repeatCount < repeatValue) {
+            pushNote(traversal.getTargetNode(nodes), traversalId, midiMessages,
                      priorityNoteDuration, nodes, traversalMap);
+        } else {
+            traversal.repeatCount = 0;
+            applyStepResult(traversal.handleNodeEvent(nodes), nodes);
+
+            if (traversal.shouldTraverse() && nodes.find(traversal.primary.target) != nodes.end()) {
+                pushNote(traversal.getTargetNode(nodes), traversalId, midiMessages,
+                         priorityNoteDuration, nodes, traversalMap);
+            }
+        }
     }
 }
 
@@ -340,7 +363,8 @@ void TraversalDispatcher::resetTraversal(int graphId, int newTargetId,
 
     TraversalLogic& traversal = traversalMap.at(graphId);
     traversal.primary.target = newTargetId;
-    traversal.state    = TraversalLogic::TraversalState::Active;
+    traversal.state          = TraversalLogic::TraversalState::Active;
+    traversal.repeatCount    = 0;
 }
 
 void TraversalDispatcher::pushModulatorNotes(int modulatorRootId, juce::MidiBuffer& midiMessages,

@@ -141,6 +141,7 @@ void NodeCanvas::resetGraphArrowProgress(int graphId)
         const int parentId = arrow->parentNode->getComponentID().getIntValue();
         const juce::ValueTree arrowRoot = ValueTreeState::getRootNode(parentId);
         if (! arrowRoot.isValid()) {
+
             continue;
         }
 

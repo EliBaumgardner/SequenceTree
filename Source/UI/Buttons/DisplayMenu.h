@@ -35,6 +35,7 @@ class DisplayMenu : public juce::Component {
         menu.addItem(2, "show velocity");
         menu.addItem(3, "show countLimit");
         menu.addItem(4, "show channel");
+        menu.addItem(5, "show repeatValue");
 
         button.onClick = [this]() {
             button.isSelected = true;
@@ -45,10 +46,11 @@ class DisplayMenu : public juce::Component {
                 repaint();
                 switch (result)
                 {
-                    case 1: selectedOption = "show pitch";      applicationContext.canvas->setSelectionMode(NodeDisplayMode::Pitch);      break;
-                    case 2: selectedOption = "show velocity";   applicationContext.canvas->setSelectionMode(NodeDisplayMode::Velocity);   break;
-                    case 3: selectedOption = "show countLimit"; applicationContext.canvas->setSelectionMode(NodeDisplayMode::CountLimit); break;
-                    case 4: selectedOption = "show channel";    applicationContext.canvas->setSelectionMode(NodeDisplayMode::Channel);    break;
+                    case 1: selectedOption = "show pitch";        applicationContext.canvas->setSelectionMode(NodeDisplayMode::Pitch);        break;
+                    case 2: selectedOption = "show velocity";     applicationContext.canvas->setSelectionMode(NodeDisplayMode::Velocity);     break;
+                    case 3: selectedOption = "show countLimit";   applicationContext.canvas->setSelectionMode(NodeDisplayMode::CountLimit);   break;
+                    case 4: selectedOption = "show channel";      applicationContext.canvas->setSelectionMode(NodeDisplayMode::Channel);      break;
+                    case 5: selectedOption = "show repeatValue";  applicationContext.canvas->setSelectionMode(NodeDisplayMode::RepeatValue);  break;
                     default: break;
                 }
                 resized();

@@ -32,6 +32,7 @@ public:
 
     int  loopCount         = 0;
     int  loopLimit         = 0;
+    int  repeatCount       = 0;
 
     enum class TraversalState { Start, Active, End, Reset };
     enum class EventType      { Node, Modulator,  };

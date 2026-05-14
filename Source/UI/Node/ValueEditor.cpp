@@ -6,6 +6,7 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
 #include "../../Graph/RTGraphBuilder.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
 
 ValueEditor::ValueEditor(ApplicationContext& context) : applicationContext(context)
 {
@@ -23,6 +24,7 @@ ValueEditor::ValueEditor(ApplicationContext& context) : applicationContext(conte
     textEditor->setColour(juce::TextEditor::textColourId,           juce::Colours::lightgrey);
     textEditor->setFont(juce::Font(juce::FontOptions(9.0f)));
     textEditor->setVisible(false);
+
     addChildComponent(textEditor.get());
 }
 
@@ -31,7 +33,7 @@ void ValueEditor::paint(juce::Graphics& g)
     if (!isEditing) {
         g.setFont(juce::Font(juce::FontOptions(9.0f)));
         g.setColour(juce::Colours::lightgrey.withAlpha(0.85f));
-        // Cast to int so it never shows as "2.0"
+
         g.drawText(juce::String((int) boundValue.getValue()),
                    getLocalBounds(), juce::Justification::centred, false);
     }
@@ -54,8 +56,12 @@ void ValueEditor::mouseDown(const juce::MouseEvent&)
 
 void ValueEditor::bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID)
 {
+    boundValue.removeListener(this);
     boundTree  = tree;
     boundValue.referTo(tree.getPropertyAsValue(propertyID, nullptr));
+    boundIdentifier = propertyID;
+
+    boundValue.addListener(this);
     repaint();
 }
 
@@ -80,6 +86,7 @@ void ValueEditor::commitValue()
     if (val < minValue) {
         val = minValue;
     }
+
     boundValue.setValue(val);
 
     if (boundTree.isValid() && applicationContext.rtGraphBuilder != nullptr) {
@@ -89,4 +96,14 @@ void ValueEditor::commitValue()
     isEditing = false;
     textEditor->setVisible(false);
     repaint();
+}
+
+void ValueEditor::valueChanged(juce::Value&)
+{
+    if (!suppressCallback) {
+        repaint();
+    }
+
+    if (onValueChange)
+        onValueChange();
 }
