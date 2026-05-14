@@ -32,9 +32,10 @@ struct RTNode {
 
     int modulatorId = 0;
 
-    int nodeID = 0;
-    int parentId = 0;
-    int countLimit = 0;
+    int nodeID      = 0;
+    int parentId    = 0;
+    int countLimit  = 0;
+    int repeatValue = 1;
 
     bool isConnectedToModulator = false;
     bool isAlternativeNode = false;

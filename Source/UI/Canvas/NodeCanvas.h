@@ -10,8 +10,6 @@
 
 #pragma once
 
-
-
 #include "../../Graph/RTData.h"
 #include "DynamicPort.h"
 #include "../../Util/NodeInfo.h"

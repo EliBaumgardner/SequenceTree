@@ -60,9 +60,10 @@ juce::ValueTree ValueTreeState::addRootNode(juce::UndoManager* undoManager)
     newTree.addChild      (rootNodeId, -1, undoManager);
 
     rootNode.setProperty(ValueTreeIdentifiers::Id, newTreeId,undoManager);
-    rootNode.setProperty(ValueTreeIdentifiers::Count,defaultNodeCount,undoManager);
-    rootNode.setProperty(ValueTreeIdentifiers::CountLimit,defaultNodeCountLimit,undoManager);
-    rootNode.setProperty(ValueTreeIdentifiers::LoopLimit,defaultRootLoopLimit,undoManager);
+    rootNode.setProperty(ValueTreeIdentifiers::Count,       defaultNodeCount,      undoManager);
+    rootNode.setProperty(ValueTreeIdentifiers::CountLimit,  defaultNodeCountLimit, undoManager);
+    rootNode.setProperty(ValueTreeIdentifiers::RepeatValue, defaultRepeatValue,    undoManager);
+    rootNode.setProperty(ValueTreeIdentifiers::LoopLimit,   defaultRootLoopLimit,  undoManager);
     rootNode.setProperty(ValueTreeIdentifiers::RootNodeId,newTreeId,undoManager);
 
     rootNodeId.setProperty(ValueTreeIdentifiers::Id,newTreeId,undoManager);
@@ -95,8 +96,9 @@ juce::ValueTree ValueTreeState::addNode(int parentNodeId, juce::UndoManager* und
 
     node.setProperty(ValueTreeIdentifiers::RootNodeId,rootId,undoManager);
     node.setProperty(ValueTreeIdentifiers::Id,nodeIdIncrement,undoManager);
-    node.setProperty(ValueTreeIdentifiers::Count,defaultNodeCount,undoManager);
-    node.setProperty(ValueTreeIdentifiers::CountLimit,defaultNodeCountLimit,undoManager);
+    node.setProperty(ValueTreeIdentifiers::Count,       defaultNodeCount,      undoManager);
+    node.setProperty(ValueTreeIdentifiers::CountLimit,  defaultNodeCountLimit, undoManager);
+    node.setProperty(ValueTreeIdentifiers::RepeatValue, defaultRepeatValue,    undoManager);
 
     nodeId.setProperty(ValueTreeIdentifiers::Id,nodeIdIncrement,undoManager);
 
@@ -129,8 +131,9 @@ juce::ValueTree ValueTreeState::addAlternativeNode(int parentNodeId, juce::UndoM
 
     node.setProperty(ValueTreeIdentifiers::RootNodeId, rootId, undoManager);
     node.setProperty(ValueTreeIdentifiers::Id, nodeIdIncrement, undoManager);
-    node.setProperty(ValueTreeIdentifiers::Count, defaultNodeCount, undoManager);
-    node.setProperty(ValueTreeIdentifiers::CountLimit, defaultNodeCountLimit, undoManager);
+    node.setProperty(ValueTreeIdentifiers::Count,       defaultNodeCount,      undoManager);
+    node.setProperty(ValueTreeIdentifiers::CountLimit,  defaultNodeCountLimit, undoManager);
+    node.setProperty(ValueTreeIdentifiers::RepeatValue, defaultRepeatValue,    undoManager);
 
     nodeId.setProperty(ValueTreeIdentifiers::Id, nodeIdIncrement, undoManager);
 
@@ -161,8 +164,9 @@ juce::ValueTree ValueTreeState::addModulatorRoot(int parentNodeId, juce::UndoMan
 
     modulatorNode.setProperty(ValueTreeIdentifiers::RootNodeId,rootId,undoManager);
     modulatorNode.setProperty(ValueTreeIdentifiers::Id,rootId,undoManager);
-    modulatorNode.setProperty(ValueTreeIdentifiers::Count,defaultNodeCount,undoManager);
-    modulatorNode.setProperty(ValueTreeIdentifiers::CountLimit,defaultNodeCountLimit,undoManager);
+    modulatorNode.setProperty(ValueTreeIdentifiers::Count,       defaultNodeCount,      undoManager);
+    modulatorNode.setProperty(ValueTreeIdentifiers::CountLimit,  defaultNodeCountLimit, undoManager);
+    modulatorNode.setProperty(ValueTreeIdentifiers::RepeatValue, defaultRepeatValue,    undoManager);
 
     modulatorNodeId.setProperty(ValueTreeIdentifiers::Id,rootId,undoManager);
 

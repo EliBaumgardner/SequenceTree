@@ -46,8 +46,10 @@ NodeTextEditor::NodeTextEditor(Node* node, ApplicationContext& context)
 
     setInterceptsMouseClicks(false,false);
     setColour(juce::TextEditor::textColourId, juce::Colours::white);
-    
+
     baseFont = juce::Font(getFont());
+
+    bindValue.addListener(this);
 }
 
 void NodeTextEditor::paint(juce::Graphics& g) {
@@ -116,6 +118,10 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
     if (mode == NodeDisplayMode::Channel) {
         int channel = juce::jlimit(1, 16, (int)value);
         display = juce::String(channel);
+    }
+
+    if (mode == NodeDisplayMode::RepeatValue) {
+        display = juce::String(juce::jmax(1, (int)value));
     }
 
     setText(display);
@@ -194,4 +200,8 @@ void NodeTextEditor::textEditorReturnKeyPressed(juce::TextEditor &editor) {
 
     node->nodeArrow->bindValue.setValue(text);
 
+}
+
+void NodeTextEditor::valueChanged(juce::Value &) {
+    formatDisplay(mode);
 }

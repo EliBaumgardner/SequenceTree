@@ -151,6 +151,10 @@ void Node::setDisplayMode(NodeDisplayMode mode)
             nodeTextEditor->bindEditor(midiNoteData, ValueTreeIdentifiers::MidiChannel);
             break;
 
+        case NodeDisplayMode::RepeatValue:
+            nodeTextEditor->bindEditor(nodeValueTree, ValueTreeIdentifiers::RepeatValue);
+            break;
+
         default:
             break;
     }
