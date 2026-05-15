@@ -37,7 +37,14 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
 
   childNode->incomingAngle = std::atan2(dy, dx);
 
-  duration = (int)(std::abs(dx) * durationAmount);
+  if (parentNode->isAlternativeNode) {
+      duration = (int)(std::abs(dy) * durationAmount);
+  }
+  else {
+      duration = (int)(std::abs(dx) * durationAmount);
+  }
+
+
   if (parentNode->nodeType == NodeType::Modulator) {
       textEditor.setText(juce::String(duration / 10) + "%");
   }
@@ -55,7 +62,6 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
   float arrowEndY = float(end.y) - dirY * float(childRadius);
 
   juce::Path curvePath;
-
   {
     float absDx = std::abs(dx);
     float absDy = std::abs(dy);

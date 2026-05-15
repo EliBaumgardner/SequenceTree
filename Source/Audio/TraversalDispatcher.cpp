@@ -72,7 +72,17 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
     }
 
     if (nextTarget != nullptr) {
-        auto it = node.durationMap.find(nextTarget->nodeID);
+
+        std::unordered_map<int, int>::const_iterator it;
+
+        if (node.isAlternativeNode) {
+            it = node.durationMap.find(node.parentId);
+        }
+        else {
+            it = node.durationMap.find(nextTarget->nodeID);
+        }
+
+
         if (it != node.durationMap.end() && it->second > 0) {
             duration = it->second;
         }
@@ -81,6 +91,7 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
         auto parentIt = nodes.find(lastTargetId);
         if (parentIt != nodes.end()) {
             auto durIt = parentIt->second.durationMap.find(node.nodeID);
+
             if (durIt != parentIt->second.durationMap.end() && durIt->second > 0) {
                 duration = durIt->second;
             }
@@ -92,7 +103,8 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
 
 void TraversalDispatcher::pushNote(const RTNode& node, int traversalId,
                                    juce::MidiBuffer& midiMessages, int sample,
-                                   NodeMap& nodes, TraversalMap& traversalMap)
+                                   NodeMap& nodes, TraversalMap& traversalMap,
+                                   bool isPrimaryRepeat)
 {
     auto traversalIterator = traversalMap.find(traversalId);
     jassert(traversalIterator != traversalMap.end());
@@ -100,18 +112,11 @@ void TraversalDispatcher::pushNote(const RTNode& node, int traversalId,
 
     RTNode* modulatorNode = nullptr;
     RTNode* nextModulatorTarget = nullptr;
+    RTNode* alternativeNode = nullptr;
 
-    dispatchModulator(node, nodes, traversalLogic, modulatorNode, traversalMap);
+    dispatchModulator(node, nodes, traversalLogic, modulatorNode, traversalMap, isPrimaryRepeat);
 
     RTNode* nextTarget = traversalLogic.peekNextTarget(nodes);
-
-    int duration = resolveDuration(node, nextTarget, traversalLogic.primary.last, nodes);
-
-    if (modulatorNode != nullptr && traversalLogic.modulator.target != -1) {
-        nextModulatorTarget = traversalLogic.peekModulators(nodes);
-        int modulatorDuration = resolveDuration(*modulatorNode, nextModulatorTarget, traversalLogic.modulator.last, nodes);
-        duration = static_cast<int>(duration * (0.001 * modulatorDuration));
-    }
 
     const double sampleRate      = processor.TempoInfo.currentSampleRate;
     const double tempoMultiplier = processor.tempoMultiplier.load();
@@ -119,16 +124,32 @@ void TraversalDispatcher::pushNote(const RTNode& node, int traversalId,
     jassert(tempoMultiplier > 0.0);
 
     RTNode effectiveNode = node;
+
+    int duration;
+
     if (effectiveNode.activeAlternativeId != -1 && !effectiveNode.notes.empty()) {
         auto altIt = nodes.find(effectiveNode.activeAlternativeId);
-        if (altIt != nodes.end() && !altIt->second.notes.empty()) {
-            effectiveNode.notes[0].pitch    = altIt->second.notes[0].pitch;
-            effectiveNode.notes[0].velocity = altIt->second.notes[0].velocity;
+
+        if (altIt != nodes.end()) {
+            alternativeNode = &altIt->second;
         }
     }
 
-    scheduler.scheduleNote(effectiveNode, traversalId, sample, midiMessages,
-                           sampleRate, tempoMultiplier, duration);
+    if (alternativeNode != nullptr) {
+        duration = resolveDuration(*alternativeNode, nextTarget, traversalLogic.primary.last, nodes);
+    }
+    else {
+        duration = resolveDuration(effectiveNode, nextTarget, traversalLogic.primary.last, nodes);
+    }
+
+    if (modulatorNode != nullptr && traversalLogic.modulator.target != -1) {
+        nextModulatorTarget = traversalLogic.peekModulators(nodes);
+        int modulatorDuration = resolveDuration(*modulatorNode, nextModulatorTarget, traversalLogic.modulator.last, nodes);
+        duration = static_cast<int>(duration * (0.001 * modulatorDuration));
+    }
+
+
+    scheduler.scheduleNote(effectiveNode, traversalId, sample, midiMessages, sampleRate, tempoMultiplier, duration);
 
     pushChordNotes(node, sample, duration, midiMessages, sampleRate, tempoMultiplier, nodes);
 
@@ -241,7 +262,7 @@ void TraversalDispatcher::pushChordNotes(const RTNode& node, int sample, int dur
     }
 }
 
-void TraversalDispatcher::dispatchModulator(const RTNode &node, NodeMap &nodes, TraversalLogic &traversalLogic, RTNode *&modulatorNode, TraversalMap& traversalMap)
+void TraversalDispatcher::dispatchModulator(const RTNode &node, NodeMap &nodes, TraversalLogic &traversalLogic, RTNode *&modulatorNode, TraversalMap& traversalMap, bool isPrimaryRepeat)
 {
     int newActiveRootId = traversalLogic.findActiveModulatorRoot(nodes, node.nodeID);
 
@@ -253,12 +274,21 @@ void TraversalDispatcher::dispatchModulator(const RTNode &node, NodeMap &nodes, 
             }
         }
 
-        traversalLogic.activeModulatorRootId = newActiveRootId;
-        traversalLogic.modulator.target      = newActiveRootId;
-        traversalLogic.modulator.last        = -1;
+        traversalLogic.activeModulatorRootId  = newActiveRootId;
+        traversalLogic.modulator.target       = newActiveRootId;
+        traversalLogic.modulator.last         = -1;
+        traversalLogic.modulatorRepeatCount   = 0;
     }
-    else if (newActiveRootId != -1) {
-        traversalLogic.advanceModulator(nodes);
+    else if (newActiveRootId != -1 && !isPrimaryRepeat) {
+        auto targetIt = nodes.find(traversalLogic.modulator.target);
+        int modulatorRepeatValue = (targetIt != nodes.end()) ? targetIt->second.repeatValue : 1;
+
+        traversalLogic.modulatorRepeatCount++;
+
+        if (traversalLogic.modulatorRepeatCount >= modulatorRepeatValue) {
+            traversalLogic.modulatorRepeatCount = 0;
+            traversalLogic.advanceModulator(nodes);
+        }
     }
 
     if (traversalLogic.activeModulatorRootId == -1 || traversalLogic.modulator.target == -1) {
@@ -307,9 +337,7 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
             pushRootNodeConnection(expiredNote.noteNode.nodeID, midiMessages,priorityNoteDuration, nodes, traversalMap);
         }
     }
-    else if (type == RTNode::NodeType::RootNode
-          || type == RTNode::NodeType::Node
-          ) {
+    else if (type == RTNode::NodeType::RootNode|| type == RTNode::NodeType::Node) {
         auto currentIt = nodes.find(traversal.primary.target);
         int  repeatValue = 1;
 
@@ -329,7 +357,7 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
 
         if (traversal.repeatCount < repeatValue) {
             pushNote(traversal.getTargetNode(nodes), traversalId, midiMessages,
-                     priorityNoteDuration, nodes, traversalMap);
+                     priorityNoteDuration, nodes, traversalMap, true);
         } else {
             traversal.repeatCount = 0;
             applyStepResult(traversal.handleNodeEvent(nodes), nodes);

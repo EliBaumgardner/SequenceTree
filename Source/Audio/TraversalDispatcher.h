@@ -18,7 +18,8 @@ public:
 
     void pushNote(const RTNode& node, int traversalId,
                   juce::MidiBuffer& midiMessages, int sample,
-                  NodeMap& nodes, TraversalMap& traversalMap);
+                  NodeMap& nodes, TraversalMap& traversalMap,
+                  bool isPrimaryRepeat = false);
 
     void handleExpiredNote(const NoteScheduler::ActiveNote& expiredNote,
                            int priorityNoteDuration,
@@ -41,7 +42,7 @@ private:
     int resolveDuration(const RTNode& node, const RTNode* nextTarget,
                         int lastTargetId, const NodeMap& nodes);
 
-    void dispatchModulator(const RTNode &node, NodeMap &nodes, TraversalLogic &traversalLogic, RTNode *&modulatorNode, TraversalMap &traverserMap);
+    void dispatchModulator(const RTNode &node, NodeMap &nodes, TraversalLogic &traversalLogic, RTNode *&modulatorNode, TraversalMap &traverserMap, bool isPrimaryRepeat);
 
     void pushChordNotes(const RTNode& node, int sample, int duration,
                         juce::MidiBuffer& midiMessages,

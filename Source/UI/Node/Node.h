@@ -64,14 +64,18 @@ public:
     int nodeId;
     NodeType nodeType    = NodeType::Node;
     float incomingAngle  = 0.0f;
+
     bool isHovered           = false;
     bool isSelected          = false;
     bool isHighlighted       = false;
     bool pendingHighlightOff = false;
+    bool isAlternativeNode   = false;
+
     float pulsePhase         = 1.0f;
 
     int displayCurrentCount = 0;
     int displayCountLimit   = 1;
+
 
 protected:
     ApplicationContext& applicationContext;

@@ -216,6 +216,7 @@ void RTGraphBuilder::updateDurationMap(int nodeId)
     if (nodeIt == canvas.nodeMap.end()) {
         return;
     }
+
     Node* node = nodeIt->second;
 
     juce::ValueTree nodeVT = ValueTreeState::getNode(nodeId);

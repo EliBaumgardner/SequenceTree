@@ -30,9 +30,10 @@ public:
     int  rootId            = 0;
     int  referenceTargetId = 0;
 
-    int  loopCount         = 0;
-    int  loopLimit         = 0;
-    int  repeatCount       = 0;
+    int  loopCount            = 0;
+    int  loopLimit            = 0;
+    int  repeatCount          = 0;
+    int  modulatorRepeatCount = 0;
 
     enum class TraversalState { Start, Active, End, Reset };
     enum class EventType      { Node, Modulator,  };
