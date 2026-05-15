@@ -209,9 +209,12 @@ Node* NodeCanvas::instantiateNodeFromTree(const juce::ValueTree& nodeValueTree)
     if (treeType == ValueTreeIdentifiers::RootNodeData) {
         node = std::make_unique<RootNode>(applicationContext);
     }
-    else if (treeType == ValueTreeIdentifiers::NodeData
-          || treeType == ValueTreeIdentifiers::AlternativeNodeData) {
+    else if (treeType == ValueTreeIdentifiers::NodeData) {
         node = std::make_unique<Node>(applicationContext);
+    }
+    else if (treeType == ValueTreeIdentifiers::AlternativeNodeData) {
+        node = std::make_unique<Node>(applicationContext);
+        node.get()->isAlternativeNode = true;
     }
     else if (treeType == ValueTreeIdentifiers::ModulatorData
           || treeType == ValueTreeIdentifiers::ModulatorRootData) {
@@ -244,29 +247,26 @@ Node* NodeCanvas::instantiateNodeFromTree(const juce::ValueTree& nodeValueTree)
 
 void NodeCanvas::addNodeToCanvas(int nodeId)
 {
-    juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
-    juce::ValueTree nodeParent = ValueTreeState::getNodeParent(nodeId);
+    juce::ValueTree nodeChildTree = ValueTreeState::getNode(nodeId);
+    juce::ValueTree nodeParentTree = ValueTreeState::getNodeParent(nodeId);
 
-    jassert(nodeValueTree.isValid());
+    jassert(nodeChildTree.isValid());
 
-    Node* childNode = instantiateNodeFromTree(nodeValueTree);
+    Node* childNode = instantiateNodeFromTree(nodeChildTree);
 
-    if (nodeParent.isValid()) {
-        int parentNodeId = nodeParent.getProperty(ValueTreeIdentifiers::Id);
+    if (nodeParentTree.isValid()) {
+        int parentNodeId = nodeParentTree.getProperty(ValueTreeIdentifiers::Id);
         auto parentNodePair = nodeMap.find(parentNodeId);
+
         if (parentNodePair != nodeMap.end()) {
             Node* parentNode = parentNodePair->second;
 
-            Node* startNode;
-            Node* endNode;
+            Node* startNode = parentNode;
+            Node* endNode = childNode;
 
-            if (nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
+            if (nodeChildTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
                 startNode = childNode;
                 endNode   = parentNode;
-            }
-            else {
-                startNode = parentNode;
-                endNode   = childNode;
             }
 
             endNode->nodeColour = startNode->nodeColour;
@@ -275,14 +275,14 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
         }
     }
 
-    if (!gridOriginSet && nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
+    if (!gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
         NodePosition pos = ValueTreeState::getNodePosition(nodeId);
         gridOrigin    = { (float)pos.xPosition, (float)pos.yPosition };
         gridSpacing   = 50.0f;
         gridOriginSet = true;
     }
 
-    applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);
+    applicationContext.rtGraphBuilder->makeRTGraph(nodeChildTree);
 }
 
 void NodeCanvas::removeNodeFromCanvas(int nodeId)
@@ -353,7 +353,6 @@ void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int 
 
 void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
 {
-    DBG("creating line point");
 
     int parentNodeId = parentNode->getComponentID().getIntValue();
     int childNodeId  = childNode->getComponentID().getIntValue();

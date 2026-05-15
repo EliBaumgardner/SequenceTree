@@ -36,7 +36,6 @@ juce::Colour CustomLookAndFeel::applyIntensity(juce::Colour base) const
     float saturationBoost = distance * 0.35f;
     float newSaturation   = juce::jlimit(0.0f, 1.0f, base.getSaturation() + saturationBoost);
 
-    // Lift every colour as the slider moves from neutral, lifting darker colours most
     float darkness        = 1.0f - base.getBrightness();
     float brightnessLift  = distance * (0.10f + darkness * 0.25f);
     float newBrightness   = juce::jlimit(0.0f, 1.0f, base.getBrightness() + brightnessLift);
@@ -293,11 +292,27 @@ void CustomLookAndFeel::drawNodeArrowText(juce::Graphics &g, const NodeArrow &no
     if (labelText.isNotEmpty() && nodeArrow.animT > 0.8f) {
         float midX = (parentX + childX) * 0.5f;
         float midY = (parentY + childY) * 0.5f;
-        float angle = std::atan2(arrowEndY - parentY, arrowEndX - parentX);
+
+        float deltaX = float(arrowEndX - parentX);
+        float deltaY = float(arrowEndY - parentY);
+
+        float angle = std::atan2(deltaY, deltaX);
 
         const float halfPi = juce::MathConstants<float>::halfPi;
-        while (angle >  halfPi) angle -= juce::MathConstants<float>::pi;
-        while (angle <= -halfPi) angle += juce::MathConstants<float>::pi;
+
+        while (angle >  halfPi) {
+            angle -= juce::MathConstants<float>::pi;
+        }
+
+        while (angle <= -halfPi) {
+            angle += juce::MathConstants<float>::pi;
+        }
+
+        const float verticalArrowTextThreshold = 0.2f;
+        const bool isVertical = std::abs(deltaX) < std::abs(deltaY) * verticalArrowTextThreshold;
+        if (isVertical) {
+            angle = 0.0f;
+        }
 
         juce::Graphics::ScopedSaveState savedState(g);
 
@@ -317,7 +332,10 @@ void CustomLookAndFeel::drawNodeArrowText(juce::Graphics &g, const NodeArrow &no
 namespace {
     juce::Path trimPathToFraction(const juce::Path& source, float t)
     {
-        if (t <= 0.0f || source.isEmpty()) return {};
+        if (t <= 0.0f || source.isEmpty()) {
+            return {};
+        }
+
         if (t >= 1.0f) {
             return source;
         }
