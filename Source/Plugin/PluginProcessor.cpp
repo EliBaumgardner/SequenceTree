@@ -341,26 +341,46 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)
     auto oldSnap = std::atomic_load(&audioSnapshot);
 
     auto newSnap = std::make_shared<AudioSnapshot>();
+
     newSnap->globalNodes = (oldSnap && oldSnap->globalNodes)
         ? std::make_shared<NodeMap>(*oldSnap->globalNodes)
         : std::make_shared<NodeMap>();
+
     newSnap->rtGraphs = (oldSnap && oldSnap->rtGraphs)
         ? std::make_shared<RTGraphs>(*oldSnap->rtGraphs)
         : std::make_shared<RTGraphs>();
 
     (*newSnap->rtGraphs)[graph->graphID] = graph;
 
-    for (const auto& [nodeId, node] : graph->nodeMap)
+
+    for (const auto& [nodeId, node] : graph->nodeMap) {
+
+        RTNode* lastNode = nullptr;
+
+        if ((*newSnap->globalNodes).count(nodeId) != 0) {
+            lastNode = &(*newSnap->globalNodes)[nodeId];
+        }
+
         (*newSnap->globalNodes)[nodeId] = node;
 
+        if (lastNode != nullptr) {
+            (*newSnap->globalNodes)[nodeId].lastNodeId = lastNode->lastNodeId;
+        }
+    }
+
     std::vector<int> staleIds;
-    for (const auto& [nodeId, node] : *newSnap->globalNodes)
+
+    for (const auto& [nodeId, node] : *newSnap->globalNodes) {
         if (node.graphID == graph->graphID && !graph->nodeMap.count(nodeId)) {
             staleIds.push_back(nodeId);
         }
+    }
 
-    for (int id : staleIds)
+
+
+    for (int id : staleIds) {
         newSnap->globalNodes->erase(id);
+    }
 
     std::atomic_store(&audioSnapshot, newSnap);
 }

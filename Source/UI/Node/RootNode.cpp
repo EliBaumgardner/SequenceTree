@@ -31,17 +31,20 @@ void RootNode::resized() {
 
     int rectHeight = bounds.getHeight() / 2;
     int rectY      = (bounds.getHeight() - rectHeight) / 2;
+
     rootRectangle->setBounds(0, rectY, rw + 8, rectHeight);
 
     juce::Rectangle<int> circleArea = bounds.withTrimmedLeft(rw);
-
     juce::Rectangle<int> editorArea = circleArea.reduced(10);
+
     upButton.setBounds(editorArea.removeFromTop(4));
     downButton.setBounds(editorArea.removeFromBottom(4));
+
     nodeTextEditor->setBounds(editorArea);
     nodeTextEditor->setJustification(juce::Justification::centred);
 
     countEditor.setBounds(circleArea.getRight() - 18, circleArea.getY(), 18, 12);
+    switchCountEditor.setBounds( circleArea.getRight() - 18, circleArea.getBottom() - 12, 18, 12);
 }
 
 void RootNode::setDisplayMode(NodeDisplayMode mode) {

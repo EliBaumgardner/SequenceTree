@@ -26,6 +26,7 @@ public:
 
     NodeTextEditor(Node* node, ApplicationContext& context);
     void paint(juce::Graphics& g) override;
+    void resized() override;
     void refit();
 
     void textEditorReturnKeyPressed(juce::TextEditor& editor) override;

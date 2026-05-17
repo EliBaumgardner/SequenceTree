@@ -27,11 +27,13 @@ public:
     void bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID);
     void setMinimumValue(int min);
     void valueChanged(juce::Value&) override;
+    void commitValue();
+
+    std::unique_ptr<juce::TextEditor> textEditor;
 
 private:
     void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
     void textEditorFocusLost      (juce::TextEditor& editor) override;
-    void commitValue();
 
     ApplicationContext& applicationContext;
 
@@ -41,7 +43,6 @@ private:
 
     juce::ValueTree boundTree;
 
-    std::unique_ptr<juce::TextEditor> textEditor;
 
     bool isEditing        = false;
     bool suppressCallback = false;

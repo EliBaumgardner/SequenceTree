@@ -155,10 +155,18 @@ void TraversalDispatcher::pushNote(const RTNode& node, int traversalId,
 
     const int wallClockMs = static_cast<int>(duration / tempoMultiplier);
 
+    if (alternativeNode != nullptr) {
+
+        auto alternativeNodeParentIterator = nodes.find(alternativeNode->parentId);
+
+        if (alternativeNodeParentIterator != nodes.end()) {
+            RTNode* alternativeNodeParent = &alternativeNodeParentIterator->second;
+            dispatchPrimaryArrow(*alternativeNode, alternativeNodeParent, traversalId, traversalLogic.rootId, wallClockMs);
+        }
+    }
+
     dispatchPrimaryArrow(node, nextTarget, traversalId, traversalLogic.rootId, wallClockMs);
-
     dispatchModulatorArrow(modulatorNode, nextModulatorTarget, traversalLogic.activeModulatorRootId, traversalLogic.rootId, wallClockMs);
-
     dispatchCrossTree(node, traversalId, sample, traversalLogic.rootId, midiMessages, sampleRate, tempoMultiplier, nodes, traversalLogic);
 }
 
@@ -247,6 +255,7 @@ void TraversalDispatcher::pushChordNotes(const RTNode& node, int sample, int dur
         }
 
         auto childIt = nodes.find(childId);
+
         if (childIt == nodes.end()) {
             continue;
         }

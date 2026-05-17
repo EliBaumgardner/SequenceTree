@@ -19,6 +19,8 @@
 
 #include "NodeTextEditor.h"
 
+#include <cmath>
+
  static const juce::String pitchNames[] = {
     juce::String(L"C"),
     juce::String(L"C♯"),
@@ -58,17 +60,35 @@ void NodeTextEditor::paint(juce::Graphics& g) {
 
 }
 
+void NodeTextEditor::resized() {
+    juce::TextEditor::resized();
+    refit();
+}
+
 void NodeTextEditor::refit() {
         auto bounds = getLocalBounds().toFloat().reduced(4.0f);
-        
+
         float length = baseFont.getStringWidthFloat(getText());
         float height = baseFont.getHeight();
-        float ratio = std::min(bounds.getWidth()/length,bounds.getHeight()/height);
-        
+
+        if (bounds.getWidth() <= 0.0f || bounds.getHeight() <= 0.0f
+            || height <= 0.0f) {
+            return;
+        }
+
+        float heightRatio = bounds.getHeight() / height;
+        float ratio = (length > 0.0f)
+                        ? std::min(bounds.getWidth()/length, heightRatio)
+                        : heightRatio;
+
         height *= ratio;
-        
+
+        if (height <= 0.0f || ! std::isfinite(height)) {
+            return;
+        }
+
         auto font = baseFont;
-    
+
         font.setHeight(height);
         setFont(font);
         applyFontToAllText(font);

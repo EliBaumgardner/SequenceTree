@@ -12,6 +12,8 @@ public:
     struct Walker
     {
         std::unordered_map<int, int> counts;
+        std::unordered_map<int,int> switchCounts;
+
         int target = 0;
         int last   = 0;
 
@@ -75,7 +77,7 @@ public:
     RTNode* peekNextTarget(NodeMap& nodes);
 
     using ChildPredicate = bool (*)(RTNode::NodeType);
-    static int selectNextChild(const NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible);
+    int selectNextChild(NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible);
 
     std::vector<int> peekCrossTreeNode(NodeMap& nodes);
     RTNode* peekModulators(NodeMap& nodes);

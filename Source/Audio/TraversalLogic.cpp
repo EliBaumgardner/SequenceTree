@@ -70,18 +70,19 @@ int TraversalLogic::advanceAlternativeNode(NodeMap &nodes) {
     return chosen;
 }
 
-int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int parentCount,
+int TraversalLogic::selectNextChild(NodeMap& nodes, int parentId, int parentCount,
                                     ChildPredicate isEligible)
 {
-    auto it = nodes.find(parentId);
-    if (it == nodes.end()) {
+    auto parentNodeIterator = nodes.find(parentId);
+
+    if (parentNodeIterator == nodes.end()) {
         return -1;
     }
 
     int chosen   = -1;
     int maxLimit = 0;
 
-    for (int childId : it->second.children) {
+    for (int childId : parentNodeIterator->second.children) {
         auto childIt = nodes.find(childId);
         if (childIt == nodes.end()) {
             continue;
@@ -92,12 +93,13 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
         if (!isEligible(child.nodeType)) {
             continue;
         }
+
         if (child.countLimit <= 0) {
             continue;
         }
 
-        auto durIt = it->second.durationMap.find(childId);
-        if (durIt != it->second.durationMap.end() && durIt->second == 0) {
+        auto durIt = parentNodeIterator->second.durationMap.find(childId);
+        if (durIt != parentNodeIterator->second.durationMap.end() && durIt->second == 0) {
             continue;
         }
 
@@ -107,6 +109,7 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
         }
     }
 
+    parentNodeIterator->second.lastNodeId = chosen;
     return chosen;
 }
 
@@ -162,8 +165,9 @@ void TraversalLogic::advanceAlternative(NodeMap& nodes, int parentId) {
 void TraversalLogic::advance(NodeMap& nodes)
 {
     int targetId            = primary.target;
-    int count               = ++primary.counts[targetId];
     int chosenNodeId        = -1;
+
+    bool switchNodeActive = false;
 
     referenceTargetId       = primary.last;
     primary.last            = targetId;
@@ -175,9 +179,34 @@ void TraversalLogic::advance(NodeMap& nodes)
         return;
     }
 
-    chosenNodeId = selectNextChild(nodes, targetId, count, &isAdvanceableChild);
+    if (targetIt->second.lastNodeId != -1 ) {
 
-    if (chosenNodeId != -1) {
+        int switchCount         = ++primary.switchCounts[targetId];
+
+        auto switchNodeIterator = nodes.find(targetIt->second.lastNodeId);
+
+        RTNode switchNode = switchNodeIterator->second;
+        int switchCountLimit = switchNode.switchCountLimit;
+
+        if (!(switchCount > switchCountLimit-1) && switchCountLimit > 1) {
+            switchNodeActive = true;
+        }
+        else {
+           switchNodeActive = false;
+            primary.switchCounts[targetId] = 0;
+        }
+
+        if (switchNodeActive) {
+            chosenNodeId = switchNode.nodeID;
+        }
+    }
+
+    if (switchNodeActive == false) {
+        int count               = ++primary.counts[targetId];
+        chosenNodeId = selectNextChild(nodes, targetId, count, &isAdvanceableChild);
+    }
+
+    if (chosenNodeId  != -1) {
         auto nextTargetIt = nodes.find(chosenNodeId);
         if (nextTargetIt == nodes.end()) {
             primary.alternativeTarget = -1;
@@ -186,6 +215,8 @@ void TraversalLogic::advance(NodeMap& nodes)
             primary.target = chosenNodeId;
             advanceAlternative(nodes, chosenNodeId);
         }
+
+        targetIt->second.lastNodeId = chosenNodeId;
     }
 
     if (primary.target == primary.last) {
