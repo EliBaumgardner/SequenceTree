@@ -29,6 +29,7 @@ class RootNode : public Node {
     }
 
     std::unique_ptr<RootRectangle> rootRectangle = nullptr;
+
 };
 
 

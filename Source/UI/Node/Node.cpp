@@ -20,25 +20,23 @@
 
 
 
-Node::Node(ApplicationContext& context) : applicationContext(context), countEditor(context)
+Node::Node(ApplicationContext& context) : applicationContext(context), countEditor(context), switchCountEditor(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
 
     upButton.setInterceptsMouseClicks(true,false);
-    addAndMakeVisible(upButton);
 
     downButton.setInterceptsMouseClicks(true,false);
-    addAndMakeVisible(downButton);
 
     nodeTextEditor = std::make_unique<NodeTextEditor>(this, context);
     nodeTextEditor->bindEditor(midiNoteData,ValueTreeIdentifiers::MidiPitch);
-
-    addAndMakeVisible(nodeTextEditor.get());
     nodeTextEditor->toBack();
 
     countEditor.setInterceptsMouseClicks(true, false);
     countEditor.setTooltip("Count Limit");
-    addAndMakeVisible(countEditor);
+
+    switchCountEditor.setInterceptsMouseClicks(true, false);
+    switchCountEditor.setTooltip("Loop Limit");
 
     upButton.onChanged = [this]() {
         incrementNodeTextEditorValue(1);
@@ -47,6 +45,12 @@ Node::Node(ApplicationContext& context) : applicationContext(context), countEdit
     downButton.onChanged = [this]() {
         incrementNodeTextEditorValue(-1);
     };
+
+    addAndMakeVisible(upButton);
+    addAndMakeVisible(downButton);
+    addAndMakeVisible(nodeTextEditor.get());
+    addAndMakeVisible(switchCountEditor);
+    addAndMakeVisible(countEditor);
 }
 
 void Node::paint(juce::Graphics& g)
@@ -57,17 +61,19 @@ void Node::paint(juce::Graphics& g)
 void Node::resized()
 {
     auto editorArea = getLocalBounds().reduced(10.0f);
-    int  buttonH    = juce::jmax(2, (int)(editorArea.getHeight() * 0.2f));
+    int  buttonHeight    = juce::jmax(2, (int)(editorArea.getHeight() * 0.2f));
 
-    upButton.setBounds(editorArea.removeFromTop(buttonH));
-    downButton.setBounds(editorArea.removeFromBottom(buttonH));
+    upButton.setBounds(editorArea.removeFromTop(buttonHeight));
+    downButton.setBounds(editorArea.removeFromBottom(buttonHeight));
 
     nodeTextEditor->setBounds(editorArea);
     nodeTextEditor->setJustification(juce::Justification::centred);
 
-    int cw = (int)(getWidth()  * 0.45f);
-    int ch = (int)(getHeight() * 0.30f);
-    countEditor.setBounds(getWidth() - cw, 0, cw, ch);
+    int editorWidth = (int)(getWidth()  * 0.45f);
+    int editorHeight = (int)(getHeight() * 0.30f);
+
+    countEditor.setBounds(getWidth() - editorWidth, 0, editorWidth, editorHeight);
+    switchCountEditor.setBounds(getWidth() - editorWidth, getHeight() - editorHeight,editorWidth,editorHeight);
 }
 
 void Node::setHoverVisual(bool isHovered)
@@ -131,6 +137,7 @@ void Node::setDisplayMode(NodeDisplayMode mode)
 
     if (nodeValueTree.isValid()) {
         countEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
+        switchCountEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
     }
 
     switch (mode) {

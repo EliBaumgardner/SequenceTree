@@ -57,7 +57,9 @@ public:
 
     IncrementButton upButton   { true };
     IncrementButton downButton { false };
+
     ValueEditor countEditor;
+    ValueEditor switchCountEditor;
 
     juce::Colour nodeColour = juce::Colour::fromRGB(195,174,132).darker().darker().darker();
 

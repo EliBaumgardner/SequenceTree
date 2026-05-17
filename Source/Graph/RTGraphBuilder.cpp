@@ -36,6 +36,7 @@ void RTGraphBuilder::makeRTGraph(const juce::ValueTree& nodeValueTree)
     }
 
     juce::ValueTree rootNodeValueTree = ValueTreeState::getNode(rootNodeId);
+
     if (!rootNodeValueTree.isValid()) {
         rtGraphs.erase(rootNodeId);
         auto emptyGraph = std::make_shared<RTGraph>();
@@ -75,7 +76,10 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
 
         int nodeId      = currentValueTree.getProperty(ValueTreeIdentifiers::Id);
         int graphId     = currentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
+
         int countLimit  = currentValueTree.getProperty(ValueTreeIdentifiers::CountLimit);
+        int switchCountLimit = currentValueTree.getProperty(ValueTreeIdentifiers::SwitchCountLimit);
+
         int repeatValue = currentValueTree.getProperty(ValueTreeIdentifiers::RepeatValue, ValueTreeState::defaultRepeatValue);
 
         bool isAlternativeNode = (nodeType == ValueTreeIdentifiers::AlternativeNodeData);
@@ -90,6 +94,10 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
 
             rtNode.graphID = graphId;
             rtNode.nodeID = nodeId;
+
+            rtNode.countLimit  = countLimit;
+            rtNode.switchCountLimit = switchCountLimit;
+            rtNode.repeatValue = repeatValue;
 
             rtNode.isAlternativeNode = isAlternativeNode;
 
@@ -117,9 +125,6 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
                     }
                 }
             }
-
-            rtNode.countLimit  = countLimit;
-            rtNode.repeatValue = repeatValue;
 
             auto nodeIt = canvas.nodeMap.find(nodeId);
 
