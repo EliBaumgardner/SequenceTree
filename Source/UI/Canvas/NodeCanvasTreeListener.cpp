@@ -39,6 +39,7 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
     if (propertyIdentifier == ValueTreeIdentifiers::XPosition
         || propertyIdentifier == ValueTreeIdentifiers::YPosition
         || propertyIdentifier == ValueTreeIdentifiers::Radius) {
+
         jassert(nodeType == ValueTreeIdentifiers::NodeData
             || nodeType == ValueTreeIdentifiers::AlternativeNodeData
             || nodeType == ValueTreeIdentifiers::RootNodeData

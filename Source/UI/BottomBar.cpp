@@ -10,17 +10,21 @@ BottomBar::BottomBar(ApplicationContext& context)
 
     addAndMakeVisible(colourSelector);
 
-    countLimitEditor.setMinimumValue(1);
-    repeatEditor    .setMinimumValue(1);
-    velocityEditor  .setMinimumValue(0);
-    pitchEditor     .setMinimumValue(0);
-    channelEditor   .setMinimumValue(1);
+    countLimitEditor       .setMinimumValue(1);
+    repeatEditor           .setMinimumValue(1);
+    switchCountLimitEditor .setMinimumValue(1);
+    subLoopCountLimitEditor.setMinimumValue(1);
+    velocityEditor         .setMinimumValue(0);
+    pitchEditor            .setMinimumValue(0);
+    channelEditor          .setMinimumValue(1);
 
-    countLimitEditor.setTooltip("Count Limit");
-    repeatEditor    .setTooltip("Repeat Value");
-    velocityEditor  .setTooltip("Velocity");
-    pitchEditor     .setTooltip("Pitch");
-    channelEditor   .setTooltip("Channel");
+    countLimitEditor       .setTooltip("Count Limit");
+    repeatEditor           .setTooltip("Repeat Value");
+    switchCountLimitEditor .setTooltip("Switch Count Limit");
+    subLoopCountLimitEditor.setTooltip("Sub Loop Count Limit");
+    velocityEditor         .setTooltip("Velocity");
+    pitchEditor            .setTooltip("Pitch");
+    channelEditor          .setTooltip("Channel");
 
     for (auto& le : labeledEditors) {
         le.editor.setVisible(false);
@@ -47,8 +51,10 @@ void BottomBar::bindToNode(Node* node)
     const bool hasMidi     = node->midiNoteData.isValid();
 
     if (hasNodeTree) {
-        countLimitEditor.bindEditor(node->nodeValueTree, ValueTreeIdentifiers::CountLimit);
-        repeatEditor    .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::RepeatValue);
+        countLimitEditor       .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::CountLimit);
+        repeatEditor           .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::RepeatValue);
+        switchCountLimitEditor .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
+        subLoopCountLimitEditor.bindEditor(node->nodeValueTree, ValueTreeIdentifiers::SubLoopCountLimit);
     }
 
     if (hasMidi) {
@@ -57,11 +63,13 @@ void BottomBar::bindToNode(Node* node)
         channelEditor .bindEditor(node->midiNoteData, ValueTreeIdentifiers::MidiChannel);
     }
 
-    countLimitEditor.setVisible(hasNodeTree);
-    repeatEditor    .setVisible(hasNodeTree);
-    velocityEditor  .setVisible(hasMidi);
-    pitchEditor     .setVisible(hasMidi);
-    channelEditor   .setVisible(hasMidi);
+    countLimitEditor       .setVisible(hasNodeTree);
+    repeatEditor           .setVisible(hasNodeTree);
+    switchCountLimitEditor .setVisible(hasNodeTree);
+    subLoopCountLimitEditor.setVisible(hasNodeTree);
+    velocityEditor         .setVisible(hasMidi);
+    pitchEditor            .setVisible(hasMidi);
+    channelEditor          .setVisible(hasMidi);
 }
 
 void BottomBar::clearBindings()

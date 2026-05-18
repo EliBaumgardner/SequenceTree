@@ -45,6 +45,7 @@ void RootNode::resized() {
 
     countEditor.setBounds(circleArea.getRight() - 18, circleArea.getY(), 18, 12);
     switchCountEditor.setBounds( circleArea.getRight() - 18, circleArea.getBottom() - 12, 18, 12);
+    subLoopLimitEditor.setBounds(circleArea.getBottomLeft().getX(), circleArea.getBottom() - 12, 18, 12);
 }
 
 void RootNode::setDisplayMode(NodeDisplayMode mode) {

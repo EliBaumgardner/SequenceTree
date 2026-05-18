@@ -43,6 +43,7 @@ public:
     static const juce::Identifier CountLimit;
     static const juce::Identifier LoopLimit;
     static const juce::Identifier SwitchCountLimit;
+    static const juce::Identifier SubLoopCountLimit;
 
     static const juce::Identifier RepeatValue;
 

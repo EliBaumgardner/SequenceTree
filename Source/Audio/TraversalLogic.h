@@ -24,6 +24,8 @@ public:
     Walker primary;
     Walker modulator;
 
+    std::unordered_map<int,int> chordCounts;
+
     int activeModulatorRootId = -1;
 
     bool isFirstEvent = false;
@@ -95,6 +97,7 @@ public:
 
     void resetCounts() {
         primary.counts.clear();
+        chordCounts.clear();
     }
 };
 

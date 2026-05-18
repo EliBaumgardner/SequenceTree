@@ -32,6 +32,7 @@ const juce::Identifier ValueTreeIdentifiers::NodeId               {"NodeId"};
 const juce::Identifier ValueTreeIdentifiers::CountLimit           {"CountLimit"};
 const juce::Identifier ValueTreeIdentifiers::SwitchCountLimit     {"SwitchCountLimit"};
 const juce::Identifier ValueTreeIdentifiers::LoopLimit            {"LoopLimit"};
+const juce::Identifier ValueTreeIdentifiers::SubLoopCountLimit    {"SubLoopCountLimit"};
 
 const juce::Identifier ValueTreeIdentifiers::SwitchCount          {"SwitchCount"};
 const juce::Identifier ValueTreeIdentifiers::Count                {"Count"};

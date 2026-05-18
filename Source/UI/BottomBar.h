@@ -21,11 +21,13 @@ private:
     ApplicationContext& applicationContext;
     ColourSelector colourSelector { applicationContext };
 
-    ValueEditor countLimitEditor { applicationContext };
-    ValueEditor repeatEditor     { applicationContext };
-    ValueEditor velocityEditor   { applicationContext };
-    ValueEditor pitchEditor      { applicationContext };
-    ValueEditor channelEditor    { applicationContext };
+    ValueEditor countLimitEditor        { applicationContext };
+    ValueEditor repeatEditor            { applicationContext };
+    ValueEditor switchCountLimitEditor  { applicationContext };
+    ValueEditor subLoopCountLimitEditor { applicationContext };
+    ValueEditor velocityEditor          { applicationContext };
+    ValueEditor pitchEditor             { applicationContext };
+    ValueEditor channelEditor           { applicationContext };
 
     struct LabeledEditor
     {
@@ -33,12 +35,14 @@ private:
         const char*  label;
     };
 
-    std::array<LabeledEditor, 5> labeledEditors {{
-        { countLimitEditor, "CNT" },
-        { repeatEditor,     "RPT" },
-        { velocityEditor,   "VEL" },
-        { pitchEditor,      "PIT" },
-        { channelEditor,    "CH"  }
+    std::array<LabeledEditor, 7> labeledEditors {{
+        { countLimitEditor,        "CNT" },
+        { repeatEditor,            "RPT" },
+        { switchCountLimitEditor,  "SW"  },
+        { subLoopCountLimitEditor, "SUB" },
+        { velocityEditor,          "VEL" },
+        { pitchEditor,             "PIT" },
+        { channelEditor,           "CH"  }
     }};
 
     static constexpr int labelWidth  = 20;

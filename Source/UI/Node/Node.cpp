@@ -14,13 +14,12 @@
 #include "../Canvas/NodeCanvas.h"
 #include "NodeArrow.h"
 
-
 #include "Node.h"
 
 
 
 
-Node::Node(ApplicationContext& context) : applicationContext(context), countEditor(context), switchCountEditor(context)
+Node::Node(ApplicationContext& context) : applicationContext(context), countEditor(context), switchCountEditor(context), subLoopLimitEditor(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
 
@@ -49,8 +48,10 @@ Node::Node(ApplicationContext& context) : applicationContext(context), countEdit
     addAndMakeVisible(upButton);
     addAndMakeVisible(downButton);
     addAndMakeVisible(nodeTextEditor.get());
+
     addAndMakeVisible(switchCountEditor);
     addAndMakeVisible(countEditor);
+    addAndMakeVisible(subLoopLimitEditor);
 }
 
 void Node::paint(juce::Graphics& g)
@@ -74,6 +75,7 @@ void Node::resized()
 
     countEditor.setBounds(getWidth() - editorWidth, 0, editorWidth, editorHeight);
     switchCountEditor.setBounds(getWidth() - editorWidth, getHeight() - editorHeight,editorWidth,editorHeight);
+    subLoopLimitEditor.setBounds(0,getHeight() - editorHeight,editorWidth,editorHeight);
 }
 
 void Node::setHoverVisual(bool isHovered)
@@ -136,8 +138,9 @@ void Node::setDisplayMode(NodeDisplayMode mode)
     this->mode = mode;
 
     if (nodeValueTree.isValid()) {
-        countEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
-        switchCountEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
+        countEditor       .bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
+        switchCountEditor .bindEditor(nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
+        subLoopLimitEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::SubLoopCountLimit);
     }
 
     switch (mode) {

@@ -167,8 +167,6 @@ void TraversalLogic::advance(NodeMap& nodes)
     int targetId            = primary.target;
     int chosenNodeId        = -1;
 
-    bool switchNodeActive = false;
-
     referenceTargetId       = primary.last;
     primary.last            = targetId;
     primary.alternativeLast = primary.alternativeTarget;
@@ -179,30 +177,25 @@ void TraversalLogic::advance(NodeMap& nodes)
         return;
     }
 
-    if (targetIt->second.lastNodeId != -1 ) {
-
-        int switchCount         = ++primary.switchCounts[targetId];
+    if (targetIt->second.lastNodeId != -1) {
+        int switchCount = ++primary.switchCounts[targetId];
 
         auto switchNodeIterator = nodes.find(targetIt->second.lastNodeId);
+        if (switchNodeIterator != nodes.end()) {
+            const RTNode& switchNode = switchNodeIterator->second;
+            int switchCountLimit = switchNode.switchCountLimit;
 
-        RTNode switchNode = switchNodeIterator->second;
-        int switchCountLimit = switchNode.switchCountLimit;
-
-        if (!(switchCount > switchCountLimit-1) && switchCountLimit > 1) {
-            switchNodeActive = true;
-        }
-        else {
-           switchNodeActive = false;
-            primary.switchCounts[targetId] = 0;
-        }
-
-        if (switchNodeActive) {
-            chosenNodeId = switchNode.nodeID;
+            if (switchCount < switchCountLimit && switchCountLimit > 1) {
+                chosenNodeId = switchNode.nodeID;
+            }
+            else {
+                primary.switchCounts[targetId] = 0;
+            }
         }
     }
 
-    if (switchNodeActive == false) {
-        int count               = ++primary.counts[targetId];
+    if (chosenNodeId == -1) {
+        int count = ++primary.counts[targetId];
         chosenNodeId = selectNextChild(nodes, targetId, count, &isAdvanceableChild);
     }
 
