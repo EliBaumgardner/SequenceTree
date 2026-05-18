@@ -541,8 +541,17 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         Node* parentNode = parentNodePair->second;
         Node* childNode = childNodePair->second;
 
-        addLinePoints(parentNode,childNode);
-        updateLinePoints(parentNode);
+        Node* startNode = parentNode;
+        Node* endNode   = childNode;
+
+        if (childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
+            startNode = childNode;
+            endNode   = parentNode;
+        }
+
+        endNode->nodeColour = startNode->nodeColour;
+        addLinePoints(startNode, endNode);
+        updateLinePoints(endNode);
     }
 
     if (!gridOriginSet && !rootNodeMap.empty()) {

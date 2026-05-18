@@ -79,6 +79,10 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
         scheduler.sendNoteOff(activeNote, midiMessages, priorityNoteDuration);
 
         if (activeNote.traversalId == -1) {
+            if (NoteScheduler::isNodeAudible(activeNote.noteNode.nodeType)
+                && !activeNote.isConnectionTrigger) {
+                bridge.highlightNode(activeNote.noteNode, false);
+            }
             scheduler.removeNote(smallestNoteIndex);
             continue;
         }

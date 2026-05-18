@@ -64,6 +64,10 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    static juce::File getPersistentStateFile();
+    void saveStateToDisk();
+    juce::ValueTree loadStateFromDisk();
+
     void clearOldEvents(int traversalId);
     void setNewGraph(std::shared_ptr<RTGraph> graph);
 

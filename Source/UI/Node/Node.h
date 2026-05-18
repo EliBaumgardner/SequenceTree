@@ -60,6 +60,7 @@ public:
 
     ValueEditor countEditor;
     ValueEditor switchCountEditor;
+    ValueEditor subLoopLimitEditor;
 
     juce::Colour nodeColour = juce::Colour::fromRGB(195,174,132).darker().darker().darker();
 

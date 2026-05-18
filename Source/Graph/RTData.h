@@ -45,6 +45,9 @@ struct RTNode {
     int loopCount      = 0;
     int loopCountLimit = 0;
 
+    int subLoopCount   = 0;
+    int subLoopCountLimit   = 0;
+
     bool isConnectedToModulator = false;
     bool isAlternativeNode = false;
     bool isLeafNode = false;

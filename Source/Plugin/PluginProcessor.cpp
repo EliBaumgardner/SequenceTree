@@ -33,7 +33,46 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 
 SequenceTreeAudioProcessor::~SequenceTreeAudioProcessor()
 {
-    
+    saveStateToDisk();
+}
+
+juce::File SequenceTreeAudioProcessor::getPersistentStateFile()
+{
+    return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+               .getChildFile("SequenceTree")
+               .getChildFile("lastState.xml");
+}
+
+void SequenceTreeAudioProcessor::saveStateToDisk()
+{
+    juce::ValueTree canvasTree = ValueTreeState::nodeMap;
+    if (!canvasTree.isValid() || canvasTree.getNumChildren() == 0) {
+        return;
+    }
+
+    std::unique_ptr<juce::XmlElement> xml(canvasTree.createXml());
+    if (xml == nullptr) {
+        return;
+    }
+
+    juce::File stateFile = getPersistentStateFile();
+    stateFile.getParentDirectory().createDirectory();
+    xml->writeTo(stateFile);
+}
+
+juce::ValueTree SequenceTreeAudioProcessor::loadStateFromDisk()
+{
+    juce::File stateFile = getPersistentStateFile();
+    if (!stateFile.existsAsFile()) {
+        return {};
+    }
+
+    std::unique_ptr<juce::XmlElement> xml(juce::XmlDocument::parse(stateFile));
+    if (xml == nullptr) {
+        return {};
+    }
+
+    return juce::ValueTree::fromXml(*xml);
 }
 
 //==============================================================================

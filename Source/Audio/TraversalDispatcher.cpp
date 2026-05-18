@@ -1,6 +1,8 @@
 #include "TraversalDispatcher.h"
 #include "AudioUIBridge.h"
 #include "../Plugin/PluginProcessor.h"
+#include <unordered_set>
+#include <functional>
 
 TraversalDispatcher::TraversalDispatcher(SequenceTreeAudioProcessor& p,
                                          NoteScheduler& s,
@@ -132,6 +134,11 @@ void TraversalDispatcher::pushNote(const RTNode& node, int traversalId,
 
         if (altIt != nodes.end()) {
             alternativeNode = &altIt->second;
+
+            if (!alternativeNode->notes.empty()) {
+                effectiveNode.notes[0].pitch    = alternativeNode->notes[0].pitch;
+                effectiveNode.notes[0].velocity = alternativeNode->notes[0].velocity;
+            }
         }
     }
 
@@ -151,7 +158,8 @@ void TraversalDispatcher::pushNote(const RTNode& node, int traversalId,
 
     scheduler.scheduleNote(effectiveNode, traversalId, sample, midiMessages, sampleRate, tempoMultiplier, duration);
 
-    pushChordNotes(node, sample, duration, midiMessages, sampleRate, tempoMultiplier, nodes);
+    int chordParentCount = traversalLogic.primary.counts[node.nodeID] + 1;
+    pushChordNotes(node, sample, duration, midiMessages, sampleRate, tempoMultiplier, nodes, chordParentCount, traversalLogic);
 
     const int wallClockMs = static_cast<int>(duration / tempoMultiplier);
 
@@ -246,29 +254,49 @@ void TraversalDispatcher::dispatchCrossTree(const RTNode& node, int traversalId,
 void TraversalDispatcher::pushChordNotes(const RTNode& node, int sample, int duration,
                                           juce::MidiBuffer& midiMessages,
                                           double sampleRate, double tempoMultiplier,
-                                          const NodeMap& nodes)
+                                          const NodeMap& nodes, int parentCount,
+                                          TraversalLogic& traversalLogic)
 {
-    for (const auto& [childId, connDuration] : node.durationMap)
+    std::unordered_set<int> visited;
+
+    std::function<void(const RTNode&, int)> walkChordChain =
+        [&](const RTNode& chainNode, int chainCount)
     {
-        if (connDuration != 0) {
-            continue;
+        for (const auto& [childId, connDuration] : chainNode.durationMap)
+        {
+            if (connDuration != 0) {
+                continue;
+            }
+
+            if (!visited.insert(childId).second) {
+                continue;
+            }
+
+            auto childIt = nodes.find(childId);
+
+            if (childIt == nodes.end()) {
+                continue;
+            }
+
+            const RTNode& chordNode = childIt->second;
+
+            if (!NoteScheduler::isNodeAudible(chordNode.nodeType)) {
+                continue;
+            }
+
+            if (chordNode.countLimit > 0 && chainCount % chordNode.countLimit == 0) {
+                scheduler.scheduleNote(chordNode, -1, sample, midiMessages,
+                                       sampleRate, tempoMultiplier, duration);
+
+                bridge.highlightNode(chordNode, true);
+            }
+
+            int childChainCount = ++traversalLogic.chordCounts[chordNode.nodeID];
+            walkChordChain(chordNode, childChainCount);
         }
+    };
 
-        auto childIt = nodes.find(childId);
-
-        if (childIt == nodes.end()) {
-            continue;
-        }
-
-        const RTNode& chordNode = childIt->second;
-
-        if (!NoteScheduler::isNodeAudible(chordNode.nodeType)) {
-            continue;
-        }
-
-        scheduler.scheduleNote(chordNode, -1, sample, midiMessages,
-                               sampleRate, tempoMultiplier, duration);
-    }
+    walkChordChain(node, parentCount);
 }
 
 void TraversalDispatcher::dispatchModulator(const RTNode &node, NodeMap &nodes, TraversalLogic &traversalLogic, RTNode *&modulatorNode, TraversalMap& traversalMap, bool isPrimaryRepeat)

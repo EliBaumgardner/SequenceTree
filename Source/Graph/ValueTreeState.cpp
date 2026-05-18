@@ -43,14 +43,15 @@ juce::ValueTree ValueTreeState::addNodeTree(juce::UndoManager* undoManager)
     return nodeTree;
 }
 
-void ValueTreeState::setNodeCountProperties(juce::UndoManager *undoManager, juce::ValueTree rootNode) {
-    rootNode.setProperty(ValueTreeIdentifiers::Count,       defaultNodeCount,      undoManager);
-    rootNode.setProperty(ValueTreeIdentifiers::SwitchCount,defaultSwitchCount,undoManager);
+void ValueTreeState::setNodeCountProperties(juce::UndoManager *undoManager, juce::ValueTree node) {
+    node.setProperty(ValueTreeIdentifiers::Count,       defaultNodeCount,      undoManager);
+    node.setProperty(ValueTreeIdentifiers::SwitchCount,defaultSwitchCount,undoManager);
 
-    rootNode.setProperty(ValueTreeIdentifiers::CountLimit,  defaultNodeCountLimit, undoManager);
-    rootNode.setProperty(ValueTreeIdentifiers::SwitchCountLimit, defaultSwitchCountLimit, undoManager);
+    node.setProperty(ValueTreeIdentifiers::CountLimit,  defaultNodeCountLimit, undoManager);
+    node.setProperty(ValueTreeIdentifiers::SwitchCountLimit, defaultSwitchCountLimit, undoManager);
+    node.setProperty(ValueTreeIdentifiers::SubLoopCountLimit,defaultSubLoopCountLimit, undoManager);
 
-    rootNode.setProperty(ValueTreeIdentifiers::RepeatValue, defaultRepeatValue,    undoManager);
+    node.setProperty(ValueTreeIdentifiers::RepeatValue, defaultRepeatValue,    undoManager);
 }
 
 juce::ValueTree ValueTreeState::addRootNode(juce::UndoManager* undoManager)

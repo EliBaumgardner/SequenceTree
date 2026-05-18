@@ -77,8 +77,9 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
         int nodeId      = currentValueTree.getProperty(ValueTreeIdentifiers::Id);
         int graphId     = currentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
 
-        int countLimit  = currentValueTree.getProperty(ValueTreeIdentifiers::CountLimit);
+        int countLimit       = currentValueTree.getProperty(ValueTreeIdentifiers::CountLimit);
         int switchCountLimit = currentValueTree.getProperty(ValueTreeIdentifiers::SwitchCountLimit);
+        int subLoopLimit     = currentValueTree.getProperty(ValueTreeIdentifiers::SubLoopCountLimit);
 
         int repeatValue = currentValueTree.getProperty(ValueTreeIdentifiers::RepeatValue, ValueTreeState::defaultRepeatValue);
 
@@ -93,11 +94,12 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
             RTNode* parentNode = nullptr;
 
             rtNode.graphID = graphId;
-            rtNode.nodeID = nodeId;
+            rtNode.nodeID  = nodeId;
 
-            rtNode.countLimit  = countLimit;
-            rtNode.switchCountLimit = switchCountLimit;
-            rtNode.repeatValue = repeatValue;
+            rtNode.countLimit        =  countLimit;
+            rtNode.subLoopCountLimit = subLoopLimit;
+            rtNode.switchCountLimit  = switchCountLimit;
+            rtNode.repeatValue       = repeatValue;
 
             rtNode.isAlternativeNode = isAlternativeNode;
 

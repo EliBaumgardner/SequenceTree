@@ -47,7 +47,8 @@ private:
     void pushChordNotes(const RTNode& node, int sample, int duration,
                         juce::MidiBuffer& midiMessages,
                         double sampleRate, double tempoMultiplier,
-                        const NodeMap& nodes);
+                        const NodeMap& nodes, int parentCount,
+                        TraversalLogic& traversalLogic);
 
     void dispatchPrimaryArrow(const RTNode& node, const RTNode* nextTarget,
                               int traversalId, int rootId, int wallClockMs);
