@@ -112,9 +112,9 @@ void TraversalDispatcher::pushNote(const RTNode& node, int traversalId,
     jassert(traversalIterator != traversalMap.end());
     TraversalLogic& traversalLogic = traversalIterator->second;
 
-    RTNode* modulatorNode = nullptr;
+    RTNode* modulatorNode       = nullptr;
     RTNode* nextModulatorTarget = nullptr;
-    RTNode* alternativeNode = nullptr;
+    RTNode* alternativeNode     = nullptr;
 
     dispatchModulator(node, nodes, traversalLogic, modulatorNode, traversalMap, isPrimaryRepeat);
 
@@ -284,15 +284,17 @@ void TraversalDispatcher::pushChordNotes(const RTNode& node, int sample, int dur
                 continue;
             }
 
-            if (chordNode.countLimit > 0 && chainCount % chordNode.countLimit == 0) {
-                scheduler.scheduleNote(chordNode, -1, sample, midiMessages,
-                                       sampleRate, tempoMultiplier, duration);
-
-                bridge.highlightNode(chordNode, true);
+            if (chordNode.countLimit <= 0 || chainCount % chordNode.countLimit != 0) {
+                continue;
             }
 
-            int childChainCount = ++traversalLogic.chordCounts[chordNode.nodeID];
-            walkChordChain(chordNode, childChainCount);
+            scheduler.scheduleNote(chordNode, -1, sample, midiMessages,
+                                   sampleRate, tempoMultiplier, duration);
+
+            bridge.highlightNode(chordNode, true);
+
+            int chordPlayCount = ++traversalLogic.chordCounts[chordNode.nodeID];
+            walkChordChain(chordNode, chordPlayCount);
         }
     };
 

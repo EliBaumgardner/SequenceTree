@@ -33,46 +33,6 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 
 SequenceTreeAudioProcessor::~SequenceTreeAudioProcessor()
 {
-    saveStateToDisk();
-}
-
-juce::File SequenceTreeAudioProcessor::getPersistentStateFile()
-{
-    return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-               .getChildFile("SequenceTree")
-               .getChildFile("lastState.xml");
-}
-
-void SequenceTreeAudioProcessor::saveStateToDisk()
-{
-    juce::ValueTree canvasTree = ValueTreeState::nodeMap;
-    if (!canvasTree.isValid() || canvasTree.getNumChildren() == 0) {
-        return;
-    }
-
-    std::unique_ptr<juce::XmlElement> xml(canvasTree.createXml());
-    if (xml == nullptr) {
-        return;
-    }
-
-    juce::File stateFile = getPersistentStateFile();
-    stateFile.getParentDirectory().createDirectory();
-    xml->writeTo(stateFile);
-}
-
-juce::ValueTree SequenceTreeAudioProcessor::loadStateFromDisk()
-{
-    juce::File stateFile = getPersistentStateFile();
-    if (!stateFile.existsAsFile()) {
-        return {};
-    }
-
-    std::unique_ptr<juce::XmlElement> xml(juce::XmlDocument::parse(stateFile));
-    if (xml == nullptr) {
-        return {};
-    }
-
-    return juce::ValueTree::fromXml(*xml);
 }
 
 //==============================================================================
@@ -189,6 +149,16 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
 
 void SequenceTreeAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
+    if (data == nullptr || sizeInBytes == 0) {
+        if (applyStateToUi) {
+            applyStateToUi(juce::ValueTree(ValueTreeIdentifiers::NodeMap));
+        }
+        else {
+            ValueTreeState::nodeMap.removeAllChildren(nullptr);
+        }
+        return;
+    }
+
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
 
     if (xmlState == nullptr) { DBG("INVALID STATE DATA"); return; }
@@ -394,16 +364,17 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)
 
     for (const auto& [nodeId, node] : graph->nodeMap) {
 
-        RTNode* lastNode = nullptr;
+        RTNode* lastNode    = nullptr;
 
         if ((*newSnap->globalNodes).count(nodeId) != 0) {
-            lastNode = &(*newSnap->globalNodes)[nodeId];
+            lastNode    = &(*newSnap->globalNodes)[nodeId];
         }
+
 
         (*newSnap->globalNodes)[nodeId] = node;
 
         if (lastNode != nullptr) {
-            (*newSnap->globalNodes)[nodeId].lastNodeId = lastNode->lastNodeId;
+            (*newSnap->globalNodes)[nodeId].lastNodeId    = lastNode->lastNodeId;
         }
     }
 
@@ -414,8 +385,6 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)
             staleIds.push_back(nodeId);
         }
     }
-
-
 
     for (int id : staleIds) {
         newSnap->globalNodes->erase(id);

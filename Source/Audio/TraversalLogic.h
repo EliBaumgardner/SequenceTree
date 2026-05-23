@@ -12,10 +12,13 @@ public:
     struct Walker
     {
         std::unordered_map<int, int> counts;
-        std::unordered_map<int,int> switchCounts;
+        std::unordered_map<int,int>  switchCounts;
+        std::unordered_map<int,int>  subRootCounts;
 
         int target = 0;
         int last   = 0;
+
+        int subRootNode = -1;
 
         int alternativeTarget = -1;
         int alternativeLast   = -1;
