@@ -60,15 +60,6 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     applicationContext.valueTreeState    = valueTreeState.get();
     applicationContext.nodeController    = nodeController.get();
 
-    if (audioProcessor.wrapperType == juce::AudioProcessor::wrapperType_Standalone
-        && ValueTreeState::nodeMap.getNumChildren() == 0)
-    {
-        juce::ValueTree restoredTree = audioProcessor.loadStateFromDisk();
-        if (restoredTree.isValid() && restoredTree.getNumChildren() > 0 && audioProcessor.applyStateToUi) {
-            audioProcessor.applyStateToUi(restoredTree);
-        }
-    }
-
     titleBar  = std::make_unique<Titlebar>(applicationContext);
     bottomBar = std::make_unique<BottomBar>(applicationContext);
 

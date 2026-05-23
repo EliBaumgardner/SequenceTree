@@ -172,15 +172,20 @@ void TraversalLogic::advance(NodeMap& nodes)
     primary.alternativeLast = primary.alternativeTarget;
 
     auto targetIt = nodes.find(targetId);
+
     if (targetIt == nodes.end() || targetIt->second.children.empty()) {
         state = isLooping ? TraversalState::Reset : TraversalState::End;
         return;
     }
 
+
     if (targetIt->second.lastNodeId != -1) {
+
+
         int switchCount = ++primary.switchCounts[targetId];
 
         auto switchNodeIterator = nodes.find(targetIt->second.lastNodeId);
+
         if (switchNodeIterator != nodes.end()) {
             const RTNode& switchNode = switchNodeIterator->second;
             int switchCountLimit = switchNode.switchCountLimit;
@@ -201,6 +206,7 @@ void TraversalLogic::advance(NodeMap& nodes)
 
     if (chosenNodeId  != -1) {
         auto nextTargetIt = nodes.find(chosenNodeId);
+
         if (nextTargetIt == nodes.end()) {
             primary.alternativeTarget = -1;
         }
@@ -209,10 +215,17 @@ void TraversalLogic::advance(NodeMap& nodes)
             advanceAlternative(nodes, chosenNodeId);
         }
 
-        targetIt->second.lastNodeId = chosenNodeId;
+        nextTargetIt->second.lastNodeId = chosenNodeId;
+
+        if (nextTargetIt->second.subLoopCountLimit > 1 && primary.subRootNode == -1) {
+            primary.subRootNode = nextTargetIt->second.nodeID;
+            primary.subRootCounts[primary.subRootNode] = 0;
+            DBG("node subRoot found: "<< primary.subRootNode <<"");
+        }
     }
 
     if (primary.target == primary.last) {
+
         state = isLooping ? TraversalState::Reset : TraversalState::End;
     }
 }
@@ -360,7 +373,32 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(NodeMap& nodes) {
 
                         result.enteredId            = rootId;
                         result.enteredAlternativeId = primary.alternativeTarget;
-                        result.rootForReset         = rootId;
+
+                        if (primary.subRootNode != -1) {
+                            auto subRootIt = nodes.find(primary.subRootNode);
+                            int subRootLimit = (subRootIt != nodes.end())
+                                                 ? subRootIt->second.subLoopCountLimit
+                                                 : 0;
+
+                            int subRootCount = ++primary.subRootCounts[primary.subRootNode];
+
+                            if (subRootCount >= subRootLimit) {
+                                DBG("subRoot reached limit: " << primary.subRootNode << " count " << subRootCount);
+                                primary.subRootCounts[primary.subRootNode] = 0;
+                                primary.subRootNode = -1;
+                                result.rootForReset = rootId;
+                            }
+                            else {
+                                DBG("looping back to subRoot: " << primary.subRootNode << " count " << subRootCount);
+                                result.rootForReset = primary.subRootNode;
+                                primary.target = primary.subRootNode;
+                                result.enteredId = primary.subRootNode;
+                            }
+                        }
+                        else {
+                            result.rootForReset = rootId;
+                        }
+
                         state                       = TraversalState::Active;
                     }
                     break;
@@ -414,35 +452,22 @@ RTNode* TraversalLogic::getModulatorNode(NodeMap& nodes, int nodeId)
 
 int TraversalLogic::findActiveModulatorRoot(NodeMap& nodes, int regularNodeId)
 {
-    int currentId = regularNodeId;
-    bool isFiringNode = true;
+    if (nodes.find(regularNodeId) == nodes.end()) {
+        return -1;
+    }
 
-    while (currentId != 0) {
-        auto it = nodes.find(currentId);
-        if (it == nodes.end()) {
-            break;
-        }
+    RTNode* modRoot = getModulatorNode(nodes, regularNodeId);
 
-        const RTNode& current = it->second;
 
-        RTNode* modRoot = getModulatorNode(nodes, currentId);
-        if (modRoot != nullptr && modRoot->countLimit > 0) {
-            auto countIt = primary.counts.find(currentId);
-            int hostCount = (countIt != primary.counts.end() ? countIt->second : 0);
-            if (isFiringNode) {
-                hostCount += 1;
-            }
+    if (modRoot == nullptr || modRoot->countLimit <= 0) {
+        return -1;
+    }
 
-            if (hostCount > 0 && hostCount % modRoot->countLimit == 0) {
-                return modRoot->nodeID;
-            }
-        }
+    auto countIt = primary.counts.find(regularNodeId);
+    int hostCount = (countIt != primary.counts.end() ? countIt->second : 0) + 1;
 
-        if (current.parentId == currentId) {
-            break;
-        }
-        currentId = current.parentId;
-        isFiringNode = false;
+    if (hostCount % modRoot->countLimit == 0) {
+        return modRoot->nodeID;
     }
 
     return -1;
