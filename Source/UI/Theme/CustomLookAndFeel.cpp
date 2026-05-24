@@ -10,11 +10,14 @@
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Titlebar.h"
 #include "../BottomBar.h"
+#include "../TraversalMenu.h"
+#include "../TraversalDisplayMenu.h"
 #include "CustomTextEditor.h"
 #include "../Node/NodeArrow.h"
 #include "../Node/NodeTextEditor.h"
 #include "CustomTextCaret.h"
 #include "../Node/RootNode.h"
+#include "Buttons/ButtonConstants.h"
 
 CustomLookAndFeel::CustomLookAndFeel()
 {
@@ -132,6 +135,13 @@ void CustomLookAndFeel::drawBottomBar(juce::Graphics &g, const BottomBar &bottom
     g.drawHorizontalLine((int)bounds.getBottom() - 1, bounds.getX(), bounds.getRight());
 }
 
+void CustomLookAndFeel::drawTraversalMenu(juce::Graphics &g, const TraversalMenu &traversalMenu)
+{
+    auto bounds = traversalMenu.getLocalBounds().toFloat();
+    g.setColour(baseDarkColour2);
+    g.fillRect(bounds);
+}
+
 void CustomLookAndFeel::drawButtonPane(juce::Graphics &g, const ButtonPane& selectionBar)
 {
     auto bounds = selectionBar.getLocalBounds().reduced(2.0f).toFloat();
@@ -144,6 +154,13 @@ void CustomLookAndFeel::drawTempoDisplay(juce::Graphics &g, const TempoDisplay &
 
 
 void CustomLookAndFeel::drawDisplayMenu(juce::Graphics &g, const DisplayMenu& displaySelector)
+{
+    auto bounds = displaySelector.getLocalBounds().toFloat().reduced(buttonBoundsReduction);
+    g.setColour(buttonBarColour);
+    g.fillRoundedRectangle(bounds, paneCornerRadius);
+}
+
+void CustomLookAndFeel::drawTraversalDisplayMenu(juce::Graphics &g, const TraversalDisplayMenu& displaySelector)
 {
     auto bounds = displaySelector.getLocalBounds().toFloat().reduced(buttonBoundsReduction);
     g.setColour(buttonBarColour);

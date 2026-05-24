@@ -20,6 +20,7 @@ class BottomBar;
 class ButtonPane;
 
 class DisplayMenu;
+class TraversalDisplayMenu;
 class DisplayButton;
 
 class NodeButton;
@@ -38,6 +39,8 @@ class RedoButton;
 
 class UndoRedoPane;
 class ResetButton;
+
+class TraversalMenu;
 
 class CustomLookAndFeel : public juce::LookAndFeel_V4
 {
@@ -78,7 +81,9 @@ public:
     void drawTitleBar       (juce::Graphics& g, const Titlebar& titleBar);
     void drawBottomBar      (juce::Graphics& g, const BottomBar& bottomBar);
 
+    void drawTraversalMenu   (juce::Graphics& g, const TraversalMenu& traversalMenu);
     void drawDisplayMenu    (juce::Graphics& g, const DisplayMenu& displaySelector);
+    void drawTraversalDisplayMenu(juce::Graphics& g, const TraversalDisplayMenu& displaySelector);
     void drawButtonPane     (juce::Graphics& g, const ButtonPane& selectionBar);
     void drawDisplayButton  (juce::Graphics& g, const DisplayButton& displayButton);
 
@@ -117,6 +122,7 @@ private:
     juce::Colour baseLightColour1     = juce::Colour::fromRGB(195,174,132);
     juce::Colour baseLightColour2     = juce::Colour::fromRGB(162,150,131);
     juce::Colour baseLightColour3     = juce::Colour::fromRGB(217,217,217);
+    juce::Colour darkBrownColour      = juce::Colour::fromRGB(48, 32, 22);
 
     juce::Colour canvasColour = baseLightColour1.darker();
 
@@ -125,6 +131,7 @@ private:
     juce::Colour buttonColour    = baseLightColour2;
     juce::Colour buttonBarColour = baseDarkColour1;
     juce::Colour editorColour    = baseDarkColour1;
+    juce::Colour traversalMenuColour = darkBrownColour;
     juce::Colour textColour      = baseLightColour1;
 
     juce::Colour arrowColour     = juce::Colours::black;

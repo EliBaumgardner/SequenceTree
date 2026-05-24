@@ -19,12 +19,12 @@
 #include "../UI/BottomBar.h"
 #include "../UI/Theme/CustomLookAndFeel.h"
 #include "../Graph/ValueTreeState.h"
+#include "../UI/TraversalMenu.h"
 #include "../Util/ApplicationContext.h"
 
 
 //==============================================================================
-/**
-*/
+
 class SequenceTreeAudioProcessor;
 
 class SequenceTreeAudioProcessorEditor  : public juce::AudioProcessorEditor
@@ -54,6 +54,7 @@ private:
     std::unique_ptr<Titlebar>       titleBar       = nullptr;
     std::unique_ptr<BottomBar>      bottomBar      = nullptr;
     std::unique_ptr<DynamicPort>    port           = nullptr;
+    std::unique_ptr<TraversalMenu>  traversalMenu  = nullptr;
     
     float menuWidthRatio = 0.25f;
     float menuHeightRatio = 0.25f;

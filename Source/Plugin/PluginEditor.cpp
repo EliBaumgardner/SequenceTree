@@ -26,6 +26,13 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     nodeController = std::make_unique<NodeController>(applicationContext);
     valueTreeState = std::make_unique<ValueTreeState>();
     port           = std::make_unique<DynamicPort>(canvas.get());
+    traversalMenu  = std::make_unique<TraversalMenu>(applicationContext);
+    traversalMenu->onWidthDragged = [this](int newWidth) {
+        int total = getWidth();
+        if (total <= 0) return;
+        menuWidthRatio = juce::jlimit(0.05f, 0.9f, static_cast<float>(newWidth) / static_cast<float>(total));
+        resized();
+    };
 
     applicationContext.canvas            = canvas.get();
 
@@ -56,9 +63,11 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
             ValueTreeState::nodeMap.addListener(&canvasPtr->treeListener);
         });
     };
+
     applicationContext.rtGraphBuilder    = rtGraphBuilder.get();
     applicationContext.valueTreeState    = valueTreeState.get();
     applicationContext.nodeController    = nodeController.get();
+
 
     titleBar  = std::make_unique<Titlebar>(applicationContext);
     bottomBar = std::make_unique<BottomBar>(applicationContext);
@@ -73,6 +82,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     addAndMakeVisible(port.get());
     addAndMakeVisible(titleBar.get());
     addAndMakeVisible(bottomBar.get());
+    addAndMakeVisible(traversalMenu.get());
 
     setResizable(true,false);
     setSize (700, 500);
@@ -94,13 +104,16 @@ void SequenceTreeAudioProcessorEditor::paint (juce::Graphics& g) { g.fillAll(juc
 void SequenceTreeAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds();
-    port.get()->setBounds(bounds);
 
     auto barHeight = static_cast<int>(bounds.getHeight() * 0.05f);
+    auto menuWidth = static_cast<int>(bounds.getWidth() * menuWidthRatio);
 
-    auto titleArea  = bounds.removeFromTop(barHeight);
-    auto bottomArea = bounds.removeFromBottom(barHeight);
+    auto traversalMenuArea= bounds.removeFromRight(menuWidth);
+    auto titleArea        = bounds.removeFromTop(barHeight);
+    auto bottomArea       = bounds.removeFromBottom(barHeight);
 
+    traversalMenu->setBounds(traversalMenuArea);
     titleBar ->setBounds(titleArea);
     bottomBar->setBounds(bottomArea);
+    port->setBounds(bounds);
 }

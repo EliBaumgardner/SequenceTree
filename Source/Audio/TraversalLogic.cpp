@@ -162,29 +162,12 @@ void TraversalLogic::advanceAlternative(NodeMap& nodes, int parentId) {
     }
 }
 
-void TraversalLogic::advance(NodeMap& nodes)
-{
-    int targetId            = primary.target;
-    int chosenNodeId        = -1;
-
-    referenceTargetId       = primary.last;
-    primary.last            = targetId;
-    primary.alternativeLast = primary.alternativeTarget;
-
-    auto targetIt = nodes.find(targetId);
-
-    if (targetIt == nodes.end() || targetIt->second.children.empty()) {
-        state = isLooping ? TraversalState::Reset : TraversalState::End;
-        return;
-    }
-
-
-    if (targetIt->second.lastNodeId != -1) {
-
+void TraversalLogic::selectSwitchNode(NodeMap &nodes, int targetId, int &chosenNodeId, RTNode &targetNode) {
+    if (targetNode.lastNodeId != -1) {
 
         int switchCount = ++primary.switchCounts[targetId];
 
-        auto switchNodeIterator = nodes.find(targetIt->second.lastNodeId);
+        auto switchNodeIterator = nodes.find(targetNode.lastNodeId);
 
         if (switchNodeIterator != nodes.end()) {
             const RTNode& switchNode = switchNodeIterator->second;
@@ -198,6 +181,27 @@ void TraversalLogic::advance(NodeMap& nodes)
             }
         }
     }
+}
+
+void TraversalLogic::advance(NodeMap& nodes)
+{
+    int targetId            = primary.target;
+    int chosenNodeId        = -1;
+
+    referenceTargetId       = primary.last;
+    primary.last            = targetId;
+    primary.alternativeLast = primary.alternativeTarget;
+
+    std::unordered_map<int,RTNode>::iterator targetIterator = nodes.find(targetId);
+
+    RTNode& targetNode = targetIterator->second;
+
+    if (targetIterator == nodes.end() || targetNode.children.empty()) {
+        state = isLooping ? TraversalState::Reset : TraversalState::End;
+        return;
+    }
+
+    selectSwitchNode(nodes, targetId, chosenNodeId, targetNode);
 
     if (chosenNodeId == -1) {
         int count = ++primary.counts[targetId];
@@ -220,12 +224,10 @@ void TraversalLogic::advance(NodeMap& nodes)
         if (nextTargetIt->second.subLoopCountLimit > 1 && primary.subRootNode == -1) {
             primary.subRootNode = nextTargetIt->second.nodeID;
             primary.subRootCounts[primary.subRootNode] = 0;
-            DBG("node subRoot found: "<< primary.subRootNode <<"");
         }
     }
 
     if (primary.target == primary.last) {
-
         state = isLooping ? TraversalState::Reset : TraversalState::End;
     }
 }
