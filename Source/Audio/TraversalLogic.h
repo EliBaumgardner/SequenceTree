@@ -75,6 +75,8 @@ public:
 
     void advanceAlternative(NodeMap &nodes, int parentId);
 
+    void selectSwitchNode(NodeMap &nodes, int targetId, int &chosenNodeId, RTNode &targetNode);
+
     void advance(NodeMap& nodes);
     void advanceModulator(NodeMap& nodes);
     int advanceAlternativeNode(NodeMap& nodes);

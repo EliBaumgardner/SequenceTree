@@ -60,6 +60,9 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Theme/CustomTextEditor.cpp
         Source/UI/Theme/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp
+        Source/UI/Buttons/DisplayMenu.cpp
+        Source/UI/TraversalMenu.cpp
+        Source/UI/TraversalDisplayMenu.cpp
         Source/UI/ColourSelector.cpp
         Source/UI/PianoRoll.cpp
         Source/UI/Titlebar.cpp
