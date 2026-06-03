@@ -30,18 +30,21 @@ private:
 
         void mouseDown(const juce::MouseEvent& e) override;
         void mouseDrag(const juce::MouseEvent& e) override;
+        void mouseUp(const juce::MouseEvent& e) override;
+        void mouseEnter(const juce::MouseEvent& e) override;
+        void mouseExit(const juce::MouseEvent& e) override;
         void paint(juce::Graphics& g) override;
 
     private:
         TraversalMenu& owner;
         int dragStartWidth = 0;
         int dragStartX = 0;
+        bool isHovered = false;
+        bool isDragging = false;
     };
 
     TraversalDisplayMenu displayMenu;
     Resizer resizer { *this };
-
-    const int displayMenuSize = 20;
 };
 
 #endif //SEQUENCETREE_TRAVERSALMENU_H

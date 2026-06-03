@@ -89,6 +89,12 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
             duration = it->second;
         }
     }
+    else if (node.isAlternativeNode) {
+        auto it = node.durationMap.find(node.parentId);
+        if (it != node.durationMap.end() && it->second > 0) {
+            duration = it->second;
+        }
+    }
     else {
         auto parentIt = nodes.find(lastTargetId);
         if (parentIt != nodes.end()) {
@@ -303,9 +309,9 @@ void TraversalDispatcher::pushChordNotes(const RTNode& node, int sample, int dur
 
 void TraversalDispatcher::dispatchModulator(const RTNode &node, NodeMap &nodes, TraversalLogic &traversalLogic, RTNode *&modulatorNode, TraversalMap& traversalMap, bool isPrimaryRepeat)
 {
-    int newActiveRootId = traversalLogic.findActiveModulatorRoot(nodes, node.nodeID);
+    int triggeredRootId = traversalLogic.findActiveModulatorRoot(nodes, node.nodeID);
 
-    if (newActiveRootId != traversalLogic.activeModulatorRootId) {
+    if (triggeredRootId != -1) {
         if (traversalLogic.modulator.target != -1) {
             auto prevIt = nodes.find(traversalLogic.modulator.target);
             if (prevIt != nodes.end()) {
@@ -313,20 +319,42 @@ void TraversalDispatcher::dispatchModulator(const RTNode &node, NodeMap &nodes, 
             }
         }
 
-        traversalLogic.activeModulatorRootId  = newActiveRootId;
-        traversalLogic.modulator.target       = newActiveRootId;
+        traversalLogic.activeModulatorRootId  = triggeredRootId;
+        traversalLogic.modulator.target       = triggeredRootId;
         traversalLogic.modulator.last         = -1;
         traversalLogic.modulatorRepeatCount   = 0;
+        traversalLogic.modulatorHostId        = node.nodeID;
     }
-    else if (newActiveRootId != -1 && !isPrimaryRepeat) {
-        auto targetIt = nodes.find(traversalLogic.modulator.target);
-        int modulatorRepeatValue = (targetIt != nodes.end()) ? targetIt->second.repeatValue : 1;
+    else if (traversalLogic.activeModulatorRootId != -1) {
+        bool isHost       = (node.nodeID == traversalLogic.modulatorHostId);
+        bool isDescendant = TraversalLogic::isDescendantOf(nodes, node.nodeID, traversalLogic.modulatorHostId);
 
-        traversalLogic.modulatorRepeatCount++;
+        if (!isHost && !isDescendant) {
+            auto targetIt = nodes.find(traversalLogic.modulator.target);
+            if (targetIt != nodes.end()) {
+                bridge.highlightNode(targetIt->second, false);
+            }
 
-        if (traversalLogic.modulatorRepeatCount >= modulatorRepeatValue) {
-            traversalLogic.modulatorRepeatCount = 0;
-            traversalLogic.advanceModulator(nodes);
+            traversalLogic.activeModulatorRootId = -1;
+            traversalLogic.modulator.target      = -1;
+            traversalLogic.modulator.last        = -1;
+            traversalLogic.modulatorRepeatCount  = 0;
+            traversalLogic.modulatorHostId       = -1;
+
+            modulatorNode = nullptr;
+            return;
+        }
+
+        if (isDescendant && !isPrimaryRepeat) {
+            auto targetIt = nodes.find(traversalLogic.modulator.target);
+            int modulatorRepeatValue = (targetIt != nodes.end()) ? targetIt->second.repeatValue : 1;
+
+            traversalLogic.modulatorRepeatCount++;
+
+            if (traversalLogic.modulatorRepeatCount >= modulatorRepeatValue) {
+                traversalLogic.modulatorRepeatCount = 0;
+                traversalLogic.advanceModulator(nodes);
+            }
         }
     }
 
@@ -361,6 +389,9 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
     auto traversalIt = traversalMap.find(traversalId);
 
     if (traversalIt == traversalMap.end()) {
+        if (expiredNote.isConnectionTrigger) {
+            bridge.highlightNode(expiredNote.noteNode, false);
+        }
         return;
     }
 

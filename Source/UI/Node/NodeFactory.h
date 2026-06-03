@@ -31,7 +31,7 @@ public:
         int nodeId = childNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
         ValueTreeState::setNodePosition(childNodeValueTree, nodePosition, undoManager);
-        setDefaultNodeNote(nodeId, undoManager);
+        inheritFromParent(parentNodeId, nodeId, childNodeValueTree, undoManager);
 
         return childNodeValueTree;
     }
@@ -42,7 +42,7 @@ public:
         int nodeId = childNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
         ValueTreeState::setNodePosition(childNodeValueTree, nodePosition, undoManager);
-        setDefaultNodeNote(nodeId, undoManager);
+        inheritFromParent(parentNodeId, nodeId, childNodeValueTree, undoManager);
 
         return childNodeValueTree;
     }
@@ -77,6 +77,47 @@ private:
         note.midiChannel = ValueTreeState::defaultMidiChannel;
 
         ValueTreeState::setMidiValue(nodeId, note, undoManager);
+    }
+
+    static void inheritFromParent(int parentNodeId, int newNodeId, juce::ValueTree newNode, juce::UndoManager* undoManager)
+    {
+        juce::ValueTree parentNode = ValueTreeState::getNode(parentNodeId);
+
+        if (!parentNode.isValid()
+            || (parentNode.getType() != ValueTreeIdentifiers::NodeData
+                && parentNode.getType() != ValueTreeIdentifiers::AlternativeNodeData
+                && parentNode.getType() != ValueTreeIdentifiers::RootNodeData))
+        {
+            setDefaultNodeNote(newNodeId, undoManager);
+            return;
+        }
+
+        const juce::Identifier propsToCopy[] = {
+            ValueTreeIdentifiers::CountLimit,
+            ValueTreeIdentifiers::SwitchCountLimit,
+            ValueTreeIdentifiers::SubLoopCountLimit,
+            ValueTreeIdentifiers::RepeatValue
+        };
+
+        for (const auto& prop : propsToCopy)
+            if (parentNode.hasProperty(prop))
+                newNode.setProperty(prop, parentNode.getProperty(prop), undoManager);
+
+        juce::ValueTree parentMidi = parentNode.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
+        juce::ValueTree newMidi    = newNode.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
+
+        if (!parentMidi.isValid() || parentMidi.getNumChildren() == 0)
+        {
+            setDefaultNodeNote(newNodeId, undoManager);
+            return;
+        }
+
+        for (int i = 0; i < parentMidi.getNumChildren(); ++i)
+        {
+            juce::ValueTree parentNote = parentMidi.getChild(i);
+            juce::ValueTree clonedNote = parentNote.createCopy();
+            newMidi.addChild(clonedNote, -1, undoManager);
+        }
     }
 };
 

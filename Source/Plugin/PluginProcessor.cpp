@@ -220,6 +220,15 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         eventManager.scheduler.activeNotes.clear();
         eventManager.traversals.clear();
 
+        auto resetSnap = std::atomic_load(&audioSnapshot);
+        if (resetSnap && resetSnap->globalNodes) {
+            for (auto& [nodeId, node] : *resetSnap->globalNodes) {
+                node.activeAlternativeId = -1;
+                node.lastAlternativeId   = -1;
+                node.lastNodeId          = -1;
+            }
+        }
+
         if (notifyUi) {
             notifyUi();
         }
@@ -371,10 +380,19 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)
         }
 
 
-        (*newSnap->globalNodes)[nodeId] = node;
-
         if (lastNode != nullptr) {
-            (*newSnap->globalNodes)[nodeId].lastNodeId    = lastNode->lastNodeId;
+            int lastNodeId          = lastNode->lastNodeId;
+            int activeAlternativeId = lastNode->activeAlternativeId;
+            int lastAlternativeId   = lastNode->lastAlternativeId;
+
+            (*newSnap->globalNodes)[nodeId] = node;
+
+            (*newSnap->globalNodes)[nodeId].lastNodeId          = lastNodeId;
+            (*newSnap->globalNodes)[nodeId].activeAlternativeId = activeAlternativeId;
+            (*newSnap->globalNodes)[nodeId].lastAlternativeId   = lastAlternativeId;
+        }
+        else {
+            (*newSnap->globalNodes)[nodeId] = node;
         }
     }
 
