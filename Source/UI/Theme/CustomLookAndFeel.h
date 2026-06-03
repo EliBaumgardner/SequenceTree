@@ -82,6 +82,7 @@ public:
     void drawBottomBar      (juce::Graphics& g, const BottomBar& bottomBar);
 
     void drawTraversalMenu   (juce::Graphics& g, const TraversalMenu& traversalMenu);
+    void drawTraversalMenuResizer(juce::Graphics& g, juce::Rectangle<int> bounds, bool isMouseOver, bool isDragging);
     void drawDisplayMenu    (juce::Graphics& g, const DisplayMenu& displaySelector);
     void drawTraversalDisplayMenu(juce::Graphics& g, const TraversalDisplayMenu& displaySelector);
     void drawButtonPane     (juce::Graphics& g, const ButtonPane& selectionBar);
@@ -111,8 +112,6 @@ public:
     void drawUndoRedoPane   (juce::Graphics& g, const UndoRedoPane& undoRedoPane);
     void drawResetButton    (juce::Graphics& g, const ResetButton& resetButton, bool isButtonDown);
 
-
-private:
 
     float colorIntensityFactor = 0.2f;
 

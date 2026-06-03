@@ -28,8 +28,11 @@ public:
     Walker modulator;
 
     std::unordered_map<int,int> chordCounts;
+    std::unordered_map<int,int> crossTreeCounts;
+    std::unordered_map<int,int> crossTreeSwitchCounts;
 
     int activeModulatorRootId = -1;
+    int modulatorHostId       = -1;
 
     bool isFirstEvent = false;
     bool isLooping    = false;
@@ -97,6 +100,8 @@ public:
 
     RTNode* getModulatorNode(NodeMap& nodes, int nodeId);
     int     findActiveModulatorRoot(NodeMap& nodes, int regularNodeId);
+
+    static bool isDescendantOf(const NodeMap& nodes, int nodeId, int ancestorId);
 
     bool shouldTraverse() const;
 

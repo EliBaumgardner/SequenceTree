@@ -31,8 +31,24 @@ void TraversalLogic::advanceModulator(NodeMap& nodes) {
     int chosen = selectNextChild(nodes, modulator.target, count, &isModulatorChild);
 
     if (chosen == -1) {
-        bridge->pushArrowReset(activeModulatorRootId);
-        modulator.target = activeModulatorRootId;
+        bool hasModulatorChild = false;
+        for (int childId : targetIt->second.children) {
+            auto childIt = nodes.find(childId);
+            if (childIt != nodes.end()
+                && isModulatorChild(childIt->second.nodeType)
+                && childIt->second.countLimit > 0) {
+                hasModulatorChild = true;
+                break;
+            }
+        }
+
+        if (hasModulatorChild) {
+            modulator.target = modulator.last;
+        }
+        else {
+            bridge->pushArrowReset(activeModulatorRootId);
+            modulator.target = activeModulatorRootId;
+        }
     }
     else {
         modulator.target = chosen;
@@ -251,9 +267,6 @@ std::vector<int> TraversalLogic::peekCrossTreeNode(NodeMap& nodes)
 {
     std::vector<int> traverserIds;
 
-    auto countIterator = primary.counts.find(primary.target);
-    int targetCount = (countIterator != primary.counts.end() ? countIterator->second : 0) + 1;
-
     auto scanHost = [&](int hostId) {
         auto hostIterator = nodes.find(hostId);
         if (hostIterator == nodes.end()) {
@@ -278,8 +291,28 @@ std::vector<int> TraversalLogic::peekCrossTreeNode(NodeMap& nodes)
                 continue;
             }
 
-            if (targetCount % childNode.countLimit == 0) {
+            int& count       = crossTreeCounts[childId];
+            int& switchCount = crossTreeSwitchCounts[childId];
+
+            if (switchCount > 0) {
                 traverserIds.push_back(childId);
+                switchCount++;
+                if (switchCount >= childNode.switchCountLimit) {
+                    switchCount = 0;
+                    count       = 0;
+                }
+            }
+            else {
+                count++;
+                if (count >= childNode.countLimit) {
+                    traverserIds.push_back(childId);
+                    if (childNode.switchCountLimit > 1) {
+                        switchCount = 1;
+                    }
+                    else {
+                        count = 0;
+                    }
+                }
             }
         }
     };
@@ -450,6 +483,32 @@ RTNode* TraversalLogic::getModulatorNode(NodeMap& nodes, int nodeId)
     }
 
     return nullptr;
+}
+
+bool TraversalLogic::isDescendantOf(const NodeMap& nodes, int nodeId, int ancestorId)
+{
+    if (ancestorId == -1 || nodeId == ancestorId) {
+        return false;
+    }
+
+    int current = nodeId;
+    int guard   = 0;
+
+    while (current != 0 && guard++ < 10000) {
+        auto it = nodes.find(current);
+        if (it == nodes.end()) {
+            return false;
+        }
+
+        int parent = it->second.parentId;
+        if (parent == ancestorId) {
+            return true;
+        }
+
+        current = parent;
+    }
+
+    return false;
 }
 
 int TraversalLogic::findActiveModulatorRoot(NodeMap& nodes, int regularNodeId)

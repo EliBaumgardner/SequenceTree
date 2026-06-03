@@ -140,6 +140,44 @@ void CustomLookAndFeel::drawTraversalMenu(juce::Graphics &g, const TraversalMenu
     auto bounds = traversalMenu.getLocalBounds().toFloat();
     g.setColour(baseDarkColour2);
     g.fillRect(bounds);
+
+    auto barHeight = std::floor(bounds.getHeight() * 0.05f);
+    auto barBounds = bounds.withHeight(barHeight)
+                           .withTrimmedLeft((float) TraversalMenu::resizerWidth);
+
+    juce::ColourGradient gradient(barColour.brighter(0.06f), 0, barBounds.getY(),
+                                   barColour.darker(0.04f),  0, barBounds.getBottom(), false);
+    g.setGradientFill(gradient);
+    g.fillRect(barBounds);
+
+    g.setColour(barColour.brighter(0.12f));
+    g.drawHorizontalLine((int)barBounds.getY(), barBounds.getX(), barBounds.getRight());
+
+    g.setColour(juce::Colours::black.withAlpha(0.35f));
+    g.drawHorizontalLine((int)barBounds.getBottom() - 1, barBounds.getX(), barBounds.getRight());
+}
+
+void CustomLookAndFeel::drawTraversalMenuResizer(juce::Graphics &g, juce::Rectangle<int> bounds, bool isMouseOver, bool isDragging)
+{
+    juce::Colour fill = baseDarkColour1;
+
+    if (isDragging) {
+        fill = baseLightColour2;
+    }
+    else if (isMouseOver) {
+        fill = baseDarkColour1.brighter(0.25f);
+    }
+
+    g.setColour(fill);
+    g.fillRect(bounds);
+
+    auto gripBounds = bounds.toFloat().reduced(bounds.getWidth() * 0.3f, bounds.getHeight() * 0.35f);
+    g.setColour(baseLightColour1.withAlpha(0.5f));
+
+    const float dotSpacing = 4.0f;
+    for (float y = gripBounds.getY(); y < gripBounds.getBottom(); y += dotSpacing) {
+        g.fillRect(gripBounds.getX(), y, gripBounds.getWidth(), 1.0f);
+    }
 }
 
 void CustomLookAndFeel::drawButtonPane(juce::Graphics &g, const ButtonPane& selectionBar)
@@ -435,7 +473,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     arrowEndX -= dirX * float(childRadius);
     arrowEndY -= dirY * float(childRadius);
 
-    bool isRootTargetArrow = b->nodeType == NodeType::Root;
+    bool isRootTargetArrow = b->nodeType == NodeType::Root && !a->isAlternativeNode;
 
     juce::Path linePath;
 
