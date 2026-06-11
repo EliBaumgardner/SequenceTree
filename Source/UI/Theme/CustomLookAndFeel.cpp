@@ -18,6 +18,9 @@
 #include "CustomTextCaret.h"
 #include "../Node/RootNode.h"
 #include "Buttons/ButtonConstants.h"
+#include "../Buttons/PaintTool.h"
+#include "../Buttons/PaintToolSettings.h"
+
 
 CustomLookAndFeel::CustomLookAndFeel()
 {
@@ -182,7 +185,7 @@ void CustomLookAndFeel::drawTraversalMenuResizer(juce::Graphics &g, juce::Rectan
 
 void CustomLookAndFeel::drawButtonPane(juce::Graphics &g, const ButtonPane& selectionBar)
 {
-    auto bounds = selectionBar.getLocalBounds().reduced(2.0f).toFloat();
+    auto bounds = selectionBar.getLocalBounds().reduced(outerButtonBoundsReduction).toFloat();
     g.setColour(buttonBarColour);
     g.fillRoundedRectangle(bounds, paneCornerRadius);
 }
@@ -193,21 +196,21 @@ void CustomLookAndFeel::drawTempoDisplay(juce::Graphics &g, const TempoDisplay &
 
 void CustomLookAndFeel::drawDisplayMenu(juce::Graphics &g, const DisplayMenu& displaySelector)
 {
-    auto bounds = displaySelector.getLocalBounds().toFloat().reduced(buttonBoundsReduction);
+    auto bounds = displaySelector.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
     g.setColour(buttonBarColour);
     g.fillRoundedRectangle(bounds, paneCornerRadius);
 }
 
 void CustomLookAndFeel::drawTraversalDisplayMenu(juce::Graphics &g, const TraversalDisplayMenu& displaySelector)
 {
-    auto bounds = displaySelector.getLocalBounds().toFloat().reduced(buttonBoundsReduction);
+    auto bounds = displaySelector.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
     g.setColour(buttonBarColour);
     g.fillRoundedRectangle(bounds, paneCornerRadius);
 }
 
 void CustomLookAndFeel::drawDisplayButton(juce::Graphics &g, const DisplayButton &displayButton)
 {
-    auto bounds = displayButton.getLocalBounds().toFloat().reduced(5.0f);
+    auto bounds = displayButton.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
 
     if (displayButton.isSelected) {
         g.setColour(buttonColour.darker());
@@ -687,7 +690,7 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
 
 void CustomLookAndFeel::drawSyncButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const SyncButton &button)
 {
-    auto bounds = button.getLocalBounds().toFloat().reduced(2.0f);
+    auto bounds = button.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
     if (isMouseOver) {
         g.setColour(buttonColour.brighter());
     }
@@ -699,7 +702,7 @@ void CustomLookAndFeel::drawSyncButton(juce::Graphics &g, bool isMouseOver, bool
 
 void CustomLookAndFeel::drawNodeButton(juce::Graphics &g, const NodeButton& nodeButton)
 {
-    auto bounds = nodeButton.getLocalBounds().toFloat().reduced(2.0f);
+    auto bounds = nodeButton.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
 
     if (nodeButton.isSelected) {
         g.setColour(buttonColour.darker());
@@ -711,7 +714,7 @@ void CustomLookAndFeel::drawNodeButton(juce::Graphics &g, const NodeButton& node
 }
 
 void CustomLookAndFeel::drawModulatorButton(juce::Graphics &g, const ModulatorButton &modulatorButton) {
-    juce::Rectangle<float> bounds = modulatorButton.getLocalBounds().toFloat().reduced(2.0f);
+    juce::Rectangle<float> bounds = modulatorButton.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
 
     if (modulatorButton.isSelected) {
         g.setColour(buttonColour.darker());
@@ -726,7 +729,7 @@ void CustomLookAndFeel::drawModulatorButton(juce::Graphics &g, const ModulatorBu
 
 void CustomLookAndFeel::drawUndoButton(juce::Graphics &g, const UndoButton &undoButton, bool isButtonDown)
 {
-    auto area = undoButton.getLocalBounds().reduced(5);
+    auto area = undoButton.getLocalBounds().reduced(outerButtonBoundsReduction);
 
     if (isButtonDown) {
         g.setColour(buttonColour.darker());
@@ -748,7 +751,7 @@ void CustomLookAndFeel::drawUndoButton(juce::Graphics &g, const UndoButton &undo
 
 void CustomLookAndFeel::drawRedoButton(juce::Graphics &g, const RedoButton &redoButton, bool isButtonDown)
 {
-    auto area = redoButton.getLocalBounds().reduced(5);
+    auto area = redoButton.getLocalBounds().reduced(outerButtonBoundsReduction);
 
     if (isButtonDown) {
         g.setColour(buttonColour.darker());
@@ -770,14 +773,14 @@ void CustomLookAndFeel::drawRedoButton(juce::Graphics &g, const RedoButton &redo
 
 void CustomLookAndFeel::drawUndoRedoPane(juce::Graphics &g,const UndoRedoPane& undoRedoPane)
 {
-    auto bounds = undoRedoPane.getLocalBounds().reduced(2.0f).toFloat();
+    auto bounds = undoRedoPane.getLocalBounds().reduced(outerButtonBoundsReduction).toFloat();
     g.setColour(buttonBarColour);
     g.fillRoundedRectangle(bounds, paneCornerRadius);
 }
 
 void CustomLookAndFeel::drawResetButton(juce::Graphics &g, const ResetButton &resetButton, bool isButtonDown)
 {
-    auto area = resetButton.getLocalBounds().toFloat().reduced(5.0f);
+    auto area = resetButton.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
 
     if (isButtonDown) {
         g.setColour(buttonColour.darker());
@@ -790,6 +793,45 @@ void CustomLookAndFeel::drawResetButton(juce::Graphics &g, const ResetButton &re
     }
 
     g.fillRect(area);
+}
+
+void CustomLookAndFeel::drawPaintTool(juce::Graphics &g, const PaintTool &paintTool) {
+
+    auto area = paintTool.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
+    g.setColour(buttonColour);
+    g.fillRect(area);
+
+    int wandBoundsReduction = 2;
+    auto wandArea = area.reduced(wandBoundsReduction);
+
+    g.setColour(juce::Colours::black);
+
+    const float handleThickness = wandArea.getHeight() * 0.16f;
+    const float circleDiameter  = wandArea.getHeight() * 0.4f;
+    const float circleRadius    = circleDiameter * 0.5f;
+
+    // Inset both ends by the circle radius so the whole wand stays inside the bounds.
+    juce::Point<float> tipCentre   (wandArea.getRight() - circleRadius, wandArea.getY() + circleRadius);
+    juce::Point<float> handleStart (wandArea.getX() + circleRadius,     wandArea.getBottom() - circleRadius);
+
+    juce::Line<float> handleLine(handleStart, tipCentre);
+    juce::Point<float> handleEnd = handleLine.getPointAlongLineProportionally(1.0f - circleRadius / handleLine.getLength());
+
+    juce::Path handle;
+    handle.addLineSegment(juce::Line<float>(handleStart, handleEnd), handleThickness);
+    g.fillPath(handle);
+
+
+    auto tipBounds = juce::Rectangle<float>(circleDiameter, circleDiameter).withCentre(tipCentre);
+    g.fillEllipse(tipBounds);
+}
+
+void CustomLookAndFeel::drawPaintToolSettings(juce::Graphics &g, const PaintToolSettings &paintToolSettings) {
+
+    auto bounds = paintToolSettings.getLocalBounds();
+
+    g.setColour(buttonColour);
+    g.fillRect(bounds);
 }
 
 void CustomLookAndFeel::drawNodeTextEditor(juce::Graphics &g, NodeTextEditor &nodeTextEditor) {

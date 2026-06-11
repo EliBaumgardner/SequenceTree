@@ -41,6 +41,9 @@ class UndoRedoPane;
 class ResetButton;
 
 class TraversalMenu;
+class PaintTool;
+
+class PaintToolSettings;
 
 class CustomLookAndFeel : public juce::LookAndFeel_V4
 {
@@ -112,10 +115,14 @@ public:
     void drawUndoRedoPane   (juce::Graphics& g, const UndoRedoPane& undoRedoPane);
     void drawResetButton    (juce::Graphics& g, const ResetButton& resetButton, bool isButtonDown);
 
+    void drawPaintTool         (juce::Graphics& g, const PaintTool& paintTool);
+    void drawPaintToolSettings (juce::Graphics& g, const PaintToolSettings& paintToolSettings);
 
-    float colorIntensityFactor = 0.2f;
+    void updateColours();
 
-    juce::Colour dropShadowColour = juce::Colours::black;
+    float colorIntensityFactor        = 0.2f;
+
+    juce::Colour dropShadowColour     = juce::Colours::black;
     juce::Colour baseDarkColour1      = juce::Colour::fromRGB(40,40,38);
     juce::Colour baseDarkColour2      = juce::Colour::fromRGB(30,30,30);
     juce::Colour baseLightColour1     = juce::Colour::fromRGB(195,174,132);
@@ -125,21 +132,22 @@ public:
 
     juce::Colour canvasColour = baseLightColour1.darker();
 
-    juce::Colour gridColour      = juce::Colour::fromRGB(15, 15, 15);
-    juce::Colour barColour       = baseDarkColour2;
-    juce::Colour buttonColour    = baseLightColour2;
-    juce::Colour buttonBarColour = baseDarkColour1;
-    juce::Colour editorColour    = baseDarkColour1;
+    juce::Colour gridColour          = juce::Colour::fromRGB(15, 15, 15);
+    juce::Colour barColour           = baseDarkColour2;
+    juce::Colour buttonColour        = baseLightColour2;
+    juce::Colour buttonBarColour     = baseDarkColour1;
+    juce::Colour editorColour        = baseDarkColour1;
     juce::Colour traversalMenuColour = darkBrownColour;
-    juce::Colour textColour      = baseLightColour1;
+    juce::Colour textColour          = baseLightColour1;
 
-    juce::Colour arrowColour     = juce::Colours::black;
+    juce::Colour arrowColour         = juce::Colours::black;
     juce::Colour arrowProgressColour = baseLightColour2;
-    juce::Colour arrowHeadColour = juce::Colours::black;
+    juce::Colour arrowHeadColour     = juce::Colours::black;
 
     static constexpr float paneCornerRadius = 4.0f;
 
-    void updateColours();
+    static constexpr float innerButtonBoundsReduction = 5.0f;
+    static constexpr float outerButtonBoundsReduction = 2.0f;
 
     juce::DropShadow barDropShadow;
     juce::DropShadow nodeDropShadow;
