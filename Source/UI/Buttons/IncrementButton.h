@@ -5,6 +5,8 @@
 #ifndef SEQUENCETREE_INCREMENTBUTTON_H
 #define SEQUENCETREE_INCREMENTBUTTON_H
 
+#include <juce_gui_basics/juce_gui_basics.h>
+
 class IncrementButton : public juce::Component {
 
 public:

@@ -74,6 +74,8 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         void resetAllArrowProgress();
         void resetGraphArrowProgress(int graphId);
 
+        void setPaintMode(bool paintMode);
+
         juce::OwnedArray<NodeArrow> nodeArrows;
         NodeArrow* snapGhostArrow = nullptr;
 
@@ -82,7 +84,8 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         juce::Colour canvasColour = juce::Colours::white;
         juce::String infoText;
 
-        bool start = false;
+        bool start     = false;
+        bool paintMode = false;
 
         bool showGrid = true;
         bool gridOriginSet = false;

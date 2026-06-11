@@ -4,6 +4,7 @@
 #include "../Util/ApplicationContext.h"
 #include "ColourSelector.h"
 #include "Node/ValueEditor.h"
+#include "Buttons/PaintTool.h"
 
 class BottomBar : public juce::Component
 {
@@ -50,4 +51,6 @@ private:
     static constexpr int cellGap     = 10;
 
     Node* node = nullptr;
+
+    std::unique_ptr<PaintTool> paintTool;
 };

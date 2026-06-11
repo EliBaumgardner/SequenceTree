@@ -570,3 +570,25 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
     }
 
 }
+
+void NodeCanvas::setPaintMode(bool paintMode) {
+
+    auto createMouseCursor = [](int size) {
+        juce::Image img(juce::Image::ARGB, size, size, true);
+        juce::Graphics g(img);
+        g.setColour(juce::Colours::black);
+        g.fillEllipse(img.getBounds().toFloat().reduced(1.0f));
+
+        const int hotspot = size / 2;
+        return juce::MouseCursor(img, hotspot, hotspot);
+    };
+
+    this->paintMode = paintMode;
+
+    if (paintMode) {
+        setMouseCursor(juce::MouseCursor(createMouseCursor(24)));
+    }
+    else {
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+    }
+}

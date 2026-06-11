@@ -10,6 +10,9 @@ BottomBar::BottomBar(ApplicationContext& context)
 
     addAndMakeVisible(colourSelector);
 
+    paintTool = std::make_unique<PaintTool>(applicationContext);
+    addAndMakeVisible(*paintTool);
+
     countLimitEditor       .setMinimumValue(1);
     repeatEditor           .setMinimumValue(1);
     switchCountLimitEditor .setMinimumValue(1);
@@ -26,9 +29,9 @@ BottomBar::BottomBar(ApplicationContext& context)
     pitchEditor            .setTooltip("Pitch");
     channelEditor          .setTooltip("Channel");
 
-    for (auto& le : labeledEditors) {
-        le.editor.setVisible(false);
-        addChildComponent(le.editor);
+    for (auto& labelEditor : labeledEditors) {
+        labelEditor.editor.setVisible(false);
+        addChildComponent(labelEditor.editor);
     }
 
     applicationContext.onNodeSelected = [this](Node* node, bool selected) {
@@ -74,8 +77,8 @@ void BottomBar::bindToNode(Node* node)
 
 void BottomBar::clearBindings()
 {
-    for (auto& le : labeledEditors) {
-        le.editor.setVisible(false);
+    for (auto& labelEditor : labeledEditors) {
+        labelEditor.editor.setVisible(false);
     }
 }
 
@@ -102,15 +105,17 @@ void BottomBar::resized()
     auto bounds= getLocalBounds().reduced(4);
     int  height               = bounds.getHeight();
 
+    paintTool->setBounds(bounds.removeFromRight(height));
     colourSelector.setBounds(bounds.removeFromLeft(height));
     bounds.removeFromLeft(16);
 
-    for (auto& le : labeledEditors) {
-        if (!le.editor.isVisible())
+    for (auto& labelEditor : labeledEditors) {
+        if (!labelEditor.editor.isVisible())
             continue;
 
         bounds.removeFromLeft(labelWidth);
-        le.editor.setBounds(bounds.removeFromLeft(editorWidth));
+        labelEditor.editor.setBounds(bounds.removeFromLeft(editorWidth));
         bounds.removeFromLeft(cellGap);
     }
+
 }
