@@ -173,7 +173,7 @@ void ColourSelector::paint(juce::Graphics& g) {
     g.setColour(juce::Colours::black);
     g.drawRect(getLocalBounds(), 1.0f);
 
-    if (node == nullptr) {
+    if (requiresNode && node == nullptr) {
         g.setColour(juce::Colours::grey.withAlpha(0.3f));
         g.fillRect(getLocalBounds().reduced(1.0f));
         return;
@@ -185,18 +185,14 @@ void ColourSelector::paint(juce::Graphics& g) {
 
 void ColourSelector::mouseDown(const juce::MouseEvent& event) {
 
-    if (node == nullptr) {
-        return;
-    }
-
     if(mainWindow != nullptr) {
         mainWindow.reset();
     }
-    
+
     mainWindow = std::make_unique<MainWindow>("",juce::Colours::white,juce::DocumentWindow::closeButton,true);
     mainWindow->centreWithSize(160, 145);
     mainWindow->setVisible(true);
-    
+
     mainWindow->getContent()->updateCursorPosition(colour);
     mainWindow->getContent()->colourPicked =[this](juce::Colour c) {
 
@@ -208,6 +204,10 @@ void ColourSelector::mouseDown(const juce::MouseEvent& event) {
 
         colour = c;
         repaint();
+
+        if (onColourPicked) {
+            onColourPicked(c);
+        }
     };
 }
 

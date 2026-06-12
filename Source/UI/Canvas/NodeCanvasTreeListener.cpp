@@ -58,4 +58,13 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
         update.nodeId = noteNode.getProperty(ValueTreeIdentifiers::Id);
         canvas.enqueueAsyncUpdate(update);
     }
+    else if (propertyIdentifier == ValueTreeIdentifiers::MidiPitch
+        || propertyIdentifier == ValueTreeIdentifiers::MidiVelocity) {
+
+        juce::ValueTree noteNode = tree.getParent().getParent();
+        NodeCanvas::AsyncUpdate update;
+        update.type   = NodeCanvas::AsyncUpdateType::ValueChanged;
+        update.nodeId = noteNode.getProperty(ValueTreeIdentifiers::Id);
+        canvas.enqueueAsyncUpdate(update);
+    }
 }

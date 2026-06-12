@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <array>
+
 #include "../../Graph/RTData.h"
 #include "DynamicPort.h"
 #include "../../Util/NodeInfo.h"
@@ -24,7 +26,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
     public:
 
-        enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved,DurationOnly};
+        enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved,DurationOnly,ValueChanged};
 
         struct AsyncUpdate {
             AsyncUpdateType type;
@@ -75,6 +77,13 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         void resetGraphArrowProgress(int graphId);
 
         void setPaintMode(bool paintMode);
+        void setBrushColour(juce::Colour colour);
+        void setBrushRadius(float radius);
+        void updateBrushCursor();
+        void setActivePaintLayer(int index);
+        void renderValueField();
+        void refreshValueField();
+        void paintStroke(juce::Point<float> canvasPos, bool isStart);
 
         juce::OwnedArray<NodeArrow> nodeArrows;
         NodeArrow* snapGhostArrow = nullptr;
@@ -86,6 +95,14 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         bool start     = false;
         bool paintMode = false;
+
+        static constexpr int numPaintLayers = 3;
+        std::array<juce::Image, numPaintLayers> paintLayers;
+        int activePaintLayer = 0;
+        juce::Image  valueField;
+        juce::Colour brushColour = juce::Colours::white;
+        float        brushRadius = 12.0f;
+        juce::Point<float> lastPaintPoint;
 
         bool showGrid = true;
         bool gridOriginSet = false;

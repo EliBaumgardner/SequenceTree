@@ -126,6 +126,11 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
     if (NodeCanvas* canvas = dynamic_cast<NodeCanvas*>(component)) {
 
+        if (canvas->paintMode && e.mods.isLeftButtonDown()) {
+            canvas->paintStroke(e.position, true);
+            return;
+        }
+
         auto parent = component->getParentComponent();
         if (auto* dynamicPort = dynamic_cast<DynamicPort*>(parent)) {
             dynamicPort->mouseDown(e.getEventRelativeTo(dynamicPort));
@@ -218,6 +223,11 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
     if (NodeCanvas* nodeCanvas = dynamic_cast<NodeCanvas*>(component)) {
+
+        if (nodeCanvas->paintMode && e.mods.isLeftButtonDown()) {
+            nodeCanvas->paintStroke(e.position, false);
+            return;
+        }
 
         auto parent = component->getParentComponent();
 
