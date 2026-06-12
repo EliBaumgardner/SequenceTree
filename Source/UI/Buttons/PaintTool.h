@@ -18,18 +18,13 @@ public:
 
     ApplicationContext& context;
 
-    std::unique_ptr<juce::DialogWindow::LaunchOptions> window;
-    std::unique_ptr<PaintToolSettings> settings;
+    std::unique_ptr<PaintToolSettingsWindow> settingsWindow;
 
     bool isSelected = false;
 
 
     PaintTool(ApplicationContext& context) : context(context) {
         setLookAndFeel(context.lookAndFeel);
-
-        settings = std::make_unique<PaintToolSettings>(context);
-
-        window = std::make_unique<juce::DialogWindow::LaunchOptions>();
     }
 
     void paint(juce::Graphics& g){
@@ -50,19 +45,14 @@ public:
         }
 
         if (e.mods.isRightButtonDown()) {
-            isSelected = true;
 
-            std::cout<<"paint tool button pressed"<<std::endl;
+            if (settingsWindow == nullptr) {
+                settingsWindow = std::make_unique<PaintToolSettingsWindow>(context);
+                settingsWindow->centreWithSize(100, 200);
+            }
 
-            window.get()->content.setNonOwned(settings.get());
-            window.get()->content->setSize(100,200);
-            window.get()->dialogTitle = "Paint Brush Settings";
-            window.get()->dialogBackgroundColour = juce::Colours::black;
-            window.get()->escapeKeyTriggersCloseButton = true;
-            window.get()->useNativeTitleBar = true;
-            window.get()->resizable = true;
-
-            window.get()->launchAsync();
+            settingsWindow->setVisible(true);
+            settingsWindow->toFront(true);
         }
 
     }

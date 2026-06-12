@@ -32,6 +32,14 @@ NodeCanvas::~NodeCanvas()
 void NodeCanvas::paint(juce::Graphics& g)
 {
     CustomLookAndFeel::get(*this).drawCanvas(g, *this);
+
+    if (paintMode && valueField.isValid()) {
+        g.drawImageAt(valueField, 0, 0);
+    }
+
+    if (paintLayers[activePaintLayer].isValid()) {
+        g.drawImageAt(paintLayers[activePaintLayer], 0, 0);
+    }
 }
 
 void NodeCanvas::enqueueAsyncUpdate(const AsyncUpdate& update)
@@ -80,6 +88,10 @@ void NodeCanvas::handleAsyncUpdate() {
         }
     }
     asyncUpdates.clear();
+
+    if (paintMode) {
+        refreshValueField();
+    }
 }
 
 void NodeCanvas::drainProgressFifo()
@@ -573,22 +585,132 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
 
 void NodeCanvas::setPaintMode(bool paintMode) {
 
-    auto createMouseCursor = [](int size) {
-        juce::Image img(juce::Image::ARGB, size, size, true);
-        juce::Graphics g(img);
-        g.setColour(juce::Colours::black);
-        g.fillEllipse(img.getBounds().toFloat().reduced(1.0f));
-
-        const int hotspot = size / 2;
-        return juce::MouseCursor(img, hotspot, hotspot);
-    };
-
     this->paintMode = paintMode;
 
     if (paintMode) {
-        setMouseCursor(juce::MouseCursor(createMouseCursor(24)));
+        updateBrushCursor();
+        refreshValueField();
     }
     else {
         setMouseCursor(juce::MouseCursor::NormalCursor);
+        repaint();
     }
+}
+
+void NodeCanvas::renderValueField() {
+
+    if (getWidth() <= 0 || getHeight() <= 0) {
+        return;
+    }
+
+    valueField = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
+    juce::Graphics g(valueField);
+
+    // The active paint layer selects which MIDI variable the field visualises.
+    // Layer index follows the PaintSetting enum order: 0 Pitch, 1 Duration, 2 Velocity.
+    juce::Identifier valueId = ValueTreeIdentifiers::MidiPitch;
+    if (activePaintLayer == 1) {
+        valueId = ValueTreeIdentifiers::MidiDuration;
+    }
+    else if (activePaintLayer == 2) {
+        valueId = ValueTreeIdentifiers::MidiVelocity;
+    }
+
+    const float glowRadius = 110.0f;
+
+    for (auto& [id, node] : nodeMap) {
+        if (node == nullptr) {
+            continue;
+        }
+
+        juce::ValueTree notes = ValueTreeState::getMidiNotes(id);
+        juce::ValueTree note  = notes.getChild(0);
+        if (! note.isValid()) {
+            continue;
+        }
+
+        int   value  = (int) note.getProperty(valueId);
+        float factor = juce::jlimit(0.0f, 1.0f, value / 127.0f);
+
+        // Brightness encodes the value (0 darkest -> 127 brightest); a floor keeps
+        // the hue readable at low values rather than fading all the way to black.
+        float brightness = 0.15f + 0.85f * factor;
+        juce::Colour patch = brushColour.withMultipliedBrightness(brightness);
+
+        auto centre = node->getBounds().getCentre().toFloat();
+
+        juce::ColourGradient glow(patch.withAlpha(0.8f), centre.x, centre.y,
+                                  patch.withAlpha(0.0f), centre.x + glowRadius, centre.y,
+                                  true);
+        g.setGradientFill(glow);
+        g.fillEllipse(centre.x - glowRadius, centre.y - glowRadius,
+                      glowRadius * 2.0f, glowRadius * 2.0f);
+    }
+}
+
+void NodeCanvas::refreshValueField() {
+
+    if (! paintMode) {
+        return;
+    }
+
+    renderValueField();
+    repaint();
+}
+
+void NodeCanvas::updateBrushCursor() {
+
+    if (!paintMode) {
+        return;
+    }
+
+    const int size    = juce::jmax(1, (int)(brushRadius * 2.0f));
+    const int hotspot = size / 2;
+
+    juce::Image img(juce::Image::ARGB, size, size, true);
+    juce::Graphics g(img);
+    g.setColour(juce::Colours::black);
+    g.drawEllipse(img.getBounds().toFloat().reduced(1.0f), 1.0f);
+
+    setMouseCursor(juce::MouseCursor(img, hotspot, hotspot));
+}
+
+void NodeCanvas::setBrushColour(juce::Colour colour) {
+    brushColour = colour;
+}
+
+void NodeCanvas::setBrushRadius(float radius) {
+    brushRadius = radius;
+    updateBrushCursor();
+}
+
+void NodeCanvas::setActivePaintLayer(int index) {
+    activePaintLayer = juce::jlimit(0, numPaintLayers - 1, index);
+
+    if (paintMode) {
+        renderValueField();
+    }
+    repaint();
+}
+
+void NodeCanvas::paintStroke(juce::Point<float> canvasPos, bool isStart) {
+
+    juce::Image& paintLayer = paintLayers[activePaintLayer];
+
+    if (!paintLayer.isValid()) {
+        paintLayer = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
+    }
+
+    juce::Graphics g(paintLayer);
+    g.setColour(brushColour);
+
+    if (!isStart) {
+        g.drawLine(juce::Line<float>(lastPaintPoint, canvasPos), brushRadius * 2.0f);
+    }
+
+    g.fillEllipse(canvasPos.x - brushRadius, canvasPos.y - brushRadius,
+                  brushRadius * 2.0f, brushRadius * 2.0f);
+
+    lastPaintPoint = canvasPos;
+    repaint();
 }

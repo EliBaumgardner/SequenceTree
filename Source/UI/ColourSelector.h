@@ -93,6 +93,13 @@ class ColourSelector : public juce::Component {
     std::unique_ptr<MainWindow> mainWindow = nullptr;
     Node* node = nullptr;
 
+    // When false, the selector is used as a standalone colour picker (e.g. the
+    // paint tool brush) and always displays its colour rather than treating a
+    // null node as a disabled/greyed state.
+    bool requiresNode = true;
+
+    std::function<void(juce::Colour)> onColourPicked;
+
 private:
     ApplicationContext& applicationContext;
     void applyColourToDescendants(Node* n, juce::Colour c);

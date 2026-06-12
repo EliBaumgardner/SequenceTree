@@ -67,6 +67,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/PianoRoll.cpp
         Source/UI/Titlebar.cpp
         Source/UI/BottomBar.cpp
+        Source/UI/Canvas/PaintedCanvas.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE
