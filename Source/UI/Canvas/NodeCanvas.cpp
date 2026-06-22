@@ -33,12 +33,17 @@ void NodeCanvas::paint(juce::Graphics& g)
 {
     CustomLookAndFeel::get(*this).drawCanvas(g, *this);
 
-    if (paintMode && valueField.isValid()) {
-        g.drawImageAt(valueField, 0, 0);
-    }
 
-    if (paintLayers[activePaintLayer].isValid()) {
-        g.drawImageAt(paintLayers[activePaintLayer], 0, 0);
+    if (paintMode) {
+
+        if (valueField.isValid()) {
+            g.setImageResamplingQuality(juce::Graphics::mediumResamplingQuality);
+            g.drawImage(valueField, getLocalBounds().toFloat());
+        }
+
+        if (paintLayers[activePaintLayer].isValid()) {
+            g.drawImageAt(paintLayers[activePaintLayer], 0, 0);
+        }
     }
 }
 
@@ -87,9 +92,11 @@ void NodeCanvas::handleAsyncUpdate() {
             applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
         }
     }
+
+    const bool fieldNeedsRefresh = ! asyncUpdates.empty();
     asyncUpdates.clear();
 
-    if (paintMode) {
+    if (paintMode && fieldNeedsRefresh) {
         refreshValueField();
     }
 }
@@ -603,11 +610,6 @@ void NodeCanvas::renderValueField() {
         return;
     }
 
-    valueField = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
-    juce::Graphics g(valueField);
-
-    // The active paint layer selects which MIDI variable the field visualises.
-    // Layer index follows the PaintSetting enum order: 0 Pitch, 1 Duration, 2 Velocity.
     juce::Identifier valueId = ValueTreeIdentifiers::MidiPitch;
     if (activePaintLayer == 1) {
         valueId = ValueTreeIdentifiers::MidiDuration;
@@ -616,7 +618,20 @@ void NodeCanvas::renderValueField() {
         valueId = ValueTreeIdentifiers::MidiVelocity;
     }
 
-    const float glowRadius = 110.0f;
+    const int   kFieldScale = 2;
+    const float glowRadius   = 110.0f;
+
+    const int fieldW = juce::jmax(1, getWidth()  / kFieldScale);
+    const int fieldH = juce::jmax(1, getHeight() / kFieldScale);
+
+    const float fieldRadius  = glowRadius / (float) kFieldScale;
+    const float fieldRadius2 = fieldRadius * fieldRadius;
+
+    const size_t numCells = (size_t) fieldW * (size_t) fieldH;
+    fieldWeightedSum.assign(numCells, 0.0f);
+    fieldTotalWeight.assign(numCells, 0.0f);
+    float* weightedSum = fieldWeightedSum.data();
+    float* totalWeight = fieldTotalWeight.data();
 
     for (auto& [id, node] : nodeMap) {
         if (node == nullptr) {
@@ -625,26 +640,72 @@ void NodeCanvas::renderValueField() {
 
         juce::ValueTree notes = ValueTreeState::getMidiNotes(id);
         juce::ValueTree note  = notes.getChild(0);
+
         if (! note.isValid()) {
             continue;
         }
 
-        int   value  = (int) note.getProperty(valueId);
-        float factor = juce::jlimit(0.0f, 1.0f, value / 127.0f);
+        const int   value  = (int) note.getProperty(valueId);
+        const float factor = juce::jlimit(0.0f, 1.0f, value / 127.0f);
 
-        // Brightness encodes the value (0 darkest -> 127 brightest); a floor keeps
-        // the hue readable at low values rather than fading all the way to black.
-        float brightness = 0.15f + 0.85f * factor;
-        juce::Colour patch = brushColour.withMultipliedBrightness(brightness);
+        const auto  centre = node->getBounds().getCentre().toFloat();
+        const float cx = centre.x / (float) kFieldScale;
+        const float cy = centre.y / (float) kFieldScale;
 
-        auto centre = node->getBounds().getCentre().toFloat();
+        const int x0 = juce::jmax(0,          (int) std::floor(cx - fieldRadius));
+        const int x1 = juce::jmin(fieldW - 1, (int) std::ceil (cx + fieldRadius));
+        const int y0 = juce::jmax(0,          (int) std::floor(cy - fieldRadius));
+        const int y1 = juce::jmin(fieldH - 1, (int) std::ceil (cy + fieldRadius));
 
-        juce::ColourGradient glow(patch.withAlpha(0.8f), centre.x, centre.y,
-                                  patch.withAlpha(0.0f), centre.x + glowRadius, centre.y,
-                                  true);
-        g.setGradientFill(glow);
-        g.fillEllipse(centre.x - glowRadius, centre.y - glowRadius,
-                      glowRadius * 2.0f, glowRadius * 2.0f);
+        for (int y = y0; y <= y1; ++y) {
+            const float dy  = (float) y - cy;
+            const float dy2 = dy * dy;
+            float* wsRow = weightedSum + (size_t) y * fieldW;
+            float* twRow = totalWeight + (size_t) y * fieldW;
+
+            for (int x = x0; x <= x1; ++x) {
+                const float dx = (float) x - cx;
+                const float d2 = dx * dx + dy2;
+
+                if (d2 >= fieldRadius2) {
+                    continue;
+                }
+
+                const float t = 1.0f - std::sqrt(d2) / fieldRadius;
+                const float w = t * t;
+
+                wsRow[x] += w * factor;
+                twRow[x] += w;
+            }
+        }
+    }
+
+    if (valueField.getWidth() != fieldW || valueField.getHeight() != fieldH) {
+        valueField = juce::Image(juce::Image::ARGB, fieldW, fieldH, false);
+    }
+
+    juce::Image::BitmapData pixels(valueField, juce::Image::BitmapData::writeOnly);
+    const juce::Colour bg = juce::Colours::white;
+
+    for (int y = 0; y < fieldH; ++y) {
+        const float*  wsRow = weightedSum + (size_t) y * fieldW;
+        const float*  twRow = totalWeight + (size_t) y * fieldW;
+        juce::uint8*  line  = pixels.getLinePointer(y);
+
+        for (int x = 0; x < fieldW; ++x) {
+            juce::Colour out = bg;
+
+            const float tw = twRow[x];
+            if (tw > 0.0f) {
+                const float fieldFactor = wsRow[x] / tw;
+                const float coverage    = juce::jlimit(0.0f, 1.0f, tw);
+                const juce::Colour patch = brushColour.withMultipliedBrightness(fieldFactor);
+                out = bg.interpolatedWith(patch, coverage);
+            }
+
+            auto* px = (juce::PixelARGB*) (line + x * pixels.pixelStride);
+            px->setARGB(out.getAlpha(), out.getRed(), out.getGreen(), out.getBlue());
+        }
     }
 }
 
