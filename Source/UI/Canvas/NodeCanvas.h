@@ -98,8 +98,13 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         static constexpr int numPaintLayers = 3;
         std::array<juce::Image, numPaintLayers> paintLayers;
+
         int activePaintLayer = 0;
         juce::Image  valueField;
+
+        std::vector<float> fieldWeightedSum;
+        std::vector<float> fieldTotalWeight;
+
         juce::Colour brushColour = juce::Colours::white;
         float        brushRadius = 12.0f;
         juce::Point<float> lastPaintPoint;
