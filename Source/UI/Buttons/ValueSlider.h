@@ -25,7 +25,7 @@ public:
 
 };
 
-class ValueSlider : public juce::Component {
+class ValueSlider : public juce::Component, public juce::SettableTooltipClient {
 
     public:
 

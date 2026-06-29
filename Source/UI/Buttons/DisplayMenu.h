@@ -11,7 +11,7 @@
 
 struct ApplicationContext;
 
-class DisplayMenu : public juce::Component {
+class DisplayMenu : public juce::Component, public juce::SettableTooltipClient {
 
     ApplicationContext& applicationContext;
 

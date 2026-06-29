@@ -11,6 +11,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "NodeInfo.h"
 
 class SequenceTreeAudioProcessor;
 class NodeCanvas;
@@ -32,4 +33,6 @@ struct ApplicationContext
     RTGraphBuilder*             rtGraphBuilder = nullptr;
 
     std::function<void(Node*, bool)> onNodeSelected;
+
+    NodeDisplayMode currentDisplayMode = NodeDisplayMode::Pitch;
 };

@@ -51,6 +51,23 @@ public:
                 settingsWindow->centreWithSize(100, 200);
             }
 
+            if (auto* settings = dynamic_cast<PaintToolSettings*>(settingsWindow->getContentComponent())) {
+                switch (context.currentDisplayMode) {
+                    case NodeDisplayMode::Pitch:
+                        settings->displayMenu->selectedOption = "Pitch";
+                        settings->setPaintMode(PaintToolSettings::PaintSetting::Pitch);
+                        settings->displayMenu->resized();
+                        break;
+                    case NodeDisplayMode::Velocity:
+                        settings->displayMenu->selectedOption = "Velocity";
+                        settings->setPaintMode(PaintToolSettings::PaintSetting::Velocity);
+                        settings->displayMenu->resized();
+                        break;
+                    default:
+                        break;
+                }
+            }
+
             settingsWindow->setVisible(true);
             settingsWindow->toFront(true);
         }
