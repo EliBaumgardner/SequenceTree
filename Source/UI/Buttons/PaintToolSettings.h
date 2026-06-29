@@ -36,6 +36,9 @@ class PaintToolSettings : public juce::Component {
 
 public:
 
+    static constexpr float minBrushFlow = 0.002f;
+    static constexpr float maxBrushFlow = 0.25f;
+
     enum class PaintSetting {Pitch, Duration, Velocity};
 
     struct ColourVariablePair {
@@ -63,6 +66,7 @@ public:
     std::unique_ptr<PaintToolDisplayMenu> displayMenu;
     std::unique_ptr<ColourSelector>       colourSelector;
     std::unique_ptr<ValueSlider>          valueSlider;
+    std::unique_ptr<ValueSlider>          flowSlider;
 
 
     PaintToolSettings(ApplicationContext& context) : context(context) {
@@ -72,6 +76,7 @@ public:
         colourSelector = std::make_unique<ColourSelector>(context);
         colourSelector->requiresNode = false;
         valueSlider = std::make_unique<ValueSlider>();
+        flowSlider  = std::make_unique<ValueSlider>();
 
 
         pitchPair.setting = PaintSetting::Pitch;
@@ -114,14 +119,32 @@ public:
 
         valueSlider->valueChanged = [this] {
             if (this->context.canvas != nullptr) {
-                float value = (float)valueSlider->boundValue.getValue();
-                this->context.canvas->brushRadius = juce::jmap(value, 0.0f, 1.0f, 1.0f, 50.0f);
+                float value  = (float)valueSlider->boundValue.getValue();
+                float radius = juce::jmap(value, 0.0f, 1.0f, 1.0f, 200.0f);
+                this->context.canvas->setBrushRadius(radius);
             }
         };
+
+        if (context.canvas != nullptr) {
+            valueSlider->boundValue = juce::jmap(context.canvas->brushRadius, 1.0f, 200.0f, 0.0f, 1.0f);
+        }
+
+        flowSlider->valueChanged = [this] {
+            if (this->context.canvas != nullptr) {
+                float value = (float)flowSlider->boundValue.getValue();
+                this->context.canvas->brushFlow = juce::jmap(value, 0.0f, 1.0f, minBrushFlow, maxBrushFlow);
+            }
+        };
+
+        if (context.canvas != nullptr) {
+            float flow = juce::jlimit(minBrushFlow, maxBrushFlow, context.canvas->brushFlow);
+            flowSlider->boundValue = juce::jmap(flow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);
+        }
 
         addAndMakeVisible(displayMenu.get());
         addAndMakeVisible(colourSelector.get());
         addAndMakeVisible(valueSlider.get());
+        addAndMakeVisible(flowSlider.get());
 
     };
 
@@ -139,6 +162,7 @@ public:
         displayMenu->setBounds(bounds.removeFromTop(displayMenuHeight));
         colourSelector->setBounds(bounds.removeFromTop(displayMenuHeight));
         valueSlider->setBounds(bounds.removeFromTop(displayMenuHeight));
+        flowSlider->setBounds(bounds.removeFromTop(displayMenuHeight));
     };
 
     void setPaintMode(PaintSetting setting) {
