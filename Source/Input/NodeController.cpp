@@ -28,6 +28,10 @@ NodeController::NodeController(ApplicationContext& context) : applicationContext
 
 void NodeController::mouseEnter(const juce::MouseEvent& e)
 {
+    if (applicationContext.canvas->paintMode) {
+        return;
+    }
+
     juce::Component* component = e.eventComponent;
     if (Node* node = dynamic_cast<Node*>(component)) {
         node->setHoverVisual(true);
@@ -35,6 +39,10 @@ void NodeController::mouseEnter(const juce::MouseEvent& e)
 }
 void NodeController::mouseExit(const juce::MouseEvent& e)
 {
+    if (applicationContext.canvas->paintMode) {
+        return;
+    }
+
     juce::Component* component = e.eventComponent;
     if (Node* node = dynamic_cast<Node*>(component)) {
         node->setHoverVisual(false);
@@ -43,6 +51,11 @@ void NodeController::mouseExit(const juce::MouseEvent& e)
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
     NodeCanvas* canvas = applicationContext.canvas;
+
+    if (canvas->paintMode) {
+        canvas->endStroke();
+        return;
+    }
 
     if (isDraggingValue) {
         isDraggingValue = false;
@@ -124,12 +137,15 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
     jassert(nodeCanvas);
 
-    if (NodeCanvas* canvas = dynamic_cast<NodeCanvas*>(component)) {
-
-        if (canvas->paintMode && e.mods.isLeftButtonDown()) {
-            canvas->paintStroke(e.position, true);
-            return;
+    if (nodeCanvas->paintMode) {
+        if (e.mods.isLeftButtonDown() || e.mods.isRightButtonDown()) {
+            auto canvasEvent = e.getEventRelativeTo(nodeCanvas);
+            nodeCanvas->paintStroke(canvasEvent.position, true, e.mods.isRightButtonDown());
         }
+        return;
+    }
+
+    if (NodeCanvas* canvas = dynamic_cast<NodeCanvas*>(component)) {
 
         auto parent = component->getParentComponent();
         if (auto* dynamicPort = dynamic_cast<DynamicPort*>(parent)) {
@@ -210,6 +226,16 @@ void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &ne
 
 void NodeController::mouseDrag(const juce::MouseEvent& e)
 {
+    NodeCanvas* canvas = applicationContext.canvas;
+
+    if (canvas->paintMode) {
+        if (e.mods.isLeftButtonDown() || e.mods.isRightButtonDown()) {
+            auto canvasEvent = e.getEventRelativeTo(canvas);
+            canvas->paintStroke(canvasEvent.position, false);
+        }
+        return;
+    }
+
     if (isDraggingValue && draggingValueNode != nullptr) {
         int yOffset = e.getOffsetFromDragStart().y;
         int delta = -yOffset / 3;
@@ -223,11 +249,6 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
     if (NodeCanvas* nodeCanvas = dynamic_cast<NodeCanvas*>(component)) {
-
-        if (nodeCanvas->paintMode && e.mods.isLeftButtonDown()) {
-            nodeCanvas->paintStroke(e.position, false);
-            return;
-        }
 
         auto parent = component->getParentComponent();
 

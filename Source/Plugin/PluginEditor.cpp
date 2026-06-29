@@ -13,11 +13,7 @@
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
 : AudioProcessorEditor(p), audioProcessor(p)
 {
-    if (auto* window = findParentComponentOfClass<juce::DocumentWindow>()) {
-        window->setFullScreen (true);
-    }
-
-    applicationContext.processor   = &p;
+applicationContext.processor   = &p;
     applicationContext.undoManager = &undoManager;
     applicationContext.lookAndFeel = &lookAndFeel;
 
@@ -35,6 +31,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     };
 
     applicationContext.canvas            = canvas.get();
+    port->onZoomChanged = [canvasPtr = canvas.get()](float z) { canvasPtr->setViewZoom(z); };
 
     audioProcessor.notifyUi = [canvasPtr = canvas.get()] {
         if (canvasPtr) {

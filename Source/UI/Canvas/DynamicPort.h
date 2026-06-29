@@ -19,6 +19,8 @@ public:
     void setZoom(float newZoom, juce::Point<float> pivotInParent);
     void centerOnCanvas();
 
+    std::function<void(float)> onZoomChanged;
+
 private:
     void applyTransform();
 

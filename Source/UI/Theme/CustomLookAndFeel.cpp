@@ -78,7 +78,12 @@ void CustomLookAndFeel::drawEditor(juce::Graphics &g, CustomTextEditor& editor)
 
 void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
 {
-    g.fillAll(canvasColour);
+
+    g.fillAll(canvasColour.brighter());
+
+    if (!canvas.showGrid) {
+        return;
+    }
 
     float spacing = canvas.gridSpacing;
     if (spacing < 15.0f) {
@@ -86,8 +91,16 @@ void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
     }
 
     auto bounds = canvas.getLocalBounds().toFloat();
-    float ox = canvas.gridOriginSet ? canvas.gridOrigin.x : bounds.getCentreX();
-    float oy = canvas.gridOriginSet ? canvas.gridOrigin.y : bounds.getCentreY();
+    float ox;
+    float oy;
+    if (canvas.gridOriginSet) {
+        ox = canvas.gridOrigin.x;
+        oy = canvas.gridOrigin.y;
+    }
+    else {
+        ox = bounds.getCentreX();
+        oy = bounds.getCentreY();
+    }
 
 
     const float armLen = 6.0f;
@@ -100,8 +113,8 @@ void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
     {
         for (float y = startY; y <= bounds.getBottom(); y += spacing)
         {
-            g.drawLine(x - armLen, y, x + armLen, y, 1.0f);
-            g.drawLine(x, y - armLen, x, y + armLen, 1.0f);
+            g.drawLine(x - armLen, y, x + armLen, y, 0.5f);
+            g.drawLine(x, y - armLen, x, y + armLen, 0.5f);
         }
     }
 }
@@ -261,8 +274,6 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
 
     float pulseExpansion = 4.0f * std::sin(node.pulsePhase * juce::MathConstants<float>::pi);
     auto  pulsedFill     = circleFill.expanded(pulseExpansion);
-
-    g.setColour(node.isHighlighted ? nodeColour.darker() : nodeColour);
 
     if (node.isHighlighted) {
         g.setColour(nodeColour.darker());
@@ -426,7 +437,13 @@ namespace {
 
             if (accumulated + segLen >= target) {
                 const float remain   = target - accumulated;
-                const float fraction = segLen > 0.0f ? remain / segLen : 0.0f;
+                float fraction;
+            if (segLen > 0.0f) {
+                fraction = remain / segLen;
+            }
+            else {
+                fraction = 0.0f;
+            }
                 out.lineTo(it.x1 + dx * fraction, it.y1 + dy * fraction);
                 return out;
             }
@@ -452,7 +469,13 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     int   parentRadius = a->getHeight() / 2;
 
     g.setColour(arrowColour);
-    const float ghostAlpha = nodeArrow.isGhost ? 0.5f : 1.0f;
+    float ghostAlpha;
+    if (nodeArrow.isGhost) {
+        ghostAlpha = 0.5f;
+    }
+    else {
+        ghostAlpha = 1.0f;
+    }
 
     float parentCenterX = float(parentCentre.x - nodeArrow.getX());
     float parentCenterY = float(parentCentre.y - nodeArrow.getY());
@@ -491,7 +514,13 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
             linePath.lineTo(arrowEndX, arrowEndY);
         }
         else {
-            float sign  = (dx >= 0.0f) ? 1.0f : -1.0f;
+            float sign;
+            if (dx >= 0.0f) {
+                sign = 1.0f;
+            }
+            else {
+                sign = -1.0f;
+            }
             float perpX = -dirY * 0.8f * sign;
             float perpY =  dirX * 0.8f * sign;
 
@@ -549,7 +578,13 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         }
 
         const float bodyLength        = juce::jmax(0.0f, linePathLength - arrowLength);
-        const float bodyFraction      = (linePathLength > 0.0f) ? bodyLength / linePathLength : 1.0f;
+        float bodyFraction;
+        if (linePathLength > 0.0f) {
+            bodyFraction = bodyLength / linePathLength;
+        }
+        else {
+            bodyFraction = 1.0f;
+        }
         const float bodyProgressT     = juce::jmin(nodeArrow.progressT, bodyFraction);
 
         if (bodyProgressT > 0.0f) {

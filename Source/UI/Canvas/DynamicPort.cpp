@@ -46,8 +46,8 @@ void DynamicPort::mouseWheelMove(const juce::MouseEvent& e,
     else {
         float dx = wheel.isReversed ? -wheel.deltaX : wheel.deltaX;
         float dy = wheel.isReversed ? -wheel.deltaY : wheel.deltaY;
-        translateX += dx * 8.0f;
-        translateY += dy * 8.0f;
+        translateX -= dx * 100.0f;
+        translateY -= dy * 100.0f;
         applyTransform();
     }
 }
@@ -64,17 +64,18 @@ void DynamicPort::setZoom(float newZoom, juce::Point<float> pivot)
         return;
     }
 
-    // Canvas-local point currently under pivot (in DynamicPort space).
     float cx = (pivot.x - translateX) / zoom;
     float cy = (pivot.y - translateY) / zoom;
 
     zoom = newZoom;
 
-    // Reposition so (cx, cy) stays exactly under pivot.
     translateX = pivot.x - cx * zoom;
     translateY = pivot.y - cy * zoom;
 
     applyTransform();
+
+    if (onZoomChanged)
+        onZoomChanged(zoom);
 }
 
 void DynamicPort::centerOnCanvas()
