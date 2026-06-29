@@ -62,7 +62,9 @@ public:
     }
 
     ApplicationContext& context;
-    
+
+    juce::TooltipWindow tooltipWindow { this, 800 };
+
     std::unique_ptr<PaintToolDisplayMenu> displayMenu;
     std::unique_ptr<ColourSelector>       colourSelector;
     std::unique_ptr<ValueSlider>          valueSlider;
@@ -140,6 +142,11 @@ public:
             float flow = juce::jlimit(minBrushFlow, maxBrushFlow, context.canvas->brushFlow);
             flowSlider->boundValue = juce::jmap(flow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);
         }
+
+        displayMenu->setTooltip("Paint mode");
+        colourSelector->setTooltip("Brush colour");
+        valueSlider->setTooltip("Brush size");
+        flowSlider->setTooltip("Brush rate");
 
         addAndMakeVisible(displayMenu.get());
         addAndMakeVisible(colourSelector.get());

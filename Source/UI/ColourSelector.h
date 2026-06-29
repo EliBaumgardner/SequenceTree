@@ -79,7 +79,7 @@ class MainWindow : public juce::DocumentWindow
     MainComponent* component = nullptr;
 };
 
-class ColourSelector : public juce::Component {
+class ColourSelector : public juce::Component, public juce::SettableTooltipClient {
 
     public:
 
