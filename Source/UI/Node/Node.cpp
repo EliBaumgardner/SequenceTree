@@ -61,8 +61,9 @@ void Node::paint(juce::Graphics& g)
 
 void Node::resized()
 {
-    auto editorArea = getLocalBounds().reduced(10.0f);
-    int  buttonHeight    = juce::jmax(2, (int)(editorArea.getHeight() * 0.2f));
+    auto circleBounds = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat()).toNearestInt();
+    auto editorArea   = circleBounds.reduced(6);
+    int  buttonHeight = juce::jmax(2, (int)(editorArea.getHeight() * 0.2f));
 
     upButton.setBounds(editorArea.removeFromTop(buttonHeight));
     downButton.setBounds(editorArea.removeFromBottom(buttonHeight));
@@ -70,12 +71,12 @@ void Node::resized()
     nodeTextEditor->setBounds(editorArea);
     nodeTextEditor->setJustification(juce::Justification::centred);
 
-    int editorWidth = (int)(getWidth()  * 0.45f);
+    int editorWidth  = (int)(getWidth()  * 0.45f);
     int editorHeight = (int)(getHeight() * 0.30f);
 
     countEditor.setBounds(getWidth() - editorWidth, 0, editorWidth, editorHeight);
-    switchCountEditor.setBounds(getWidth() - editorWidth, getHeight() - editorHeight,editorWidth,editorHeight);
-    subLoopLimitEditor.setBounds(0,getHeight() - editorHeight,editorWidth,editorHeight);
+    switchCountEditor.setBounds(getWidth() - editorWidth, getHeight() - editorHeight, editorWidth, editorHeight);
+    subLoopLimitEditor.setBounds(0, getHeight() - editorHeight, editorWidth, editorHeight);
 }
 
 void Node::setHoverVisual(bool isHovered)

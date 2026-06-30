@@ -93,6 +93,8 @@ public:
 
     void drawNodeInteractionEffects(juce::Graphics &g, const Node &node, juce::Rectangle<float> bounds);
 
+    static juce::Rectangle<float> getNodeCircleBounds(juce::Rectangle<float> componentBounds);
+
     void drawNode           (juce::Graphics& g, const Node& node);
     void drawNode           (juce::Graphics& g, const Node& node, juce::Rectangle<float> circleBoundsOverride);
     void drawRootNode       (juce::Graphics& g, const RootNode& node);
@@ -149,8 +151,6 @@ public:
     static constexpr float innerButtonBoundsReduction = 5.0f;
     static constexpr float outerButtonBoundsReduction = 2.0f;
 
-    juce::DropShadow barDropShadow;
-    juce::DropShadow nodeDropShadow;
 };
 
 #endif //SEQUENCETREE_CUSTOMLOOKANDFEEL_H

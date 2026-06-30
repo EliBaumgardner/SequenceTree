@@ -25,8 +25,6 @@
 CustomLookAndFeel::CustomLookAndFeel()
 {
     updateColours();
-    nodeDropShadow = juce::DropShadow(dropShadowColour.withAlpha(0.4f),6,juce::Point<int>(3,3));
-    barDropShadow  = juce::DropShadow(dropShadowColour.withAlpha(0.4f),6,juce::Point<int>(3,3));
 }
 
 void CustomLookAndFeel::setColorIntensityFactor(float factor)
@@ -255,24 +253,49 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node)
     drawNode(g, node, node.getLocalBounds().toFloat());
 }
 
+juce::Rectangle<float> CustomLookAndFeel::getNodeCircleBounds(juce::Rectangle<float> componentBounds)
+{
+    static constexpr float pad        = 2.0f;
+    static constexpr float shadowDX   = 2.0f;
+    static constexpr float shadowBlur = 4.0f;
+    float diameter = componentBounds.getWidth() - pad - shadowDX - shadowBlur;
+    return juce::Rectangle<float>(diameter, diameter)
+               .withPosition(componentBounds.getX() + pad, componentBounds.getY() + pad);
+}
+
 void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rectangle<float> componentBounds)
 {
-    juce::Rectangle<float> bounds      = componentBounds.reduced(1.5f);
-    juce::Rectangle<float> circleBounds = bounds.reduced(6.0f);
-    juce::Rectangle<float> circleFill   = circleBounds.reduced(0.5f);
-    juce::Rectangle<float> circleSelect = bounds.reduced(4.0f);
-    juce::Rectangle<float> circleHover  = bounds.reduced(5.5f);
+    static constexpr float shadowDX   = 2.0f;
+    static constexpr float shadowDY   = 2.0f;
+    static constexpr float shadowBlur = 4.0f;
 
-    juce::Path nodePath;
-    nodePath.addEllipse(circleBounds);
-    nodeDropShadow.drawForPath(g, nodePath);
+    auto  circleBounds = getNodeCircleBounds(componentBounds);
+    auto circleFill   = circleBounds.reduced(0.5f);
+    auto circleSelect = circleBounds.reduced(2.0f);
+    auto circleHover  = circleBounds.reduced(0.5f);
+
+    {
+        float innerR       = circleBounds.getWidth() * 0.5f;
+        float outerR       = innerR + shadowBlur;
+        auto  shadowCenter = circleBounds.getCentre() + juce::Point<float>(shadowDX, shadowDY);
+        auto  shadowBounds = juce::Rectangle<float>(outerR * 2.0f, outerR * 2.0f).withCentre(shadowCenter);
+
+        juce::ColourGradient gradient(
+            juce::Colours::black.withAlpha(0.15f), shadowCenter.x, shadowCenter.y,
+            juce::Colours::black.withAlpha(0.0f),  shadowCenter.x + outerR, shadowCenter.y,
+            true);
+        gradient.addColour(innerR / outerR, juce::Colours::black.withAlpha(0.10f));
+
+        g.setGradientFill(gradient);
+        g.fillEllipse(shadowBounds);
+    }
 
     float velocity        = (float)(int)node.midiNoteData.getProperty(ValueTreeIdentifiers::MidiVelocity, 100);
     float brightnessFactor = juce::jmap(velocity, 0.0f, 127.0f, 0.4f, 1.6f);
 
     juce::Colour nodeColour = node.nodeColour;
 
-    float pulseExpansion = 4.0f * std::sin(node.pulsePhase * juce::MathConstants<float>::pi);
+    float pulseExpansion = 15.0f * std::sin(node.pulsePhase * juce::MathConstants<float>::pi);
     auto  pulsedFill     = circleFill.expanded(pulseExpansion);
 
     if (node.isHighlighted) {
@@ -289,34 +312,19 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
         const float startAngle = -juce::MathConstants<float>::halfPi;
         const int   limit      = node.displayCountLimit;
         const int   filled     = juce::jlimit(0, limit, node.displayCurrentCount);
+        const float fraction   = static_cast<float>(filled) / static_cast<float>(limit);
 
-        const float segmentAngle = twoPi / static_cast<float>(limit);
-        const float gapAngle     = juce::jmin(0.08f, segmentAngle * 0.15f);
-        const float arcAngle     = segmentAngle - gapAngle;
-
-        auto ringBounds = bounds.reduced(2.0f);
-
-        for (int i = 0; i < limit; ++i)
-        {
-            float angleStart = startAngle + static_cast<float>(i) * segmentAngle + gapAngle * 0.5f;
-
-            juce::Path seg;
-            seg.addArc(ringBounds.getX(), ringBounds.getY(),
-                       ringBounds.getWidth(), ringBounds.getHeight(),
-                       angleStart, angleStart + arcAngle, true);
-
-            if (i < filled) {
-                g.setColour(baseLightColour1);
-            }
-            else {
-                g.setColour(baseLightColour1.brighter());
-            }
-
-            g.strokePath(seg, juce::PathStrokeType(1.0f));
+        if (fraction > 0.0f) {
+            juce::Path fillSector;
+            fillSector.addPieSegment(pulsedFill, startAngle, startAngle + twoPi * fraction, 0.0f);
+            g.setColour(baseLightColour1.withAlpha(0.35f));
+            g.fillPath(fillSector);
         }
     }
 
-    if (node.isHovered) { g.drawEllipse(circleHover, 2.0f); }
+    if (node.isHovered) {
+        g.drawEllipse(circleHover, 2.0f);
+    }
 
     if (node.isSelected) {
         juce::Path dottedPath;

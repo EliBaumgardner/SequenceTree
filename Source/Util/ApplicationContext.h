@@ -33,6 +33,7 @@ struct ApplicationContext
     RTGraphBuilder*             rtGraphBuilder = nullptr;
 
     std::function<void(Node*, bool)> onNodeSelected;
+    std::function<void(NodeDisplayMode)> onDisplayModeChanged;
 
     NodeDisplayMode currentDisplayMode = NodeDisplayMode::Pitch;
 };
