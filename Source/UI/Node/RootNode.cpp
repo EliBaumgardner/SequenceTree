@@ -35,7 +35,7 @@ void RootNode::resized() {
     rootRectangle->setBounds(0, rectY, rw + 8, rectHeight);
 
     juce::Rectangle<int> circleArea = bounds.withTrimmedLeft(rw);
-    juce::Rectangle<int> editorArea = circleArea.reduced(10);
+    juce::Rectangle<int> editorArea = CustomLookAndFeel::getNodeCircleBounds(circleArea.toFloat()).toNearestInt().reduced(6);
 
     upButton.setBounds(editorArea.removeFromTop(4));
     downButton.setBounds(editorArea.removeFromBottom(4));

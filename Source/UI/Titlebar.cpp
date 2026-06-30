@@ -35,6 +35,8 @@ Titlebar::Titlebar(ApplicationContext& context)
     addAndMakeVisible(displaySelector);
     addAndMakeVisible(undoRedoPane);
 
+    displaySelector.selectedOption = "show pitch";
+
     playButton.onClick = [this]() {
         NodeCanvas& canvas = *applicationContext.canvas;
         jassert(&canvas);

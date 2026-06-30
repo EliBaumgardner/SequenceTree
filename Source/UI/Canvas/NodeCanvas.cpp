@@ -614,7 +614,7 @@ void NodeCanvas::renderValueField() {
     const juce::Identifier valueId = paintLayerValueId();
 
     const int   kFieldScale = 2;
-    const float glowRadius   = 110.0f;
+    const float glowRadius   = 330.0f;
 
     const int fieldW = juce::jmax(1, getWidth()  / kFieldScale);
     const int fieldH = juce::jmax(1, getHeight() / kFieldScale);
@@ -670,7 +670,7 @@ void NodeCanvas::renderValueField() {
                 }
 
                 const float t = 1.0f - std::sqrt(d2) / fieldRadius;
-                const float w = t * t;
+                const float w = std::pow(t, 10.0f);
 
                 wsRow[x] += w * factor;
                 twRow[x] += w;
@@ -921,7 +921,10 @@ void NodeCanvas::timerCallback() {
 }
 
 juce::Colour NodeCanvas::mapFieldColour(float factor) const {
-    return brushColour.withMultipliedBrightness(juce::jlimit(0.0f, 1.0f, factor));
+    const float boosted    = factor * 1.6f;
+    const float brightness = juce::jlimit(0.0f, 1.0f, boosted);
+    const float whiteMix   = juce::jlimit(0.0f, 0.4f, boosted - 1.0f);
+    return brushColour.withMultipliedBrightness(brightness).interpolatedWith(juce::Colours::white, whiteMix);
 }
 
 juce::Identifier NodeCanvas::paintLayerValueId() const {

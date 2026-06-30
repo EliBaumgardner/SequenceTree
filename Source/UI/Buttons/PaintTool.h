@@ -25,6 +25,28 @@ public:
 
     PaintTool(ApplicationContext& context) : context(context) {
         setLookAndFeel(context.lookAndFeel);
+        settingsWindow = std::make_unique<PaintToolSettingsWindow>(context);
+        settingsWindow->centreWithSize(100, 200);
+
+        context.onDisplayModeChanged = [this](NodeDisplayMode mode) {
+            auto* settings = dynamic_cast<PaintToolSettings*>(settingsWindow->getContentComponent());
+            if (settings == nullptr) { return; }
+
+            switch (mode) {
+                case NodeDisplayMode::Pitch:
+                    settings->displayMenu->selectedOption = "Pitch";
+                    settings->setPaintMode(PaintToolSettings::PaintSetting::Pitch);
+                    settings->displayMenu->resized();
+                    break;
+                case NodeDisplayMode::Velocity:
+                    settings->displayMenu->selectedOption = "Velocity";
+                    settings->setPaintMode(PaintToolSettings::PaintSetting::Velocity);
+                    settings->displayMenu->resized();
+                    break;
+                default:
+                    break;
+            }
+        };
     }
 
     void paint(juce::Graphics& g){
@@ -38,19 +60,15 @@ public:
 
             if (isSelected) {
                 context.canvas->setPaintMode(true);
-            }
-            else {
+                if (auto* settings = dynamic_cast<PaintToolSettings*>(settingsWindow->getContentComponent())) {
+                    settings->setPaintMode(settings->paintSetting);
+                }
+            } else {
                 context.canvas->setPaintMode(false);
             }
         }
 
         if (e.mods.isRightButtonDown()) {
-
-            if (settingsWindow == nullptr) {
-                settingsWindow = std::make_unique<PaintToolSettingsWindow>(context);
-                settingsWindow->centreWithSize(100, 200);
-            }
-
             if (auto* settings = dynamic_cast<PaintToolSettings*>(settingsWindow->getContentComponent())) {
                 switch (context.currentDisplayMode) {
                     case NodeDisplayMode::Pitch:
@@ -64,6 +82,9 @@ public:
                         settings->displayMenu->resized();
                         break;
                     default:
+                        settings->displayMenu->selectedOption = "Pitch";
+                        settings->setPaintMode(PaintToolSettings::PaintSetting::Pitch);
+                        settings->displayMenu->resized();
                         break;
                 }
             }

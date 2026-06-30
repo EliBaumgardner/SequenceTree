@@ -46,9 +46,9 @@ public:
         PaintSetting setting;
     };
 
-    ColourVariablePair pitchPair    { juce::Colours::white, PaintSetting::Pitch };
-    ColourVariablePair velocityPair { juce::Colours::white, PaintSetting::Velocity };
-    ColourVariablePair durationPair { juce::Colours::white, PaintSetting::Duration };
+    ColourVariablePair pitchPair    { juce::Colours::red,   PaintSetting::Pitch };
+    ColourVariablePair velocityPair { juce::Colours::green, PaintSetting::Velocity };
+    ColourVariablePair durationPair { juce::Colours::blue,  PaintSetting::Duration };
 
     PaintSetting paintSetting = PaintSetting::Pitch;
 
@@ -112,11 +112,12 @@ public:
         };
 
         colourSelector->onColourPicked = [this](juce::Colour c) {
+            currentPair().colour = c;
+
             if (this->context.canvas != nullptr) {
                 this->context.canvas->setBrushColour(c);
+                this->context.canvas->refreshValueField();
             }
-
-            currentPair().colour = c;
         };
 
         valueSlider->valueChanged = [this] {

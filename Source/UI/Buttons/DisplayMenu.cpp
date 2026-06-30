@@ -37,6 +37,9 @@ DisplayMenu::DisplayMenu(ApplicationContext& context)
                 case 5: selectedOption = "show repeatValue";  applicationContext.canvas->setSelectionMode(NodeDisplayMode::RepeatValue);  applicationContext.currentDisplayMode = NodeDisplayMode::RepeatValue;  break;
                 default: break;
             }
+            if (result != 0 && applicationContext.onDisplayModeChanged) {
+                applicationContext.onDisplayModeChanged(applicationContext.currentDisplayMode);
+            }
             resized();
         });
     };
