@@ -295,8 +295,9 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
 
     juce::Colour nodeColour = node.nodeColour;
 
-    float pulseExpansion = 15.0f * std::sin(node.pulsePhase * juce::MathConstants<float>::pi);
-    auto  pulsedFill     = circleFill.expanded(pulseExpansion);
+    float maxPulseExpansion = circleFill.getX() - componentBounds.getX();
+    float pulseExpansion    = maxPulseExpansion * std::sin(node.pulsePhase * juce::MathConstants<float>::pi);
+    auto  pulsedFill        = circleFill.expanded(pulseExpansion);
 
     if (node.isHighlighted) {
         g.setColour(nodeColour.darker());

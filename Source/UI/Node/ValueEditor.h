@@ -25,6 +25,7 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
 
     void bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID);
+    void enableDualValue(const juce::Identifier& secondaryPropertyID);
     void setMinimumValue(int min);
     void valueChanged(juce::Value&) override;
     void commitValue();
@@ -35,16 +36,23 @@ private:
     void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
     void textEditorFocusLost      (juce::TextEditor& editor) override;
 
+    juce::String getDisplayText() const;
+    void commitSingleValue(const juce::String& text);
+    void commitDualValue  (const juce::String& text);
+
     ApplicationContext& applicationContext;
 
     juce::Value boundValue;
+    juce::Value boundSecondaryValue;
 
     juce::Identifier boundIdentifier;
+    juce::Identifier secondaryIdentifier;
 
     juce::ValueTree boundTree;
 
 
     bool isEditing        = false;
     bool suppressCallback = false;
+    bool dualNumberMode   = false;
     int  minValue         = 1;
 };

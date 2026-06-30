@@ -41,6 +41,7 @@ public:
     //Node Property Identifiers
 
     static const juce::Identifier CountLimit;
+    static const juce::Identifier TriggerLimit;
     static const juce::Identifier LoopLimit;
     static const juce::Identifier SwitchCountLimit;
     static const juce::Identifier SubLoopCountLimit;

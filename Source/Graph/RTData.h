@@ -35,6 +35,7 @@ struct RTNode {
     int nodeID      = 0;
     int parentId    = 0;
     int countLimit  = 0;
+    int triggerLimit = 0;
     int repeatValue = 1;
 
     int lastNodeId = -1;

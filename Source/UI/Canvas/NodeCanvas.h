@@ -10,19 +10,18 @@
 
 #pragma once
 
-#include <array>
-
 #include "../../Graph/RTData.h"
 #include "DynamicPort.h"
 #include "../../Util/NodeInfo.h"
 #include "../../Util/ApplicationContext.h"
 #include "NodeCanvasTreeListener.h"
+#include "ValueField.h"
 
 class Node;
 class RootNode;
 class NodeArrow;
 
-class NodeCanvas : public juce::Component, public juce::AsyncUpdater, public juce::Timer {
+class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
     public:
 
@@ -76,21 +75,14 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater, public juc
         void resetAllArrowProgress();
         void resetGraphArrowProgress(int graphId);
 
-        void setPaintMode(bool paintMode);
+        void setPaintMode(bool enabled);
         void setBrushColour(juce::Colour colour);
         void setBrushRadius(float radius);
-        void updateBrushCursor();
         void setActivePaintLayer(int index);
-        void renderValueField();
+        void setViewZoom(float z);
         void refreshValueField();
         void paintStroke(juce::Point<float> canvasPos, bool isStart, bool erase = false);
         void endStroke();
-        void ensurePaintBuffers();
-        void seedStrokeDensityFromNodes();
-        void accumulateStroke(juce::Point<float> from, juce::Point<float> to, bool rearm = false);
-        void applyPaintToNodes(juce::Point<float> from, juce::Point<float> to);
-        juce::Identifier paintLayerValueId() const;
-        void timerCallback() override;
 
         juce::OwnedArray<NodeArrow> nodeArrows;
         NodeArrow* snapGhostArrow = nullptr;
@@ -103,32 +95,6 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater, public juc
         bool start     = false;
         bool paintMode = false;
 
-        static constexpr int numPaintLayers = 3;
-
-        int activePaintLayer = 0;
-        juce::Image  valueField;
-
-        std::vector<float> fieldWeightedSum;
-        std::vector<float> fieldTotalWeight;
-        std::vector<float> fieldCoverageProd;
-
-        juce::Colour brushColour = juce::Colours::white;
-        float        brushRadius = 12.0f;
-        float        viewZoom    = 1.0f;
-
-        void setViewZoom(float z);
-
-        std::array<std::vector<float>, numPaintLayers> paintDensity;
-        std::vector<float>   strokeMask;
-        juce::Point<float>   strokePrevPoint;
-        juce::Point<float>   brushCurrentPoint;
-        float  brushFlow         = 0.22f;
-        bool   brushStrokeActive = false;
-        bool   brushErase        = false;
-
-        static constexpr int   dwellTimerHz = 30;
-        static constexpr float dwellRearm   = 0.15f;
-
         bool showGrid = false;
         bool gridOriginSet = false;
         juce::Point<float> gridOrigin { 0.0f, 0.0f };
@@ -140,8 +106,8 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater, public juc
 
         NodeCanvasTreeListener treeListener { *this };
 
-    private:
-        juce::Colour mapFieldColour(float factor) const;
+        ValueField valueField { *this };
 
+    private:
         ApplicationContext& applicationContext;
 };

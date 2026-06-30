@@ -34,9 +34,26 @@ void ValueEditor::paint(juce::Graphics& g)
         g.setFont(juce::Font(juce::FontOptions(9.0f)));
         g.setColour(juce::Colours::lightgrey.withAlpha(0.85f));
 
-        g.drawText(juce::String((int) boundValue.getValue()),
+        g.drawText(getDisplayText(),
                    getLocalBounds(), juce::Justification::centred, false);
     }
+}
+
+juce::String ValueEditor::getDisplayText() const
+{
+    int primaryValue = (int) boundValue.getValue();
+
+    if (!dualNumberMode) {
+        return juce::String(primaryValue);
+    }
+
+    int secondaryValue = (int) boundSecondaryValue.getValue();
+
+    if (secondaryValue <= 0) {
+        return juce::String(primaryValue);
+    }
+
+    return juce::String(primaryValue) + ":" + juce::String(secondaryValue);
 }
 
 void ValueEditor::resized()
@@ -48,7 +65,7 @@ void ValueEditor::mouseDown(const juce::MouseEvent&)
 {
     isEditing = true;
     textEditor->setVisible(true);
-    textEditor->setText(juce::String((int) boundValue.getValue()), juce::dontSendNotification);
+    textEditor->setText(getDisplayText(), juce::dontSendNotification);
     textEditor->grabKeyboardFocus();
     textEditor->selectAll();
     repaint();
@@ -57,12 +74,28 @@ void ValueEditor::mouseDown(const juce::MouseEvent&)
 void ValueEditor::bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID)
 {
     boundValue.removeListener(this);
+    boundSecondaryValue.removeListener(this);
+
     boundTree  = tree;
     boundValue.referTo(tree.getPropertyAsValue(propertyID, nullptr));
     boundIdentifier = propertyID;
 
     boundValue.addListener(this);
+
+    if (dualNumberMode && secondaryIdentifier.isValid()) {
+        boundSecondaryValue.referTo(tree.getPropertyAsValue(secondaryIdentifier, nullptr));
+        boundSecondaryValue.addListener(this);
+    }
+
     repaint();
+}
+
+void ValueEditor::enableDualValue(const juce::Identifier& secondaryPropertyID)
+{
+    dualNumberMode      = true;
+    secondaryIdentifier = secondaryPropertyID;
+
+    textEditor->setInputRestrictions(9, "0123456789:");
 }
 
 void ValueEditor::textEditorReturnKeyPressed(juce::TextEditor&)
@@ -82,12 +115,14 @@ void ValueEditor::setMinimumValue(int min)
 
 void ValueEditor::commitValue()
 {
-    int val = textEditor->getText().getIntValue();
-    if (val < minValue) {
-        val = minValue;
-    }
+    juce::String text = textEditor->getText();
 
-    boundValue.setValue(val);
+    if (dualNumberMode) {
+        commitDualValue(text);
+    }
+    else {
+        commitSingleValue(text);
+    }
 
     if (boundTree.isValid() && applicationContext.rtGraphBuilder != nullptr) {
         applicationContext.rtGraphBuilder->makeRTGraph(boundTree);
@@ -96,6 +131,45 @@ void ValueEditor::commitValue()
     isEditing = false;
     textEditor->setVisible(false);
     repaint();
+}
+
+void ValueEditor::commitSingleValue(const juce::String& text)
+{
+    int value = text.getIntValue();
+    if (value < minValue) {
+        value = minValue;
+    }
+
+    boundValue.setValue(value);
+}
+
+void ValueEditor::commitDualValue(const juce::String& text)
+{
+    int separatorIndex = text.indexOfChar(':');
+
+    juce::String primaryText   = text;
+    juce::String secondaryText;
+
+    if (separatorIndex >= 0) {
+        primaryText   = text.substring(0, separatorIndex);
+        secondaryText = text.substring(separatorIndex + 1);
+    }
+
+    int primaryValue = primaryText.getIntValue();
+    if (primaryValue < minValue) {
+        primaryValue = minValue;
+    }
+
+    int secondaryValue = 0;
+    if (secondaryText.isNotEmpty()) {
+        secondaryValue = secondaryText.getIntValue();
+        if (secondaryValue < 0) {
+            secondaryValue = 0;
+        }
+    }
+
+    boundValue.setValue(primaryValue);
+    boundSecondaryValue.setValue(secondaryValue);
 }
 
 void ValueEditor::valueChanged(juce::Value&)

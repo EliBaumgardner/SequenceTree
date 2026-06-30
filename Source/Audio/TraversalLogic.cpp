@@ -114,6 +114,19 @@ int TraversalLogic::selectNextChild(NodeMap& nodes, int parentId, int parentCoun
             continue;
         }
 
+        if (child.triggerLimit > 0) {
+            auto triggerCountIterator = triggerCounts.find(childId);
+            int  triggeredCount       = 0;
+
+            if (triggerCountIterator != triggerCounts.end()) {
+                triggeredCount = triggerCountIterator->second;
+            }
+
+            if (triggeredCount >= child.triggerLimit) {
+                continue;
+            }
+        }
+
         auto durIt = parentNodeIterator->second.durationMap.find(childId);
         if (durIt != parentNodeIterator->second.durationMap.end() && durIt->second == 0) {
             continue;
@@ -131,6 +144,21 @@ int TraversalLogic::selectNextChild(NodeMap& nodes, int parentId, int parentCoun
 
 static bool isAdvanceableChild(RTNode::NodeType t) {
     return t == RTNode::NodeType::Node || t == RTNode::NodeType::Modulator;
+}
+
+void TraversalLogic::registerTrigger(NodeMap& nodes, int nodeId)
+{
+    auto nodeIterator = nodes.find(nodeId);
+
+    if (nodeIterator == nodes.end()) {
+        return;
+    }
+
+    if (nodeIterator->second.triggerLimit <= 0) {
+        return;
+    }
+
+    triggerCounts[nodeId] = triggerCounts[nodeId] + 1;
 }
 
 static bool isAudibleChild(RTNode::NodeType t) {
@@ -222,6 +250,10 @@ void TraversalLogic::advance(NodeMap& nodes)
     if (chosenNodeId == -1) {
         int count = ++primary.counts[targetId];
         chosenNodeId = selectNextChild(nodes, targetId, count, &isAdvanceableChild);
+
+        if (chosenNodeId != -1) {
+            registerTrigger(nodes, chosenNodeId);
+        }
     }
 
     if (chosenNodeId  != -1) {
@@ -237,7 +269,11 @@ void TraversalLogic::advance(NodeMap& nodes)
 
         nextTargetIt->second.lastNodeId = chosenNodeId;
 
-        if (nextTargetIt->second.subLoopCountLimit > 1 && primary.subRootNode == -1) {
+        int nextSubLoopCountLimit = nextTargetIt->second.subLoopCountLimit;
+        bool subLoopsForever      = (nextSubLoopCountLimit == 0);
+        bool subLoopsFinitely     = (nextSubLoopCountLimit > 1);
+
+        if ((subLoopsForever || subLoopsFinitely) && primary.subRootNode == -1) {
             primary.subRootNode = nextTargetIt->second.nodeID;
             primary.subRootCounts[primary.subRootNode] = 0;
         }
@@ -417,7 +453,9 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(NodeMap& nodes) {
 
                             int subRootCount = ++primary.subRootCounts[primary.subRootNode];
 
-                            if (subRootCount >= subRootLimit) {
+                            bool subRootLoopsForever = (subRootLimit == 0);
+
+                            if (!subRootLoopsForever && subRootCount >= subRootLimit) {
                                 DBG("subRoot reached limit: " << primary.subRootNode << " count " << subRootCount);
                                 primary.subRootCounts[primary.subRootNode] = 0;
                                 primary.subRootNode = -1;

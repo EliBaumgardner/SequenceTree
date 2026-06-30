@@ -78,6 +78,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
         int graphId     = currentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
 
         int countLimit       = currentValueTree.getProperty(ValueTreeIdentifiers::CountLimit);
+        int triggerLimit     = currentValueTree.getProperty(ValueTreeIdentifiers::TriggerLimit, ValueTreeState::defaultTriggerLimit);
         int switchCountLimit = currentValueTree.getProperty(ValueTreeIdentifiers::SwitchCountLimit);
         int subLoopLimit     = currentValueTree.getProperty(ValueTreeIdentifiers::SubLoopCountLimit);
 
@@ -97,6 +98,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
             rtNode.nodeID  = nodeId;
 
             rtNode.countLimit        =  countLimit;
+            rtNode.triggerLimit      = triggerLimit;
             rtNode.subLoopCountLimit = subLoopLimit;
             rtNode.switchCountLimit  = switchCountLimit;
             rtNode.repeatValue       = repeatValue;

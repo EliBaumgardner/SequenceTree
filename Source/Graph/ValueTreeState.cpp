@@ -48,6 +48,7 @@ void ValueTreeState::setNodeCountProperties(juce::UndoManager *undoManager, juce
     node.setProperty(ValueTreeIdentifiers::SwitchCount,defaultSwitchCount,undoManager);
 
     node.setProperty(ValueTreeIdentifiers::CountLimit,  defaultNodeCountLimit, undoManager);
+    node.setProperty(ValueTreeIdentifiers::TriggerLimit, defaultTriggerLimit, undoManager);
     node.setProperty(ValueTreeIdentifiers::SwitchCountLimit, defaultSwitchCountLimit, undoManager);
     node.setProperty(ValueTreeIdentifiers::SubLoopCountLimit,defaultSubLoopCountLimit, undoManager);
 
