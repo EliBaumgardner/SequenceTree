@@ -50,6 +50,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Canvas/DynamicPort.cpp
         Source/UI/Canvas/NodeCanvas.cpp
         Source/UI/Canvas/NodeCanvasTreeListener.cpp
+        Source/UI/Canvas/ValueField.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
         Source/UI/Node/NodeArrow.cpp
@@ -67,7 +68,6 @@ target_sources(SequenceTree PRIVATE
         Source/UI/PianoRoll.cpp
         Source/UI/Titlebar.cpp
         Source/UI/BottomBar.cpp
-        Source/UI/Canvas/PaintedCanvas.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE

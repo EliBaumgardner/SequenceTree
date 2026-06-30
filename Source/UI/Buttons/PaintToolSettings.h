@@ -129,18 +129,18 @@ public:
         };
 
         if (context.canvas != nullptr) {
-            valueSlider->boundValue = juce::jmap(context.canvas->brushRadius, 1.0f, 200.0f, 0.0f, 1.0f);
+            valueSlider->boundValue = juce::jmap(context.canvas->valueField.brushRadius, 1.0f, 200.0f, 0.0f, 1.0f);
         }
 
         flowSlider->valueChanged = [this] {
             if (this->context.canvas != nullptr) {
                 float value = (float)flowSlider->boundValue.getValue();
-                this->context.canvas->brushFlow = juce::jmap(value, 0.0f, 1.0f, minBrushFlow, maxBrushFlow);
+                this->context.canvas->valueField.brushFlow = juce::jmap(value, 0.0f, 1.0f, minBrushFlow, maxBrushFlow);
             }
         };
 
         if (context.canvas != nullptr) {
-            float flow = juce::jlimit(minBrushFlow, maxBrushFlow, context.canvas->brushFlow);
+            float flow = juce::jlimit(minBrushFlow, maxBrushFlow, context.canvas->valueField.brushFlow);
             flowSlider->boundValue = juce::jmap(flow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);
         }
 

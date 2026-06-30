@@ -33,6 +33,9 @@ Node::Node(ApplicationContext& context) : applicationContext(context), countEdit
 
     countEditor.setInterceptsMouseClicks(true, false);
     countEditor.setTooltip("Count Limit");
+    countEditor.enableDualValue(ValueTreeIdentifiers::TriggerLimit);
+
+    subLoopLimitEditor.setMinimumValue(0);
 
     switchCountEditor.setInterceptsMouseClicks(true, false);
     switchCountEditor.setTooltip("Loop Limit");
@@ -102,35 +105,28 @@ void Node::setSelectVisual() {
     repaint();
 }
 
-void Node::setHighlightVisual(bool h)
+void Node::setHighlightVisual(bool shouldHighlight)
 {
-    if (h) {
-        pendingHighlightOff = false;
-        isHighlighted = true;
-        pulsePhase = 0.0f;
-        startTimerHz(60);
-        repaint();
-    } else {
-        if (isTimerRunning()) {
-            pendingHighlightOff = true;
-        } else {
-            isHighlighted = false;
-            repaint();
-        }
+    if (!shouldHighlight) {
+        return;
     }
+
+    isHighlighted = true;
+    pulsePhase    = 0.0f;
+    startTimerHz(60);
+    repaint();
 }
 
 void Node::timerCallback()
 {
     pulsePhase += 0.07f;
+
     if (pulsePhase >= 1.0f) {
-        pulsePhase = 1.0f;
+        pulsePhase    = 1.0f;
+        isHighlighted = false;
         stopTimer();
-        if (pendingHighlightOff) {
-            pendingHighlightOff = false;
-            isHighlighted = false;
-        }
     }
+
     repaint();
 }
 

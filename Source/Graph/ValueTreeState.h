@@ -59,6 +59,7 @@ public:
 
     static inline int defaultSwitchCountLimit  {1};
     static inline int defaultNodeCountLimit    {1};
+    static inline int defaultTriggerLimit      {0};
     static inline int defaultSubLoopCountLimit {1};
     static inline int defaultRootLoopLimit     {0};
 

@@ -13,6 +13,7 @@
 #include "Node.h"
 #include "NodeArrow.h"
 #include "../../Graph/ValueTreeState.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Graph/RTGraphBuilder.h"
 
@@ -132,7 +133,15 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
     }
 
     if (mode == NodeDisplayMode::CountLimit) {
-        display = juce::String((int)value);
+        int countLimit   = (int) value;
+        int triggerLimit = nodeValueTree.getProperty(ValueTreeIdentifiers::TriggerLimit, 0);
+
+        if (triggerLimit > 0) {
+            display = juce::String(countLimit) + ":" + juce::String(triggerLimit);
+        }
+        else {
+            display = juce::String(countLimit);
+        }
     }
 
     if (mode == NodeDisplayMode::Channel) {

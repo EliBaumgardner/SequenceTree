@@ -30,6 +30,7 @@ public:
     std::unordered_map<int,int> chordCounts;
     std::unordered_map<int,int> crossTreeCounts;
     std::unordered_map<int,int> crossTreeSwitchCounts;
+    std::unordered_map<int,int> triggerCounts;
 
     int activeModulatorRootId = -1;
     int modulatorHostId       = -1;
@@ -88,6 +89,8 @@ public:
 
     using ChildPredicate = bool (*)(RTNode::NodeType);
     int selectNextChild(NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible);
+
+    void registerTrigger(NodeMap& nodes, int nodeId);
 
     std::vector<int> peekCrossTreeNode(NodeMap& nodes);
     RTNode* peekModulators(NodeMap& nodes);
