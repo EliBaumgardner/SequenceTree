@@ -15,6 +15,7 @@ const juce::Identifier ValueTreeIdentifiers::RootNodeData         {"RootNodeData
 const juce::Identifier ValueTreeIdentifiers::ModulatorRootData    {"ModulatorRootData"};
 const juce::Identifier ValueTreeIdentifiers::NodeData             {"NodeData"};
 const juce::Identifier ValueTreeIdentifiers::AlternativeNodeData  {"AlternativeNodeData"};
+const juce::Identifier ValueTreeIdentifiers::TraversalFlagData    {"TraversalFlagData"};
 const juce::Identifier ValueTreeIdentifiers::ModulatorData        {"ModulatorData"};
 
 const juce::Identifier ValueTreeIdentifiers::NodeChildrenIds      {"NodeChildrenIds"};

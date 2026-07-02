@@ -19,7 +19,7 @@ struct NodeNote {
 };
 
 enum class ModulationType {Pitch,Velocity,Duration};
-enum class NodeType { Node, Root, Modulator};
+enum class NodeType { Node, Root, Modulator, TraversalFlag};
 
 enum class NodeDisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue};
 

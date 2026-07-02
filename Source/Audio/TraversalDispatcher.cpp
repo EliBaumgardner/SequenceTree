@@ -81,7 +81,9 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
             it = node.durationMap.find(node.parentId);
         }
         else {
-            it = node.durationMap.find(nextTarget->nodeID);
+            if (nextTarget->nodeType != RTNode::NodeType::TraversalFlagData) {
+                it = node.durationMap.find(nextTarget->nodeID);
+            }
         }
 
 

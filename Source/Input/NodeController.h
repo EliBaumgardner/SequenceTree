@@ -33,7 +33,7 @@ class NodeController : public juce::MouseListener {
 
 public:
 
-    enum class NodeControllerMode {Node, Modulator};
+    enum class NodeControllerMode {Node, Modulator, TraversalFlag};
     NodeControllerMode nodeControllerMode;
 
     NodeController(ApplicationContext& context);

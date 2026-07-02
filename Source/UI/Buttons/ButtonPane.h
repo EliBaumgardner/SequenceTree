@@ -11,6 +11,7 @@
 #include "../../Input/NodeController.h"
 #include "NodeButton.h"
 #include "ModulatorButton.h"
+#include "TraversalFlagButton.h"
 
 
 class ButtonPane : public juce::Component {
@@ -21,13 +22,15 @@ class ButtonPane : public juce::Component {
 
     NodeButton nodeButton;
     ModulatorButton modulatorButton;
+    TraversalFlagButton traversalFlagButton;
 
     ButtonPane(ApplicationContext& context)
-        : applicationContext(context), nodeButton(context), modulatorButton(context)
+        : applicationContext(context), nodeButton(context), modulatorButton(context), traversalFlagButton(context)
     {
         setLookAndFeel(applicationContext.lookAndFeel);
         addAndMakeVisible(nodeButton);
         addAndMakeVisible(modulatorButton);
+        addAndMakeVisible(traversalFlagButton);
 
         NodeController& nodeController = *applicationContext.nodeController;
 
@@ -40,6 +43,9 @@ class ButtonPane : public juce::Component {
 
             modulatorButton.isSelected = false;
             modulatorButton.repaint();
+
+            traversalFlagButton.isSelected = false;
+            traversalFlagButton.repaint();
 
             nodeController.nodeControllerMode = NodeController::NodeControllerMode::Node;
         };
@@ -54,7 +60,26 @@ class ButtonPane : public juce::Component {
             nodeButton.isSelected = false;
             nodeButton.repaint();
 
+            traversalFlagButton.isSelected = false;
+            traversalFlagButton.repaint();
+
             nodeController.nodeControllerMode = NodeController::NodeControllerMode::Modulator;
+        };
+
+        traversalFlagButton.onClick = [this, &nodeController]() {
+
+            jassert(&nodeController);
+
+            traversalFlagButton.isSelected = true;
+            traversalFlagButton.repaint();
+
+            nodeButton.isSelected = false;
+            nodeButton.repaint();
+
+            modulatorButton.isSelected = false;
+            modulatorButton.repaint();
+
+            nodeController.nodeControllerMode = NodeController::NodeControllerMode::TraversalFlag;
         };
     }
 
@@ -67,7 +92,7 @@ class ButtonPane : public juce::Component {
     {
         auto bounds = getLocalBounds().reduced(2.0f);
         int buttonSize = bounds.getHeight();
-        int numButtons = 2;
+        int numButtons = 3;
         float totalButtonWidth = buttonSize * numButtons;
 
         float spacing = (bounds.getWidth() - totalButtonWidth) / (numButtons + 1);
@@ -77,6 +102,9 @@ class ButtonPane : public juce::Component {
 
         x += buttonSize + spacing;
         modulatorButton.setBounds(x, bounds.getY(), buttonSize,buttonSize);
+
+        x += buttonSize + spacing;
+        traversalFlagButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
     }
 };
 

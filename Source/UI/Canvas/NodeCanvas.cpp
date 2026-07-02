@@ -14,6 +14,7 @@
 #include "../../Graph/RTGraphBuilder.h"
 
 #include "../Node/Modulator.h"
+#include "../Node/TraversalFlagNode.h"
 
 
 // Canvas Related Functions //
@@ -146,11 +147,11 @@ void NodeCanvas::resetGraphArrowProgress(int graphId)
 {
     for (NodeArrow* arrow : nodeArrows)
     {
-        if (arrow == nullptr || arrow->parentNode == nullptr) {
+        if (arrow == nullptr || arrow->startNode == nullptr) {
             continue;
         }
 
-        const int parentId = arrow->parentNode->getComponentID().getIntValue();
+        const int parentId = arrow->startNode->getComponentID().getIntValue();
         const juce::ValueTree arrowRoot = ValueTreeState::getRootNode(parentId);
         if (! arrowRoot.isValid()) {
 
@@ -228,6 +229,9 @@ Node* NodeCanvas::instantiateNodeFromTree(const juce::ValueTree& nodeValueTree)
         node = std::make_unique<Node>(applicationContext);
         node.get()->isAlternativeNode = true;
     }
+    else if (treeType == ValueTreeIdentifiers::TraversalFlagData) {
+        node = std::make_unique<TraversalFlagNode>(applicationContext);
+    }
     else if (treeType == ValueTreeIdentifiers::ModulatorData
           || treeType == ValueTreeIdentifiers::ModulatorRootData) {
         node = std::make_unique<Modulator>(applicationContext);
@@ -290,7 +294,8 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
 
     if (!gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
         NodePosition pos = ValueTreeState::getNodePosition(nodeId);
-        gridOrigin    = { (float)pos.xPosition, (float)pos.yPosition };
+        gridOrigin    = { (float)pos.xPosition - CustomLookAndFeel::nodeCirclePad,
+                          (float)pos.yPosition - CustomLookAndFeel::nodeCirclePad };
         gridSpacing   = 50.0f;
         gridOriginSet = true;
     }
@@ -329,13 +334,18 @@ void NodeCanvas::setNodePosition(int nodeId)
     int xPosition = nodePosition.xPosition;
     int yPosition = nodePosition.yPosition;
     int radius    = nodePosition.radius;
+    int height = radius *2;
 
     auto node = nodePair->second;
 
     if (node->nodeType == NodeType::Root) {
         const int rw = RootNode::loopLimitRectangleWidth;
-        node->setSize(radius * 2 + rw, radius * 2);
+        node->setSize(radius * 2 + rw, height);
         node->setTopLeftPosition(xPosition - radius - rw, yPosition - radius);
+    }
+    else if (node->nodeType == NodeType::TraversalFlag) {
+        node->setSize(radius * 4, radius * 4);
+        node->setCentrePosition(xPosition, yPosition);
     }
     else {
         node->setSize(radius * 2, radius * 2);
@@ -393,12 +403,12 @@ void NodeCanvas::removeLinePoints(Node* node)
     for (int i = nodeArrows.size() - 1; i >= 0; i--)
     {
         NodeArrow* nodeArrow = nodeArrows[i];
-        if (nodeArrow->parentNode != node && nodeArrow->childNode != node) {
+        if (nodeArrow->startNode != node && nodeArrow->endNode != node) {
             continue;
         }
 
-        const int childNodeId = nodeArrow->childNode->getComponentID().getIntValue();
-        nodeArrow->parentNode->nodeArrows.erase(childNodeId);
+        const int childNodeId = nodeArrow->endNode->getComponentID().getIntValue();
+        nodeArrow->startNode->nodeArrows.erase(childNodeId);
 
         nodeArrows.remove(i);
     }
@@ -408,8 +418,8 @@ void NodeCanvas::updateLinePoints(Node* movedNode)
 {
     for (NodeArrow* arrow : nodeArrows)
     {
-        Node* parentNode = arrow->parentNode;
-        Node* childNode  = arrow->childNode;
+        Node* parentNode = arrow->startNode;
+        Node* childNode  = arrow->endNode;
         NodeDisplayMode mode = movedNode->mode;
 
         if (parentNode != movedNode && childNode != movedNode) {
@@ -457,7 +467,7 @@ void NodeCanvas::triggerArrowSnapForNode(int nodeId)
 
     for (NodeArrow* arrow : nodeArrows)
     {
-        if (arrow->childNode == node) {
+        if (arrow->endNode == node) {
             arrow->triggerSnapAnimation();
             return;
         }
@@ -467,7 +477,7 @@ void NodeCanvas::triggerArrowSnapForNode(int nodeId)
 void NodeCanvas::showSnapGhostArrow(Node* from, Node* to)
 {
     if (snapGhostArrow != nullptr) {
-        if (snapGhostArrow->parentNode == from && snapGhostArrow->childNode == to) {
+        if (snapGhostArrow->startNode == from && snapGhostArrow->endNode == to) {
             return;
         }
         removeChildComponent(snapGhostArrow);
@@ -571,7 +581,8 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         auto it = rootNodeMap.begin();
         int firstRootId = it->first;
         NodePosition pos = ValueTreeState::getNodePosition(firstRootId);
-        gridOrigin    = { (float)pos.xPosition, (float)pos.yPosition };
+        gridOrigin    = { (float)pos.xPosition - CustomLookAndFeel::nodeCirclePad,
+                          (float)pos.yPosition - CustomLookAndFeel::nodeCirclePad };
         gridSpacing   = 50.0f;
         gridOriginSet = true;
     }

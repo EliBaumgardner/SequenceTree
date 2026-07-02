@@ -139,6 +139,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
                 }
             }
 
+
             if (nodeType == ValueTreeIdentifiers::NodeData) {
                 rtNode.nodeType = RTNode::NodeType::Node;
             }
@@ -154,6 +155,10 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
             if (nodeType == ValueTreeIdentifiers::ModulatorData) {
                 rtNode.nodeType = RTNode::NodeType::Modulator;
             }
+            if (nodeType == ValueTreeIdentifiers::TraversalFlagData) {
+                rtNode.nodeType = RTNode::NodeType::TraversalFlagData;
+            }
+
 
             for (int i = 0; i < nodeMidiNotes.getNumChildren(); i++) {
                 juce::ValueTree note = nodeMidiNotes.getChild(i);

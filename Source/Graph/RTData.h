@@ -56,7 +56,7 @@ struct RTNode {
     bool isAlternativeRoot = false;
 
 
-    enum class NodeType {RootNode, Node, Alternative, Modulator, ModulatorRoot};
+    enum class NodeType {RootNode, Node, Alternative, Modulator, ModulatorRoot, TraversalFlagData};
 
     NodeType nodeType = NodeType::Node;
 

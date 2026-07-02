@@ -22,6 +22,7 @@ public:
     static const juce::Identifier RootNodeData;
     static const juce::Identifier NodeData;
     static const juce::Identifier AlternativeNodeData;
+    static const juce::Identifier TraversalFlagData;
     static const juce::Identifier ModulatorData;
     static const juce::Identifier ModulatorRootData;
 
