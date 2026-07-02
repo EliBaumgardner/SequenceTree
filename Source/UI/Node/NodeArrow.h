@@ -31,8 +31,8 @@ public:
   void resetProgress();
   void timerCallback() override;
 
-  Node* parentNode = nullptr;
-  Node* childNode   = nullptr;
+  Node* startNode = nullptr;
+  Node* endNode   = nullptr;
 
   juce::ValueTree boundNodeValueTree;
   juce::Value bindValue;

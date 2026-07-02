@@ -167,7 +167,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
         dragParentCenter = node->getNodeCentre().toFloat();
 
-        if (node->nodeTextEditor != nullptr) {
+        if (node->nodeTextEditor != nullptr && node->nodeTextEditor->isVisible()) {
             auto localPos = e.getEventRelativeTo(node->nodeTextEditor.get()).getPosition();
             if (node->nodeTextEditor->getLocalBounds().contains(localPos)) {
                 isDraggingValue = true;
@@ -264,10 +264,12 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         int nodeId = node->getComponentID().getIntValue();
         NodePosition newPosition;
 
+        int defaultRadius = 20;
+
         auto pos = e.getEventRelativeTo(node->getParentComponent());
         newPosition.xPosition = pos.x;
         newPosition.yPosition = pos.y;
-        newPosition.radius    = 20;
+        newPosition.radius    = defaultRadius;
 
         if (e.getDistanceFromDragStart() < 5 || !e.mods.isLeftButtonDown()) {
             return;
@@ -321,6 +323,9 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
         else {
             draggedNodeTree = NodeFactory::createModulatorRoot(nodeId, newPosition, undoManager);
         }
+    }
+    else if (nodeControllerMode == NodeControllerMode::TraversalFlag) {
+        draggedNodeTree = NodeFactory::createTraversalFlagNode(nodeId, newPosition, undoManager);
     }
 }
 

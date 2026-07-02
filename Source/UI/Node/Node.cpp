@@ -65,7 +65,7 @@ void Node::paint(juce::Graphics& g)
 void Node::resized()
 {
     auto circleBounds = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat()).toNearestInt();
-    auto editorArea   = circleBounds.reduced(6);
+    auto editorArea   = circleBounds.reduced(editorAreaBoundsReduction);
     int  buttonHeight = juce::jmax(2, (int)(editorArea.getHeight() * 0.2f));
 
     upButton.setBounds(editorArea.removeFromTop(buttonHeight));
@@ -74,8 +74,8 @@ void Node::resized()
     nodeTextEditor->setBounds(editorArea);
     nodeTextEditor->setJustification(juce::Justification::centred);
 
-    int editorWidth  = (int)(getWidth()  * 0.45f);
-    int editorHeight = (int)(getHeight() * 0.30f);
+    int editorWidth  = (int)(getWidth()  * nodeEditorWidthFactor);
+    int editorHeight = (int)(getHeight() * nodeEditorHeightFactor);
 
     countEditor.setBounds(getWidth() - editorWidth, 0, editorWidth, editorHeight);
     switchCountEditor.setBounds(getWidth() - editorWidth, getHeight() - editorHeight, editorWidth, editorHeight);

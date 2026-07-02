@@ -78,6 +78,10 @@ public:
     int displayCurrentCount = 0;
     int displayCountLimit   = 1;
 
+    const float nodeEditorWidthFactor = 0.45f;
+    const float nodeEditorHeightFactor = 0.30f;
+
+    const int editorAreaBoundsReduction = 6;
 
 protected:
     ApplicationContext& applicationContext;

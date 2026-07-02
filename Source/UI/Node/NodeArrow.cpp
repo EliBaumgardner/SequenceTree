@@ -15,7 +15,7 @@
 #include "../Theme/CustomLookAndFeel.h"
 
 NodeArrow::NodeArrow(Node* startNode, Node* endNode, ApplicationContext& context)
-    : parentNode(startNode), childNode(endNode)
+    : startNode(startNode), endNode(endNode)
 {
     setLookAndFeel(context.lookAndFeel);
     bindValue.addListener(this);
@@ -27,17 +27,22 @@ void NodeArrow::paint(juce::Graphics &g) {
 
 void NodeArrow::setArrowBounds(Node* movedNode) {
 
-  juce::Point<int> start = parentNode->getNodeCentre();
-  juce::Point<int> end   = childNode->getNodeCentre();
+  juce::Point<int> start = startNode->getNodeCentre();
+  juce::Point<int> end   = endNode->getNodeCentre();
 
   float dx = float(end.x - start.x);
   float dy = float(end.y - start.y);
 
   length = std::sqrt(dx*dx + dy*dy);
 
-  childNode->incomingAngle = std::atan2(dy, dx);
+  endNode->incomingAngle = std::atan2(dy, dx);
 
-  if (parentNode->isAlternativeNode) {
+  if (endNode->nodeType == NodeType::TraversalFlag) {
+      endNode->resized();
+      endNode->repaint();
+  }
+
+  if (startNode->isAlternativeNode) {
       duration = (int)(std::abs(dy) * durationAmount);
   }
   else {
@@ -45,15 +50,15 @@ void NodeArrow::setArrowBounds(Node* movedNode) {
   }
 
 
-  if (parentNode->nodeType == NodeType::Modulator) {
+  if (startNode->nodeType == NodeType::Modulator) {
       textEditor.setText(juce::String(duration / 10) + "%");
   }
   else {
       textEditor.setText(juce::String(duration));
   }
 
-  int parentRadius = parentNode->getHeight() / 2;
-  int childRadius  = childNode->getHeight()  / 2;
+  int parentRadius = startNode->getHeight() / 2;
+  int childRadius  = (endNode->nodeType == NodeType::TraversalFlag) ? 0 : endNode->getHeight() / 2;
 
   float dirX = (length > 0.0f) ? dx / length : 1.0f;
   float dirY = (length > 0.0f) ? dy / length : 0.0f;

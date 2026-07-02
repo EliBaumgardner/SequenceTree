@@ -28,6 +28,7 @@ public:
 
     static juce::ValueTree addNode            (int parentNodeId, juce::UndoManager* undoManager);
     static juce::ValueTree addAlternativeNode (int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addTraversalFlagNode (int parentNodeId, juce::UndoManager* undoManager);
     static juce::ValueTree addModulatorRoot   (int parentNodeId, juce::UndoManager* undoManager);
     static juce::ValueTree addModulator       (int parentNodeId, juce::UndoManager* undoManager);
 

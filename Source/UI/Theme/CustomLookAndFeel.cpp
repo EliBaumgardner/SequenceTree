@@ -4,6 +4,7 @@
 
 #include "CustomLookAndFeel.h"
 #include "../Buttons/ModulatorButton.h"
+#include "../Buttons/TraversalFlagButton.h"
 #include "../Buttons/ResetButton.h"
 #include "../Canvas/NodeCanvas.h"
 #include "../Node/Node.h"
@@ -20,6 +21,7 @@
 #include "Buttons/ButtonConstants.h"
 #include "../Buttons/PaintTool.h"
 #include "../Buttons/PaintToolSettings.h"
+#include "../Graph/ValueTreeState.h"
 
 
 CustomLookAndFeel::CustomLookAndFeel()
@@ -255,12 +257,11 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node)
 
 juce::Rectangle<float> CustomLookAndFeel::getNodeCircleBounds(juce::Rectangle<float> componentBounds)
 {
-    static constexpr float pad        = 2.0f;
     static constexpr float shadowDX   = 2.0f;
     static constexpr float shadowBlur = 4.0f;
-    float diameter = componentBounds.getWidth() - pad - shadowDX - shadowBlur;
+    float diameter = componentBounds.getWidth() - nodeCirclePad - shadowDX - shadowBlur;
     return juce::Rectangle<float>(diameter, diameter)
-               .withPosition(componentBounds.getX() + pad, componentBounds.getY() + pad);
+               .withPosition(componentBounds.getX() + nodeCirclePad, componentBounds.getY() + nodeCirclePad);
 }
 
 void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rectangle<float> componentBounds)
@@ -466,11 +467,11 @@ namespace {
 
 void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeArrow, const juce::TextEditor& editor)
 {
-    auto* a = nodeArrow.parentNode;
-    auto* b = nodeArrow.childNode;
+    auto* a = nodeArrow.startNode;
+    auto* b = nodeArrow.endNode;
 
-    auto parentCentre = a->getNodeCentre();
-    auto childCentre  = b->getNodeCentre();
+    juce::Point<int> parentCentre = a->getNodeCentre();
+    juce::Point<int> childCentre  = b->getNodeCentre();
 
     float arrowLength  = 12.0f;
     float arrowWidth   = 6.0f;
@@ -505,8 +506,18 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     float dirX = deltaX / length;
     float dirY = deltaY / length;
 
-    arrowEndX -= dirX * float(childRadius);
-    arrowEndY -= dirY * float(childRadius);
+    bool childIsTraversalFlag = b->nodeType == NodeType::TraversalFlag;
+
+    if (! childIsTraversalFlag) {
+        arrowEndX -= dirX * float(childRadius);
+        arrowEndY -= dirY * float(childRadius);
+    }
+    else {
+        float childHalf      = std::min(b->getWidth(), b->getHeight()) * 0.5f;
+        float baseHalfHeight = (childHalf - 4.0f) * 0.7f * 0.5f;
+        arrowEndX += dirX * baseHalfHeight;
+        arrowEndY += dirY * baseHalfHeight;
+    }
 
     bool isRootTargetArrow = b->nodeType == NodeType::Root && !a->isAlternativeNode;
 
@@ -518,7 +529,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         float absDx = std::abs(dx);
         float absDy = std::abs(dy);
 
-        if (absDx < 1.0f || absDy < 1.0f) {
+        if (absDx < 1.0f || absDy < 1.0f || childIsTraversalFlag) {
             linePath.startNewSubPath(parentCenterX, parentCenterY);
             linePath.lineTo(arrowEndX, arrowEndY);
         }
@@ -565,6 +576,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     auto highlightPath = linePath;
     shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
     highlightPath.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
+
     g.setColour(arrowColour.darker(0.4f).withAlpha(0.35f * ghostAlpha));
     g.strokePath(shadowPath,    lineStroke);
     g.setColour(arrowColour.brighter(0.4f).withAlpha(0.18f * ghostAlpha));
@@ -573,7 +585,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     g.strokePath(linePath, lineStroke);
 
     if (! nodeArrow.isGhost && nodeArrow.progressT > 0.0f) {
-        const juce::Colour progressColour = nodeArrow.parentNode->nodeColour.brighter(0.3f);
+        const juce::Colour progressColour = nodeArrow.startNode->nodeColour.brighter(0.3f);
 
         float linePathLength = 0.0f;
         {
@@ -656,7 +668,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         }
     }
 
-    if (nodeArrow.animT > 0.3f) {
+    if (nodeArrow.animT > 0.3f && !childIsTraversalFlag) {
         float leftX  = arrowEndX - arrowLength * dirX + arrowWidth * dirY;
         float leftY  = arrowEndY - arrowLength * dirY - arrowWidth * dirX;
         float rightX = arrowEndX - arrowLength * dirX - arrowWidth * dirY;
@@ -769,6 +781,27 @@ void CustomLookAndFeel::drawModulatorButton(juce::Graphics &g, const ModulatorBu
 
     g.fillRect(bounds);
     g.drawRect(bounds, 1.0f);
+}
+
+void CustomLookAndFeel::drawTraversalFlagButton(juce::Graphics &g, const TraversalFlagButton &traversalFlagButton)
+{
+    juce::Rectangle<float> bounds = traversalFlagButton.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
+
+    if (traversalFlagButton.isSelected) {
+        g.setColour(buttonColour.darker());
+    }
+    else {
+        g.setColour(buttonColour);
+    }
+
+    juce::Path triangle;
+    triangle.startNewSubPath(bounds.getCentreX(), bounds.getY());
+    triangle.lineTo(bounds.getRight(), bounds.getBottom());
+    triangle.lineTo(bounds.getX(), bounds.getBottom());
+    triangle.closeSubPath();
+
+    g.fillPath(triangle);
+    g.strokePath(triangle, juce::PathStrokeType(1.0f));
 }
 
 void CustomLookAndFeel::drawUndoButton(juce::Graphics &g, const UndoButton &undoButton, bool isButtonDown)

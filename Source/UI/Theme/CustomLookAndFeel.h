@@ -25,6 +25,7 @@ class DisplayButton;
 
 class NodeButton;
 class ModulatorButton;
+class TraversalFlagButton;
 
 class PlayButton;
 
@@ -109,6 +110,7 @@ public:
 
     void drawNodeButton     (juce::Graphics& g, const NodeButton& nodeButton);
     void drawModulatorButton(juce::Graphics& g, const ModulatorButton& modulatorButton);
+    void drawTraversalFlagButton(juce::Graphics& g, const TraversalFlagButton& traversalFlagButton);
 
     void drawTempoDisplay   (juce::Graphics& g, const TempoDisplay& tempoDisplay);
 
@@ -145,6 +147,8 @@ public:
     juce::Colour arrowColour         = juce::Colours::black;
     juce::Colour arrowProgressColour = baseLightColour2;
     juce::Colour arrowHeadColour     = juce::Colours::black;
+
+    static constexpr float nodeCirclePad = 2.0f;
 
     static constexpr float paneCornerRadius = 4.0f;
 

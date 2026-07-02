@@ -47,6 +47,19 @@ public:
         return childNodeValueTree;
     }
 
+    static juce::ValueTree createTraversalFlagNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
+    {
+        juce::ValueTree childNodeValueTree = ValueTreeState::addTraversalFlagNode(parentNodeId, undoManager);
+        int nodeId = childNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+
+        NodePosition traversalFlagNodePosition = nodePosition;
+
+        ValueTreeState::setNodePosition(childNodeValueTree, traversalFlagNodePosition, undoManager);
+        inheritFromParent(parentNodeId, nodeId, childNodeValueTree, undoManager);
+
+        return childNodeValueTree;
+    }
+
     static juce::ValueTree createModulator(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager) {
 
         juce::ValueTree modulatorValueTree = ValueTreeState::addModulator(parentNodeId, undoManager);
