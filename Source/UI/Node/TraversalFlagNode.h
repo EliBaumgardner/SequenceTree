@@ -19,6 +19,8 @@ class TraversalFlagNode : public Node {
     private:
     juce::Path buildTrianglePath() const;
     juce::Colour outlineColour = juce::Colours::black;
+
+    std::unique_ptr<ValueEditor> traversalNumEditor = nullptr;
 };
 
 #endif //SEQUENCETREE_TRAVERSALFLAGNODE_H

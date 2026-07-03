@@ -72,6 +72,15 @@ public:
     static const juce::Identifier ColorIntensityFactor;
 
     //Static ValueTrees
+
+    static const juce::Identifier TraversalData;
+    static const juce::Identifier TraversalMap;
+
+    static const juce::Identifier TraversalId;
+    static const juce::Identifier TraversalChildrenIds;
+
+    static const juce::Identifier TempoMultiplier;
+    // Traversal ValueTrees
 };
 
 

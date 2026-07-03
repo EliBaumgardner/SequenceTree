@@ -309,21 +309,6 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
 
     g.fillEllipse(pulsedFill);
 
-    if (node.displayCountLimit >= 1) {
-        const float twoPi      = juce::MathConstants<float>::twoPi;
-        const float startAngle = -juce::MathConstants<float>::halfPi;
-        const int   limit      = node.displayCountLimit;
-        const int   filled     = juce::jlimit(0, limit, node.displayCurrentCount);
-        const float fraction   = static_cast<float>(filled) / static_cast<float>(limit);
-
-        if (fraction > 0.0f) {
-            juce::Path fillSector;
-            fillSector.addPieSegment(pulsedFill, startAngle, startAngle + twoPi * fraction, 0.0f);
-            g.setColour(baseLightColour1.withAlpha(0.35f));
-            g.fillPath(fillSector);
-        }
-    }
-
     if (node.isHovered) {
         g.drawEllipse(circleHover, 2.0f);
     }

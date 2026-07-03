@@ -13,9 +13,17 @@ TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context
 
     countEditor.setVisible(true);
     switchCountEditor.setVisible(true);
+
     subLoopLimitEditor.setVisible(false);
     upButton.setVisible(false);
     downButton.setVisible(false);
+
+    traversalNumEditor = std::make_unique<ValueEditor>(context);
+    addAndMakeVisible(traversalNumEditor.get());
+
+    if (nodeTextEditor != nullptr) {
+        nodeTextEditor->setVisible(false);
+    }
 }
 
 void TraversalFlagNode::resized() {
@@ -32,7 +40,7 @@ void TraversalFlagNode::resized() {
                                                           cx, cy));
 
     int size = juce::roundToInt(bladeLength * 0.7f);
-    nodeTextEditor->setBounds(juce::Rectangle<int>(0, 0, size, size).withCentre(centre.roundToInt()));
+    traversalNumEditor->setBounds(juce::Rectangle<int>(0, 0, size, size).withCentre(centre.roundToInt()));
 
     auto triangleBounds = buildTrianglePath().getBounds();
 

@@ -18,17 +18,23 @@
 
 struct RTNote {
 
-    float pitch      = 0;
-    float velocity   = 0;
-    float duration   = 0;
+    float pitch       = 0;
+    float velocity    = 0;
+    float duration    = 0;
     int   midiChannel = 1;
+};
+
+struct RTtraversal {
+
+    int traversalId = 0;
+    double tempoMultiplier = 1;
 };
 
 struct RTNode {
 
-    int lastAlternativeId = -1;
+    int lastAlternativeId   = -1;
     int activeAlternativeId = -1;
-    int alternativeRootId = -1;
+    int alternativeRootId   = -1;
 
     int modulatorId = 0;
 
@@ -60,6 +66,7 @@ struct RTNode {
 
     NodeType nodeType = NodeType::Node;
 
+    std::vector<RTtraversal> traversals;
     std::vector<RTNote> notes;
     std::vector<int> children;
     std::unordered_map<int, int> durationMap;

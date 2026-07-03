@@ -71,6 +71,7 @@ public:
     bool isHovered           = false;
     bool isSelected          = false;
     bool isHighlighted       = false;
+    bool pendingHighlightOff = false;
     bool isAlternativeNode   = false;
 
     float pulsePhase         = 1.0f;
