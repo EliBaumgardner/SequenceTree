@@ -10,6 +10,8 @@
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/ValueTreeState.h"
 
+static const int defaultTraversalId = 1;
+
 class NodeFactory
 {
 public:
@@ -19,10 +21,10 @@ public:
         juce::ValueTree rootNodeValueTree = ValueTreeState::addRootNode(undoManager);
         int rootId = rootNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
-
         ValueTreeState::setNodePosition(rootNodeValueTree,nodePosition,undoManager);
 
         setDefaultNodeNote(rootId, undoManager);
+        setDefaultTraversal(rootId, undoManager);
     }
 
     static juce::ValueTree createNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
@@ -35,6 +37,7 @@ public:
 
         return childNodeValueTree;
     }
+
 
     static juce::ValueTree createAlternativeNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
@@ -55,7 +58,6 @@ public:
         NodePosition traversalFlagNodePosition = nodePosition;
 
         ValueTreeState::setNodePosition(childNodeValueTree, traversalFlagNodePosition, undoManager);
-        inheritFromParent(parentNodeId, nodeId, childNodeValueTree, undoManager);
 
         return childNodeValueTree;
     }
@@ -80,6 +82,21 @@ public:
     }
 
 private:
+
+    static void setDefaultTraversal(int nodeId, juce::UndoManager *undoManager)
+    {
+        juce::ValueTree rootNodeValueTree = ValueTreeState::getNode(nodeId);
+
+        if (ValueTreeState::traversalMap.getNumChildren() == 0) {
+            ValueTreeState::createTraversalData(defaultTraversalId, undoManager);
+        }
+
+        juce::ValueTree traversalId = juce::ValueTree{ValueTreeIdentifiers::TraversalId};
+        traversalId.setProperty(ValueTreeIdentifiers::TraversalId, defaultTraversalId, undoManager);
+
+        juce::ValueTree traversalChildrenIds = rootNodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
+        traversalChildrenIds.addChild(traversalId, -1, undoManager);
+    }
 
     static void setDefaultNodeNote(int nodeId, juce::UndoManager *undoManager)
     {
@@ -113,8 +130,9 @@ private:
         };
 
         for (const auto& prop : propsToCopy)
-            if (parentNode.hasProperty(prop))
+            if (parentNode.hasProperty(prop)) {
                 newNode.setProperty(prop, parentNode.getProperty(prop), undoManager);
+            }
 
         juce::ValueTree parentMidi = parentNode.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
         juce::ValueTree newMidi    = newNode.getChildWithName(ValueTreeIdentifiers::MidiNotesData);

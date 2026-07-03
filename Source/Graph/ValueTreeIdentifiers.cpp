@@ -56,4 +56,10 @@ const juce::Identifier ValueTreeIdentifiers::ModulationType       {"ModulationTy
 const juce::Identifier ValueTreeIdentifiers::PitchMod             {"PitchMod"};
 const juce::Identifier ValueTreeIdentifiers::VelocityMod          {"VelocityMod"};
 const juce::Identifier ValueTreeIdentifiers::DurationMod          {"DurationMod"};
-const juce::Identifier ValueTreeIdentifiers::ColorIntensityFactor  {"ColorIntensityFactor"};
+const juce::Identifier ValueTreeIdentifiers::ColorIntensityFactor {"ColorIntensityFactor"};
+
+const juce::Identifier ValueTreeIdentifiers::TraversalData        {"TraversalData"};
+const juce::Identifier ValueTreeIdentifiers::TraversalId          {"TraversalId"};
+const juce::Identifier ValueTreeIdentifiers::TempoMultiplier      {"TempoMultiplier"};
+const juce::Identifier ValueTreeIdentifiers::TraversalChildrenIds {"TraversalChildrenIds"};
+const juce::Identifier ValueTreeIdentifiers::TraversalMap         {"TraversalMap"};

@@ -24,13 +24,15 @@ public:
 
     static void setNodeCountProperties(juce::UndoManager *undoManager, juce::ValueTree node);
 
-    static juce::ValueTree addRootNode     (juce::UndoManager* undoManager);
+    static juce::ValueTree createTraversalData    (int traversalId, juce::UndoManager* undoManager);
 
-    static juce::ValueTree addNode            (int parentNodeId, juce::UndoManager* undoManager);
-    static juce::ValueTree addAlternativeNode (int parentNodeId, juce::UndoManager* undoManager);
-    static juce::ValueTree addTraversalFlagNode (int parentNodeId, juce::UndoManager* undoManager);
-    static juce::ValueTree addModulatorRoot   (int parentNodeId, juce::UndoManager* undoManager);
-    static juce::ValueTree addModulator       (int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addRootNode         (juce::UndoManager* undoManager);
+
+    static juce::ValueTree addNode             (int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addAlternativeNode  (int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addTraversalFlagNode(int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addModulatorRoot    (int parentNodeId, juce::UndoManager* undoManager);
+    static juce::ValueTree addModulator        (int parentNodeId, juce::UndoManager* undoManager);
 
     static void connectNodes   (int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
     static void removeRootNode (int rootNodeId, juce::UndoManager* undoManager);
@@ -52,22 +54,20 @@ public:
     static juce::ValueTree nodeMap;
     static juce::ValueTree nodeTreeMap;
     static juce::ValueTree nodeArrows;
+    static juce::ValueTree traversalMap;
 
     static inline int nodeIdIncrement          {0};
-
     static inline int defaultSwitchCount       {1};
     static inline int defaultNodeCount         {1};
-
     static inline int defaultSwitchCountLimit  {1};
     static inline int defaultNodeCountLimit    {1};
     static inline int defaultTriggerLimit      {0};
     static inline int defaultSubLoopCountLimit {1};
     static inline int defaultRootLoopLimit     {0};
-
     static inline int defaultRepeatValue       {1};
-
     static inline int defaultModAmount         {1};
     static inline int defaultMidiChannel       {1};
+    static inline int defaultTempoMult         {1};
 };
 
 

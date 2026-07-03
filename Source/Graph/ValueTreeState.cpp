@@ -15,7 +15,7 @@ juce::ValueTree ValueTreeState::canvasData;
 juce::ValueTree ValueTreeState::nodeTreeIds;
 juce::ValueTree ValueTreeState::nodeMap;
 juce::ValueTree ValueTreeState::nodeTreeMap;
-
+juce::ValueTree ValueTreeState::traversalMap;
 
 
 ValueTreeState::ValueTreeState() {
@@ -24,6 +24,9 @@ ValueTreeState::ValueTreeState() {
     nodeTreeIds  = juce::ValueTree(ValueTreeIdentifiers::NodeTreeIds);
     nodeMap      = juce::ValueTree(ValueTreeIdentifiers::NodeMap);
     nodeTreeMap  = juce::ValueTree(ValueTreeIdentifiers::NodeTreeMap);
+
+    traversalMap = juce::ValueTree(ValueTreeIdentifiers::TraversalMap);
+
     canvasData.addChild(nodeTreeIds, -1, nullptr);
 }
 
@@ -66,9 +69,12 @@ juce::ValueTree ValueTreeState::addRootNode(juce::UndoManager* undoManager)
     juce::ValueTree rootNode          {ValueTreeIdentifiers::RootNodeData};
     juce::ValueTree nodeChildrenIds   {ValueTreeIdentifiers::NodeChildrenIds};
     juce::ValueTree midiNotesData     {ValueTreeIdentifiers::MidiNotesData};
+    juce::ValueTree traversalChildrenIds {ValueTreeIdentifiers::TraversalChildrenIds};
+
 
     rootNode.addChild     (midiNotesData, -1, undoManager);
     rootNode.addChild     (nodeChildrenIds, -1, undoManager);
+    rootNode.addChild     (traversalChildrenIds, -1, undoManager);
     newTree.addChild      (rootNodeId, -1, undoManager);
 
     setNodeCountProperties(undoManager, rootNode);
@@ -97,10 +103,10 @@ juce::ValueTree ValueTreeState::addNode(int parentNodeId, juce::UndoManager* und
     int rootId = parentNode.getProperty(ValueTreeIdentifiers::RootNodeId);
     nodeIdIncrement = nodeIdIncrement + 1;
 
-    juce::ValueTree nodeId            {ValueTreeIdentifiers::NodeId};
-    juce::ValueTree node              {ValueTreeIdentifiers::NodeData};
+    juce::ValueTree nodeId               {ValueTreeIdentifiers::NodeId};
+    juce::ValueTree node                 {ValueTreeIdentifiers::NodeData};
     juce::ValueTree nodeChildrenIds      {ValueTreeIdentifiers::NodeChildrenIds};
-    juce::ValueTree midiNotesData     {ValueTreeIdentifiers::MidiNotesData};
+    juce::ValueTree midiNotesData        {ValueTreeIdentifiers::MidiNotesData};
 
     node.addChild(nodeChildrenIds, -1, undoManager);
     node.addChild(midiNotesData, -1, undoManager);
@@ -169,8 +175,11 @@ juce::ValueTree ValueTreeState::addTraversalFlagNode(int parentNodeId, juce::Und
     juce::ValueTree nodeChildrenIds  {ValueTreeIdentifiers::NodeChildrenIds};
     juce::ValueTree midiNotesData    {ValueTreeIdentifiers::MidiNotesData};
 
+    juce::ValueTree traversalChildrenIds {ValueTreeIdentifiers::TraversalChildrenIds};
+
     node.addChild(nodeChildrenIds, -1, undoManager);
     node.addChild(midiNotesData, -1, undoManager);
+    node.addChild(traversalChildrenIds, -1, undoManager);
 
     setNodeCountProperties(undoManager, node);
 
@@ -402,4 +411,16 @@ juce::ValueTree ValueTreeState::getMidiNotes(int nodeId) {
     }
 
     return midiNotes;
+}
+
+juce::ValueTree ValueTreeState::createTraversalData(int traversalId, juce::UndoManager* undoManager)
+{
+    juce::ValueTree traversalData   {ValueTreeIdentifiers::TraversalData};
+
+    traversalData.setProperty  (ValueTreeIdentifiers::TraversalId, traversalId, undoManager);
+
+    traversalData.setProperty(ValueTreeIdentifiers::TempoMultiplier,defaultTempoMult,undoManager);
+
+    traversalMap.addChild(traversalData, -1, undoManager);
+    return traversalData;
 }
