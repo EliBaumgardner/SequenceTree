@@ -295,24 +295,33 @@ bool SequenceTreeAudioProcessor::initializeTraversalForRootNode(juce::MidiBuffer
         return rootFound;
     }
 
-    traversals.insert({rootId, TraversalLogic(rootId, eventManager.bridge)});
-    TraversalLogic& traversal = traversals.at(rootId);
-    traversal.isFirstEvent  = true;
-    traversal.primary.target = rootId;
-    traversal.state         = TraversalLogic::TraversalState::Active;
-    traversal.isLooping     = true;
+    RTNode rootNode = nodes[rootId];
 
-    auto rtGraphIt = rtGraphs.find(rootId);
-    if (rtGraphIt != rtGraphs.end()) {
-        traversal.loopLimit = rtGraphIt->second->loopLimit;
+    std::vector<RTtraversal> rootTraversals = rootNode.traversals;
+
+    for (int i = 0; i < rootTraversals.size(); i++) {
+
+        RTtraversal traversal = rootTraversals[i];
+
+        traversals.insert({rootId, TraversalLogic(rootId, eventManager.bridge,traversal)});
+        TraversalLogic& traversalLogic = traversals.at(rootId);
+        traversalLogic.isFirstEvent  = true;
+        traversalLogic.primary.target = rootId;
+        traversalLogic.state         = TraversalLogic::TraversalState::Active;
+        traversalLogic.isLooping     = true;
+
+        auto rtGraphIt = rtGraphs.find(rootId);
+        if (rtGraphIt != rtGraphs.end()) {
+            traversalLogic.loopLimit = rtGraphIt->second->loopLimit;
+        }
+
+        traversalLogic.advanceAlternative(nodes, rootId);
+
+        RTNode& rootNode    = nodes.at(rootId);
+        int     traversalId = rootNode.nodeID;
+        eventManager.bridge.highlightNode(rootNode, true);
+        eventManager.dispatcher.pushNote(rootNode, traversalId, midiMessages, 0, nodes, traversals);
     }
-
-    traversal.advanceAlternative(nodes, rootId);
-
-    RTNode& rootNode    = nodes.at(rootId);
-    int     traversalId = rootNode.nodeID;
-    eventManager.bridge.highlightNode(rootNode, true);
-    eventManager.dispatcher.pushNote(rootNode, traversalId, midiMessages, 0, nodes, traversals);
 
     return rootFound;
 }

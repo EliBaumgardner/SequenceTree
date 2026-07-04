@@ -20,7 +20,6 @@ class RootNode : public Node {
     ~RootNode() override;
     void paint(juce::Graphics& g) override;
     void resized() override;
-    void setDisplayMode(NodeDisplayMode mode) override;
 
     juce::Point<int> getNodeCentre() const override
     {

@@ -25,12 +25,14 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
 
     void bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID);
+
     void enableDualValue(const juce::Identifier& secondaryPropertyID);
     void setMinimumValue(int min);
     void valueChanged(juce::Value&) override;
     void commitValue();
 
     std::unique_ptr<juce::TextEditor> textEditor;
+    juce::Value boundValue;
 
 private:
     void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
@@ -42,7 +44,6 @@ private:
 
     ApplicationContext& applicationContext;
 
-    juce::Value boundValue;
     juce::Value boundSecondaryValue;
 
     juce::Identifier boundIdentifier;
