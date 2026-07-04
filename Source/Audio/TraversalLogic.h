@@ -4,10 +4,14 @@
 #include <unordered_map>
 #include <vector>
 
+
 class AudioUIBridge;
 
 class TraversalLogic {
+
 public:
+
+    RTtraversal traversal;
 
     struct Walker
     {
@@ -73,7 +77,7 @@ public:
         int  countSourceCount  = 0;
     };
 
-    TraversalLogic(int root, AudioUIBridge& bridge);
+    TraversalLogic(int root, AudioUIBridge& bridge, RTtraversal traversal);
 
     StepResult handleNodeEvent(NodeMap& nodes);
 

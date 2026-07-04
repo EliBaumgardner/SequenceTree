@@ -1,8 +1,8 @@
 #include "TraversalLogic.h"
 #include "AudioUIBridge.h"
 
-TraversalLogic::TraversalLogic(int root, AudioUIBridge& b)
-    : rootId(root), bridge(&b) {
+TraversalLogic::TraversalLogic(int root, AudioUIBridge& b, RTtraversal traversal)
+    : rootId(root), bridge(&b), traversal(traversal) {
 
 }
 

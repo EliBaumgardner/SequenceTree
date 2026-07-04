@@ -458,7 +458,9 @@ void TraversalDispatcher::resetTraversal(int graphId, int newTargetId,
         scheduler.clearTraversalNotes(graphId);
     }
     else {
-        traversalMap.insert({ graphId, TraversalLogic(graphId, bridge) });
+        RTNode rootNode = nodes.at(graphId);
+        RTtraversal traversal = rootNode.traversals[0];
+        traversalMap.insert({ graphId, TraversalLogic(graphId, bridge,traversal) });
     }
 
     TraversalLogic& traversal = traversalMap.at(graphId);

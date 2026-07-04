@@ -5,6 +5,7 @@
 #include "RootNode.h"
 #include "NodeTextEditor.h"
 #include "../Theme/CustomLookAndFeel.h"
+#include "../Graph/ValueTreeState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
 RootNode::RootNode(ApplicationContext& context) : Node(context)
@@ -15,6 +16,46 @@ RootNode::RootNode(ApplicationContext& context) : Node(context)
 
     rootRectangle = std::make_unique<RootRectangle>(context);
     addAndMakeVisible(rootRectangle.get());
+
+    ValueEditor& traversalEditor = rootRectangle->loopLimitEditor;
+
+    traversalEditor.boundValue.setValue(1);
+
+
+    traversalEditor.onValueChange = [this, &traversalEditor]() {
+
+        juce::String text = traversalEditor.boundValue.toString();
+
+        std::vector<int> words;
+        juce::String word;
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text[i];
+
+            if (std::isdigit(c)) {
+                word += c;
+            }
+            else {
+                words.push_back(word.getIntValue());
+                word.clear();
+            }
+        }
+
+        for (int i = 0; i < words.size(); i++) {
+
+            int traversalId = words[i];
+
+            juce::ValueTree traversalData = ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+
+            if (!traversalData.isValid()) {
+                ValueTreeState::createTraversalData(traversalId, nullptr);
+            }
+
+            juce::ValueTree traversalIdTree {ValueTreeIdentifiers::TraversalId};
+            traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalId, traversalId, nullptr);
+            nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds).addChild(traversalIdTree, -1, nullptr);
+        }
+    };
 }
 
 RootNode::~RootNode() = default;
@@ -48,10 +89,3 @@ void RootNode::resized() {
     subLoopLimitEditor.setBounds(circleArea.getBottomLeft().getX(), circleArea.getBottom() - 12, 18, 12);
 }
 
-void RootNode::setDisplayMode(NodeDisplayMode mode) {
-    Node::setDisplayMode(mode);
-
-    if (nodeValueTree.isValid() && rootRectangle != nullptr) {
-        rootRectangle->loopLimitEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::LoopLimit);
-    }
-}

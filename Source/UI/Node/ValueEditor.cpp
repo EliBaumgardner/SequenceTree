@@ -26,6 +26,8 @@ ValueEditor::ValueEditor(ApplicationContext& context) : applicationContext(conte
     textEditor->setVisible(false);
 
     addChildComponent(textEditor.get());
+
+    boundValue.addListener(this);
 }
 
 void ValueEditor::paint(juce::Graphics& g)
