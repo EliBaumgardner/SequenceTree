@@ -128,8 +128,23 @@ void TraversalDispatcher::pushNote(const RTNode& node, int traversalId,
 
     RTNode* nextTarget = traversalLogic.peekNextTarget(nodes);
 
-    const double sampleRate      = processor.TempoInfo.currentSampleRate;
-    const double tempoMultiplier = processor.tempoMultiplier.load();
+    const double sampleRate = processor.TempoInfo.currentSampleRate;
+
+    double traversalMultiplier = traversalLogic.traversal.tempoMultiplier;
+    auto rootIt = nodes.find(traversalLogic.rootId);
+    if (rootIt != nodes.end()) {
+        for (const RTtraversal& t : rootIt->second.traversals) {
+            if (t.traversalId == traversalLogic.traversal.traversalId) {
+                traversalMultiplier = t.tempoMultiplier;
+                break;
+            }
+        }
+    }
+    if (traversalMultiplier <= 0.0) {
+        traversalMultiplier = 1.0;
+    }
+
+    const double tempoMultiplier = processor.tempoMultiplier.load() * traversalMultiplier;
     jassert(sampleRate > 0.0);
     jassert(tempoMultiplier > 0.0);
 

@@ -30,6 +30,11 @@ void RTGraphBuilder::makeRTGraph(const juce::ValueTree& nodeValueTree)
         return;
     }
 
+    if (nodeValueTree.getType() == ValueTreeIdentifiers::TraversalData) {
+        rebuildGraphsForTraversal(nodeValueTree.getProperty(ValueTreeIdentifiers::TraversalId));
+        return;
+    }
+
     int rootNodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
     if (rootNodeId == 0) {
         return;
@@ -58,6 +63,25 @@ void RTGraphBuilder::makeRTGraph(const juce::ValueTree& nodeValueTree)
 
     rtGraphs[rtGraph->graphID] = rtGraph;
     applicationContext.processor->setNewGraph(rtGraph);
+}
+
+void RTGraphBuilder::rebuildGraphsForTraversal(int traversalId)
+{
+    juce::ValueTree nodeMap = ValueTreeState::nodeMap;
+
+    for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
+        juce::ValueTree rootNode = nodeMap.getChild(i);
+
+        if (rootNode.getType() != ValueTreeIdentifiers::RootNodeData) {
+            continue;
+        }
+
+        juce::ValueTree traversalChildrenIds = rootNode.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
+
+        if (traversalChildrenIds.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
+            makeRTGraph(rootNode);
+        }
+    }
 }
 
 void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::shared_ptr<RTGraph> rtGraph, std::unordered_map<int, juce::ValueTree>& tempNodeMap) {
@@ -109,12 +133,15 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
 
             for (int i = 0; i < nodeValueTreeTraversals.getNumChildren(); i++) {
                 juce::ValueTree traversalIdTree = nodeValueTreeTraversals.getChild(i);
-                int traversalId = traversalIdTree.getProperty(ValueTreeIdentifiers::Id);
+                int traversalId = traversalIdTree.getProperty(ValueTreeIdentifiers::TraversalId);
                 juce::ValueTree traversalData = ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
                 RTtraversal rtTraversal;
 
                 rtTraversal.traversalId = traversalId;
-                rtTraversal.tempoMultiplier = traversalData.getProperty(ValueTreeIdentifiers::TempoMultiplier);
+
+                if (traversalData.isValid()) {
+                    rtTraversal.tempoMultiplier = traversalData.getProperty(ValueTreeIdentifiers::TempoMultiplier);
+                }
 
                 rtNode.traversals.push_back(rtTraversal);
             }

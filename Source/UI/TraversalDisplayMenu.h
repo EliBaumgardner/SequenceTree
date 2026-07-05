@@ -13,11 +13,14 @@ class TraversalDisplayMenu : public DisplayMenu {
 
 public:
 
-    TraversalDisplayMenu(ApplicationContext& context);
+    explicit TraversalDisplayMenu(ApplicationContext& context);
 
     void paint(juce::Graphics& g) override;
 
     void addTraversalToMenu(int traversalId);
+    void removeTraversalFromMenu(int traversalId);
+
+    std::function<void(int)> onTraversalSelected;
 
 private:
 

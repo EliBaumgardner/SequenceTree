@@ -17,6 +17,8 @@ RootNode::RootNode(ApplicationContext& context) : Node(context)
     rootRectangle = std::make_unique<RootRectangle>(context);
     addAndMakeVisible(rootRectangle.get());
 
+    subLoopLimitEditor.setTooltip("Loop Limit");
+
     ValueEditor& traversalEditor = rootRectangle->loopLimitEditor;
 
     traversalEditor.boundValue.setValue(1);
@@ -24,36 +26,56 @@ RootNode::RootNode(ApplicationContext& context) : Node(context)
 
     traversalEditor.onValueChange = [this, &traversalEditor]() {
 
+        DBG("traversal chhanged");
+
         juce::String text = traversalEditor.boundValue.toString();
 
         std::vector<int> words;
         juce::String word;
 
-        for (int i = 0; i < text.length(); i++) {
-            char c = text[i];
+        for (int i = 0; i <= text.length(); i++) {
 
-            if (std::isdigit(c)) {
-                word += c;
+            bool isDigit = i < text.length() && juce::CharacterFunctions::isDigit(text[i]);
+
+            if (isDigit) {
+                word += text[i];
             }
-            else {
+            else if (word.isNotEmpty()) {
                 words.push_back(word.getIntValue());
                 word.clear();
             }
         }
 
-        for (int i = 0; i < words.size(); i++) {
+        auto contains = [&words](int id) {
+            for (int w : words) {
+                if (w == id) return true;
+            }
+            return false;
+        };
 
-            int traversalId = words[i];
+        juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
 
-            juce::ValueTree traversalData = ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+        for (int i = traversalChildrenIds.getNumChildren() - 1; i >= 0; i--) {
 
-            if (!traversalData.isValid()) {
+            int existingId = traversalChildrenIds.getChild(i).getProperty(ValueTreeIdentifiers::TraversalId);
+
+            if (!contains(existingId)) {
+                traversalChildrenIds.removeChild(i, nullptr);
+            }
+        }
+
+        for (int traversalId : words) {
+
+            if (!ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
                 ValueTreeState::createTraversalData(traversalId, nullptr);
             }
 
-            juce::ValueTree traversalIdTree {ValueTreeIdentifiers::TraversalId};
-            traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalId, traversalId, nullptr);
-            nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds).addChild(traversalIdTree, -1, nullptr);
+            if (!traversalChildrenIds.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
+
+                juce::ValueTree traversalIdTree {ValueTreeIdentifiers::TraversalId};
+                traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalId, traversalId, nullptr);
+                traversalChildrenIds.addChild(traversalIdTree, -1, nullptr);
+            }
         }
     };
 }
