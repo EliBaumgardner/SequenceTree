@@ -11,6 +11,8 @@ TraversalDisplayMenu::TraversalDisplayMenu(ApplicationContext& context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
 
+    menu.clear();
+
     button.onClick = [this]() {
 
         button.isSelected = true;
@@ -29,6 +31,10 @@ TraversalDisplayMenu::TraversalDisplayMenu(ApplicationContext& context)
                 }
             }
 
+            if (result != 0 && onTraversalSelected) {
+                onTraversalSelected(result);
+            }
+
             resized();
         });
     };
@@ -41,6 +47,27 @@ void TraversalDisplayMenu::paint(juce::Graphics& g)
 
 void TraversalDisplayMenu::addTraversalToMenu(int traversalId)
 {
+    DBG("adding traversal to menu");
     juce::String itemName = "Traversal " + juce::String(traversalId);
     menu.addItem(traversalId, itemName);
+}
+
+void TraversalDisplayMenu::removeTraversalFromMenu(int traversalId) {
+
+    juce::String itemName = "Traversal " + juce::String(traversalId);
+
+    juce::PopupMenu remaining;
+    juce::PopupMenu::MenuItemIterator it(menu);
+
+    while (it.next()) {
+        if (it.getItem().itemID != traversalId)
+            remaining.addItem(it.getItem());
+    }
+
+    menu = std::move(remaining);
+
+    if (selectedOption == itemName) {
+        selectedOption = "";
+        resized();
+    }
 }

@@ -38,6 +38,8 @@ private:
     void createRTNodeConnections(std::shared_ptr<RTGraph> rtGraph,
                                  std::unordered_map<int, juce::ValueTree>& tempNodeMap);
 
+    void rebuildGraphsForTraversal(int traversalId);
+
     ApplicationContext& applicationContext;
     NodeCanvas&         canvas;
 };

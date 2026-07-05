@@ -147,7 +147,12 @@ void Node::setDisplayMode(NodeDisplayMode mode)
     if (nodeValueTree.isValid()) {
         countEditor       .bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
         switchCountEditor .bindEditor(nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
-        subLoopLimitEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::SubLoopCountLimit);
+
+        juce::Identifier subLoopProperty = (nodeType == NodeType::Root)
+            ? ValueTreeIdentifiers::LoopLimit
+            : ValueTreeIdentifiers::SubLoopCountLimit;
+
+        subLoopLimitEditor.bindEditor(nodeValueTree, subLoopProperty);
     }
 
     switch (mode) {

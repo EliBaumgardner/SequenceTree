@@ -27,6 +27,7 @@ public:
     void bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID);
 
     void enableDualValue(const juce::Identifier& secondaryPropertyID);
+    void enableDecimalValue(double min);
     void setMinimumValue(int min);
     void valueChanged(juce::Value&) override;
     void commitValue();
@@ -55,5 +56,7 @@ private:
     bool isEditing        = false;
     bool suppressCallback = false;
     bool dualNumberMode   = false;
+    bool decimalMode      = false;
     int  minValue         = 1;
+    double minDecimalValue = 0.1;
 };

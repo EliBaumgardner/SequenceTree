@@ -6,21 +6,34 @@
 #define SEQUENCETREE_TRAVERSALMENU_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <memory>
 
 #include "TraversalDisplayMenu.h"
+#include "Node/ValueEditor.h"
+
+class TraversalMenuListener;
 
 class TraversalMenu : public juce::Component {
 
 public:
 
     TraversalMenu(ApplicationContext& context);
+    ~TraversalMenu() override;
+
     void paint(juce::Graphics& g) override;
     void resized() override;
+
+    void selectTraversal(int traversalId);
 
     std::function<void(int)> onWidthDragged;
 
     static constexpr int resizerWidth = 6;
     static constexpr int minMenuWidth = 60;
+
+    TraversalDisplayMenu displayMenu;
+
+    juce::Label multiplierLabel;
+    ValueEditor multiplierEditor;
 
 private:
 
@@ -43,8 +56,9 @@ private:
         bool isDragging = false;
     };
 
-    TraversalDisplayMenu displayMenu;
     Resizer resizer { *this };
+
+    std::unique_ptr<TraversalMenuListener> menuListener;
 };
 
 #endif //SEQUENCETREE_TRAVERSALMENU_H

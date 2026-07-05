@@ -3,15 +3,66 @@
 //
 
 #include "TraversalMenu.h"
+#include "TraversalMenuListener.h"
 #include "../Util/ApplicationContext.h"
+#include "../Graph/ValueTreeState.h"
 #include "Theme/CustomLookAndFeel.h"
 
-TraversalMenu::TraversalMenu(ApplicationContext& context) :displayMenu(context) {
+TraversalMenu::TraversalMenu(ApplicationContext& context) : displayMenu(context), multiplierEditor(context) {
     setLookAndFeel(context.lookAndFeel);
     addAndMakeVisible(displayMenu);
     addAndMakeVisible(resizer);
 
+    multiplierLabel.setText("Multiplier", juce::dontSendNotification);
+    multiplierLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    multiplierLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
+    multiplierLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(multiplierLabel);
 
+    multiplierEditor.enableDecimalValue(0.1);
+    addAndMakeVisible(multiplierEditor);
+
+    displayMenu.onTraversalSelected = [this](int traversalId) {
+        selectTraversal(traversalId);
+    };
+
+    menuListener = std::make_unique<TraversalMenuListener>(*this);
+    ValueTreeState::traversalMap.addListener(menuListener.get());
+
+    int firstTraversalId = -1;
+
+    for (int i = 0; i < ValueTreeState::traversalMap.getNumChildren(); ++i) {
+        juce::ValueTree traversalData = ValueTreeState::traversalMap.getChild(i);
+        if (traversalData.getType() == ValueTreeIdentifiers::TraversalData) {
+            int traversalId = traversalData.getProperty(ValueTreeIdentifiers::TraversalId);
+            displayMenu.addTraversalToMenu(traversalId);
+            if (firstTraversalId == -1) {
+                firstTraversalId = traversalId;
+            }
+        }
+    }
+
+    if (firstTraversalId != -1) {
+        selectTraversal(firstTraversalId);
+    }
+}
+
+void TraversalMenu::selectTraversal(int traversalId) {
+    juce::ValueTree traversalData = ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+
+    if (!traversalData.isValid()) {
+        return;
+    }
+
+    multiplierEditor.bindEditor(traversalData, ValueTreeIdentifiers::TempoMultiplier);
+
+    displayMenu.selectedOption = "Traversal " + juce::String(traversalId);
+    displayMenu.resized();
+    displayMenu.repaint();
+}
+
+TraversalMenu::~TraversalMenu() {
+    ValueTreeState::traversalMap.removeListener(menuListener.get());
 }
 
 void TraversalMenu::paint(juce::Graphics &g) {
@@ -26,6 +77,11 @@ void TraversalMenu::resized() {
     int barHeight = static_cast<int>(getHeight() * 0.05f);
     auto barArea = bounds.removeFromTop(barHeight);
     displayMenu.setBounds(barArea.reduced(4));
+
+    int rowHeight = juce::jmax(18, barHeight);
+    auto rowArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
+    multiplierLabel.setBounds(rowArea.removeFromLeft(rowArea.getWidth() / 2));
+    multiplierEditor.setBounds(rowArea);
 }
 
 TraversalMenu::Resizer::Resizer(TraversalMenu& ownerRef) : owner(ownerRef)

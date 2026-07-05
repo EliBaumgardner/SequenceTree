@@ -43,6 +43,13 @@ void ValueEditor::paint(juce::Graphics& g)
 
 juce::String ValueEditor::getDisplayText() const
 {
+    if (decimalMode) {
+        double value = (double) boundValue.getValue();
+        juce::String text(value, 3);
+        text = text.trimCharactersAtEnd("0").trimCharactersAtEnd(".");
+        return text.isEmpty() ? "0" : text;
+    }
+
     int primaryValue = (int) boundValue.getValue();
 
     if (!dualNumberMode) {
@@ -100,6 +107,14 @@ void ValueEditor::enableDualValue(const juce::Identifier& secondaryPropertyID)
     textEditor->setInputRestrictions(9, "0123456789:");
 }
 
+void ValueEditor::enableDecimalValue(double min)
+{
+    decimalMode     = true;
+    minDecimalValue = min;
+
+    textEditor->setInputRestrictions(6, "0123456789.");
+}
+
 void ValueEditor::textEditorReturnKeyPressed(juce::TextEditor&)
 {
     commitValue();
@@ -137,6 +152,16 @@ void ValueEditor::commitValue()
 
 void ValueEditor::commitSingleValue(const juce::String& text)
 {
+    if (decimalMode) {
+        double value = text.getDoubleValue();
+        if (value < minDecimalValue) {
+            value = minDecimalValue;
+        }
+
+        boundValue.setValue(value);
+        return;
+    }
+
     int value = text.getIntValue();
     if (value < minValue) {
         value = minValue;

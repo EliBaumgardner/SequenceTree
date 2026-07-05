@@ -13,7 +13,7 @@
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
 : AudioProcessorEditor(p), audioProcessor(p)
 {
-applicationContext.processor   = &p;
+    applicationContext.processor   = &p;
     applicationContext.undoManager = &undoManager;
     applicationContext.lookAndFeel = &lookAndFeel;
 
@@ -23,6 +23,7 @@ applicationContext.processor   = &p;
     valueTreeState = std::make_unique<ValueTreeState>();
     port           = std::make_unique<DynamicPort>(canvas.get());
     traversalMenu  = std::make_unique<TraversalMenu>(applicationContext);
+
     traversalMenu->onWidthDragged = [this](int newWidth) {
         int total = getWidth();
         if (total <= 0) return;
@@ -74,6 +75,7 @@ applicationContext.processor   = &p;
     valueTreeState.get()->canvasData.addListener(&canvas->treeListener);
     valueTreeState.get()->nodeMap.addListener(&canvas->treeListener);
     valueTreeState.get()->nodeTreeMap.addListener(&canvas->treeListener);
+    valueTreeState.get()->traversalMap.addListener(&canvas->treeListener);
 
 
     addAndMakeVisible(port.get());
