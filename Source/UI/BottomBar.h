@@ -5,6 +5,7 @@
 #include "ColourSelector.h"
 #include "Node/ValueEditor.h"
 #include "Buttons/PaintTool.h"
+#include "Buttons/ArrowTool.h"
 
 class BottomBar : public juce::Component
 {
@@ -53,4 +54,5 @@ private:
     Node* node = nullptr;
 
     std::unique_ptr<PaintTool> paintTool;
+    std::unique_ptr<ArrowTool> arrowTool;
 };

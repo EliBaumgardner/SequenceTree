@@ -9,6 +9,7 @@
 
 #include "../Node/Node.h"
 #include "../Node/RootNode.h"
+#include "../Node/DanglingArrow.h"
 #include "NodeCanvas.h"
 #include "../../Audio/EventManager.h"
 #include "../../Graph/RTGraphBuilder.h"
@@ -83,6 +84,10 @@ void NodeCanvas::handleAsyncUpdate() {
             applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
         }
         else if (updateType == AsyncUpdateType::DurationOnly) {
+            applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
+        }
+        else if (updateType == AsyncUpdateType::DanglingArrowsChanged) {
+            rebuildDanglingArrowsForNode(nodeId);
             applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
         }
     }
@@ -294,8 +299,8 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
 
     if (!gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
         NodePosition pos = ValueTreeState::getNodePosition(nodeId);
-        gridOrigin    = { (float)pos.xPosition - CustomLookAndFeel::nodeCirclePad,
-                          (float)pos.yPosition - CustomLookAndFeel::nodeCirclePad };
+        gridOrigin    = { (float)pos.xPosition,
+                          (float)pos.yPosition };
         gridSpacing   = 50.0f;
         gridOriginSet = true;
     }
@@ -311,6 +316,7 @@ void NodeCanvas::removeNodeFromCanvas(int nodeId)
     }
 
     Node* node = nodePair->second;
+    removeDanglingArrowsForNode(node);
     removeLinePoints(node);
     removeChildComponent(node);
     delete node;
@@ -430,6 +436,13 @@ void NodeCanvas::updateLinePoints(Node* movedNode)
         childNode->nodeTextEditor->formatDisplay(mode);
         arrow->setArrowBounds(movedNode);
     }
+
+    for (DanglingArrow* danglingArrow : danglingArrows)
+    {
+        if (danglingArrow->startNode == movedNode) {
+            danglingArrow->setArrowBounds();
+        }
+    }
 }
 
 // processor-related Functions //
@@ -503,9 +516,128 @@ void NodeCanvas::hideSnapGhostArrow()
     }
 }
 
+void NodeCanvas::setArrowMode(bool enabled)
+{
+    arrowMode = enabled;
+
+    if (! enabled) {
+        cancelDanglingPreview();
+    }
+}
+
+void NodeCanvas::updateDanglingPreview(Node* node, juce::Point<int> tipOffset)
+{
+    if (node == nullptr) {
+        return;
+    }
+
+    if (danglingPreview == nullptr || danglingPreview->startNode != node) {
+        danglingPreview = std::make_unique<DanglingArrow>(node, tipOffset, applicationContext);
+        addAndMakeVisible(*danglingPreview);
+        danglingPreview->toBack();
+    }
+
+    danglingPreview->setTipOffset(tipOffset);
+}
+
+void NodeCanvas::commitDanglingArrow()
+{
+    if (danglingPreview == nullptr) {
+        return;
+    }
+
+    Node* node = danglingPreview->startNode;
+    juce::Point<int> tipOffset = danglingPreview->tipOffset;
+
+    danglingPreview.reset();
+
+    addDanglingArrow(node, tipOffset);
+}
+
+void NodeCanvas::cancelDanglingPreview()
+{
+    danglingPreview.reset();
+}
+
+void NodeCanvas::addDanglingArrow(Node* node, juce::Point<int> tipOffset)
+{
+    if (node == nullptr || ! node->nodeValueTree.isValid()) {
+        return;
+    }
+
+    juce::UndoManager* undoManager = applicationContext.undoManager;
+    juce::ValueTree nodeTree = node->nodeValueTree;
+
+    juce::ValueTree arrowList = nodeTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+    if (! arrowList.isValid()) {
+        arrowList = juce::ValueTree(ValueTreeIdentifiers::DanglingArrows);
+        nodeTree.addChild(arrowList, -1, undoManager);
+    }
+
+    juce::ValueTree arrowTree(ValueTreeIdentifiers::DanglingArrow);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
+    arrowList.addChild(arrowTree, -1, undoManager);
+}
+
+void NodeCanvas::rebuildDanglingArrowsForNode(int nodeId)
+{
+    removeDanglingArrowsForNodeId(nodeId);
+
+    auto nodePair = nodeMap.find(nodeId);
+    if (nodePair == nodeMap.end()) {
+        return;
+    }
+
+    Node* node = nodePair->second;
+    juce::ValueTree arrowList = node->nodeValueTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+    if (! arrowList.isValid()) {
+        return;
+    }
+
+    for (int i = 0; i < arrowList.getNumChildren(); ++i) {
+        juce::ValueTree arrowTree = arrowList.getChild(i);
+
+        juce::Point<int> tipOffset {
+            (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX),
+            (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)
+        };
+
+        auto arrow = std::make_unique<DanglingArrow>(node, tipOffset, applicationContext);
+        arrow->arrowTree = arrowTree;
+        addAndMakeVisible(*arrow);
+        arrow->toBack();
+        arrow->setArrowBounds();
+        danglingArrows.add(arrow.release());
+    }
+}
+
+void NodeCanvas::removeDanglingArrowsForNode(Node* node)
+{
+    for (int i = danglingArrows.size() - 1; i >= 0; --i) {
+        if (danglingArrows[i]->startNode == node) {
+            removeChildComponent(danglingArrows[i]);
+            danglingArrows.remove(i);
+        }
+    }
+}
+
+void NodeCanvas::removeDanglingArrowsForNodeId(int nodeId)
+{
+    for (int i = danglingArrows.size() - 1; i >= 0; --i) {
+        Node* startNode = danglingArrows[i]->startNode;
+        if (startNode != nullptr && startNode->getComponentID().getIntValue() == nodeId) {
+            removeChildComponent(danglingArrows[i]);
+            danglingArrows.remove(i);
+        }
+    }
+}
+
 void NodeCanvas::clearCanvas()
 {
     hideSnapGhostArrow();
+    cancelDanglingPreview();
+    danglingArrows.clear();
     nodeArrows.clear();
 
     for (auto& [nodeId, node] : nodeMap) {
@@ -577,12 +709,16 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         updateLinePoints(endNode);
     }
 
+    for (auto& [nodeId, node] : nodeMap) {
+        rebuildDanglingArrowsForNode(nodeId);
+    }
+
     if (!gridOriginSet && !rootNodeMap.empty()) {
         auto it = rootNodeMap.begin();
         int firstRootId = it->first;
         NodePosition pos = ValueTreeState::getNodePosition(firstRootId);
-        gridOrigin    = { (float)pos.xPosition - CustomLookAndFeel::nodeCirclePad,
-                          (float)pos.yPosition - CustomLookAndFeel::nodeCirclePad };
+        gridOrigin    = { (float)pos.xPosition,
+                          (float)pos.yPosition };
         gridSpacing   = 50.0f;
         gridOriginSet = true;
     }

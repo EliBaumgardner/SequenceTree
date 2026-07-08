@@ -21,6 +21,8 @@
 #include "Buttons/ButtonConstants.h"
 #include "../Buttons/PaintTool.h"
 #include "../Buttons/PaintToolSettings.h"
+#include "../Buttons/ArrowTool.h"
+#include "../Node/DanglingArrow.h"
 #include "../Graph/ValueTreeState.h"
 
 
@@ -886,6 +888,142 @@ void CustomLookAndFeel::drawPaintTool(juce::Graphics &g, const PaintTool &paintT
 
     auto tipBounds = juce::Rectangle<float>(circleDiameter, circleDiameter).withCentre(tipCentre);
     g.fillEllipse(tipBounds);
+}
+
+void CustomLookAndFeel::drawDanglingArrow(juce::Graphics &g, const DanglingArrow &danglingArrow)
+{
+    Node* node = danglingArrow.startNode;
+    if (node == nullptr) {
+        return;
+    }
+
+    juce::Point<int> startCentre = node->getNodeCentre();
+    juce::Point<int> tip         = danglingArrow.getTip();
+
+    float startX = float(startCentre.x - danglingArrow.getX());
+    float startY = float(startCentre.y - danglingArrow.getY());
+    float endX   = float(tip.x - danglingArrow.getX());
+    float endY   = float(tip.y - danglingArrow.getY());
+
+    float dx = endX - startX;
+    float dy = endY - startY;
+    float length = std::sqrt(dx * dx + dy * dy);
+
+    if (length < 1.0f) {
+        return;
+    }
+
+    float dirX = dx / length;
+    float dirY = dy / length;
+
+    float parentRadius = node->getHeight() / 2.0f;
+    startX += dirX * parentRadius;
+    startY += dirY * parentRadius;
+
+    juce::Path linePath;
+    linePath.startNewSubPath(startX, startY);
+    linePath.lineTo(endX, endY);
+
+    juce::PathStrokeType lineStroke(2.0f);
+    auto shadowPath    = linePath;
+    auto highlightPath = linePath;
+    shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
+    highlightPath.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
+
+    g.setColour(arrowColour.darker(0.4f).withAlpha(0.35f));
+    g.strokePath(shadowPath,    lineStroke);
+    g.setColour(arrowColour.brighter(0.4f).withAlpha(0.18f));
+    g.strokePath(highlightPath, lineStroke);
+    g.setColour(arrowColour);
+    g.strokePath(linePath, lineStroke);
+
+    const float arrowLength = 12.0f;
+    const float arrowWidth  = 6.0f;
+
+    float leftX  = endX - arrowLength * dirX + arrowWidth * dirY;
+    float leftY  = endY - arrowLength * dirY - arrowWidth * dirX;
+    float rightX = endX - arrowLength * dirX - arrowWidth * dirY;
+    float rightY = endY - arrowLength * dirY + arrowWidth * dirX;
+
+    juce::Path arrowHead;
+    arrowHead.startNewSubPath(leftX, leftY);
+    arrowHead.lineTo(endX, endY);
+    arrowHead.lineTo(rightX, rightY);
+    arrowHead.closeSubPath();
+
+    g.setColour(arrowHeadColour);
+    g.fillPath(arrowHead);
+
+    juce::String labelText = danglingArrow.getDurationLabel();
+    if (labelText.isNotEmpty()) {
+        float rawStartX = float(startCentre.x - danglingArrow.getX());
+        float rawStartY = float(startCentre.y - danglingArrow.getY());
+
+        float midX = (rawStartX + endX) * 0.5f;
+        float midY = (rawStartY + endY) * 0.5f;
+
+        float deltaX = endX - rawStartX;
+        float deltaY = endY - rawStartY;
+
+        float angle = std::atan2(deltaY, deltaX);
+
+        const float halfPi = juce::MathConstants<float>::halfPi;
+
+        while (angle >  halfPi) {
+            angle -= juce::MathConstants<float>::pi;
+        }
+
+        while (angle <= -halfPi) {
+            angle += juce::MathConstants<float>::pi;
+        }
+
+        const float verticalArrowTextThreshold = 0.2f;
+        const bool isVertical = std::abs(deltaX) < std::abs(deltaY) * verticalArrowTextThreshold;
+        if (isVertical) {
+            angle = 0.0f;
+        }
+
+        juce::Graphics::ScopedSaveState savedState(g);
+
+        g.addTransform(juce::AffineTransform::rotation(angle).translated(midX, midY));
+
+        g.setFont(juce::Font(10.0f));
+        g.setColour(juce::Colours::darkgrey);
+
+        float textW = 60.0f;
+        float textH = 12.0f;
+
+        g.drawText(labelText, -textW * 0.5f, -(textH * 0.5f + 2.0f), textW, textH,
+                   juce::Justification::centred, true);
+    }
+}
+
+void CustomLookAndFeel::drawArrowTool(juce::Graphics &g, const ArrowTool &arrowTool)
+{
+    auto area = arrowTool.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
+    g.setColour(arrowTool.isSelected ? buttonColour.brighter(0.3f) : buttonColour);
+    g.fillRect(area);
+
+    auto glyphArea = area.reduced(area.getWidth() * 0.22f, area.getHeight() * 0.34f);
+
+    juce::Point<float> tail(glyphArea.getX(), glyphArea.getCentreY());
+    juce::Point<float> head(glyphArea.getRight(), glyphArea.getCentreY());
+
+    g.setColour(juce::Colours::black);
+
+    juce::Path shaft;
+    shaft.addLineSegment(juce::Line<float>(tail, head), glyphArea.getHeight() * 0.16f);
+    g.fillPath(shaft);
+
+    const float headLength = glyphArea.getWidth() * 0.32f;
+    const float headWidth  = glyphArea.getHeight() * 0.5f;
+
+    juce::Path arrowHead;
+    arrowHead.startNewSubPath(head.x, head.y);
+    arrowHead.lineTo(head.x - headLength, head.y - headWidth);
+    arrowHead.lineTo(head.x - headLength, head.y + headWidth);
+    arrowHead.closeSubPath();
+    g.fillPath(arrowHead);
 }
 
 void CustomLookAndFeel::drawPaintToolSettings(juce::Graphics &g, const PaintToolSettings &paintToolSettings) {

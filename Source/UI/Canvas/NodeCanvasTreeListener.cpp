@@ -20,6 +20,24 @@ void NodeCanvasTreeListener::valueTreeChildAdded(juce::ValueTree& parent, juce::
         update.rootNodeId = child.getProperty(ValueTreeIdentifiers::RootNodeId);
         canvas.enqueueAsyncUpdate(update);
     }
+    else if (child.getType() == ValueTreeIdentifiers::DanglingArrows) {
+        enqueueDanglingArrowsChanged(parent);
+    }
+    else if (child.getType() == ValueTreeIdentifiers::DanglingArrow) {
+        enqueueDanglingArrowsChanged(parent.getParent());
+    }
+}
+
+void NodeCanvasTreeListener::enqueueDanglingArrowsChanged(const juce::ValueTree& nodeTree)
+{
+    if (! nodeTree.isValid()) {
+        return;
+    }
+
+    NodeCanvas::AsyncUpdate update;
+    update.type   = NodeCanvas::AsyncUpdateType::DanglingArrowsChanged;
+    update.nodeId = nodeTree.getProperty(ValueTreeIdentifiers::Id);
+    canvas.enqueueAsyncUpdate(update);
 }
 
 void NodeCanvasTreeListener::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int /*childIndex*/)
@@ -30,6 +48,12 @@ void NodeCanvasTreeListener::valueTreeChildRemoved(juce::ValueTree& parent, juce
         update.nodeId     = child.getProperty(ValueTreeIdentifiers::Id);
         update.rootNodeId = child.getProperty(ValueTreeIdentifiers::RootNodeId);
         canvas.enqueueAsyncUpdate(update);
+    }
+    else if (child.getType() == ValueTreeIdentifiers::DanglingArrows) {
+        enqueueDanglingArrowsChanged(parent);
+    }
+    else if (child.getType() == ValueTreeIdentifiers::DanglingArrow) {
+        enqueueDanglingArrowsChanged(parent.getParent());
     }
 }
 
@@ -68,5 +92,10 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
         update.type   = NodeCanvas::AsyncUpdateType::ValueChanged;
         update.nodeId = noteNode.getProperty(ValueTreeIdentifiers::Id);
         canvas.enqueueAsyncUpdate(update);
+    }
+    else if (propertyIdentifier == ValueTreeIdentifiers::ArrowTipX
+        || propertyIdentifier == ValueTreeIdentifiers::ArrowTipY) {
+
+        enqueueDanglingArrowsChanged(tree.getParent().getParent());
     }
 }

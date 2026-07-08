@@ -75,7 +75,7 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
 
     if (nextTarget != nullptr) {
 
-        std::unordered_map<int, int>::const_iterator it;
+        std::unordered_map<int, int>::const_iterator it = node.durationMap.end();
 
         if (node.isAlternativeNode) {
             it = node.durationMap.find(node.parentId);
@@ -98,12 +98,18 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
         }
     }
     else {
-        auto parentIt = nodes.find(lastTargetId);
-        if (parentIt != nodes.end()) {
-            auto durIt = parentIt->second.durationMap.find(node.nodeID);
+        auto danglingIt = node.durationMap.find(node.nodeID);
+        if (danglingIt != node.durationMap.end() && danglingIt->second > 0) {
+            duration = danglingIt->second;
+        }
+        else {
+            auto parentIt = nodes.find(lastTargetId);
+            if (parentIt != nodes.end()) {
+                auto durIt = parentIt->second.durationMap.find(node.nodeID);
 
-            if (durIt != parentIt->second.durationMap.end() && durIt->second > 0) {
-                duration = durIt->second;
+                if (durIt != parentIt->second.durationMap.end() && durIt->second > 0) {
+                    duration = durIt->second;
+                }
             }
         }
     }
