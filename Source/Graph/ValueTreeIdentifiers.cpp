@@ -23,6 +23,11 @@ const juce::Identifier ValueTreeIdentifiers::NodeChildrenIds      {"NodeChildren
 const juce::Identifier ValueTreeIdentifiers::MidiNotesData        {"MidiNotesData"};
 const juce::Identifier ValueTreeIdentifiers::MidiNoteData         {"MidiNoteData"};
 
+const juce::Identifier ValueTreeIdentifiers::DanglingArrows       {"DanglingArrows"};
+const juce::Identifier ValueTreeIdentifiers::DanglingArrow        {"DanglingArrow"};
+const juce::Identifier ValueTreeIdentifiers::ArrowTipX            {"ArrowTipX"};
+const juce::Identifier ValueTreeIdentifiers::ArrowTipY            {"ArrowTipY"};
+
 
 const juce::Identifier ValueTreeIdentifiers::Id                   {"Id"};
 const juce::Identifier ValueTreeIdentifiers::RootNodeId           {"RootNodeId"};

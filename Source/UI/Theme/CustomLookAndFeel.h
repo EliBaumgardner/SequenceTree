@@ -46,6 +46,9 @@ class PaintTool;
 
 class PaintToolSettings;
 
+class DanglingArrow;
+class ArrowTool;
+
 class CustomLookAndFeel : public juce::LookAndFeel_V4
 {
 
@@ -104,6 +107,7 @@ public:
     void drawNodeArrowText          (juce::Graphics &g, const NodeArrow &nodeArrow, const juce::TextEditor &editor, TextCords textCords);
 
     void drawNodeArrow      (juce::Graphics& g, const NodeArrow& nodeArrow, const juce::TextEditor& editor);
+    void drawDanglingArrow  (juce::Graphics& g, const DanglingArrow& danglingArrow);
 
     void drawPlayButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const PlayButton& button);
     void drawSyncButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const SyncButton& button);
@@ -121,6 +125,7 @@ public:
 
     void drawPaintTool         (juce::Graphics& g, const PaintTool& paintTool);
     void drawPaintToolSettings (juce::Graphics& g, const PaintToolSettings& paintToolSettings);
+    void drawArrowTool         (juce::Graphics& g, const ArrowTool& arrowTool);
 
     void updateColours();
 

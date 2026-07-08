@@ -14,5 +14,7 @@ public:
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& propertyIdentifier) override;
 
 private:
+    void enqueueDanglingArrowsChanged(const juce::ValueTree& nodeTree);
+
     NodeCanvas& canvas;
 };

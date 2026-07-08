@@ -13,6 +13,9 @@ BottomBar::BottomBar(ApplicationContext& context)
     paintTool = std::make_unique<PaintTool>(applicationContext);
     addAndMakeVisible(*paintTool);
 
+    arrowTool = std::make_unique<ArrowTool>(applicationContext);
+    addAndMakeVisible(*arrowTool);
+
     countLimitEditor       .setMinimumValue(1);
     repeatEditor           .setMinimumValue(1);
     switchCountLimitEditor .setMinimumValue(1);
@@ -106,6 +109,8 @@ void BottomBar::resized()
     int  height               = bounds.getHeight();
 
     paintTool->setBounds(bounds.removeFromRight(height));
+    bounds.removeFromRight(cellGap);
+    arrowTool->setBounds(bounds.removeFromRight(height));
     colourSelector.setBounds(bounds.removeFromLeft(height));
     bounds.removeFromLeft(16);
 

@@ -57,6 +57,15 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
         return;
     }
 
+    if (canvas->arrowMode) {
+        if (canvas->hasDanglingPreview()) {
+            applicationContext.undoManager->beginNewTransaction();
+            canvas->commitDanglingArrow();
+        }
+        isDragStart = true;
+        return;
+    }
+
     if (isDraggingValue) {
         isDraggingValue = false;
         draggingValueNode = nullptr;
@@ -272,6 +281,13 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         newPosition.radius    = defaultRadius;
 
         if (e.getDistanceFromDragStart() < 5 || !e.mods.isLeftButtonDown()) {
+            return;
+        }
+
+        if (canvas->arrowMode) {
+            juce::Point<int> centre = node->getNodeCentre();
+            canvas->updateDanglingPreview(node, { newPosition.xPosition - centre.x,
+                                                  newPosition.yPosition - centre.y });
             return;
         }
 

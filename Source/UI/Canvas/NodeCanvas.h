@@ -20,12 +20,13 @@
 class Node;
 class RootNode;
 class NodeArrow;
+class DanglingArrow;
 
 class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
     public:
 
-        enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved,DurationOnly,ValueChanged};
+        enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved,DurationOnly,ValueChanged,DanglingArrowsChanged};
 
         struct AsyncUpdate {
             AsyncUpdateType type;
@@ -44,6 +45,16 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         void updateLinePoints(Node* movedNode);
 
         void removeLinePoints(Node* node);
+
+        void setArrowMode(bool enabled);
+        void updateDanglingPreview(Node* node, juce::Point<int> tipOffset);
+        void commitDanglingArrow();
+        void cancelDanglingPreview();
+        bool hasDanglingPreview() const { return danglingPreview != nullptr; }
+        void addDanglingArrow(Node* node, juce::Point<int> tipOffset);
+        void rebuildDanglingArrowsForNode(int nodeId);
+        void removeDanglingArrowsForNode(Node* node);
+        void removeDanglingArrowsForNodeId(int nodeId);
 
         void setSelectionMode(NodeDisplayMode mode) const;
 
@@ -86,6 +97,10 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         juce::OwnedArray<NodeArrow> nodeArrows;
         NodeArrow* snapGhostArrow = nullptr;
+
+        juce::OwnedArray<DanglingArrow> danglingArrows;
+        std::unique_ptr<DanglingArrow> danglingPreview;
+        bool arrowMode = false;
 
         std::unordered_map<int, Node*> nodeMap;
 

@@ -31,6 +31,11 @@ public:
     static const juce::Identifier MidiNotesData;
     static const juce::Identifier MidiNoteData;
 
+    static const juce::Identifier DanglingArrows;
+    static const juce::Identifier DanglingArrow;
+    static const juce::Identifier ArrowTipX;
+    static const juce::Identifier ArrowTipY;
+
     // Property Identifiers
 
     static const juce::Identifier Id;

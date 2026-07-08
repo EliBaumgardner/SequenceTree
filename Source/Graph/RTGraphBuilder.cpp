@@ -14,6 +14,7 @@
 #include "../UI/Canvas/NodeCanvas.h"
 #include "../UI/Node/Node.h"
 #include "../UI/Node/NodeArrow.h"
+#include "../UI/Node/DanglingArrow.h"
 #include "../Util/ApplicationContext.h"
 #include "ValueTreeState.h"
 #include "ValueTreeIdentifiers.h"
@@ -178,6 +179,11 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
                 for (auto& [childId, nodeArrow] : nodeFromTree->nodeArrows) {
                     rtNode.durationMap[childId] = nodeArrow->duration;
                 }
+                for (DanglingArrow* danglingArrow : canvas.danglingArrows) {
+                    if (danglingArrow->startNode == nodeFromTree) {
+                        rtNode.durationMap[nodeId] = danglingArrow->getDuration();
+                    }
+                }
             }
 
 
@@ -288,6 +294,11 @@ void RTGraphBuilder::updateDurationMap(int nodeId)
         globalNodeIt->second.durationMap.clear();
         for (auto& [childId, arrow] : node->nodeArrows)
             globalNodeIt->second.durationMap[childId] = arrow->duration;
+        for (DanglingArrow* danglingArrow : canvas.danglingArrows) {
+            if (danglingArrow->startNode == node) {
+                globalNodeIt->second.durationMap[nodeId] = danglingArrow->getDuration();
+            }
+        }
     }
 
     juce::ValueTree parentVT = ValueTreeState::getNodeParent(nodeId);
@@ -301,6 +312,11 @@ void RTGraphBuilder::updateDurationMap(int nodeId)
                 globalParentIt->second.durationMap.clear();
                 for (auto& [childId, arrow] : parentNode->nodeArrows) {
                     globalParentIt->second.durationMap[childId] = arrow->duration;
+                }
+                for (DanglingArrow* danglingArrow : canvas.danglingArrows) {
+                    if (danglingArrow->startNode == parentNode) {
+                        globalParentIt->second.durationMap[parentId] = danglingArrow->getDuration();
+                    }
                 }
             }
         }
