@@ -580,6 +580,58 @@ void NodeCanvas::addDanglingArrow(Node* node, juce::Point<int> tipOffset)
     arrowList.addChild(arrowTree, -1, undoManager);
 }
 
+DanglingArrow* NodeCanvas::hitTestDanglingArrowHead(juce::Point<int> canvasPos, float radius) const
+{
+    DanglingArrow* nearest = nullptr;
+    float minDist = radius;
+
+    for (DanglingArrow* danglingArrow : danglingArrows) {
+        if (danglingArrow->startNode == nullptr) {
+            continue;
+        }
+
+        float dist = (float) canvasPos.getDistanceFrom(danglingArrow->getTip());
+        if (dist < minDist) {
+            minDist = dist;
+            nearest = danglingArrow;
+        }
+    }
+
+    return nearest;
+}
+
+void NodeCanvas::setDanglingArrowTip(DanglingArrow* arrow, juce::Point<int> tipOffset)
+{
+    if (arrow == nullptr) {
+        return;
+    }
+
+    arrow->setTipOffset(tipOffset);
+}
+
+void NodeCanvas::commitDanglingArrowTip(DanglingArrow* arrow)
+{
+    if (arrow == nullptr || ! arrow->arrowTree.isValid()) {
+        return;
+    }
+
+    juce::UndoManager* undoManager = applicationContext.undoManager;
+    arrow->arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipX, arrow->tipOffset.x, undoManager);
+    arrow->arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, arrow->tipOffset.y, undoManager);
+}
+
+void NodeCanvas::removeDanglingArrow(DanglingArrow* arrow)
+{
+    if (arrow == nullptr || ! arrow->arrowTree.isValid()) {
+        return;
+    }
+
+    juce::ValueTree arrowList = arrow->arrowTree.getParent();
+    if (arrowList.isValid()) {
+        arrowList.removeChild(arrow->arrowTree, applicationContext.undoManager);
+    }
+}
+
 void NodeCanvas::rebuildDanglingArrowsForNode(int nodeId)
 {
     removeDanglingArrowsForNodeId(nodeId);

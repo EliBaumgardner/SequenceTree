@@ -11,6 +11,7 @@
 #include "../UI/Canvas/NodeCanvas.h"
 #include "../UI/Node/Node.h"
 #include "../UI/Node/NodeArrow.h"
+#include "../UI/Node/DanglingArrow.h"
 #include "NodeController.h"
 #include "../UI/Node/Modulator.h"
 #include "../UI/Node/NodeFactory.h"
@@ -52,17 +53,32 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
 {
     NodeCanvas* canvas = applicationContext.canvas;
 
+    if (draggingDanglingArrow != nullptr) {
+        applicationContext.undoManager->beginNewTransaction();
+        canvas->commitDanglingArrowTip(draggingDanglingArrow);
+        draggingDanglingArrow = nullptr;
+
+        if (canvas->showGrid) {
+            canvas->showGrid = false;
+            canvas->repaint();
+        }
+        return;
+    }
+
     if (canvas->paintMode) {
         canvas->endStroke();
         return;
     }
 
-    if (canvas->arrowMode) {
-        if (canvas->hasDanglingPreview()) {
-            applicationContext.undoManager->beginNewTransaction();
-            canvas->commitDanglingArrow();
-        }
+    if (canvas->arrowMode && canvas->hasDanglingPreview()) {
+        applicationContext.undoManager->beginNewTransaction();
+        canvas->commitDanglingArrow();
         isDragStart = true;
+
+        if (canvas->showGrid) {
+            canvas->showGrid = false;
+            canvas->repaint();
+        }
         return;
     }
 
@@ -156,6 +172,25 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
     if (NodeCanvas* canvas = dynamic_cast<NodeCanvas*>(component)) {
 
+        if (! canvas->paintMode && e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
+            if (DanglingArrow* arrow = canvas->hitTestDanglingArrowHead({ e.x, e.y }, danglingArrowGrabRadius)) {
+                undoManager->beginNewTransaction();
+                canvas->removeDanglingArrow(arrow);
+                return;
+            }
+        }
+
+        if (! canvas->paintMode && ! e.mods.isShiftDown()) {
+            if (DanglingArrow* arrow = canvas->hitTestDanglingArrowHead({ e.x, e.y }, danglingArrowGrabRadius)) {
+                draggingDanglingArrow = arrow;
+                if (canvas->gridOriginSet) {
+                    canvas->showGrid = true;
+                    canvas->repaint();
+                }
+                return;
+            }
+        }
+
         auto parent = component->getParentComponent();
         if (auto* dynamicPort = dynamic_cast<DynamicPort*>(parent)) {
             dynamicPort->mouseDown(e.getEventRelativeTo(dynamicPort));
@@ -206,13 +241,12 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     }
 }
 
-void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree)
+juce::Point<int> NodeController::snapPointToGrid(juce::Point<int> point) const
 {
     NodeCanvas* canvas = applicationContext.canvas;
 
     if (!canvas->gridOriginSet) {
-        ValueTreeState::setNodePosition(draggedNodeTree, newPosition, undoManager);
-        return;
+        return point;
     }
 
     float spacing = canvas->gridSpacing;
@@ -220,15 +254,26 @@ void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &ne
     float oy = canvas->gridOrigin.y;
     const float snapThreshold = 12.0f;
 
-    float snappedX = ox + std::round((float(newPosition.xPosition) - ox) / spacing) * spacing;
-    float snappedY = oy + std::round((float(newPosition.yPosition) - oy) / spacing) * spacing;
+    float snappedX = ox + std::round((float(point.x) - ox) / spacing) * spacing;
+    float snappedY = oy + std::round((float(point.y) - oy) / spacing) * spacing;
 
-    if (std::abs(float(newPosition.xPosition) - snappedX) < snapThreshold) {
-        newPosition.xPosition = int(snappedX);
+    juce::Point<int> result = point;
+
+    if (std::abs(float(point.x) - snappedX) < snapThreshold) {
+        result.x = int(snappedX);
     }
-    if (std::abs(float(newPosition.yPosition) - snappedY) < snapThreshold) {
-        newPosition.yPosition = int(snappedY);
+    if (std::abs(float(point.y) - snappedY) < snapThreshold) {
+        result.y = int(snappedY);
     }
+
+    return result;
+}
+
+void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree)
+{
+    juce::Point<int> snapped = snapPointToGrid({ newPosition.xPosition, newPosition.yPosition });
+    newPosition.xPosition = snapped.x;
+    newPosition.yPosition = snapped.y;
 
     ValueTreeState::setNodePosition(draggedNodeTree, newPosition, undoManager);
 }
@@ -251,6 +296,17 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         double newValue = dragStartValue + delta;
         draggingValueNode->nodeTextEditor->bindValue.setValue(newValue);
         draggingValueNode->nodeTextEditor->formatDisplay(draggingValueNode->nodeTextEditor->mode);
+        return;
+    }
+
+    if (draggingDanglingArrow != nullptr) {
+        Node* startNode = draggingDanglingArrow->startNode;
+        if (startNode != nullptr) {
+            auto pos = e.getEventRelativeTo(canvas).getPosition();
+            juce::Point<int> snapped = snapPointToGrid(pos);
+            juce::Point<int> centre = startNode->getNodeCentre();
+            canvas->setDanglingArrowTip(draggingDanglingArrow, { snapped.x - centre.x, snapped.y - centre.y });
+        }
         return;
     }
 
@@ -284,10 +340,15 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
             return;
         }
 
-        if (canvas->arrowMode) {
-            juce::Point<int> centre = node->getNodeCentre();
-            canvas->updateDanglingPreview(node, { newPosition.xPosition - centre.x,
-                                                  newPosition.yPosition - centre.y });
+        if (canvas->arrowMode && e.mods.isShiftDown()) {
+            if (canvas->gridOriginSet) {
+                canvas->showGrid = true;
+                canvas->repaint();
+            }
+            juce::Point<int> snapped = snapPointToGrid({ newPosition.xPosition, newPosition.yPosition });
+            juce::Point<int> centre  = node->getNodeCentre();
+            canvas->updateDanglingPreview(node, { snapped.x - centre.x,
+                                                  snapped.y - centre.y });
             return;
         }
 

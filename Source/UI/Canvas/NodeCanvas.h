@@ -52,6 +52,10 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         void cancelDanglingPreview();
         bool hasDanglingPreview() const { return danglingPreview != nullptr; }
         void addDanglingArrow(Node* node, juce::Point<int> tipOffset);
+        DanglingArrow* hitTestDanglingArrowHead(juce::Point<int> canvasPos, float radius) const;
+        void setDanglingArrowTip(DanglingArrow* arrow, juce::Point<int> tipOffset);
+        void commitDanglingArrowTip(DanglingArrow* arrow);
+        void removeDanglingArrow(DanglingArrow* arrow);
         void rebuildDanglingArrowsForNode(int nodeId);
         void removeDanglingArrowsForNode(Node* node);
         void removeDanglingArrowsForNodeId(int nodeId);

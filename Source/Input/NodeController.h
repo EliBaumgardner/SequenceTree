@@ -27,6 +27,8 @@ class NodeData;
 
 class NodeFactory;
 
+class DanglingArrow;
+
 
 
 class NodeController : public juce::MouseListener {
@@ -45,6 +47,7 @@ public:
     void mouseDown           (const juce::MouseEvent& e) override;
 
     void snapToGrid          (juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree);
+    juce::Point<int> snapPointToGrid (juce::Point<int> point) const;
 
     void handleNodeDrag      (juce::UndoManager *undoManager, int nodeId, NodePosition newPosition);
     void handleNodeDragStart (juce::UndoManager *undoManager, Node *node, int nodeId, NodePosition newPosition, const juce::ModifierKeys& mods);
@@ -53,9 +56,12 @@ public:
 
 private:
 
-    static constexpr float rootSnapThreshold = 60.0f;
+    static constexpr float rootSnapThreshold      = 60.0f;
+    static constexpr float danglingArrowGrabRadius = 14.0f;
 
     ApplicationContext& applicationContext;
+
+    DanglingArrow* draggingDanglingArrow = nullptr;
 
     Node* snapTargetRoot           = nullptr;
 
