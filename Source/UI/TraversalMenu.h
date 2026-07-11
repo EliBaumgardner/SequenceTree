@@ -39,6 +39,12 @@ public:
     juce::Label channelLabel;
     ValueEditor channelEditor;
 
+    juce::Label transposeLabel;
+    ValueEditor transposeEditor;
+
+    juce::Label velocityLabel;
+    ValueEditor velocityEditor;
+
     juce::Label colourLabel;
     ColourSelector colourSelector;
 

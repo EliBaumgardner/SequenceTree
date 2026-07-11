@@ -185,7 +185,7 @@ void TraversalDispatcher::pushNote(const RTNode& node, int traversalId,
     }
 
 
-    scheduler.scheduleNote(effectiveNode, traversalId, sample, midiMessages, sampleRate, tempoMultiplier, duration, false, traversalLogic.traversal.channel);
+    scheduler.scheduleNote(effectiveNode, traversalId, sample, midiMessages, sampleRate, tempoMultiplier, duration, false, traversalLogic.traversal.channel, traversalLogic.traversal.transpose, traversalLogic.traversal.velocityMultiplier);
 
     int chordParentCount = traversalLogic.primary.counts[node.nodeID] + 1;
     pushChordNotes(node, sample, duration, midiMessages, sampleRate, tempoMultiplier, nodes, chordParentCount, traversalLogic);
@@ -278,7 +278,7 @@ void TraversalDispatcher::dispatchCrossTree(const RTNode& node, int traversalId,
         }
 
         scheduler.scheduleNote(crossTreeRoot, traversalId, sample, midiMessages,
-                               sampleRate, tempoMultiplier, connectionDuration, true, traversal.traversal.channel);
+                               sampleRate, tempoMultiplier, connectionDuration, true, traversal.traversal.channel, traversal.traversal.transpose, traversal.traversal.velocityMultiplier);
 
         const int wallClockMs = static_cast<int>(connectionDuration / tempoMultiplier);
         bridge.pushProgress(progressSourceId, crossTreeRootId, wallClockMs, rootId, traversal.traversal.traversalId);
@@ -323,7 +323,7 @@ void TraversalDispatcher::pushChordNotes(const RTNode& node, int sample, int dur
             }
 
             scheduler.scheduleNote(chordNode, -1, sample, midiMessages,
-                                   sampleRate, tempoMultiplier, duration, false, traversalLogic.traversal.channel);
+                                   sampleRate, tempoMultiplier, duration, false, traversalLogic.traversal.channel, traversalLogic.traversal.transpose, traversalLogic.traversal.velocityMultiplier);
 
             bridge.highlightNode(chordNode, true, traversalLogic.traversal.traversalId);
 

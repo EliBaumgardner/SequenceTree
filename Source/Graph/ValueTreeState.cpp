@@ -425,6 +425,10 @@ juce::ValueTree ValueTreeState::createTraversalData(int traversalId, juce::UndoM
 
     traversalData.setProperty(ValueTreeIdentifiers::TraversalChannel, 1, undoManager);
 
+    traversalData.setProperty(ValueTreeIdentifiers::TraversalTranspose, 0, undoManager);
+
+    traversalData.setProperty(ValueTreeIdentifiers::TraversalVelocity, 1.0, undoManager);
+
     traversalMap.addChild(traversalData, -1, undoManager);
     return traversalData;
 }

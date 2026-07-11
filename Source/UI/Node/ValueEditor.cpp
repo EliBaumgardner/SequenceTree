@@ -62,6 +62,9 @@ juce::String ValueEditor::getDisplayText() const
         if (acceptMultiple) {
             return juce::String(editorText);
         }
+        if (signedMode && primaryValue > 0) {
+            return "+" + juce::String(primaryValue);
+        }
         return juce::String(primaryValue);
     }
 
@@ -116,12 +119,22 @@ void ValueEditor::enableDualValue(const juce::Identifier& secondaryPropertyID)
     textEditor->setInputRestrictions(9, "0123456789:");
 }
 
-void ValueEditor::enableDecimalValue(double min)
+void ValueEditor::enableDecimalValue(double min, double max)
 {
     decimalMode     = true;
     minDecimalValue = min;
+    maxDecimalValue = max;
 
     textEditor->setInputRestrictions(6, "0123456789.");
+}
+
+void ValueEditor::enableSignedValue(int min, int max)
+{
+    signedMode = true;
+    minValue   = min;
+    maxValue   = max;
+
+    textEditor->setInputRestrictions(4, "-0123456789");
 }
 
 void ValueEditor::textEditorReturnKeyPressed(juce::TextEditor&)
@@ -176,6 +189,9 @@ void ValueEditor::commitSingleValue(const juce::String& text)
         if (value < minDecimalValue) {
             value = minDecimalValue;
         }
+        if (value > maxDecimalValue) {
+            value = maxDecimalValue;
+        }
 
         boundValue.setValue(value);
         return;
@@ -184,6 +200,9 @@ void ValueEditor::commitSingleValue(const juce::String& text)
     int value = text.getIntValue();
     if (value < minValue) {
         value = minValue;
+    }
+    if (value > maxValue) {
+        value = maxValue;
     }
 
     boundValue.setValue(value);

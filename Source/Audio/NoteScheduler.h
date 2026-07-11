@@ -34,7 +34,8 @@ public:
     void scheduleNote(const RTNode& node, int traversalId, int sample,
                       juce::MidiBuffer& midiMessages,
                       double sampleRate, double tempoMultiplier,
-                      int duration, bool isConnectionTrigger = false, int channel = -1);
+                      int duration, bool isConnectionTrigger = false, int channel = -1, int transpose = 0,
+                      double velocityMultiplier = 1.0);
 
     void sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
     void removeNote(int index);

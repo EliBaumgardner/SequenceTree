@@ -8,7 +8,7 @@
 #include "../Graph/ValueTreeState.h"
 #include "Theme/CustomLookAndFeel.h"
 
-TraversalMenu::TraversalMenu(ApplicationContext& context) : displayMenu(context), multiplierEditor(context), channelEditor(context), colourSelector(context) {
+TraversalMenu::TraversalMenu(ApplicationContext& context) : displayMenu(context), multiplierEditor(context), channelEditor(context), transposeEditor(context), velocityEditor(context), colourSelector(context) {
     setLookAndFeel(context.lookAndFeel);
     addAndMakeVisible(displayMenu);
     addAndMakeVisible(resizer);
@@ -30,6 +30,24 @@ TraversalMenu::TraversalMenu(ApplicationContext& context) : displayMenu(context)
 
     channelEditor.setMinimumValue(1);
     addAndMakeVisible(channelEditor);
+
+    transposeLabel.setText("Transpose", juce::dontSendNotification);
+    transposeLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    transposeLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
+    transposeLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(transposeLabel);
+
+    transposeEditor.enableSignedValue(-24, 24);
+    addAndMakeVisible(transposeEditor);
+
+    velocityLabel.setText("Velocity", juce::dontSendNotification);
+    velocityLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    velocityLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
+    velocityLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(velocityLabel);
+
+    velocityEditor.enableDecimalValue(0.0, 1.0);
+    addAndMakeVisible(velocityEditor);
 
     colourLabel.setText("Colour", juce::dontSendNotification);
     colourLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
@@ -86,6 +104,16 @@ void TraversalMenu::selectTraversal(int traversalId) {
     }
     channelEditor.bindEditor(traversalData, ValueTreeIdentifiers::TraversalChannel);
 
+    if (!traversalData.hasProperty(ValueTreeIdentifiers::TraversalTranspose)) {
+        traversalData.setProperty(ValueTreeIdentifiers::TraversalTranspose, 0, nullptr);
+    }
+    transposeEditor.bindEditor(traversalData, ValueTreeIdentifiers::TraversalTranspose);
+
+    if (!traversalData.hasProperty(ValueTreeIdentifiers::TraversalVelocity)) {
+        traversalData.setProperty(ValueTreeIdentifiers::TraversalVelocity, 1.0, nullptr);
+    }
+    velocityEditor.bindEditor(traversalData, ValueTreeIdentifiers::TraversalVelocity);
+
     juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
     colourSelector.colour = colourString.isNotEmpty() ? juce::Colour::fromString(colourString) : juce::Colours::white;
     colourSelector.repaint();
@@ -120,6 +148,14 @@ void TraversalMenu::resized() {
     auto channelArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
     channelLabel.setBounds(channelArea.removeFromLeft(channelArea.getWidth() / 2));
     channelEditor.setBounds(channelArea);
+
+    auto transposeArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
+    transposeLabel.setBounds(transposeArea.removeFromLeft(transposeArea.getWidth() / 2));
+    transposeEditor.setBounds(transposeArea);
+
+    auto velocityArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
+    velocityLabel.setBounds(velocityArea.removeFromLeft(velocityArea.getWidth() / 2));
+    velocityEditor.setBounds(velocityArea);
 
     auto colourArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
     colourLabel.setBounds(colourArea.removeFromLeft(colourArea.getWidth() / 2));

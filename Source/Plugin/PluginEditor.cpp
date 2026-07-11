@@ -95,6 +95,7 @@ SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
     ValueTreeState::canvasData.removeListener(&canvas->treeListener);
     ValueTreeState::nodeMap.removeListener(&canvas->treeListener);
     ValueTreeState::nodeTreeMap.removeListener(&canvas->treeListener);
+    ValueTreeState::traversalMap.removeListener(&canvas->treeListener);
 }
 
 

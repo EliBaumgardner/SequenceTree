@@ -87,6 +87,8 @@ public:
     static const juce::Identifier TempoMultiplier;
     static const juce::Identifier TraversalColour;
     static const juce::Identifier TraversalChannel;
+    static const juce::Identifier TraversalTranspose;
+    static const juce::Identifier TraversalVelocity;
     // Traversal ValueTrees
 };
 
