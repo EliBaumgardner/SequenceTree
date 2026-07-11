@@ -5,6 +5,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <limits>
 #include "../../Util/ApplicationContext.h"
 
 
@@ -27,7 +28,8 @@ public:
     void bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID);
 
     void enableDualValue(const juce::Identifier& secondaryPropertyID);
-    void enableDecimalValue(double min);
+    void enableDecimalValue(double min, double max = std::numeric_limits<double>::max());
+    void enableSignedValue(int min, int max);
     void setMinimumValue(int min);
     void valueChanged(juce::Value&) override;
     void commitValue();
@@ -67,5 +69,8 @@ private:
     bool acceptMultiple   = false;
 
     int  minValue         = 1;
+    int  maxValue         = std::numeric_limits<int>::max();
+    bool signedMode       = false;
     double minDecimalValue = 0.1;
+    double maxDecimalValue = std::numeric_limits<double>::max();
 };

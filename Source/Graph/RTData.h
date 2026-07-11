@@ -29,6 +29,8 @@ struct RTtraversal {
     int traversalId = 0;
     double tempoMultiplier = 1;
     int channel = 1;
+    int transpose = 0;
+    double velocityMultiplier = 1.0;
 };
 
 struct RTNode {

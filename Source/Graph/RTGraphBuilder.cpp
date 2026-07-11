@@ -146,6 +146,14 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
                     if (traversalData.hasProperty(ValueTreeIdentifiers::TraversalChannel)) {
                         rtTraversal.channel = traversalData.getProperty(ValueTreeIdentifiers::TraversalChannel);
                     }
+
+                    if (traversalData.hasProperty(ValueTreeIdentifiers::TraversalTranspose)) {
+                        rtTraversal.transpose = traversalData.getProperty(ValueTreeIdentifiers::TraversalTranspose);
+                    }
+
+                    if (traversalData.hasProperty(ValueTreeIdentifiers::TraversalVelocity)) {
+                        rtTraversal.velocityMultiplier = traversalData.getProperty(ValueTreeIdentifiers::TraversalVelocity);
+                    }
                 }
 
                 rtNode.traversals.push_back(rtTraversal);
