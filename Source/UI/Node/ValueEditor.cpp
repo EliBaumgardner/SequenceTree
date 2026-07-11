@@ -13,15 +13,21 @@ ValueEditor::ValueEditor(ApplicationContext& context) : applicationContext(conte
     setLookAndFeel(applicationContext.lookAndFeel);
 
     textEditor = std::make_unique<juce::TextEditor>();
+
     textEditor->addListener(this);
+
     textEditor->setMultiLine(false);
     textEditor->setReturnKeyStartsNewLine(false);
+
     textEditor->setInputRestrictions(4, "0123456789");
+
     textEditor->setJustification(juce::Justification::centred);
+
     textEditor->setColour(juce::TextEditor::backgroundColourId,     juce::Colours::transparentBlack);
     textEditor->setColour(juce::TextEditor::outlineColourId,        juce::Colours::transparentBlack);
     textEditor->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
     textEditor->setColour(juce::TextEditor::textColourId,           juce::Colours::lightgrey);
+
     textEditor->setFont(juce::Font(juce::FontOptions(9.0f)));
     textEditor->setVisible(false);
 
@@ -53,6 +59,9 @@ juce::String ValueEditor::getDisplayText() const
     int primaryValue = (int) boundValue.getValue();
 
     if (!dualNumberMode) {
+        if (acceptMultiple) {
+            return juce::String(editorText);
+        }
         return juce::String(primaryValue);
     }
 
@@ -132,13 +141,17 @@ void ValueEditor::setMinimumValue(int min)
 
 void ValueEditor::commitValue()
 {
-    juce::String text = textEditor->getText();
+    editorText = textEditor->getText();
 
     if (dualNumberMode) {
-        commitDualValue(text);
+        commitDualValue(editorText);
+    }
+    else if (acceptMultiple){
+        DBG("acceptMultiple");
+        commitMultipleValues(editorText);
     }
     else {
-        commitSingleValue(text);
+        commitSingleValue(editorText);
     }
 
     if (boundTree.isValid() && applicationContext.rtGraphBuilder != nullptr) {
@@ -148,6 +161,12 @@ void ValueEditor::commitValue()
     isEditing = false;
     textEditor->setVisible(false);
     repaint();
+}
+
+void ValueEditor::acceptMultipleValues() {
+
+    acceptMultiple = true;
+    textEditor->setInputRestrictions(8, "0123456789' ',");
 }
 
 void ValueEditor::commitSingleValue(const juce::String& text)
@@ -197,6 +216,22 @@ void ValueEditor::commitDualValue(const juce::String& text)
 
     boundValue.setValue(primaryValue);
     boundSecondaryValue.setValue(secondaryValue);
+}
+
+void ValueEditor::commitMultipleValues(const juce::String &text) {
+    DBG(text);
+
+    for (int i = 0; i < text.length(); i++) {
+        char c = text[i];
+        if (c != ' ' && c != ',') {
+            DBG(c);
+            juce::Value value;
+            value.setValue(c);
+            values.push_back(value);
+        }
+    }
+
+    onValueChange();
 }
 
 void ValueEditor::valueChanged(juce::Value&)

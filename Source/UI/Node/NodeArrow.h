@@ -12,6 +12,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../../Util/ApplicationContext.h"
+#include "ArrowProgress.h"
 
 class Node;
 
@@ -29,8 +30,9 @@ public:
   void valueChanged(juce::Value&) override;
 
   void triggerSnapAnimation();
-  void startProgress(int durationMs);
+  void startProgress(int traversalId, int durationMs, juce::Colour colour);
   void resetProgress();
+  void resetProgress(int traversalId);
   void timerCallback() override;
 
   Node* startNode = nullptr;
@@ -49,9 +51,7 @@ public:
   float animT  = 1.0f;
   int duration = 0;
 
-  float progressT      = 0.0f;
-  bool  progressActive = false;
-  juce::Colour progressColour { juce::Colours::white };
+  ArrowProgress progress;
 
   bool updateFromBindValue = false;
   bool isGhost = false;
@@ -60,11 +60,8 @@ public:
 
 private:
   float  animVelocity       = 0.0f;
-  double progressStartMs    = 0.0;
-  int    progressDurationMs = 0;
 
   void ensureAnimationTimerRunning();
   bool advanceSnapAnimation();
-  bool advanceProgressAnimation();
   bool isSnapSettled() const;
 };

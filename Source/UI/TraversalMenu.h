@@ -36,6 +36,9 @@ public:
     juce::Label multiplierLabel;
     ValueEditor multiplierEditor;
 
+    juce::Label channelLabel;
+    ValueEditor channelEditor;
+
     juce::Label colourLabel;
     ColourSelector colourSelector;
 

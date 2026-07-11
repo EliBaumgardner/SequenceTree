@@ -18,13 +18,13 @@ public:
 
     void pushNote(const RTNode& node, int traversalId,
                   juce::MidiBuffer& midiMessages, int sample,
-                  const NodeMap& nodes, NodeStateMap& nodeStates, TraversalMap& traversalMap,
+                  const NodeMap& nodes, TraversalMap& traversalMap,
                   bool isPrimaryRepeat = false);
 
     void handleExpiredNote(const NoteScheduler::ActiveNote& expiredNote,
                            int priorityNoteDuration,
                            juce::MidiBuffer& midiMessages,
-                           const NodeMap& nodes, NodeStateMap& nodeStates, TraversalMap& traversalMap);
+                           const NodeMap& nodes, TraversalMap& traversalMap);
 
     void resetTraversal(int graphId, int newTargetId,
                         const NodeMap& nodes, TraversalMap& traversalMap);
@@ -34,15 +34,15 @@ public:
 private:
 
     void pushModulatorNotes(int modulatorRootId, juce::MidiBuffer& midiMessages,
-                            int sample, const NodeMap& nodes, NodeStateMap& nodeStates, TraversalMap& traversalMap);
+                            int sample, const NodeMap& nodes, TraversalMap& traversalMap);
 
     void pushRootNodeConnection(int rootNodeId, juce::MidiBuffer& midiMessages,
-                                int sample, const NodeMap& nodes, NodeStateMap& nodeStates, TraversalMap& traversalMap);
+                                int sample, const NodeMap& nodes, TraversalMap& traversalMap);
 
     int resolveDuration(const RTNode& node, const RTNode* nextTarget,
                         int lastTargetId, const NodeMap& nodes);
 
-    void dispatchModulator(const RTNode &node, const NodeMap& nodes, NodeStateMap& nodeStates, TraversalLogic &traversalLogic, const RTNode*& modulatorNode, TraversalMap &traverserMap, bool isPrimaryRepeat);
+    void dispatchModulator(const RTNode &node, const NodeMap& nodes, TraversalLogic &traversalLogic, const RTNode*& modulatorNode, TraversalMap &traverserMap, bool isPrimaryRepeat);
 
     void pushChordNotes(const RTNode& node, int sample, int duration,
                         juce::MidiBuffer& midiMessages,
@@ -63,7 +63,7 @@ private:
     void dispatchCrossTree(const RTNode& node, int traversalId, int sample, int rootId,
                            juce::MidiBuffer& midiMessages,
                            double sampleRate, double tempoMultiplier,
-                           const NodeMap& nodes, NodeStateMap& nodeStates, TraversalLogic& traversal);
+                           const NodeMap& nodes, TraversalLogic& traversal);
 
     SequenceTreeAudioProcessor& processor;
     NoteScheduler&              scheduler;

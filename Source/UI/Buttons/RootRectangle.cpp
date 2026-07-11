@@ -5,14 +5,15 @@
 #include "RootRectangle.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-RootRectangle::RootRectangle(ApplicationContext& context) : loopLimitEditor(context)
+RootRectangle::RootRectangle(ApplicationContext& context) : traversalEditor(context)
 {
     setLookAndFeel(context.lookAndFeel);
 
-    loopLimitEditor.setMinimumValue(0);
-    loopLimitEditor.setInterceptsMouseClicks(true, false);
-    loopLimitEditor.setTooltip("Loop Limit");
-    addAndMakeVisible(loopLimitEditor);
+    traversalEditor.setMinimumValue(0);
+    traversalEditor.setInterceptsMouseClicks(true, false);
+    traversalEditor.setTooltip("Loop Limit");
+    traversalEditor.acceptMultipleValues();
+    addAndMakeVisible(traversalEditor);
 }
 
 void RootRectangle::paint(juce::Graphics &g) {
@@ -20,5 +21,5 @@ void RootRectangle::paint(juce::Graphics &g) {
 }
 
 void RootRectangle::resized() {
-    loopLimitEditor.setBounds(getLocalBounds());
+    traversalEditor.setBounds(getLocalBounds());
 }

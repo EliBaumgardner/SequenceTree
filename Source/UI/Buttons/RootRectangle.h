@@ -17,7 +17,7 @@ public:
     void resized() override;
     void paint(juce::Graphics& g) override;
 
-    ValueEditor loopLimitEditor;
+    ValueEditor traversalEditor;
 };
 
 

@@ -117,20 +117,22 @@ void NodeArrow::triggerSnapAnimation()
     ensureAnimationTimerRunning();
 }
 
-void NodeArrow::startProgress(int durationMs)
+void NodeArrow::startProgress(int traversalId, int durationMs, juce::Colour colour)
 {
-    progressT          = 0.0f;
-    progressActive     = durationMs > 0;
-    progressStartMs    = juce::Time::getMillisecondCounterHiRes();
-    progressDurationMs = juce::jmax(1, durationMs);
+    progress.start(traversalId, durationMs, colour);
     ensureAnimationTimerRunning();
     repaint();
 }
 
 void NodeArrow::resetProgress()
 {
-    progressT      = 0.0f;
-    progressActive = false;
+    progress.reset();
+    repaint();
+}
+
+void NodeArrow::resetProgress(int traversalId)
+{
+    progress.reset(traversalId);
     repaint();
 }
 
@@ -165,32 +167,12 @@ bool NodeArrow::advanceSnapAnimation()
     return false;
 }
 
-bool NodeArrow::advanceProgressAnimation()
-{
-    if (! progressActive) {
-        return true;
-    }
-
-    const double currentTimeMs      = juce::Time::getMillisecondCounterHiRes();
-    const double elapsedMs          = currentTimeMs - progressStartMs;
-    const double normalisedProgress = elapsedMs / static_cast<double>(progressDurationMs);
-
-    if (normalisedProgress >= 1.0) {
-        progressT      = 1.0f;
-        progressActive = false;
-        return true;
-    }
-
-    progressT = static_cast<float>(juce::jlimit(0.0, 1.0, normalisedProgress));
-    return false;
-}
-
 void NodeArrow::timerCallback()
 {
-    const bool snapDone     = advanceSnapAnimation();
-    const bool progressDone = advanceProgressAnimation();
+    const bool snapDone       = advanceSnapAnimation();
+    const bool progressActive = progress.advance();
 
-    if (snapDone && progressDone) {
+    if (snapDone && ! progressActive) {
         stopTimer();
     }
 

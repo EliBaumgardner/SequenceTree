@@ -11,6 +11,8 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <map>
+#include <set>
 
 #include "../../Util/NodeInfo.h"
 #include "../../Util/ApplicationContext.h"
@@ -36,7 +38,7 @@ public:
     void setHoverVisual    (bool isHovered);
     void setSelectVisual   (bool isSelected);
     void setSelectVisual   ();
-    void setHighlightVisual(bool isHighlighted);
+    void setHighlightVisual(int traversalId, bool isHighlighted, juce::Colour colour);
 
     std::function<void(Node*, bool)> onSelected;
     void timerCallback() override;
@@ -71,8 +73,8 @@ public:
     bool isHovered           = false;
     bool isSelected          = false;
     bool isHighlighted       = false;
-    bool pendingHighlightOff = false;
-    juce::Colour highlightColour { juce::Colours::white };
+    std::map<int, juce::Colour> activeHighlights;
+    std::set<int>               pendingHighlightOffIds;
     bool isAlternativeNode   = false;
 
     float pulsePhase         = 1.0f;

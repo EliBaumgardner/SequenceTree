@@ -10,7 +10,7 @@
 #include "Node.h"
 #include "NodeArrow.h"
 
-class DanglingArrow : public juce::Component
+class DanglingArrow : public juce::Component, private juce::Timer
 {
 public:
 
@@ -19,6 +19,38 @@ public:
     {
         setLookAndFeel(context.lookAndFeel);
         setInterceptsMouseClicks(false, false);
+    }
+
+    ~DanglingArrow() override { stopTimer(); }
+
+    void startProgress(int traversalId, int durationMs, juce::Colour colour)
+    {
+        progress.start(traversalId, durationMs, colour);
+        if (! isTimerRunning()) {
+            startTimerHz(animationTimerHz);
+        }
+        repaint();
+    }
+
+    void resetProgress()
+    {
+        progress.reset();
+        repaint();
+    }
+
+    void resetProgress(int traversalId)
+    {
+        progress.reset(traversalId);
+        repaint();
+    }
+
+    void timerCallback() override
+    {
+        if (! progress.advance()) {
+            stopTimer();
+        }
+
+        repaint();
     }
 
     void paint(juce::Graphics& g) override
@@ -85,5 +117,8 @@ public:
     juce::Point<int> tipOffset;
     juce::ValueTree arrowTree;
 
+    ArrowProgress progress;
+
     static constexpr int arrowBoundsPadding = 40;
+    static constexpr int animationTimerHz   = 60;
 };

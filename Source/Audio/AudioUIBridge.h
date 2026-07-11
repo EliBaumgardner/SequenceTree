@@ -34,6 +34,7 @@ public:
     struct ResetCommand
     {
         int rootId        = 0;
+        int traversalId   = -1;
     };
 
 
@@ -56,6 +57,6 @@ public:
 
     void highlightNode(const RTNode& node, bool shouldHighlight, int traversalId = -1);
     void pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId, int traversalId);
-    void pushArrowReset(int rootId);
+    void pushArrowReset(int rootId, int traversalId = -1);
     void pushCount(int nodeId, int currentCount, int countLimit);
 };

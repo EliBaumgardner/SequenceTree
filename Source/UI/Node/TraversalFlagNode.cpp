@@ -4,6 +4,8 @@
 
 #include "TraversalFlagNode.h"
 #include "NodeTextEditor.h"
+#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
 
 #include <cmath>
 
@@ -19,7 +21,41 @@ TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context
     downButton.setVisible(false);
 
     traversalNumEditor = std::make_unique<ValueEditor>(context);
+    traversalNumEditor->setMinimumValue(0);
+    traversalNumEditor->setInterceptsMouseClicks(true, false);
+    traversalNumEditor->setTooltip("Traversal");
+    traversalNumEditor->acceptMultipleValues();
     addAndMakeVisible(traversalNumEditor.get());
+
+    traversalNumEditor->boundValue.setValue(1);
+
+    traversalNumEditor->onValueChange = [this]() {
+
+        juce::String text = traversalNumEditor->textEditor->getText();
+
+        std::vector<int> words;
+        juce::String word;
+
+        for (int i = 0; i <= text.length(); i++) {
+
+            bool isDigit = i < text.length() && juce::CharacterFunctions::isDigit(text[i]);
+
+            if (isDigit) {
+                word += text[i];
+            }
+            else if (word.isNotEmpty()) {
+                words.push_back(word.getIntValue());
+                word.clear();
+            }
+        }
+
+        for (int traversalId : words) {
+
+            if (!ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
+                ValueTreeState::createTraversalData(traversalId, nullptr);
+            }
+        }
+    };
 
     if (nodeTextEditor != nullptr) {
         nodeTextEditor->setVisible(false);

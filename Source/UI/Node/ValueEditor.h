@@ -32,8 +32,14 @@ public:
     void valueChanged(juce::Value&) override;
     void commitValue();
 
+    void acceptMultipleValues();
+
     std::unique_ptr<juce::TextEditor> textEditor;
     juce::Value boundValue;
+
+    std::vector<juce::Value> values;
+
+    juce::String editorText;
 
 private:
     void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
@@ -42,6 +48,7 @@ private:
     juce::String getDisplayText() const;
     void commitSingleValue(const juce::String& text);
     void commitDualValue  (const juce::String& text);
+    void commitMultipleValues(const juce::String& text);
 
     ApplicationContext& applicationContext;
 
@@ -57,6 +64,8 @@ private:
     bool suppressCallback = false;
     bool dualNumberMode   = false;
     bool decimalMode      = false;
+    bool acceptMultiple   = false;
+
     int  minValue         = 1;
     double minDecimalValue = 0.1;
 };

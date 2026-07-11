@@ -24,14 +24,14 @@ void AudioUIBridge::pushProgress(int parentNodeId, int childNodeId, int duration
     else { jassertfalse; }
 }
 
-void AudioUIBridge::pushArrowReset(int rootId)
+void AudioUIBridge::pushArrowReset(int rootId, int traversalId)
 {
     const auto scope = arrowResetFifo.write(1);
     if (scope.blockSize1 > 0) {
-        arrowResetBuffer[static_cast<size_t>(scope.startIndex1)] = {rootId};
+        arrowResetBuffer[static_cast<size_t>(scope.startIndex1)] = {rootId, traversalId};
     }
     else if (scope.blockSize2 > 0) {
-        arrowResetBuffer[static_cast<size_t>(scope.startIndex2)] = {rootId};
+        arrowResetBuffer[static_cast<size_t>(scope.startIndex2)] = {rootId, traversalId};
     }
     else { jassertfalse; }
 }

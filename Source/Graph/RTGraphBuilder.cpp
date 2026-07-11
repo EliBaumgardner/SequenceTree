@@ -142,6 +142,10 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
 
                 if (traversalData.isValid()) {
                     rtTraversal.tempoMultiplier = traversalData.getProperty(ValueTreeIdentifiers::TempoMultiplier);
+
+                    if (traversalData.hasProperty(ValueTreeIdentifiers::TraversalChannel)) {
+                        rtTraversal.channel = traversalData.getProperty(ValueTreeIdentifiers::TraversalChannel);
+                    }
                 }
 
                 rtNode.traversals.push_back(rtTraversal);
@@ -269,7 +273,7 @@ void RTGraphBuilder::updateDurationMap(int nodeId)
 {
     auto* processor = applicationContext.processor;
     auto snap = std::atomic_load(&processor->audioSnapshot);
-    if (!snap || !snap->globalNodes || !snap->nodeStates) {
+    if (!snap || !snap->globalNodes) {
         return;
     }
 
@@ -287,7 +291,6 @@ void RTGraphBuilder::updateDurationMap(int nodeId)
 
     auto newSnap = std::make_shared<SequenceTreeAudioProcessor::AudioSnapshot>();
     newSnap->globalNodes = std::make_shared<NodeMap>(*snap->globalNodes);
-    newSnap->nodeStates  = std::make_shared<NodeStateMap>(*snap->nodeStates);
     newSnap->rtGraphs    = snap->rtGraphs;
 
     auto globalNodeIt = newSnap->globalNodes->find(nodeId);

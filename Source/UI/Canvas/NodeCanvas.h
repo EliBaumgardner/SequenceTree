@@ -88,7 +88,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         void drainArrowResetFifo();
 
         void resetAllArrowProgress();
-        void resetGraphArrowProgress(int graphId);
+        void resetGraphArrowProgress(int graphId, int traversalId);
 
         void setPaintMode(bool enabled);
         void setBrushColour(juce::Colour colour);

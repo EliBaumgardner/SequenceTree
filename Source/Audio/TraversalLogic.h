@@ -31,6 +31,8 @@ public:
     Walker primary;
     Walker modulator;
 
+    NodeStateMap nodeStates;
+
     std::unordered_map<int,int> chordCounts;
     std::unordered_map<int,int> crossTreeCounts;
     std::unordered_map<int,int> crossTreeSwitchCounts;
@@ -79,25 +81,25 @@ public:
 
     TraversalLogic(int root, AudioUIBridge& bridge, RTtraversal traversal);
 
-    StepResult handleNodeEvent(const NodeMap& nodes, NodeStateMap& nodeStates);
+    StepResult handleNodeEvent(const NodeMap& nodes);
 
-    void advanceAlternative(const NodeMap& nodes, NodeStateMap& nodeStates, int parentId);
+    void advanceAlternative(const NodeMap& nodes, int parentId);
 
-    void selectSwitchNode(const NodeMap& nodes, NodeStateMap& nodeStates, int targetId, int& chosenNodeId);
+    void selectSwitchNode(const NodeMap& nodes, int targetId, int& chosenNodeId);
 
-    void advance(const NodeMap& nodes, NodeStateMap& nodeStates);
-    void advanceModulator(const NodeMap& nodes, NodeStateMap& nodeStates);
-    int advanceAlternativeNode(const NodeMap& nodes, NodeStateMap& nodeStates);
+    void advance(const NodeMap& nodes);
+    void advanceModulator(const NodeMap& nodes);
+    int advanceAlternativeNode(const NodeMap& nodes);
 
-    const RTNode* peekNextTarget(const NodeMap& nodes, NodeStateMap& nodeStates);
+    const RTNode* peekNextTarget(const NodeMap& nodes);
 
     using ChildPredicate = bool (*)(RTNode::NodeType);
-    int selectNextChild(const NodeMap& nodes, NodeStateMap& nodeStates, int parentId, int parentCount, ChildPredicate isEligible);
+    int selectNextChild(const NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible);
 
     void registerTrigger(const NodeMap& nodes, int nodeId);
 
     std::vector<int> peekCrossTreeNode(const NodeMap& nodes);
-    const RTNode* peekModulators(const NodeMap& nodes, NodeStateMap& nodeStates);
+    const RTNode* peekModulators(const NodeMap& nodes);
 
     const RTNode& getTargetNode   (const NodeMap& nodes) const;
     const RTNode& getLastNode     (const NodeMap& nodes) const;
@@ -115,6 +117,7 @@ public:
     void resetCounts() {
         primary.counts.clear();
         chordCounts.clear();
+        nodeStates.clear();
     }
 };
 
