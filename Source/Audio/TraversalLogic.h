@@ -79,25 +79,25 @@ public:
 
     TraversalLogic(int root, AudioUIBridge& bridge, RTtraversal traversal);
 
-    StepResult handleNodeEvent(NodeMap& nodes);
+    StepResult handleNodeEvent(const NodeMap& nodes, NodeStateMap& nodeStates);
 
-    void advanceAlternative(NodeMap &nodes, int parentId);
+    void advanceAlternative(const NodeMap& nodes, NodeStateMap& nodeStates, int parentId);
 
-    void selectSwitchNode(NodeMap &nodes, int targetId, int &chosenNodeId, RTNode &targetNode);
+    void selectSwitchNode(const NodeMap& nodes, NodeStateMap& nodeStates, int targetId, int& chosenNodeId);
 
-    void advance(NodeMap& nodes);
-    void advanceModulator(NodeMap& nodes);
-    int advanceAlternativeNode(NodeMap& nodes);
+    void advance(const NodeMap& nodes, NodeStateMap& nodeStates);
+    void advanceModulator(const NodeMap& nodes, NodeStateMap& nodeStates);
+    int advanceAlternativeNode(const NodeMap& nodes, NodeStateMap& nodeStates);
 
-    RTNode* peekNextTarget(NodeMap& nodes);
+    const RTNode* peekNextTarget(const NodeMap& nodes, NodeStateMap& nodeStates);
 
     using ChildPredicate = bool (*)(RTNode::NodeType);
-    int selectNextChild(NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible);
+    int selectNextChild(const NodeMap& nodes, NodeStateMap& nodeStates, int parentId, int parentCount, ChildPredicate isEligible);
 
-    void registerTrigger(NodeMap& nodes, int nodeId);
+    void registerTrigger(const NodeMap& nodes, int nodeId);
 
-    std::vector<int> peekCrossTreeNode(NodeMap& nodes);
-    RTNode* peekModulators(NodeMap& nodes);
+    std::vector<int> peekCrossTreeNode(const NodeMap& nodes);
+    const RTNode* peekModulators(const NodeMap& nodes, NodeStateMap& nodeStates);
 
     const RTNode& getTargetNode   (const NodeMap& nodes) const;
     const RTNode& getLastNode     (const NodeMap& nodes) const;
@@ -105,8 +105,8 @@ public:
     const RTNode& getRootNode     (const NodeMap& nodes) const;
     static const RTNode& getRelayNode(int relayNodeId, const NodeMap& nodes);
 
-    RTNode* getModulatorNode(NodeMap& nodes, int nodeId);
-    int     findActiveModulatorRoot(NodeMap& nodes, int regularNodeId);
+    const RTNode* getModulatorNode(const NodeMap& nodes, int nodeId);
+    int           findActiveModulatorRoot(const NodeMap& nodes, int regularNodeId);
 
     static bool isDescendantOf(const NodeMap& nodes, int nodeId, int ancestorId);
 

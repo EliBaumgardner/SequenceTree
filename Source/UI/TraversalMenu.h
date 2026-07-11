@@ -10,6 +10,7 @@
 
 #include "TraversalDisplayMenu.h"
 #include "Node/ValueEditor.h"
+#include "ColourSelector.h"
 
 class TraversalMenuListener;
 
@@ -35,7 +36,12 @@ public:
     juce::Label multiplierLabel;
     ValueEditor multiplierEditor;
 
+    juce::Label colourLabel;
+    ColourSelector colourSelector;
+
 private:
+
+    juce::ValueTree currentTraversalData;
 
     class Resizer : public juce::Component {
     public:

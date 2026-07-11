@@ -51,6 +51,7 @@ public:
 
   float progressT      = 0.0f;
   bool  progressActive = false;
+  juce::Colour progressColour { juce::Colours::white };
 
   bool updateFromBindValue = false;
   bool isGhost = false;

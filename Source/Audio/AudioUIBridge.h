@@ -12,6 +12,7 @@ public:
     {
         int  nodeId          = 0;
         bool shouldHighlight = false;
+        int  traversalId     = -1;
     };
 
     struct ProgressCommand
@@ -20,6 +21,7 @@ public:
         int childNodeId  = 0;
         int durationMs   = 0;
         int graphId      = 0;
+        int traversalId  = -1;
     };
 
     struct CountCommand
@@ -52,8 +54,8 @@ public:
     std::array<CountCommand, kCountFifoSize>       countBuffer {};
 
 
-    void highlightNode(const RTNode& node, bool shouldHighlight);
-    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId);
+    void highlightNode(const RTNode& node, bool shouldHighlight, int traversalId = -1);
+    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId, int traversalId);
     void pushArrowReset(int rootId);
     void pushCount(int nodeId, int currentCount, int countLimit);
 };

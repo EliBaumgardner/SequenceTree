@@ -65,6 +65,7 @@ private:
 
     Node* snapTargetRoot           = nullptr;
 
+    bool creatingDanglingArrow     = false;
     bool isDragStart               = true;
     bool hasConnection             = false;
     bool isDraggingValue           = false;

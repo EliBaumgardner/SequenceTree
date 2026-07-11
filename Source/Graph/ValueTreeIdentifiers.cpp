@@ -66,5 +66,6 @@ const juce::Identifier ValueTreeIdentifiers::ColorIntensityFactor {"ColorIntensi
 const juce::Identifier ValueTreeIdentifiers::TraversalData        {"TraversalData"};
 const juce::Identifier ValueTreeIdentifiers::TraversalId          {"TraversalId"};
 const juce::Identifier ValueTreeIdentifiers::TempoMultiplier      {"TempoMultiplier"};
+const juce::Identifier ValueTreeIdentifiers::TraversalColour      {"TraversalColour"};
 const juce::Identifier ValueTreeIdentifiers::TraversalChildrenIds {"TraversalChildrenIds"};
 const juce::Identifier ValueTreeIdentifiers::TraversalMap         {"TraversalMap"};

@@ -162,6 +162,8 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
     jassert(nodeCanvas);
 
+    creatingDanglingArrow = false;
+
     if (nodeCanvas->paintMode) {
         if (e.mods.isLeftButtonDown() || e.mods.isRightButtonDown()) {
             auto canvasEvent = e.getEventRelativeTo(nodeCanvas);
@@ -220,6 +222,10 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
                 return;
             }
         }
+
+        creatingDanglingArrow = nodeCanvas->arrowMode
+            && e.mods.isLeftButtonDown()
+            && e.mods.isShiftDown();
 
         node->setHoverVisual(true);
         int nodeId = node->getComponentID().getIntValue();
@@ -340,7 +346,7 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
             return;
         }
 
-        if (canvas->arrowMode && e.mods.isShiftDown()) {
+        if (canvas->arrowMode && creatingDanglingArrow) {
             if (canvas->gridOriginSet) {
                 canvas->showGrid = true;
                 canvas->repaint();

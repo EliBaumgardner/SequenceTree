@@ -1,25 +1,25 @@
 #include "AudioUIBridge.h"
 
-void AudioUIBridge::highlightNode(const RTNode& node, bool shouldHighlight)
+void AudioUIBridge::highlightNode(const RTNode& node, bool shouldHighlight, int traversalId)
 {
     const auto scope = highlightFifo.write(1);
     if (scope.blockSize1 > 0) {
-        highlightBuffer[static_cast<size_t>(scope.startIndex1)] = { node.nodeID, shouldHighlight };
+        highlightBuffer[static_cast<size_t>(scope.startIndex1)] = { node.nodeID, shouldHighlight, traversalId };
     }
     else if (scope.blockSize2 > 0) {
-        highlightBuffer[static_cast<size_t>(scope.startIndex2)] = { node.nodeID, shouldHighlight };
+        highlightBuffer[static_cast<size_t>(scope.startIndex2)] = { node.nodeID, shouldHighlight, traversalId };
     }
     else { jassertfalse; }
 }
 
-void AudioUIBridge::pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId)
+void AudioUIBridge::pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId, int traversalId)
 {
     const auto scope = progressFifo.write(1);
     if (scope.blockSize1 > 0) {
-        progressBuffer[static_cast<size_t>(scope.startIndex1)] = { parentNodeId, childNodeId, durationMs, graphId };
+        progressBuffer[static_cast<size_t>(scope.startIndex1)] = { parentNodeId, childNodeId, durationMs, graphId, traversalId };
     }
     else if (scope.blockSize2 > 0) {
-        progressBuffer[static_cast<size_t>(scope.startIndex2)] = { parentNodeId, childNodeId, durationMs, graphId };
+        progressBuffer[static_cast<size_t>(scope.startIndex2)] = { parentNodeId, childNodeId, durationMs, graphId, traversalId };
     }
     else { jassertfalse; }
 }
