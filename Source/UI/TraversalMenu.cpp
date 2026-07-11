@@ -8,7 +8,7 @@
 #include "../Graph/ValueTreeState.h"
 #include "Theme/CustomLookAndFeel.h"
 
-TraversalMenu::TraversalMenu(ApplicationContext& context) : displayMenu(context), multiplierEditor(context), colourSelector(context) {
+TraversalMenu::TraversalMenu(ApplicationContext& context) : displayMenu(context), multiplierEditor(context), channelEditor(context), colourSelector(context) {
     setLookAndFeel(context.lookAndFeel);
     addAndMakeVisible(displayMenu);
     addAndMakeVisible(resizer);
@@ -21,6 +21,15 @@ TraversalMenu::TraversalMenu(ApplicationContext& context) : displayMenu(context)
 
     multiplierEditor.enableDecimalValue(0.1);
     addAndMakeVisible(multiplierEditor);
+
+    channelLabel.setText("Channel", juce::dontSendNotification);
+    channelLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    channelLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
+    channelLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(channelLabel);
+
+    channelEditor.setMinimumValue(1);
+    addAndMakeVisible(channelEditor);
 
     colourLabel.setText("Colour", juce::dontSendNotification);
     colourLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
@@ -72,6 +81,11 @@ void TraversalMenu::selectTraversal(int traversalId) {
 
     multiplierEditor.bindEditor(traversalData, ValueTreeIdentifiers::TempoMultiplier);
 
+    if (!traversalData.hasProperty(ValueTreeIdentifiers::TraversalChannel)) {
+        traversalData.setProperty(ValueTreeIdentifiers::TraversalChannel, 1, nullptr);
+    }
+    channelEditor.bindEditor(traversalData, ValueTreeIdentifiers::TraversalChannel);
+
     juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
     colourSelector.colour = colourString.isNotEmpty() ? juce::Colour::fromString(colourString) : juce::Colours::white;
     colourSelector.repaint();
@@ -102,6 +116,10 @@ void TraversalMenu::resized() {
     auto rowArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
     multiplierLabel.setBounds(rowArea.removeFromLeft(rowArea.getWidth() / 2));
     multiplierEditor.setBounds(rowArea);
+
+    auto channelArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
+    channelLabel.setBounds(channelArea.removeFromLeft(channelArea.getWidth() / 2));
+    channelEditor.setBounds(channelArea);
 
     auto colourArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
     colourLabel.setBounds(colourArea.removeFromLeft(colourArea.getWidth() / 2));

@@ -21,16 +21,16 @@ RootNode::RootNode(ApplicationContext& context) : Node(context)
 
     subLoopLimitEditor.setTooltip("Loop Limit");
 
-    ValueEditor& traversalEditor = rootRectangle->loopLimitEditor;
+    ValueEditor& traversalEditor = rootRectangle->traversalEditor;
 
     traversalEditor.boundValue.setValue(1);
 
 
     traversalEditor.onValueChange = [this, &traversalEditor]() {
 
-        DBG("traversal chhanged");
+        DBG("traversal changed");
 
-        juce::String text = traversalEditor.boundValue.toString();
+        juce::String text = traversalEditor.textEditor->getText();
 
         std::vector<int> words;
         juce::String word;

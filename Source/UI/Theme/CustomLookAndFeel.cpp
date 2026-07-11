@@ -301,12 +301,19 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
     g.setColour(nodeColour);
     g.fillEllipse(circleFill);
 
-    if (node.isHighlighted) {
+    if (! node.activeHighlights.empty()) {
         constexpr float highlightRingWidth = 1.25f;
-        auto highlightRing = circleFill.reduced(highlightRingWidth * 0.5f);
+        constexpr float highlightRingSpacing = 2.0f;
 
-        g.setColour(node.highlightColour);
-        g.drawEllipse(highlightRing, highlightRingWidth);
+        int ringIndex = 0;
+        for (const auto& highlight : node.activeHighlights) {
+            float inset = highlightRingWidth * 0.5f + static_cast<float>(ringIndex) * highlightRingSpacing;
+            auto highlightRing = circleFill.reduced(inset);
+
+            g.setColour(highlight.second);
+            g.drawEllipse(highlightRing, highlightRingWidth);
+            ++ringIndex;
+        }
     }
 
     if (node.isHovered) {
@@ -569,9 +576,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     g.setColour(arrowColour.withAlpha(ghostAlpha));
     g.strokePath(linePath, lineStroke);
 
-    if (! nodeArrow.isGhost && nodeArrow.progressT > 0.0f) {
-        const juce::Colour progressColour = nodeArrow.progressColour;
-
+    if (! nodeArrow.isGhost && nodeArrow.progress.hasTracks()) {
         const float shaftDeltaX = arrowEndX - parentCenterX;
         const float shaftDeltaY = arrowEndY - parentCenterY;
         const float shaftLength = std::sqrt(shaftDeltaX * shaftDeltaX + shaftDeltaY * shaftDeltaY);
@@ -580,19 +585,31 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
             const float unitX = shaftDeltaX / shaftLength;
             const float unitY = shaftDeltaY / shaftLength;
 
-            const float offsetDistance = 3.5f;
-            const float perpX = -unitY * offsetDistance;
-            const float perpY =  unitX * offsetDistance;
+            const float baseOffset = 3.5f;
+            const float trackSpacing = 3.0f;
 
-            juce::Path offsetLine = linePath;
-            offsetLine.applyTransform(juce::AffineTransform::translation(perpX, perpY));
+            int drawnCount = 0;
+            for (const auto& entry : nodeArrow.progress.tracks) {
+                const ArrowProgress::Track& track = entry.second;
+                if (track.t <= 0.0f) {
+                    continue;
+                }
 
-            juce::Path progressPath = trimPathToFraction(offsetLine, nodeArrow.progressT);
-            if (! progressPath.isEmpty()) {
-                g.setColour(progressColour);
-                g.strokePath(progressPath, juce::PathStrokeType(1.25f,
-                                                                juce::PathStrokeType::curved,
-                                                                juce::PathStrokeType::butt));
+                const float offsetDistance = baseOffset + static_cast<float>(drawnCount) * trackSpacing;
+                const float perpX = -unitY * offsetDistance;
+                const float perpY =  unitX * offsetDistance;
+
+                juce::Path offsetLine = linePath;
+                offsetLine.applyTransform(juce::AffineTransform::translation(perpX, perpY));
+
+                juce::Path progressPath = trimPathToFraction(offsetLine, track.t);
+                if (! progressPath.isEmpty()) {
+                    g.setColour(track.colour);
+                    g.strokePath(progressPath, juce::PathStrokeType(1.25f,
+                                                                    juce::PathStrokeType::curved,
+                                                                    juce::PathStrokeType::butt));
+                }
+                ++drawnCount;
             }
         }
     }
@@ -878,6 +895,35 @@ void CustomLookAndFeel::drawDanglingArrow(juce::Graphics &g, const DanglingArrow
     g.strokePath(highlightPath, lineStroke);
     g.setColour(arrowColour);
     g.strokePath(linePath, lineStroke);
+
+    if (danglingArrow.progress.hasTracks()) {
+        const float baseOffset = 3.5f;
+        const float trackSpacing = 3.0f;
+
+        int drawnCount = 0;
+        for (const auto& entry : danglingArrow.progress.tracks) {
+            const ArrowProgress::Track& track = entry.second;
+            if (track.t <= 0.0f) {
+                continue;
+            }
+
+            const float offsetDistance = baseOffset + static_cast<float>(drawnCount) * trackSpacing;
+            const float perpX = -dirY * offsetDistance;
+            const float perpY =  dirX * offsetDistance;
+
+            juce::Path offsetLine = linePath;
+            offsetLine.applyTransform(juce::AffineTransform::translation(perpX, perpY));
+
+            juce::Path progressPath = trimPathToFraction(offsetLine, track.t);
+            if (! progressPath.isEmpty()) {
+                g.setColour(track.colour);
+                g.strokePath(progressPath, juce::PathStrokeType(1.25f,
+                                                                juce::PathStrokeType::curved,
+                                                                juce::PathStrokeType::butt));
+            }
+            ++drawnCount;
+        }
+    }
 
     const float arrowLength = 12.0f;
     const float arrowWidth  = 6.0f;

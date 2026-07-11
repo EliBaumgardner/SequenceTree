@@ -14,7 +14,7 @@ bool NoteScheduler::isNodeAudible(RTNode::NodeType nodeType)
 void NoteScheduler::scheduleNote(const RTNode& node, int traversalId, int sample,
                                  juce::MidiBuffer& midiMessages,
                                  double sampleRate, double tempoMultiplier,
-                                 int duration, bool isConnectionTrigger)
+                                 int duration, bool isConnectionTrigger, int channel)
 {
     ActiveNote newNote;
     newNote.traversalId         = traversalId;
@@ -34,6 +34,10 @@ void NoteScheduler::scheduleNote(const RTNode& node, int traversalId, int sample
         if (newNote.event.velocity <= 0) {
             newNote.event.velocity = 63;
         }
+    }
+
+    if (channel >= 1) {
+        newNote.event.midiChannel = juce::jlimit(1, 16, channel);
     }
 
     activeNotes.push_back(newNote);

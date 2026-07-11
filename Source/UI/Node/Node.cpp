@@ -105,21 +105,32 @@ void Node::setSelectVisual() {
     repaint();
 }
 
-void Node::setHighlightVisual(bool shouldHighlight)
+void Node::setHighlightVisual(int traversalId, bool shouldHighlight, juce::Colour colour)
 {
     if (shouldHighlight) {
-        pendingHighlightOff = false;
-        isHighlighted = true;
-        pulsePhase    = 0.0f;
+        pendingHighlightOffIds.erase(traversalId);
+        activeHighlights[traversalId] = colour;
+        pulsePhase = 0.0f;
         startTimerHz(60);
     }
+    else if (traversalId == -1) {
+        if (isTimerRunning()) {
+            for (const auto& entry : activeHighlights) {
+                pendingHighlightOffIds.insert(entry.first);
+            }
+        }
+        else {
+            activeHighlights.clear();
+        }
+    }
     else if (isTimerRunning()) {
-        pendingHighlightOff = true;
+        pendingHighlightOffIds.insert(traversalId);
     }
     else {
-        isHighlighted = false;
+        activeHighlights.erase(traversalId);
     }
 
+    isHighlighted = ! activeHighlights.empty();
     repaint();
 }
 
@@ -131,10 +142,11 @@ void Node::timerCallback()
         pulsePhase = 1.0f;
         stopTimer();
 
-        if (pendingHighlightOff) {
-            pendingHighlightOff = false;
-            isHighlighted       = false;
+        for (int id : pendingHighlightOffIds) {
+            activeHighlights.erase(id);
         }
+        pendingHighlightOffIds.clear();
+        isHighlighted = ! activeHighlights.empty();
     }
 
     repaint();

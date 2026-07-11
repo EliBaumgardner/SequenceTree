@@ -34,11 +34,15 @@ public:
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 #endif
 
-    bool initializeTraversalForRootNode(juce::MidiBuffer &midiMessages, const NodeMap &nodes, NodeStateMap &nodeStates, TraversalMap &traversals, RTGraphs &rtGraphs);
+    bool initializeTraversalForRootNode(juce::MidiBuffer &midiMessages, const NodeMap &nodes, TraversalMap &traversals, RTGraphs &rtGraphs);
 
     void updateTraversalCounts(const NodeMap &nodes, TraversalMap &traversals);
     void syncActiveTraversals(const NodeMap &nodes, TraversalMap &traversals);
-    void syncTraversalLoopLimits(TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages, const NodeMap &nodes, NodeStateMap &nodeStates);
+    void removeDeletedTraversals(const NodeMap &nodes, TraversalMap &traversals, juce::MidiBuffer &midiMessages);
+    void startMissingTraversals(const NodeMap &nodes, TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages);
+    void startTraversal(const RTNode &rootNode, const RTtraversal &traversal, const NodeMap &nodes, TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages);
+    void stopTraversalNotes(int traversalId, juce::MidiBuffer &midiMessages);
+    void syncTraversalLoopLimits(TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages, const NodeMap &nodes);
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
@@ -76,7 +80,6 @@ public:
     struct AudioSnapshot
     {
         std::shared_ptr<NodeMap>      globalNodes;
-        std::shared_ptr<NodeStateMap> nodeStates;
         std::shared_ptr<RTGraphs>     rtGraphs;
     };
 
@@ -99,6 +102,8 @@ public:
     } TempoInfo { 44100, 0, 0, 0, 0, 120 };
 
     EventManager eventManager { this };
+
+    int numTraversals = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessor)
 };

@@ -7,7 +7,7 @@ EventManager::EventManager(SequenceTreeAudioProcessor* p)
     jassert(p != nullptr);
 }
 
-void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, const NodeMap& nodes, NodeStateMap& nodeStates, TraversalMap& traversalMap)
+void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, const NodeMap& nodes, TraversalMap& traversalMap)
 {
     auto& activeNotes = scheduler.activeNotes;
 
@@ -43,16 +43,16 @@ void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, const NodeM
 
         traversal.primary.target = traversal.rootId;
         traversal.state          = TraversalLogic::TraversalState::Active;
-        traversal.advanceAlternative(nodes, nodeStates, traversal.rootId);
+        traversal.advanceAlternative(nodes, traversal.rootId);
         bridge.highlightNode(rootIt->second, true, traversal.traversal.traversalId);
-        dispatcher.pushNote(rootIt->second, orphanedTraversalId, midiMessages, 0, nodes, nodeStates, traversalMap);
+        dispatcher.pushNote(rootIt->second, orphanedTraversalId, midiMessages, 0, nodes, traversalMap);
     }
 }
 
 void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
-                                   const NodeMap& nodes, NodeStateMap& nodeStates, TraversalMap& traversalMap)
+                                   const NodeMap& nodes, TraversalMap& traversalMap)
 {
-    handleOrphanNotes(midiMessages, nodes, nodeStates, traversalMap);
+    handleOrphanNotes(midiMessages, nodes, traversalMap);
 
     auto& activeNotes = scheduler.activeNotes;
 
@@ -90,7 +90,7 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
         scheduler.removeNote(smallestNoteIndex);
 
         dispatcher.handleExpiredNote(expiredNote, priorityNoteDuration,
-                                     midiMessages, nodes, nodeStates, traversalMap);
+                                     midiMessages, nodes, traversalMap);
     }
 
     for (auto& note : activeNotes) {

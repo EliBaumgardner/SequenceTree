@@ -112,20 +112,31 @@ void NodeCanvas::drainProgressFifo()
             return;
         }
 
-        auto arrowIt = parentIt->second->nodeArrows.find(cmd.childNodeId);
-        if (arrowIt == parentIt->second->nodeArrows.end() || arrowIt->second == nullptr) {
-            return;
-        }
+        juce::Colour progressColour = juce::Colours::white;
 
         juce::ValueTree traversalData = ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, cmd.traversalId);
         if (traversalData.isValid()) {
             juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
             if (colourString.isNotEmpty()) {
-                arrowIt->second->progressColour = juce::Colour::fromString(colourString);
+                progressColour = juce::Colour::fromString(colourString);
             }
         }
 
-        arrowIt->second->startProgress(cmd.durationMs);
+        if (cmd.parentNodeId == cmd.childNodeId) {
+            for (DanglingArrow* danglingArrow : danglingArrows) {
+                if (danglingArrow->startNode == parentIt->second) {
+                    danglingArrow->startProgress(cmd.traversalId, cmd.durationMs, progressColour);
+                }
+            }
+            return;
+        }
+
+        auto arrowIt = parentIt->second->nodeArrows.find(cmd.childNodeId);
+        if (arrowIt == parentIt->second->nodeArrows.end() || arrowIt->second == nullptr) {
+            return;
+        }
+
+        arrowIt->second->startProgress(cmd.traversalId, cmd.durationMs, progressColour);
     };
 
     for (int i = 0; i < scope.blockSize1; ++i)
@@ -139,7 +150,7 @@ void NodeCanvas::drainArrowResetFifo() {
     const auto scope = bridge.arrowResetFifo.read(bridge.arrowResetFifo.getNumReady());
 
     auto apply = [this](const AudioUIBridge::ResetCommand cmd) {
-            resetGraphArrowProgress(cmd.rootId);
+            resetGraphArrowProgress(cmd.rootId, cmd.traversalId);
     };
 
     for (int i = 0; i < scope.blockSize1; ++i)
@@ -154,9 +165,14 @@ void NodeCanvas::resetAllArrowProgress()
         if (arrow != nullptr) {
             arrow->resetProgress();
         }
+
+    for (DanglingArrow* danglingArrow : danglingArrows)
+        if (danglingArrow != nullptr) {
+            danglingArrow->resetProgress();
+        }
 }
 
-void NodeCanvas::resetGraphArrowProgress(int graphId)
+void NodeCanvas::resetGraphArrowProgress(int graphId, int traversalId)
 {
     for (NodeArrow* arrow : nodeArrows)
     {
@@ -172,7 +188,24 @@ void NodeCanvas::resetGraphArrowProgress(int graphId)
         }
 
         if (static_cast<int>(arrowRoot.getProperty(ValueTreeIdentifiers::Id)) == graphId) {
-            arrow->resetProgress();
+            arrow->resetProgress(traversalId);
+        }
+    }
+
+    for (DanglingArrow* danglingArrow : danglingArrows)
+    {
+        if (danglingArrow == nullptr || danglingArrow->startNode == nullptr) {
+            continue;
+        }
+
+        const int parentId = danglingArrow->startNode->getComponentID().getIntValue();
+        const juce::ValueTree arrowRoot = ValueTreeState::getRootNode(parentId);
+        if (! arrowRoot.isValid()) {
+            continue;
+        }
+
+        if (static_cast<int>(arrowRoot.getProperty(ValueTreeIdentifiers::Id)) == graphId) {
+            danglingArrow->resetProgress(traversalId);
         }
     }
 }
@@ -213,17 +246,19 @@ void NodeCanvas::drainHighlightFifo()
             return;
         }
 
+        juce::Colour highlightColour = juce::Colours::white;
+
         if (cmd.shouldHighlight) {
             juce::ValueTree traversalData = ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, cmd.traversalId);
             if (traversalData.isValid()) {
                 juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
                 if (colourString.isNotEmpty()) {
-                    it->second->highlightColour = juce::Colour::fromString(colourString);
+                    highlightColour = juce::Colour::fromString(colourString);
                 }
             }
         }
 
-        it->second->setHighlightVisual(cmd.shouldHighlight);
+        it->second->setHighlightVisual(cmd.traversalId, cmd.shouldHighlight, highlightColour);
     };
 
     for (int i = 0; i < scope.blockSize1; ++i)
