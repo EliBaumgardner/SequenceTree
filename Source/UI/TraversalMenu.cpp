@@ -8,7 +8,7 @@
 #include "../Graph/ValueTreeState.h"
 #include "Theme/CustomLookAndFeel.h"
 
-TraversalMenu::TraversalMenu(ApplicationContext& context) : displayMenu(context), multiplierEditor(context) {
+TraversalMenu::TraversalMenu(ApplicationContext& context) : displayMenu(context), multiplierEditor(context), colourSelector(context) {
     setLookAndFeel(context.lookAndFeel);
     addAndMakeVisible(displayMenu);
     addAndMakeVisible(resizer);
@@ -21,6 +21,20 @@ TraversalMenu::TraversalMenu(ApplicationContext& context) : displayMenu(context)
 
     multiplierEditor.enableDecimalValue(0.1);
     addAndMakeVisible(multiplierEditor);
+
+    colourLabel.setText("Colour", juce::dontSendNotification);
+    colourLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    colourLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
+    colourLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(colourLabel);
+
+    colourSelector.requiresNode = false;
+    colourSelector.onColourPicked = [this](juce::Colour c) {
+        if (currentTraversalData.isValid()) {
+            currentTraversalData.setProperty(ValueTreeIdentifiers::TraversalColour, c.toString(), nullptr);
+        }
+    };
+    addAndMakeVisible(colourSelector);
 
     displayMenu.onTraversalSelected = [this](int traversalId) {
         selectTraversal(traversalId);
@@ -54,7 +68,13 @@ void TraversalMenu::selectTraversal(int traversalId) {
         return;
     }
 
+    currentTraversalData = traversalData;
+
     multiplierEditor.bindEditor(traversalData, ValueTreeIdentifiers::TempoMultiplier);
+
+    juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
+    colourSelector.colour = colourString.isNotEmpty() ? juce::Colour::fromString(colourString) : juce::Colours::white;
+    colourSelector.repaint();
 
     displayMenu.selectedOption = "Traversal " + juce::String(traversalId);
     displayMenu.resized();
@@ -82,6 +102,10 @@ void TraversalMenu::resized() {
     auto rowArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
     multiplierLabel.setBounds(rowArea.removeFromLeft(rowArea.getWidth() / 2));
     multiplierEditor.setBounds(rowArea);
+
+    auto colourArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
+    colourLabel.setBounds(colourArea.removeFromLeft(colourArea.getWidth() / 2));
+    colourSelector.setBounds(colourArea);
 }
 
 TraversalMenu::Resizer::Resizer(TraversalMenu& ownerRef) : owner(ownerRef)

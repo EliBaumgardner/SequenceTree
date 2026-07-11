@@ -72,6 +72,7 @@ public:
     bool isSelected          = false;
     bool isHighlighted       = false;
     bool pendingHighlightOff = false;
+    juce::Colour highlightColour { juce::Colours::white };
     bool isAlternativeNode   = false;
 
     float pulsePhase         = 1.0f;

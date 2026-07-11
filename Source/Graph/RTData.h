@@ -32,8 +32,6 @@ struct RTtraversal {
 
 struct RTNode {
 
-    int lastAlternativeId   = -1;
-    int activeAlternativeId = -1;
     int alternativeRootId   = -1;
 
     int modulatorId = 0;
@@ -43,8 +41,6 @@ struct RTNode {
     int countLimit  = 0;
     int triggerLimit = 0;
     int repeatValue = 1;
-
-    int lastNodeId = -1;
 
     int switchCount      = 0;
     int switchCountLimit = 0;
@@ -76,6 +72,15 @@ struct RTNode {
 
 
 using NodeMap = std::unordered_map<int, RTNode>;
+
+struct NodeRuntimeState {
+
+    int activeAlternativeId = -1;
+    int lastAlternativeId   = -1;
+    int lastNodeId          = -1;
+};
+
+using NodeStateMap = std::unordered_map<int, NodeRuntimeState>;
 
 struct RTGraph {
 

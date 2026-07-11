@@ -298,18 +298,16 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
 
     juce::Colour nodeColour = node.nodeColour;
 
-    float maxPulseExpansion = circleFill.getX() - componentBounds.getX();
-    float pulseExpansion    = maxPulseExpansion * std::sin(node.pulsePhase * juce::MathConstants<float>::pi);
-    auto  pulsedFill        = circleFill.expanded(pulseExpansion);
+    g.setColour(nodeColour);
+    g.fillEllipse(circleFill);
 
     if (node.isHighlighted) {
-        g.setColour(nodeColour.darker());
-    }
-    else {
-        g.setColour(nodeColour);
-    }
+        constexpr float highlightRingWidth = 1.25f;
+        auto highlightRing = circleFill.reduced(highlightRingWidth * 0.5f);
 
-    g.fillEllipse(pulsedFill);
+        g.setColour(node.highlightColour);
+        g.drawEllipse(highlightRing, highlightRingWidth);
+    }
 
     if (node.isHovered) {
         g.drawEllipse(circleHover, 2.0f);
@@ -572,86 +570,30 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     g.strokePath(linePath, lineStroke);
 
     if (! nodeArrow.isGhost && nodeArrow.progressT > 0.0f) {
-        const juce::Colour progressColour = nodeArrow.startNode->nodeColour.brighter(0.3f);
+        const juce::Colour progressColour = nodeArrow.progressColour;
 
-        float linePathLength = 0.0f;
-        {
-            juce::PathFlatteningIterator iterator(linePath);
-            while (iterator.next())
-            {
-                const float segmentDeltaX = iterator.x2 - iterator.x1;
-                const float segmentDeltaY = iterator.y2 - iterator.y1;
-                linePathLength += std::sqrt(segmentDeltaX * segmentDeltaX + segmentDeltaY * segmentDeltaY);
-            }
-        }
+        const float shaftDeltaX = arrowEndX - parentCenterX;
+        const float shaftDeltaY = arrowEndY - parentCenterY;
+        const float shaftLength = std::sqrt(shaftDeltaX * shaftDeltaX + shaftDeltaY * shaftDeltaY);
 
-        const float bodyLength        = juce::jmax(0.0f, linePathLength - arrowLength);
-        float bodyFraction;
-        if (linePathLength > 0.0f) {
-            bodyFraction = bodyLength / linePathLength;
-        }
-        else {
-            bodyFraction = 1.0f;
-        }
-        const float bodyProgressT     = juce::jmin(nodeArrow.progressT, bodyFraction);
+        if (shaftLength > 0.0f) {
+            const float unitX = shaftDeltaX / shaftLength;
+            const float unitY = shaftDeltaY / shaftLength;
 
-        if (bodyProgressT > 0.0f) {
-            juce::Path bodyProgressPath = trimPathToFraction(linePath, bodyProgressT);
-            if (! bodyProgressPath.isEmpty()) {
-                const juce::PathStrokeType bodyStroke(3.0f,
-                                                      juce::PathStrokeType::curved,
-                                                      juce::PathStrokeType::butt);
-                const juce::PathStrokeType bodyGlowStroke(5.5f,
-                                                          juce::PathStrokeType::curved,
-                                                          juce::PathStrokeType::butt);
+            const float offsetDistance = 3.5f;
+            const float perpX = -unitY * offsetDistance;
+            const float perpY =  unitX * offsetDistance;
 
-                g.setColour(progressColour.withAlpha(0.25f));
-                g.strokePath(bodyProgressPath, bodyGlowStroke);
+            juce::Path offsetLine = linePath;
+            offsetLine.applyTransform(juce::AffineTransform::translation(perpX, perpY));
 
+            juce::Path progressPath = trimPathToFraction(offsetLine, nodeArrow.progressT);
+            if (! progressPath.isEmpty()) {
                 g.setColour(progressColour);
-                g.strokePath(bodyProgressPath, bodyStroke);
+                g.strokePath(progressPath, juce::PathStrokeType(1.25f,
+                                                                juce::PathStrokeType::curved,
+                                                                juce::PathStrokeType::butt));
             }
-        }
-
-        if (nodeArrow.progressT > bodyFraction) {
-            const float headFraction       = juce::jmax(1.0e-6f, 1.0f - bodyFraction);
-            const float headProgressT      = juce::jlimit(0.0f, 1.0f,
-                                                          (nodeArrow.progressT - bodyFraction) / headFraction);
-
-            const float headPerpendicularX =  dirY;
-            const float headPerpendicularY = -dirX;
-
-            const float headBaseX          = arrowEndX - arrowLength * dirX;
-            const float headBaseY          = arrowEndY - arrowLength * dirY;
-            const float headFrontX         = headBaseX + headProgressT * arrowLength * dirX;
-            const float headFrontY         = headBaseY + headProgressT * arrowLength * dirY;
-            const float headFrontHalfWidth = arrowWidth * (1.0f - headProgressT);
-
-            const float baseLeftX  = headBaseX + arrowWidth * headPerpendicularX;
-            const float baseLeftY  = headBaseY + arrowWidth * headPerpendicularY;
-            const float baseRightX = headBaseX - arrowWidth * headPerpendicularX;
-            const float baseRightY = headBaseY - arrowWidth * headPerpendicularY;
-            const float frontLeftX  = headFrontX + headFrontHalfWidth * headPerpendicularX;
-            const float frontLeftY  = headFrontY + headFrontHalfWidth * headPerpendicularY;
-            const float frontRightX = headFrontX - headFrontHalfWidth * headPerpendicularX;
-            const float frontRightY = headFrontY - headFrontHalfWidth * headPerpendicularY;
-
-            juce::Path headProgressPath;
-            headProgressPath.startNewSubPath(baseLeftX, baseLeftY);
-            headProgressPath.lineTo(frontLeftX, frontLeftY);
-            headProgressPath.lineTo(frontRightX, frontRightY);
-            headProgressPath.lineTo(baseRightX, baseRightY);
-            headProgressPath.closeSubPath();
-
-            const juce::PathStrokeType headGlowStroke(2.5f,
-                                                      juce::PathStrokeType::curved,
-                                                      juce::PathStrokeType::rounded);
-
-            g.setColour(progressColour.withAlpha(0.25f));
-            g.strokePath(headProgressPath, headGlowStroke);
-
-            g.setColour(progressColour);
-            g.fillPath(headProgressPath);
         }
     }
 

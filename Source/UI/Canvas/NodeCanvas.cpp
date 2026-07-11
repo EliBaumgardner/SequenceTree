@@ -117,6 +117,14 @@ void NodeCanvas::drainProgressFifo()
             return;
         }
 
+        juce::ValueTree traversalData = ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, cmd.traversalId);
+        if (traversalData.isValid()) {
+            juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
+            if (colourString.isNotEmpty()) {
+                arrowIt->second->progressColour = juce::Colour::fromString(colourString);
+            }
+        }
+
         arrowIt->second->startProgress(cmd.durationMs);
     };
 
@@ -198,22 +206,30 @@ void NodeCanvas::drainHighlightFifo()
     auto& bridge = applicationContext.processor->eventManager.bridge;
     const auto scope = bridge.highlightFifo.read(bridge.highlightFifo.getNumReady());
 
+    auto apply = [this](const AudioUIBridge::HighlightCommand& cmd)
+    {
+        auto it = nodeMap.find(cmd.nodeId);
+        if (it == nodeMap.end()) {
+            return;
+        }
+
+        if (cmd.shouldHighlight) {
+            juce::ValueTree traversalData = ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, cmd.traversalId);
+            if (traversalData.isValid()) {
+                juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
+                if (colourString.isNotEmpty()) {
+                    it->second->highlightColour = juce::Colour::fromString(colourString);
+                }
+            }
+        }
+
+        it->second->setHighlightVisual(cmd.shouldHighlight);
+    };
+
     for (int i = 0; i < scope.blockSize1; ++i)
-    {
-        auto& cmd = bridge.highlightBuffer[static_cast<size_t>(scope.startIndex1 + i)];
-        auto it = nodeMap.find(cmd.nodeId);
-        if (it != nodeMap.end()) {
-            it->second->setHighlightVisual(cmd.shouldHighlight);
-        }
-    }
+        apply(bridge.highlightBuffer[static_cast<size_t>(scope.startIndex1 + i)]);
     for (int i = 0; i < scope.blockSize2; ++i)
-    {
-        auto& cmd = bridge.highlightBuffer[static_cast<size_t>(scope.startIndex2 + i)];
-        auto it = nodeMap.find(cmd.nodeId);
-        if (it != nodeMap.end()) {
-            it->second->setHighlightVisual(cmd.shouldHighlight);
-        }
-    }
+        apply(bridge.highlightBuffer[static_cast<size_t>(scope.startIndex2 + i)]);
 }
 
 Node* NodeCanvas::instantiateNodeFromTree(const juce::ValueTree& nodeValueTree)

@@ -34,10 +34,11 @@ public:
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 #endif
 
-    bool initializeTraversalForRootNode(juce::MidiBuffer &midiMessages, NodeMap &nodes, TraversalMap &traversals, RTGraphs &rtGraphs);
+    bool initializeTraversalForRootNode(juce::MidiBuffer &midiMessages, const NodeMap &nodes, NodeStateMap &nodeStates, TraversalMap &traversals, RTGraphs &rtGraphs);
 
-    void updateTraversalCounts(NodeMap &nodes, TraversalMap &traversals);
-    void syncTraversalLoopLimits(TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages, NodeMap &nodes);
+    void updateTraversalCounts(const NodeMap &nodes, TraversalMap &traversals);
+    void syncActiveTraversals(const NodeMap &nodes, TraversalMap &traversals);
+    void syncTraversalLoopLimits(TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages, const NodeMap &nodes, NodeStateMap &nodeStates);
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
@@ -74,8 +75,9 @@ public:
 
     struct AudioSnapshot
     {
-        std::shared_ptr<NodeMap>  globalNodes;
-        std::shared_ptr<RTGraphs> rtGraphs;
+        std::shared_ptr<NodeMap>      globalNodes;
+        std::shared_ptr<NodeStateMap> nodeStates;
+        std::shared_ptr<RTGraphs>     rtGraphs;
     };
 
     std::shared_ptr<AudioSnapshot> audioSnapshot;

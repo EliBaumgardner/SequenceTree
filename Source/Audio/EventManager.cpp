@@ -7,7 +7,7 @@ EventManager::EventManager(SequenceTreeAudioProcessor* p)
     jassert(p != nullptr);
 }
 
-void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, NodeMap& nodes, TraversalMap& traversalMap)
+void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, const NodeMap& nodes, NodeStateMap& nodeStates, TraversalMap& traversalMap)
 {
     auto& activeNotes = scheduler.activeNotes;
 
@@ -43,16 +43,16 @@ void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, NodeMap& no
 
         traversal.primary.target = traversal.rootId;
         traversal.state          = TraversalLogic::TraversalState::Active;
-        traversal.advanceAlternative(nodes, traversal.rootId);
-        bridge.highlightNode(rootIt->second, true);
-        dispatcher.pushNote(rootIt->second, orphanedTraversalId, midiMessages, 0, nodes, traversalMap);
+        traversal.advanceAlternative(nodes, nodeStates, traversal.rootId);
+        bridge.highlightNode(rootIt->second, true, traversal.traversal.traversalId);
+        dispatcher.pushNote(rootIt->second, orphanedTraversalId, midiMessages, 0, nodes, nodeStates, traversalMap);
     }
 }
 
 void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
-                                   NodeMap& nodes, TraversalMap& traversalMap)
+                                   const NodeMap& nodes, NodeStateMap& nodeStates, TraversalMap& traversalMap)
 {
-    handleOrphanNotes(midiMessages, nodes, traversalMap);
+    handleOrphanNotes(midiMessages, nodes, nodeStates, traversalMap);
 
     auto& activeNotes = scheduler.activeNotes;
 
@@ -90,7 +90,7 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
         scheduler.removeNote(smallestNoteIndex);
 
         dispatcher.handleExpiredNote(expiredNote, priorityNoteDuration,
-                                     midiMessages, nodes, traversalMap);
+                                     midiMessages, nodes, nodeStates, traversalMap);
     }
 
     for (auto& note : activeNotes) {

@@ -14,7 +14,7 @@ static bool isAlternativeChild(RTNode::NodeType t) {
     return t == RTNode::NodeType::Alternative;
 }
 
-void TraversalLogic::advanceModulator(NodeMap& nodes) {
+void TraversalLogic::advanceModulator(const NodeMap& nodes, NodeStateMap& nodeStates) {
 
     if (activeModulatorRootId == -1 || modulator.target == -1) {
         return;
@@ -28,7 +28,7 @@ void TraversalLogic::advanceModulator(NodeMap& nodes) {
     modulator.last = modulator.target;
     int count      = ++modulator.counts[modulator.target];
 
-    int chosen = selectNextChild(nodes, modulator.target, count, &isModulatorChild);
+    int chosen = selectNextChild(nodes, nodeStates, modulator.target, count, &isModulatorChild);
 
     if (chosen == -1) {
         bool hasModulatorChild = false;
@@ -55,11 +55,11 @@ void TraversalLogic::advanceModulator(NodeMap& nodes) {
     }
 }
 
-int TraversalLogic::advanceAlternativeNode(NodeMap &nodes) {
+int TraversalLogic::advanceAlternativeNode(const NodeMap& nodes, NodeStateMap& nodeStates) {
     int targetId = primary.target;
     auto targetIt = nodes.find(targetId);
 
-    int activeAlternativeNodeId = targetIt->second.activeAlternativeId;
+    int activeAlternativeNodeId = nodeStates[targetId].activeAlternativeId;
 
     if (targetIt == nodes.end()) {
         return 0;
@@ -71,12 +71,12 @@ int TraversalLogic::advanceAlternativeNode(NodeMap &nodes) {
     int chosen = 0;
 
     if (activeAlternativeNodeId == -1) {
-        chosen = selectNextChild(nodes, targetId,count, &isAlternativeChild);
-        targetIt->second.activeAlternativeId = chosen;
+        chosen = selectNextChild(nodes, nodeStates, targetId, count, &isAlternativeChild);
+        nodeStates[targetId].activeAlternativeId = chosen;
     }
     else {
-        chosen = selectNextChild(nodes, activeAlternativeNodeId, count, &isAlternativeChild);
-        targetIt->second.activeAlternativeId = chosen;
+        chosen = selectNextChild(nodes, nodeStates, activeAlternativeNodeId, count, &isAlternativeChild);
+        nodeStates[targetId].activeAlternativeId = chosen;
     }
 
     if (chosen == -1) {
@@ -86,7 +86,7 @@ int TraversalLogic::advanceAlternativeNode(NodeMap &nodes) {
     return chosen;
 }
 
-int TraversalLogic::selectNextChild(NodeMap& nodes, int parentId, int parentCount,
+int TraversalLogic::selectNextChild(const NodeMap& nodes, NodeStateMap& nodeStates, int parentId, int parentCount,
                                     ChildPredicate isEligible)
 {
     auto parentNodeIterator = nodes.find(parentId);
@@ -138,7 +138,7 @@ int TraversalLogic::selectNextChild(NodeMap& nodes, int parentId, int parentCoun
         }
     }
 
-    parentNodeIterator->second.lastNodeId = chosen;
+    nodeStates[parentId].lastNodeId = chosen;
     return chosen;
 }
 
@@ -146,7 +146,7 @@ static bool isAdvanceableChild(RTNode::NodeType t) {
     return t == RTNode::NodeType::Node || t == RTNode::NodeType::Modulator;
 }
 
-void TraversalLogic::registerTrigger(NodeMap& nodes, int nodeId)
+void TraversalLogic::registerTrigger(const NodeMap& nodes, int nodeId)
 {
     auto nodeIterator = nodes.find(nodeId);
 
@@ -165,25 +165,25 @@ static bool isAudibleChild(RTNode::NodeType t) {
     return t == RTNode::NodeType::Node;
 }
 
-void TraversalLogic::advanceAlternative(NodeMap& nodes, int parentId) {
+void TraversalLogic::advanceAlternative(const NodeMap& nodes, NodeStateMap& nodeStates, int parentId) {
     auto parentIt = nodes.find(parentId);
     if (parentIt == nodes.end()) {
         primary.alternativeTarget = -1;
         return;
     }
 
-    RTNode& parent = parentIt->second;
+    const RTNode& parent = parentIt->second;
 
     if (parent.alternativeRootId == -1) {
-        parent.activeAlternativeId = -1;
+        nodeStates[parentId].activeAlternativeId = -1;
         primary.alternativeTarget  = -1;
         return;
     }
 
-    int currentAltId = parent.activeAlternativeId;
+    int currentAltId = nodeStates[parentId].activeAlternativeId;
 
     if (currentAltId == -1) {
-        parent.activeAlternativeId = parentId;
+        nodeStates[parentId].activeAlternativeId = parentId;
         primary.alternativeTarget  = -1;
         return;
     }
@@ -195,23 +195,23 @@ void TraversalLogic::advanceAlternative(NodeMap& nodes, int parentId) {
         count = ++primary.counts[currentAltId];
     }
 
-    int chosen = selectNextChild(nodes, currentAltId, count, &isAlternativeChild);
+    int chosen = selectNextChild(nodes, nodeStates, currentAltId, count, &isAlternativeChild);
 
     if (chosen == -1) {
-        parent.activeAlternativeId = parentId;
+        nodeStates[parentId].activeAlternativeId = parentId;
         primary.alternativeTarget  = -1;
     } else {
-        parent.activeAlternativeId = chosen;
+        nodeStates[parentId].activeAlternativeId = chosen;
         primary.alternativeTarget  = chosen;
     }
 }
 
-void TraversalLogic::selectSwitchNode(NodeMap &nodes, int targetId, int &chosenNodeId, RTNode &targetNode) {
-    if (targetNode.lastNodeId != -1) {
+void TraversalLogic::selectSwitchNode(const NodeMap& nodes, NodeStateMap& nodeStates, int targetId, int& chosenNodeId) {
+    if (nodeStates[targetId].lastNodeId != -1) {
 
         int switchCount = ++primary.switchCounts[targetId];
 
-        auto switchNodeIterator = nodes.find(targetNode.lastNodeId);
+        auto switchNodeIterator = nodes.find(nodeStates[targetId].lastNodeId);
 
         if (switchNodeIterator != nodes.end()) {
             const RTNode& switchNode = switchNodeIterator->second;
@@ -227,7 +227,7 @@ void TraversalLogic::selectSwitchNode(NodeMap &nodes, int targetId, int &chosenN
     }
 }
 
-void TraversalLogic::advance(NodeMap& nodes)
+void TraversalLogic::advance(const NodeMap& nodes, NodeStateMap& nodeStates)
 {
     int targetId            = primary.target;
     int chosenNodeId        = -1;
@@ -236,20 +236,20 @@ void TraversalLogic::advance(NodeMap& nodes)
     primary.last            = targetId;
     primary.alternativeLast = primary.alternativeTarget;
 
-    std::unordered_map<int,RTNode>::iterator targetIterator = nodes.find(targetId);
+    auto targetIterator = nodes.find(targetId);
 
-    RTNode& targetNode = targetIterator->second;
+    const RTNode& targetNode = targetIterator->second;
 
     if (targetIterator == nodes.end() || targetNode.children.empty()) {
         state = isLooping ? TraversalState::Reset : TraversalState::End;
         return;
     }
 
-    selectSwitchNode(nodes, targetId, chosenNodeId, targetNode);
+    selectSwitchNode(nodes, nodeStates, targetId, chosenNodeId);
 
     if (chosenNodeId == -1) {
         int count = ++primary.counts[targetId];
-        chosenNodeId = selectNextChild(nodes, targetId, count, &isAdvanceableChild);
+        chosenNodeId = selectNextChild(nodes, nodeStates, targetId, count, &isAdvanceableChild);
 
         if (chosenNodeId != -1) {
             registerTrigger(nodes, chosenNodeId);
@@ -264,10 +264,10 @@ void TraversalLogic::advance(NodeMap& nodes)
         }
         else {
             primary.target = chosenNodeId;
-            advanceAlternative(nodes, chosenNodeId);
+            advanceAlternative(nodes, nodeStates, chosenNodeId);
         }
 
-        nextTargetIt->second.lastNodeId = chosenNodeId;
+        nodeStates[chosenNodeId].lastNodeId = chosenNodeId;
 
         int nextSubLoopCountLimit = nextTargetIt->second.subLoopCountLimit;
         bool subLoopsForever      = (nextSubLoopCountLimit == 0);
@@ -284,12 +284,12 @@ void TraversalLogic::advance(NodeMap& nodes)
     }
 }
 
-RTNode* TraversalLogic::peekNextTarget(NodeMap& nodes)
+const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes, NodeStateMap& nodeStates)
 {
     auto cIt = primary.counts.find(primary.target);
     int count = (cIt != primary.counts.end() ? cIt->second : 0) + 1;
 
-    int peekTargetId = selectNextChild(nodes, primary.target, count, &isAudibleChild);
+    int peekTargetId = selectNextChild(nodes, nodeStates, primary.target, count, &isAudibleChild);
 
     if (peekTargetId == -1 || peekTargetId == primary.target) {
         return nullptr;
@@ -299,7 +299,7 @@ RTNode* TraversalLogic::peekNextTarget(NodeMap& nodes)
     return (itPeek != nodes.end()) ? &itPeek->second : nullptr;
 }
 
-std::vector<int> TraversalLogic::peekCrossTreeNode(NodeMap& nodes)
+std::vector<int> TraversalLogic::peekCrossTreeNode(const NodeMap& nodes)
 {
     std::vector<int> traverserIds;
 
@@ -361,7 +361,7 @@ std::vector<int> TraversalLogic::peekCrossTreeNode(NodeMap& nodes)
     return traverserIds;
 }
 
-RTNode* TraversalLogic::peekModulators(NodeMap& nodes) {
+const RTNode* TraversalLogic::peekModulators(const NodeMap& nodes, NodeStateMap& nodeStates) {
 
     if (modulator.target == -1) {
         return nullptr;
@@ -370,7 +370,7 @@ RTNode* TraversalLogic::peekModulators(NodeMap& nodes) {
     auto cIt  = modulator.counts.find(modulator.target);
     int count = (cIt != modulator.counts.end() ? cIt->second : 0) + 1;
 
-    int peekId = selectNextChild(nodes, modulator.target, count, &isModulatorChild);
+    int peekId = selectNextChild(nodes, nodeStates, modulator.target, count, &isModulatorChild);
     if (peekId == -1) {
         return nullptr;
     }
@@ -391,14 +391,14 @@ bool TraversalLogic::shouldTraverse() const
     return state != TraversalState::End;
 }
 
-TraversalLogic::StepResult TraversalLogic::handleNodeEvent(NodeMap& nodes) {
+TraversalLogic::StepResult TraversalLogic::handleNodeEvent(const NodeMap& nodes, NodeStateMap& nodeStates) {
     StepResult result;
 
     switch (state) {
         case TraversalState::Start: {
             state          = TraversalState::Active;
             primary.target = rootId;
-            advanceAlternative(nodes, rootId);
+            advanceAlternative(nodes, nodeStates, rootId);
 
             result.kind                 = StepResult::Kind::EnteredRoot;
             result.enteredId            = primary.target;
@@ -406,7 +406,7 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(NodeMap& nodes) {
             return result;
         }
         case TraversalState::Active: {
-            advance(nodes);
+            advance(nodes, nodeStates);
 
             const int leftAlternativeId = primary.alternativeLast;
             const int leftId            = primary.last;
@@ -440,7 +440,7 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(NodeMap& nodes) {
                         result.leftAlternativeId = primary.alternativeTarget;
 
                         primary.target           = rootId;
-                        advanceAlternative(nodes, rootId);
+                        advanceAlternative(nodes, nodeStates, rootId);
 
                         result.enteredId            = rootId;
                         result.enteredAlternativeId = primary.alternativeTarget;
@@ -500,7 +500,7 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(NodeMap& nodes) {
     return result;
 }
 
-RTNode* TraversalLogic::getModulatorNode(NodeMap& nodes, int nodeId)
+const RTNode* TraversalLogic::getModulatorNode(const NodeMap& nodes, int nodeId)
 {
     auto nodeIterator = nodes.find(nodeId);
     if (nodeIterator == nodes.end()) {
@@ -513,7 +513,7 @@ RTNode* TraversalLogic::getModulatorNode(NodeMap& nodes, int nodeId)
             continue;
         }
 
-        RTNode* childNode = &childIt->second;
+        const RTNode* childNode = &childIt->second;
 
         if (childNode->nodeType == RTNode::NodeType::ModulatorRoot) {
             return childNode;
@@ -549,13 +549,13 @@ bool TraversalLogic::isDescendantOf(const NodeMap& nodes, int nodeId, int ancest
     return false;
 }
 
-int TraversalLogic::findActiveModulatorRoot(NodeMap& nodes, int regularNodeId)
+int TraversalLogic::findActiveModulatorRoot(const NodeMap& nodes, int regularNodeId)
 {
     if (nodes.find(regularNodeId) == nodes.end()) {
         return -1;
     }
 
-    RTNode* modRoot = getModulatorNode(nodes, regularNodeId);
+    const RTNode* modRoot = getModulatorNode(nodes, regularNodeId);
 
 
     if (modRoot == nullptr || modRoot->countLimit <= 0) {

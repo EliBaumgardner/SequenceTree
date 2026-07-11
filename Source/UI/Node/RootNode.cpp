@@ -7,6 +7,8 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Graph/ValueTreeState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
+#include "../../Graph/RTGraphBuilder.h"
+#include "../../Util/ApplicationContext.h"
 
 RootNode::RootNode(ApplicationContext& context) : Node(context)
 {
@@ -77,6 +79,8 @@ RootNode::RootNode(ApplicationContext& context) : Node(context)
                 traversalChildrenIds.addChild(traversalIdTree, -1, nullptr);
             }
         }
+
+        applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);
     };
 }
 

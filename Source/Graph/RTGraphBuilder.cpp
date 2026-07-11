@@ -269,7 +269,7 @@ void RTGraphBuilder::updateDurationMap(int nodeId)
 {
     auto* processor = applicationContext.processor;
     auto snap = std::atomic_load(&processor->audioSnapshot);
-    if (!snap || !snap->globalNodes) {
+    if (!snap || !snap->globalNodes || !snap->nodeStates) {
         return;
     }
 
@@ -287,6 +287,7 @@ void RTGraphBuilder::updateDurationMap(int nodeId)
 
     auto newSnap = std::make_shared<SequenceTreeAudioProcessor::AudioSnapshot>();
     newSnap->globalNodes = std::make_shared<NodeMap>(*snap->globalNodes);
+    newSnap->nodeStates  = std::make_shared<NodeStateMap>(*snap->nodeStates);
     newSnap->rtGraphs    = snap->rtGraphs;
 
     auto globalNodeIt = newSnap->globalNodes->find(nodeId);
