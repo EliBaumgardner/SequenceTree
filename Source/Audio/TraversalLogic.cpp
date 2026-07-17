@@ -188,6 +188,23 @@ void TraversalLogic::advanceAlternative(const NodeMap& nodes,int parentId) {
         return;
     }
 
+    if (currentAltId != parentId) {
+        auto currentAltIt = nodes.find(currentAltId);
+
+        if (currentAltIt != nodes.end()) {
+            int switchCountLimit = currentAltIt->second.switchCountLimit;
+            int switchCount      = ++primary.switchCounts[currentAltId];
+
+            if (switchCount < switchCountLimit && switchCountLimit > 1) {
+                primary.alternativeTarget = currentAltId;
+                return;
+            }
+            else {
+                primary.switchCounts[currentAltId] = 0;
+            }
+        }
+    }
+
     int count;
     if (currentAltId == parentId) {
         count = primary.counts[parentId];

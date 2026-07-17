@@ -214,8 +214,6 @@ void TraversalDispatcher::dispatchPrimaryArrow(const RTNode& node, const RTNode*
         bridge.pushProgress(node.nodeID, nextTarget->nodeID, wallClockMs, rootId, colourTraversalId);
     }
     else {
-        bridge.pushArrowReset(rootId, colourTraversalId);
-
         auto danglingIt = node.durationMap.find(node.nodeID);
         if (danglingIt != node.durationMap.end() && danglingIt->second > 0) {
             bridge.pushProgress(node.nodeID, node.nodeID, wallClockMs, rootId, colourTraversalId);

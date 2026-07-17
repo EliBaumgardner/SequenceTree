@@ -89,6 +89,13 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
 SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
 {
+    if (keyListenerTarget != nullptr)
+        keyListenerTarget->removeKeyListener(this);
+
+    auto& desktop = juce::Desktop::getInstance();
+    if (desktop.getKioskModeComponent() == getTopLevelComponent())
+        desktop.setKioskModeComponent(nullptr);
+
     audioProcessor.notifyUi       = nullptr;
     audioProcessor.applyStateToUi = nullptr;
 
@@ -116,4 +123,51 @@ void SequenceTreeAudioProcessorEditor::resized()
     titleBar ->setBounds(titleArea);
     bottomBar->setBounds(bottomArea);
     port->setBounds(bounds);
+}
+
+void SequenceTreeAudioProcessorEditor::parentHierarchyChanged()
+{
+    auto* top = getTopLevelComponent();
+    if (top == keyListenerTarget)
+        return;
+
+    if (keyListenerTarget != nullptr)
+        keyListenerTarget->removeKeyListener(this);
+
+    keyListenerTarget = top;
+
+    if (keyListenerTarget != nullptr)
+        keyListenerTarget->addKeyListener(this);
+}
+
+bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, juce::Component*)
+{
+    if (audioProcessor.wrapperType != juce::AudioProcessor::wrapperType_Standalone)
+        return false;
+
+    if (key.getModifiers().isShiftDown()
+        && (key.getKeyCode() == '1' || key.getTextCharacter() == '!'))
+    {
+        toggleFullScreen();
+        return true;
+    }
+
+    if (key == juce::KeyPress::escapeKey
+        && juce::Desktop::getInstance().getKioskModeComponent() != nullptr)
+    {
+        toggleFullScreen();
+        return true;
+    }
+
+    return false;
+}
+
+void SequenceTreeAudioProcessorEditor::toggleFullScreen()
+{
+    auto& desktop = juce::Desktop::getInstance();
+
+    if (desktop.getKioskModeComponent() == nullptr)
+        desktop.setKioskModeComponent(getTopLevelComponent(), false);
+    else
+        desktop.setKioskModeComponent(nullptr);
 }
