@@ -27,7 +27,8 @@
 
 class SequenceTreeAudioProcessor;
 
-class SequenceTreeAudioProcessorEditor  : public juce::AudioProcessorEditor
+class SequenceTreeAudioProcessorEditor  : public juce::AudioProcessorEditor,
+                                          public juce::KeyListener
 {
 
 public:
@@ -40,7 +41,15 @@ public:
     void resized() override;
     void setManualMenuBounds (juce::Rectangle<int> b);
 
+    bool keyPressed (const juce::KeyPress& key, juce::Component* originatingComponent) override;
+    void parentHierarchyChanged() override;
+
 private:
+    void toggleFullScreen();
+
+    juce::Component* keyListenerTarget = nullptr;
+
+
     SequenceTreeAudioProcessor& audioProcessor;
     juce::UndoManager undoManager;
     CustomLookAndFeel lookAndFeel;

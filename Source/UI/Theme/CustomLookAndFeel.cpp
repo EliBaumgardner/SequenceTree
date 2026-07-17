@@ -361,11 +361,28 @@ void CustomLookAndFeel::drawNodeArrowText(juce::Graphics &g, const NodeArrow &no
 
     juce::String labelText = editor.getText();
     if (labelText.isNotEmpty() && nodeArrow.animT > 0.8f) {
-        float midX = (parentX + childX) * 0.5f;
-        float midY = (parentY + childY) * 0.5f;
-
         float deltaX = float(arrowEndX - parentX);
         float deltaY = float(arrowEndY - parentY);
+
+        const float arrowHeadLength = 12.0f;
+        const float parentRadius = float(nodeArrow.startNode->getHeight()) * 0.5f;
+
+        float shaftStartX = float(parentX);
+        float shaftStartY = float(parentY);
+        float shaftEndX = float(arrowEndX);
+        float shaftEndY = float(arrowEndY);
+        float length = std::sqrt(deltaX * deltaX + deltaY * deltaY);
+        if (length > 0.0f) {
+            float ux = deltaX / length;
+            float uy = deltaY / length;
+            shaftStartX += ux * parentRadius;
+            shaftStartY += uy * parentRadius;
+            shaftEndX   -= ux * arrowHeadLength;
+            shaftEndY   -= uy * arrowHeadLength;
+        }
+
+        float midX = (shaftStartX + shaftEndX) * 0.5f;
+        float midY = (shaftStartY + shaftEndY) * 0.5f;
 
         float angle = std::atan2(deltaY, deltaX);
 
@@ -389,14 +406,14 @@ void CustomLookAndFeel::drawNodeArrowText(juce::Graphics &g, const NodeArrow &no
 
         g.addTransform(juce::AffineTransform::rotation(angle).translated(midX, midY));
 
-        g.setFont(juce::Font(10.0f));
+        g.setFont(juce::Font(8.5f));
         g.setColour(juce::Colours::darkgrey);
 
         float textW = 60.0f;
         float textH = 12.0f;
 
-        g.drawText(labelText, -textW * 0.5f, -(textH * 0.5f + 2.0f), textW, textH,
-                   juce::Justification::centred, true);
+        g.drawText(labelText, -textW * 0.5f, -textH, textW, textH,
+                   juce::Justification::centredBottom, true);
     }
 }
 
@@ -947,11 +964,27 @@ void CustomLookAndFeel::drawDanglingArrow(juce::Graphics &g, const DanglingArrow
         float rawStartX = float(startCentre.x - danglingArrow.getX());
         float rawStartY = float(startCentre.y - danglingArrow.getY());
 
-        float midX = (rawStartX + endX) * 0.5f;
-        float midY = (rawStartY + endY) * 0.5f;
-
         float deltaX = endX - rawStartX;
         float deltaY = endY - rawStartY;
+
+        const float startRadius = float(node->getHeight()) * 0.5f;
+
+        float shaftStartX = rawStartX;
+        float shaftStartY = rawStartY;
+        float shaftEndX = endX;
+        float shaftEndY = endY;
+        float shaftLength = std::sqrt(deltaX * deltaX + deltaY * deltaY);
+        if (shaftLength > 0.0f) {
+            float ux = deltaX / shaftLength;
+            float uy = deltaY / shaftLength;
+            shaftStartX += ux * startRadius;
+            shaftStartY += uy * startRadius;
+            shaftEndX   -= ux * arrowLength;
+            shaftEndY   -= uy * arrowLength;
+        }
+
+        float midX = (shaftStartX + shaftEndX) * 0.5f;
+        float midY = (shaftStartY + shaftEndY) * 0.5f;
 
         float angle = std::atan2(deltaY, deltaX);
 
@@ -975,14 +1008,14 @@ void CustomLookAndFeel::drawDanglingArrow(juce::Graphics &g, const DanglingArrow
 
         g.addTransform(juce::AffineTransform::rotation(angle).translated(midX, midY));
 
-        g.setFont(juce::Font(10.0f));
+        g.setFont(juce::Font(8.5f));
         g.setColour(juce::Colours::darkgrey);
 
         float textW = 60.0f;
         float textH = 12.0f;
 
-        g.drawText(labelText, -textW * 0.5f, -(textH * 0.5f + 2.0f), textW, textH,
-                   juce::Justification::centred, true);
+        g.drawText(labelText, -textW * 0.5f, -textH, textW, textH,
+                   juce::Justification::centredBottom, true);
     }
 }
 
