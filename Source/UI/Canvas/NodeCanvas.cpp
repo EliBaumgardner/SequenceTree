@@ -476,6 +476,24 @@ void NodeCanvas::removeLinePoints(Node* node)
     }
 }
 
+void NodeCanvas::removeArrow(NodeArrow* arrow)
+{
+    if (arrow == nullptr) {
+        return;
+    }
+
+    if (arrow->startNode != nullptr && arrow->endNode != nullptr) {
+        int childNodeId = arrow->endNode->getComponentID().getIntValue();
+        arrow->startNode->nodeArrows.erase(childNodeId);
+    }
+
+    int index = nodeArrows.indexOf(arrow);
+    if (index >= 0) {
+        removeChildComponent(arrow);
+        nodeArrows.remove(index);
+    }
+}
+
 void NodeCanvas::updateLinePoints(Node* movedNode)
 {
     for (NodeArrow* arrow : nodeArrows)

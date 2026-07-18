@@ -59,11 +59,15 @@ public:
     Node* findConnectionTarget (juce::Point<int> point, int excludeNodeId) const;
     void  commitFlagConnection (int sourceNodeId, Node* target);
 
+    NodeArrow* findArrowNear   (juce::Point<float> point, float radius) const;
+    void       deleteArrow     (NodeArrow* arrow);
+
 private:
 
     static constexpr float rootSnapThreshold      = 60.0f;
     static constexpr float danglingArrowGrabRadius = 14.0f;
     static constexpr float flagArrowVicinity       = 28.0f;
+    static constexpr float arrowHoverRadius        = 8.0f;
 
     ApplicationContext& applicationContext;
 

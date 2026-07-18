@@ -35,6 +35,7 @@ public:
     static juce::ValueTree addModulator        (int parentNodeId, juce::UndoManager* undoManager);
 
     static void connectNodes   (int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
+    static void disconnectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
     static void removeRootNode (int rootNodeId, juce::UndoManager* undoManager);
     static void removeNode     (int nodeId, juce::UndoManager* undoManager);
     static void removeNodeTree (int treeId, juce::UndoManager* undoManager);
