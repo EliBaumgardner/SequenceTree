@@ -528,8 +528,8 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     juce::Point<int> parentCentre = a->getNodeCentre();
     juce::Point<int> childCentre  = b->getNodeCentre();
 
-    float arrowLength  = 12.0f;
-    float arrowWidth   = 6.0f;
+    float arrowLength  = nodeArrow.hovered ? 15.0f : 12.0f;
+    float arrowWidth   = nodeArrow.hovered ? 7.5f  : 6.0f;
     int   childRadius  = b->getHeight() / 2;
     int   parentRadius = a->getHeight() / 2;
 
@@ -627,7 +627,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         stroke.createDashedStroke(linePath, linePath, dashLengths, 2);
     }
 
-    juce::PathStrokeType lineStroke(2.0f);
+    juce::PathStrokeType lineStroke(nodeArrow.hovered ? 3.25f : 2.0f);
     auto shadowPath    = linePath;
     auto highlightPath = linePath;
     shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));

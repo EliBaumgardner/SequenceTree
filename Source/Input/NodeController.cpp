@@ -93,6 +93,67 @@ void NodeController::mouseMove(const juce::MouseEvent& e)
             arrow->refreshHoverVisibility();
         }
     }
+
+    NodeArrow* hoveredArrow = findArrowNear(cursor, arrowHoverRadius);
+
+    for (NodeArrow* arrow : canvas->nodeArrows) {
+        bool shouldBold = (arrow == hoveredArrow);
+        if (shouldBold != arrow->hovered) {
+            arrow->hovered = shouldBold;
+            arrow->repaint();
+        }
+    }
+}
+
+NodeArrow* NodeController::findArrowNear(juce::Point<float> point, float radius) const
+{
+    NodeCanvas* canvas = applicationContext.canvas;
+
+    NodeArrow* nearest = nullptr;
+    float minDist = radius;
+
+    for (NodeArrow* arrow : canvas->nodeArrows) {
+        if (arrow->startNode == nullptr || arrow->endNode == nullptr || ! arrow->isVisible()) {
+            continue;
+        }
+
+        float dist = distanceToSegment(point,
+                                       arrow->startNode->getNodeCentre().toFloat(),
+                                       arrow->endNode->getNodeCentre().toFloat());
+        if (dist < minDist) {
+            minDist = dist;
+            nearest = arrow;
+        }
+    }
+
+    return nearest;
+}
+
+void NodeController::deleteArrow(NodeArrow* arrow)
+{
+    if (arrow == nullptr || arrow->startNode == nullptr || arrow->endNode == nullptr) {
+        return;
+    }
+
+    NodeCanvas* canvas = applicationContext.canvas;
+    juce::UndoManager* undoManager = applicationContext.undoManager;
+
+    int parentNodeId = arrow->startNode->getComponentID().getIntValue();
+    int childNodeId  = arrow->endNode->getComponentID().getIntValue();
+
+    undoManager->beginNewTransaction();
+    ValueTreeState::disconnectNodes(parentNodeId, childNodeId, undoManager);
+
+    canvas->removeArrow(arrow);
+
+    juce::ValueTree parentTree = ValueTreeState::getNode(parentNodeId);
+    if (parentTree.isValid()) {
+        int rootId = parentTree.getProperty(ValueTreeIdentifiers::RootNodeId);
+        juce::ValueTree rootTree = ValueTreeState::getNode(rootId);
+        if (rootTree.isValid()) {
+            applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
+        }
+    }
 }
 
 void NodeController::mouseUp(const juce::MouseEvent& e)
@@ -243,6 +304,10 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
             if (DanglingArrow* arrow = canvas->hitTestDanglingArrowHead({ e.x, e.y }, danglingArrowGrabRadius)) {
                 undoManager->beginNewTransaction();
                 canvas->removeDanglingArrow(arrow);
+                return;
+            }
+            if (NodeArrow* nodeArrow = findArrowNear({ (float) e.x, (float) e.y }, danglingArrowGrabRadius)) {
+                deleteArrow(nodeArrow);
                 return;
             }
         }

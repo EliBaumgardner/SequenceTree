@@ -275,6 +275,21 @@ void ValueTreeState::connectNodes(int parentNodeId, int childNodeId, juce::UndoM
     nodeChildrenIds.addChild(childId, -1, undoManager);
 }
 
+void ValueTreeState::disconnectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager)
+{
+    juce::ValueTree parentNode = getNode(parentNodeId);
+
+    juce::ValueTree nodeChildrenIds = parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+    if (! nodeChildrenIds.isValid()) {
+        return;
+    }
+
+    juce::ValueTree childId = nodeChildrenIds.getChildWithProperty(ValueTreeIdentifiers::Id, childNodeId);
+    if (childId.isValid()) {
+        nodeChildrenIds.removeChild(childId, undoManager);
+    }
+}
+
 void ValueTreeState::removeNodeTree(int treeId, juce::UndoManager* undoManager)
 {
     juce::ValueTree nodeTree = nodeTreeMap.getChildWithProperty(ValueTreeIdentifiers::NodeTreeId,treeId);
