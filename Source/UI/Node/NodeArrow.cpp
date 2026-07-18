@@ -117,6 +117,48 @@ void NodeArrow::triggerSnapAnimation()
     ensureAnimationTimerRunning();
 }
 
+void NodeArrow::setHoverFade(bool shouldBeVisible)
+{
+    hoverAlphaTarget = shouldBeVisible ? 1.0f : 0.0f;
+
+    if (shouldBeVisible && ! isVisible()) {
+        setVisible(true);
+    }
+
+    ensureAnimationTimerRunning();
+}
+
+void NodeArrow::initHoverState(bool visibleNow)
+{
+    hoverAlpha       = visibleNow ? 1.0f : 0.0f;
+    hoverAlphaTarget = hoverAlpha;
+    setAlpha(hoverAlpha);
+    setVisible(visibleNow);
+}
+
+bool NodeArrow::advanceHoverFade()
+{
+    if (hoverAlphaTarget < hoverAlpha && ! isSnapSettled()) {
+        return false;
+    }
+
+    if (std::abs(hoverAlpha - hoverAlphaTarget) < hoverFadeEpsilon) {
+        if (hoverAlpha != hoverAlphaTarget) {
+            hoverAlpha = hoverAlphaTarget;
+            setAlpha(hoverAlpha);
+        }
+        if (hoverAlphaTarget <= 0.0f && isVisible()) {
+            setVisible(false);
+        }
+        return true;
+    }
+
+    float step = (hoverAlpha < hoverAlphaTarget) ? hoverFadeStep : -hoverFadeStep;
+    hoverAlpha = juce::jlimit(0.0f, 1.0f, hoverAlpha + step);
+    setAlpha(hoverAlpha);
+    return false;
+}
+
 void NodeArrow::startProgress(int traversalId, int durationMs, juce::Colour colour)
 {
     progress.start(traversalId, durationMs, colour);
@@ -171,8 +213,9 @@ void NodeArrow::timerCallback()
 {
     const bool snapDone       = advanceSnapAnimation();
     const bool progressActive = progress.advance();
+    const bool hoverDone      = advanceHoverFade();
 
-    if (snapDone && ! progressActive) {
+    if (snapDone && ! progressActive && hoverDone) {
         stopTimer();
     }
 

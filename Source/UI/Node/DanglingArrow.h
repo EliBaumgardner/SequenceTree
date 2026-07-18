@@ -117,6 +117,8 @@ public:
     juce::Point<int> tipOffset;
     juce::ValueTree arrowTree;
 
+    bool dashed = false;
+
     ArrowProgress progress;
 
     static constexpr int arrowBoundsPadding = 40;

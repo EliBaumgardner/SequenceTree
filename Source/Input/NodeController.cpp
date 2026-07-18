@@ -49,6 +49,52 @@ void NodeController::mouseExit(const juce::MouseEvent& e)
         node->setHoverVisual(false);
     }
 }
+static float distanceToSegment(juce::Point<float> p, juce::Point<float> a, juce::Point<float> b)
+{
+    juce::Point<float> ab = b - a;
+    float lengthSquared = ab.x * ab.x + ab.y * ab.y;
+
+    if (lengthSquared < 1.0e-6f) {
+        return p.getDistanceFrom(a);
+    }
+
+    float t = ((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / lengthSquared;
+    t = juce::jlimit(0.0f, 1.0f, t);
+
+    juce::Point<float> projection = a + ab * t;
+    return p.getDistanceFrom(projection);
+}
+
+void NodeController::mouseMove(const juce::MouseEvent& e)
+{
+    NodeCanvas* canvas = applicationContext.canvas;
+
+    if (canvas->paintMode) {
+        return;
+    }
+
+    juce::Point<float> cursor = e.getEventRelativeTo(canvas).position;
+
+    for (NodeArrow* arrow : canvas->nodeArrows) {
+        if (arrow->startNode == nullptr || arrow->endNode == nullptr) {
+            continue;
+        }
+        if (arrow->startNode->nodeType != NodeType::TraversalFlag) {
+            continue;
+        }
+
+        float dist = distanceToSegment(cursor,
+                                       arrow->startNode->getNodeCentre().toFloat(),
+                                       arrow->endNode->getNodeCentre().toFloat());
+
+        bool nearby = dist < flagArrowVicinity;
+        if (nearby != arrow->proximityHovered) {
+            arrow->proximityHovered = nearby;
+            arrow->refreshHoverVisibility();
+        }
+    }
+}
+
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
     NodeCanvas* canvas = applicationContext.canvas;
@@ -57,6 +103,24 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
         applicationContext.undoManager->beginNewTransaction();
         canvas->commitDanglingArrowTip(draggingDanglingArrow);
         draggingDanglingArrow = nullptr;
+
+        if (canvas->showGrid) {
+            canvas->showGrid = false;
+            canvas->repaint();
+        }
+        return;
+    }
+
+    if (draggingFlagConnection) {
+        draggingFlagConnection = false;
+        canvas->cancelDanglingPreview();
+
+        if (flagConnectionTarget != nullptr) {
+            commitFlagConnection(flagConnectionSourceId, flagConnectionTarget);
+        }
+
+        flagConnectionTarget   = nullptr;
+        flagConnectionSourceId = -1;
 
         if (canvas->showGrid) {
             canvas->showGrid = false;
@@ -163,6 +227,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     jassert(nodeCanvas);
 
     creatingDanglingArrow = false;
+    draggingFlagConnection = false;
 
     if (nodeCanvas->paintMode) {
         if (e.mods.isLeftButtonDown() || e.mods.isRightButtonDown()) {
@@ -226,6 +291,14 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
         creatingDanglingArrow = nodeCanvas->arrowMode
             && e.mods.isLeftButtonDown()
             && e.mods.isShiftDown();
+
+        draggingFlagConnection = ! nodeCanvas->arrowMode
+            && node->nodeType == NodeType::TraversalFlag
+            && e.mods.isLeftButtonDown()
+            && e.mods.isShiftDown();
+
+        flagConnectionSourceId = draggingFlagConnection ? node->getComponentID().getIntValue() : -1;
+        flagConnectionTarget   = nullptr;
 
         node->setHoverVisual(true);
         int nodeId = node->getComponentID().getIntValue();
@@ -347,14 +420,25 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         }
 
         if (canvas->arrowMode && creatingDanglingArrow) {
+            updateConnectionPreview(node, newPosition, false);
+            return;
+        }
+
+        if (draggingFlagConnection) {
             if (canvas->gridOriginSet) {
                 canvas->showGrid = true;
                 canvas->repaint();
             }
-            juce::Point<int> snapped = snapPointToGrid({ newPosition.xPosition, newPosition.yPosition });
-            juce::Point<int> centre  = node->getNodeCentre();
-            canvas->updateDanglingPreview(node, { snapped.x - centre.x,
-                                                  snapped.y - centre.y });
+
+            juce::Point<int> cursor { newPosition.xPosition, newPosition.yPosition };
+            flagConnectionTarget = findConnectionTarget(cursor, flagConnectionSourceId);
+
+            juce::Point<int> centre = node->getNodeCentre();
+            juce::Point<int> tip = flagConnectionTarget != nullptr
+                ? flagConnectionTarget->getNodeCentre()
+                : snapPointToGrid(cursor);
+
+            canvas->updateDanglingPreview(node, { tip.x - centre.x, tip.y - centre.y }, true);
             return;
         }
 
@@ -409,6 +493,80 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
     }
     else if (nodeControllerMode == NodeControllerMode::TraversalFlag) {
         draggedNodeTree = NodeFactory::createTraversalFlagNode(nodeId, newPosition, undoManager);
+    }
+}
+
+void NodeController::updateConnectionPreview(Node *node, const NodePosition& newPosition, bool dashed)
+{
+    NodeCanvas* canvas = applicationContext.canvas;
+
+    if (canvas->gridOriginSet) {
+        canvas->showGrid = true;
+        canvas->repaint();
+    }
+
+    juce::Point<int> snapped = snapPointToGrid({ newPosition.xPosition, newPosition.yPosition });
+    juce::Point<int> centre  = node->getNodeCentre();
+    canvas->updateDanglingPreview(node, { snapped.x - centre.x, snapped.y - centre.y }, dashed);
+}
+
+Node* NodeController::findConnectionTarget(juce::Point<int> point, int excludeNodeId) const
+{
+    NodeCanvas* canvas = applicationContext.canvas;
+
+    Node* nearest = nullptr;
+    float minDist = rootSnapThreshold;
+
+    for (auto& [id, node] : canvas->nodeMap)
+    {
+        if (id == excludeNodeId) {
+            continue;
+        }
+
+        float dist = (float) point.getDistanceFrom(node->getNodeCentre());
+        if (dist < minDist) {
+            minDist = dist;
+            nearest = node;
+        }
+    }
+
+    return nearest;
+}
+
+void NodeController::commitFlagConnection(int sourceNodeId, Node* target)
+{
+    NodeCanvas* canvas = applicationContext.canvas;
+
+    auto sourceIt = canvas->nodeMap.find(sourceNodeId);
+    if (sourceIt == canvas->nodeMap.end() || target == nullptr) {
+        return;
+    }
+
+    int targetNodeId = target->getComponentID().getIntValue();
+
+    if (sourceIt->second->nodeArrows.count(targetNodeId) > 0) {
+        return;
+    }
+
+    juce::UndoManager* undoManager = applicationContext.undoManager;
+    undoManager->beginNewTransaction();
+    ValueTreeState::connectNodes(sourceNodeId, targetNodeId, undoManager);
+
+    canvas->addLinePoints(sourceIt->second, target);
+    canvas->updateLinePoints(sourceIt->second);
+
+    auto arrowIt = sourceIt->second->nodeArrows.find(targetNodeId);
+    if (arrowIt != sourceIt->second->nodeArrows.end()) {
+        arrowIt->second->triggerSnapAnimation();
+    }
+
+    juce::ValueTree sourceTree = ValueTreeState::getNode(sourceNodeId);
+    if (sourceTree.isValid()) {
+        int rootId = sourceTree.getProperty(ValueTreeIdentifiers::RootNodeId);
+        juce::ValueTree rootTree = ValueTreeState::getNode(rootId);
+        if (rootTree.isValid()) {
+            applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
+        }
     }
 }
 

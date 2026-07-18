@@ -28,8 +28,8 @@ public:
 
     std::function<void(int)> onWidthDragged;
 
-    static constexpr int resizerWidth = 6;
-    static constexpr int minMenuWidth = 60;
+    static constexpr int resizerWidth = 15;
+    static constexpr int minMenuWidth = resizerWidth;
 
     TraversalDisplayMenu displayMenu;
 

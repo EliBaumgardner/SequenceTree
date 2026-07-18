@@ -1,8 +1,6 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 
-// Custom caret — controls width and colour independently of the LookAndFeel.
-// JUCE positions and resizes this component automatically; we just override paint.
 class CustomTextCaret : public juce::CaretComponent
 {
 public:
