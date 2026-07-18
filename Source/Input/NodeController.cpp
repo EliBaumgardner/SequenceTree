@@ -135,25 +135,19 @@ void NodeController::deleteArrow(NodeArrow* arrow)
         return;
     }
 
-    NodeCanvas* canvas = applicationContext.canvas;
+    int startId = arrow->startNode->getComponentID().getIntValue();
+    int endId   = arrow->endNode->getComponentID().getIntValue();
+
+    juce::ValueTree startTree     = ValueTreeState::getNode(startId);
+    juce::ValueTree startChildren = startTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+    bool startOwnsEnd = startChildren.getChildWithProperty(ValueTreeIdentifiers::Id, endId).isValid();
+
+    int ownerNodeId = startOwnsEnd ? startId : endId;
+    int childNodeId = startOwnsEnd ? endId : startId;
+
     juce::UndoManager* undoManager = applicationContext.undoManager;
-
-    int parentNodeId = arrow->startNode->getComponentID().getIntValue();
-    int childNodeId  = arrow->endNode->getComponentID().getIntValue();
-
     undoManager->beginNewTransaction();
-    ValueTreeState::disconnectNodes(parentNodeId, childNodeId, undoManager);
-
-    canvas->removeArrow(arrow);
-
-    juce::ValueTree parentTree = ValueTreeState::getNode(parentNodeId);
-    if (parentTree.isValid()) {
-        int rootId = parentTree.getProperty(ValueTreeIdentifiers::RootNodeId);
-        juce::ValueTree rootTree = ValueTreeState::getNode(rootId);
-        if (rootTree.isValid()) {
-            applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
-        }
-    }
+    ValueTreeState::disconnectNodes(ownerNodeId, childNodeId, undoManager);
 }
 
 void NodeController::mouseUp(const juce::MouseEvent& e)

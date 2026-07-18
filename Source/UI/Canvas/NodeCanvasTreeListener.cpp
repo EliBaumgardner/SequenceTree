@@ -20,6 +20,13 @@ void NodeCanvasTreeListener::valueTreeChildAdded(juce::ValueTree& parent, juce::
         update.rootNodeId = child.getProperty(ValueTreeIdentifiers::RootNodeId);
         canvas.enqueueAsyncUpdate(update);
     }
+    else if (parent.getType() == ValueTreeIdentifiers::NodeChildrenIds) {
+        NodeCanvas::AsyncUpdate update;
+        update.type       = NodeCanvas::AsyncUpdateType::ArrowAdded;
+        update.nodeId     = parent.getParent().getProperty(ValueTreeIdentifiers::Id);
+        update.rootNodeId = child.getProperty(ValueTreeIdentifiers::Id);
+        canvas.enqueueAsyncUpdate(update);
+    }
     else if (child.getType() == ValueTreeIdentifiers::DanglingArrows) {
         enqueueDanglingArrowsChanged(parent);
     }
@@ -47,6 +54,13 @@ void NodeCanvasTreeListener::valueTreeChildRemoved(juce::ValueTree& parent, juce
         update.type       = NodeCanvas::AsyncUpdateType::NodeRemoved;
         update.nodeId     = child.getProperty(ValueTreeIdentifiers::Id);
         update.rootNodeId = child.getProperty(ValueTreeIdentifiers::RootNodeId);
+        canvas.enqueueAsyncUpdate(update);
+    }
+    else if (parent.getType() == ValueTreeIdentifiers::NodeChildrenIds) {
+        NodeCanvas::AsyncUpdate update;
+        update.type       = NodeCanvas::AsyncUpdateType::ArrowRemoved;
+        update.nodeId     = parent.getParent().getProperty(ValueTreeIdentifiers::Id);
+        update.rootNodeId = child.getProperty(ValueTreeIdentifiers::Id);
         canvas.enqueueAsyncUpdate(update);
     }
     else if (child.getType() == ValueTreeIdentifiers::DanglingArrows) {

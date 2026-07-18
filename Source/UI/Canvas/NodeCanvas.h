@@ -26,7 +26,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
     public:
 
-        enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved,DurationOnly,ValueChanged,DanglingArrowsChanged};
+        enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved,DurationOnly,ValueChanged,DanglingArrowsChanged,ArrowAdded,ArrowRemoved};
 
         struct AsyncUpdate {
             AsyncUpdateType type;
@@ -46,6 +46,9 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         void removeLinePoints(Node* node);
         void removeArrow(NodeArrow* arrow);
+
+        void handleArrowAdded(int parentNodeId, int childNodeId);
+        void handleArrowRemoved(int parentNodeId, int childNodeId);
 
         void setArrowMode(bool enabled);
         void updateDanglingPreview(Node* node, juce::Point<int> tipOffset, bool dashed = false);
