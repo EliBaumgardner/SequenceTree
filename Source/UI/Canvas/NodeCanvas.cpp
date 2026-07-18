@@ -90,6 +90,12 @@ void NodeCanvas::handleAsyncUpdate() {
             rebuildDanglingArrowsForNode(nodeId);
             applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
         }
+        else if (updateType == AsyncUpdateType::ArrowAdded) {
+            handleArrowAdded(nodeId, asyncUpdate.rootNodeId);
+        }
+        else if (updateType == AsyncUpdateType::ArrowRemoved) {
+            handleArrowRemoved(nodeId, asyncUpdate.rootNodeId);
+        }
     }
 
     const bool fieldNeedsRefresh = ! asyncUpdates.empty();
@@ -491,6 +497,71 @@ void NodeCanvas::removeArrow(NodeArrow* arrow)
     if (index >= 0) {
         removeChildComponent(arrow);
         nodeArrows.remove(index);
+    }
+}
+
+void NodeCanvas::handleArrowAdded(int parentNodeId, int childNodeId)
+{
+    auto parentIt = nodeMap.find(parentNodeId);
+    auto childIt  = nodeMap.find(childNodeId);
+    if (parentIt == nodeMap.end() || childIt == nodeMap.end()) {
+        return;
+    }
+
+    Node* parentNode = parentIt->second;
+    Node* childNode  = childIt->second;
+
+    Node* startNode = parentNode;
+    Node* endNode   = childNode;
+
+    if (childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
+        startNode = childNode;
+        endNode   = parentNode;
+    }
+
+    int endNodeId = endNode->getComponentID().getIntValue();
+    if (startNode->nodeArrows.count(endNodeId) > 0) {
+        return;
+    }
+
+    endNode->nodeColour = startNode->nodeColour;
+    addLinePoints(startNode, endNode);
+    updateLinePoints(endNode);
+
+    juce::ValueTree rootTree = ValueTreeState::getRootNode(parentNodeId);
+    if (rootTree.isValid()) {
+        applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
+    }
+}
+
+void NodeCanvas::handleArrowRemoved(int parentNodeId, int childNodeId)
+{
+    NodeArrow* target = nullptr;
+
+    for (NodeArrow* arrow : nodeArrows) {
+        if (arrow->startNode == nullptr || arrow->endNode == nullptr) {
+            continue;
+        }
+
+        int startId = arrow->startNode->getComponentID().getIntValue();
+        int endId   = arrow->endNode->getComponentID().getIntValue();
+
+        if ((startId == parentNodeId && endId == childNodeId)
+            || (startId == childNodeId && endId == parentNodeId)) {
+            target = arrow;
+            break;
+        }
+    }
+
+    if (target == nullptr) {
+        return;
+    }
+
+    removeArrow(target);
+
+    juce::ValueTree rootTree = ValueTreeState::getRootNode(parentNodeId);
+    if (rootTree.isValid()) {
+        applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
     }
 }
 
