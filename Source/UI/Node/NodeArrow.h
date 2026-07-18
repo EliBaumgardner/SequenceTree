@@ -30,6 +30,9 @@ public:
   void valueChanged(juce::Value&) override;
 
   void triggerSnapAnimation();
+  void setHoverFade(bool shouldBeVisible);
+  void initHoverState(bool visibleNow);
+  void refreshHoverVisibility() { setHoverFade(sourceHovered || proximityHovered); }
   void startProgress(int traversalId, int durationMs, juce::Colour colour);
   void resetProgress();
   void resetProgress(int traversalId);
@@ -46,10 +49,18 @@ public:
   static inline const float snapSpringStiffness {0.20f};
   static inline const float snapSpringDamping   {0.30f};
   static inline const float snapSettledEpsilon  {0.001f};
+  static inline const float hoverFadeStep       {0.08f};
+  static inline const float hoverFadeEpsilon    {0.001f};
 
   float length = 0;
   float animT  = 1.0f;
   int duration = 0;
+
+  float hoverAlpha       = 1.0f;
+  float hoverAlphaTarget = 1.0f;
+
+  bool sourceHovered     = false;
+  bool proximityHovered  = false;
 
   ArrowProgress progress;
 
@@ -63,5 +74,6 @@ private:
 
   void ensureAnimationTimerRunning();
   bool advanceSnapAnimation();
+  bool advanceHoverFade();
   bool isSnapSettled() const;
 };

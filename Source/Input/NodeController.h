@@ -24,7 +24,6 @@ class NodeMenu;
 
 class NodeData;
 
-
 class NodeFactory;
 
 class DanglingArrow;
@@ -42,6 +41,7 @@ public:
 
     void mouseEnter          (const juce::MouseEvent& e) override;
     void mouseExit           (const juce::MouseEvent& e) override;
+    void mouseMove           (const juce::MouseEvent& e) override;
     void mouseDrag           (const juce::MouseEvent& e) override;
     void mouseUp             (const juce::MouseEvent& e) override;
     void mouseDown           (const juce::MouseEvent& e) override;
@@ -52,12 +52,18 @@ public:
     void handleNodeDrag      (juce::UndoManager *undoManager, int nodeId, NodePosition newPosition);
     void handleNodeDragStart (juce::UndoManager *undoManager, Node *node, int nodeId, NodePosition newPosition, const juce::ModifierKeys& mods);
 
+    void updateConnectionPreview (Node *node, const NodePosition& newPosition, bool dashed);
+
     void checkRootNodeSnap   (const NodePosition& pos);
+
+    Node* findConnectionTarget (juce::Point<int> point, int excludeNodeId) const;
+    void  commitFlagConnection (int sourceNodeId, Node* target);
 
 private:
 
     static constexpr float rootSnapThreshold      = 60.0f;
     static constexpr float danglingArrowGrabRadius = 14.0f;
+    static constexpr float flagArrowVicinity       = 28.0f;
 
     ApplicationContext& applicationContext;
 
@@ -66,6 +72,9 @@ private:
     Node* snapTargetRoot           = nullptr;
 
     bool creatingDanglingArrow     = false;
+    bool draggingFlagConnection    = false;
+    int  flagConnectionSourceId    = -1;
+    Node* flagConnectionTarget     = nullptr;
     bool isDragStart               = true;
     bool hasConnection             = false;
     bool isDraggingValue           = false;

@@ -445,6 +445,11 @@ void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
     parentNode->nodeArrows[childNodeId] = arrow.get();
     addAndMakeVisible(arrow.get());
 
+    if (parentNode->nodeType == NodeType::TraversalFlag) {
+        arrow->sourceHovered = parentNode->isHovered;
+        arrow->initHoverState(parentNode->isHovered);
+    }
+
     arrow->toBack();
     arrow->setInterceptsMouseClicks(false,false);
 
@@ -576,7 +581,7 @@ void NodeCanvas::setArrowMode(bool enabled)
     }
 }
 
-void NodeCanvas::updateDanglingPreview(Node* node, juce::Point<int> tipOffset)
+void NodeCanvas::updateDanglingPreview(Node* node, juce::Point<int> tipOffset, bool dashed)
 {
     if (node == nullptr) {
         return;
@@ -588,6 +593,7 @@ void NodeCanvas::updateDanglingPreview(Node* node, juce::Point<int> tipOffset)
         danglingPreview->toBack();
     }
 
+    danglingPreview->dashed = dashed;
     danglingPreview->setTipOffset(tipOffset);
 }
 

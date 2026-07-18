@@ -42,6 +42,7 @@ class UndoRedoPane;
 class ResetButton;
 
 class TraversalMenu;
+class NodeMenu;
 class PaintTool;
 
 class PaintToolSettings;
@@ -90,6 +91,8 @@ public:
 
     void drawTraversalMenu   (juce::Graphics& g, const TraversalMenu& traversalMenu);
     void drawTraversalMenuResizer(juce::Graphics& g, juce::Rectangle<int> bounds, bool isMouseOver, bool isDragging);
+    void drawNodeMenu        (juce::Graphics& g, const NodeMenu& nodeMenu);
+    void drawNodeMenuResizer (juce::Graphics& g, juce::Rectangle<int> bounds, bool isMouseOver, bool isDragging);
     void drawDisplayMenu    (juce::Graphics& g, const DisplayMenu& displaySelector);
     void drawTraversalDisplayMenu(juce::Graphics& g, const TraversalDisplayMenu& displaySelector);
     void drawButtonPane     (juce::Graphics& g, const ButtonPane& selectionBar);

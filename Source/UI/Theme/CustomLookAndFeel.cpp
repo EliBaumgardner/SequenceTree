@@ -12,6 +12,7 @@
 #include "../Titlebar.h"
 #include "../BottomBar.h"
 #include "../TraversalMenu.h"
+#include "../NodeMenu.h"
 #include "../TraversalDisplayMenu.h"
 #include "CustomTextEditor.h"
 #include "../Node/NodeArrow.h"
@@ -176,6 +177,51 @@ void CustomLookAndFeel::drawTraversalMenu(juce::Graphics &g, const TraversalMenu
 }
 
 void CustomLookAndFeel::drawTraversalMenuResizer(juce::Graphics &g, juce::Rectangle<int> bounds, bool isMouseOver, bool isDragging)
+{
+    juce::Colour fill = baseDarkColour1;
+
+    if (isDragging) {
+        fill = baseLightColour2;
+    }
+    else if (isMouseOver) {
+        fill = baseDarkColour1.brighter(0.25f);
+    }
+
+    g.setColour(fill);
+    g.fillRect(bounds);
+
+    auto gripBounds = bounds.toFloat().reduced(bounds.getWidth() * 0.3f, bounds.getHeight() * 0.35f);
+    g.setColour(baseLightColour1.withAlpha(0.5f));
+
+    const float dotSpacing = 4.0f;
+    for (float y = gripBounds.getY(); y < gripBounds.getBottom(); y += dotSpacing) {
+        g.fillRect(gripBounds.getX(), y, gripBounds.getWidth(), 1.0f);
+    }
+}
+
+void CustomLookAndFeel::drawNodeMenu(juce::Graphics &g, const NodeMenu &nodeMenu)
+{
+    auto bounds = nodeMenu.getLocalBounds().toFloat();
+    g.setColour(baseDarkColour2);
+    g.fillRect(bounds);
+
+    auto barHeight = std::floor(bounds.getHeight() * 0.05f);
+    auto barBounds = bounds.withHeight(barHeight)
+                           .withTrimmedRight((float) NodeMenu::resizerWidth);
+
+    juce::ColourGradient gradient(barColour.brighter(0.06f), 0, barBounds.getY(),
+                                   barColour.darker(0.04f),  0, barBounds.getBottom(), false);
+    g.setGradientFill(gradient);
+    g.fillRect(barBounds);
+
+    g.setColour(barColour.brighter(0.12f));
+    g.drawHorizontalLine((int)barBounds.getY(), barBounds.getX(), barBounds.getRight());
+
+    g.setColour(juce::Colours::black.withAlpha(0.35f));
+    g.drawHorizontalLine((int)barBounds.getBottom() - 1, barBounds.getX(), barBounds.getRight());
+}
+
+void CustomLookAndFeel::drawNodeMenuResizer(juce::Graphics &g, juce::Rectangle<int> bounds, bool isMouseOver, bool isDragging)
 {
     juce::Colour fill = baseDarkColour1;
 
@@ -529,6 +575,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     }
 
     bool isRootTargetArrow = b->nodeType == NodeType::Root && !a->isAlternativeNode;
+    bool isFlagSourceArrow = a->nodeType == NodeType::TraversalFlag;
 
     juce::Path linePath;
 
@@ -574,7 +621,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         }
     }
 
-    if (isRootTargetArrow || nodeArrow.isGhost) {
+    if (isRootTargetArrow || isFlagSourceArrow || nodeArrow.isGhost) {
         juce::PathStrokeType stroke(2.0f);
         float dashLengths[] = { 6.0f, 10.0f };
         stroke.createDashedStroke(linePath, linePath, dashLengths, 2);
@@ -899,6 +946,12 @@ void CustomLookAndFeel::drawDanglingArrow(juce::Graphics &g, const DanglingArrow
     juce::Path linePath;
     linePath.startNewSubPath(startX, startY);
     linePath.lineTo(endX, endY);
+
+    if (danglingArrow.dashed) {
+        juce::PathStrokeType dashStroke(2.0f);
+        float dashLengths[] = { 6.0f, 10.0f };
+        dashStroke.createDashedStroke(linePath, linePath, dashLengths, 2);
+    }
 
     juce::PathStrokeType lineStroke(2.0f);
     auto shadowPath    = linePath;

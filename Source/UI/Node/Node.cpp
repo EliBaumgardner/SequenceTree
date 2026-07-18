@@ -85,6 +85,16 @@ void Node::resized()
 void Node::setHoverVisual(bool isHovered)
 {
     this->isHovered = isHovered;
+
+    if (nodeType == NodeType::TraversalFlag) {
+        for (auto& [childId, arrow] : nodeArrows) {
+            if (arrow != nullptr) {
+                arrow->sourceHovered = isHovered;
+                arrow->refreshHoverVisibility();
+            }
+        }
+    }
+
     repaint();
 }
 

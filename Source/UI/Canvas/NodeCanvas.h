@@ -47,7 +47,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         void removeLinePoints(Node* node);
 
         void setArrowMode(bool enabled);
-        void updateDanglingPreview(Node* node, juce::Point<int> tipOffset);
+        void updateDanglingPreview(Node* node, juce::Point<int> tipOffset, bool dashed = false);
         void commitDanglingArrow();
         void cancelDanglingPreview();
         bool hasDanglingPreview() const { return danglingPreview != nullptr; }
