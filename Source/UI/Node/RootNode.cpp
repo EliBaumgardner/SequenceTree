@@ -9,6 +9,7 @@
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
 #include "../../Util/ApplicationContext.h"
+#include "../Canvas/NodeCanvas.h"
 
 RootNode::RootNode(ApplicationContext& context) : Node(context)
 {
@@ -24,67 +25,80 @@ RootNode::RootNode(ApplicationContext& context) : Node(context)
     ValueEditor& traversalEditor = rootRectangle->traversalEditor;
 
     traversalEditor.boundValue.setValue(1);
+    traversalEditor.editorText = "1";
+    traversalEditor.textEditor->setText("1", juce::dontSendNotification);
 
-
-    traversalEditor.onValueChange = [this, &traversalEditor]() {
-
-        DBG("traversal changed");
-
-        juce::String text = traversalEditor.textEditor->getText();
-
-        std::vector<int> words;
-        juce::String word;
-
-        for (int i = 0; i <= text.length(); i++) {
-
-            bool isDigit = i < text.length() && juce::CharacterFunctions::isDigit(text[i]);
-
-            if (isDigit) {
-                word += text[i];
-            }
-            else if (word.isNotEmpty()) {
-                words.push_back(word.getIntValue());
-                word.clear();
-            }
-        }
-
-        auto contains = [&words](int id) {
-            for (int w : words) {
-                if (w == id) return true;
-            }
-            return false;
-        };
-
-        juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
-
-        for (int i = traversalChildrenIds.getNumChildren() - 1; i >= 0; i--) {
-
-            int existingId = traversalChildrenIds.getChild(i).getProperty(ValueTreeIdentifiers::TraversalId);
-
-            if (!contains(existingId)) {
-                traversalChildrenIds.removeChild(i, nullptr);
-            }
-        }
-
-        for (int traversalId : words) {
-
-            if (!ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
-                ValueTreeState::createTraversalData(traversalId, nullptr);
-            }
-
-            if (!traversalChildrenIds.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
-
-                juce::ValueTree traversalIdTree {ValueTreeIdentifiers::TraversalId};
-                traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalId, traversalId, nullptr);
-                traversalChildrenIds.addChild(traversalIdTree, -1, nullptr);
-            }
-        }
-
-        applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);
+    traversalEditor.onValueChange = [this]() {
+        equipTraversals();
     };
 }
 
 RootNode::~RootNode() = default;
+
+void RootNode::equipTraversals()
+{
+    if (! nodeValueTree.isValid()) {
+        return;
+    }
+
+    juce::String text = rootRectangle->traversalEditor.editorText;
+
+    std::vector<int> words;
+    juce::String word;
+
+    for (int i = 0; i <= text.length(); i++) {
+
+        bool isDigit = i < text.length() && juce::CharacterFunctions::isDigit(text[i]);
+
+        if (isDigit) {
+            word += text[i];
+        }
+        else if (word.isNotEmpty()) {
+            words.push_back(word.getIntValue());
+            word.clear();
+        }
+    }
+
+    auto contains = [&words](int id) {
+        for (int w : words) {
+            if (w == id) return true;
+        }
+        return false;
+    };
+
+    juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
+
+    const int graphId = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+
+    for (int i = traversalChildrenIds.getNumChildren() - 1; i >= 0; i--) {
+
+        int existingId = traversalChildrenIds.getChild(i).getProperty(ValueTreeIdentifiers::TraversalId);
+
+        if (!contains(existingId)) {
+            traversalChildrenIds.removeChild(i, nullptr);
+
+            if (applicationContext.canvas != nullptr) {
+                applicationContext.canvas->resetGraphArrowProgress(graphId, existingId);
+            }
+        }
+    }
+
+    for (int traversalId : words) {
+
+        if (!ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
+            ValueTreeState::createTraversalData(traversalId, nullptr);
+        }
+
+        if (!traversalChildrenIds.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
+
+            juce::ValueTree traversalIdTree {ValueTreeIdentifiers::TraversalId};
+            traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalId, traversalId, nullptr);
+            traversalChildrenIds.addChild(traversalIdTree, -1, nullptr);
+        }
+    }
+
+    applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);
+}
 
 void RootNode::paint(juce::Graphics& g)
 {

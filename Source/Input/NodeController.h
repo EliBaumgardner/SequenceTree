@@ -62,6 +62,8 @@ public:
     NodeArrow* findArrowNear   (juce::Point<float> point, float radius) const;
     void       deleteArrow     (NodeArrow* arrow);
 
+    DanglingArrow* findDanglingArrowNear (juce::Point<float> point, float radius) const;
+
 private:
 
     static constexpr float rootSnapThreshold      = 60.0f;

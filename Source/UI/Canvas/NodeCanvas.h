@@ -76,6 +76,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         void setNodePosition(int nodeId);
 
         void setProcessorPlayblack(bool isPlaying);
+        void equipRootTraversals();
 
         void setValueTreeState(const juce::ValueTree& stateTree);
 

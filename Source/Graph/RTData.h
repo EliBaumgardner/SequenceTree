@@ -60,6 +60,13 @@ struct RTNode {
     bool isLeafNode = false;
     bool isAlternativeRoot = false;
 
+    // Set on TraversalFlagData nodes: the traversal to spawn and the node it
+    // starts on (reached via the flag's dashed arrow) when this flag's parent
+    // is reached during traversal.
+    int flagTargetId = -1;
+
+    bool flagRemovesTraversal = false;
+
 
     enum class NodeType {RootNode, Node, Alternative, Modulator, ModulatorRoot, TraversalFlagData};
 
@@ -69,6 +76,9 @@ struct RTNode {
     std::vector<RTNote> notes;
     std::vector<int> children;
     std::unordered_map<int, int> durationMap;
+
+    // The traversal a TraversalFlagData node spawns; traversalId <= 0 means unset.
+    RTtraversal flagTraversal;
 
     int graphID = 0;
 };
@@ -96,10 +106,10 @@ struct RTGraph {
     int loopLimit = 0;
 
     RTGraph() = default;
-    
+
     RTGraph(RTGraph&& other) noexcept : nodeMap(other.nodeMap)
     {}
-    
+
     RTGraph& operator=(RTGraph&& other) noexcept {
         if(this != &other) {
             nodeMap = std::move(other.nodeMap);

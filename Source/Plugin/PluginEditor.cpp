@@ -48,13 +48,36 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
         }
     };
 
-    audioProcessor.applyStateToUi = [canvasPtr = canvas.get()](juce::ValueTree restoredTree) {
-        juce::MessageManager::callAsync([canvasPtr, restoredTree]() {
-            ValueTreeState::nodeMap.removeListener(&canvasPtr->treeListener);
-            ValueTreeState::nodeMap.removeAllChildren(nullptr);
+    audioProcessor.applyStateToUi =
+        [safeCanvas = juce::Component::SafePointer<NodeCanvas>(canvas.get()),
+         proc = &audioProcessor](juce::ValueTree restoredTree) {
+        juce::MessageManager::callAsync([safeCanvas, proc, restoredTree]() {
+            NodeCanvas* canvasPtr = safeCanvas.getComponent();
+            if (canvasPtr == nullptr) {
+                return;
+            }
 
-            for (int i = 0; i < restoredTree.getNumChildren(); ++i)
-                ValueTreeState::nodeMap.addChild(restoredTree.getChild(i).createCopy(), -1, nullptr);
+            juce::ValueTree restoredNodeMap;
+            juce::ValueTree restoredTraversalMap;
+
+            if (restoredTree.getType() == ValueTreeIdentifiers::PluginState) {
+                restoredNodeMap      = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
+                restoredTraversalMap = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalMap);
+            }
+            else {
+                restoredNodeMap = restoredTree;
+            }
+
+            ValueTreeState::nodeMap.removeListener(&canvasPtr->treeListener);
+            ValueTreeState::traversalMap.removeListener(&canvasPtr->treeListener);
+
+            ValueTreeState::traversalMap.removeAllChildren(nullptr);
+            for (int i = 0; i < restoredTraversalMap.getNumChildren(); ++i)
+                ValueTreeState::traversalMap.addChild(restoredTraversalMap.getChild(i).createCopy(), -1, nullptr);
+
+            ValueTreeState::nodeMap.removeAllChildren(nullptr);
+            for (int i = 0; i < restoredNodeMap.getNumChildren(); ++i)
+                ValueTreeState::nodeMap.addChild(restoredNodeMap.getChild(i).createCopy(), -1, nullptr);
 
             int maxId = 0;
             for (int i = 0; i < ValueTreeState::nodeMap.getNumChildren(); ++i) {
@@ -67,8 +90,18 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
             canvasPtr->setValueTreeState(ValueTreeState::nodeMap);
             ValueTreeState::nodeMap.addListener(&canvasPtr->treeListener);
+            ValueTreeState::traversalMap.addListener(&canvasPtr->treeListener);
+
+            proc->pendingRestoreState = juce::ValueTree();
         });
     };
+
+    if (audioProcessor.pendingRestoreState.isValid()) {
+        audioProcessor.applyStateToUi(audioProcessor.pendingRestoreState);
+    }
+    else if (ValueTreeState::nodeMap.getNumChildren() > 0) {
+        canvas->setValueTreeState(ValueTreeState::nodeMap);
+    }
 
     applicationContext.rtGraphBuilder    = rtGraphBuilder.get();
     applicationContext.valueTreeState    = valueTreeState.get();

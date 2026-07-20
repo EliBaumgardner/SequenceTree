@@ -41,8 +41,12 @@ public:
     int activeModulatorRootId = -1;
     int modulatorHostId       = -1;
 
-    bool isFirstEvent = false;
-    bool isLooping    = false;
+    bool isFirstEvent  = false;
+    bool isLooping     = false;
+    bool isFlagSpawned = false;
+    bool pendingRemoval = false;
+
+    int  flagSourceNodeId = -1;
 
     int  rootId            = 0;
     int  referenceTargetId = 0;

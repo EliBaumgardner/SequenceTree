@@ -185,6 +185,7 @@ juce::ValueTree ValueTreeState::addTraversalFlagNode(int parentNodeId, juce::Und
 
     node.setProperty(ValueTreeIdentifiers::RootNodeId, rootId, undoManager);
     node.setProperty(ValueTreeIdentifiers::Id, nodeIdIncrement, undoManager);
+    node.setProperty(ValueTreeIdentifiers::TraversalFlagValue, 0, undoManager);
     nodeId.setProperty(ValueTreeIdentifiers::Id, nodeIdIncrement, undoManager);
 
     parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).addChild(nodeId, -1, undoManager);
@@ -387,6 +388,11 @@ NodePosition ValueTreeState::getNodePosition(int nodeId)
 juce::ValueTree ValueTreeState::getNodeParent(int nodeId) {
     for(int i = 0; i < nodeMap.getNumChildren(); ++i) {
         juce::ValueTree node = nodeMap.getChild(i);
+
+        if (node.getType() == ValueTreeIdentifiers::TraversalFlagData) {
+            continue;
+        }
+
         juce::ValueTree nodeChildrenIds = node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
         juce::ValueTree nodeChildId = nodeChildrenIds.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId);
         if (nodeChildId.isValid()) {

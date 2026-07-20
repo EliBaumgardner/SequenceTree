@@ -77,6 +77,8 @@ public:
     std::function<void()>                  notifyUi;
     std::function<void(juce::ValueTree)>   applyStateToUi;
 
+    juce::ValueTree                        pendingRestoreState;
+
     struct AudioSnapshot
     {
         std::shared_ptr<NodeMap>      globalNodes;

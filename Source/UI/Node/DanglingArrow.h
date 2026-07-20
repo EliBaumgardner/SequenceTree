@@ -118,6 +118,7 @@ public:
     juce::ValueTree arrowTree;
 
     bool dashed = false;
+    bool hovered = false;
 
     ArrowProgress progress;
 

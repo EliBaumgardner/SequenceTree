@@ -4,6 +4,7 @@
 
 #include "ValueTreeIdentifiers.h"
 
+const juce::Identifier ValueTreeIdentifiers::PluginState          {"PluginState"};
 const juce::Identifier ValueTreeIdentifiers::CanvasData           {"CanvasData"};
 const juce::Identifier ValueTreeIdentifiers::NodeMap              {"NodeMap"};
 const juce::Identifier ValueTreeIdentifiers::NodeTreeMap          {"NodeTreeMap"};
@@ -65,6 +66,7 @@ const juce::Identifier ValueTreeIdentifiers::ColorIntensityFactor {"ColorIntensi
 
 const juce::Identifier ValueTreeIdentifiers::TraversalData        {"TraversalData"};
 const juce::Identifier ValueTreeIdentifiers::TraversalId          {"TraversalId"};
+const juce::Identifier ValueTreeIdentifiers::TraversalFlagValue   {"TraversalFlagValue"};
 const juce::Identifier ValueTreeIdentifiers::TempoMultiplier      {"TempoMultiplier"};
 const juce::Identifier ValueTreeIdentifiers::TraversalColour      {"TraversalColour"};
 const juce::Identifier ValueTreeIdentifiers::TraversalChannel     {"TraversalChannel"};
