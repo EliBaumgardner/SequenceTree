@@ -103,6 +103,16 @@ void NodeController::mouseMove(const juce::MouseEvent& e)
             arrow->repaint();
         }
     }
+
+    DanglingArrow* hoveredDangling = findDanglingArrowNear(cursor, arrowHoverRadius);
+
+    for (DanglingArrow* arrow : canvas->danglingArrows) {
+        bool shouldBold = (arrow == hoveredDangling);
+        if (shouldBold != arrow->hovered) {
+            arrow->hovered = shouldBold;
+            arrow->repaint();
+        }
+    }
 }
 
 NodeArrow* NodeController::findArrowNear(juce::Point<float> point, float radius) const
@@ -120,6 +130,30 @@ NodeArrow* NodeController::findArrowNear(juce::Point<float> point, float radius)
         float dist = distanceToSegment(point,
                                        arrow->startNode->getNodeCentre().toFloat(),
                                        arrow->endNode->getNodeCentre().toFloat());
+        if (dist < minDist) {
+            minDist = dist;
+            nearest = arrow;
+        }
+    }
+
+    return nearest;
+}
+
+DanglingArrow* NodeController::findDanglingArrowNear(juce::Point<float> point, float radius) const
+{
+    NodeCanvas* canvas = applicationContext.canvas;
+
+    DanglingArrow* nearest = nullptr;
+    float minDist = radius;
+
+    for (DanglingArrow* arrow : canvas->danglingArrows) {
+        if (arrow->startNode == nullptr) {
+            continue;
+        }
+
+        float dist = distanceToSegment(point,
+                                       arrow->startNode->getNodeCentre().toFloat(),
+                                       arrow->getTip().toFloat());
         if (dist < minDist) {
             minDist = dist;
             nearest = arrow;
@@ -295,7 +329,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     if (NodeCanvas* canvas = dynamic_cast<NodeCanvas*>(component)) {
 
         if (! canvas->paintMode && e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
-            if (DanglingArrow* arrow = canvas->hitTestDanglingArrowHead({ e.x, e.y }, danglingArrowGrabRadius)) {
+            if (DanglingArrow* arrow = findDanglingArrowNear({ (float) e.x, (float) e.y }, danglingArrowGrabRadius)) {
                 undoManager->beginNewTransaction();
                 canvas->removeDanglingArrow(arrow);
                 return;
@@ -619,6 +653,8 @@ void NodeController::commitFlagConnection(int sourceNodeId, Node* target)
         arrowIt->second->triggerSnapAnimation();
     }
 
+    // Rebuild the flag's graph so its flag target/traversal are re-encoded for the
+    // audio thread.
     juce::ValueTree sourceTree = ValueTreeState::getNode(sourceNodeId);
     if (sourceTree.isValid()) {
         int rootId = sourceTree.getProperty(ValueTreeIdentifiers::RootNodeId);

@@ -58,6 +58,16 @@ juce::String ValueEditor::getDisplayText() const
 
     int primaryValue = (int) boundValue.getValue();
 
+    if (requirePlusMode) {
+        if (primaryValue > 0) {
+            return "+" + juce::String(primaryValue);
+        }
+        if (primaryValue < 0) {
+            return juce::String(primaryValue);
+        }
+        return juce::String();
+    }
+
     if (!dualNumberMode) {
         if (acceptMultiple) {
             return juce::String(editorText);
@@ -137,6 +147,13 @@ void ValueEditor::enableSignedValue(int min, int max)
     textEditor->setInputRestrictions(4, "-0123456789");
 }
 
+void ValueEditor::enablePlusRequiredValue()
+{
+    requirePlusMode = true;
+
+    textEditor->setInputRestrictions(5, "+-0123456789");
+}
+
 void ValueEditor::textEditorReturnKeyPressed(juce::TextEditor&)
 {
     commitValue();
@@ -194,6 +211,29 @@ void ValueEditor::commitSingleValue(const juce::String& text)
         }
 
         boundValue.setValue(value);
+        return;
+    }
+
+    if (requirePlusMode) {
+        juce::String trimmed = text.trim();
+
+        bool spawns  = trimmed.startsWithChar('+');
+        bool removes = trimmed.startsWithChar('-');
+
+        if (!spawns && !removes) {
+            boundValue.setValue(0);
+            return;
+        }
+
+        int magnitude = trimmed.substring(1).getIntValue();
+        if (magnitude < minValue) {
+            magnitude = minValue;
+        }
+        if (magnitude > maxValue) {
+            magnitude = maxValue;
+        }
+
+        boundValue.setValue(removes ? -magnitude : magnitude);
         return;
     }
 

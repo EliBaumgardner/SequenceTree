@@ -953,7 +953,7 @@ void CustomLookAndFeel::drawDanglingArrow(juce::Graphics &g, const DanglingArrow
         dashStroke.createDashedStroke(linePath, linePath, dashLengths, 2);
     }
 
-    juce::PathStrokeType lineStroke(2.0f);
+    juce::PathStrokeType lineStroke(danglingArrow.hovered ? 3.25f : 2.0f);
     auto shadowPath    = linePath;
     auto highlightPath = linePath;
     shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
@@ -995,8 +995,8 @@ void CustomLookAndFeel::drawDanglingArrow(juce::Graphics &g, const DanglingArrow
         }
     }
 
-    const float arrowLength = 12.0f;
-    const float arrowWidth  = 6.0f;
+    const float arrowLength = danglingArrow.hovered ? 15.0f : 12.0f;
+    const float arrowWidth  = danglingArrow.hovered ? 7.5f  : 6.0f;
 
     float leftX  = endX - arrowLength * dirX + arrowWidth * dirY;
     float leftY  = endY - arrowLength * dirY - arrowWidth * dirX;

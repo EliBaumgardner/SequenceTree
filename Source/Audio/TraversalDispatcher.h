@@ -4,6 +4,7 @@
 #include "NoteScheduler.h"
 #include <memory>
 #include <atomic>
+#include <unordered_set>
 
 class AudioUIBridge;
 class SequenceTreeAudioProcessor;
@@ -64,6 +65,14 @@ private:
                            juce::MidiBuffer& midiMessages,
                            double sampleRate, double tempoMultiplier,
                            const NodeMap& nodes, TraversalLogic& traversal);
+
+    void dispatchFlag(const RTNode& node, int hostTraversalId, int parentCount, int sample, juce::MidiBuffer& midiMessages,
+                      const NodeMap& nodes, TraversalMap& traversalMap);
+
+    void startFlagTraversal(const RTNode& flagNode, int hostTraversalId, int sample, juce::MidiBuffer& midiMessages,
+                            const NodeMap& nodes, TraversalMap& traversalMap);
+
+    void queueFlagRemoval(const RTNode& flagNode, int hostTraversalId, TraversalMap& traversalMap);
 
     SequenceTreeAudioProcessor& processor;
     NoteScheduler&              scheduler;

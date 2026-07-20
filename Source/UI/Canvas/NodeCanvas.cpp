@@ -592,10 +592,23 @@ void NodeCanvas::updateLinePoints(Node* movedNode)
 
 // processor-related Functions //
 
+void NodeCanvas::equipRootTraversals()
+{
+    for (auto& [nodeId, node] : nodeMap) {
+        if (auto* rootNode = dynamic_cast<RootNode*>(node)) {
+            rootNode->equipTraversals();
+        }
+    }
+}
+
 void NodeCanvas::setProcessorPlayblack(bool isPlaying)
 {
     start = isPlaying;
     applicationContext.processor->isPlaying.store(start);
+
+    if (isPlaying) {
+        equipRootTraversals();
+    }
 
     for(auto& [graphID,graph] : applicationContext.rtGraphBuilder->rtGraphs) {
         graph.get()->traversalRequested = start;
@@ -888,8 +901,9 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         auto parentNodePair = nodeMap.find(parentNodeId);
         auto childNodePair = nodeMap.find(childNodeId);
 
-        jassert(parentNodePair != nodeMap.end());
-        jassert(childNodePair != nodeMap.end());
+        if (parentNodePair == nodeMap.end() || childNodePair == nodeMap.end()) {
+            continue;
+        }
 
         Node* parentNode = parentNodePair->second;
         Node* childNode = childNodePair->second;
@@ -900,6 +914,10 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
         if (childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
             startNode = childNode;
             endNode   = parentNode;
+        }
+
+        if (startNode->nodeArrows.count(endNode->getComponentID().getIntValue()) > 0) {
+            continue;
         }
 
         endNode->nodeColour = startNode->nodeColour;

@@ -30,6 +30,7 @@ public:
     void enableDualValue(const juce::Identifier& secondaryPropertyID);
     void enableDecimalValue(double min, double max = std::numeric_limits<double>::max());
     void enableSignedValue(int min, int max);
+    void enablePlusRequiredValue();
     void setMinimumValue(int min);
     void valueChanged(juce::Value&) override;
     void commitValue();
@@ -71,6 +72,7 @@ private:
     int  minValue         = 1;
     int  maxValue         = std::numeric_limits<int>::max();
     bool signedMode       = false;
+    bool requirePlusMode  = false;
     double minDecimalValue = 0.1;
     double maxDecimalValue = std::numeric_limits<double>::max();
 };

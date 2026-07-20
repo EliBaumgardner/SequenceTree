@@ -12,6 +12,7 @@ class ValueTreeIdentifiers {
 
 public:
 
+    static const juce::Identifier PluginState;
     static const juce::Identifier CanvasData;
     static const juce::Identifier NodeMap;
     static const juce::Identifier NodeTreeMap;
@@ -83,6 +84,7 @@ public:
 
     static const juce::Identifier TraversalId;
     static const juce::Identifier TraversalChildrenIds;
+    static const juce::Identifier TraversalFlagValue;
 
     static const juce::Identifier TempoMultiplier;
     static const juce::Identifier TraversalColour;

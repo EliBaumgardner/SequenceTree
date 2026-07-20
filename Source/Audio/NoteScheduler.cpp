@@ -8,7 +8,8 @@ NoteScheduler::NoteScheduler(AudioUIBridge& b)
 
 bool NoteScheduler::isNodeAudible(RTNode::NodeType nodeType)
 {
-    return nodeType != RTNode::NodeType::ModulatorRoot;
+    return nodeType != RTNode::NodeType::ModulatorRoot
+        && nodeType != RTNode::NodeType::TraversalFlagData;
 }
 
 void NoteScheduler::scheduleNote(const RTNode& node, int traversalId, int sample,

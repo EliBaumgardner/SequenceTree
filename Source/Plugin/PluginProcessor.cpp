@@ -140,9 +140,18 @@ juce::AudioProcessorEditor* SequenceTreeAudioProcessor::createEditor()
 //==============================================================================
 void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    juce::ValueTree canvasTree = ValueTreeState::nodeMap;
+    juce::ValueTree state;
 
-    std::unique_ptr<juce::XmlElement> xml(canvasTree.createXml());
+    if (pendingRestoreState.isValid()) {
+        state = pendingRestoreState;
+    }
+    else {
+        state = juce::ValueTree(ValueTreeIdentifiers::PluginState);
+        state.addChild(ValueTreeState::nodeMap.createCopy(),      -1, nullptr);
+        state.addChild(ValueTreeState::traversalMap.createCopy(), -1, nullptr);
+    }
+
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
 
     copyXmlToBinary(*xml, destData);
 }
@@ -150,6 +159,8 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
 void SequenceTreeAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     if (data == nullptr || sizeInBytes == 0) {
+        pendingRestoreState = juce::ValueTree();
+
         if (applyStateToUi) {
             applyStateToUi(juce::ValueTree(ValueTreeIdentifiers::NodeMap));
         }
@@ -166,6 +177,8 @@ void SequenceTreeAudioProcessor::setStateInformation (const void* data, int size
     juce::ValueTree restoredTree = juce::ValueTree::fromXml (*xmlState);
 
     if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
+
+    pendingRestoreState = restoredTree;
 
     if (applyStateToUi) {
         applyStateToUi(restoredTree);
@@ -201,6 +214,15 @@ void SequenceTreeAudioProcessor::updateTraversalCounts(const NodeMap &nodes, Tra
 
 void SequenceTreeAudioProcessor::syncActiveTraversals(const NodeMap &nodes, TraversalMap &traversals) {
     for (auto& [id, traverser] : traversals) {
+        if (traverser.isFlagSpawned) {
+            auto flagIt = nodes.find(traverser.flagSourceNodeId);
+            if (flagIt != nodes.end()
+                && flagIt->second.flagTraversal.traversalId == traverser.traversal.traversalId) {
+                traverser.traversal = flagIt->second.flagTraversal;
+            }
+            continue;
+        }
+
         auto rootIt = nodes.find(traverser.rootId);
         if (rootIt == nodes.end()) {
             continue;
@@ -222,10 +244,15 @@ void SequenceTreeAudioProcessor::removeDeletedTraversals(const NodeMap &nodes, T
         bool stillAssigned = false;
         auto rootIt = nodes.find(traverser.rootId);
         if (rootIt != nodes.end()) {
-            for (const RTtraversal& assigned : rootIt->second.traversals) {
-                if (assigned.traversalId == traverser.traversal.traversalId) {
-                    stillAssigned = true;
-                    break;
+            if (traverser.isFlagSpawned) {
+                stillAssigned = true;
+            }
+            else {
+                for (const RTtraversal& assigned : rootIt->second.traversals) {
+                    if (assigned.traversalId == traverser.traversal.traversalId) {
+                        stillAssigned = true;
+                        break;
+                    }
                 }
             }
         }
@@ -424,6 +451,9 @@ void SequenceTreeAudioProcessor::startMissingTraversals(const NodeMap &nodes, Tr
 {
     std::unordered_set<int> activeRootIds;
     for (const auto& [id, traverser] : traversals) {
+        if (traverser.isFlagSpawned) {
+            continue;
+        }
         activeRootIds.insert(traverser.rootId);
     }
 

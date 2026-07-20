@@ -21,6 +21,8 @@ class RootNode : public Node {
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    void equipTraversals();
+
     juce::Point<int> getNodeCentre() const override
     {
         return { getBounds().getX() + loopLimitRectangleWidth + getHeight() / 2,

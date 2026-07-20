@@ -6,6 +6,8 @@
 #include "NodeTextEditor.h"
 #include "../../Graph/ValueTreeState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
+#include "../../Graph/RTGraphBuilder.h"
+#include "../../Util/ApplicationContext.h"
 
 #include <cmath>
 
@@ -21,44 +23,44 @@ TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context
     downButton.setVisible(false);
 
     traversalNumEditor = std::make_unique<ValueEditor>(context);
-    traversalNumEditor->setMinimumValue(0);
+    traversalNumEditor->enablePlusRequiredValue();
+    traversalNumEditor->setMinimumValue(1);
     traversalNumEditor->setInterceptsMouseClicks(true, false);
-    traversalNumEditor->setTooltip("Traversal");
-    traversalNumEditor->acceptMultipleValues();
+    traversalNumEditor->setTooltip("Type +N to spawn traversal N, -N to remove it");
     addAndMakeVisible(traversalNumEditor.get());
 
-    traversalNumEditor->boundValue.setValue(1);
+    traversalNumEditor->boundValue.setValue(0);
 
     traversalNumEditor->onValueChange = [this]() {
 
-        juce::String text = traversalNumEditor->textEditor->getText();
+        int traversalId = (int) traversalNumEditor->boundValue.getValue();
 
-        std::vector<int> words;
-        juce::String word;
-
-        for (int i = 0; i <= text.length(); i++) {
-
-            bool isDigit = i < text.length() && juce::CharacterFunctions::isDigit(text[i]);
-
-            if (isDigit) {
-                word += text[i];
-            }
-            else if (word.isNotEmpty()) {
-                words.push_back(word.getIntValue());
-                word.clear();
-            }
+        if (traversalId > 0
+            && !ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
+            ValueTreeState::createTraversalData(traversalId, nullptr);
         }
 
-        for (int traversalId : words) {
-
-            if (!ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
-                ValueTreeState::createTraversalData(traversalId, nullptr);
-            }
-        }
+        rebuildOwnGraph();
     };
 
     if (nodeTextEditor != nullptr) {
         nodeTextEditor->setVisible(false);
+    }
+}
+
+void TraversalFlagNode::setDisplayMode(NodeDisplayMode mode)
+{
+    Node::setDisplayMode(mode);
+
+    if (nodeValueTree.isValid() && traversalNumEditor != nullptr) {
+        traversalNumEditor->bindEditor(nodeValueTree, ValueTreeIdentifiers::TraversalFlagValue);
+    }
+}
+
+void TraversalFlagNode::rebuildOwnGraph()
+{
+    if (nodeValueTree.isValid() && applicationContext.rtGraphBuilder != nullptr) {
+        applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);
     }
 }
 

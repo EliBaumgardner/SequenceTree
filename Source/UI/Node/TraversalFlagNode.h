@@ -15,9 +15,11 @@ class TraversalFlagNode : public Node {
     void paint(juce::Graphics& g) override;
     void resized() override;
     bool hitTest(int x, int y) override;
+    void setDisplayMode(NodeDisplayMode mode) override;
 
     private:
     juce::Path buildTrianglePath() const;
+    void rebuildOwnGraph();
     juce::Colour outlineColour = juce::Colours::black;
 
     std::unique_ptr<ValueEditor> traversalNumEditor = nullptr;

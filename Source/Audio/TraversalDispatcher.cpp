@@ -205,6 +205,7 @@ void TraversalDispatcher::pushNote(const RTNode& node, int traversalId,
     dispatchPrimaryArrow(node, nextTarget, traversalLogic.rootId, wallClockMs, traversalLogic.traversal.traversalId);
     dispatchModulatorArrow(modulatorNode, nextModulatorTarget, traversalLogic.activeModulatorRootId, traversalLogic.rootId, wallClockMs, traversalLogic.traversal.traversalId);
     dispatchCrossTree(node, traversalId, sample, traversalLogic.rootId, midiMessages, sampleRate, tempoMultiplier, nodes, traversalLogic);
+    dispatchFlag(node, traversalId, chordParentCount, sample, midiMessages, nodes, traversalMap);
 }
 
 void TraversalDispatcher::dispatchPrimaryArrow(const RTNode& node, const RTNode* nextTarget,
@@ -281,6 +282,102 @@ void TraversalDispatcher::dispatchCrossTree(const RTNode& node, int traversalId,
         const int wallClockMs = static_cast<int>(connectionDuration / tempoMultiplier);
         bridge.pushProgress(progressSourceId, crossTreeRootId, wallClockMs, rootId, traversal.traversal.traversalId);
     }
+}
+
+void TraversalDispatcher::dispatchFlag(const RTNode& node, int hostTraversalId, int parentCount, int sample, juce::MidiBuffer& midiMessages,
+                                       const NodeMap& nodes, TraversalMap& traversalMap)
+{
+    for (int childId : node.children) {
+        auto childIt = nodes.find(childId);
+        if (childIt == nodes.end()) {
+            continue;
+        }
+
+        const RTNode& flagNode = childIt->second;
+        if (flagNode.nodeType != RTNode::NodeType::TraversalFlagData) {
+            continue;
+        }
+
+        if (flagNode.countLimit <= 0 || parentCount % flagNode.countLimit != 0) {
+            continue;
+        }
+
+        if (flagNode.flagRemovesTraversal) {
+            queueFlagRemoval(flagNode, hostTraversalId, traversalMap);
+        }
+        else {
+            startFlagTraversal(flagNode, hostTraversalId, sample, midiMessages, nodes, traversalMap);
+        }
+    }
+}
+
+void TraversalDispatcher::queueFlagRemoval(const RTNode& flagNode, int hostTraversalId, TraversalMap& traversalMap)
+{
+    const int traversalId = flagNode.flagTraversal.traversalId;
+
+    if (traversalId <= 0) {
+        return;
+    }
+
+    if (hostTraversalId != traversalId) {
+        return;
+    }
+
+    auto traversalIt = traversalMap.find(traversalId);
+    if (traversalIt == traversalMap.end()) {
+        return;
+    }
+
+    traversalIt->second.pendingRemoval = true;
+}
+
+void TraversalDispatcher::startFlagTraversal(const RTNode& flagNode, int hostTraversalId, int sample, juce::MidiBuffer& midiMessages,
+                                              const NodeMap& nodes, TraversalMap& traversalMap)
+{
+    const int traversalId = flagNode.flagTraversal.traversalId;
+
+    if (traversalId <= 0) {
+        return;
+    }
+
+    if (hostTraversalId == traversalId) {
+        return;
+    }
+
+    if (traversalMap.find(traversalId) != traversalMap.end()) {
+        return;
+    }
+
+    auto startIt = nodes.find(flagNode.flagTargetId);
+    if (startIt == nodes.end()) {
+        return;
+    }
+
+    const RTNode& startNode = startIt->second;
+    const int rootId = startNode.graphID;
+
+    traversalMap.insert({ traversalId, TraversalLogic(rootId, bridge, flagNode.flagTraversal) });
+    TraversalLogic& traversalLogic = traversalMap.at(traversalId);
+
+    traversalLogic.isFirstEvent     = true;
+    traversalLogic.isFlagSpawned    = true;
+    traversalLogic.flagSourceNodeId = flagNode.nodeID;
+    traversalLogic.primary.target   = startNode.nodeID;
+    traversalLogic.state          = TraversalLogic::TraversalState::Active;
+    traversalLogic.isLooping      = true;
+
+    auto snap = std::atomic_load(&processor.audioSnapshot);
+    if (snap && snap->rtGraphs) {
+        auto rtGraphIt = snap->rtGraphs->find(rootId);
+        if (rtGraphIt != snap->rtGraphs->end()) {
+            traversalLogic.loopLimit = rtGraphIt->second->loopLimit;
+        }
+    }
+
+    traversalLogic.advanceAlternative(nodes, startNode.nodeID);
+
+    bridge.highlightNode(startNode, true, traversalId);
+    pushNote(startNode, traversalId, midiMessages, sample, nodes, traversalMap);
 }
 
 void TraversalDispatcher::pushChordNotes(const RTNode& node, int sample, int duration,
@@ -415,13 +512,19 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
     auto traversalIt = traversalMap.find(traversalId);
 
     if (traversalIt == traversalMap.end()) {
-        if (expiredNote.isConnectionTrigger) {
-            bridge.highlightNode(expiredNote.noteNode, false);
-        }
+        bridge.highlightNode(expiredNote.noteNode, false);
         return;
     }
 
     TraversalLogic& traversal = traversalIt->second;
+
+    if (traversal.pendingRemoval) {
+        bridge.highlightNode(expiredNote.noteNode, false, traversal.traversal.traversalId);
+        bridge.pushArrowReset(traversal.rootId, traversal.traversal.traversalId);
+        traversalMap.erase(traversalIt);
+        return;
+    }
+
     auto type = expiredNote.noteNode.nodeType;
 
     jassert(nodes.find(traversal.primary.target) != nodes.end());
