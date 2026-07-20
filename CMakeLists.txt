@@ -59,6 +59,9 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Node/Modulator.cpp
         Source/UI/Node/TraversalFlagNode.cpp
         Source/UI/Theme/CustomLookAndFeel.cpp
+        Source/UI/Theme/CustomLookAndFeel_Nodes.cpp
+        Source/UI/Theme/CustomLookAndFeel_Menus.cpp
+        Source/UI/Theme/CustomLookAndFeel_Buttons.cpp
         Source/UI/Theme/CustomTextEditor.cpp
         Source/UI/Theme/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp
@@ -70,6 +73,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/PianoRoll.cpp
         Source/UI/Titlebar.cpp
         Source/UI/BottomBar.cpp
+        Source/UI/MenuBar.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE

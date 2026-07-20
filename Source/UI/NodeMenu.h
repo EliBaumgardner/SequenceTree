@@ -9,6 +9,9 @@
 
 struct ApplicationContext;
 
+class MenuBar;
+class TraversalMenu;
+
 class NodeMenu : public juce::Component {
 
 public:
@@ -21,10 +24,13 @@ public:
 
     std::function<void(int)> onWidthDragged;
 
-    static constexpr int resizerWidth = 15;
+    static constexpr int resizerWidth = 10;
+    static constexpr int menuBarWidth = 40;
     static constexpr int minMenuWidth = resizerWidth;
 
 private:
+
+    void toggleTraversalMenu();
 
     class Resizer : public juce::Component {
     public:
@@ -46,6 +52,11 @@ private:
     };
 
     Resizer resizer { *this };
+
+    std::unique_ptr<MenuBar> menuBar = nullptr;
+    std::unique_ptr<TraversalMenu> traversalMenu = nullptr;
+
+    bool traversalMenuOpen = false;
 };
 
 #endif //SEQUENCETREE_NODEMENU_H

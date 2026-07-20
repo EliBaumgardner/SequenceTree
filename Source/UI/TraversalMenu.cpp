@@ -8,10 +8,11 @@
 #include "../Graph/ValueTreeState.h"
 #include "Theme/CustomLookAndFeel.h"
 
-TraversalMenu::TraversalMenu(ApplicationContext& context) : displayMenu(context), multiplierEditor(context), channelEditor(context), transposeEditor(context), velocityEditor(context), colourSelector(context) {
+TraversalMenu::TraversalMenu(ApplicationContext& context, bool showResizer) : displayMenu(context), multiplierEditor(context), channelEditor(context), transposeEditor(context), velocityEditor(context), colourSelector(context), showResizer(showResizer) {
     setLookAndFeel(context.lookAndFeel);
     addAndMakeVisible(displayMenu);
-    addAndMakeVisible(resizer);
+    addChildComponent(resizer);
+    resizer.setVisible(showResizer);
 
     multiplierLabel.setText("Multiplier", juce::dontSendNotification);
     multiplierLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
@@ -134,7 +135,9 @@ void TraversalMenu::paint(juce::Graphics &g) {
 void TraversalMenu::resized() {
     auto bounds = getLocalBounds();
 
-    resizer.setBounds(bounds.removeFromLeft(resizerWidth));
+    if (showResizer) {
+        resizer.setBounds(bounds.removeFromLeft(resizerWidth));
+    }
 
     int barHeight = static_cast<int>(getHeight() * 0.05f);
     auto barArea = bounds.removeFromTop(barHeight);

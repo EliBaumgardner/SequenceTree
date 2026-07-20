@@ -16,6 +16,8 @@ class RootRectangle;
 class NodeArrow;
 
 class Titlebar;
+class MenuBar;
+
 class BottomBar;
 class ButtonPane;
 
@@ -50,6 +52,8 @@ class PaintToolSettings;
 class DanglingArrow;
 class ArrowTool;
 
+class IconButton;
+
 class CustomLookAndFeel : public juce::LookAndFeel_V4
 {
 
@@ -75,10 +79,7 @@ public:
     juce::Colour getTextColour() const { return textColour; }
     juce::Colour getBarColour() const { return barColour; }
 
-    static CustomLookAndFeel& get(juce::Component& c)
-    {
-        return static_cast<CustomLookAndFeel&>(c.getLookAndFeel());
-    }
+    static CustomLookAndFeel& get(juce::Component& c) { return static_cast<CustomLookAndFeel&>(c.getLookAndFeel()); }
 
     void drawEditor         (juce::Graphics& g, CustomTextEditor& editor);
     void drawNodeTextEditor (juce::Graphics& g, NodeTextEditor& editor);
@@ -88,13 +89,21 @@ public:
 
     void drawTitleBar       (juce::Graphics& g, const Titlebar& titleBar);
     void drawBottomBar      (juce::Graphics& g, const BottomBar& bottomBar);
+    void drawMenuBar        (juce::Graphics& g, const MenuBar& menuBar);
+
+    void drawNodeIcon       (juce::Graphics& g, const IconButton& iconButton);
+    void drawTreeIcon       (juce::Graphics& g, const IconButton& iconButton);
+    void drawTraversalIcon   (juce::Graphics& g, const IconButton& iconButton);
 
     void drawTraversalMenu   (juce::Graphics& g, const TraversalMenu& traversalMenu);
     void drawTraversalMenuResizer(juce::Graphics& g, juce::Rectangle<int> bounds, bool isMouseOver, bool isDragging);
+
     void drawNodeMenu        (juce::Graphics& g, const NodeMenu& nodeMenu);
     void drawNodeMenuResizer (juce::Graphics& g, juce::Rectangle<int> bounds, bool isMouseOver, bool isDragging);
+
     void drawDisplayMenu    (juce::Graphics& g, const DisplayMenu& displaySelector);
     void drawTraversalDisplayMenu(juce::Graphics& g, const TraversalDisplayMenu& displaySelector);
+
     void drawButtonPane     (juce::Graphics& g, const ButtonPane& selectionBar);
     void drawDisplayButton  (juce::Graphics& g, const DisplayButton& displayButton);
 

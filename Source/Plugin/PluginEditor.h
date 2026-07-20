@@ -19,7 +19,6 @@
 #include "../UI/BottomBar.h"
 #include "../UI/Theme/CustomLookAndFeel.h"
 #include "../Graph/ValueTreeState.h"
-#include "../UI/TraversalMenu.h"
 #include "../UI/NodeMenu.h"
 #include "../Util/ApplicationContext.h"
 
@@ -64,10 +63,8 @@ private:
     std::unique_ptr<Titlebar>       titleBar       = nullptr;
     std::unique_ptr<BottomBar>      bottomBar      = nullptr;
     std::unique_ptr<DynamicPort>    port           = nullptr;
-    std::unique_ptr<TraversalMenu>  traversalMenu  = nullptr;
     std::unique_ptr<NodeMenu>       nodeMenu       = nullptr;
 
-    float menuWidthRatio = 0.0f;
     float nodeMenuWidthRatio = 0.0f;
     float menuHeightRatio = 0.25f;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessorEditor)

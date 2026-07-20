@@ -18,13 +18,15 @@ class TraversalMenu : public juce::Component {
 
 public:
 
-    TraversalMenu(ApplicationContext& context);
+    TraversalMenu(ApplicationContext& context, bool showResizer = true);
     ~TraversalMenu() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
 
     void selectTraversal(int traversalId);
+
+    bool hasResizer() const { return showResizer; }
 
     std::function<void(int)> onWidthDragged;
 
@@ -72,6 +74,7 @@ private:
     };
 
     Resizer resizer { *this };
+    bool showResizer;
 
     std::unique_ptr<TraversalMenuListener> menuListener;
 };
