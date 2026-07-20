@@ -22,15 +22,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     nodeController = std::make_unique<NodeController>(applicationContext);
     valueTreeState = std::make_unique<ValueTreeState>();
     port           = std::make_unique<DynamicPort>(canvas.get());
-    traversalMenu  = std::make_unique<TraversalMenu>(applicationContext);
     nodeMenu       = std::make_unique<NodeMenu>(applicationContext);
-
-    traversalMenu->onWidthDragged = [this](int newWidth) {
-        int total = getWidth();
-        if (total <= 0) return;
-        menuWidthRatio = juce::jlimit(0.01f, 0.9f, static_cast<float>(newWidth) / static_cast<float>(total));
-        resized();
-    };
 
     nodeMenu->onWidthDragged = [this](int newWidth) {
         int total = getWidth();
@@ -122,7 +114,6 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     addAndMakeVisible(port.get());
     addAndMakeVisible(titleBar.get());
     addAndMakeVisible(bottomBar.get());
-    addAndMakeVisible(traversalMenu.get());
     addAndMakeVisible(nodeMenu.get());
 
     setResizable(true,false);
@@ -155,15 +146,12 @@ void SequenceTreeAudioProcessorEditor::resized()
     auto bounds = getLocalBounds();
 
     auto barHeight = static_cast<int>(bounds.getHeight() * 0.05f);
-    auto menuWidth = juce::jmax(TraversalMenu::resizerWidth, static_cast<int>(bounds.getWidth() * menuWidthRatio));
     auto nodeMenuWidth = juce::jmax(NodeMenu::resizerWidth, static_cast<int>(bounds.getWidth() * nodeMenuWidthRatio));
 
-    auto traversalMenuArea= bounds.removeFromRight(menuWidth);
     auto nodeMenuArea     = bounds.removeFromLeft(nodeMenuWidth);
     auto titleArea        = bounds.removeFromTop(barHeight);
     auto bottomArea       = bounds.removeFromBottom(barHeight);
 
-    traversalMenu->setBounds(traversalMenuArea);
     nodeMenu->setBounds(nodeMenuArea);
     titleBar ->setBounds(titleArea);
     bottomBar->setBounds(bottomArea);

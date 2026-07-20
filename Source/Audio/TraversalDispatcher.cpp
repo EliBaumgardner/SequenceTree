@@ -39,6 +39,7 @@ void TraversalDispatcher::applyStepResult(const TraversalLogic::StepResult& step
     if (step.referenceOffId != -1) {
         highlight(step.referenceOffId, false);
     }
+
     if (step.rootForReset   != -1) {
         bridge.pushArrowReset(step.rootForReset, traversalId);
     }
@@ -47,6 +48,7 @@ void TraversalDispatcher::applyStepResult(const TraversalLogic::StepResult& step
         bridge.pushCount(step.countSourceNodeId, 0, 1);
 
         auto it = nodes.find(step.countSourceNodeId);
+
         if (it != nodes.end()) {
             for (int childId : it->second.children) {
                 auto childIt = nodes.find(childId);

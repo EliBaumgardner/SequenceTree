@@ -5,10 +5,20 @@
 #include "NodeMenu.h"
 #include "../Util/ApplicationContext.h"
 #include "Theme/CustomLookAndFeel.h"
+#include "../UI/MenuBar.h"
+#include "../UI/TraversalMenu.h"
 
 NodeMenu::NodeMenu(ApplicationContext& context) {
     setLookAndFeel(context.lookAndFeel);
+
+    menuBar = std::make_unique<MenuBar>(context);
+    menuBar->traversalIcon->onClick = [this] { toggleTraversalMenu(); };
+
+    traversalMenu = std::make_unique<TraversalMenu>(context, false);
+
     addAndMakeVisible(resizer);
+    addAndMakeVisible(menuBar.get());
+    addChildComponent(traversalMenu.get());
 }
 
 NodeMenu::~NodeMenu() {
@@ -23,6 +33,15 @@ void NodeMenu::resized() {
     auto bounds = getLocalBounds();
 
     resizer.setBounds(bounds.removeFromRight(resizerWidth));
+    menuBar->setBounds(bounds.removeFromRight(menuBarWidth));
+
+    traversalMenu->setBounds(bounds);
+}
+
+void NodeMenu::toggleTraversalMenu() {
+    traversalMenuOpen = !traversalMenuOpen;
+    traversalMenu->setVisible(traversalMenuOpen);
+    resized();
 }
 
 NodeMenu::Resizer::Resizer(NodeMenu& ownerRef) : owner(ownerRef)
