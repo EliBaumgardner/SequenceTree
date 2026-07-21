@@ -118,7 +118,11 @@ void Node::setSelectVisual() {
 void Node::setHighlightVisual(int traversalId, bool shouldHighlight, juce::Colour colour)
 {
     if (shouldHighlight) {
-        pendingHighlightOffIds.erase(traversalId);
+        for (int pendingId : pendingHighlightOffIds) {
+            activeHighlights.erase(pendingId);
+        }
+        pendingHighlightOffIds.clear();
+
         activeHighlights[traversalId] = colour;
         pulsePhase = 0.0f;
         startTimerHz(60);

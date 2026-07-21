@@ -284,6 +284,44 @@ void NodeController::showArrowContextMenu(NodeArrow* arrow)
     });
 }
 
+void NodeController::showDanglingArrowContextMenu(DanglingArrow* arrow)
+{
+    if (arrow == nullptr) {
+        return;
+    }
+
+    juce::PopupMenu menu;
+    menu.setLookAndFeel(applicationContext.lookAndFeel);
+    menu.addItem(1, "edit allowed traversals");
+
+    juce::Component::SafePointer<DanglingArrow> safeArrow(arrow);
+
+    menu.showMenuAsync(juce::PopupMenu::Options(), [this, safeArrow] (int result)
+    {
+        switch (result)
+        {
+            case 1:
+            {
+                if (safeArrow == nullptr) {
+                    break;
+                }
+
+                juce::ValueTree connection = safeArrow->arrowTree;
+                if (!connection.isValid()) {
+                    break;
+                }
+
+                allowedTraversalsWindow = std::make_unique<AllowedTraversalsWindow>(applicationContext, connection);
+                allowedTraversalsWindow->centreWithSize(allowedTraversalsWindow->getWidth(),
+                                                        allowedTraversalsWindow->getHeight());
+                allowedTraversalsWindow->setVisible(true);
+                break;
+            }
+            default: break;
+        }
+    });
+}
+
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
     NodeCanvas* canvas = applicationContext.canvas;
@@ -462,6 +500,10 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
         if (! canvas->paintMode && ! e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
             if (NodeArrow* clickedArrow = findArrowNear({ (float) e.x, (float) e.y }, arrowHoverRadius)) {
                 showArrowContextMenu(clickedArrow);
+                return;
+            }
+            if (DanglingArrow* clickedDangling = findDanglingArrowNear({ (float) e.x, (float) e.y }, arrowHoverRadius)) {
+                showDanglingArrowContextMenu(clickedDangling);
                 return;
             }
         }

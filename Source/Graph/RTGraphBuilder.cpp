@@ -213,6 +213,15 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
                 for (DanglingArrow* danglingArrow : canvas.danglingArrows) {
                     if (danglingArrow->startNode == nodeFromTree) {
                         rtNode.durationMap[nodeId] = danglingArrow->getDuration();
+
+                        juce::ValueTree disabledTraversals = danglingArrow->arrowTree.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
+                        if (disabledTraversals.isValid()) {
+                            std::unordered_set<int>& disabledSet = rtNode.disabledTraversalsByChild[nodeId];
+
+                            for (int j = 0; j < disabledTraversals.getNumChildren(); j++) {
+                                disabledSet.insert((int) disabledTraversals.getChild(j).getProperty(ValueTreeIdentifiers::TraversalId));
+                            }
+                        }
                     }
                 }
             }

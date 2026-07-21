@@ -12,14 +12,14 @@ void AudioUIBridge::highlightNode(const RTNode& node, bool shouldHighlight, int 
     else { jassertfalse; }
 }
 
-void AudioUIBridge::pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId, int traversalId)
+void AudioUIBridge::pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId, int traversalId, bool isConnection)
 {
     const auto scope = progressFifo.write(1);
     if (scope.blockSize1 > 0) {
-        progressBuffer[static_cast<size_t>(scope.startIndex1)] = { parentNodeId, childNodeId, durationMs, graphId, traversalId };
+        progressBuffer[static_cast<size_t>(scope.startIndex1)] = { parentNodeId, childNodeId, durationMs, graphId, traversalId, isConnection };
     }
     else if (scope.blockSize2 > 0) {
-        progressBuffer[static_cast<size_t>(scope.startIndex2)] = { parentNodeId, childNodeId, durationMs, graphId, traversalId };
+        progressBuffer[static_cast<size_t>(scope.startIndex2)] = { parentNodeId, childNodeId, durationMs, graphId, traversalId, isConnection };
     }
     else { jassertfalse; }
 }

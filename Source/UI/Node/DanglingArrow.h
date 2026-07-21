@@ -23,9 +23,9 @@ public:
 
     ~DanglingArrow() override { stopTimer(); }
 
-    void startProgress(int traversalId, int durationMs, juce::Colour colour)
+    void startProgress(int traversalId, int durationMs, juce::Colour colour, bool oneShot = false)
     {
-        progress.start(traversalId, durationMs, colour);
+        progress.start(traversalId, durationMs, colour, oneShot);
         if (! isTimerRunning()) {
             startTimerHz(animationTimerHz);
         }

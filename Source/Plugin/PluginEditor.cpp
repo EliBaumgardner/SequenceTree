@@ -112,9 +112,9 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
 
     addAndMakeVisible(port.get());
+    addAndMakeVisible(menuArea.get());
     addAndMakeVisible(titleBar.get());
     addAndMakeVisible(bottomBar.get());
-    addAndMakeVisible(menuArea.get());
 
     setResizable(true,false);
     setSize (700, 500);

@@ -69,6 +69,7 @@ public:
     juce::ValueTree getArrowConnectionTree (NodeArrow* arrow) const;
 
     DanglingArrow* findDanglingArrowNear (juce::Point<float> point, float radius) const;
+    void           showDanglingArrowContextMenu (DanglingArrow* arrow);
 
 private:
 

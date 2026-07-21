@@ -1,4 +1,4 @@
-#include "CustomTextCaret.h"
+ #include "CustomTextCaret.h"
 
 CustomTextCaret::CustomTextCaret(juce::Component* keyFocusOwner)
     : juce::CaretComponent(keyFocusOwner)

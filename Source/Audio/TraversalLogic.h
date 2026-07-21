@@ -48,6 +48,7 @@ public:
 
     int  flagSourceNodeId = -1;
 
+    int  instanceId        = 0;
     int  rootId            = 0;
     int  referenceTargetId = 0;
 

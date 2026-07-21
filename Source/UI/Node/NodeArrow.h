@@ -33,7 +33,7 @@ public:
   void setHoverFade(bool shouldBeVisible);
   void initHoverState(bool visibleNow);
   void refreshHoverVisibility() { setHoverFade(sourceHovered || proximityHovered); }
-  void startProgress(int traversalId, int durationMs, juce::Colour colour);
+  void startProgress(int traversalId, int durationMs, juce::Colour colour, bool oneShot = false);
   void resetProgress();
   void resetProgress(int traversalId);
   void timerCallback() override;
