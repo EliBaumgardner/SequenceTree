@@ -119,6 +119,7 @@ public:
 
     bool dashed = false;
     bool hovered = false;
+    bool selected = false;
 
     ArrowProgress progress;
 

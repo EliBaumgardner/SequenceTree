@@ -243,8 +243,9 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     juce::Point<int> parentCentre = a->getNodeCentre();
     juce::Point<int> childCentre  = b->getNodeCentre();
 
-    float arrowLength  = nodeArrow.hovered ? 15.0f : 12.0f;
-    float arrowWidth   = nodeArrow.hovered ? 7.5f  : 6.0f;
+    bool  emphasised   = nodeArrow.hovered || nodeArrow.selected;
+    float arrowLength  = emphasised ? 15.0f : 12.0f;
+    float arrowWidth   = emphasised ? 7.5f  : 6.0f;
     int   childRadius  = b->getHeight() / 2;
     int   parentRadius = a->getHeight() / 2;
 
@@ -292,6 +293,8 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
     bool isRootTargetArrow = b->nodeType == NodeType::Root && !a->isAlternativeNode;
     bool isFlagSourceArrow = a->nodeType == NodeType::TraversalFlag;
 
+    bool drawHead = nodeArrow.animT > 0.3f && ! childIsTraversalFlag;
+
     juce::Path linePath;
 
     {
@@ -301,8 +304,11 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         float absDy = std::abs(dy);
 
         if (absDx < 1.0f || absDy < 1.0f || childIsTraversalFlag) {
+            float shaftEndX = arrowEndX - (drawHead ? dirX * arrowLength : 0.0f);
+            float shaftEndY = arrowEndY - (drawHead ? dirY * arrowLength : 0.0f);
+
             linePath.startNewSubPath(parentCenterX, parentCenterY);
-            linePath.lineTo(arrowEndX, arrowEndY);
+            linePath.lineTo(shaftEndX, shaftEndY);
         }
         else {
             float sign;
@@ -323,9 +329,6 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
             float cp2X = parentCenterX + dx * 0.67f - perpX * offset;
             float cp2Y = parentCenterY + dy * 0.67f - perpY * offset;
 
-            linePath.startNewSubPath(parentCenterX, parentCenterY);
-            linePath.cubicTo(cp1X, cp1Y, cp2X, cp2Y, arrowEndX, arrowEndY);
-
             float neckX = arrowEndX - cp2X;
             float neckY = arrowEndY - cp2Y;
             float neckLen = std::sqrt(neckX * neckX + neckY * neckY);
@@ -333,6 +336,12 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
                 dirX = neckX / neckLen;
                 dirY = neckY / neckLen;
             }
+
+            float shaftEndX = arrowEndX - (drawHead ? dirX * arrowLength : 0.0f);
+            float shaftEndY = arrowEndY - (drawHead ? dirY * arrowLength : 0.0f);
+
+            linePath.startNewSubPath(parentCenterX, parentCenterY);
+            linePath.cubicTo(cp1X, cp1Y, cp2X, cp2Y, shaftEndX, shaftEndY);
         }
     }
 
@@ -342,7 +351,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         stroke.createDashedStroke(linePath, linePath, dashLengths, 2);
     }
 
-    juce::PathStrokeType lineStroke(nodeArrow.hovered ? 3.25f : 2.0f);
+    juce::PathStrokeType lineStroke(emphasised ? 3.25f : 2.0f);
     auto shadowPath    = linePath;
     auto highlightPath = linePath;
     shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
@@ -393,7 +402,7 @@ void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeAr
         }
     }
 
-    if (nodeArrow.animT > 0.3f && !childIsTraversalFlag) {
+    if (drawHead) {
         float leftX  = arrowEndX - arrowLength * dirX + arrowWidth * dirY;
         float leftY  = arrowEndY - arrowLength * dirY - arrowWidth * dirX;
         float rightX = arrowEndX - arrowLength * dirX - arrowWidth * dirY;
@@ -461,9 +470,17 @@ void CustomLookAndFeel::drawDanglingArrow(juce::Graphics &g, const DanglingArrow
     startX += dirX * parentRadius;
     startY += dirY * parentRadius;
 
+    bool danglingEmphasised = danglingArrow.hovered || danglingArrow.selected;
+
+    const float arrowLength = danglingEmphasised ? 15.0f : 12.0f;
+    const float arrowWidth  = danglingEmphasised ? 7.5f  : 6.0f;
+
+    float shaftEndX = endX - dirX * arrowLength;
+    float shaftEndY = endY - dirY * arrowLength;
+
     juce::Path linePath;
     linePath.startNewSubPath(startX, startY);
-    linePath.lineTo(endX, endY);
+    linePath.lineTo(shaftEndX, shaftEndY);
 
     if (danglingArrow.dashed) {
         juce::PathStrokeType dashStroke(2.0f);
@@ -471,7 +488,7 @@ void CustomLookAndFeel::drawDanglingArrow(juce::Graphics &g, const DanglingArrow
         dashStroke.createDashedStroke(linePath, linePath, dashLengths, 2);
     }
 
-    juce::PathStrokeType lineStroke(danglingArrow.hovered ? 3.25f : 2.0f);
+    juce::PathStrokeType lineStroke(danglingEmphasised ? 3.25f : 2.0f);
     auto shadowPath    = linePath;
     auto highlightPath = linePath;
     shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
@@ -512,9 +529,6 @@ void CustomLookAndFeel::drawDanglingArrow(juce::Graphics &g, const DanglingArrow
             ++drawnCount;
         }
     }
-
-    const float arrowLength = danglingArrow.hovered ? 15.0f : 12.0f;
-    const float arrowWidth  = danglingArrow.hovered ? 7.5f  : 6.0f;
 
     float leftX  = endX - arrowLength * dirX + arrowWidth * dirY;
     float leftY  = endY - arrowLength * dirY - arrowWidth * dirX;

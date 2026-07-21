@@ -60,6 +60,7 @@ public:
     void  commitFlagConnection (int sourceNodeId, Node* target);
 
     NodeArrow* findArrowNear   (juce::Point<float> point, float radius) const;
+    NodeArrow* findArrowHeadNear (juce::Point<float> point, float radius) const;
     void       deleteArrow     (NodeArrow* arrow);
 
     DanglingArrow* findDanglingArrowNear (juce::Point<float> point, float radius) const;
@@ -70,12 +71,16 @@ private:
     static constexpr float danglingArrowGrabRadius = 14.0f;
     static constexpr float flagArrowVicinity       = 28.0f;
     static constexpr float arrowHoverRadius        = 8.0f;
+    static constexpr float arrowHeadGrabRadius     = 16.0f;
 
     ApplicationContext& applicationContext;
 
     DanglingArrow* draggingDanglingArrow = nullptr;
 
     Node* snapTargetRoot           = nullptr;
+
+    Node* draggingArrowHeadNode    = nullptr;
+    bool pressedOnArrow            = false;
 
     bool creatingDanglingArrow     = false;
     bool draggingFlagConnection    = false;

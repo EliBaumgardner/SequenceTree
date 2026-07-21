@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <unordered_set>
+
 #include "../../Graph/RTData.h"
 #include "DynamicPort.h"
 #include "../../Util/NodeInfo.h"
@@ -72,6 +74,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         Node* instantiateNodeFromTree(const juce::ValueTree& nodeValueTree);
 
         void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY);
+        void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY, std::unordered_set<int>& visited);
 
         void setNodePosition(int nodeId);
 
@@ -81,6 +84,11 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         void setValueTreeState(const juce::ValueTree& stateTree);
 
         void clearCanvas();
+
+        void setSelectedArrow(NodeArrow* arrow);
+        void setSelectedDanglingArrow(DanglingArrow* arrow);
+        void clearArrowSelection();
+
         void triggerArrowSnapForNode(int nodeId);
         void showSnapGhostArrow(Node* from, Node* to);
         void hideSnapGhostArrow();

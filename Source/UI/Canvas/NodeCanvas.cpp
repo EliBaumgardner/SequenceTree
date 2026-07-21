@@ -309,9 +309,7 @@ Node* NodeCanvas::instantiateNodeFromTree(const juce::ValueTree& nodeValueTree)
     node->setDisplayMode(NodeDisplayMode::Pitch);
 
     node->onSelected = [this](Node* n, bool sel) {
-        if (applicationContext.onNodeSelected) {
-            applicationContext.onNodeSelected(n, sel);
-        }
+        applicationContext.notifyNodeSelected(n, sel);
     };
 
     addAndMakeVisible(node.get());
@@ -419,13 +417,59 @@ void NodeCanvas::setNodePosition(int nodeId)
 
 }
 
+static std::unordered_set<int> collectAncestorIds(int nodeId)
+{
+    std::unordered_set<int> ancestors;
+    std::vector<int> frontier { nodeId };
+
+    while (! frontier.empty()) {
+        int current = frontier.back();
+        frontier.pop_back();
+
+        for (int i = 0; i < ValueTreeState::nodeMap.getNumChildren(); ++i) {
+            juce::ValueTree candidate = ValueTreeState::nodeMap.getChild(i);
+            juce::ValueTree candidateChildren = candidate.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+            if (! candidateChildren.getChildWithProperty(ValueTreeIdentifiers::Id, current).isValid()) {
+                continue;
+            }
+
+            int parentId = candidate.getProperty(ValueTreeIdentifiers::Id);
+            if (parentId == nodeId) {
+                continue;
+            }
+
+            if (ancestors.insert(parentId).second) {
+                frontier.push_back(parentId);
+            }
+        }
+    }
+
+    return ancestors;
+}
+
 void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY)
+{
+    int rootId = (int) nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+
+    std::unordered_set<int> visited = collectAncestorIds(rootId);
+    visited.insert(rootId);
+
+    moveDescendants(nodeValueTree, deltaX, deltaY, visited);
+}
+
+void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY, std::unordered_set<int>& visited)
 {
     juce::ValueTree nodeValueTreeChildren = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
     for (int i = 0; i < nodeValueTreeChildren.getNumChildren(); i++) {
         juce::ValueTree childIdTree = nodeValueTreeChildren.getChild(i);
         int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
+
+        if (! visited.insert(childId).second) {
+            continue;
+        }
+
         juce::ValueTree childNodeTree = ValueTreeState::getNode(childId);
 
         NodePosition childPosition = ValueTreeState::getNodePosition(childId);
@@ -433,7 +477,7 @@ void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int 
         childPosition.yPosition += deltaY;
 
         ValueTreeState::setNodePosition(childNodeTree, childPosition, applicationContext.undoManager);
-        moveDescendants(childNodeTree, deltaX, deltaY);
+        moveDescendants(childNodeTree, deltaX, deltaY, visited);
     }
 }
 
@@ -497,6 +541,43 @@ void NodeCanvas::removeArrow(NodeArrow* arrow)
     if (index >= 0) {
         removeChildComponent(arrow);
         nodeArrows.remove(index);
+    }
+}
+
+void NodeCanvas::setSelectedArrow(NodeArrow* arrow)
+{
+    clearArrowSelection();
+
+    if (arrow != nullptr && ! arrow->selected) {
+        arrow->selected = true;
+        arrow->repaint();
+    }
+}
+
+void NodeCanvas::setSelectedDanglingArrow(DanglingArrow* arrow)
+{
+    clearArrowSelection();
+
+    if (arrow != nullptr && ! arrow->selected) {
+        arrow->selected = true;
+        arrow->repaint();
+    }
+}
+
+void NodeCanvas::clearArrowSelection()
+{
+    for (NodeArrow* arrow : nodeArrows) {
+        if (arrow->selected) {
+            arrow->selected = false;
+            arrow->repaint();
+        }
+    }
+
+    for (DanglingArrow* arrow : danglingArrows) {
+        if (arrow->selected) {
+            arrow->selected = false;
+            arrow->repaint();
+        }
     }
 }
 

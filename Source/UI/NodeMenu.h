@@ -1,62 +1,72 @@
 //
-// Created by Eli Baumgardner on 7/17/26.
+// Created by Eli Baumgardner on 7/20/26.
 //
 
 #ifndef SEQUENCETREE_NODEMENU_H
 #define SEQUENCETREE_NODEMENU_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <array>
+#include "../Util/ApplicationContext.h"
+#include "Node/ValueEditor.h"
+#include "ColourSelector.h"
 
-struct ApplicationContext;
-
-class MenuBar;
-class TraversalMenu;
+class Node;
 
 class NodeMenu : public juce::Component {
 
 public:
 
-    NodeMenu(ApplicationContext& context);
+    explicit NodeMenu(ApplicationContext& context);
     ~NodeMenu() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    std::function<void(int)> onWidthDragged;
-
-    static constexpr int resizerWidth = 10;
-    static constexpr int menuBarWidth = 40;
-    static constexpr int minMenuWidth = resizerWidth;
-
 private:
 
-    void toggleTraversalMenu();
+    void bindToNode(Node* node);
+    void clearBindings();
 
-    class Resizer : public juce::Component {
-    public:
-        explicit Resizer(NodeMenu& owner);
+    ApplicationContext& applicationContext;
 
-        void mouseDown(const juce::MouseEvent& e) override;
-        void mouseDrag(const juce::MouseEvent& e) override;
-        void mouseUp(const juce::MouseEvent& e) override;
-        void mouseEnter(const juce::MouseEvent& e) override;
-        void mouseExit(const juce::MouseEvent& e) override;
-        void paint(juce::Graphics& g) override;
+    ColourSelector colourSelector { applicationContext };
+    juce::Label    colourLabel;
 
-    private:
-        NodeMenu& owner;
-        int dragStartWidth = 0;
-        int dragStartX = 0;
-        bool isHovered = false;
-        bool isDragging = false;
+    ValueEditor countLimitEditor        { applicationContext };
+    ValueEditor repeatEditor            { applicationContext };
+    ValueEditor switchCountLimitEditor  { applicationContext };
+    ValueEditor subLoopCountLimitEditor { applicationContext };
+    ValueEditor velocityEditor          { applicationContext };
+    ValueEditor pitchEditor             { applicationContext };
+    ValueEditor channelEditor           { applicationContext };
+
+    juce::Label countLimitLabel;
+    juce::Label repeatLabel;
+    juce::Label switchCountLimitLabel;
+    juce::Label subLoopCountLimitLabel;
+    juce::Label velocityLabel;
+    juce::Label pitchLabel;
+    juce::Label channelLabel;
+
+    struct LabeledRow
+    {
+        juce::Label& label;
+        ValueEditor& editor;
     };
 
-    Resizer resizer { *this };
+    std::array<LabeledRow, 7> labeledRows {{
+        { countLimitLabel,        countLimitEditor        },
+        { repeatLabel,            repeatEditor            },
+        { switchCountLimitLabel,  switchCountLimitEditor  },
+        { subLoopCountLimitLabel, subLoopCountLimitEditor },
+        { velocityLabel,          velocityEditor          },
+        { pitchLabel,             pitchEditor              },
+        { channelLabel,           channelEditor            }
+    }};
 
-    std::unique_ptr<MenuBar> menuBar = nullptr;
-    std::unique_ptr<TraversalMenu> traversalMenu = nullptr;
-
-    bool traversalMenuOpen = false;
+    static constexpr int rowHeight = 20;
+    static constexpr int rowGap    = 6;
 };
 
 #endif //SEQUENCETREE_NODEMENU_H

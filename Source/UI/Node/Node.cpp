@@ -203,6 +203,10 @@ void Node::setDisplayMode(NodeDisplayMode mode)
             break;
     }
 
+    const bool pitchMode = (mode == NodeDisplayMode::Pitch);
+    nodeTextEditor->setReadOnly(pitchMode);
+    nodeTextEditor->setCaretVisible(! pitchMode);
+
     nodeTextEditor->formatDisplay(mode);
 }
 

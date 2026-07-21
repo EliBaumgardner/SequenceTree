@@ -22,12 +22,12 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     nodeController = std::make_unique<NodeController>(applicationContext);
     valueTreeState = std::make_unique<ValueTreeState>();
     port           = std::make_unique<DynamicPort>(canvas.get());
-    nodeMenu       = std::make_unique<NodeMenu>(applicationContext);
+    menuArea       = std::make_unique<MenuArea>(applicationContext);
 
-    nodeMenu->onWidthDragged = [this](int newWidth) {
+    menuArea->onWidthDragged = [this](int newWidth) {
         int total = getWidth();
         if (total <= 0) return;
-        nodeMenuWidthRatio = juce::jlimit(0.01f, 0.9f, static_cast<float>(newWidth) / static_cast<float>(total));
+        menuAreaWidthRatio = juce::jlimit(0.01f, 0.9f, static_cast<float>(newWidth) / static_cast<float>(total));
         resized();
     };
 
@@ -114,7 +114,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     addAndMakeVisible(port.get());
     addAndMakeVisible(titleBar.get());
     addAndMakeVisible(bottomBar.get());
-    addAndMakeVisible(nodeMenu.get());
+    addAndMakeVisible(menuArea.get());
 
     setResizable(true,false);
     setSize (700, 500);
@@ -146,13 +146,13 @@ void SequenceTreeAudioProcessorEditor::resized()
     auto bounds = getLocalBounds();
 
     auto barHeight = static_cast<int>(bounds.getHeight() * 0.05f);
-    auto nodeMenuWidth = juce::jmax(NodeMenu::resizerWidth, static_cast<int>(bounds.getWidth() * nodeMenuWidthRatio));
+    auto menuAreaWidth = juce::jmax(MenuArea::resizerWidth, static_cast<int>(bounds.getWidth() * menuAreaWidthRatio));
 
-    auto nodeMenuArea     = bounds.removeFromLeft(nodeMenuWidth);
+    auto menuAreaBounds   = bounds.removeFromLeft(menuAreaWidth);
     auto titleArea        = bounds.removeFromTop(barHeight);
     auto bottomArea       = bounds.removeFromBottom(barHeight);
 
-    nodeMenu->setBounds(nodeMenuArea);
+    menuArea ->setBounds(menuAreaBounds);
     titleBar ->setBounds(titleArea);
     bottomBar->setBounds(bottomArea);
     port->setBounds(bounds);
@@ -200,7 +200,7 @@ void SequenceTreeAudioProcessorEditor::toggleFullScreen()
     auto& desktop = juce::Desktop::getInstance();
 
     if (desktop.getKioskModeComponent() == nullptr)
-        desktop.setKioskModeComponent(getTopLevelComponent(), false);
+        desktop.setKioskModeComponent(getTopLevelComponent(), true);
     else
         desktop.setKioskModeComponent(nullptr);
 }

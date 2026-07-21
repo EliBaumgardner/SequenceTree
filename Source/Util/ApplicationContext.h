@@ -11,6 +11,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <vector>
 #include "NodeInfo.h"
 
 class SequenceTreeAudioProcessor;
@@ -32,8 +33,22 @@ struct ApplicationContext
     NodeController*             nodeController = nullptr;
     RTGraphBuilder*             rtGraphBuilder = nullptr;
 
-    std::function<void(Node*, bool)> onNodeSelected;
     std::function<void(NodeDisplayMode)> onDisplayModeChanged;
 
     NodeDisplayMode currentDisplayMode = NodeDisplayMode::Pitch;
+
+    void addNodeSelectedListener(std::function<void(Node*, bool)> listener)
+    {
+        onNodeSelectedListeners.push_back(std::move(listener));
+    }
+
+    void notifyNodeSelected(Node* node, bool selected)
+    {
+        for (auto& listener : onNodeSelectedListeners)
+            listener(node, selected);
+    }
+
+private:
+
+    std::vector<std::function<void(Node*, bool)>> onNodeSelectedListeners;
 };

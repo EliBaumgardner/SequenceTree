@@ -11,6 +11,7 @@
 #pragma once
 
 
+#include <unordered_set>
 #include "../Util/PluginModules.h"
 #include "../Util/ApplicationContext.h"
 #include "Node/Node.h"
@@ -103,4 +104,5 @@ class ColourSelector : public juce::Component, public juce::SettableTooltipClien
 private:
     ApplicationContext& applicationContext;
     void applyColourToDescendants(Node* n, juce::Colour c);
+    void applyColourToDescendants(Node* n, juce::Colour c, std::unordered_set<int>& visited);
 };
