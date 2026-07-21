@@ -8,6 +8,7 @@
 #include "../Titlebar.h"
 #include "../BottomBar.h"
 #include "../TraversalMenu.h"
+#include "../MenuArea.h"
 #include "../NodeMenu.h"
 #include "../TraversalDisplayMenu.h"
 #include "../Buttons/ButtonPane.h"
@@ -95,15 +96,15 @@ void CustomLookAndFeel::drawTraversalMenuResizer(juce::Graphics &g, juce::Rectan
     }
 }
 
-void CustomLookAndFeel::drawNodeMenu(juce::Graphics &g, const NodeMenu &nodeMenu)
+void CustomLookAndFeel::drawMenuArea(juce::Graphics &g, const MenuArea &menuArea)
 {
-    auto bounds = nodeMenu.getLocalBounds().toFloat();
+    auto bounds = menuArea.getLocalBounds().toFloat();
     g.setColour(baseDarkColour2);
     g.fillRect(bounds);
 
     auto barHeight = std::floor(bounds.getHeight() * 0.05f);
     auto barBounds = bounds.withHeight(barHeight)
-                           .withTrimmedRight((float) NodeMenu::resizerWidth);
+                           .withTrimmedRight((float) MenuArea::resizerWidth);
 
     juce::ColourGradient gradient(barColour.brighter(0.06f), 0, barBounds.getY(),
                                    barColour.darker(0.04f),  0, barBounds.getBottom(), false);
@@ -117,7 +118,7 @@ void CustomLookAndFeel::drawNodeMenu(juce::Graphics &g, const NodeMenu &nodeMenu
     g.drawHorizontalLine((int)barBounds.getBottom() - 1, barBounds.getX(), barBounds.getRight());
 }
 
-void CustomLookAndFeel::drawNodeMenuResizer(juce::Graphics &g, juce::Rectangle<int> bounds, bool isMouseOver, bool isDragging)
+void CustomLookAndFeel::drawMenuAreaResizer(juce::Graphics &g, juce::Rectangle<int> bounds, bool isMouseOver, bool isDragging)
 {
     juce::Colour fill = baseDarkColour1;
 
@@ -138,6 +139,13 @@ void CustomLookAndFeel::drawNodeMenuResizer(juce::Graphics &g, juce::Rectangle<i
     for (float y = gripBounds.getY(); y < gripBounds.getBottom(); y += dotSpacing) {
         g.fillRect(gripBounds.getX(), y, gripBounds.getWidth(), 1.0f);
     }
+}
+
+void CustomLookAndFeel::drawNodeMenu(juce::Graphics &g, const NodeMenu &nodeMenu)
+{
+    auto bounds = nodeMenu.getLocalBounds().toFloat();
+    g.setColour(baseDarkColour2);
+    g.fillRect(bounds);
 }
 
 void CustomLookAndFeel::drawButtonPane(juce::Graphics &g, const ButtonPane& selectionBar)

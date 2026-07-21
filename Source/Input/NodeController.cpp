@@ -139,6 +139,42 @@ NodeArrow* NodeController::findArrowNear(juce::Point<float> point, float radius)
     return nearest;
 }
 
+NodeArrow* NodeController::findArrowHeadNear(juce::Point<float> point, float radius) const
+{
+    NodeCanvas* canvas = applicationContext.canvas;
+
+    NodeArrow* nearest = nullptr;
+    float minDist = radius;
+
+    for (NodeArrow* arrow : canvas->nodeArrows) {
+        if (arrow->startNode == nullptr || arrow->endNode == nullptr || ! arrow->isVisible()) {
+            continue;
+        }
+
+        juce::Point<float> start = arrow->startNode->getNodeCentre().toFloat();
+        juce::Point<float> end   = arrow->endNode->getNodeCentre().toFloat();
+
+        juce::Point<float> direction = end - start;
+        float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+        if (length < 1.0f) {
+            continue;
+        }
+
+        direction /= length;
+
+        float childRadius = arrow->endNode->getHeight() * 0.5f;
+        juce::Point<float> headAnchor = end - direction * (childRadius + 8.0f);
+
+        float dist = point.getDistanceFrom(headAnchor);
+        if (dist < minDist) {
+            minDist = dist;
+            nearest = arrow;
+        }
+    }
+
+    return nearest;
+}
+
 DanglingArrow* NodeController::findDanglingArrowNear(juce::Point<float> point, float radius) const
 {
     NodeCanvas* canvas = applicationContext.canvas;
@@ -187,6 +223,23 @@ void NodeController::deleteArrow(NodeArrow* arrow)
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
     NodeCanvas* canvas = applicationContext.canvas;
+
+    if (draggingArrowHeadNode != nullptr) {
+        int nodeId = draggingArrowHeadNode->getComponentID().getIntValue();
+        draggingArrowHeadNode = nullptr;
+        pressedOnArrow = false;
+        isDragStart = true;
+
+        canvas->triggerArrowSnapForNode(nodeId);
+
+        if (canvas->showGrid) {
+            canvas->showGrid = false;
+            canvas->repaint();
+        }
+        return;
+    }
+
+    pressedOnArrow = false;
 
     if (draggingDanglingArrow != nullptr) {
         applicationContext.undoManager->beginNewTransaction();
@@ -317,6 +370,8 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
     creatingDanglingArrow = false;
     draggingFlagConnection = false;
+    draggingArrowHeadNode = nullptr;
+    pressedOnArrow = false;
 
     if (nodeCanvas->paintMode) {
         if (e.mods.isLeftButtonDown() || e.mods.isRightButtonDown()) {
@@ -349,6 +404,32 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
                 }
                 return;
             }
+        }
+
+        if (! canvas->paintMode && ! e.mods.isShiftDown() && e.mods.isLeftButtonDown()) {
+            juce::Point<float> clickPoint { (float) e.x, (float) e.y };
+
+            if (NodeArrow* headArrow = findArrowHeadNear(clickPoint, arrowHeadGrabRadius)) {
+                canvas->setSelectedArrow(headArrow);
+                draggingArrowHeadNode = headArrow->endNode;
+                pressedOnArrow = true;
+                isDragStart = true;
+                return;
+            }
+
+            if (NodeArrow* clickedArrow = findArrowNear(clickPoint, arrowHoverRadius)) {
+                canvas->setSelectedArrow(clickedArrow);
+                pressedOnArrow = true;
+                return;
+            }
+
+            if (DanglingArrow* clickedDangling = findDanglingArrowNear(clickPoint, arrowHoverRadius)) {
+                canvas->setSelectedDanglingArrow(clickedDangling);
+                pressedOnArrow = true;
+                return;
+            }
+
+            canvas->clearArrowSelection();
         }
 
         auto parent = component->getParentComponent();
@@ -394,6 +475,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
         flagConnectionTarget   = nullptr;
 
         node->setHoverVisual(true);
+        nodeCanvas->clearArrowSelection();
         int nodeId = node->getComponentID().getIntValue();
 
         for (auto& [nodeId, canvasNode] : nodeCanvas->nodeMap) {
@@ -486,6 +568,27 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
     if (NodeCanvas* nodeCanvas = dynamic_cast<NodeCanvas*>(component)) {
+
+        if (draggingArrowHeadNode != nullptr) {
+            if (e.getDistanceFromDragStart() < 5) {
+                return;
+            }
+
+            int nodeId = draggingArrowHeadNode->getComponentID().getIntValue();
+            auto pos = e.getEventRelativeTo(nodeCanvas).getPosition();
+
+            NodePosition newPosition;
+            newPosition.xPosition = pos.x;
+            newPosition.yPosition = pos.y;
+            newPosition.radius    = 20;
+
+            handleNodeDrag(undoManager, nodeId, newPosition);
+            return;
+        }
+
+        if (pressedOnArrow) {
+            return;
+        }
 
         auto parent = component->getParentComponent();
 
@@ -653,8 +756,6 @@ void NodeController::commitFlagConnection(int sourceNodeId, Node* target)
         arrowIt->second->triggerSnapAnimation();
     }
 
-    // Rebuild the flag's graph so its flag target/traversal are re-encoded for the
-    // audio thread.
     juce::ValueTree sourceTree = ValueTreeState::getNode(sourceNodeId);
     if (sourceTree.isValid()) {
         int rootId = sourceTree.getProperty(ValueTreeIdentifiers::RootNodeId);

@@ -67,6 +67,7 @@ public:
   bool updateFromBindValue = false;
   bool isGhost = false;
   bool hovered = false;
+  bool selected = false;
 
   juce::TextEditor textEditor;
 

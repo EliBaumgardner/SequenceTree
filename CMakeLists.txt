@@ -67,6 +67,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Buttons/RootRectangle.cpp
         Source/UI/Buttons/DisplayMenu.cpp
         Source/UI/TraversalMenu.cpp
+        Source/UI/MenuArea.cpp
         Source/UI/NodeMenu.cpp
         Source/UI/TraversalDisplayMenu.cpp
         Source/UI/ColourSelector.cpp

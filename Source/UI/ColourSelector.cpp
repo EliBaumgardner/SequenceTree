@@ -231,6 +231,12 @@ void ColourSelector::setNode(Node* node) {
 
 void ColourSelector::applyColourToDescendants(Node* n, juce::Colour c)
 {
+    std::unordered_set<int> visited { n->nodeId };
+    applyColourToDescendants(n, c, visited);
+}
+
+void ColourSelector::applyColourToDescendants(Node* n, juce::Colour c, std::unordered_set<int>& visited)
+{
     NodeCanvas* canvas = applicationContext.canvas;
     if (canvas == nullptr) {
         return;
@@ -244,11 +250,15 @@ void ColourSelector::applyColourToDescendants(Node* n, juce::Colour c)
     for (int i = 0; i < childrenIds.getNumChildren(); ++i)
     {
         int childId = childrenIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+        if (! visited.insert(childId).second) {
+            continue;
+        }
+
         auto it = canvas->nodeMap.find(childId);
         if (it != canvas->nodeMap.end()) {
             it->second->nodeColour = c;
             it->second->repaint();
-            applyColourToDescendants(it->second, c);
+            applyColourToDescendants(it->second, c, visited);
         }
     }
 }
