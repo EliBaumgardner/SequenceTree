@@ -246,6 +246,9 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
                     if (nodeValueTreeChildren.getNumChildren() > 0) {
                         rtNode.flagTargetId = nodeValueTreeChildren.getChild(0).getProperty(ValueTreeIdentifiers::Id);
                     }
+                    else if (!rtNode.flagRemovesTraversal) {
+                        rtNode.flagTargetId = rtNode.parentId;
+                    }
                 }
             }
 
@@ -312,6 +315,16 @@ void RTGraphBuilder::createRTNodeConnections(std::shared_ptr<RTGraph> rtGraph, s
             }
 
             rtGraph->nodeMap[id].children.push_back(childId);
+
+            juce::ValueTree disabledTraversals = childIdTree.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
+            if (disabledTraversals.isValid()) {
+                std::unordered_set<int>& disabledSet = rtGraph->nodeMap[id].disabledTraversalsByChild[childId];
+
+                for (int j = 0; j < disabledTraversals.getNumChildren(); j++) {
+                    int disabledTraversalId = disabledTraversals.getChild(j).getProperty(ValueTreeIdentifiers::TraversalId);
+                    disabledSet.insert(disabledTraversalId);
+                }
+            }
         }
     }
 }

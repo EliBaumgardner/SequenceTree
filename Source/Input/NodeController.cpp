@@ -18,6 +18,8 @@
 #include "../UI/Canvas/DynamicPort.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "../Graph/RTGraphBuilder.h"
+#include "../Graph/ValueTreeState.h"
+#include "../UI/AllowedTraversalsMenu.h"
 
 
 
@@ -26,6 +28,8 @@
 NodeController::NodeController(ApplicationContext& context) : applicationContext(context)
 {
 }
+
+NodeController::~NodeController() = default;
 
 void NodeController::mouseEnter(const juce::MouseEvent& e)
 {
@@ -220,6 +224,66 @@ void NodeController::deleteArrow(NodeArrow* arrow)
     ValueTreeState::disconnectNodes(ownerNodeId, childNodeId, undoManager);
 }
 
+juce::ValueTree NodeController::getArrowConnectionTree(NodeArrow* arrow) const
+{
+    if (arrow == nullptr || arrow->startNode == nullptr || arrow->endNode == nullptr) {
+        return {};
+    }
+
+    int startId = arrow->startNode->getComponentID().getIntValue();
+    int endId   = arrow->endNode->getComponentID().getIntValue();
+
+    juce::ValueTree startTree     = ValueTreeState::getNode(startId);
+    juce::ValueTree startChildren = startTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+    bool startOwnsEnd = startChildren.getChildWithProperty(ValueTreeIdentifiers::Id, endId).isValid();
+
+    int ownerNodeId = startOwnsEnd ? startId : endId;
+    int childNodeId = startOwnsEnd ? endId : startId;
+
+    juce::ValueTree ownerTree     = ValueTreeState::getNode(ownerNodeId);
+    juce::ValueTree ownerChildren = ownerTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+    return ownerChildren.getChildWithProperty(ValueTreeIdentifiers::Id, childNodeId);
+}
+
+void NodeController::showArrowContextMenu(NodeArrow* arrow)
+{
+    if (arrow == nullptr) {
+        return;
+    }
+
+    juce::PopupMenu menu;
+    menu.setLookAndFeel(applicationContext.lookAndFeel);
+    menu.addItem(1, "edit allowed traversals");
+
+    juce::Component::SafePointer<NodeArrow> safeArrow(arrow);
+
+    menu.showMenuAsync(juce::PopupMenu::Options(), [this, safeArrow] (int result)
+    {
+        switch (result)
+        {
+            case 1:
+            {
+                if (safeArrow == nullptr) {
+                    break;
+                }
+
+                juce::ValueTree connection = getArrowConnectionTree(safeArrow);
+                if (!connection.isValid()) {
+                    break;
+                }
+
+                allowedTraversalsWindow = std::make_unique<AllowedTraversalsWindow>(applicationContext, connection);
+                allowedTraversalsWindow->centreWithSize(allowedTraversalsWindow->getWidth(),
+                                                        allowedTraversalsWindow->getHeight());
+                allowedTraversalsWindow->setVisible(true);
+                break;
+            }
+            default: break;
+        }
+    });
+}
+
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
     NodeCanvas* canvas = applicationContext.canvas;
@@ -391,6 +455,13 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
             }
             if (NodeArrow* nodeArrow = findArrowNear({ (float) e.x, (float) e.y }, danglingArrowGrabRadius)) {
                 deleteArrow(nodeArrow);
+                return;
+            }
+        }
+
+        if (! canvas->paintMode && ! e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
+            if (NodeArrow* clickedArrow = findArrowNear({ (float) e.x, (float) e.y }, arrowHoverRadius)) {
+                showArrowContextMenu(clickedArrow);
                 return;
             }
         }

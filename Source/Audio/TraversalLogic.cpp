@@ -132,6 +132,12 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes,int parentId, int paren
             continue;
         }
 
+        const auto& disabledByChild = parentNodeIterator->second.disabledTraversalsByChild;
+        auto disabledIt = disabledByChild.find(childId);
+        if (disabledIt != disabledByChild.end() && disabledIt->second.count(traversal.traversalId) > 0) {
+            continue;
+        }
+
         if (parentCount % child.countLimit == 0 && child.countLimit > maxLimit) {
             chosen   = childId;
             maxLimit = child.countLimit;

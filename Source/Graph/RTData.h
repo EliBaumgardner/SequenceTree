@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <functional>  // for std::hash
 #include <utility>     // for std::pair
 #include <string>      // if you use std::string
@@ -76,6 +77,8 @@ struct RTNode {
     std::vector<RTNote> notes;
     std::vector<int> children;
     std::unordered_map<int, int> durationMap;
+
+    std::unordered_map<int, std::unordered_set<int>> disabledTraversalsByChild;
 
     // The traversal a TraversalFlagData node spawns; traversalId <= 0 means unset.
     RTtraversal flagTraversal;
