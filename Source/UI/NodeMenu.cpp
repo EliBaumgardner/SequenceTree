@@ -51,6 +51,8 @@ NodeMenu::NodeMenu(ApplicationContext& context)
     addAndMakeVisible(colourLabel);
     addAndMakeVisible(colourSelector);
 
+    addAndMakeVisible(editTraversalRulesButton);
+
     applicationContext.addNodeSelectedListener([this](Node* node, bool selected) {
         colourSelector.setNode(selected ? node : nullptr);
 
@@ -110,11 +112,15 @@ void NodeMenu::clearBindings() {
 }
 
 void NodeMenu::paint(juce::Graphics& g) {
-    CustomLookAndFeel::get(*this).drawNodeMenu(g, *this);
+    const Theme& theme = CustomLookAndFeel::get(*this);
+    g.setColour(theme.baseDarkColour2);
+    g.fillRect(getLocalBounds().toFloat());
 }
 
 void NodeMenu::resized() {
-    auto bounds = getLocalBounds().reduced(6);
+    auto bounds = getLocalBounds().reduced(MenuTextButton::menuEdgeInset);
+
+    editTraversalRulesButton.setBounds(bounds.removeFromBottom(MenuTextButton::preferredHeight));
 
     auto colourRowBounds = bounds.removeFromTop(rowHeight);
     colourLabel.setBounds(colourRowBounds.removeFromLeft(colourRowBounds.getWidth() / 3));

@@ -31,7 +31,7 @@ class TempoDisplay : public juce::Component, public juce::SettableTooltipClient 
 
     void paint(juce::Graphics& g) override
     {
-        CustomLookAndFeel::get(*this).drawTempoDisplay(g, *this);
+
     }
 
     void resized() override

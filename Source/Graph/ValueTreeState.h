@@ -2,13 +2,6 @@
 // Created by Eli Baumgardner on 3/21/26.
 //
 
-#ifndef SEQUENCETREE_TESTCLASS_H
-#define SEQUENCETREE_TESTCLASS_H
-
-//
-// Created by Eli Baumgardner on 3/21/26.
-//
-
 #pragma once
 
 #include "../Util/NodeInfo.h"
@@ -20,56 +13,58 @@ public:
 
     ValueTreeState();
 
-    static juce::ValueTree addNodeTree     (juce::UndoManager* undoManager);
+    juce::ValueTree addNodeTree     (juce::UndoManager* undoManager);
 
-    static void setNodeCountProperties(juce::UndoManager *undoManager, juce::ValueTree node);
+    void setNodeCountProperties(juce::UndoManager *undoManager, juce::ValueTree node);
 
-    static juce::ValueTree createTraversalData    (int traversalId, juce::UndoManager* undoManager);
+    juce::ValueTree createTraversalData    (int traversalId, juce::UndoManager* undoManager);
 
-    static juce::ValueTree addRootNode         (juce::UndoManager* undoManager);
+    juce::ValueTree addRootNode         (juce::UndoManager* undoManager);
 
-    static juce::ValueTree addNode             (int parentNodeId, juce::UndoManager* undoManager);
-    static juce::ValueTree addAlternativeNode  (int parentNodeId, juce::UndoManager* undoManager);
-    static juce::ValueTree addTraversalFlagNode(int parentNodeId, juce::UndoManager* undoManager);
-    static juce::ValueTree addModulatorRoot    (int parentNodeId, juce::UndoManager* undoManager);
-    static juce::ValueTree addModulator        (int parentNodeId, juce::UndoManager* undoManager);
+    juce::ValueTree addNode             (int parentNodeId, juce::UndoManager* undoManager);
+    juce::ValueTree addAlternativeNode  (int parentNodeId, juce::UndoManager* undoManager);
+    juce::ValueTree addTraversalFlagNode(int parentNodeId, juce::UndoManager* undoManager);
+    juce::ValueTree addModulatorRoot    (int parentNodeId, juce::UndoManager* undoManager);
+    juce::ValueTree addModulator        (int parentNodeId, juce::UndoManager* undoManager);
 
-    static void connectNodes   (int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
-    static void disconnectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
-    static void removeRootNode (int rootNodeId, juce::UndoManager* undoManager);
-    static void removeNode     (int nodeId, juce::UndoManager* undoManager);
-    static void removeNodeTree (int treeId, juce::UndoManager* undoManager);
+    void connectNodes   (int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
+    void disconnectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
+    void removeRootNode (int rootNodeId, juce::UndoManager* undoManager);
+    void removeNode     (int nodeId, juce::UndoManager* undoManager);
+    void removeNodeTree (int treeId, juce::UndoManager* undoManager);
 
-    static void setNodePosition (juce::ValueTree node, NodePosition nodePosition,juce::UndoManager* undoManager);
-    static void setMidiValue    (int nodeId, NodeNote note, juce::UndoManager* undoManager);
+    void setNodePosition (juce::ValueTree node, NodePosition nodePosition, juce::UndoManager* undoManager);
+    void setMidiValue    (int nodeId, NodeNote note, juce::UndoManager* undoManager);
 
-    static NodePosition    getNodePosition (int nodeId);
-    static juce::ValueTree getRootNode     (int nodeId);
-    static juce::ValueTree getNode         (int nocdId);
-    static juce::ValueTree getNodeParent   (int nodeId);
-    static juce::ValueTree getMidiNotes    (int nodeId);
-    static juce::ValueTree getNodeTree     (int treeId);
+    NodePosition    getNodePosition (int nodeId);
+    juce::ValueTree getRootNode     (int nodeId);
+    juce::ValueTree getNode         (int nodeId);
+    juce::ValueTree getNodeParent   (int nodeId);
+    juce::ValueTree getMidiNotes    (int nodeId);
+    juce::ValueTree getNodeTree     (int treeId);
 
-    static juce::ValueTree canvasData;
-    static juce::ValueTree nodeTreeIds;
-    static juce::ValueTree nodeMap;
-    static juce::ValueTree nodeTreeMap;
-    static juce::ValueTree nodeArrows;
-    static juce::ValueTree traversalMap;
+    int  getNodeIdIncrement() const  { return nodeIdIncrement; }
+    void setNodeIdIncrement(int value) { nodeIdIncrement = value; }
 
-    static inline int nodeIdIncrement          {0};
-    static inline int defaultSwitchCount       {1};
-    static inline int defaultNodeCount         {1};
-    static inline int defaultSwitchCountLimit  {1};
-    static inline int defaultNodeCountLimit    {1};
-    static inline int defaultTriggerLimit      {0};
-    static inline int defaultSubLoopCountLimit {1};
-    static inline int defaultRootLoopLimit     {0};
-    static inline int defaultRepeatValue       {1};
-    static inline int defaultModAmount         {1};
-    static inline int defaultMidiChannel       {1};
-    static inline int defaultTempoMult         {1};
+    juce::ValueTree canvasData;
+    juce::ValueTree nodeTreeIds;
+    juce::ValueTree nodeMap;
+    juce::ValueTree nodeTreeMap;
+    juce::ValueTree traversalMap;
+
+    static constexpr int defaultSwitchCount       {1};
+    static constexpr int defaultNodeCount         {1};
+    static constexpr int defaultSwitchCountLimit  {1};
+    static constexpr int defaultNodeCountLimit    {1};
+    static constexpr int defaultTriggerLimit      {0};
+    static constexpr int defaultSubLoopCountLimit {1};
+    static constexpr int defaultRootLoopLimit     {0};
+    static constexpr int defaultRepeatValue       {1};
+    static constexpr int defaultModAmount         {1};
+    static constexpr int defaultMidiChannel       {1};
+    static constexpr int defaultTempoMult         {1};
+
+private:
+
+    int nodeIdIncrement = 0;
 };
-
-
-#endif //SEQUENCETREE_VALUETREESTATE_H

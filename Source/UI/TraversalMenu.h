@@ -11,6 +11,7 @@
 #include "TraversalDisplayMenu.h"
 #include "Node/ValueEditor.h"
 #include "ColourSelector.h"
+#include "Buttons/EditTraversalRulesButton.h"
 
 class TraversalMenuListener;
 
@@ -50,7 +51,11 @@ public:
     juce::Label colourLabel;
     ColourSelector colourSelector;
 
+    EditTraversalRulesButton editTraversalRulesButton;
+
 private:
+
+    ApplicationContext& applicationContext;
 
     juce::ValueTree currentTraversalData;
 

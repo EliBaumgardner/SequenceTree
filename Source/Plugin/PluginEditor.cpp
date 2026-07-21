@@ -13,14 +13,14 @@
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
 : AudioProcessorEditor(p), audioProcessor(p)
 {
-    applicationContext.processor   = &p;
-    applicationContext.undoManager = &undoManager;
-    applicationContext.lookAndFeel = &lookAndFeel;
+    applicationContext.processor      = &p;
+    applicationContext.undoManager    = &undoManager;
+    applicationContext.lookAndFeel    = &lookAndFeel;
+    applicationContext.valueTreeState = &p.graphState;
 
     canvas         = std::make_unique<NodeCanvas>(applicationContext);
     rtGraphBuilder = std::make_unique<RTGraphBuilder>(applicationContext, *canvas);
     nodeController = std::make_unique<NodeController>(applicationContext);
-    valueTreeState = std::make_unique<ValueTreeState>();
     port           = std::make_unique<DynamicPort>(canvas.get());
     menuArea       = std::make_unique<MenuArea>(applicationContext);
 
@@ -42,8 +42,9 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     audioProcessor.applyStateToUi =
         [safeCanvas = juce::Component::SafePointer<NodeCanvas>(canvas.get()),
-         proc = &audioProcessor](juce::ValueTree restoredTree) {
-        juce::MessageManager::callAsync([safeCanvas, proc, restoredTree]() {
+         proc = &audioProcessor,
+         state = &p.graphState](juce::ValueTree restoredTree) {
+        juce::MessageManager::callAsync([safeCanvas, proc, state, restoredTree]() {
             NodeCanvas* canvasPtr = safeCanvas.getComponent();
             if (canvasPtr == nullptr) {
                 return;
@@ -60,29 +61,29 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
                 restoredNodeMap = restoredTree;
             }
 
-            ValueTreeState::nodeMap.removeListener(&canvasPtr->treeListener);
-            ValueTreeState::traversalMap.removeListener(&canvasPtr->treeListener);
+            state->nodeMap.removeListener(&canvasPtr->treeListener);
+            state->traversalMap.removeListener(&canvasPtr->treeListener);
 
-            ValueTreeState::traversalMap.removeAllChildren(nullptr);
+            state->traversalMap.removeAllChildren(nullptr);
             for (int i = 0; i < restoredTraversalMap.getNumChildren(); ++i)
-                ValueTreeState::traversalMap.addChild(restoredTraversalMap.getChild(i).createCopy(), -1, nullptr);
+                state->traversalMap.addChild(restoredTraversalMap.getChild(i).createCopy(), -1, nullptr);
 
-            ValueTreeState::nodeMap.removeAllChildren(nullptr);
+            state->nodeMap.removeAllChildren(nullptr);
             for (int i = 0; i < restoredNodeMap.getNumChildren(); ++i)
-                ValueTreeState::nodeMap.addChild(restoredNodeMap.getChild(i).createCopy(), -1, nullptr);
+                state->nodeMap.addChild(restoredNodeMap.getChild(i).createCopy(), -1, nullptr);
 
             int maxId = 0;
-            for (int i = 0; i < ValueTreeState::nodeMap.getNumChildren(); ++i) {
-                int id = ValueTreeState::nodeMap.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+            for (int i = 0; i < state->nodeMap.getNumChildren(); ++i) {
+                int id = state->nodeMap.getChild(i).getProperty(ValueTreeIdentifiers::Id);
                 if (id > maxId) {
                     maxId = id;
                 }
             }
-            ValueTreeState::nodeIdIncrement = maxId;
+            state->setNodeIdIncrement(maxId);
 
-            canvasPtr->setValueTreeState(ValueTreeState::nodeMap);
-            ValueTreeState::nodeMap.addListener(&canvasPtr->treeListener);
-            ValueTreeState::traversalMap.addListener(&canvasPtr->treeListener);
+            canvasPtr->setValueTreeState(state->nodeMap);
+            state->nodeMap.addListener(&canvasPtr->treeListener);
+            state->traversalMap.addListener(&canvasPtr->treeListener);
 
             proc->pendingRestoreState = juce::ValueTree();
         });
@@ -91,13 +92,12 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     if (audioProcessor.pendingRestoreState.isValid()) {
         audioProcessor.applyStateToUi(audioProcessor.pendingRestoreState);
     }
-    else if (ValueTreeState::nodeMap.getNumChildren() > 0) {
-        canvas->setValueTreeState(ValueTreeState::nodeMap);
+    else if (applicationContext.valueTreeState->nodeMap.getNumChildren() > 0) {
+        canvas->setValueTreeState(applicationContext.valueTreeState->nodeMap);
     }
 
-    applicationContext.rtGraphBuilder    = rtGraphBuilder.get();
-    applicationContext.valueTreeState    = valueTreeState.get();
-    applicationContext.nodeController    = nodeController.get();
+    applicationContext.rtGraphBuilder = rtGraphBuilder.get();
+    applicationContext.nodeController = nodeController.get();
 
 
     titleBar  = std::make_unique<Titlebar>(applicationContext);
@@ -105,10 +105,10 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     canvas->addMouseListener(nodeController.get(),true);
 
-    valueTreeState.get()->canvasData.addListener(&canvas->treeListener);
-    valueTreeState.get()->nodeMap.addListener(&canvas->treeListener);
-    valueTreeState.get()->nodeTreeMap.addListener(&canvas->treeListener);
-    valueTreeState.get()->traversalMap.addListener(&canvas->treeListener);
+    applicationContext.valueTreeState->canvasData.addListener(&canvas->treeListener);
+    applicationContext.valueTreeState->nodeMap.addListener(&canvas->treeListener);
+    applicationContext.valueTreeState->nodeTreeMap.addListener(&canvas->treeListener);
+    applicationContext.valueTreeState->traversalMap.addListener(&canvas->treeListener);
 
 
     addAndMakeVisible(port.get());
@@ -132,10 +132,10 @@ SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
     audioProcessor.notifyUi       = nullptr;
     audioProcessor.applyStateToUi = nullptr;
 
-    ValueTreeState::canvasData.removeListener(&canvas->treeListener);
-    ValueTreeState::nodeMap.removeListener(&canvas->treeListener);
-    ValueTreeState::nodeTreeMap.removeListener(&canvas->treeListener);
-    ValueTreeState::traversalMap.removeListener(&canvas->treeListener);
+    applicationContext.valueTreeState->canvasData.removeListener(&canvas->treeListener);
+    applicationContext.valueTreeState->nodeMap.removeListener(&canvas->treeListener);
+    applicationContext.valueTreeState->nodeTreeMap.removeListener(&canvas->treeListener);
+    applicationContext.valueTreeState->traversalMap.removeListener(&canvas->treeListener);
 }
 
 

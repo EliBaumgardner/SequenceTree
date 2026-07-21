@@ -2,21 +2,8 @@
 // Created by Eli Baumgardner on 3/21/26.
 //
 
-
-
 #include "ValueTreeState.h"
 #include "ValueTreeIdentifiers.h"
-
-//
-// Created by Eli Baumgardner on 3/21/26.
-//
-
-juce::ValueTree ValueTreeState::canvasData;
-juce::ValueTree ValueTreeState::nodeTreeIds;
-juce::ValueTree ValueTreeState::nodeMap;
-juce::ValueTree ValueTreeState::nodeTreeMap;
-juce::ValueTree ValueTreeState::traversalMap;
-
 
 ValueTreeState::ValueTreeState() {
 

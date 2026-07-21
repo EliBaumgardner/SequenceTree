@@ -3,7 +3,7 @@
 `
     NodeTextEditor.cpp
     Created: 1 Sep 2025 1:28:52pm
-    Author:  Eli Baimgardner
+    Author:  Eli Baumgardner
 
   ==============================================================================
 */
@@ -116,7 +116,7 @@ void NodeTextEditor::formatDisplay(NodeDisplayMode mode) {
 
     int nodeId = node->getComponentID().getIntValue();
 
-    juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
+    juce::ValueTree nodeValueTree = applicationContext.valueTreeState->getNode(nodeId);
 
     if (mode == NodeDisplayMode::Pitch) {
         int midiNote = juce::jlimit(0, 127, (int)value);

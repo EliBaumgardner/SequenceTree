@@ -3,7 +3,7 @@
 
     PianoRoll.cpp
     Created: 27 Aug 2025 5:25:07pm
-    Author:  Eli Baimgardner
+    Author:  Eli Baumgardner
 
   ==============================================================================
 */

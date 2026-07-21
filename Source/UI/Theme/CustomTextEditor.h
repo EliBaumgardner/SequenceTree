@@ -3,7 +3,7 @@
 
     CustomTextEditor.h
     Created: 18 May 2025 10:55:47am
-    Author:  Eli Baimgardner
+    Author:  Eli Baumgardner
 
   ==============================================================================
 */

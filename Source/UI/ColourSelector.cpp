@@ -3,7 +3,7 @@
 
     ColourSelector.cpp
     Created: 10 Aug 2025 5:05:50pm
-    Author:  Eli Baimgardner
+    Author:  Eli Baumgardner
 
   ==============================================================================
 */

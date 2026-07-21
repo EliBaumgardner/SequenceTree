@@ -3,7 +3,7 @@
 
     NodeArrow.h
     Created: 12 Jun 2025 12:45:57am
-    Author:  Eli Baimgardner
+    Author:  Eli Baumgardner
 
   ==============================================================================
 */

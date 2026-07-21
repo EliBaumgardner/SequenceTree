@@ -96,4 +96,4 @@ class ValueSlider : public juce::Component, public juce::SettableTooltipClient {
     }
 };
 
-#endif SEQUENCETREE_VALUESLIDER_H
+#endif //SEQUENCETREE_VALUESLIDER_H

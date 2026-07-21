@@ -20,7 +20,23 @@ class DisplayButton : public juce::Component, public juce::SettableTooltipClient
 
     void paint(juce::Graphics& g) override
     {
-        CustomLookAndFeel::get(*this).drawDisplayButton(g, *this);
+        const Theme& theme = CustomLookAndFeel::get(*this);
+        auto bounds = getLocalBounds().toFloat().reduced(Theme::outerButtonBoundsReduction);
+
+        g.setColour(isSelected ? theme.buttonColour.darker() : theme.buttonColour);
+
+        float triangleHeight = bounds.getHeight() * 0.9f;
+        float centreY = bounds.getCentreY();
+        float topY    = centreY - triangleHeight / 2.0f;
+        float bottomY = centreY + triangleHeight / 2.0f;
+
+        juce::Path vPath;
+        vPath.startNewSubPath(bounds.getX(), topY);
+        vPath.lineTo(bounds.getCentreX(), bottomY);
+        vPath.lineTo(bounds.getRight(), topY);
+        vPath.closeSubPath();
+
+        g.fillPath(vPath);
     }
 
     void mouseDown(const juce::MouseEvent& e) override { onClick(); }

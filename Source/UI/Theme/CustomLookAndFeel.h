@@ -6,6 +6,7 @@
 #define SEQUENCETREE_CUSTOMLOOKANDFEEL_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "Theme.h"
 
 class NodeCanvas;
 
@@ -15,23 +16,11 @@ class RootRectangle;
 
 class NodeArrow;
 
-class Titlebar;
-class MenuBar;
-
-class BottomBar;
-class ButtonPane;
-
-class DisplayMenu;
-class TraversalDisplayMenu;
-class DisplayButton;
-
 class NodeButton;
 class ModulatorButton;
 class TraversalFlagButton;
 
 class PlayButton;
-
-class TempoDisplay;
 class SyncButton;
 
 class CustomTextEditor;
@@ -43,9 +32,6 @@ class RedoButton;
 class UndoRedoPane;
 class ResetButton;
 
-class TraversalMenu;
-class MenuArea;
-class NodeMenu;
 class PaintTool;
 
 class PaintToolSettings;
@@ -55,7 +41,7 @@ class ArrowTool;
 
 class IconButton;
 
-class CustomLookAndFeel : public juce::LookAndFeel_V4
+class CustomLookAndFeel : public juce::LookAndFeel_V4, public Theme
 {
 
 public:
@@ -71,15 +57,6 @@ public:
 
     CustomLookAndFeel();
 
-    void setColorIntensityFactor(float factor);
-    float getColorIntensityFactor() const { return colorIntensityFactor; }
-
-    juce::Colour applyIntensity(juce::Colour base) const;
-
-    juce::Colour getButtonColour() const { return buttonColour; }
-    juce::Colour getTextColour() const { return textColour; }
-    juce::Colour getBarColour() const { return barColour; }
-
     static CustomLookAndFeel& get(juce::Component& c) { return static_cast<CustomLookAndFeel&>(c.getLookAndFeel()); }
 
     void drawEditor         (juce::Graphics& g, CustomTextEditor& editor);
@@ -88,27 +65,15 @@ public:
 
     void drawCanvas         (juce::Graphics& g, const NodeCanvas& canvas);
 
-    void drawTitleBar       (juce::Graphics& g, const Titlebar& titleBar);
-    void drawBottomBar      (juce::Graphics& g, const BottomBar& bottomBar);
-    void drawMenuBar        (juce::Graphics& g, const MenuBar& menuBar);
 
     void drawNodeIcon       (juce::Graphics& g, const IconButton& iconButton);
     void drawTreeIcon       (juce::Graphics& g, const IconButton& iconButton);
     void drawTraversalIcon   (juce::Graphics& g, const IconButton& iconButton);
 
-    void drawTraversalMenu   (juce::Graphics& g, const TraversalMenu& traversalMenu);
-    void drawTraversalMenuResizer(juce::Graphics& g, juce::Rectangle<int> bounds, bool isMouseOver, bool isDragging);
 
-    void drawMenuArea        (juce::Graphics& g, const MenuArea& menuArea);
-    void drawMenuAreaResizer (juce::Graphics& g, juce::Rectangle<int> bounds, bool isMouseOver, bool isDragging);
 
-    void drawNodeMenu        (juce::Graphics& g, const NodeMenu& nodeMenu);
 
-    void drawDisplayMenu    (juce::Graphics& g, const DisplayMenu& displaySelector);
-    void drawTraversalDisplayMenu(juce::Graphics& g, const TraversalDisplayMenu& displaySelector);
 
-    void drawButtonPane     (juce::Graphics& g, const ButtonPane& selectionBar);
-    void drawDisplayButton  (juce::Graphics& g, const DisplayButton& displayButton);
 
     void drawNodeInteractionEffects(juce::Graphics &g, const Node &node, juce::Rectangle<float> bounds);
 
@@ -131,7 +96,7 @@ public:
     void drawModulatorButton(juce::Graphics& g, const ModulatorButton& modulatorButton);
     void drawTraversalFlagButton(juce::Graphics& g, const TraversalFlagButton& traversalFlagButton);
 
-    void drawTempoDisplay   (juce::Graphics& g, const TempoDisplay& tempoDisplay);
+
 
     void drawUndoButton     (juce::Graphics& g, const UndoButton& undoButton, bool isButtonDown);
     void drawRedoButton     (juce::Graphics& g, const RedoButton& redoButton, bool isButtonDown);
@@ -141,39 +106,6 @@ public:
     void drawPaintTool         (juce::Graphics& g, const PaintTool& paintTool);
     void drawPaintToolSettings (juce::Graphics& g, const PaintToolSettings& paintToolSettings);
     void drawArrowTool         (juce::Graphics& g, const ArrowTool& arrowTool);
-
-    void updateColours();
-
-    float colorIntensityFactor        = 0.2f;
-
-    juce::Colour dropShadowColour     = juce::Colours::black;
-    juce::Colour baseDarkColour1      = juce::Colour::fromRGB(40,40,38);
-    juce::Colour baseDarkColour2      = juce::Colour::fromRGB(30,30,30);
-    juce::Colour baseLightColour1     = juce::Colour::fromRGB(195,174,132);
-    juce::Colour baseLightColour2     = juce::Colour::fromRGB(162,150,131);
-    juce::Colour baseLightColour3     = juce::Colour::fromRGB(217,217,217);
-    juce::Colour darkBrownColour      = juce::Colour::fromRGB(48, 32, 22);
-
-    juce::Colour canvasColour = baseLightColour1.darker();
-
-    juce::Colour gridColour          = juce::Colour::fromRGB(15, 15, 15);
-    juce::Colour barColour           = baseDarkColour2;
-    juce::Colour buttonColour        = baseLightColour2;
-    juce::Colour buttonBarColour     = baseDarkColour1;
-    juce::Colour editorColour        = baseDarkColour1;
-    juce::Colour traversalMenuColour = darkBrownColour;
-    juce::Colour textColour          = baseLightColour1;
-
-    juce::Colour arrowColour         = juce::Colours::black;
-    juce::Colour arrowProgressColour = baseLightColour2;
-    juce::Colour arrowHeadColour     = juce::Colours::black;
-
-    static constexpr float nodeCirclePad = 2.0f;
-
-    static constexpr float paneCornerRadius = 4.0f;
-
-    static constexpr float innerButtonBoundsReduction = 5.0f;
-    static constexpr float outerButtonBoundsReduction = 2.0f;
 
 };
 

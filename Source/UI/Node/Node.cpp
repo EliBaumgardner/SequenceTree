@@ -3,7 +3,7 @@
 
     Node.cpp
     Created: 6 May 2025 8:37:02pm
-    Author:  Eli Baimgardner
+    Author:  Eli Baumgardner
 
   ==============================================================================
 */

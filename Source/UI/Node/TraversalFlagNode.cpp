@@ -36,8 +36,8 @@ TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context
         int traversalId = (int) traversalNumEditor->boundValue.getValue();
 
         if (traversalId > 0
-            && !ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
-            ValueTreeState::createTraversalData(traversalId, nullptr);
+            && !applicationContext.valueTreeState->traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
+            applicationContext.valueTreeState->createTraversalData(traversalId, nullptr);
         }
 
         rebuildOwnGraph();

@@ -375,7 +375,7 @@ void TraversalDispatcher::startFlagTraversal(const RTNode& flagNode, int hostTyp
         }
     }
 
-    const int instanceId = processor.nextTraversalInstanceId();
+    const int instanceId = processor.traversalSession.nextTraversalInstanceId();
 
     traversalMap.insert({ instanceId, TraversalLogic(rootId, bridge, flagNode.flagTraversal) });
     TraversalLogic& traversalLogic = traversalMap.at(instanceId);
@@ -686,7 +686,7 @@ void TraversalDispatcher::startCrossTreeTraversal(const RTNode& targetRootNode, 
     }
 
     if (instanceId == -1) {
-        instanceId = processor.nextTraversalInstanceId();
+        instanceId = processor.traversalSession.nextTraversalInstanceId();
         traversalMap.insert({ instanceId, TraversalLogic(rootId, bridge, traversal) });
         traversalMap.at(instanceId).instanceId = instanceId;
     }
