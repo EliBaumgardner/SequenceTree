@@ -73,4 +73,5 @@ const juce::Identifier ValueTreeIdentifiers::TraversalChannel     {"TraversalCha
 const juce::Identifier ValueTreeIdentifiers::TraversalTranspose   {"TraversalTranspose"};
 const juce::Identifier ValueTreeIdentifiers::TraversalVelocity    {"TraversalVelocity"};
 const juce::Identifier ValueTreeIdentifiers::TraversalChildrenIds {"TraversalChildrenIds"};
+const juce::Identifier ValueTreeIdentifiers::DisabledTraversalIds {"DisabledTraversalIds"};
 const juce::Identifier ValueTreeIdentifiers::TraversalMap         {"TraversalMap"};

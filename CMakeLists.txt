@@ -70,6 +70,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/MenuArea.cpp
         Source/UI/NodeMenu.cpp
         Source/UI/TraversalDisplayMenu.cpp
+        Source/UI/AllowedTraversalsMenu.cpp
         Source/UI/ColourSelector.cpp
         Source/UI/PianoRoll.cpp
         Source/UI/Titlebar.cpp

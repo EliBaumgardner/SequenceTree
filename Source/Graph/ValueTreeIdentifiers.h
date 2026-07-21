@@ -84,6 +84,7 @@ public:
 
     static const juce::Identifier TraversalId;
     static const juce::Identifier TraversalChildrenIds;
+    static const juce::Identifier DisabledTraversalIds;
     static const juce::Identifier TraversalFlagValue;
 
     static const juce::Identifier TempoMultiplier;

@@ -28,6 +28,8 @@ class NodeFactory;
 
 class DanglingArrow;
 
+class AllowedTraversalsWindow;
+
 
 
 class NodeController : public juce::MouseListener {
@@ -38,6 +40,7 @@ public:
     NodeControllerMode nodeControllerMode;
 
     NodeController(ApplicationContext& context);
+    ~NodeController() override;
 
     void mouseEnter          (const juce::MouseEvent& e) override;
     void mouseExit           (const juce::MouseEvent& e) override;
@@ -62,6 +65,8 @@ public:
     NodeArrow* findArrowNear   (juce::Point<float> point, float radius) const;
     NodeArrow* findArrowHeadNear (juce::Point<float> point, float radius) const;
     void       deleteArrow     (NodeArrow* arrow);
+    void       showArrowContextMenu (NodeArrow* arrow);
+    juce::ValueTree getArrowConnectionTree (NodeArrow* arrow) const;
 
     DanglingArrow* findDanglingArrowNear (juce::Point<float> point, float radius) const;
 
@@ -76,6 +81,8 @@ private:
     ApplicationContext& applicationContext;
 
     DanglingArrow* draggingDanglingArrow = nullptr;
+
+    std::unique_ptr<AllowedTraversalsWindow> allowedTraversalsWindow;
 
     Node* snapTargetRoot           = nullptr;
 
