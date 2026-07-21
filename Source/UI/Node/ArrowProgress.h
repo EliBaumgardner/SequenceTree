@@ -14,9 +14,10 @@ public:
         int          durationMs = 1;
         juce::Colour colour     { juce::Colours::white };
         bool         active     = false;
+        bool         oneShot    = false;
     };
 
-    void start(int traversalId, int durationMs, juce::Colour colour)
+    void start(int traversalId, int durationMs, juce::Colour colour, bool oneShot = false)
     {
         Track& track = tracks[traversalId];
         track.t          = 0.0f;
@@ -24,6 +25,7 @@ public:
         track.durationMs = juce::jmax(1, durationMs);
         track.colour     = colour;
         track.active     = durationMs > 0;
+        track.oneShot    = oneShot;
     }
 
     void reset()
@@ -41,17 +43,23 @@ public:
         bool anyActive = false;
         const double nowMs = juce::Time::getMillisecondCounterHiRes();
 
-        for (auto& entry : tracks)
+        for (auto entry = tracks.begin(); entry != tracks.end(); )
         {
-            Track& track = entry.second;
+            Track& track = entry->second;
 
             if (! track.active) {
+                entry = std::next(entry);
                 continue;
             }
 
             const double normalised = (nowMs - track.startMs) / static_cast<double>(track.durationMs);
 
             if (normalised >= 1.0) {
+                if (track.oneShot) {
+                    entry = tracks.erase(entry);
+                    continue;
+                }
+
                 track.t      = 1.0f;
                 track.active = false;
             }
@@ -59,6 +67,8 @@ public:
                 track.t   = static_cast<float>(juce::jlimit(0.0, 1.0, normalised));
                 anyActive = true;
             }
+
+            entry = std::next(entry);
         }
 
         return anyActive;

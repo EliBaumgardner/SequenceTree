@@ -17,11 +17,12 @@ public:
 
     struct ProgressCommand
     {
-        int parentNodeId = 0;
-        int childNodeId  = 0;
-        int durationMs   = 0;
-        int graphId      = 0;
-        int traversalId  = -1;
+        int  parentNodeId = 0;
+        int  childNodeId  = 0;
+        int  durationMs   = 0;
+        int  graphId      = 0;
+        int  traversalId  = -1;
+        bool isConnection = false;
     };
 
     struct CountCommand
@@ -56,7 +57,7 @@ public:
 
 
     void highlightNode(const RTNode& node, bool shouldHighlight, int traversalId = -1);
-    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId, int traversalId);
+    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId, int traversalId, bool isConnection = false);
     void pushArrowReset(int rootId, int traversalId = -1);
     void pushCount(int nodeId, int currentCount, int countLimit);
 };

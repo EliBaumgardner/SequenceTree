@@ -159,9 +159,9 @@ bool NodeArrow::advanceHoverFade()
     return false;
 }
 
-void NodeArrow::startProgress(int traversalId, int durationMs, juce::Colour colour)
+void NodeArrow::startProgress(int traversalId, int durationMs, juce::Colour colour, bool oneShot)
 {
-    progress.start(traversalId, durationMs, colour);
+    progress.start(traversalId, durationMs, colour, oneShot);
     ensureAnimationTimerRunning();
     repaint();
 }

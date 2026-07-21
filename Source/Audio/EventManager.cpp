@@ -21,14 +21,14 @@ void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, const NodeM
 
         scheduler.handleOrphanNoteOff(activeNote, midiMessages);
 
-        int orphanedTraversalId = activeNote.traversalId;
+        int orphanedInstanceId = activeNote.instanceId;
         scheduler.removeNote(i);
 
-        if (orphanedTraversalId == -1) {
+        if (orphanedInstanceId == -1) {
             continue;
         }
 
-        auto traversalIt = traversalMap.find(orphanedTraversalId);
+        auto traversalIt = traversalMap.find(orphanedInstanceId);
 
         if (traversalIt == traversalMap.end()) {
             continue;
@@ -45,7 +45,7 @@ void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, const NodeM
         traversal.state          = TraversalLogic::TraversalState::Active;
         traversal.advanceAlternative(nodes, traversal.rootId);
         bridge.highlightNode(rootIt->second, true, traversal.traversal.traversalId);
-        dispatcher.pushNote(rootIt->second, orphanedTraversalId, midiMessages, 0, nodes, traversalMap);
+        dispatcher.pushNote(rootIt->second, orphanedInstanceId, midiMessages, 0, nodes, traversalMap);
     }
 }
 
@@ -78,7 +78,7 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
 
         scheduler.sendNoteOff(activeNote, midiMessages, priorityNoteDuration);
 
-        if (activeNote.traversalId == -1) {
+        if (activeNote.instanceId == -1) {
             if (NoteScheduler::isNodeAudible(activeNote.noteNode.nodeType)) {
                 bridge.highlightNode(activeNote.noteNode, false);
             }

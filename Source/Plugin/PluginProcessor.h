@@ -41,8 +41,10 @@ public:
     void removeDeletedTraversals(const NodeMap &nodes, TraversalMap &traversals, juce::MidiBuffer &midiMessages);
     void startMissingTraversals(const NodeMap &nodes, TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages);
     void startTraversal(const RTNode &rootNode, const RTtraversal &traversal, const NodeMap &nodes, TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages);
-    void stopTraversalNotes(int traversalId, juce::MidiBuffer &midiMessages);
+    void stopTraversalNotes(int instanceId, juce::MidiBuffer &midiMessages);
     void syncTraversalLoopLimits(TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages, const NodeMap &nodes);
+
+    int nextTraversalInstanceId() { return ++traversalInstanceCounter; }
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
@@ -90,6 +92,8 @@ public:
     std::atomic<bool>   isPlaying       = false;
     std::atomic<bool>   resetRequested  = false;
     std::atomic<double> tempoMultiplier { 1.0 };
+
+    int traversalInstanceCounter = 0;
 
     juce::AudioProcessorValueTreeState valueTreeState;
 

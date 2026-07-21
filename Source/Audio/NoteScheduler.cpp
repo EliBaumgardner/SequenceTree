@@ -12,14 +12,14 @@ bool NoteScheduler::isNodeAudible(RTNode::NodeType nodeType)
         && nodeType != RTNode::NodeType::TraversalFlagData;
 }
 
-void NoteScheduler::scheduleNote(const RTNode& node, int traversalId, int sample,
+void NoteScheduler::scheduleNote(const RTNode& node, int instanceId, int sample,
                                  juce::MidiBuffer& midiMessages,
                                  double sampleRate, double tempoMultiplier,
                                  int duration, bool isConnectionTrigger, int channel, int transpose,
                                  double velocityMultiplier)
 {
     ActiveNote newNote;
-    newNote.traversalId         = traversalId;
+    newNote.instanceId          = instanceId;
     newNote.event.pitch         = 63;
     newNote.event.velocity      = 63;
     newNote.event.duration      = duration;
@@ -71,12 +71,12 @@ void NoteScheduler::removeNote(int index)
     activeNotes.pop_back();
 }
 
-void NoteScheduler::clearTraversalNotes(int traversalId)
+void NoteScheduler::clearTraversalNotes(int instanceId)
 {
     for (auto& note : activeNotes)
     {
-        if (note.traversalId == traversalId) {
-            note.traversalId = -1;
+        if (note.instanceId == instanceId) {
+            note.instanceId = -1;
         }
     }
 }

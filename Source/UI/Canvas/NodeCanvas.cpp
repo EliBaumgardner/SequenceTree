@@ -131,7 +131,7 @@ void NodeCanvas::drainProgressFifo()
         if (cmd.parentNodeId == cmd.childNodeId) {
             for (DanglingArrow* danglingArrow : danglingArrows) {
                 if (danglingArrow->startNode == parentIt->second) {
-                    danglingArrow->startProgress(cmd.traversalId, cmd.durationMs, progressColour);
+                    danglingArrow->startProgress(cmd.traversalId, cmd.durationMs, progressColour, cmd.isConnection);
                 }
             }
             return;
@@ -142,7 +142,7 @@ void NodeCanvas::drainProgressFifo()
             return;
         }
 
-        arrowIt->second->startProgress(cmd.traversalId, cmd.durationMs, progressColour);
+        arrowIt->second->startProgress(cmd.traversalId, cmd.durationMs, progressColour, cmd.isConnection);
     };
 
     for (int i = 0; i < scope.blockSize1; ++i)

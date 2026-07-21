@@ -21,7 +21,7 @@ public:
     struct ActiveNote
     {
         MidiEvent event;
-        int       traversalId      = 0;
+        int       instanceId       = 0;
         int       remainingSamples = 0;
         RTNode    noteNode;
         bool      isConnectionTrigger = false;
@@ -31,7 +31,7 @@ public:
 
     explicit NoteScheduler(AudioUIBridge& bridge);
 
-    void scheduleNote(const RTNode& node, int traversalId, int sample,
+    void scheduleNote(const RTNode& node, int instanceId, int sample,
                       juce::MidiBuffer& midiMessages,
                       double sampleRate, double tempoMultiplier,
                       int duration, bool isConnectionTrigger = false, int channel = -1, int transpose = 0,
@@ -39,7 +39,7 @@ public:
 
     void sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
     void removeNote(int index);
-    void clearTraversalNotes(int traversalId);
+    void clearTraversalNotes(int instanceId);
     void handleOrphanNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages);
 
     static bool isNodeAudible(RTNode::NodeType nodeType);

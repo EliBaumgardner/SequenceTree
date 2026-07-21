@@ -17,7 +17,7 @@ public:
                         NoteScheduler& scheduler,
                         AudioUIBridge& bridge);
 
-    void pushNote(const RTNode& node, int traversalId,
+    void pushNote(const RTNode& node, int instanceId,
                   juce::MidiBuffer& midiMessages, int sample,
                   const NodeMap& nodes, TraversalMap& traversalMap,
                   bool isPrimaryRepeat = false);
@@ -41,7 +41,7 @@ private:
                                 int sample, const NodeMap& nodes, TraversalMap& traversalMap);
 
     int resolveDuration(const RTNode& node, const RTNode* nextTarget,
-                        int lastTargetId, const NodeMap& nodes);
+                        int lastTargetId, const NodeMap& nodes, int traversalId);
 
     void dispatchModulator(const RTNode &node, const NodeMap& nodes, TraversalLogic &traversalLogic, const RTNode*& modulatorNode, TraversalMap &traverserMap, bool isPrimaryRepeat);
 
@@ -59,18 +59,24 @@ private:
                                 int activeModulatorRootId,
                                 int rootId, int wallClockMs, int colourTraversalId);
 
-    void dispatchCrossTree(const RTNode& node, int traversalId, int sample, int rootId,
+    void dispatchCrossTree(const RTNode& node, int sourceInstanceId, int sample, int rootId,
                            juce::MidiBuffer& midiMessages,
                            double sampleRate, double tempoMultiplier,
-                           const NodeMap& nodes, TraversalLogic& traversal);
+                           const NodeMap& nodes, TraversalLogic& traversal, TraversalMap& traversalMap);
 
-    void dispatchFlag(const RTNode& node, int hostTraversalId, int parentCount, int sample, juce::MidiBuffer& midiMessages,
+    bool hasActiveTraversalOnTree(int treeRootId, const TraversalMap& traversalMap) const;
+
+    void startCrossTreeTraversal(const RTNode& targetRootNode, const RTtraversal& traversal,
+                                 int sample, juce::MidiBuffer& midiMessages,
+                                 const NodeMap& nodes, TraversalMap& traversalMap);
+
+    void dispatchFlag(const RTNode& node, int hostInstanceId, int hostTypeId, int parentCount, int sample, juce::MidiBuffer& midiMessages,
                       const NodeMap& nodes, TraversalMap& traversalMap);
 
-    void startFlagTraversal(const RTNode& flagNode, int hostTraversalId, int sample, juce::MidiBuffer& midiMessages,
+    void startFlagTraversal(const RTNode& flagNode, int hostTypeId, int sample, juce::MidiBuffer& midiMessages,
                             const NodeMap& nodes, TraversalMap& traversalMap);
 
-    void queueFlagRemoval(const RTNode& flagNode, int hostTraversalId, TraversalMap& traversalMap);
+    void queueFlagRemoval(const RTNode& flagNode, int hostInstanceId, int hostTypeId, TraversalMap& traversalMap);
 
     SequenceTreeAudioProcessor& processor;
     NoteScheduler&              scheduler;
