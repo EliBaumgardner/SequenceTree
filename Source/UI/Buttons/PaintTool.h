@@ -49,7 +49,7 @@ public:
         };
     }
 
-    void paint(juce::Graphics& g){
+    void paint(juce::Graphics& g) override {
         CustomLookAndFeel::get(*this).drawPaintTool(g, *this);
     }
 

@@ -59,7 +59,6 @@ private:
     std::unique_ptr<NodeCanvas>     canvas         = nullptr;
     std::unique_ptr<RTGraphBuilder> rtGraphBuilder = nullptr;
     std::unique_ptr<NodeController> nodeController   = nullptr;
-    std::unique_ptr<ValueTreeState> valueTreeState = nullptr;
     std::unique_ptr<Titlebar>       titleBar       = nullptr;
     std::unique_ptr<BottomBar>      bottomBar      = nullptr;
     std::unique_ptr<DynamicPort>    port           = nullptr;

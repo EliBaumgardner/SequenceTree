@@ -3,13 +3,15 @@
 
     RTData.h
     Created: 12 Jul 2025 1:05:00pm
-    Author:  Eli Baimgardner
+    Author:  Eli Baumgardner
 
   ==============================================================================
 */
 
 #pragma once
 
+#include <atomic>
+#include <memory>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
@@ -110,12 +112,21 @@ struct RTGraph {
 
     RTGraph() = default;
 
-    RTGraph(RTGraph&& other) noexcept : nodeMap(other.nodeMap)
+    RTGraph(RTGraph&& other) noexcept
+        : nodeMap(std::move(other.nodeMap)),
+          traversalRequested(other.traversalRequested.load()),
+          rootID(other.rootID),
+          graphID(other.graphID),
+          loopLimit(other.loopLimit)
     {}
 
     RTGraph& operator=(RTGraph&& other) noexcept {
         if(this != &other) {
-            nodeMap = std::move(other.nodeMap);
+            nodeMap   = std::move(other.nodeMap);
+            traversalRequested.store(other.traversalRequested.load());
+            rootID    = other.rootID;
+            graphID   = other.graphID;
+            loopLimit = other.loopLimit;
         }
         return *this;
     }
@@ -123,4 +134,6 @@ struct RTGraph {
     RTGraph(const RTGraph&) = delete;
     RTGraph& operator=(const RTGraph&) = delete;
 };
+
+using RTGraphs = std::unordered_map<int, std::shared_ptr<RTGraph>>;
 

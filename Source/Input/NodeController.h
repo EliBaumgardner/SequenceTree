@@ -3,7 +3,7 @@
 
     ObjectObjectController
     Created: 6 May 2025 8:38:35pm
-    Author:  Eli Baimgardner
+    Author:  Eli Baumgardner
 
   ==============================================================================
 */
@@ -73,13 +73,47 @@ public:
 
 private:
 
+    enum class DragState {
+        Idle,
+        EditingValue,
+        MovingArrowHead,
+        MovingDanglingTip,
+        ArrowSelected,
+        CreatingDanglingArrow,
+        ConnectingFlag
+    };
+
+    void handleCanvasMouseDown (const juce::MouseEvent& e, NodeCanvas& canvas);
+    void handleNodeMouseDown   (const juce::MouseEvent& e, Node& node);
+
+    void handleCanvasMouseDrag (const juce::MouseEvent& e, NodeCanvas& canvas);
+    void handleNodeMouseDrag   (const juce::MouseEvent& e, Node& node);
+
+    void dragValue         (const juce::MouseEvent& e);
+    void dragDanglingTip   (const juce::MouseEvent& e, NodeCanvas& canvas);
+    void dragFlagConnection(const juce::MouseEvent& e, Node& node, const NodePosition& newPosition);
+
+    void finishArrowHeadDrag         (NodeCanvas& canvas);
+    void finishDanglingTipDrag       (NodeCanvas& canvas);
+    void finishFlagConnection        (NodeCanvas& canvas);
+    void finishDanglingArrowCreation (NodeCanvas& canvas);
+    void connectDraggedNodeToRoot    (NodeCanvas& canvas);
+
+    void endDrag  (NodeCanvas& canvas);
+    void hideGrid (NodeCanvas& canvas) const;
+    void showGrid (NodeCanvas& canvas) const;
+
     static constexpr float rootSnapThreshold      = 60.0f;
     static constexpr float danglingArrowGrabRadius = 14.0f;
     static constexpr float flagArrowVicinity       = 28.0f;
     static constexpr float arrowHoverRadius        = 8.0f;
     static constexpr float arrowHeadGrabRadius     = 16.0f;
+    static constexpr int   dragThreshold           = 5;
+    static constexpr int   defaultNodeRadius       = 20;
 
     ApplicationContext& applicationContext;
+
+    DragState dragState = DragState::Idle;
 
     DanglingArrow* draggingDanglingArrow = nullptr;
 
@@ -88,15 +122,11 @@ private:
     Node* snapTargetRoot           = nullptr;
 
     Node* draggingArrowHeadNode    = nullptr;
-    bool pressedOnArrow            = false;
 
-    bool creatingDanglingArrow     = false;
-    bool draggingFlagConnection    = false;
-    int  flagConnectionSourceId    = -1;
+    int   flagConnectionSourceId   = -1;
     Node* flagConnectionTarget     = nullptr;
+
     bool isDragStart               = true;
-    bool hasConnection             = false;
-    bool isDraggingValue           = false;
 
     double dragStartValue          = 0.0;
     Node*  draggingValueNode       = nullptr;
@@ -106,6 +136,4 @@ private:
     juce::ValueTree draggedNodeTree;
 
     int snapSourceNodeId = -1;
-    int lastX            =  0;
-    int lastY            =  0;
 };

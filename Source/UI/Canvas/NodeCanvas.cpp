@@ -49,10 +49,7 @@ void NodeCanvas::enqueueAsyncUpdate(const AsyncUpdate& update)
 }
 
 void NodeCanvas::handleAsyncUpdate() {
-    drainHighlightFifo();
-    drainArrowResetFifo();
-    drainProgressFifo();
-    drainCountFifo();
+    drainer.drainAll();
 
     for (auto& asyncUpdate  : asyncUpdates) {
         int nodeId = asyncUpdate.nodeId;
@@ -68,7 +65,7 @@ void NodeCanvas::handleAsyncUpdate() {
             int rootNodeId = asyncUpdate.rootNodeId;
             if (rootNodeId != nodeId) {
 
-                juce::ValueTree rootTree = ValueTreeState::getNode(rootNodeId);
+                juce::ValueTree rootTree = applicationContext.valueTreeState->getNode(rootNodeId);
                 if (rootTree.isValid()) {
                     applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
                 }
@@ -87,7 +84,7 @@ void NodeCanvas::handleAsyncUpdate() {
             applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
         }
         else if (updateType == AsyncUpdateType::DanglingArrowsChanged) {
-            rebuildDanglingArrowsForNode(nodeId);
+            danglingArrowLayer.rebuildForNode(nodeId);
             applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
         }
         else if (updateType == AsyncUpdateType::ArrowAdded) {
@@ -106,65 +103,6 @@ void NodeCanvas::handleAsyncUpdate() {
     }
 }
 
-void NodeCanvas::drainProgressFifo()
-{
-    auto& bridge = applicationContext.processor->eventManager.bridge;
-    const auto scope = bridge.progressFifo.read(bridge.progressFifo.getNumReady());
-
-    auto apply = [this](const AudioUIBridge::ProgressCommand& cmd)
-    {
-        auto parentIt = nodeMap.find(cmd.parentNodeId);
-        if (parentIt == nodeMap.end()) {
-            return;
-        }
-
-        juce::Colour progressColour = juce::Colours::white;
-
-        juce::ValueTree traversalData = ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, cmd.traversalId);
-        if (traversalData.isValid()) {
-            juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
-            if (colourString.isNotEmpty()) {
-                progressColour = juce::Colour::fromString(colourString);
-            }
-        }
-
-        if (cmd.parentNodeId == cmd.childNodeId) {
-            for (DanglingArrow* danglingArrow : danglingArrows) {
-                if (danglingArrow->startNode == parentIt->second) {
-                    danglingArrow->startProgress(cmd.traversalId, cmd.durationMs, progressColour, cmd.isConnection);
-                }
-            }
-            return;
-        }
-
-        auto arrowIt = parentIt->second->nodeArrows.find(cmd.childNodeId);
-        if (arrowIt == parentIt->second->nodeArrows.end() || arrowIt->second == nullptr) {
-            return;
-        }
-
-        arrowIt->second->startProgress(cmd.traversalId, cmd.durationMs, progressColour, cmd.isConnection);
-    };
-
-    for (int i = 0; i < scope.blockSize1; ++i)
-        apply(bridge.progressBuffer[static_cast<size_t>(scope.startIndex1 + i)]);
-    for (int i = 0; i < scope.blockSize2; ++i)
-        apply(bridge.progressBuffer[static_cast<size_t>(scope.startIndex2 + i)]);
-}
-
-void NodeCanvas::drainArrowResetFifo() {
-    auto& bridge = applicationContext.processor->eventManager.bridge;
-    const auto scope = bridge.arrowResetFifo.read(bridge.arrowResetFifo.getNumReady());
-
-    auto apply = [this](const AudioUIBridge::ResetCommand cmd) {
-            resetGraphArrowProgress(cmd.rootId, cmd.traversalId);
-    };
-
-    for (int i = 0; i < scope.blockSize1; ++i)
-        apply(bridge.arrowResetBuffer[static_cast<size_t>(scope.startIndex1 + i)]);
-    for (int i = 0; i < scope.blockSize2; ++i)
-        apply(bridge.arrowResetBuffer[static_cast<size_t>(scope.startIndex2 + i)]);
-}
-
 void NodeCanvas::resetAllArrowProgress()
 {
     for (NodeArrow* arrow : nodeArrows)
@@ -172,7 +110,7 @@ void NodeCanvas::resetAllArrowProgress()
             arrow->resetProgress();
         }
 
-    for (DanglingArrow* danglingArrow : danglingArrows)
+    for (DanglingArrow* danglingArrow : danglingArrowLayer.arrows)
         if (danglingArrow != nullptr) {
             danglingArrow->resetProgress();
         }
@@ -187,7 +125,7 @@ void NodeCanvas::resetGraphArrowProgress(int graphId, int traversalId)
         }
 
         const int parentId = arrow->startNode->getComponentID().getIntValue();
-        const juce::ValueTree arrowRoot = ValueTreeState::getRootNode(parentId);
+        const juce::ValueTree arrowRoot = applicationContext.valueTreeState->getRootNode(parentId);
         if (! arrowRoot.isValid()) {
 
             continue;
@@ -198,14 +136,14 @@ void NodeCanvas::resetGraphArrowProgress(int graphId, int traversalId)
         }
     }
 
-    for (DanglingArrow* danglingArrow : danglingArrows)
+    for (DanglingArrow* danglingArrow : danglingArrowLayer.arrows)
     {
         if (danglingArrow == nullptr || danglingArrow->startNode == nullptr) {
             continue;
         }
 
         const int parentId = danglingArrow->startNode->getComponentID().getIntValue();
-        const juce::ValueTree arrowRoot = ValueTreeState::getRootNode(parentId);
+        const juce::ValueTree arrowRoot = applicationContext.valueTreeState->getRootNode(parentId);
         if (! arrowRoot.isValid()) {
             continue;
         }
@@ -214,63 +152,6 @@ void NodeCanvas::resetGraphArrowProgress(int graphId, int traversalId)
             danglingArrow->resetProgress(traversalId);
         }
     }
-}
-
-void NodeCanvas::drainCountFifo()
-{
-    auto& bridge = applicationContext.processor->eventManager.bridge;
-    const auto scope = bridge.countFifo.read(bridge.countFifo.getNumReady());
-
-    auto apply = [this](const AudioUIBridge::CountCommand& cmd)
-    {
-        auto it = nodeMap.find(cmd.nodeId);
-        if (it == nodeMap.end()) {
-            return;
-        }
-
-        Node* node = it->second;
-        node->displayCurrentCount = cmd.currentCount;
-        node->displayCountLimit   = juce::jmax(1, cmd.countLimit);
-        node->repaint();
-    };
-
-    for (int i = 0; i < scope.blockSize1; ++i)
-        apply(bridge.countBuffer[static_cast<size_t>(scope.startIndex1 + i)]);
-    for (int i = 0; i < scope.blockSize2; ++i)
-        apply(bridge.countBuffer[static_cast<size_t>(scope.startIndex2 + i)]);
-}
-
-void NodeCanvas::drainHighlightFifo()
-{
-    auto& bridge = applicationContext.processor->eventManager.bridge;
-    const auto scope = bridge.highlightFifo.read(bridge.highlightFifo.getNumReady());
-
-    auto apply = [this](const AudioUIBridge::HighlightCommand& cmd)
-    {
-        auto it = nodeMap.find(cmd.nodeId);
-        if (it == nodeMap.end()) {
-            return;
-        }
-
-        juce::Colour highlightColour = juce::Colours::white;
-
-        if (cmd.shouldHighlight) {
-            juce::ValueTree traversalData = ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, cmd.traversalId);
-            if (traversalData.isValid()) {
-                juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
-                if (colourString.isNotEmpty()) {
-                    highlightColour = juce::Colour::fromString(colourString);
-                }
-            }
-        }
-
-        it->second->setHighlightVisual(cmd.traversalId, cmd.shouldHighlight, highlightColour);
-    };
-
-    for (int i = 0; i < scope.blockSize1; ++i)
-        apply(bridge.highlightBuffer[static_cast<size_t>(scope.startIndex1 + i)]);
-    for (int i = 0; i < scope.blockSize2; ++i)
-        apply(bridge.highlightBuffer[static_cast<size_t>(scope.startIndex2 + i)]);
 }
 
 Node* NodeCanvas::instantiateNodeFromTree(const juce::ValueTree& nodeValueTree)
@@ -324,8 +205,8 @@ Node* NodeCanvas::instantiateNodeFromTree(const juce::ValueTree& nodeValueTree)
 
 void NodeCanvas::addNodeToCanvas(int nodeId)
 {
-    juce::ValueTree nodeChildTree = ValueTreeState::getNode(nodeId);
-    juce::ValueTree nodeParentTree = ValueTreeState::getNodeParent(nodeId);
+    juce::ValueTree nodeChildTree = applicationContext.valueTreeState->getNode(nodeId);
+    juce::ValueTree nodeParentTree = applicationContext.valueTreeState->getNodeParent(nodeId);
 
     jassert(nodeChildTree.isValid());
 
@@ -353,7 +234,7 @@ void NodeCanvas::addNodeToCanvas(int nodeId)
     }
 
     if (!gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
-        NodePosition pos = ValueTreeState::getNodePosition(nodeId);
+        NodePosition pos = applicationContext.valueTreeState->getNodePosition(nodeId);
         gridOrigin    = { (float)pos.xPosition,
                           (float)pos.yPosition };
         gridSpacing   = 50.0f;
@@ -371,7 +252,7 @@ void NodeCanvas::removeNodeFromCanvas(int nodeId)
     }
 
     Node* node = nodePair->second;
-    removeDanglingArrowsForNode(node);
+    danglingArrowLayer.removeForNode(node);
     removeLinePoints(node);
     removeChildComponent(node);
     delete node;
@@ -385,12 +266,12 @@ void NodeCanvas::setNodePosition(int nodeId)
         return;
     }
 
-    juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
+    juce::ValueTree nodeValueTree = applicationContext.valueTreeState->getNode(nodeId);
     if (!nodeValueTree.isValid()) {
         return;
     }
 
-    NodePosition nodePosition = ValueTreeState::getNodePosition(nodeId);
+    NodePosition nodePosition = applicationContext.valueTreeState->getNodePosition(nodeId);
 
     int xPosition = nodePosition.xPosition;
     int yPosition = nodePosition.yPosition;
@@ -417,7 +298,7 @@ void NodeCanvas::setNodePosition(int nodeId)
 
 }
 
-static std::unordered_set<int> collectAncestorIds(int nodeId)
+static std::unordered_set<int> collectAncestorIds(const juce::ValueTree& nodeMap, int nodeId)
 {
     std::unordered_set<int> ancestors;
     std::vector<int> frontier { nodeId };
@@ -426,8 +307,8 @@ static std::unordered_set<int> collectAncestorIds(int nodeId)
         int current = frontier.back();
         frontier.pop_back();
 
-        for (int i = 0; i < ValueTreeState::nodeMap.getNumChildren(); ++i) {
-            juce::ValueTree candidate = ValueTreeState::nodeMap.getChild(i);
+        for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
+            juce::ValueTree candidate = nodeMap.getChild(i);
             juce::ValueTree candidateChildren = candidate.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
             if (! candidateChildren.getChildWithProperty(ValueTreeIdentifiers::Id, current).isValid()) {
@@ -452,7 +333,7 @@ void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int 
 {
     int rootId = (int) nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
-    std::unordered_set<int> visited = collectAncestorIds(rootId);
+    std::unordered_set<int> visited = collectAncestorIds(applicationContext.valueTreeState->nodeMap, rootId);
     visited.insert(rootId);
 
     moveDescendants(nodeValueTree, deltaX, deltaY, visited);
@@ -470,13 +351,13 @@ void NodeCanvas::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int 
             continue;
         }
 
-        juce::ValueTree childNodeTree = ValueTreeState::getNode(childId);
+        juce::ValueTree childNodeTree = applicationContext.valueTreeState->getNode(childId);
 
-        NodePosition childPosition = ValueTreeState::getNodePosition(childId);
+        NodePosition childPosition = applicationContext.valueTreeState->getNodePosition(childId);
         childPosition.xPosition += deltaX;
         childPosition.yPosition += deltaY;
 
-        ValueTreeState::setNodePosition(childNodeTree, childPosition, applicationContext.undoManager);
+        applicationContext.valueTreeState->setNodePosition(childNodeTree, childPosition, applicationContext.undoManager);
         moveDescendants(childNodeTree, deltaX, deltaY, visited);
     }
 }
@@ -487,7 +368,7 @@ void NodeCanvas::addLinePoints(Node* parentNode, Node* childNode)
     int parentNodeId = parentNode->getComponentID().getIntValue();
     int childNodeId  = childNode->getComponentID().getIntValue();
 
-    juce::ValueTree parentMidiNotesData = ValueTreeState::getMidiNotes(parentNodeId);
+    juce::ValueTree parentMidiNotesData = applicationContext.valueTreeState->getMidiNotes(parentNodeId);
     juce::ValueTree parentMidiNoteData  = parentMidiNotesData.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
 
     auto arrow = std::make_unique<NodeArrow>(parentNode, childNode, applicationContext);
@@ -573,7 +454,7 @@ void NodeCanvas::clearArrowSelection()
         }
     }
 
-    for (DanglingArrow* arrow : danglingArrows) {
+    for (DanglingArrow* arrow : danglingArrowLayer.arrows) {
         if (arrow->selected) {
             arrow->selected = false;
             arrow->repaint();
@@ -609,7 +490,7 @@ void NodeCanvas::handleArrowAdded(int parentNodeId, int childNodeId)
     addLinePoints(startNode, endNode);
     updateLinePoints(endNode);
 
-    juce::ValueTree rootTree = ValueTreeState::getRootNode(parentNodeId);
+    juce::ValueTree rootTree = applicationContext.valueTreeState->getRootNode(parentNodeId);
     if (rootTree.isValid()) {
         applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
     }
@@ -640,7 +521,7 @@ void NodeCanvas::handleArrowRemoved(int parentNodeId, int childNodeId)
 
     removeArrow(target);
 
-    juce::ValueTree rootTree = ValueTreeState::getRootNode(parentNodeId);
+    juce::ValueTree rootTree = applicationContext.valueTreeState->getRootNode(parentNodeId);
     if (rootTree.isValid()) {
         applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
     }
@@ -663,7 +544,7 @@ void NodeCanvas::updateLinePoints(Node* movedNode)
         arrow->setArrowBounds(movedNode);
     }
 
-    for (DanglingArrow* danglingArrow : danglingArrows)
+    for (DanglingArrow* danglingArrow : danglingArrowLayer.arrows)
     {
         if (danglingArrow->startNode == movedNode) {
             danglingArrow->setArrowBounds();
@@ -755,181 +636,10 @@ void NodeCanvas::hideSnapGhostArrow()
     }
 }
 
-void NodeCanvas::setArrowMode(bool enabled)
-{
-    arrowMode = enabled;
-
-    if (! enabled) {
-        cancelDanglingPreview();
-    }
-}
-
-void NodeCanvas::updateDanglingPreview(Node* node, juce::Point<int> tipOffset, bool dashed)
-{
-    if (node == nullptr) {
-        return;
-    }
-
-    if (danglingPreview == nullptr || danglingPreview->startNode != node) {
-        danglingPreview = std::make_unique<DanglingArrow>(node, tipOffset, applicationContext);
-        addAndMakeVisible(*danglingPreview);
-        danglingPreview->toBack();
-    }
-
-    danglingPreview->dashed = dashed;
-    danglingPreview->setTipOffset(tipOffset);
-}
-
-void NodeCanvas::commitDanglingArrow()
-{
-    if (danglingPreview == nullptr) {
-        return;
-    }
-
-    Node* node = danglingPreview->startNode;
-    juce::Point<int> tipOffset = danglingPreview->tipOffset;
-
-    danglingPreview.reset();
-
-    addDanglingArrow(node, tipOffset);
-}
-
-void NodeCanvas::cancelDanglingPreview()
-{
-    danglingPreview.reset();
-}
-
-void NodeCanvas::addDanglingArrow(Node* node, juce::Point<int> tipOffset)
-{
-    if (node == nullptr || ! node->nodeValueTree.isValid()) {
-        return;
-    }
-
-    juce::UndoManager* undoManager = applicationContext.undoManager;
-    juce::ValueTree nodeTree = node->nodeValueTree;
-
-    juce::ValueTree arrowList = nodeTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
-    if (! arrowList.isValid()) {
-        arrowList = juce::ValueTree(ValueTreeIdentifiers::DanglingArrows);
-        nodeTree.addChild(arrowList, -1, undoManager);
-    }
-
-    juce::ValueTree arrowTree(ValueTreeIdentifiers::DanglingArrow);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
-    arrowList.addChild(arrowTree, -1, undoManager);
-}
-
-DanglingArrow* NodeCanvas::hitTestDanglingArrowHead(juce::Point<int> canvasPos, float radius) const
-{
-    DanglingArrow* nearest = nullptr;
-    float minDist = radius;
-
-    for (DanglingArrow* danglingArrow : danglingArrows) {
-        if (danglingArrow->startNode == nullptr) {
-            continue;
-        }
-
-        float dist = (float) canvasPos.getDistanceFrom(danglingArrow->getTip());
-        if (dist < minDist) {
-            minDist = dist;
-            nearest = danglingArrow;
-        }
-    }
-
-    return nearest;
-}
-
-void NodeCanvas::setDanglingArrowTip(DanglingArrow* arrow, juce::Point<int> tipOffset)
-{
-    if (arrow == nullptr) {
-        return;
-    }
-
-    arrow->setTipOffset(tipOffset);
-}
-
-void NodeCanvas::commitDanglingArrowTip(DanglingArrow* arrow)
-{
-    if (arrow == nullptr || ! arrow->arrowTree.isValid()) {
-        return;
-    }
-
-    juce::UndoManager* undoManager = applicationContext.undoManager;
-    arrow->arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipX, arrow->tipOffset.x, undoManager);
-    arrow->arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, arrow->tipOffset.y, undoManager);
-}
-
-void NodeCanvas::removeDanglingArrow(DanglingArrow* arrow)
-{
-    if (arrow == nullptr || ! arrow->arrowTree.isValid()) {
-        return;
-    }
-
-    juce::ValueTree arrowList = arrow->arrowTree.getParent();
-    if (arrowList.isValid()) {
-        arrowList.removeChild(arrow->arrowTree, applicationContext.undoManager);
-    }
-}
-
-void NodeCanvas::rebuildDanglingArrowsForNode(int nodeId)
-{
-    removeDanglingArrowsForNodeId(nodeId);
-
-    auto nodePair = nodeMap.find(nodeId);
-    if (nodePair == nodeMap.end()) {
-        return;
-    }
-
-    Node* node = nodePair->second;
-    juce::ValueTree arrowList = node->nodeValueTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
-    if (! arrowList.isValid()) {
-        return;
-    }
-
-    for (int i = 0; i < arrowList.getNumChildren(); ++i) {
-        juce::ValueTree arrowTree = arrowList.getChild(i);
-
-        juce::Point<int> tipOffset {
-            (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX),
-            (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)
-        };
-
-        auto arrow = std::make_unique<DanglingArrow>(node, tipOffset, applicationContext);
-        arrow->arrowTree = arrowTree;
-        addAndMakeVisible(*arrow);
-        arrow->toBack();
-        arrow->setArrowBounds();
-        danglingArrows.add(arrow.release());
-    }
-}
-
-void NodeCanvas::removeDanglingArrowsForNode(Node* node)
-{
-    for (int i = danglingArrows.size() - 1; i >= 0; --i) {
-        if (danglingArrows[i]->startNode == node) {
-            removeChildComponent(danglingArrows[i]);
-            danglingArrows.remove(i);
-        }
-    }
-}
-
-void NodeCanvas::removeDanglingArrowsForNodeId(int nodeId)
-{
-    for (int i = danglingArrows.size() - 1; i >= 0; --i) {
-        Node* startNode = danglingArrows[i]->startNode;
-        if (startNode != nullptr && startNode->getComponentID().getIntValue() == nodeId) {
-            removeChildComponent(danglingArrows[i]);
-            danglingArrows.remove(i);
-        }
-    }
-}
-
 void NodeCanvas::clearCanvas()
 {
     hideSnapGhostArrow();
-    cancelDanglingPreview();
-    danglingArrows.clear();
+    danglingArrowLayer.clear();
     nodeArrows.clear();
 
     for (auto& [nodeId, node] : nodeMap) {
@@ -1007,13 +717,13 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
     }
 
     for (auto& [nodeId, node] : nodeMap) {
-        rebuildDanglingArrowsForNode(nodeId);
+        danglingArrowLayer.rebuildForNode(nodeId);
     }
 
     if (!gridOriginSet && !rootNodeMap.empty()) {
         auto it = rootNodeMap.begin();
         int firstRootId = it->first;
-        NodePosition pos = ValueTreeState::getNodePosition(firstRootId);
+        NodePosition pos = applicationContext.valueTreeState->getNodePosition(firstRootId);
         gridOrigin    = { (float)pos.xPosition,
                           (float)pos.yPosition };
         gridSpacing   = 50.0f;

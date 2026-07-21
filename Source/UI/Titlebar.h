@@ -3,7 +3,7 @@
 
     TitleBar.h
     Created: 12 Jun 2025 6:50:43pm
-    Author:  Eli Baimgardner
+    Author:  Eli Baumgardner
 
   ==============================================================================
 */

@@ -13,7 +13,6 @@ public:
     AudioUIBridge       bridge;
     NoteScheduler       scheduler   { bridge };
     TraversalDispatcher dispatcher;
-    TraversalMap        traversals;
 
     explicit EventManager(SequenceTreeAudioProcessor* p);
 

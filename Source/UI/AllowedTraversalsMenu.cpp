@@ -39,8 +39,8 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(ApplicationContext& context, juce::
 {
     setLookAndFeel(context.lookAndFeel);
 
-    for (int i = 0; i < ValueTreeState::traversalMap.getNumChildren(); ++i) {
-        juce::ValueTree traversalData = ValueTreeState::traversalMap.getChild(i);
+    for (int i = 0; i < applicationContext.valueTreeState->traversalMap.getNumChildren(); ++i) {
+        juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap.getChild(i);
 
         if (traversalData.getType() != ValueTreeIdentifiers::TraversalData) {
             continue;

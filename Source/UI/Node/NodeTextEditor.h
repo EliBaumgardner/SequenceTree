@@ -3,7 +3,7 @@
 
     NodeTextEditor.h
     Created: 1 Sep 2025 1:28:52pm
-    Author:  Eli Baimgardner
+    Author:  Eli Baumgardner
 
   ==============================================================================
 */

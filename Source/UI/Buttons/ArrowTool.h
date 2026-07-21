@@ -29,7 +29,7 @@ public:
     void mouseDown(const juce::MouseEvent& e) override {
         if (e.mods.isLeftButtonDown()) {
             isSelected = !isSelected;
-            context.canvas->setArrowMode(isSelected);
+            context.canvas->danglingArrowLayer.setArrowMode(isSelected);
             repaint();
         }
     }

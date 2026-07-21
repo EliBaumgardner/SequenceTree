@@ -18,6 +18,8 @@
 #include "../../Util/ApplicationContext.h"
 #include "NodeCanvasTreeListener.h"
 #include "ValueField.h"
+#include "AudioCommandDrainer.h"
+#include "DanglingArrowLayer.h"
 
 class Node;
 class RootNode;
@@ -25,6 +27,9 @@ class NodeArrow;
 class DanglingArrow;
 
 class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
+
+    private:
+        ApplicationContext& applicationContext;
 
     public:
 
@@ -51,20 +56,6 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         void handleArrowAdded(int parentNodeId, int childNodeId);
         void handleArrowRemoved(int parentNodeId, int childNodeId);
-
-        void setArrowMode(bool enabled);
-        void updateDanglingPreview(Node* node, juce::Point<int> tipOffset, bool dashed = false);
-        void commitDanglingArrow();
-        void cancelDanglingPreview();
-        bool hasDanglingPreview() const { return danglingPreview != nullptr; }
-        void addDanglingArrow(Node* node, juce::Point<int> tipOffset);
-        DanglingArrow* hitTestDanglingArrowHead(juce::Point<int> canvasPos, float radius) const;
-        void setDanglingArrowTip(DanglingArrow* arrow, juce::Point<int> tipOffset);
-        void commitDanglingArrowTip(DanglingArrow* arrow);
-        void removeDanglingArrow(DanglingArrow* arrow);
-        void rebuildDanglingArrowsForNode(int nodeId);
-        void removeDanglingArrowsForNode(Node* node);
-        void removeDanglingArrowsForNodeId(int nodeId);
 
         void setSelectionMode(NodeDisplayMode mode) const;
 
@@ -95,11 +86,6 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         void handleAsyncUpdate() override;
 
-        void drainHighlightFifo();
-        void drainProgressFifo();
-        void drainCountFifo();
-        void drainArrowResetFifo();
-
         void resetAllArrowProgress();
         void resetGraphArrowProgress(int graphId, int traversalId);
 
@@ -114,10 +100,6 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         juce::OwnedArray<NodeArrow> nodeArrows;
         NodeArrow* snapGhostArrow = nullptr;
-
-        juce::OwnedArray<DanglingArrow> danglingArrows;
-        std::unique_ptr<DanglingArrow> danglingPreview;
-        bool arrowMode = false;
 
         std::unordered_map<int, Node*> nodeMap;
 
@@ -140,6 +122,8 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         ValueField valueField { *this };
 
-    private:
-        ApplicationContext& applicationContext;
+        AudioCommandDrainer drainer          { *this, applicationContext };
+        DanglingArrowLayer  danglingArrowLayer { *this, applicationContext };
+
+        ApplicationContext& getApplicationContext() { return applicationContext; }
 };

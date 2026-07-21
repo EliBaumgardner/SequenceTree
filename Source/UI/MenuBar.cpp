@@ -31,7 +31,9 @@ MenuBar::MenuBar(ApplicationContext& context): context(context)
 
 void MenuBar::paint(juce::Graphics &g)
 {
-    CustomLookAndFeel::get(*this).drawMenuBar(g, *this);
+    const Theme& theme = CustomLookAndFeel::get(*this);
+    g.setColour(theme.buttonBarColour);
+    g.fillRect(getLocalBounds().toFloat());
 }
 
 void MenuBar::resized()

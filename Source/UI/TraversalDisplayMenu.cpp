@@ -42,7 +42,10 @@ TraversalDisplayMenu::TraversalDisplayMenu(ApplicationContext& context)
 
 void TraversalDisplayMenu::paint(juce::Graphics& g)
 {
-    CustomLookAndFeel::get(*this).drawTraversalDisplayMenu(g, *this);
+    const Theme& theme = CustomLookAndFeel::get(*this);
+    auto bounds = getLocalBounds().toFloat().reduced(Theme::outerButtonBoundsReduction);
+    g.setColour(theme.buttonBarColour);
+    g.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
 }
 
 void TraversalDisplayMenu::addTraversalToMenu(int traversalId)

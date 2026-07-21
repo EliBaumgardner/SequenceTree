@@ -10,6 +10,7 @@
 #include "../Util/ApplicationContext.h"
 #include "Node/ValueEditor.h"
 #include "ColourSelector.h"
+#include "Buttons/EditTraversalRulesButton.h"
 
 class Node;
 
@@ -64,6 +65,8 @@ private:
         { pitchLabel,             pitchEditor              },
         { channelLabel,           channelEditor            }
     }};
+
+    EditTraversalRulesButton editTraversalRulesButton { applicationContext };
 
     static constexpr int rowHeight = 20;
     static constexpr int rowGap    = 6;

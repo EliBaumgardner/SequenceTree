@@ -13,7 +13,9 @@
 #include <atomic>
 #include <functional>
 #include "../Graph/RTData.h"
+#include "../Graph/ValueTreeState.h"
 #include "../Audio/EventManager.h"
+#include "../Audio/TraversalSession.h"
 
 class SequenceTreeAudioProcessorEditor;
 
@@ -28,23 +30,9 @@ public:
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
 
-    using RTGraphs = std::unordered_map<int, std::shared_ptr<RTGraph>>;
-
 #ifndef JucePlugin_PreferredChannelConfigurations
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 #endif
-
-    bool initializeTraversalForRootNode(juce::MidiBuffer &midiMessages, const NodeMap &nodes, TraversalMap &traversals, RTGraphs &rtGraphs);
-
-    void updateTraversalCounts(const NodeMap &nodes, TraversalMap &traversals);
-    void syncActiveTraversals(const NodeMap &nodes, TraversalMap &traversals);
-    void removeDeletedTraversals(const NodeMap &nodes, TraversalMap &traversals, juce::MidiBuffer &midiMessages);
-    void startMissingTraversals(const NodeMap &nodes, TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages);
-    void startTraversal(const RTNode &rootNode, const RTtraversal &traversal, const NodeMap &nodes, TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages);
-    void stopTraversalNotes(int instanceId, juce::MidiBuffer &midiMessages);
-    void syncTraversalLoopLimits(TraversalMap &traversals, RTGraphs &rtGraphs, juce::MidiBuffer &midiMessages, const NodeMap &nodes);
-
-    int nextTraversalInstanceId() { return ++traversalInstanceCounter; }
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
@@ -89,13 +77,17 @@ public:
 
     std::shared_ptr<AudioSnapshot> audioSnapshot;
 
+    void publishAudioSnapshot(std::shared_ptr<AudioSnapshot> snapshot);
+
     std::atomic<bool>   isPlaying       = false;
     std::atomic<bool>   resetRequested  = false;
     std::atomic<double> tempoMultiplier { 1.0 };
 
-    int traversalInstanceCounter = 0;
+    std::vector<std::shared_ptr<AudioSnapshot>> retiredSnapshots;
 
     juce::AudioProcessorValueTreeState valueTreeState;
+
+    ValueTreeState graphState;
 
 
     struct {
@@ -107,7 +99,10 @@ public:
         int bpm;
     } TempoInfo { 44100, 0, 0, 0, 0, 120 };
 
-    EventManager eventManager { this };
+    EventManager     eventManager     { this };
+    TraversalSession traversalSession { eventManager };
+
+    bool hasPendingUiCommands() const;
 
     int numTraversals = 0;
 

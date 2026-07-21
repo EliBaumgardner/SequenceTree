@@ -27,7 +27,10 @@ public:
     }
 
     void paint(juce::Graphics& g) {
-        CustomLookAndFeel::get(*this).drawDisplayMenu(g, *this);
+        const Theme& theme = CustomLookAndFeel::get(*this);
+        auto bounds = getLocalBounds().toFloat().reduced(Theme::outerButtonBoundsReduction);
+        g.setColour(theme.buttonBarColour);
+        g.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
     };
 };
 
@@ -211,4 +214,4 @@ public:
     }
 };
 
-#endif SEQUENCETREE_PAINTTOOLSETTINGS_H
+#endif //SEQUENCETREE_PAINTTOOLSETTINGS_H

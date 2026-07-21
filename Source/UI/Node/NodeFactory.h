@@ -16,79 +16,79 @@ class NodeFactory
 {
 public:
 
-    static void createRootNode(const NodePosition& nodePosition, juce::UndoManager* undoManager)
+    static void createRootNode(ValueTreeState& state, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
-        juce::ValueTree rootNodeValueTree = ValueTreeState::addRootNode(undoManager);
+        juce::ValueTree rootNodeValueTree = state.addRootNode(undoManager);
         int rootId = rootNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
-        ValueTreeState::setNodePosition(rootNodeValueTree,nodePosition,undoManager);
+        state.setNodePosition(rootNodeValueTree,nodePosition,undoManager);
 
-        setDefaultNodeNote(rootId, undoManager);
-        setDefaultTraversal(rootId, undoManager);
+        setDefaultNodeNote(state, rootId, undoManager);
+        setDefaultTraversal(state, rootId, undoManager);
     }
 
-    static juce::ValueTree createNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
+    static juce::ValueTree createNode(ValueTreeState& state, const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
-        juce::ValueTree childNodeValueTree = ValueTreeState::addNode(parentNodeId, undoManager);
+        juce::ValueTree childNodeValueTree = state.addNode(parentNodeId, undoManager);
         int nodeId = childNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
-        ValueTreeState::setNodePosition(childNodeValueTree, nodePosition, undoManager);
-        inheritFromParent(parentNodeId, nodeId, childNodeValueTree, undoManager);
+        state.setNodePosition(childNodeValueTree, nodePosition, undoManager);
+        inheritFromParent(state, parentNodeId, nodeId, childNodeValueTree, undoManager);
 
         return childNodeValueTree;
     }
 
 
-    static juce::ValueTree createAlternativeNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
+    static juce::ValueTree createAlternativeNode(ValueTreeState& state, const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
-        juce::ValueTree childNodeValueTree = ValueTreeState::addAlternativeNode(parentNodeId, undoManager);
+        juce::ValueTree childNodeValueTree = state.addAlternativeNode(parentNodeId, undoManager);
         int nodeId = childNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
-        ValueTreeState::setNodePosition(childNodeValueTree, nodePosition, undoManager);
-        inheritFromParent(parentNodeId, nodeId, childNodeValueTree, undoManager);
+        state.setNodePosition(childNodeValueTree, nodePosition, undoManager);
+        inheritFromParent(state, parentNodeId, nodeId, childNodeValueTree, undoManager);
 
         return childNodeValueTree;
     }
 
-    static juce::ValueTree createTraversalFlagNode(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
+    static juce::ValueTree createTraversalFlagNode(ValueTreeState& state, const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager)
     {
-        juce::ValueTree childNodeValueTree = ValueTreeState::addTraversalFlagNode(parentNodeId, undoManager);
+        juce::ValueTree childNodeValueTree = state.addTraversalFlagNode(parentNodeId, undoManager);
         int nodeId = childNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
         NodePosition traversalFlagNodePosition = nodePosition;
 
-        ValueTreeState::setNodePosition(childNodeValueTree, traversalFlagNodePosition, undoManager);
+        state.setNodePosition(childNodeValueTree, traversalFlagNodePosition, undoManager);
 
         return childNodeValueTree;
     }
 
-    static juce::ValueTree createModulator(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager) {
+    static juce::ValueTree createModulator(ValueTreeState& state, const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager) {
 
-        juce::ValueTree modulatorValueTree = ValueTreeState::addModulator(parentNodeId, undoManager);
-        ValueTreeState::setNodePosition(modulatorValueTree, nodePosition, undoManager);
+        juce::ValueTree modulatorValueTree = state.addModulator(parentNodeId, undoManager);
+        state.setNodePosition(modulatorValueTree, nodePosition, undoManager);
 
         return modulatorValueTree;
     }
 
-    static juce::ValueTree createModulatorRoot(const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager) {
-        juce::ValueTree modulatorRootValueTree = ValueTreeState::addModulatorRoot(parentNodeId, undoManager);
-        ValueTreeState::setNodePosition(modulatorRootValueTree, nodePosition, undoManager);
+    static juce::ValueTree createModulatorRoot(ValueTreeState& state, const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager) {
+        juce::ValueTree modulatorRootValueTree = state.addModulatorRoot(parentNodeId, undoManager);
+        state.setNodePosition(modulatorRootValueTree, nodePosition, undoManager);
         return modulatorRootValueTree;
     }
 
-    static void destroyNode(const int nodeId, juce::UndoManager* undoManager)
+    static void destroyNode(ValueTreeState& state, const int nodeId, juce::UndoManager* undoManager)
     {
-        ValueTreeState::removeNode(nodeId,undoManager);
+        state.removeNode(nodeId,undoManager);
     }
 
 private:
 
-    static void setDefaultTraversal(int nodeId, juce::UndoManager *undoManager)
+    static void setDefaultTraversal(ValueTreeState& state, int nodeId, juce::UndoManager *undoManager)
     {
-        juce::ValueTree rootNodeValueTree = ValueTreeState::getNode(nodeId);
+        juce::ValueTree rootNodeValueTree = state.getNode(nodeId);
 
-        if (ValueTreeState::traversalMap.getNumChildren() == 0) {
-            ValueTreeState::createTraversalData(defaultTraversalId, undoManager);
+        if (state.traversalMap.getNumChildren() == 0) {
+            state.createTraversalData(defaultTraversalId, undoManager);
         }
 
         juce::ValueTree traversalId = juce::ValueTree{ValueTreeIdentifiers::TraversalId};
@@ -98,7 +98,7 @@ private:
         traversalChildrenIds.addChild(traversalId, -1, undoManager);
     }
 
-    static void setDefaultNodeNote(int nodeId, juce::UndoManager *undoManager)
+    static void setDefaultNodeNote(ValueTreeState& state, int nodeId, juce::UndoManager *undoManager)
     {
         NodeNote note;
         note.pitch       = 60;
@@ -106,19 +106,19 @@ private:
         note.duration    = 1000;
         note.midiChannel = ValueTreeState::defaultMidiChannel;
 
-        ValueTreeState::setMidiValue(nodeId, note, undoManager);
+        state.setMidiValue(nodeId, note, undoManager);
     }
 
-    static void inheritFromParent(int parentNodeId, int newNodeId, juce::ValueTree newNode, juce::UndoManager* undoManager)
+    static void inheritFromParent(ValueTreeState& state, int parentNodeId, int newNodeId, juce::ValueTree newNode, juce::UndoManager* undoManager)
     {
-        juce::ValueTree parentNode = ValueTreeState::getNode(parentNodeId);
+        juce::ValueTree parentNode = state.getNode(parentNodeId);
 
         if (!parentNode.isValid()
             || (parentNode.getType() != ValueTreeIdentifiers::NodeData
                 && parentNode.getType() != ValueTreeIdentifiers::AlternativeNodeData
                 && parentNode.getType() != ValueTreeIdentifiers::RootNodeData))
         {
-            setDefaultNodeNote(newNodeId, undoManager);
+            setDefaultNodeNote(state, newNodeId, undoManager);
             return;
         }
 
@@ -139,7 +139,7 @@ private:
 
         if (!parentMidi.isValid() || parentMidi.getNumChildren() == 0)
         {
-            setDefaultNodeNote(newNodeId, undoManager);
+            setDefaultNodeNote(state, newNodeId, undoManager);
             return;
         }
 

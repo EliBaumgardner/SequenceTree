@@ -85,8 +85,8 @@ void RootNode::equipTraversals()
 
     for (int traversalId : words) {
 
-        if (!ValueTreeState::traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
-            ValueTreeState::createTraversalData(traversalId, nullptr);
+        if (!applicationContext.valueTreeState->traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
+            applicationContext.valueTreeState->createTraversalData(traversalId, nullptr);
         }
 
         if (!traversalChildrenIds.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {

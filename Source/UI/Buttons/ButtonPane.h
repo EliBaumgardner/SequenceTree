@@ -85,7 +85,10 @@ class ButtonPane : public juce::Component {
 
     void paint(juce::Graphics& g) override
     {
-        CustomLookAndFeel::get(*this).drawButtonPane(g, *this);
+        const Theme& theme = CustomLookAndFeel::get(*this);
+        auto bounds = getLocalBounds().reduced(Theme::outerButtonBoundsReduction).toFloat();
+        g.setColour(theme.buttonBarColour);
+        g.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
     }
 
     void resized () override

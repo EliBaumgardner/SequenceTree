@@ -3,7 +3,7 @@
 
     ObjectController.h.cpp
     Created: 6 May 2025 8:38:35pm
-    Author:  Eli Baimgardner
+    Author:  Eli Baumgardner
 
   ==============================================================================
 */
@@ -110,7 +110,7 @@ void NodeController::mouseMove(const juce::MouseEvent& e)
 
     DanglingArrow* hoveredDangling = findDanglingArrowNear(cursor, arrowHoverRadius);
 
-    for (DanglingArrow* arrow : canvas->danglingArrows) {
+    for (DanglingArrow* arrow : canvas->danglingArrowLayer.arrows) {
         bool shouldBold = (arrow == hoveredDangling);
         if (shouldBold != arrow->hovered) {
             arrow->hovered = shouldBold;
@@ -186,7 +186,7 @@ DanglingArrow* NodeController::findDanglingArrowNear(juce::Point<float> point, f
     DanglingArrow* nearest = nullptr;
     float minDist = radius;
 
-    for (DanglingArrow* arrow : canvas->danglingArrows) {
+    for (DanglingArrow* arrow : canvas->danglingArrowLayer.arrows) {
         if (arrow->startNode == nullptr) {
             continue;
         }
@@ -212,7 +212,7 @@ void NodeController::deleteArrow(NodeArrow* arrow)
     int startId = arrow->startNode->getComponentID().getIntValue();
     int endId   = arrow->endNode->getComponentID().getIntValue();
 
-    juce::ValueTree startTree     = ValueTreeState::getNode(startId);
+    juce::ValueTree startTree     = applicationContext.valueTreeState->getNode(startId);
     juce::ValueTree startChildren = startTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
     bool startOwnsEnd = startChildren.getChildWithProperty(ValueTreeIdentifiers::Id, endId).isValid();
 
@@ -221,7 +221,7 @@ void NodeController::deleteArrow(NodeArrow* arrow)
 
     juce::UndoManager* undoManager = applicationContext.undoManager;
     undoManager->beginNewTransaction();
-    ValueTreeState::disconnectNodes(ownerNodeId, childNodeId, undoManager);
+    applicationContext.valueTreeState->disconnectNodes(ownerNodeId, childNodeId, undoManager);
 }
 
 juce::ValueTree NodeController::getArrowConnectionTree(NodeArrow* arrow) const
@@ -233,14 +233,14 @@ juce::ValueTree NodeController::getArrowConnectionTree(NodeArrow* arrow) const
     int startId = arrow->startNode->getComponentID().getIntValue();
     int endId   = arrow->endNode->getComponentID().getIntValue();
 
-    juce::ValueTree startTree     = ValueTreeState::getNode(startId);
+    juce::ValueTree startTree     = applicationContext.valueTreeState->getNode(startId);
     juce::ValueTree startChildren = startTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
     bool startOwnsEnd = startChildren.getChildWithProperty(ValueTreeIdentifiers::Id, endId).isValid();
 
     int ownerNodeId = startOwnsEnd ? startId : endId;
     int childNodeId = startOwnsEnd ? endId : startId;
 
-    juce::ValueTree ownerTree     = ValueTreeState::getNode(ownerNodeId);
+    juce::ValueTree ownerTree     = applicationContext.valueTreeState->getNode(ownerNodeId);
     juce::ValueTree ownerChildren = ownerTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
     return ownerChildren.getChildWithProperty(ValueTreeIdentifiers::Id, childNodeId);
@@ -322,54 +322,156 @@ void NodeController::showDanglingArrowContextMenu(DanglingArrow* arrow)
     });
 }
 
+void NodeController::hideGrid(NodeCanvas& canvas) const
+{
+    if (canvas.showGrid) {
+        canvas.showGrid = false;
+        canvas.repaint();
+    }
+}
+
+void NodeController::showGrid(NodeCanvas& canvas) const
+{
+    if (canvas.gridOriginSet) {
+        canvas.showGrid = true;
+        canvas.repaint();
+    }
+}
+
+void NodeController::endDrag(NodeCanvas& canvas)
+{
+    draggedNodeTree  = juce::ValueTree();
+    isDragStart      = true;
+    snapTargetRoot   = nullptr;
+    snapSourceNodeId = -1;
+
+    hideGrid(canvas);
+}
+
+void NodeController::finishArrowHeadDrag(NodeCanvas& canvas)
+{
+    const int nodeId = draggingArrowHeadNode->getComponentID().getIntValue();
+
+    draggingArrowHeadNode = nullptr;
+    dragState             = DragState::Idle;
+    isDragStart           = true;
+
+    canvas.triggerArrowSnapForNode(nodeId);
+    hideGrid(canvas);
+}
+
+void NodeController::finishDanglingTipDrag(NodeCanvas& canvas)
+{
+    applicationContext.undoManager->beginNewTransaction();
+    canvas.danglingArrowLayer.commitTip(draggingDanglingArrow);
+
+    draggingDanglingArrow = nullptr;
+    dragState             = DragState::Idle;
+
+    hideGrid(canvas);
+}
+
+void NodeController::finishFlagConnection(NodeCanvas& canvas)
+{
+    dragState = DragState::Idle;
+    canvas.danglingArrowLayer.cancelPreview();
+
+    if (flagConnectionTarget != nullptr) {
+        commitFlagConnection(flagConnectionSourceId, flagConnectionTarget);
+    }
+
+    flagConnectionTarget   = nullptr;
+    flagConnectionSourceId = -1;
+
+    hideGrid(canvas);
+}
+
+void NodeController::finishDanglingArrowCreation(NodeCanvas& canvas)
+{
+    applicationContext.undoManager->beginNewTransaction();
+    canvas.danglingArrowLayer.commitPreview();
+
+    dragState   = DragState::Idle;
+    isDragStart = true;
+
+    hideGrid(canvas);
+}
+
+void NodeController::connectDraggedNodeToRoot(NodeCanvas& canvas)
+{
+    canvas.hideSnapGhostArrow();
+
+    const int rootNodeId   = snapTargetRoot->getComponentID().getIntValue();
+    const int parentNodeId = snapSourceNodeId;
+
+    snapTargetRoot   = nullptr;
+    snapSourceNodeId = -1;
+
+    const int draggedNodeId = (int) draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
+
+    juce::UndoManager* undoManager = applicationContext.undoManager;
+    undoManager->undo();
+
+    canvas.asyncUpdates.erase(
+        std::remove_if(canvas.asyncUpdates.begin(), canvas.asyncUpdates.end(),
+            [draggedNodeId](const NodeCanvas::AsyncUpdate& update) {
+                return update.nodeId == draggedNodeId
+                    && update.type != NodeCanvas::AsyncUpdateType::NodeRemoved;
+            }),
+        canvas.asyncUpdates.end()
+    );
+
+    undoManager->beginNewTransaction();
+    applicationContext.valueTreeState->connectNodes(parentNodeId, rootNodeId, undoManager);
+
+    auto parentIterator = canvas.nodeMap.find(parentNodeId);
+    auto rootIterator   = canvas.nodeMap.find(rootNodeId);
+
+    if (parentIterator == canvas.nodeMap.end() || rootIterator == canvas.nodeMap.end()) {
+        return;
+    }
+
+    canvas.addLinePoints(parentIterator->second, rootIterator->second);
+    canvas.updateLinePoints(parentIterator->second);
+
+    auto arrowIterator = parentIterator->second->nodeArrows.find(rootNodeId);
+    if (arrowIterator != parentIterator->second->nodeArrows.end()) {
+        arrowIterator->second->triggerSnapAnimation();
+    }
+
+    juce::ValueTree parentValueTree = applicationContext.valueTreeState->getNode(parentNodeId);
+    if (!parentValueTree.isValid()) {
+        return;
+    }
+
+    const int parentRootId = parentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
+    juce::ValueTree parentRootValueTree = applicationContext.valueTreeState->getNode(parentRootId);
+
+    if (parentRootValueTree.isValid()) {
+        applicationContext.rtGraphBuilder->makeRTGraph(parentRootValueTree);
+    }
+}
+
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
     NodeCanvas* canvas = applicationContext.canvas;
 
-    if (draggingArrowHeadNode != nullptr) {
-        int nodeId = draggingArrowHeadNode->getComponentID().getIntValue();
-        draggingArrowHeadNode = nullptr;
-        pressedOnArrow = false;
-        isDragStart = true;
-
-        canvas->triggerArrowSnapForNode(nodeId);
-
-        if (canvas->showGrid) {
-            canvas->showGrid = false;
-            canvas->repaint();
-        }
+    if (dragState == DragState::MovingArrowHead && draggingArrowHeadNode != nullptr) {
+        finishArrowHeadDrag(*canvas);
         return;
     }
 
-    pressedOnArrow = false;
+    if (dragState == DragState::ArrowSelected) {
+        dragState = DragState::Idle;
+    }
 
     if (draggingDanglingArrow != nullptr) {
-        applicationContext.undoManager->beginNewTransaction();
-        canvas->commitDanglingArrowTip(draggingDanglingArrow);
-        draggingDanglingArrow = nullptr;
-
-        if (canvas->showGrid) {
-            canvas->showGrid = false;
-            canvas->repaint();
-        }
+        finishDanglingTipDrag(*canvas);
         return;
     }
 
-    if (draggingFlagConnection) {
-        draggingFlagConnection = false;
-        canvas->cancelDanglingPreview();
-
-        if (flagConnectionTarget != nullptr) {
-            commitFlagConnection(flagConnectionSourceId, flagConnectionTarget);
-        }
-
-        flagConnectionTarget   = nullptr;
-        flagConnectionSourceId = -1;
-
-        if (canvas->showGrid) {
-            canvas->showGrid = false;
-            canvas->repaint();
-        }
+    if (dragState == DragState::ConnectingFlag) {
+        finishFlagConnection(*canvas);
         return;
     }
 
@@ -378,233 +480,172 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
         return;
     }
 
-    if (canvas->arrowMode && canvas->hasDanglingPreview()) {
-        applicationContext.undoManager->beginNewTransaction();
-        canvas->commitDanglingArrow();
-        isDragStart = true;
-
-        if (canvas->showGrid) {
-            canvas->showGrid = false;
-            canvas->repaint();
-        }
+    if (canvas->danglingArrowLayer.isArrowMode() && canvas->danglingArrowLayer.hasPreview()) {
+        finishDanglingArrowCreation(*canvas);
         return;
     }
 
-    if (isDraggingValue) {
-        isDraggingValue = false;
+    if (dragState == DragState::EditingValue) {
+        dragState         = DragState::Idle;
         draggingValueNode = nullptr;
     }
     else if (snapTargetRoot != nullptr) {
-        canvas->hideSnapGhostArrow();
+        connectDraggedNodeToRoot(*canvas);
+    }
+    else if (draggedNodeTree.isValid()) {
+        canvas->triggerArrowSnapForNode((int) draggedNodeTree.getProperty(ValueTreeIdentifiers::Id));
+    }
 
-        int rootNodeId = snapTargetRoot->getComponentID().getIntValue();
-        DBG("rootNodeId:" + juce::String(rootNodeId));
-        int parentNodeId   = snapSourceNodeId;
+    endDrag(*canvas);
+}
 
-        snapTargetRoot   = nullptr;
-        snapSourceNodeId = -1;
+void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e, NodeCanvas& canvas)
+{
+    juce::UndoManager* undoManager = applicationContext.undoManager;
+    const juce::Point<float> clickPoint { (float) e.x, (float) e.y };
 
-        int draggedNodeId = (int)draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
+    if (e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
+        if (DanglingArrow* arrow = findDanglingArrowNear(clickPoint, danglingArrowGrabRadius)) {
+            undoManager->beginNewTransaction();
+            canvas.danglingArrowLayer.remove(arrow);
+            return;
+        }
+        if (NodeArrow* nodeArrow = findArrowNear(clickPoint, danglingArrowGrabRadius)) {
+            deleteArrow(nodeArrow);
+            return;
+        }
+    }
 
-        juce::UndoManager* undoManager = applicationContext.undoManager;
-        undoManager->undo();
+    if (!e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
+        if (NodeArrow* clickedArrow = findArrowNear(clickPoint, arrowHoverRadius)) {
+            showArrowContextMenu(clickedArrow);
+            return;
+        }
+        if (DanglingArrow* clickedDangling = findDanglingArrowNear(clickPoint, arrowHoverRadius)) {
+            showDanglingArrowContextMenu(clickedDangling);
+            return;
+        }
+    }
 
-        canvas->asyncUpdates.erase(
-            std::remove_if(canvas->asyncUpdates.begin(), canvas->asyncUpdates.end(),
-                [draggedNodeId](const NodeCanvas::AsyncUpdate& u) {
-                    return u.nodeId == draggedNodeId
-                        && u.type != NodeCanvas::AsyncUpdateType::NodeRemoved;
-                }),
-            canvas->asyncUpdates.end()
-        );
+    if (!e.mods.isShiftDown()) {
+        if (DanglingArrow* arrow = canvas.danglingArrowLayer.hitTestHead({ e.x, e.y }, danglingArrowGrabRadius)) {
+            draggingDanglingArrow = arrow;
+            dragState             = DragState::MovingDanglingTip;
+            showGrid(canvas);
+            return;
+        }
+    }
+
+    if (!e.mods.isShiftDown() && e.mods.isLeftButtonDown()) {
+        if (NodeArrow* headArrow = findArrowHeadNear(clickPoint, arrowHeadGrabRadius)) {
+            canvas.setSelectedArrow(headArrow);
+            draggingArrowHeadNode = headArrow->endNode;
+            dragState             = DragState::MovingArrowHead;
+            isDragStart           = true;
+            return;
+        }
+
+        if (NodeArrow* clickedArrow = findArrowNear(clickPoint, arrowHoverRadius)) {
+            canvas.setSelectedArrow(clickedArrow);
+            dragState = DragState::ArrowSelected;
+            return;
+        }
+
+        if (DanglingArrow* clickedDangling = findDanglingArrowNear(clickPoint, arrowHoverRadius)) {
+            canvas.setSelectedDanglingArrow(clickedDangling);
+            dragState = DragState::ArrowSelected;
+            return;
+        }
+
+        canvas.clearArrowSelection();
+    }
+
+    if (auto* dynamicPort = dynamic_cast<DynamicPort*>(canvas.getParentComponent())) {
+        dynamicPort->mouseDown(e.getEventRelativeTo(dynamicPort));
+    }
+
+    if (e.mods.isShiftDown() && e.mods.isLeftButtonDown()) {
+        NodePosition nodePosition;
+        nodePosition.xPosition = e.x;
+        nodePosition.yPosition = e.y;
+        nodePosition.radius    = 20;
 
         undoManager->beginNewTransaction();
-        ValueTreeState::connectNodes(parentNodeId, rootNodeId, undoManager);
+        NodeFactory::createRootNode(*applicationContext.valueTreeState, nodePosition, undoManager);
+    }
+}
 
-        auto parentIterator = canvas->nodeMap.find(parentNodeId);
-        auto rootIterator   = canvas->nodeMap.find(rootNodeId);
+void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
+{
+    NodeCanvas* canvas = applicationContext.canvas;
+    juce::UndoManager* undoManager = applicationContext.undoManager;
 
-        if (parentIterator != canvas->nodeMap.end() && rootIterator != canvas->nodeMap.end()) {
-            canvas->addLinePoints(parentIterator->second, rootIterator->second);
-            canvas->updateLinePoints(parentIterator->second);
+    dragParentCenter = node.getNodeCentre().toFloat();
 
-            auto arrowIterator = parentIterator->second->nodeArrows.find(rootNodeId);
+    if (node.nodeTextEditor != nullptr && node.nodeTextEditor->isVisible()) {
+        auto localPosition = e.getEventRelativeTo(node.nodeTextEditor.get()).getPosition();
 
-            if (arrowIterator != parentIterator->second->nodeArrows.end()) {
-                arrowIterator->second->triggerSnapAnimation();
-            }
-
-            juce::ValueTree parentValueTree = ValueTreeState::getNode(parentNodeId);
-            if (parentValueTree.isValid()) {
-                int parentRootId = parentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
-                juce::ValueTree parentRootValueTree = ValueTreeState::getNode(parentRootId);
-                if (parentRootValueTree.isValid()) {
-                    applicationContext.rtGraphBuilder->makeRTGraph(parentRootValueTree);
-                }
-            }
+        if (node.nodeTextEditor->getLocalBounds().contains(localPosition)) {
+            dragState         = DragState::EditingValue;
+            dragStartValue    = node.nodeTextEditor->bindValue.toString().getDoubleValue();
+            draggingValueNode = &node;
+            return;
         }
+    }
+
+    const bool isShiftLeftDrag = e.mods.isLeftButtonDown() && e.mods.isShiftDown();
+
+    if (isShiftLeftDrag && canvas->danglingArrowLayer.isArrowMode()) {
+        dragState = DragState::CreatingDanglingArrow;
+    }
+    else if (isShiftLeftDrag && node.nodeType == NodeType::TraversalFlag) {
+        dragState = DragState::ConnectingFlag;
+    }
+
+    const int nodeId = node.getComponentID().getIntValue();
+
+    flagConnectionSourceId = (dragState == DragState::ConnectingFlag) ? nodeId : -1;
+    flagConnectionTarget   = nullptr;
+
+    node.setHoverVisual(true);
+    canvas->clearArrowSelection();
+
+    for (auto& [canvasNodeId, canvasNode] : canvas->nodeMap) {
+        if (canvasNode != &node) {
+            canvasNode->setSelectVisual(false);
+        }
+    }
+
+    if (e.mods.isRightButtonDown() && e.mods.isShiftDown()) {
+        undoManager->beginNewTransaction();
+        NodeFactory::destroyNode(*applicationContext.valueTreeState, nodeId, undoManager);
     }
     else {
-        if (draggedNodeTree.isValid()) {
-            int nodeId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
-            canvas->triggerArrowSnapForNode(nodeId);
-        }
-    }
-
-    draggedNodeTree  = juce::ValueTree();
-    isDragStart      = true;
-    snapTargetRoot   = nullptr;
-    snapSourceNodeId = -1;
-
-    if (canvas->showGrid) {
-        canvas->showGrid = false;
-        canvas->repaint();
+        node.setSelectVisual();
     }
 }
 
 void NodeController::mouseDown(const juce::MouseEvent& e)
 {
-    NodeCanvas* nodeCanvas = applicationContext.canvas;
-    juce::Component* component = e.eventComponent;
-    juce::UndoManager* undoManager = applicationContext.undoManager;
+    NodeCanvas* canvas = applicationContext.canvas;
+    jassert(canvas);
 
-    jassert(nodeCanvas);
-
-    creatingDanglingArrow = false;
-    draggingFlagConnection = false;
+    dragState             = DragState::Idle;
     draggingArrowHeadNode = nullptr;
-    pressedOnArrow = false;
 
-    if (nodeCanvas->paintMode) {
+    if (canvas->paintMode) {
         if (e.mods.isLeftButtonDown() || e.mods.isRightButtonDown()) {
-            auto canvasEvent = e.getEventRelativeTo(nodeCanvas);
-            nodeCanvas->paintStroke(canvasEvent.position, true, e.mods.isRightButtonDown());
+            auto canvasEvent = e.getEventRelativeTo(canvas);
+            canvas->paintStroke(canvasEvent.position, true, e.mods.isRightButtonDown());
         }
         return;
     }
 
-    if (NodeCanvas* canvas = dynamic_cast<NodeCanvas*>(component)) {
-
-        if (! canvas->paintMode && e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
-            if (DanglingArrow* arrow = findDanglingArrowNear({ (float) e.x, (float) e.y }, danglingArrowGrabRadius)) {
-                undoManager->beginNewTransaction();
-                canvas->removeDanglingArrow(arrow);
-                return;
-            }
-            if (NodeArrow* nodeArrow = findArrowNear({ (float) e.x, (float) e.y }, danglingArrowGrabRadius)) {
-                deleteArrow(nodeArrow);
-                return;
-            }
-        }
-
-        if (! canvas->paintMode && ! e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
-            if (NodeArrow* clickedArrow = findArrowNear({ (float) e.x, (float) e.y }, arrowHoverRadius)) {
-                showArrowContextMenu(clickedArrow);
-                return;
-            }
-            if (DanglingArrow* clickedDangling = findDanglingArrowNear({ (float) e.x, (float) e.y }, arrowHoverRadius)) {
-                showDanglingArrowContextMenu(clickedDangling);
-                return;
-            }
-        }
-
-        if (! canvas->paintMode && ! e.mods.isShiftDown()) {
-            if (DanglingArrow* arrow = canvas->hitTestDanglingArrowHead({ e.x, e.y }, danglingArrowGrabRadius)) {
-                draggingDanglingArrow = arrow;
-                if (canvas->gridOriginSet) {
-                    canvas->showGrid = true;
-                    canvas->repaint();
-                }
-                return;
-            }
-        }
-
-        if (! canvas->paintMode && ! e.mods.isShiftDown() && e.mods.isLeftButtonDown()) {
-            juce::Point<float> clickPoint { (float) e.x, (float) e.y };
-
-            if (NodeArrow* headArrow = findArrowHeadNear(clickPoint, arrowHeadGrabRadius)) {
-                canvas->setSelectedArrow(headArrow);
-                draggingArrowHeadNode = headArrow->endNode;
-                pressedOnArrow = true;
-                isDragStart = true;
-                return;
-            }
-
-            if (NodeArrow* clickedArrow = findArrowNear(clickPoint, arrowHoverRadius)) {
-                canvas->setSelectedArrow(clickedArrow);
-                pressedOnArrow = true;
-                return;
-            }
-
-            if (DanglingArrow* clickedDangling = findDanglingArrowNear(clickPoint, arrowHoverRadius)) {
-                canvas->setSelectedDanglingArrow(clickedDangling);
-                pressedOnArrow = true;
-                return;
-            }
-
-            canvas->clearArrowSelection();
-        }
-
-        auto parent = component->getParentComponent();
-        if (auto* dynamicPort = dynamic_cast<DynamicPort*>(parent)) {
-            dynamicPort->mouseDown(e.getEventRelativeTo(dynamicPort));
-        }
-
-        if (e.mods.isShiftDown() && e.mods.isLeftButtonDown()) {
-            NodePosition nodePosition;
-
-            nodePosition.xPosition = e.x;
-            nodePosition.yPosition = e.y;
-            nodePosition.radius    = 20;
-
-            undoManager->beginNewTransaction();
-            NodeFactory::createRootNode(nodePosition,undoManager);
-        }
+    if (NodeCanvas* clickedCanvas = dynamic_cast<NodeCanvas*>(e.eventComponent)) {
+        handleCanvasMouseDown(e, *clickedCanvas);
     }
-    else if (Node* node= dynamic_cast<Node*>(component) ) {
-
-        dragParentCenter = node->getNodeCentre().toFloat();
-
-        if (node->nodeTextEditor != nullptr && node->nodeTextEditor->isVisible()) {
-            auto localPos = e.getEventRelativeTo(node->nodeTextEditor.get()).getPosition();
-            if (node->nodeTextEditor->getLocalBounds().contains(localPos)) {
-                isDraggingValue = true;
-                dragStartValue = node->nodeTextEditor->bindValue.toString().getDoubleValue();
-                draggingValueNode = node;
-                return;
-            }
-        }
-
-        creatingDanglingArrow = nodeCanvas->arrowMode
-            && e.mods.isLeftButtonDown()
-            && e.mods.isShiftDown();
-
-        draggingFlagConnection = ! nodeCanvas->arrowMode
-            && node->nodeType == NodeType::TraversalFlag
-            && e.mods.isLeftButtonDown()
-            && e.mods.isShiftDown();
-
-        flagConnectionSourceId = draggingFlagConnection ? node->getComponentID().getIntValue() : -1;
-        flagConnectionTarget   = nullptr;
-
-        node->setHoverVisual(true);
-        nodeCanvas->clearArrowSelection();
-        int nodeId = node->getComponentID().getIntValue();
-
-        for (auto& [nodeId, canvasNode] : nodeCanvas->nodeMap) {
-            if(canvasNode != node) {
-                canvasNode->setSelectVisual(false);
-            }
-        }
-
-       if(e.mods.isRightButtonDown() && e.mods.isShiftDown()) {
-
-            undoManager->beginNewTransaction();
-            NodeFactory::destroyNode(nodeId, undoManager);
-        }
-        else {
-            node->setSelectVisual();
-        }
+    else if (Node* clickedNode = dynamic_cast<Node*>(e.eventComponent)) {
+        handleNodeMouseDown(e, *clickedNode);
     }
 }
 
@@ -642,7 +683,120 @@ void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &ne
     newPosition.xPosition = snapped.x;
     newPosition.yPosition = snapped.y;
 
-    ValueTreeState::setNodePosition(draggedNodeTree, newPosition, undoManager);
+    applicationContext.valueTreeState->setNodePosition(draggedNodeTree, newPosition, undoManager);
+}
+
+void NodeController::dragValue(const juce::MouseEvent& e)
+{
+    const int    yOffset  = e.getOffsetFromDragStart().y;
+    const int    delta    = -yOffset / 3;
+    const double newValue = dragStartValue + delta;
+
+    draggingValueNode->nodeTextEditor->bindValue.setValue(newValue);
+    draggingValueNode->nodeTextEditor->formatDisplay(draggingValueNode->nodeTextEditor->mode);
+}
+
+void NodeController::dragDanglingTip(const juce::MouseEvent& e, NodeCanvas& canvas)
+{
+    Node* startNode = draggingDanglingArrow->startNode;
+
+    if (startNode == nullptr) {
+        return;
+    }
+
+    const juce::Point<int> snapped = snapPointToGrid(e.getEventRelativeTo(&canvas).getPosition());
+    const juce::Point<int> centre  = startNode->getNodeCentre();
+
+    canvas.danglingArrowLayer.setTip(draggingDanglingArrow, { snapped.x - centre.x, snapped.y - centre.y });
+}
+
+void NodeController::dragFlagConnection(const juce::MouseEvent& e, Node& node, const NodePosition& newPosition)
+{
+    NodeCanvas* canvas = applicationContext.canvas;
+
+    showGrid(*canvas);
+
+    const juce::Point<int> cursor { newPosition.xPosition, newPosition.yPosition };
+    flagConnectionTarget = findConnectionTarget(cursor, flagConnectionSourceId);
+
+    const juce::Point<int> centre = node.getNodeCentre();
+    const juce::Point<int> tip    = flagConnectionTarget != nullptr
+        ? flagConnectionTarget->getNodeCentre()
+        : snapPointToGrid(cursor);
+
+    canvas->danglingArrowLayer.updatePreview(&node, { tip.x - centre.x, tip.y - centre.y }, true);
+}
+
+void NodeController::handleCanvasMouseDrag(const juce::MouseEvent& e, NodeCanvas& canvas)
+{
+    if (dragState == DragState::MovingArrowHead && draggingArrowHeadNode != nullptr) {
+        if (e.getDistanceFromDragStart() < dragThreshold) {
+            return;
+        }
+
+        const int nodeId = draggingArrowHeadNode->getComponentID().getIntValue();
+        const auto position = e.getEventRelativeTo(&canvas).getPosition();
+
+        NodePosition newPosition;
+        newPosition.xPosition = position.x;
+        newPosition.yPosition = position.y;
+        newPosition.radius    = defaultNodeRadius;
+
+        handleNodeDrag(applicationContext.undoManager, nodeId, newPosition);
+        return;
+    }
+
+    if (dragState == DragState::ArrowSelected) {
+        return;
+    }
+
+    if (auto* dynamicPort = dynamic_cast<DynamicPort*>(canvas.getParentComponent())) {
+        dynamicPort->mouseDrag(e.getEventRelativeTo(dynamicPort));
+    }
+}
+
+void NodeController::handleNodeMouseDrag(const juce::MouseEvent& e, Node& node)
+{
+    NodeCanvas* canvas = applicationContext.canvas;
+    juce::UndoManager* undoManager = applicationContext.undoManager;
+
+    const int  nodeId   = node.getComponentID().getIntValue();
+    const auto position = e.getEventRelativeTo(node.getParentComponent());
+
+    NodePosition newPosition;
+    newPosition.xPosition = position.x;
+    newPosition.yPosition = position.y;
+    newPosition.radius    = defaultNodeRadius;
+
+    if (e.getDistanceFromDragStart() < dragThreshold || !e.mods.isLeftButtonDown()) {
+        return;
+    }
+
+    if (dragState == DragState::CreatingDanglingArrow && canvas->danglingArrowLayer.isArrowMode()) {
+        updateConnectionPreview(&node, newPosition, false);
+        return;
+    }
+
+    if (dragState == DragState::ConnectingFlag) {
+        dragFlagConnection(e, node, newPosition);
+        return;
+    }
+
+    if (!e.mods.isShiftDown() && !e.mods.isCtrlDown() && !draggedNodeTree.isValid()) {
+        handleNodeDrag(undoManager, nodeId, newPosition);
+        return;
+    }
+
+    if (isDragStart) {
+        isDragStart = false;
+        handleNodeDragStart(undoManager, &node, nodeId, newPosition, e.mods);
+        return;
+    }
+
+    if (draggedNodeTree.isValid()) {
+        snapToGrid(undoManager, newPosition, draggedNodeTree);
+        checkRootNodeSnap(newPosition);
+    }
 }
 
 void NodeController::mouseDrag(const juce::MouseEvent& e)
@@ -657,115 +811,23 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         return;
     }
 
-    if (isDraggingValue && draggingValueNode != nullptr) {
-        int yOffset = e.getOffsetFromDragStart().y;
-        int delta = -yOffset / 3;
-        double newValue = dragStartValue + delta;
-        draggingValueNode->nodeTextEditor->bindValue.setValue(newValue);
-        draggingValueNode->nodeTextEditor->formatDisplay(draggingValueNode->nodeTextEditor->mode);
+    if (dragState == DragState::EditingValue && draggingValueNode != nullptr) {
+        dragValue(e);
         return;
     }
 
     if (draggingDanglingArrow != nullptr) {
-        Node* startNode = draggingDanglingArrow->startNode;
-        if (startNode != nullptr) {
-            auto pos = e.getEventRelativeTo(canvas).getPosition();
-            juce::Point<int> snapped = snapPointToGrid(pos);
-            juce::Point<int> centre = startNode->getNodeCentre();
-            canvas->setDanglingArrowTip(draggingDanglingArrow, { snapped.x - centre.x, snapped.y - centre.y });
-        }
+        dragDanglingTip(e, *canvas);
         return;
     }
 
-    juce::Component* component = e.eventComponent;
-    juce::UndoManager* undoManager = applicationContext.undoManager;
-
-    if (NodeCanvas* nodeCanvas = dynamic_cast<NodeCanvas*>(component)) {
-
-        if (draggingArrowHeadNode != nullptr) {
-            if (e.getDistanceFromDragStart() < 5) {
-                return;
-            }
-
-            int nodeId = draggingArrowHeadNode->getComponentID().getIntValue();
-            auto pos = e.getEventRelativeTo(nodeCanvas).getPosition();
-
-            NodePosition newPosition;
-            newPosition.xPosition = pos.x;
-            newPosition.yPosition = pos.y;
-            newPosition.radius    = 20;
-
-            handleNodeDrag(undoManager, nodeId, newPosition);
-            return;
-        }
-
-        if (pressedOnArrow) {
-            return;
-        }
-
-        auto parent = component->getParentComponent();
-
-        if (auto* dynamicPort = dynamic_cast<DynamicPort*>(parent)) {
-            auto parentEvent = e.getEventRelativeTo(dynamicPort);
-            dynamicPort->mouseDrag(parentEvent);
-        }
+    if (NodeCanvas* draggedCanvas = dynamic_cast<NodeCanvas*>(e.eventComponent)) {
+        handleCanvasMouseDrag(e, *draggedCanvas);
         return;
     }
 
-    if (Node* node = dynamic_cast<Node*>(component)) {
-
-        int nodeId = node->getComponentID().getIntValue();
-        NodePosition newPosition;
-
-        int defaultRadius = 20;
-
-        auto pos = e.getEventRelativeTo(node->getParentComponent());
-        newPosition.xPosition = pos.x;
-        newPosition.yPosition = pos.y;
-        newPosition.radius    = defaultRadius;
-
-        if (e.getDistanceFromDragStart() < 5 || !e.mods.isLeftButtonDown()) {
-            return;
-        }
-
-        if (canvas->arrowMode && creatingDanglingArrow) {
-            updateConnectionPreview(node, newPosition, false);
-            return;
-        }
-
-        if (draggingFlagConnection) {
-            if (canvas->gridOriginSet) {
-                canvas->showGrid = true;
-                canvas->repaint();
-            }
-
-            juce::Point<int> cursor { newPosition.xPosition, newPosition.yPosition };
-            flagConnectionTarget = findConnectionTarget(cursor, flagConnectionSourceId);
-
-            juce::Point<int> centre = node->getNodeCentre();
-            juce::Point<int> tip = flagConnectionTarget != nullptr
-                ? flagConnectionTarget->getNodeCentre()
-                : snapPointToGrid(cursor);
-
-            canvas->updateDanglingPreview(node, { tip.x - centre.x, tip.y - centre.y }, true);
-            return;
-        }
-
-        if (!e.mods.isShiftDown() && !e.mods.isCtrlDown() && !draggedNodeTree.isValid()) {
-            handleNodeDrag(undoManager, nodeId, newPosition);
-            return;
-        }
-
-        if (isDragStart) {
-            isDragStart = false;
-            handleNodeDragStart(undoManager, node, nodeId, newPosition, e.mods);
-            return;
-        }
-
-        if (draggedNodeTree.isValid()) {
-            snapToGrid(undoManager, newPosition, draggedNodeTree);
-            checkRootNodeSnap(newPosition);
-        }
+    if (Node* draggedNode = dynamic_cast<Node*>(e.eventComponent)) {
+        handleNodeMouseDrag(e, *draggedNode);
     }
 }
 
@@ -786,22 +848,22 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
 
     if (nodeControllerMode == NodeControllerMode::Node) {
         if (makeAlt) {
-            draggedNodeTree = NodeFactory::createAlternativeNode(nodeId, newPosition, undoManager);
+            draggedNodeTree = NodeFactory::createAlternativeNode(*applicationContext.valueTreeState, nodeId, newPosition, undoManager);
         }
         else {
-            draggedNodeTree = NodeFactory::createNode(nodeId, newPosition, undoManager);
+            draggedNodeTree = NodeFactory::createNode(*applicationContext.valueTreeState, nodeId, newPosition, undoManager);
         }
     }
     else if (nodeControllerMode == NodeControllerMode::Modulator) {
         if (nodeType == ValueTreeIdentifiers::ModulatorRootData || nodeType == ValueTreeIdentifiers::ModulatorData) {
-            draggedNodeTree = NodeFactory::createModulator(nodeId, newPosition, undoManager);
+            draggedNodeTree = NodeFactory::createModulator(*applicationContext.valueTreeState, nodeId, newPosition, undoManager);
         }
         else {
-            draggedNodeTree = NodeFactory::createModulatorRoot(nodeId, newPosition, undoManager);
+            draggedNodeTree = NodeFactory::createModulatorRoot(*applicationContext.valueTreeState, nodeId, newPosition, undoManager);
         }
     }
     else if (nodeControllerMode == NodeControllerMode::TraversalFlag) {
-        draggedNodeTree = NodeFactory::createTraversalFlagNode(nodeId, newPosition, undoManager);
+        draggedNodeTree = NodeFactory::createTraversalFlagNode(*applicationContext.valueTreeState, nodeId, newPosition, undoManager);
     }
 }
 
@@ -816,7 +878,7 @@ void NodeController::updateConnectionPreview(Node *node, const NodePosition& new
 
     juce::Point<int> snapped = snapPointToGrid({ newPosition.xPosition, newPosition.yPosition });
     juce::Point<int> centre  = node->getNodeCentre();
-    canvas->updateDanglingPreview(node, { snapped.x - centre.x, snapped.y - centre.y }, dashed);
+    canvas->danglingArrowLayer.updatePreview(node, { snapped.x - centre.x, snapped.y - centre.y }, dashed);
 }
 
 Node* NodeController::findConnectionTarget(juce::Point<int> point, int excludeNodeId) const
@@ -859,7 +921,7 @@ void NodeController::commitFlagConnection(int sourceNodeId, Node* target)
 
     juce::UndoManager* undoManager = applicationContext.undoManager;
     undoManager->beginNewTransaction();
-    ValueTreeState::connectNodes(sourceNodeId, targetNodeId, undoManager);
+    applicationContext.valueTreeState->connectNodes(sourceNodeId, targetNodeId, undoManager);
 
     canvas->addLinePoints(sourceIt->second, target);
     canvas->updateLinePoints(sourceIt->second);
@@ -869,10 +931,10 @@ void NodeController::commitFlagConnection(int sourceNodeId, Node* target)
         arrowIt->second->triggerSnapAnimation();
     }
 
-    juce::ValueTree sourceTree = ValueTreeState::getNode(sourceNodeId);
+    juce::ValueTree sourceTree = applicationContext.valueTreeState->getNode(sourceNodeId);
     if (sourceTree.isValid()) {
         int rootId = sourceTree.getProperty(ValueTreeIdentifiers::RootNodeId);
-        juce::ValueTree rootTree = ValueTreeState::getNode(rootId);
+        juce::ValueTree rootTree = applicationContext.valueTreeState->getNode(rootId);
         if (rootTree.isValid()) {
             applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
         }
@@ -890,8 +952,8 @@ void NodeController::handleNodeDrag(juce::UndoManager *undoManager, int nodeId, 
         }
     }
 
-    juce::ValueTree nodeValueTree = ValueTreeState::getNode(nodeId);
-    NodePosition oldPosition = ValueTreeState::getNodePosition(nodeId);
+    juce::ValueTree nodeValueTree = applicationContext.valueTreeState->getNode(nodeId);
+    NodePosition oldPosition = applicationContext.valueTreeState->getNodePosition(nodeId);
 
     snapToGrid(undoManager, newPosition, nodeValueTree);
 

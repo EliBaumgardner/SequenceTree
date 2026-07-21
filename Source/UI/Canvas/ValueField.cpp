@@ -131,7 +131,7 @@ void ValueField::render()
             continue;
         }
 
-        juce::ValueTree notes = ValueTreeState::getMidiNotes(id);
+        juce::ValueTree notes = owner.getApplicationContext().valueTreeState->getMidiNotes(id);
         juce::ValueTree note  = notes.getChild(0);
 
         if (!note.isValid()) {
@@ -251,7 +251,7 @@ void ValueField::seedStrokeDensityFromNodes()
             continue;
         }
 
-        juce::ValueTree notes = ValueTreeState::getMidiNotes(id);
+        juce::ValueTree notes = owner.getApplicationContext().valueTreeState->getMidiNotes(id);
         juce::ValueTree note  = notes.getChild(0);
 
         if (!note.isValid()) {
@@ -425,7 +425,7 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
 
         const int value = juce::jlimit(0, 127, (int) std::round(sample * 127.0f));
 
-        juce::ValueTree notes = ValueTreeState::getMidiNotes(id);
+        juce::ValueTree notes = owner.getApplicationContext().valueTreeState->getMidiNotes(id);
         juce::ValueTree note  = notes.getChild(0);
 
         if (!note.isValid()) {

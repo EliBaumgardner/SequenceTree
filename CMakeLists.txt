@@ -43,6 +43,7 @@ target_sources(SequenceTree PRIVATE
         Source/Audio/NoteScheduler.cpp
         Source/Audio/TraversalLogic.cpp
         Source/Audio/TraversalDispatcher.cpp
+        Source/Audio/TraversalSession.cpp
         Source/Graph/RTGraphBuilder.cpp
         Source/Graph/ValueTreeState.cpp
         Source/Graph/ValueTreeIdentifiers.cpp
@@ -51,6 +52,8 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Canvas/NodeCanvas.cpp
         Source/UI/Canvas/NodeCanvasTreeListener.cpp
         Source/UI/Canvas/ValueField.cpp
+        Source/UI/Canvas/AudioCommandDrainer.cpp
+        Source/UI/Canvas/DanglingArrowLayer.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
         Source/UI/Node/NodeArrow.cpp
@@ -58,9 +61,9 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Node/ValueEditor.cpp
         Source/UI/Node/Modulator.cpp
         Source/UI/Node/TraversalFlagNode.cpp
+        Source/UI/Theme/Theme.cpp
         Source/UI/Theme/CustomLookAndFeel.cpp
         Source/UI/Theme/CustomLookAndFeel_Nodes.cpp
-        Source/UI/Theme/CustomLookAndFeel_Menus.cpp
         Source/UI/Theme/CustomLookAndFeel_Buttons.cpp
         Source/UI/Theme/CustomTextEditor.cpp
         Source/UI/Theme/CustomTextCaret.cpp
@@ -71,6 +74,8 @@ target_sources(SequenceTree PRIVATE
         Source/UI/NodeMenu.cpp
         Source/UI/TraversalDisplayMenu.cpp
         Source/UI/AllowedTraversalsMenu.cpp
+        Source/UI/TraversalRulesMenu.cpp
+        Source/UI/Buttons/EditTraversalRulesButton.cpp
         Source/UI/ColourSelector.cpp
         Source/UI/PianoRoll.cpp
         Source/UI/Titlebar.cpp
