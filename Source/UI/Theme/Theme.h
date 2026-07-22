@@ -8,18 +8,9 @@
 
 struct Theme
 {
-    void setColorIntensityFactor(float factor);
-    float getColorIntensityFactor() const { return colorIntensityFactor; }
-
-    juce::Colour applyIntensity(juce::Colour base) const;
-
     juce::Colour getButtonColour() const { return buttonColour; }
     juce::Colour getTextColour()   const { return textColour; }
     juce::Colour getBarColour()    const { return barColour; }
-
-    void updateColours();
-
-    float colorIntensityFactor        = 0.2f;
 
     juce::Colour dropShadowColour     = juce::Colours::black;
     juce::Colour baseDarkColour1      = juce::Colour::fromRGB(40,40,38);

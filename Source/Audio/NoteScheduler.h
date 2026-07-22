@@ -20,12 +20,15 @@ public:
 
     struct ActiveNote
     {
-        MidiEvent event;
-        int       instanceId       = 0;
-        int       remainingSamples = 0;
-        RTNode    noteNode;
-        bool      isConnectionTrigger = false;
+        MidiEvent        event;
+        int              instanceId       = 0;
+        int              remainingSamples = 0;
+        int              nodeId           = 0;
+        RTNode::NodeType nodeType         = RTNode::NodeType::Node;
+        bool             isConnectionTrigger = false;
     };
+
+    static constexpr int maxExpectedActiveNotes = 256;
 
     std::vector<ActiveNote> activeNotes;
 
@@ -35,7 +38,8 @@ public:
                       juce::MidiBuffer& midiMessages,
                       double sampleRate, double tempoMultiplier,
                       int duration, bool isConnectionTrigger = false, int channel = -1, int transpose = 0,
-                      double velocityMultiplier = 1.0);
+                      double velocityMultiplier = 1.0,
+                      int pitchOverride = -1, int velocityOverride = -1);
 
     void sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
     void removeNote(int index);

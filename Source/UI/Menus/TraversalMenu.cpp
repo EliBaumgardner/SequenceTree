@@ -4,9 +4,9 @@
 
 #include "TraversalMenu.h"
 #include "TraversalMenuListener.h"
-#include "../Util/ApplicationContext.h"
-#include "../Graph/ValueTreeState.h"
-#include "Theme/CustomLookAndFeel.h"
+#include "../../Util/ApplicationContext.h"
+#include "../../Graph/ValueTreeState.h"
+#include "../Theme/CustomLookAndFeel.h"
 
 TraversalMenu::TraversalMenu(ApplicationContext& context, bool showResizer)
     : ResizablePanel(context, ResizeEdge::Left, resizerWidth, showResizer),
@@ -74,7 +74,7 @@ TraversalMenu::TraversalMenu(ApplicationContext& context, bool showResizer)
 
     addAndMakeVisible(editTraversalRulesButton.get());
 
-    displayMenu.onTraversalSelected = [this](int traversalId) {
+    displayMenu.onItemSelected = [this](int traversalId) {
         selectTraversal(traversalId);
     };
 
@@ -87,7 +87,7 @@ TraversalMenu::TraversalMenu(ApplicationContext& context, bool showResizer)
         juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap.getChild(i);
         if (traversalData.getType() == ValueTreeIdentifiers::TraversalData) {
             int traversalId = traversalData.getProperty(ValueTreeIdentifiers::TraversalId);
-            displayMenu.addTraversalToMenu(traversalId);
+            addTraversalToMenu(traversalId);
             if (firstTraversalId == -1) {
                 firstTraversalId = traversalId;
             }
@@ -97,6 +97,10 @@ TraversalMenu::TraversalMenu(ApplicationContext& context, bool showResizer)
     if (firstTraversalId != -1) {
         selectTraversal(firstTraversalId);
     }
+}
+
+void TraversalMenu::addTraversalToMenu(int traversalId) {
+    displayMenu.addItem(traversalId, "Traversal " + juce::String(traversalId));
 }
 
 void TraversalMenu::selectTraversal(int traversalId) {
@@ -129,9 +133,7 @@ void TraversalMenu::selectTraversal(int traversalId) {
     colourSelector.colour = colourString.isNotEmpty() ? juce::Colour::fromString(colourString) : juce::Colours::white;
     colourSelector.repaint();
 
-    displayMenu.selectedOption = "Traversal " + juce::String(traversalId);
-    displayMenu.resized();
-    displayMenu.repaint();
+    displayMenu.setSelectedItem(traversalId);
 }
 
 TraversalMenu::~TraversalMenu() {

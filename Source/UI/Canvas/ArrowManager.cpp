@@ -8,7 +8,6 @@
 #include "NodeManager.h"
 #include "../Node/Arrow.h"
 #include "../Node/Node.h"
-#include "../Node/NodeTextEditor.h"
 #include "../../Graph/ValueTreeState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
@@ -143,9 +142,8 @@ void ArrowManager::refreshFor(Node* movedNode)
         }
 
         if (! arrow->isDangling()) {
-            const NodeDisplayMode mode = movedNode->mode;
-            parentNode->nodeTextEditor->formatDisplay(mode);
-            childNode->nodeTextEditor->formatDisplay(mode);
+            parentNode->refreshValueDisplay();
+            childNode->refreshValueDisplay();
         }
 
         arrow->setArrowBounds();

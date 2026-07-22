@@ -72,9 +72,8 @@ int Arrow::getDuration() const
     }
 
     const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
-    const int span = startNode->isAlternativeNode ? std::abs(delta.y) : std::abs(delta.x);
 
-    return (int)((float)span * durationAmount);
+    return ArrowDuration::fromDelta(delta.x, delta.y, startNode->isAlternativeNode);
 }
 
 juce::String Arrow::getDurationLabel() const

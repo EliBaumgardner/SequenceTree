@@ -1,21 +1,28 @@
 #include "TraversalSession.h"
 #include "EventManager.h"
 
+#include <algorithm>
 #include <unordered_set>
 
 TraversalSession::TraversalSession(EventManager& eventManager) : eventManager(eventManager)
 {
+    activeRootIdScratch.reserve(scratchCapacity);
+}
+
+void TraversalSession::prepare()
+{
+    traversals.prepare(maxConcurrentTraversals, eventManager.bridge);
 }
 
 void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
 {
     for (auto& note : eventManager.scheduler.activeNotes)
     {
-        if (NoteScheduler::isNodeAudible(note.noteNode.nodeType) && !note.isConnectionTrigger) {
-            midiMessages.addEvent(juce::MidiMessage::noteOff(1, note.event.pitch), 0);
+        if (NoteScheduler::isNodeAudible(note.nodeType) && !note.isConnectionTrigger) {
+            midiMessages.addEvent(juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch), 0);
         }
 
-        eventManager.bridge.highlightNode(note.noteNode, false);
+        eventManager.bridge.highlightNode(note.nodeId, false);
     }
 
     eventManager.scheduler.activeNotes.clear();
@@ -51,32 +58,10 @@ void TraversalSession::restartActiveTraversals(const NodeMap& nodes, RTGraphs& r
 void TraversalSession::syncWithGraph(const NodeMap& nodes, RTGraphs& rtGraphs,
                                      juce::MidiBuffer& midiMessages)
 {
-    updateTraversalCounts(nodes);
     syncActiveTraversals(nodes);
     removeDeletedTraversals(nodes, midiMessages);
     startMissingTraversals(nodes, rtGraphs, midiMessages);
     syncTraversalLoopLimits(nodes, rtGraphs, midiMessages);
-}
-
-void TraversalSession::updateTraversalCounts(const NodeMap& nodes)
-{
-    for (const auto& [nodeId, node] : nodes) {
-        for (auto& [id, traverser] : traversals) {
-            if (!traverser.primary.counts.count(nodeId)) {
-                traverser.primary.counts[nodeId] = 0;
-            }
-        }
-    }
-
-    for (auto& [id, traverser] : traversals) {
-        for (auto it = traverser.primary.counts.begin(); it != traverser.primary.counts.end(); ) {
-            if (nodes.find(it->first) == nodes.end()) {
-                it = traverser.primary.counts.erase(it);
-            } else {
-                it = std::next(it);
-            }
-        }
-    }
 }
 
 void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
@@ -139,12 +124,17 @@ void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiB
 void TraversalSession::startMissingTraversals(const NodeMap& nodes, RTGraphs& rtGraphs,
                                               juce::MidiBuffer& midiMessages)
 {
-    std::unordered_set<int> activeRootIds;
+    activeRootIdScratch.clear();
+
     for (const auto& [id, traverser] : traversals) {
         if (traverser.isFlagSpawned) {
             continue;
         }
-        activeRootIds.insert(traverser.rootId);
+
+        if (std::find(activeRootIdScratch.begin(), activeRootIdScratch.end(), traverser.rootId)
+            == activeRootIdScratch.end()) {
+            activeRootIdScratch.push_back(traverser.rootId);
+        }
     }
 
     auto isActive = [this](int rootId, int traversalId) {
@@ -156,7 +146,7 @@ void TraversalSession::startMissingTraversals(const NodeMap& nodes, RTGraphs& rt
         return false;
     };
 
-    for (int rootId : activeRootIds) {
+    for (int rootId : activeRootIdScratch) {
         auto rootIt = nodes.find(rootId);
         if (rootIt == nodes.end()) {
             continue;
@@ -198,7 +188,7 @@ void TraversalSession::syncTraversalLoopLimits(const NodeMap& nodes, RTGraphs& r
                 auto rootIt = nodes.find(traversal.rootId);
                 if (rootIt != nodes.end()) {
                     eventManager.bridge.highlightNode(rootIt->second, true);
-                    eventManager.dispatcher.pushNote(rootIt->second, instanceId, midiMessages, 0, nodes, traversals);
+                    eventManager.dispatcher.pushNote(rootIt->second, instanceId, { nodes, traversals, midiMessages }, 0);
                 }
             }
         }
@@ -236,7 +226,7 @@ bool TraversalSession::startTraversalsFromFirstRoot(const NodeMap& nodes, RTGrap
         return false;
     }
 
-    const RTNode rootNode = nodes.at(rootId);
+    const RTNode& rootNode = nodes.at(rootId);
 
     for (const RTtraversal& traversal : rootNode.traversals) {
         startTraversal(rootNode, traversal, nodes, rtGraphs, midiMessages);
@@ -253,8 +243,13 @@ void TraversalSession::startTraversal(const RTNode& rootNode, const RTtraversal&
     const int traversalId = traversal.traversalId;
     const int instanceId  = nextTraversalInstanceId();
 
-    traversals.insert({ instanceId, TraversalLogic(rootId, eventManager.bridge, traversal) });
-    TraversalLogic& traversalLogic = traversals.at(instanceId);
+    TraversalLogic* acquired = traversals.acquire(instanceId, rootId, traversal);
+
+    if (acquired == nullptr) {
+        return;
+    }
+
+    TraversalLogic& traversalLogic = *acquired;
 
     traversalLogic.instanceId     = instanceId;
     traversalLogic.isFirstEvent   = true;
@@ -270,7 +265,7 @@ void TraversalSession::startTraversal(const RTNode& rootNode, const RTtraversal&
     traversalLogic.advanceAlternative(nodes, rootId);
 
     eventManager.bridge.highlightNode(rootNode, true, traversalId);
-    eventManager.dispatcher.pushNote(rootNode, instanceId, midiMessages, 0, nodes, traversals);
+    eventManager.dispatcher.pushNote(rootNode, instanceId, { nodes, traversals, midiMessages }, 0);
 }
 
 void TraversalSession::stopTraversalNotes(int instanceId, juce::MidiBuffer& midiMessages)
@@ -284,11 +279,11 @@ void TraversalSession::stopTraversalNotes(int instanceId, juce::MidiBuffer& midi
             continue;
         }
 
-        if (NoteScheduler::isNodeAudible(note.noteNode.nodeType) && !note.isConnectionTrigger) {
+        if (NoteScheduler::isNodeAudible(note.nodeType) && !note.isConnectionTrigger) {
             midiMessages.addEvent(juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch), 0);
         }
 
-        eventManager.bridge.highlightNode(note.noteNode, false);
+        eventManager.bridge.highlightNode(note.nodeId, false);
         eventManager.scheduler.removeNote(i);
     }
 }

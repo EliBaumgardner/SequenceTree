@@ -23,8 +23,6 @@
 
 class Arrow;
 
-class NodeTextEditor;
-
 class NodeCanvas;
 
 class Node : public juce::Component, public juce::Timer {
@@ -53,7 +51,8 @@ public:
     virtual juce::Point<int> getNodeCentre() const { return getBounds().getCentre(); }
 
     virtual void setDisplayMode(NodeDisplayMode mode);
-    void incrementNodeTextEditorValue(int incrementValue);
+    void incrementNodeValue(int incrementValue);
+    void refreshValueDisplay();
 
     Arrow* nodeArrow = nullptr;
     std::unordered_map<int, Arrow*> nodeArrows;
@@ -62,7 +61,7 @@ public:
     juce::ValueTree midiNoteData;
 
     NodeDisplayMode mode;
-    std::unique_ptr<NodeTextEditor> nodeTextEditor = nullptr;
+    ValueEditor nodeValueEditor;
 
     std::unique_ptr<IconButton> upButton;
     std::unique_ptr<IconButton> downButton;

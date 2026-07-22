@@ -6,9 +6,9 @@
 #define SEQUENCETREE_MENUBAR_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../Util/ApplicationContext.h"
-#include "../UI/Theme/CustomLookAndFeel.h"
-#include "Buttons/IconButton.h"
+#include "../../Util/ApplicationContext.h"
+#include "../Theme/CustomLookAndFeel.h"
+#include "../Buttons/IconButton.h"
 
 class MenuBar : public juce::Component {
 public:

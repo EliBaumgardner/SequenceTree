@@ -3,11 +3,11 @@
 //
 
 #include "MenuArea.h"
-#include "../Util/ApplicationContext.h"
-#include "Theme/CustomLookAndFeel.h"
-#include "../UI/MenuBar.h"
-#include "../UI/TraversalMenu.h"
-#include "../UI/NodeMenu.h"
+#include "../../Util/ApplicationContext.h"
+#include "../Theme/CustomLookAndFeel.h"
+#include "MenuBar.h"
+#include "TraversalMenu.h"
+#include "NodeMenu.h"
 
 MenuArea::MenuArea(ApplicationContext& context)
     : ResizablePanel(context, ResizeEdge::Right, resizerWidth)

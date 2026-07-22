@@ -15,9 +15,8 @@
 #include "../Util/ApplicationContext.h"
 #include "Buttons/IconButton.h"
 #include "Buttons/ButtonPane.h"
-#include "Buttons/DisplayMenu.h"
+#include "Menus/ItemSelector.h"
 #include "Buttons/TempoDisplay.h"
-#include "Buttons/ColorIntensityControl.h"
 #include "../Input/NodeController.h"
 
 class Titlebar : public juce::Component {
@@ -33,6 +32,7 @@ public:
 
 private:
 
+    void configureDisplaySelector();
     void configureModePane();
     void configureUndoRedoPane();
     void setControllerMode(NodeController::NodeControllerMode mode);
@@ -40,9 +40,8 @@ private:
     ApplicationContext& applicationContext;
 
     ButtonPane           buttonPane;
-    DisplayMenu          displaySelector;
+    ItemSelector         displaySelector;
     TempoDisplay         tempoDisplay;
-    ColorIntensityControl colorIntensityControl;
     std::unique_ptr<IconButton> playButton;
     std::unique_ptr<IconButton> resetButton;
     ButtonPane           undoRedoPane;

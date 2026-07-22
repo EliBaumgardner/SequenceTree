@@ -3,7 +3,6 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Graph/ValueTreeState.h"
 #include "../../Plugin/PluginProcessor.h"
-#include "../Node/NodeTextEditor.h"
 #include "../Node/Arrow.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
@@ -114,7 +113,6 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
     }
 
     for(auto& [graphID,graph] : applicationContext.rtGraphBuilder->rtGraphs) {
-        graph.get()->traversalRequested = start;
         applicationContext.processor->setNewGraph(graph);
     }
 

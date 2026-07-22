@@ -75,7 +75,6 @@ public:
     static const juce::Identifier VelocityMod;
     static const juce::Identifier DurationMod;
 
-    static const juce::Identifier ColorIntensityFactor;
 
     //Static ValueTrees
 

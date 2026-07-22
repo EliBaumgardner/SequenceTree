@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "ResizablePanel.h"
+#include "../ResizablePanel.h"
 
 class MenuBar;
 class TraversalMenu;

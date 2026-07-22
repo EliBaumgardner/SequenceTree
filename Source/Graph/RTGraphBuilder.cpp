@@ -13,17 +13,78 @@
 #include <unordered_set>
 
 #include "../Plugin/PluginProcessor.h"
-#include "../UI/Canvas/NodeCanvas.h"
-#include "../UI/Node/Node.h"
-#include "../UI/Node/Arrow.h"
-#include "../Util/ApplicationContext.h"
+#include "ArrowDuration.h"
 #include "ValueTreeState.h"
 #include "ValueTreeIdentifiers.h"
 
 
-RTGraphBuilder::RTGraphBuilder(ApplicationContext& context, NodeCanvas& canvasRef)
-    : applicationContext(context), canvas(canvasRef)
+RTGraphBuilder::RTGraphBuilder(SequenceTreeAudioProcessor& processorRef, ValueTreeState& valueTreeStateRef)
+    : processor(processorRef), valueTreeState(valueTreeStateRef)
 {
+}
+
+static juce::Point<int> nodeCentre(const juce::ValueTree& nodeValueTree)
+{
+    return { (int) nodeValueTree.getProperty(ValueTreeIdentifiers::XPosition),
+             (int) nodeValueTree.getProperty(ValueTreeIdentifiers::YPosition) };
+}
+
+static void collectDisabledTraversals(const juce::ValueTree& owner, std::unordered_set<int>& disabledSet)
+{
+    juce::ValueTree disabledTraversals = owner.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
+
+    if (!disabledTraversals.isValid()) {
+        return;
+    }
+
+    for (int i = 0; i < disabledTraversals.getNumChildren(); i++) {
+        disabledSet.insert((int) disabledTraversals.getChild(i).getProperty(ValueTreeIdentifiers::TraversalId));
+    }
+}
+
+void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNode& rtNode)
+{
+    const bool isAlternative = (nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData);
+    const juce::Point<int> centre = nodeCentre(nodeValueTree);
+
+    auto durationTo = [&](const juce::ValueTree& other) {
+        const juce::Point<int> delta = nodeCentre(other) - centre;
+        return ArrowDuration::fromDelta(delta.x, delta.y, isAlternative);
+    };
+
+    if (isAlternative) {
+        juce::ValueTree parent = valueTreeState.getNodeParent(rtNode.nodeID);
+
+        if (parent.isValid()) {
+            rtNode.durationMap[(int) parent.getProperty(ValueTreeIdentifiers::Id)] = durationTo(parent);
+        }
+    }
+
+    juce::ValueTree childIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+    for (int i = 0; i < childIds.getNumChildren(); i++) {
+        const int childId = childIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+        juce::ValueTree childTree = valueTreeState.getNode(childId);
+
+        if (!childTree.isValid() || childTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
+            continue;
+        }
+
+        rtNode.durationMap[childId] = durationTo(childTree);
+    }
+
+    juce::ValueTree danglingArrows = nodeValueTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+
+    for (int i = 0; i < danglingArrows.getNumChildren(); i++) {
+        juce::ValueTree arrowTree = danglingArrows.getChild(i);
+
+        const int tipX = arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX);
+        const int tipY = arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY);
+
+        rtNode.durationMap[rtNode.nodeID] = ArrowDuration::fromDelta(tipX, tipY, isAlternative);
+
+        collectDisabledTraversals(arrowTree, rtNode.disabledTraversalsByChild[rtNode.nodeID]);
+    }
 }
 
 void RTGraphBuilder::makeRTGraph(const juce::ValueTree& nodeValueTree)
@@ -42,13 +103,13 @@ void RTGraphBuilder::makeRTGraph(const juce::ValueTree& nodeValueTree)
         return;
     }
 
-    juce::ValueTree rootNodeValueTree = applicationContext.valueTreeState->getNode(rootNodeId);
+    juce::ValueTree rootNodeValueTree = valueTreeState.getNode(rootNodeId);
 
     if (!rootNodeValueTree.isValid()) {
         rtGraphs.erase(rootNodeId);
         auto emptyGraph = std::make_shared<RTGraph>();
         emptyGraph->graphID = rootNodeId;
-        applicationContext.processor->setNewGraph(emptyGraph);
+        processor.setNewGraph(emptyGraph);
         return;
     }
 
@@ -61,15 +122,13 @@ void RTGraphBuilder::makeRTGraph(const juce::ValueTree& nodeValueTree)
     createRTNodes(rootNodeValueTree, rtGraph, tempNodeMap);
     createRTNodeConnections(rtGraph, tempNodeMap);
 
-    rtGraph->traversalRequested = canvas.start;
-
     rtGraphs[rtGraph->graphID] = rtGraph;
-    applicationContext.processor->setNewGraph(rtGraph);
+    processor.setNewGraph(rtGraph);
 }
 
 void RTGraphBuilder::rebuildGraphsForTraversal(int traversalId)
 {
-    juce::ValueTree nodeMap = applicationContext.valueTreeState->nodeMap;
+    juce::ValueTree nodeMap = valueTreeState.nodeMap;
 
     std::unordered_set<int> rootsToRebuild;
 
@@ -96,7 +155,7 @@ void RTGraphBuilder::rebuildGraphsForTraversal(int traversalId)
     }
 
     for (int rootId : rootsToRebuild) {
-        juce::ValueTree rootNode = applicationContext.valueTreeState->getNode(rootId);
+        juce::ValueTree rootNode = valueTreeState.getNode(rootId);
         if (rootNode.isValid()) {
             makeRTGraph(rootNode);
         }
@@ -109,7 +168,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
     while(!stack.empty()) {
 
         juce::ValueTree currentValueTree = stack.back();
-        juce::ValueTree nodeParentValueTree = applicationContext.valueTreeState->getNodeParent(currentValueTree.getProperty(ValueTreeIdentifiers::Id));
+        juce::ValueTree nodeParentValueTree = valueTreeState.getNodeParent(currentValueTree.getProperty(ValueTreeIdentifiers::Id));
 
         juce::ValueTree nodeValueTreeChildren = currentValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
         juce::ValueTree nodeValueTreeTraversals = currentValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
@@ -153,7 +212,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
             for (int i = 0; i < nodeValueTreeTraversals.getNumChildren(); i++) {
                 juce::ValueTree traversalIdTree = nodeValueTreeTraversals.getChild(i);
                 int traversalId = traversalIdTree.getProperty(ValueTreeIdentifiers::TraversalId);
-                juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+                juce::ValueTree traversalData = valueTreeState.traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
                 RTtraversal rtTraversal;
 
                 rtTraversal.traversalId = traversalId;
@@ -202,27 +261,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
                 }
             }
 
-            Node* nodeFromTree = canvas.nodeManager.find(nodeId);
-
-            if (nodeFromTree != nullptr) {
-                for (auto& [childId, nodeArrow] : nodeFromTree->nodeArrows) {
-                    rtNode.durationMap[childId] = nodeArrow->getDuration();
-                }
-                for (Arrow* danglingArrow : canvas.arrowManager.all()) {
-                    if (danglingArrow->isDangling() && danglingArrow->startNode == nodeFromTree) {
-                        rtNode.durationMap[nodeId] = danglingArrow->getDuration();
-
-                        juce::ValueTree disabledTraversals = danglingArrow->arrowTree.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
-                        if (disabledTraversals.isValid()) {
-                            std::unordered_set<int>& disabledSet = rtNode.disabledTraversalsByChild[nodeId];
-
-                            for (int j = 0; j < disabledTraversals.getNumChildren(); j++) {
-                                disabledSet.insert((int) disabledTraversals.getChild(j).getProperty(ValueTreeIdentifiers::TraversalId));
-                            }
-                        }
-                    }
-                }
-            }
+            fillDurationMap(currentValueTree, rtNode);
 
 
             if (nodeType == ValueTreeIdentifiers::NodeData) {
@@ -276,13 +315,11 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
                 rtNode.notes.push_back(std::move(rtNote));
             }
 
-            // A traversal flag's connection to its target is a start marker, not a
-            // structural edge, so its children are never walked into the graph.
             if (nodeType != ValueTreeIdentifiers::TraversalFlagData) {
                 for (int i = 0; i < nodeValueTreeChildren.getNumChildren(); i++) {
                     juce::ValueTree childIdTree = nodeValueTreeChildren.getChild(i);
                     int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
-                    juce::ValueTree childDataTree = applicationContext.valueTreeState->getNode(childId);
+                    juce::ValueTree childDataTree = valueTreeState.getNode(childId);
 
                    if (childDataTree.getType() == ValueTreeIdentifiers::ModulatorRootData) {
                        rtNode.isConnectedToModulator = true;
@@ -315,7 +352,7 @@ void RTGraphBuilder::createRTNodeConnections(std::shared_ptr<RTGraph> rtGraph, s
             juce::ValueTree childIdTree = nodeChildrenIds.getChild(i);
             int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
 
-            juce::ValueTree childDataTree = applicationContext.valueTreeState->getNode(childId);
+            juce::ValueTree childDataTree = valueTreeState.getNode(childId);
 
             if (!childDataTree.isValid()) {
                 continue;
@@ -341,7 +378,7 @@ RTtraversal RTGraphBuilder::buildRTtraversal(int traversalId)
     RTtraversal rtTraversal;
     rtTraversal.traversalId = traversalId;
 
-    juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+    juce::ValueTree traversalData = valueTreeState.traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
     if (traversalData.isValid()) {
         rtTraversal.tempoMultiplier = traversalData.getProperty(ValueTreeIdentifiers::TempoMultiplier);
 
@@ -361,19 +398,13 @@ RTtraversal RTGraphBuilder::buildRTtraversal(int traversalId)
 
 void RTGraphBuilder::updateDurationMap(int nodeId)
 {
-    auto* processor = applicationContext.processor;
-    auto snap = std::atomic_load(&processor->audioSnapshot);
+    const auto* snap = processor.getPublishedSnapshot();
     if (!snap || !snap->globalNodes) {
         return;
     }
 
-    Node* node = canvas.nodeManager.find(nodeId);
-    if (node == nullptr) {
-        return;
-    }
-
-    juce::ValueTree nodeVT = applicationContext.valueTreeState->getNode(nodeId);
-    if (!nodeVT.isValid()) {
+    juce::ValueTree nodeValueTree = valueTreeState.getNode(nodeId);
+    if (!nodeValueTree.isValid()) {
         return;
     }
 
@@ -381,39 +412,33 @@ void RTGraphBuilder::updateDurationMap(int nodeId)
     newSnap->globalNodes = std::make_shared<NodeMap>(*snap->globalNodes);
     newSnap->rtGraphs    = snap->rtGraphs;
 
-    auto globalNodeIt = newSnap->globalNodes->find(nodeId);
-    if (globalNodeIt != newSnap->globalNodes->end()) {
+    auto refresh = [&](int targetId, const juce::ValueTree& targetTree) {
+        auto globalNodeIt = newSnap->globalNodes->find(targetId);
+        if (globalNodeIt == newSnap->globalNodes->end()) {
+            return;
+        }
+
         globalNodeIt->second.durationMap.clear();
-        for (auto& [childId, arrow] : node->nodeArrows)
-            globalNodeIt->second.durationMap[childId] = arrow->getDuration();
-        for (Arrow* danglingArrow : canvas.arrowManager.all()) {
-            if (danglingArrow->isDangling() && danglingArrow->startNode == node) {
-                globalNodeIt->second.durationMap[nodeId] = danglingArrow->getDuration();
-            }
-        }
+        fillDurationMap(targetTree, globalNodeIt->second);
+    };
+
+    refresh(nodeId, nodeValueTree);
+
+    juce::ValueTree parentValueTree = valueTreeState.getNodeParent(nodeId);
+    if (parentValueTree.isValid()) {
+        refresh((int) parentValueTree.getProperty(ValueTreeIdentifiers::Id), parentValueTree);
     }
 
-    juce::ValueTree parentVT = applicationContext.valueTreeState->getNodeParent(nodeId);
-    if (parentVT.isValid()) {
-        int parentId = parentVT.getProperty(ValueTreeIdentifiers::Id);
-        Node* parentNode = canvas.nodeManager.find(parentId);
-        if (parentNode != nullptr) {
-            auto globalParentIt = newSnap->globalNodes->find(parentId);
-            if (globalParentIt != newSnap->globalNodes->end()) {
-                globalParentIt->second.durationMap.clear();
-                for (auto& [childId, arrow] : parentNode->nodeArrows) {
-                    globalParentIt->second.durationMap[childId] = arrow->getDuration();
-                }
-                for (Arrow* danglingArrow : canvas.arrowManager.all()) {
-                    if (danglingArrow->isDangling() && danglingArrow->startNode == parentNode) {
-                        globalParentIt->second.durationMap[parentId] = danglingArrow->getDuration();
-                    }
-                }
-            }
-        }
-    }
-
-    processor->publishAudioSnapshot(newSnap);
+    processor.publishAudioSnapshot(newSnap);
 }
 
-void RTGraphBuilder::destroyRTGraph(Node* root) { }
+void RTGraphBuilder::rebuildAllGraphs()
+{
+    for (int i = 0; i < valueTreeState.nodeMap.getNumChildren(); ++i) {
+        juce::ValueTree node = valueTreeState.nodeMap.getChild(i);
+
+        if (node.getType() == ValueTreeIdentifiers::RootNodeData) {
+            makeRTGraph(node);
+        }
+    }
+}

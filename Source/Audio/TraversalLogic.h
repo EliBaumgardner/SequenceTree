@@ -84,7 +84,10 @@ public:
         int  countSourceCount  = 0;
     };
 
+    TraversalLogic() = default;
     TraversalLogic(int root, AudioUIBridge& bridge, RTtraversal traversal);
+
+    void reset(int root, const RTtraversal& newTraversal);
 
     StepResult handleNodeEvent(const NodeMap& nodes);
 
@@ -103,7 +106,7 @@ public:
 
     void registerTrigger(const NodeMap& nodes, int nodeId);
 
-    std::vector<int> peekCrossTreeNode(const NodeMap& nodes);
+    void peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& traverserIds);
     const RTNode* peekModulators(const NodeMap& nodes);
 
     const RTNode& getTargetNode   (const NodeMap& nodes) const;
@@ -125,5 +128,3 @@ public:
         nodeStates.clear();
     }
 };
-
-using TraversalMap = std::unordered_map<int, TraversalLogic>;

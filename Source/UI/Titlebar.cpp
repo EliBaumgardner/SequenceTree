@@ -21,7 +21,6 @@ Titlebar::Titlebar(ApplicationContext& context)
       buttonPane(context),
       displaySelector(context),
       tempoDisplay(context),
-      colorIntensityControl(context),
       undoRedoPane(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
@@ -43,7 +42,6 @@ Titlebar::Titlebar(ApplicationContext& context)
     addAndMakeVisible(playButton.get());
     addAndMakeVisible(resetButton.get());
     addAndMakeVisible(tempoDisplay);
-    //addAndMakeVisible(colorIntensityControl);
     addAndMakeVisible(buttonPane);
     addAndMakeVisible(displaySelector);
     addAndMakeVisible(undoRedoPane);
@@ -51,7 +49,7 @@ Titlebar::Titlebar(ApplicationContext& context)
     configureModePane();
     configureUndoRedoPane();
 
-    displaySelector.selectedOption = "show pitch";
+    configureDisplaySelector();
 
     playButton->onClick = [this]() {
         NodeCanvas& canvas = *applicationContext.canvas;
@@ -82,6 +80,28 @@ Titlebar::Titlebar(ApplicationContext& context)
 
     tempoDisplay.editor.onReturnKey = applyMultiplier;
     tempoDisplay.editor.onFocusLost = applyMultiplier;
+}
+
+void Titlebar::configureDisplaySelector()
+{
+    auto addDisplayMode = [this](int itemId, juce::String label, NodeDisplayMode mode) {
+        displaySelector.addItem(itemId, std::move(label), [this, mode]() {
+            applicationContext.canvas->nodeManager.setDisplayMode(mode);
+            applicationContext.currentDisplayMode = mode;
+
+            if (applicationContext.onDisplayModeChanged) {
+                applicationContext.onDisplayModeChanged(mode);
+            }
+        });
+    };
+
+    addDisplayMode(1, "show pitch",       NodeDisplayMode::Pitch);
+    addDisplayMode(2, "show velocity",    NodeDisplayMode::Velocity);
+    addDisplayMode(3, "show countLimit",  NodeDisplayMode::CountLimit);
+    addDisplayMode(4, "show channel",     NodeDisplayMode::Channel);
+    addDisplayMode(5, "show repeatValue", NodeDisplayMode::RepeatValue);
+
+    displaySelector.setSelectedItem(1);
 }
 
 void Titlebar::configureModePane()
@@ -159,8 +179,7 @@ void Titlebar::paint(juce::Graphics& g)
     };
 
     drawSep((resetButton->getRight() + tempoDisplay.getX()) / 2);
-    drawSep((tempoDisplay.getRight() + colorIntensityControl.getX()) / 2);
-    drawSep((colorIntensityControl.getRight() + undoRedoPane.getX()) / 2);
+    drawSep((tempoDisplay.getRight() + undoRedoPane.getX()) / 2);
     drawSep((buttonPane.getRight() + displaySelector.getX()) / 2);
 }
 
@@ -171,7 +190,6 @@ void Titlebar::resized()
 
     int buttonSize = std::min(bounds.getHeight(), bounds.getWidth() / 25);
     int tempoDisplayWidth = bounds.getWidth() / 8;
-    int colorIntensityWidth = bounds.getWidth() / 25;
     int buttonPaneWidth = bounds.getWidth() / 8;
     int displaySelectorWidth = bounds.getWidth() / 8;
     int undoRedoPaneWidth = bounds.getWidth() / 8;

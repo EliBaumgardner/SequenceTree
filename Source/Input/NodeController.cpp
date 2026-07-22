@@ -18,7 +18,7 @@
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "../Graph/RTGraphBuilder.h"
 #include "../Graph/ValueTreeState.h"
-#include "../UI/AllowedTraversalsMenu.h"
+#include "../UI/Menus/AllowedTraversalsMenu.h"
 #include "../UI/Theme/CustomLookAndFeel.h"
 
 
@@ -493,12 +493,12 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
 
     dragParentCenter = node.getNodeCentre().toFloat();
 
-    if (node.nodeTextEditor != nullptr && node.nodeTextEditor->isVisible()) {
-        auto localPosition = e.getEventRelativeTo(node.nodeTextEditor.get()).getPosition();
+    if (node.nodeValueEditor.isVisible()) {
+        auto localPosition = e.getEventRelativeTo(&node.nodeValueEditor).getPosition();
 
-        if (node.nodeTextEditor->getLocalBounds().contains(localPosition)) {
+        if (node.nodeValueEditor.getLocalBounds().contains(localPosition)) {
             dragState         = DragState::EditingValue;
-            dragStartValue    = node.nodeTextEditor->bindValue.toString().getDoubleValue();
+            dragStartValue    = node.nodeValueEditor.boundValue.toString().getDoubleValue();
             draggingValueNode = &node;
             return;
         }
@@ -603,8 +603,8 @@ void NodeController::dragValue(const juce::MouseEvent& e)
     const int    delta    = -yOffset / 3;
     const double newValue = dragStartValue + delta;
 
-    draggingValueNode->nodeTextEditor->bindValue.setValue(newValue);
-    draggingValueNode->nodeTextEditor->formatDisplay(draggingValueNode->nodeTextEditor->mode);
+    draggingValueNode->nodeValueEditor.boundValue.setValue(newValue);
+    draggingValueNode->refreshValueDisplay();
 }
 
 void NodeController::dragDanglingTip(const juce::MouseEvent& e, NodeCanvas& canvas)

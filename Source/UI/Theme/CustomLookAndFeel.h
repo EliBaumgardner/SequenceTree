@@ -16,13 +16,8 @@ class Arrow;
 struct ArrowGeometry;
 
 class CustomTextEditor;
-class NodeTextEditor;
-
-class PaintTool;
 
 class PaintToolSettings;
-
-class ArrowTool;
 
 class CustomLookAndFeel : public juce::LookAndFeel_V4, public Theme
 {
@@ -38,12 +33,9 @@ public:
         int newY;
     };
 
-    CustomLookAndFeel();
-
     static CustomLookAndFeel& get(juce::Component& c) { return static_cast<CustomLookAndFeel&>(c.getLookAndFeel()); }
 
     void drawEditor         (juce::Graphics& g, CustomTextEditor& editor);
-    void drawNodeTextEditor (juce::Graphics& g, NodeTextEditor& editor);
     juce::CaretComponent* createCaretComponent(juce::Component* keyFocusOwner) override;
 
     void drawCanvas         (juce::Graphics& g, const NodeCanvas& canvas);
@@ -78,9 +70,10 @@ public:
     void drawRedoIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawResetIcon      (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawPaintTool         (juce::Graphics& g, const PaintTool& paintTool);
+    void drawPaintToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawArrowToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+
     void drawPaintToolSettings (juce::Graphics& g, const PaintToolSettings& paintToolSettings);
-    void drawArrowTool         (juce::Graphics& g, const ArrowTool& arrowTool);
 
 };
 

@@ -6,6 +6,56 @@ TraversalLogic::TraversalLogic(int root, AudioUIBridge& b, RTtraversal traversal
 
 }
 
+static void resetWalker(TraversalLogic::Walker& walker)
+{
+    walker.counts.clear();
+    walker.switchCounts.clear();
+    walker.subRootCounts.clear();
+
+    walker.target = 0;
+    walker.last   = 0;
+
+    walker.subRootNode = -1;
+
+    walker.alternativeTarget = -1;
+    walker.alternativeLast   = -1;
+}
+
+void TraversalLogic::reset(int root, const RTtraversal& newTraversal)
+{
+    resetWalker(primary);
+    resetWalker(modulator);
+
+    nodeStates.clear();
+    chordCounts.clear();
+    crossTreeCounts.clear();
+    crossTreeSwitchCounts.clear();
+    triggerCounts.clear();
+
+    traversal = newTraversal;
+
+    activeModulatorRootId = -1;
+    modulatorHostId       = -1;
+
+    isFirstEvent   = false;
+    isLooping      = false;
+    isFlagSpawned  = false;
+    pendingRemoval = false;
+
+    flagSourceNodeId = -1;
+
+    instanceId        = 0;
+    rootId            = root;
+    referenceTargetId = 0;
+
+    loopCount            = 0;
+    loopLimit            = 0;
+    repeatCount          = 0;
+    modulatorRepeatCount = 0;
+
+    state = TraversalState::Start;
+}
+
 static bool isModulatorChild(RTNode::NodeType t) {
     return t == RTNode::NodeType::Modulator || t == RTNode::NodeType::ModulatorRoot;
 }
@@ -261,9 +311,7 @@ void TraversalLogic::advance(const NodeMap& nodes)
 
     auto targetIterator = nodes.find(targetId);
 
-    const RTNode& targetNode = targetIterator->second;
-
-    if (targetIterator == nodes.end() || targetNode.children.empty()) {
+    if (targetIterator == nodes.end() || targetIterator->second.children.empty()) {
         state = isLooping ? TraversalState::Reset : TraversalState::End;
         return;
     }
@@ -282,23 +330,23 @@ void TraversalLogic::advance(const NodeMap& nodes)
     if (chosenNodeId  != -1) {
         auto nextTargetIt = nodes.find(chosenNodeId);
 
+        nodeStates[chosenNodeId].lastNodeId = chosenNodeId;
+
         if (nextTargetIt == nodes.end()) {
             primary.alternativeTarget = -1;
         }
         else {
             primary.target = chosenNodeId;
             advanceAlternative(nodes,chosenNodeId);
-        }
 
-        nodeStates[chosenNodeId].lastNodeId = chosenNodeId;
+            int nextSubLoopCountLimit = nextTargetIt->second.subLoopCountLimit;
+            bool subLoopsForever      = (nextSubLoopCountLimit == 0);
+            bool subLoopsFinitely     = (nextSubLoopCountLimit > 1);
 
-        int nextSubLoopCountLimit = nextTargetIt->second.subLoopCountLimit;
-        bool subLoopsForever      = (nextSubLoopCountLimit == 0);
-        bool subLoopsFinitely     = (nextSubLoopCountLimit > 1);
-
-        if ((subLoopsForever || subLoopsFinitely) && primary.subRootNode == -1) {
-            primary.subRootNode = nextTargetIt->second.nodeID;
-            primary.subRootCounts[primary.subRootNode] = 0;
+            if ((subLoopsForever || subLoopsFinitely) && primary.subRootNode == -1) {
+                primary.subRootNode = nextTargetIt->second.nodeID;
+                primary.subRootCounts[primary.subRootNode] = 0;
+            }
         }
     }
 
@@ -322,9 +370,9 @@ const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes)
     return (itPeek != nodes.end()) ? &itPeek->second : nullptr;
 }
 
-std::vector<int> TraversalLogic::peekCrossTreeNode(const NodeMap& nodes)
+void TraversalLogic::peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& traverserIds)
 {
-    std::vector<int> traverserIds;
+    traverserIds.clear();
 
     auto scanHost = [&](int hostId) {
         auto hostIterator = nodes.find(hostId);
@@ -380,8 +428,6 @@ std::vector<int> TraversalLogic::peekCrossTreeNode(const NodeMap& nodes)
     if (primary.alternativeTarget != -1) {
         scanHost(primary.alternativeTarget);
     }
-
-    return traverserIds;
 }
 
 const RTNode* TraversalLogic::peekModulators(const NodeMap& nodes) {
@@ -479,13 +525,11 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(const NodeMap& nodes)
                             bool subRootLoopsForever = (subRootLimit == 0);
 
                             if (!subRootLoopsForever && subRootCount >= subRootLimit) {
-                                DBG("subRoot reached limit: " << primary.subRootNode << " count " << subRootCount);
                                 primary.subRootCounts[primary.subRootNode] = 0;
                                 primary.subRootNode = -1;
                                 result.rootForReset = rootId;
                             }
                             else {
-                                DBG("looping back to subRoot: " << primary.subRootNode << " count " << subRootCount);
                                 result.rootForReset = primary.subRootNode;
                                 primary.target = primary.subRootNode;
                                 result.enteredId = primary.subRootNode;

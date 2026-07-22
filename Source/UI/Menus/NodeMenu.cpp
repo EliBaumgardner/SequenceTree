@@ -3,9 +3,9 @@
 //
 
 #include "NodeMenu.h"
-#include "../Graph/ValueTreeIdentifiers.h"
-#include "Theme/CustomLookAndFeel.h"
-#include "Node/Node.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
+#include "../Theme/CustomLookAndFeel.h"
+#include "../Node/Node.h"
 
 NodeMenu::NodeMenu(ApplicationContext& context)
     : applicationContext(context)

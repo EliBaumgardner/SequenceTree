@@ -15,8 +15,7 @@ void Modulator::resized() {
     upButton->setBounds(editorArea.removeFromTop(4.0f));
     downButton->setBounds(editorArea.removeFromBottom(4.0f));
 
-    nodeTextEditor.get()->setBounds(editorArea);
-    nodeTextEditor.get()->setJustification(juce::Justification::centred);
+    nodeValueEditor.setBounds(editorArea);
 }
 
 void Modulator::paint(juce::Graphics& g) {

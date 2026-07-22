@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Util/PluginModules.h"
-#include "TraversalLogic.h"
+#include "TraversalPool.h"
 #include "../Graph/RTData.h"
 
 class EventManager;
@@ -11,6 +11,8 @@ class TraversalSession
 public:
 
     explicit TraversalSession(EventManager& eventManager);
+
+    void prepare();
 
     void silenceAllNotes(juce::MidiBuffer& midiMessages);
     void clearTraversals();
@@ -33,7 +35,6 @@ public:
 
 private:
 
-    void updateTraversalCounts  (const NodeMap& nodes);
     void syncActiveTraversals   (const NodeMap& nodes);
     void removeDeletedTraversals(const NodeMap& nodes, juce::MidiBuffer& midiMessages);
 
@@ -54,6 +55,11 @@ private:
     EventManager& eventManager;
 
     TraversalMap traversals;
+
+    static constexpr int scratchCapacity           = 256;
+    static constexpr int maxConcurrentTraversals   = 128;
+
+    std::vector<int> activeRootIdScratch;
 
     int traversalInstanceCounter = 0;
 };

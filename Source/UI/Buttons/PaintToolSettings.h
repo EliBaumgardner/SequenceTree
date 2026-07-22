@@ -8,31 +8,10 @@
 #include <juce_graphics/juce_graphics.h>
 #include "../../Util/ApplicationContext.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "DisplayMenu.h"
-#include "ColourSelector.h"
+#include "../Menus/ItemSelector.h"
+#include "../Menus/ColourSelector.h"
 #include "../Canvas/NodeCanvas.h"
 #include "ValueSlider.h"
-
-
-class PaintToolDisplayMenu : public DisplayMenu {
-public:
-
-
-    PaintToolDisplayMenu(ApplicationContext& context) : DisplayMenu(context) {
-        menu.clear();
-
-        menu.addItem(1,"Pitch");
-        menu.addItem(2,"Velocity");
-        menu.addItem(3,"Duration");
-    }
-
-    void paint(juce::Graphics& g) {
-        const Theme& theme = CustomLookAndFeel::get(*this);
-        auto bounds = getLocalBounds().toFloat().reduced(Theme::outerButtonBoundsReduction);
-        g.setColour(theme.buttonBarColour);
-        g.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
-    };
-};
 
 
 class PaintToolSettings : public juce::Component {
@@ -46,6 +25,8 @@ public:
     static constexpr int defaultHeight = 200;
 
     enum class PaintSetting {Pitch, Duration, Velocity};
+
+    static int itemIdFor(PaintSetting setting) { return (int) setting + 1; }
 
     struct ColourVariablePair {
         juce::Colour colour;
@@ -71,7 +52,7 @@ public:
 
     juce::TooltipWindow tooltipWindow { this, 800 };
 
-    std::unique_ptr<PaintToolDisplayMenu> displayMenu;
+    std::unique_ptr<ItemSelector>         displayMenu;
     std::unique_ptr<ColourSelector>       colourSelector;
     std::unique_ptr<ValueSlider>          valueSlider;
     std::unique_ptr<ValueSlider>          flowSlider;
@@ -80,7 +61,7 @@ public:
     PaintToolSettings(ApplicationContext& context) : context(context) {
         setLookAndFeel(context.lookAndFeel);
 
-        displayMenu = std::make_unique<PaintToolDisplayMenu>(context);
+        displayMenu = std::make_unique<ItemSelector>(context);
         colourSelector = std::make_unique<ColourSelector>(context);
         colourSelector->requiresNode = false;
         valueSlider = std::make_unique<ValueSlider>();
@@ -91,31 +72,18 @@ public:
         velocityPair.setting = PaintSetting::Velocity;
         durationPair.setting = PaintSetting::Duration;
 
-        displayMenu->button->onClick = [this] {
-            displayMenu->button->setSelected(true);
-            repaint();
-
-            displayMenu->menu.showMenuAsync(juce::PopupMenu::Options(), [this] (int result) {
-                displayMenu->button->setSelected(false);
-
-                switch (result) {
-                    case 1: displayMenu->selectedOption  = "Pitch";
-                        paintSetting = PaintSetting::Pitch;
-                        break;
-                    case 2: displayMenu->selectedOption  = "Velocity";
-                        paintSetting = PaintSetting::Velocity;
-                        break;
-                    case 3: displayMenu->selectedOption  = "Duration";
-                        paintSetting = PaintSetting::Duration;
-                        break;
-                }
-
-                setPaintMode(paintSetting);
-
-                displayMenu->resized();
+        auto addPaintSetting = [this](PaintSetting setting, juce::String label) {
+            displayMenu->addItem(itemIdFor(setting), std::move(label), [this, setting]() {
+                setPaintMode(setting);
                 resized();
             });
         };
+
+        addPaintSetting(PaintSetting::Pitch,    "Pitch");
+        addPaintSetting(PaintSetting::Velocity, "Velocity");
+        addPaintSetting(PaintSetting::Duration, "Duration");
+
+        displayMenu->setSelectedItem(itemIdFor(paintSetting));
 
         colourSelector->onColourPicked = [this](juce::Colour c) {
             currentPair().colour = c;
@@ -182,6 +150,7 @@ public:
     void setPaintMode(PaintSetting setting) {
 
         paintSetting = setting;
+        displayMenu->setSelectedItem(itemIdFor(setting));
 
         juce::Colour saved = currentPair().colour;
 

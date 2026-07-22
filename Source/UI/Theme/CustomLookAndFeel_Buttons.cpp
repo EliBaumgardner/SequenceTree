@@ -4,9 +4,7 @@
 
 #include "CustomLookAndFeel.h"
 #include "Buttons/ButtonConstants.h"
-#include "../Buttons/PaintTool.h"
 #include "../Buttons/PaintToolSettings.h"
-#include "../Buttons/ArrowTool.h"
 
 void CustomLookAndFeel::drawPlayIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
@@ -236,10 +234,10 @@ void CustomLookAndFeel::drawTextButton(juce::Graphics &g, juce::Rectangle<float>
     g.drawText(state.text, bounds, juce::Justification::centred);
 }
 
-void CustomLookAndFeel::drawPaintTool(juce::Graphics &g, const PaintTool &paintTool) {
+void CustomLookAndFeel::drawPaintToolIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state) {
 
-    auto area = paintTool.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
-    g.setColour(buttonColour);
+    auto area = bounds.reduced(outerButtonBoundsReduction);
+    g.setColour(state.isSelected ? buttonColour.brighter(0.3f) : buttonColour);
     g.fillRect(area);
 
     int wandBoundsReduction = 2;
@@ -267,10 +265,10 @@ void CustomLookAndFeel::drawPaintTool(juce::Graphics &g, const PaintTool &paintT
     g.fillEllipse(tipBounds);
 }
 
-void CustomLookAndFeel::drawArrowTool(juce::Graphics &g, const ArrowTool &arrowTool)
+void CustomLookAndFeel::drawArrowToolIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
-    auto area = arrowTool.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
-    g.setColour(arrowTool.isSelected ? buttonColour.brighter(0.3f) : buttonColour);
+    auto area = bounds.reduced(outerButtonBoundsReduction);
+    g.setColour(state.isSelected ? buttonColour.brighter(0.3f) : buttonColour);
     g.fillRect(area);
 
     auto glyphArea = area.reduced(area.getWidth() * 0.22f, area.getHeight() * 0.34f);

@@ -1,13 +1,13 @@
 #include "AudioUIBridge.h"
 
-void AudioUIBridge::highlightNode(const RTNode& node, bool shouldHighlight, int traversalId)
+void AudioUIBridge::highlightNode(int nodeId, bool shouldHighlight, int traversalId)
 {
     const auto scope = highlightFifo.write(1);
     if (scope.blockSize1 > 0) {
-        highlightBuffer[static_cast<size_t>(scope.startIndex1)] = { node.nodeID, shouldHighlight, traversalId };
+        highlightBuffer[static_cast<size_t>(scope.startIndex1)] = { nodeId, shouldHighlight, traversalId };
     }
     else if (scope.blockSize2 > 0) {
-        highlightBuffer[static_cast<size_t>(scope.startIndex2)] = { node.nodeID, shouldHighlight, traversalId };
+        highlightBuffer[static_cast<size_t>(scope.startIndex2)] = { nodeId, shouldHighlight, traversalId };
     }
     else { jassertfalse; }
 }
