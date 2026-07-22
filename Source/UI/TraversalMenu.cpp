@@ -8,11 +8,10 @@
 #include "../Graph/ValueTreeState.h"
 #include "Theme/CustomLookAndFeel.h"
 
-TraversalMenu::TraversalMenu(ApplicationContext& context, bool showResizer) : displayMenu(context), multiplierEditor(context), channelEditor(context), transposeEditor(context), velocityEditor(context), colourSelector(context), editTraversalRulesButton(context), applicationContext(context), showResizer(showResizer) {
-    setLookAndFeel(context.lookAndFeel);
+TraversalMenu::TraversalMenu(ApplicationContext& context, bool showResizer)
+    : ResizablePanel(context, ResizeEdge::Left, resizerWidth, showResizer),
+      displayMenu(context), multiplierEditor(context), channelEditor(context), transposeEditor(context), velocityEditor(context), colourSelector(context) {
     addAndMakeVisible(displayMenu);
-    addChildComponent(resizer);
-    resizer.setVisible(showResizer);
 
     multiplierLabel.setText("Multiplier", juce::dontSendNotification);
     multiplierLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
@@ -64,7 +63,16 @@ TraversalMenu::TraversalMenu(ApplicationContext& context, bool showResizer) : di
     };
     addAndMakeVisible(colourSelector);
 
-    addAndMakeVisible(editTraversalRulesButton);
+
+    editTraversalRulesButton = std::make_unique<IconButton>(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawTextButton(g, bounds, state);
+        }, context.lookAndFeel);
+
+    editTraversalRulesButton->setText("edit traversal rules");
+    editTraversalRulesButton->onClick = [this]() { traversalRulesLauncher.show(); };
+
+    addAndMakeVisible(editTraversalRulesButton.get());
 
     displayMenu.onTraversalSelected = [this](int traversalId) {
         selectTraversal(traversalId);
@@ -131,40 +139,28 @@ TraversalMenu::~TraversalMenu() {
 }
 
 void TraversalMenu::paint(juce::Graphics &g) {
-    const Theme& theme = CustomLookAndFeel::get(*this);
+    ResizablePanel::paint(g);
+
     auto bounds = getLocalBounds().toFloat();
-
-    g.setColour(theme.baseDarkColour2);
-    g.fillRect(bounds);
-
     auto barHeight = std::floor(bounds.getHeight() * 0.05f);
     auto barBounds = bounds.withHeight(barHeight);
 
-    if (showResizer) {
+    if (hasResizer()) {
         barBounds = barBounds.withTrimmedLeft((float) resizerWidth);
     }
 
-    juce::ColourGradient gradient(theme.barColour.brighter(0.06f), 0, barBounds.getY(),
-                                  theme.barColour.darker(0.04f),   0, barBounds.getBottom(), false);
-    g.setGradientFill(gradient);
-    g.fillRect(barBounds);
-
-    g.setColour(theme.barColour.brighter(0.12f));
-    g.drawHorizontalLine((int) barBounds.getY(), barBounds.getX(), barBounds.getRight());
-
-    g.setColour(juce::Colours::black.withAlpha(0.35f));
-    g.drawHorizontalLine((int) barBounds.getBottom() - 1, barBounds.getX(), barBounds.getRight());
+    drawTopBar(g, barBounds);
 }
 
 void TraversalMenu::resized() {
     auto bounds = getLocalBounds();
 
-    if (showResizer) {
+    if (hasResizer()) {
         resizer.setBounds(bounds.removeFromLeft(resizerWidth));
     }
 
-    auto editRulesArea = bounds.removeFromBottom(MenuTextButton::preferredHeight + MenuTextButton::menuEdgeInset * 2);
-    editTraversalRulesButton.setBounds(editRulesArea.reduced(MenuTextButton::menuEdgeInset));
+    auto editRulesArea = bounds.removeFromBottom(Theme::textButtonHeight + Theme::menuEdgeInset * 2);
+    editTraversalRulesButton->setBounds(editRulesArea.reduced(Theme::menuEdgeInset));
 
     int barHeight = static_cast<int>(getHeight() * 0.05f);
     auto barArea = bounds.removeFromTop(barHeight);
@@ -190,76 +186,4 @@ void TraversalMenu::resized() {
     auto colourArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
     colourLabel.setBounds(colourArea.removeFromLeft(colourArea.getWidth() / 2));
     colourSelector.setBounds(colourArea);
-}
-
-TraversalMenu::Resizer::Resizer(TraversalMenu& ownerRef) : owner(ownerRef)
-{
-    setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
-}
-
-void TraversalMenu::Resizer::mouseDown(const juce::MouseEvent& e)
-{
-    dragStartWidth = owner.getWidth();
-    dragStartX     = owner.getX();
-    isDragging     = true;
-    repaint();
-}
-
-void TraversalMenu::Resizer::mouseUp(const juce::MouseEvent& e)
-{
-    isDragging = false;
-    repaint();
-}
-
-void TraversalMenu::Resizer::mouseEnter(const juce::MouseEvent& e)
-{
-    isHovered = true;
-    repaint();
-}
-
-void TraversalMenu::Resizer::mouseExit(const juce::MouseEvent& e)
-{
-    isHovered = false;
-    repaint();
-}
-
-void TraversalMenu::Resizer::mouseDrag(const juce::MouseEvent& e)
-{
-    int deltaX = e.getScreenPosition().getX() - e.getMouseDownScreenPosition().getX();
-
-    int newWidth = juce::jmax(minMenuWidth, dragStartWidth - deltaX);
-
-    if (owner.onWidthDragged) {
-        owner.onWidthDragged(newWidth);
-    }
-    else {
-        int newX = dragStartX + (dragStartWidth - newWidth);
-        owner.setBounds(newX, owner.getY(), newWidth, owner.getHeight());
-    }
-}
-
-void TraversalMenu::Resizer::paint(juce::Graphics& g)
-{
-    const Theme& theme = CustomLookAndFeel::get(*this);
-    auto bounds = getLocalBounds();
-
-    juce::Colour fill = theme.baseDarkColour1;
-
-    if (isDragging) {
-        fill = theme.baseLightColour2;
-    }
-    else if (isHovered) {
-        fill = theme.baseDarkColour1.brighter(0.25f);
-    }
-
-    g.setColour(fill);
-    g.fillRect(bounds);
-
-    auto gripBounds = bounds.toFloat().reduced(bounds.getWidth() * 0.3f, bounds.getHeight() * 0.35f);
-    g.setColour(theme.baseLightColour1.withAlpha(0.5f));
-
-    const float dotSpacing = 4.0f;
-    for (float y = gripBounds.getY(); y < gripBounds.getBottom(); y += dotSpacing) {
-        g.fillRect(gripBounds.getX(), y, gripBounds.getWidth(), 1.0f);
-    }
 }

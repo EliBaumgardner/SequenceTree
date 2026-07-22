@@ -5,8 +5,8 @@
 #include "DanglingArrowLayer.h"
 
 #include "NodeCanvas.h"
+#include "../Node/Arrow.h"
 #include "../Node/Node.h"
-#include "../Node/DanglingArrow.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Util/ApplicationContext.h"
 
@@ -33,7 +33,7 @@ void DanglingArrowLayer::updatePreview(Node* node, juce::Point<int> tipOffset, b
     }
 
     if (preview == nullptr || preview->startNode != node) {
-        preview = std::make_unique<DanglingArrow>(node, tipOffset, applicationContext);
+        preview = std::make_unique<Arrow>(node, tipOffset, applicationContext);
         canvas.addAndMakeVisible(*preview);
         preview->toBack();
     }
@@ -82,7 +82,7 @@ void DanglingArrowLayer::add(Node* node, juce::Point<int> tipOffset)
     arrowList.addChild(arrowTree, -1, undoManager);
 }
 
-void DanglingArrowLayer::remove(DanglingArrow* arrow)
+void DanglingArrowLayer::remove(Arrow* arrow)
 {
     if (arrow == nullptr || !arrow->arrowTree.isValid()) {
         return;
@@ -94,27 +94,27 @@ void DanglingArrowLayer::remove(DanglingArrow* arrow)
     }
 }
 
-DanglingArrow* DanglingArrowLayer::hitTestHead(juce::Point<int> canvasPos, float radius) const
+Arrow* DanglingArrowLayer::hitTestHead(juce::Point<int> canvasPos, float radius) const
 {
-    DanglingArrow* nearest = nullptr;
+    Arrow* nearest = nullptr;
     float minDist = radius;
 
-    for (DanglingArrow* danglingArrow : arrows) {
-        if (danglingArrow->startNode == nullptr) {
+    for (Arrow* arrow : canvas.arrowManager.all()) {
+        if (! arrow->isDangling() || arrow->startNode == nullptr) {
             continue;
         }
 
-        float dist = (float) canvasPos.getDistanceFrom(danglingArrow->getTip());
+        float dist = (float) canvasPos.getDistanceFrom(arrow->getTip());
         if (dist < minDist) {
             minDist = dist;
-            nearest = danglingArrow;
+            nearest = arrow;
         }
     }
 
     return nearest;
 }
 
-void DanglingArrowLayer::setTip(DanglingArrow* arrow, juce::Point<int> tipOffset)
+void DanglingArrowLayer::setTip(Arrow* arrow, juce::Point<int> tipOffset)
 {
     if (arrow == nullptr) {
         return;
@@ -123,7 +123,7 @@ void DanglingArrowLayer::setTip(DanglingArrow* arrow, juce::Point<int> tipOffset
     arrow->setTipOffset(tipOffset);
 }
 
-void DanglingArrowLayer::commitTip(DanglingArrow* arrow)
+void DanglingArrowLayer::commitTip(Arrow* arrow)
 {
     if (arrow == nullptr || !arrow->arrowTree.isValid()) {
         return;
@@ -138,12 +138,10 @@ void DanglingArrowLayer::rebuildForNode(int nodeId)
 {
     removeForNodeId(nodeId);
 
-    auto nodePair = canvas.nodeMap.find(nodeId);
-    if (nodePair == canvas.nodeMap.end()) {
+    Node* node = canvas.nodeManager.find(nodeId);
+    if (node == nullptr) {
         return;
     }
-
-    Node* node = nodePair->second;
     juce::ValueTree arrowList = node->nodeValueTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
     if (!arrowList.isValid()) {
         return;
@@ -157,38 +155,33 @@ void DanglingArrowLayer::rebuildForNode(int nodeId)
             (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)
         };
 
-        auto arrow = std::make_unique<DanglingArrow>(node, tipOffset, applicationContext);
+        auto arrow = std::make_unique<Arrow>(node, tipOffset, applicationContext);
         arrow->arrowTree = arrowTree;
         canvas.addAndMakeVisible(*arrow);
         arrow->toBack();
         arrow->setArrowBounds();
-        arrows.add(arrow.release());
+        canvas.arrowManager.adopt(arrow.release());
     }
 }
 
 void DanglingArrowLayer::removeForNode(Node* node)
 {
-    for (int i = arrows.size() - 1; i >= 0; --i) {
-        if (arrows[i]->startNode == node) {
-            canvas.removeChildComponent(arrows[i]);
-            arrows.remove(i);
-        }
-    }
+    canvas.arrowManager.removeMatching([node](Arrow* arrow) {
+        return arrow->isDangling() && arrow->startNode == node;
+    });
 }
 
 void DanglingArrowLayer::removeForNodeId(int nodeId)
 {
-    for (int i = arrows.size() - 1; i >= 0; --i) {
-        Node* startNode = arrows[i]->startNode;
-        if (startNode != nullptr && startNode->getComponentID().getIntValue() == nodeId) {
-            canvas.removeChildComponent(arrows[i]);
-            arrows.remove(i);
+    canvas.arrowManager.removeMatching([nodeId](Arrow* arrow) {
+        if (! arrow->isDangling() || arrow->startNode == nullptr) {
+            return false;
         }
-    }
+        return arrow->startNode->getComponentID().getIntValue() == nodeId;
+    });
 }
 
 void DanglingArrowLayer::clear()
 {
     cancelPreview();
-    arrows.clear();
 }

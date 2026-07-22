@@ -17,7 +17,7 @@ RootRectangle::RootRectangle(ApplicationContext& context) : traversalEditor(cont
 }
 
 void RootRectangle::paint(juce::Graphics &g) {
-    CustomLookAndFeel::get(*this).drawRootNodeRectangle(g, *this);
+    CustomLookAndFeel::get(*this).drawRootRectangle(g, getLocalBounds().toFloat());
 }
 
 void RootRectangle::resized() {

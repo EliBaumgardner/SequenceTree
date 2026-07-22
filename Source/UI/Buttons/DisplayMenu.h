@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Theme/CustomTextEditor.h"
-#include "DisplayButton.h"
+#include "IconButton.h"
 
 struct ApplicationContext;
 
@@ -17,7 +17,7 @@ class DisplayMenu : public juce::Component, public juce::SettableTooltipClient {
 
 public:
 
-    DisplayButton button;
+    std::unique_ptr<IconButton> button;
     CustomTextEditor display;
     juce::PopupMenu menu;
     juce::String selectedOption = "";

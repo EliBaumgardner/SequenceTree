@@ -19,8 +19,8 @@ TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context
     switchCountEditor.setVisible(true);
 
     subLoopLimitEditor.setVisible(false);
-    upButton.setVisible(false);
-    downButton.setVisible(false);
+    upButton->setVisible(false);
+    downButton->setVisible(false);
 
     traversalNumEditor = std::make_unique<ValueEditor>(context);
     traversalNumEditor->enablePlusRequiredValue();

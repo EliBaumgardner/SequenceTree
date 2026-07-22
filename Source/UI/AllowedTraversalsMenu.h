@@ -22,6 +22,7 @@ public:
 
     int  getIdealHeight() const;
 
+    static constexpr int defaultWidth = 160;
     static constexpr int rowHeight    = 26;
     static constexpr int toggleWidth  = 40;
     static constexpr int contentInset = 8;
@@ -50,15 +51,6 @@ private:
     juce::ValueTree connection;
 
     std::vector<TraversalRow> rows;
-};
-
-class AllowedTraversalsWindow : public juce::DocumentWindow {
-
-public:
-
-    AllowedTraversalsWindow(ApplicationContext& context, juce::ValueTree connection);
-
-    void closeButtonPressed() override;
 };
 
 #endif //SEQUENCETREE_ALLOWEDTRAVERSALSMENU_H

@@ -51,7 +51,16 @@ NodeMenu::NodeMenu(ApplicationContext& context)
     addAndMakeVisible(colourLabel);
     addAndMakeVisible(colourSelector);
 
-    addAndMakeVisible(editTraversalRulesButton);
+
+    editTraversalRulesButton = std::make_unique<IconButton>(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawTextButton(g, bounds, state);
+        }, context.lookAndFeel);
+
+    editTraversalRulesButton->setText("edit traversal rules");
+    editTraversalRulesButton->onClick = [this]() { traversalRulesLauncher.show(); };
+
+    addAndMakeVisible(editTraversalRulesButton.get());
 
     applicationContext.addNodeSelectedListener([this](Node* node, bool selected) {
         colourSelector.setNode(selected ? node : nullptr);
@@ -118,9 +127,9 @@ void NodeMenu::paint(juce::Graphics& g) {
 }
 
 void NodeMenu::resized() {
-    auto bounds = getLocalBounds().reduced(MenuTextButton::menuEdgeInset);
+    auto bounds = getLocalBounds().reduced(Theme::menuEdgeInset);
 
-    editTraversalRulesButton.setBounds(bounds.removeFromBottom(MenuTextButton::preferredHeight));
+    editTraversalRulesButton->setBounds(bounds.removeFromBottom(Theme::textButtonHeight));
 
     auto colourRowBounds = bounds.removeFromTop(rowHeight);
     colourLabel.setBounds(colourRowBounds.removeFromLeft(colourRowBounds.getWidth() / 3));

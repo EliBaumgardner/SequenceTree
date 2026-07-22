@@ -13,14 +13,14 @@ TraversalDisplayMenu::TraversalDisplayMenu(ApplicationContext& context)
 
     menu.clear();
 
-    button.onClick = [this]() {
+    button->onClick = [this]() {
 
-        button.isSelected = true;
+        button->setSelected(true);
         repaint();
 
         menu.showMenuAsync (juce::PopupMenu::Options(), [this] (int result)
         {
-            button.isSelected = false;
+            button->setSelected(false);
             repaint();
 
             juce::PopupMenu::MenuItemIterator it(menu);

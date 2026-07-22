@@ -12,6 +12,7 @@
 #include "../Util/PluginModules.h"
 #include "../Util/ApplicationContext.h"
 #include "../Util/NodeInfo.h"
+#include "../UI/PopupWindow.h"
 
 
 class NodeCanvas;
@@ -26,9 +27,7 @@ class NodeData;
 
 class NodeFactory;
 
-class DanglingArrow;
-
-class AllowedTraversalsWindow;
+class Arrow;
 
 
 
@@ -62,14 +61,11 @@ public:
     Node* findConnectionTarget (juce::Point<int> point, int excludeNodeId) const;
     void  commitFlagConnection (int sourceNodeId, Node* target);
 
-    NodeArrow* findArrowNear   (juce::Point<float> point, float radius) const;
-    NodeArrow* findArrowHeadNear (juce::Point<float> point, float radius) const;
-    void       deleteArrow     (NodeArrow* arrow);
-    void       showArrowContextMenu (NodeArrow* arrow);
-    juce::ValueTree getArrowConnectionTree (NodeArrow* arrow) const;
-
-    DanglingArrow* findDanglingArrowNear (juce::Point<float> point, float radius) const;
-    void           showDanglingArrowContextMenu (DanglingArrow* arrow);
+    Arrow* findArrowNear     (juce::Point<float> point, float radius) const;
+    Arrow* findArrowHeadNear (juce::Point<float> point, float radius) const;
+    void   deleteArrow       (Arrow* arrow);
+    void   showArrowContextMenu (Arrow* arrow);
+    juce::ValueTree getArrowConnectionTree (Arrow* arrow) const;
 
 private:
 
@@ -115,9 +111,9 @@ private:
 
     DragState dragState = DragState::Idle;
 
-    DanglingArrow* draggingDanglingArrow = nullptr;
+    Arrow* draggingDanglingArrow = nullptr;
 
-    std::unique_ptr<AllowedTraversalsWindow> allowedTraversalsWindow;
+    PopupWindowLauncher allowedTraversalsLauncher { "Allowed Traversals" };
 
     Node* snapTargetRoot           = nullptr;
 

@@ -15,6 +15,7 @@
 #include "../Util/PluginModules.h"
 #include "../Util/ApplicationContext.h"
 #include "Node/Node.h"
+#include "PopupWindow.h"
 
 /* Colour Selector Button that displays the selected colour and opens a pop up menu and cursor for colour selection; */
 
@@ -64,22 +65,6 @@ private:
     juce::OwnedArray<PresetSwatch> swatches;
 };
 
-class MainWindow : public juce::DocumentWindow
-{
-    public:
-    
-    MainWindow (const juce::String& name,
-                    juce::Colour backgroundColour,
-                    int requiredButtons,
-                    bool addToDesktop = true);
-    
-    void closeButtonPressed() override;
-    
-    MainComponent* getContent();
-    
-    MainComponent* component = nullptr;
-};
-
 class ColourSelector : public juce::Component, public juce::SettableTooltipClient {
 
     public:
@@ -91,8 +76,10 @@ class ColourSelector : public juce::Component, public juce::SettableTooltipClien
 
 
     juce::Colour colour = juce::Colours::white;
-    std::unique_ptr<MainWindow> mainWindow = nullptr;
     Node* node = nullptr;
+
+    static constexpr int pickerWidth  = 160;
+    static constexpr int pickerHeight = 145;
 
     // When false, the selector is used as a standalone colour picker (e.g. the
     // paint tool brush) and always displays its colour rather than treating a
@@ -103,6 +90,18 @@ class ColourSelector : public juce::Component, public juce::SettableTooltipClien
 
 private:
     ApplicationContext& applicationContext;
+
+    PopupWindowLauncher pickerLauncher {
+        "",
+        []() {
+            auto content = std::make_unique<MainComponent>();
+            content->setSize(pickerWidth, pickerHeight);
+
+            return content;
+        },
+        juce::Colours::white
+    };
+
     void applyColourToDescendants(Node* n, juce::Colour c);
     void applyColourToDescendants(Node* n, juce::Colour c, std::unordered_set<int>& visited);
 };

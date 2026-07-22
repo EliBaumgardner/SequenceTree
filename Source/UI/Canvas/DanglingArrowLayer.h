@@ -11,7 +11,7 @@ struct ApplicationContext;
 
 class NodeCanvas;
 class Node;
-class DanglingArrow;
+class Arrow;
 
 class DanglingArrowLayer {
 
@@ -29,12 +29,12 @@ public:
     bool hasPreview() const { return preview != nullptr; }
 
     void add(Node* node, juce::Point<int> tipOffset);
-    void remove(DanglingArrow* arrow);
+    void remove(Arrow* arrow);
 
-    DanglingArrow* hitTestHead(juce::Point<int> canvasPos, float radius) const;
+    Arrow* hitTestHead(juce::Point<int> canvasPos, float radius) const;
 
-    void setTip   (DanglingArrow* arrow, juce::Point<int> tipOffset);
-    void commitTip(DanglingArrow* arrow);
+    void setTip   (Arrow* arrow, juce::Point<int> tipOffset);
+    void commitTip(Arrow* arrow);
 
     void rebuildForNode  (int nodeId);
     void removeForNode   (Node* node);
@@ -42,14 +42,12 @@ public:
 
     void clear();
 
-    juce::OwnedArray<DanglingArrow> arrows;
-
 private:
 
     NodeCanvas&         canvas;
     ApplicationContext& applicationContext;
 
-    std::unique_ptr<DanglingArrow> preview;
+    std::unique_ptr<Arrow> preview;
 
     bool arrowMode = false;
 };

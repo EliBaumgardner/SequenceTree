@@ -12,20 +12,32 @@
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
-#include "NodeArrow.h"
+#include "Arrow.h"
 
 #include "Node.h"
 
 
 
 
-Node::Node(ApplicationContext& context) : applicationContext(context), countEditor(context), switchCountEditor(context), subLoopLimitEditor(context)
+Node::Node(ApplicationContext& context)
+    : applicationContext(context),
+      countEditor(context), switchCountEditor(context), subLoopLimitEditor(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
 
-    upButton.setInterceptsMouseClicks(true,false);
+    upButton = std::make_unique<IconButton>(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState&) {
+            CustomLookAndFeel::get(*this).drawIncrementIcon(g, bounds, true);
+        });
 
-    downButton.setInterceptsMouseClicks(true,false);
+    downButton = std::make_unique<IconButton>(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState&) {
+            CustomLookAndFeel::get(*this).drawIncrementIcon(g, bounds, false);
+        });
+
+    upButton->setInterceptsMouseClicks(true,false);
+
+    downButton->setInterceptsMouseClicks(true,false);
 
     nodeTextEditor = std::make_unique<NodeTextEditor>(this, context);
     nodeTextEditor->bindEditor(midiNoteData,ValueTreeIdentifiers::MidiPitch);
@@ -40,16 +52,16 @@ Node::Node(ApplicationContext& context) : applicationContext(context), countEdit
     switchCountEditor.setInterceptsMouseClicks(true, false);
     switchCountEditor.setTooltip("Loop Limit");
 
-    upButton.onChanged = [this]() {
+    upButton->onClick = [this]() {
         incrementNodeTextEditorValue(1);
     };
 
-    downButton.onChanged = [this]() {
+    downButton->onClick = [this]() {
         incrementNodeTextEditorValue(-1);
     };
 
-    addAndMakeVisible(upButton);
-    addAndMakeVisible(downButton);
+    addAndMakeVisible(upButton.get());
+    addAndMakeVisible(downButton.get());
     addAndMakeVisible(nodeTextEditor.get());
 
     addAndMakeVisible(switchCountEditor);
@@ -59,7 +71,7 @@ Node::Node(ApplicationContext& context) : applicationContext(context), countEdit
 
 void Node::paint(juce::Graphics& g)
 {
-    CustomLookAndFeel::get(*this).drawNode(g, *this);
+    CustomLookAndFeel::get(*this).drawNode(g, getNodeVisual());
 }
 
 void Node::resized()
@@ -68,8 +80,8 @@ void Node::resized()
     auto editorArea   = circleBounds.reduced(editorAreaBoundsReduction);
     int  buttonHeight = juce::jmax(2, (int)(editorArea.getHeight() * 0.2f));
 
-    upButton.setBounds(editorArea.removeFromTop(buttonHeight));
-    downButton.setBounds(editorArea.removeFromBottom(buttonHeight));
+    upButton->setBounds(editorArea.removeFromTop(buttonHeight));
+    downButton->setBounds(editorArea.removeFromBottom(buttonHeight));
 
     nodeTextEditor->setBounds(editorArea);
     nodeTextEditor->setJustification(juce::Justification::centred);

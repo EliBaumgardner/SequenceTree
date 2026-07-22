@@ -10,7 +10,9 @@
 #include "../Util/ApplicationContext.h"
 #include "Node/ValueEditor.h"
 #include "ColourSelector.h"
-#include "Buttons/EditTraversalRulesButton.h"
+#include "Buttons/IconButton.h"
+#include "TraversalRulesMenu.h"
+#include "PopupWindow.h"
 
 class Node;
 
@@ -66,7 +68,17 @@ private:
         { channelLabel,           channelEditor            }
     }};
 
-    EditTraversalRulesButton editTraversalRulesButton { applicationContext };
+    std::unique_ptr<IconButton> editTraversalRulesButton;
+
+    PopupWindowLauncher traversalRulesLauncher {
+        "Traversal Rules",
+        [this]() {
+            auto content = std::make_unique<TraversalRulesMenu>(applicationContext);
+            content->setSize(TraversalRulesMenu::defaultWidth, TraversalRulesMenu::defaultHeight);
+
+            return content;
+        }
+    };
 
     static constexpr int rowHeight = 20;
     static constexpr int rowGap    = 6;

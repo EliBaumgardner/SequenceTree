@@ -6,36 +6,48 @@
 #include "Theme/CustomLookAndFeel.h"
 
 TraversalRulesMenu::TraversalRulesMenu(ApplicationContext& context)
-    : applicationContext(context)
+    : ResizablePanel(context, ResizeEdge::Right, resizerWidth)
 {
-    setLookAndFeel(applicationContext.lookAndFeel);
-}
-
-TraversalRulesMenu::~TraversalRulesMenu() {
-    setLookAndFeel(nullptr);
+    addAndMakeVisible(panel);
 }
 
 void TraversalRulesMenu::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour::fromRGB(30, 30, 30));
+    ResizablePanel::paint(g);
 
     g.setColour(juce::Colours::black);
     g.drawRect(getLocalBounds(), 1);
 }
 
 void TraversalRulesMenu::resized() {
+    panelWidth = clampPanelWidth(panelWidth);
+
+    auto bounds = getLocalBounds();
+
+    panel.setBounds(bounds.removeFromLeft(panelWidth));
+    resizer.setBounds(bounds.removeFromLeft(resizerWidth));
 }
 
-TraversalRulesWindow::TraversalRulesWindow(ApplicationContext& context)
-    : juce::DocumentWindow("Traversal Rules", juce::Colour::fromRGB(30, 30, 30),
-                           juce::DocumentWindow::closeButton, true)
-{
-    auto* content = new TraversalRulesMenu(context);
-    content->setSize(TraversalRulesMenu::defaultWidth, TraversalRulesMenu::defaultHeight);
+int TraversalRulesMenu::clampPanelWidth(int newWidth) const {
+    const int available = getWidth() - resizerWidth - minContentWidth;
+    const int maxWidth  = juce::jmax(minPanelWidth, available);
 
-    setContentOwned(content, true);
-    setResizable(true, true);
+    return juce::jlimit(minPanelWidth, maxWidth, newWidth);
 }
 
-void TraversalRulesWindow::closeButtonPressed() {
-    setVisible(false);
+void TraversalRulesMenu::setPanelWidth(int newWidth) {
+    const int clamped = clampPanelWidth(newWidth);
+
+    if (clamped == panelWidth) {
+        return;
+    }
+
+    panelWidth = clamped;
+    resized();
+}
+
+void TraversalRulesMenu::Panel::paint(juce::Graphics& g) {
+    const Theme& theme = CustomLookAndFeel::get(*this);
+
+    g.setColour(theme.baseDarkColour1);
+    g.fillRect(getLocalBounds());
 }

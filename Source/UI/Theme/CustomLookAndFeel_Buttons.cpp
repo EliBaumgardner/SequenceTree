@@ -3,37 +3,27 @@
 //
 
 #include "CustomLookAndFeel.h"
-#include "../Buttons/PlayButton.h"
-#include "../Buttons/SyncButton.h"
-#include "../Buttons/NodeButton.h"
-#include "../Buttons/ModulatorButton.h"
-#include "../Buttons/TraversalFlagButton.h"
-#include "../Buttons/UndoButton.h"
-#include "../Buttons/RedoButton.h"
-#include "../Buttons/UndoRedoPane.h"
-#include "../Buttons/ResetButton.h"
 #include "Buttons/ButtonConstants.h"
 #include "../Buttons/PaintTool.h"
 #include "../Buttons/PaintToolSettings.h"
 #include "../Buttons/ArrowTool.h"
-#include "../Buttons/IconButton.h"
 
-void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const PlayButton &button)
+void CustomLookAndFeel::drawPlayIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
-    auto area = button.getLocalBounds().reduced(5);
+    auto area = bounds.toNearestInt().reduced(5);
 
-    if (isMouseOver) {
+    if (state.isHovered) {
         g.setColour(buttonColour.brighter());
 
     }
-    else if (isButtonDown) {
+    else if (state.isDown) {
         g.setColour(buttonColour.darker());
     }
     else {
         g.setColour(buttonColour);
     }
 
-    if (button.isOn) {
+    if (state.isSelected) {
         juce::Path playButton;
         playButton.startNewSubPath((float)area.getX(), (float)area.getY());
         playButton.lineTo((float)area.getRight(), (float)area.getCentreY());
@@ -56,23 +46,23 @@ void CustomLookAndFeel::drawPlayButton(juce::Graphics &g, bool isMouseOver, bool
     }
 }
 
-void CustomLookAndFeel::drawSyncButton(juce::Graphics &g, bool isMouseOver, bool isButtonDown, const SyncButton &button)
+void CustomLookAndFeel::drawSyncIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
-    auto bounds = button.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
-    if (isMouseOver) {
+    auto area = bounds.reduced(outerButtonBoundsReduction);
+    if (state.isHovered) {
         g.setColour(buttonColour.brighter());
     }
     else {
         g.setColour(buttonColour);
     }
-    g.drawEllipse(bounds, 1.0f);
+    g.drawEllipse(area, 1.0f);
 }
 
-void CustomLookAndFeel::drawNodeButton(juce::Graphics &g, const NodeButton& nodeButton)
+void CustomLookAndFeel::drawNodeModeIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, const ButtonState& state)
 {
-    auto bounds = nodeButton.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
+    auto bounds = boundsIn.reduced(outerButtonBoundsReduction);
 
-    if (nodeButton.isSelected) {
+    if (state.isSelected) {
         g.setColour(buttonColour.darker());
     }
     else {
@@ -81,10 +71,10 @@ void CustomLookAndFeel::drawNodeButton(juce::Graphics &g, const NodeButton& node
     g.fillEllipse(bounds);
 }
 
-void CustomLookAndFeel::drawModulatorButton(juce::Graphics &g, const ModulatorButton &modulatorButton) {
-    juce::Rectangle<float> bounds = modulatorButton.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
+void CustomLookAndFeel::drawModulatorIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, const ButtonState& state) {
+    juce::Rectangle<float> bounds = boundsIn.reduced(outerButtonBoundsReduction);
 
-    if (modulatorButton.isSelected) {
+    if (state.isSelected) {
         g.setColour(buttonColour.darker());
     }
     else{
@@ -95,11 +85,11 @@ void CustomLookAndFeel::drawModulatorButton(juce::Graphics &g, const ModulatorBu
     g.drawRect(bounds, 1.0f);
 }
 
-void CustomLookAndFeel::drawTraversalFlagButton(juce::Graphics &g, const TraversalFlagButton &traversalFlagButton)
+void CustomLookAndFeel::drawTraversalFlagIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, const ButtonState& state)
 {
-    juce::Rectangle<float> bounds = traversalFlagButton.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
+    juce::Rectangle<float> bounds = boundsIn.reduced(outerButtonBoundsReduction);
 
-    if (traversalFlagButton.isSelected) {
+    if (state.isSelected) {
         g.setColour(buttonColour.darker());
     }
     else {
@@ -116,14 +106,14 @@ void CustomLookAndFeel::drawTraversalFlagButton(juce::Graphics &g, const Travers
     g.strokePath(triangle, juce::PathStrokeType(1.0f));
 }
 
-void CustomLookAndFeel::drawUndoButton(juce::Graphics &g, const UndoButton &undoButton, bool isButtonDown)
+void CustomLookAndFeel::drawUndoIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
-    auto area = undoButton.getLocalBounds().reduced(outerButtonBoundsReduction);
+    auto area = bounds.reduced(outerButtonBoundsReduction);
 
-    if (isButtonDown) {
+    if (state.isDown) {
         g.setColour(buttonColour.darker());
     }
-    else if (undoButton.isHovered) {
+    else if (state.isHovered) {
         g.setColour(buttonColour.brighter());
     }
     else {
@@ -138,14 +128,14 @@ void CustomLookAndFeel::drawUndoButton(juce::Graphics &g, const UndoButton &undo
     g.fillPath(path);
 }
 
-void CustomLookAndFeel::drawRedoButton(juce::Graphics &g, const RedoButton &redoButton, bool isButtonDown)
+void CustomLookAndFeel::drawRedoIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
-    auto area = redoButton.getLocalBounds().reduced(outerButtonBoundsReduction);
+    auto area = bounds.reduced(outerButtonBoundsReduction);
 
-    if (isButtonDown) {
+    if (state.isDown) {
         g.setColour(buttonColour.darker());
     }
-    else if (redoButton.isHovered) {
+    else if (state.isHovered) {
         g.setColour(buttonColour.brighter());
     }
     else {
@@ -160,21 +150,14 @@ void CustomLookAndFeel::drawRedoButton(juce::Graphics &g, const RedoButton &redo
     g.fillPath(path);
 }
 
-void CustomLookAndFeel::drawUndoRedoPane(juce::Graphics &g,const UndoRedoPane& undoRedoPane)
+void CustomLookAndFeel::drawResetIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
-    auto bounds = undoRedoPane.getLocalBounds().reduced(outerButtonBoundsReduction).toFloat();
-    g.setColour(buttonBarColour);
-    g.fillRoundedRectangle(bounds, paneCornerRadius);
-}
+    auto area = bounds.reduced(outerButtonBoundsReduction);
 
-void CustomLookAndFeel::drawResetButton(juce::Graphics &g, const ResetButton &resetButton, bool isButtonDown)
-{
-    auto area = resetButton.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
-
-    if (isButtonDown) {
+    if (state.isDown) {
         g.setColour(buttonColour.darker());
     }
-    else if (resetButton.isHovered) {
+    else if (state.isHovered) {
         g.setColour(buttonColour.brighter());
     }
     else {
@@ -182,6 +165,75 @@ void CustomLookAndFeel::drawResetButton(juce::Graphics &g, const ResetButton &re
     }
 
     g.fillRect(area);
+}
+
+void CustomLookAndFeel::drawDisplayArrowIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, const ButtonState& state)
+{
+    auto bounds = boundsIn.reduced(outerButtonBoundsReduction);
+
+    g.setColour(state.isSelected ? buttonColour.darker() : buttonColour);
+
+    float triangleHeight = bounds.getHeight() * 0.9f;
+    float centreY = bounds.getCentreY();
+    float topY    = centreY - triangleHeight / 2.0f;
+    float bottomY = centreY + triangleHeight / 2.0f;
+
+    juce::Path vPath;
+    vPath.startNewSubPath(bounds.getX(), topY);
+    vPath.lineTo(bounds.getCentreX(), bottomY);
+    vPath.lineTo(bounds.getRight(), topY);
+    vPath.closeSubPath();
+
+    g.fillPath(vPath);
+}
+
+void CustomLookAndFeel::drawIncrementIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, bool pointsUp)
+{
+    auto bounds = boundsIn.reduced(4.0f, 1.0f);
+    auto w = bounds.getWidth();
+    auto h = bounds.getHeight();
+    auto x = bounds.getX();
+    auto y = bounds.getY();
+
+    juce::Path path;
+    if (pointsUp) {
+        path.startNewSubPath(x,              y + h);
+        path.lineTo         (x + w * 0.5f,   y);
+        path.lineTo         (x + w,          y + h);
+    }
+    else {
+        path.startNewSubPath(x,              y);
+        path.lineTo         (x + w * 0.5f,   y + h);
+        path.lineTo         (x + w,          y);
+    }
+    path.closeSubPath();
+
+    g.setColour(juce::Colours::black);
+    g.fillPath(path);
+}
+
+void CustomLookAndFeel::drawTextButton(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
+{
+    auto area = bounds.reduced(outerButtonBoundsReduction);
+
+    juce::Colour fill = buttonColour;
+
+    if (state.isDown) {
+        fill = buttonColour.darker();
+    }
+    else if (state.isHovered) {
+        fill = buttonColour.brighter();
+    }
+
+    g.setColour(fill);
+    g.fillRoundedRectangle(area, paneCornerRadius);
+
+    g.setColour(juce::Colours::black.withAlpha(0.5f));
+    g.drawRoundedRectangle(area, paneCornerRadius, 1.0f);
+
+    g.setColour(juce::Colours::black.withAlpha(0.8f));
+    g.setFont(juce::Font(juce::FontOptions(labelFontHeight)));
+    g.drawText(state.text, bounds, juce::Justification::centred);
 }
 
 void CustomLookAndFeel::drawPaintTool(juce::Graphics &g, const PaintTool &paintTool) {
@@ -251,8 +303,7 @@ void CustomLookAndFeel::drawPaintToolSettings(juce::Graphics &g, const PaintTool
     g.fillRect(bounds);
 }
 
-void CustomLookAndFeel::drawNodeIcon(juce::Graphics &g, const IconButton &iconButton) {
-    auto bounds = iconButton.getLocalBounds().toFloat();
+void CustomLookAndFeel::drawNodeIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState&) {
     g.setColour(buttonColour);
     g.fillEllipse(bounds);
 
@@ -261,8 +312,7 @@ void CustomLookAndFeel::drawNodeIcon(juce::Graphics &g, const IconButton &iconBu
     g.fillEllipse(glyphBounds);
 }
 
-void CustomLookAndFeel::drawTreeIcon(juce::Graphics &g, const IconButton &iconButton) {
-    auto bounds = iconButton.getLocalBounds().toFloat();
+void CustomLookAndFeel::drawTreeIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState&) {
     g.setColour(buttonColour);
     g.fillEllipse(bounds);
 
@@ -290,8 +340,7 @@ void CustomLookAndFeel::drawTreeIcon(juce::Graphics &g, const IconButton &iconBu
     nodeCircle(rightPos);
 }
 
-void CustomLookAndFeel::drawTraversalIcon(juce::Graphics &g, const IconButton &iconButton) {
-    auto bounds = iconButton.getLocalBounds().toFloat();
+void CustomLookAndFeel::drawTraversalIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState&) {
     g.setColour(buttonColour);
     g.fillEllipse(bounds);
 

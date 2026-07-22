@@ -11,7 +11,7 @@
 
 #include "../Canvas/NodeCanvas.h"
 #include "Node.h"
-#include "NodeArrow.h"
+#include "Arrow.h"
 #include "../../Graph/ValueTreeState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Theme/CustomLookAndFeel.h"
