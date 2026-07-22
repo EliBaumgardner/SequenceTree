@@ -8,6 +8,23 @@
 #include "../../Graph/RTGraphBuilder.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
+#include <cmath>
+
+static const juce::String pitchNames[] = {
+    juce::String(L"C"),
+    juce::String(L"C♯"),
+    juce::String(L"D"),
+    juce::String(L"D♯"),
+    juce::String(L"E"),
+    juce::String(L"F"),
+    juce::String(L"F♯"),
+    juce::String(L"G"),
+    juce::String(L"G♯"),
+    juce::String(L"A"),
+    juce::String(L"A♯"),
+    juce::String(L"B")
+};
+
 ValueEditor::ValueEditor(ApplicationContext& context) : applicationContext(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
@@ -39,7 +56,7 @@ ValueEditor::ValueEditor(ApplicationContext& context) : applicationContext(conte
 void ValueEditor::paint(juce::Graphics& g)
 {
     if (!isEditing) {
-        g.setFont(juce::Font(juce::FontOptions(9.0f)));
+        g.setFont(displayFont());
         g.setColour(juce::Colours::lightgrey.withAlpha(0.85f));
 
         g.drawText(getDisplayText(),
@@ -47,8 +64,43 @@ void ValueEditor::paint(juce::Graphics& g)
     }
 }
 
+juce::Font ValueEditor::displayFont() const
+{
+    juce::Font font { juce::FontOptions(baseFontHeight) };
+
+    if (! autoFitText) {
+        return font;
+    }
+
+    auto  bounds     = getLocalBounds().toFloat().reduced(autoFitInset);
+    float textWidth  = font.getStringWidthFloat(getDisplayText());
+    float textHeight = font.getHeight();
+
+    if (bounds.getWidth() <= 0.0f || bounds.getHeight() <= 0.0f || textHeight <= 0.0f) {
+        return font;
+    }
+
+    float heightRatio = bounds.getHeight() / textHeight;
+    float ratio       = textWidth > 0.0f ? std::min(bounds.getWidth() / textWidth, heightRatio)
+                                         : heightRatio;
+    float fittedHeight = textHeight * ratio;
+
+    if (fittedHeight <= 0.0f || ! std::isfinite(fittedHeight)) {
+        return font;
+    }
+
+    font.setHeight(fittedHeight);
+    return font;
+}
+
 juce::String ValueEditor::getDisplayText() const
 {
+    if (pitchMode) {
+        int midiNote = juce::jlimit(0, 127, (int) boundValue.getValue());
+
+        return pitchNames[midiNote % 12] + juce::String((midiNote / 12) - 1);
+    }
+
     if (decimalMode) {
         double value = (double) boundValue.getValue();
         juce::String text(value, 3);
@@ -94,9 +146,19 @@ void ValueEditor::resized()
 
 void ValueEditor::mouseDown(const juce::MouseEvent&)
 {
+    if (! editable) {
+        return;
+    }
+
     isEditing = true;
+
+    juce::Font font = displayFont();
+    textEditor->setFont(font);
+    textEditor->applyFontToAllText(font);
+
     textEditor->setVisible(true);
-    textEditor->setText(getDisplayText(), juce::dontSendNotification);
+    textEditor->setText(pitchMode ? juce::String((int) boundValue.getValue()) : getDisplayText(),
+                        juce::dontSendNotification);
     textEditor->grabKeyboardFocus();
     textEditor->selectAll();
     repaint();
@@ -127,6 +189,41 @@ void ValueEditor::enableDualValue(const juce::Identifier& secondaryPropertyID)
     secondaryIdentifier = secondaryPropertyID;
 
     textEditor->setInputRestrictions(9, "0123456789:");
+}
+
+void ValueEditor::disableDualValue()
+{
+    if (! dualNumberMode) {
+        return;
+    }
+
+    boundSecondaryValue.removeListener(this);
+    boundSecondaryValue = juce::Value();
+
+    dualNumberMode      = false;
+    secondaryIdentifier = juce::Identifier();
+
+    textEditor->setInputRestrictions(4, "0123456789");
+}
+
+void ValueEditor::enableAutoFitText()
+{
+    autoFitText = true;
+}
+
+void ValueEditor::setPitchMode(bool shouldShowPitchNames)
+{
+    if (pitchMode == shouldShowPitchNames) {
+        return;
+    }
+
+    pitchMode = shouldShowPitchNames;
+    repaint();
+}
+
+void ValueEditor::setEditable(bool shouldBeEditable)
+{
+    editable = shouldBeEditable;
 }
 
 void ValueEditor::enableDecimalValue(double min, double max)

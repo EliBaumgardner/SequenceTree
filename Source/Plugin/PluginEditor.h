@@ -19,7 +19,7 @@
 #include "../UI/BottomBar.h"
 #include "../UI/Theme/CustomLookAndFeel.h"
 #include "../Graph/ValueTreeState.h"
-#include "../UI/MenuArea.h"
+#include "../UI/Menus/MenuArea.h"
 #include "../Util/ApplicationContext.h"
 
 
@@ -47,6 +47,9 @@ public:
 private:
     void toggleFullScreen();
 
+    void attachStateListeners();
+    void detachStateListeners();
+
     juce::Component* keyListenerTarget = nullptr;
 
 
@@ -57,8 +60,7 @@ private:
     juce::TooltipWindow tooltipWindow { this, 400 };
 
     std::unique_ptr<NodeCanvas>     canvas         = nullptr;
-    std::unique_ptr<RTGraphBuilder> rtGraphBuilder = nullptr;
-    std::unique_ptr<NodeController> nodeController   = nullptr;
+    std::unique_ptr<NodeController> nodeController  = nullptr;
     std::unique_ptr<Titlebar>       titleBar       = nullptr;
     std::unique_ptr<BottomBar>      bottomBar      = nullptr;
     std::unique_ptr<DynamicPort>    port           = nullptr;

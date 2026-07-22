@@ -9,8 +9,8 @@
 */
 
 #include "ColourSelector.h"
-#include "../Graph/ValueTreeIdentifiers.h"
-#include "Canvas/NodeCanvas.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
+#include "../Canvas/NodeCanvas.h"
 
 juce::Colour MainComponent::presetColours[MainComponent::numPresets] {};
 bool         MainComponent::presetSet[MainComponent::numPresets]     {};

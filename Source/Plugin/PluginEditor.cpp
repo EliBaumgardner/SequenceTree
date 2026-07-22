@@ -21,8 +21,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     canvas = std::make_unique<NodeCanvas>(applicationContext);
     applicationContext.canvas = canvas.get();
 
-    rtGraphBuilder = std::make_unique<RTGraphBuilder>(applicationContext, *canvas);
-    applicationContext.rtGraphBuilder = rtGraphBuilder.get();
+    applicationContext.rtGraphBuilder = &p.rtGraphBuilder;
 
     nodeController = std::make_unique<NodeController>(applicationContext);
     applicationContext.nodeController = nodeController.get();
@@ -49,57 +48,15 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
         }
     };
 
-    audioProcessor.applyStateToUi =
-        [safeCanvas = juce::Component::SafePointer<NodeCanvas>(canvas.get()),
-         proc = &audioProcessor,
-         state = &p.graphState](juce::ValueTree restoredTree) {
-        juce::MessageManager::callAsync([safeCanvas, proc, state, restoredTree]() {
-            NodeCanvas* canvasPtr = safeCanvas.getComponent();
-            if (canvasPtr == nullptr) {
-                return;
-            }
+    audioProcessor.suspendStateListeners = [this] { detachStateListeners(); };
 
-            juce::ValueTree restoredNodeMap;
-            juce::ValueTree restoredTraversalMap;
-
-            if (restoredTree.getType() == ValueTreeIdentifiers::PluginState) {
-                restoredNodeMap      = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
-                restoredTraversalMap = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalMap);
-            }
-            else {
-                restoredNodeMap = restoredTree;
-            }
-
-            state->nodeMap.removeListener(&canvasPtr->treeListener);
-            state->traversalMap.removeListener(&canvasPtr->treeListener);
-
-            state->traversalMap.removeAllChildren(nullptr);
-            for (int i = 0; i < restoredTraversalMap.getNumChildren(); ++i)
-                state->traversalMap.addChild(restoredTraversalMap.getChild(i).createCopy(), -1, nullptr);
-
-            state->nodeMap.removeAllChildren(nullptr);
-            for (int i = 0; i < restoredNodeMap.getNumChildren(); ++i)
-                state->nodeMap.addChild(restoredNodeMap.getChild(i).createCopy(), -1, nullptr);
-
-            int maxId = 0;
-            for (int i = 0; i < state->nodeMap.getNumChildren(); ++i) {
-                int id = state->nodeMap.getChild(i).getProperty(ValueTreeIdentifiers::Id);
-                if (id > maxId) {
-                    maxId = id;
-                }
-            }
-            state->setNodeIdIncrement(maxId);
-
-            canvasPtr->setValueTreeState(state->nodeMap);
-            state->nodeMap.addListener(&canvasPtr->treeListener);
-            state->traversalMap.addListener(&canvasPtr->treeListener);
-
-            proc->pendingRestoreState = juce::ValueTree();
-        });
+    audioProcessor.resumeStateListeners = [this] {
+        canvas->setValueTreeState(applicationContext.valueTreeState->nodeMap);
+        attachStateListeners();
     };
 
     if (audioProcessor.pendingRestoreState.isValid()) {
-        audioProcessor.applyStateToUi(audioProcessor.pendingRestoreState);
+        audioProcessor.applyRestoredState();
     }
     else if (applicationContext.valueTreeState->nodeMap.getNumChildren() > 0) {
         canvas->setValueTreeState(applicationContext.valueTreeState->nodeMap);
@@ -107,10 +64,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     canvas->addMouseListener(nodeController.get(),true);
 
-    applicationContext.valueTreeState->canvasData.addListener(&canvas->treeListener);
-    applicationContext.valueTreeState->nodeMap.addListener(&canvas->treeListener);
-    applicationContext.valueTreeState->nodeTreeMap.addListener(&canvas->treeListener);
-    applicationContext.valueTreeState->traversalMap.addListener(&canvas->treeListener);
+    attachStateListeners();
 
 
     addAndMakeVisible(port.get());
@@ -131,9 +85,23 @@ SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
     if (desktop.getKioskModeComponent() == getTopLevelComponent())
         desktop.setKioskModeComponent(nullptr);
 
-    audioProcessor.notifyUi       = nullptr;
-    audioProcessor.applyStateToUi = nullptr;
+    audioProcessor.notifyUi              = nullptr;
+    audioProcessor.suspendStateListeners = nullptr;
+    audioProcessor.resumeStateListeners  = nullptr;
 
+    detachStateListeners();
+}
+
+void SequenceTreeAudioProcessorEditor::attachStateListeners()
+{
+    applicationContext.valueTreeState->canvasData.addListener(&canvas->treeListener);
+    applicationContext.valueTreeState->nodeMap.addListener(&canvas->treeListener);
+    applicationContext.valueTreeState->nodeTreeMap.addListener(&canvas->treeListener);
+    applicationContext.valueTreeState->traversalMap.addListener(&canvas->treeListener);
+}
+
+void SequenceTreeAudioProcessorEditor::detachStateListeners()
+{
     applicationContext.valueTreeState->canvasData.removeListener(&canvas->treeListener);
     applicationContext.valueTreeState->nodeMap.removeListener(&canvas->treeListener);
     applicationContext.valueTreeState->nodeTreeMap.removeListener(&canvas->treeListener);

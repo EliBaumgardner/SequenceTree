@@ -15,7 +15,7 @@ void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, const NodeM
     {
         auto& activeNote = activeNotes[i];
 
-        if (nodes.find(activeNote.noteNode.nodeID) != nodes.end()) {
+        if (nodes.find(activeNote.nodeId) != nodes.end()) {
             continue;
         }
 
@@ -45,7 +45,7 @@ void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, const NodeM
         traversal.state          = TraversalLogic::TraversalState::Active;
         traversal.advanceAlternative(nodes, traversal.rootId);
         bridge.highlightNode(rootIt->second, true, traversal.traversal.traversalId);
-        dispatcher.pushNote(rootIt->second, orphanedInstanceId, midiMessages, 0, nodes, traversalMap);
+        dispatcher.pushNote(rootIt->second, orphanedInstanceId, { nodes, traversalMap, midiMessages }, 0);
     }
 }
 
@@ -79,8 +79,8 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
         scheduler.sendNoteOff(activeNote, midiMessages, priorityNoteDuration);
 
         if (activeNote.instanceId == -1) {
-            if (NoteScheduler::isNodeAudible(activeNote.noteNode.nodeType)) {
-                bridge.highlightNode(activeNote.noteNode, false);
+            if (NoteScheduler::isNodeAudible(activeNote.nodeType)) {
+                bridge.highlightNode(activeNote.nodeId, false);
             }
             scheduler.removeNote(smallestNoteIndex);
             continue;
@@ -90,7 +90,7 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
         scheduler.removeNote(smallestNoteIndex);
 
         dispatcher.handleExpiredNote(expiredNote, priorityNoteDuration,
-                                     midiMessages, nodes, traversalMap);
+                                     { nodes, traversalMap, midiMessages });
     }
 
     for (auto& note : activeNotes) {

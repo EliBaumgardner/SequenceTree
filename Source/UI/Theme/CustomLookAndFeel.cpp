@@ -5,13 +5,7 @@
 #include "CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
 #include "CustomTextEditor.h"
-#include "../Node/NodeTextEditor.h"
 #include "CustomTextCaret.h"
-
-CustomLookAndFeel::CustomLookAndFeel()
-{
-    updateColours();
-}
 
 void CustomLookAndFeel::drawEditor(juce::Graphics &g, CustomTextEditor& editor)
 {
@@ -66,9 +60,6 @@ void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
             g.drawLine(x, y - armLen, x, y + armLen, 0.5f);
         }
     }
-}
-
-void CustomLookAndFeel::drawNodeTextEditor(juce::Graphics &g, NodeTextEditor &nodeTextEditor) {
 }
 
 juce::CaretComponent* CustomLookAndFeel::createCaretComponent(juce::Component* keyFocusOwner) {

@@ -3,10 +3,10 @@
 //
 
 #include "AllowedTraversalsMenu.h"
-#include "../Graph/ValueTreeState.h"
-#include "../Graph/ValueTreeIdentifiers.h"
-#include "../Graph/RTGraphBuilder.h"
-#include "Theme/CustomLookAndFeel.h"
+#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
+#include "../../Graph/RTGraphBuilder.h"
+#include "../Theme/CustomLookAndFeel.h"
 
 void AllowedTraversalsMenu::ToggleButton::paint(juce::Graphics& g) {
     auto bounds = getLocalBounds().toFloat().reduced(2.0f);

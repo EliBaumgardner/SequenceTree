@@ -3,7 +3,7 @@
 //
 
 #include "TraversalRulesMenu.h"
-#include "Theme/CustomLookAndFeel.h"
+#include "../Theme/CustomLookAndFeel.h"
 
 TraversalRulesMenu::TraversalRulesMenu(ApplicationContext& context)
     : ResizablePanel(context, ResizeEdge::Right, resizerWidth)

@@ -17,6 +17,40 @@ ValueTreeState::ValueTreeState() {
     canvasData.addChild(nodeTreeIds, -1, nullptr);
 }
 
+void ValueTreeState::replaceState(const juce::ValueTree& restoredTree)
+{
+    juce::ValueTree restoredNodeMap;
+    juce::ValueTree restoredTraversalMap;
+
+    if (restoredTree.getType() == ValueTreeIdentifiers::PluginState) {
+        restoredNodeMap      = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
+        restoredTraversalMap = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalMap);
+    }
+    else {
+        restoredNodeMap = restoredTree;
+    }
+
+    traversalMap.removeAllChildren(nullptr);
+    for (int i = 0; i < restoredTraversalMap.getNumChildren(); ++i) {
+        traversalMap.addChild(restoredTraversalMap.getChild(i).createCopy(), -1, nullptr);
+    }
+
+    nodeMap.removeAllChildren(nullptr);
+    for (int i = 0; i < restoredNodeMap.getNumChildren(); ++i) {
+        nodeMap.addChild(restoredNodeMap.getChild(i).createCopy(), -1, nullptr);
+    }
+
+    int maxId = 0;
+    for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
+        int id = nodeMap.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+        if (id > maxId) {
+            maxId = id;
+        }
+    }
+
+    nodeIdIncrement = maxId;
+}
+
 juce::ValueTree ValueTreeState::addNodeTree(juce::UndoManager* undoManager)
 {
     juce::ValueTree nodeTreeId         {ValueTreeIdentifiers::NodeTreeId};

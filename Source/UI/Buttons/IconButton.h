@@ -15,6 +15,7 @@ public:
     using Painter = std::function<void(juce::Graphics&, juce::Rectangle<float>, const ButtonState&)>;
 
     std::function<void()> onClick;
+    std::function<void()> onRightClick;
 
     explicit IconButton(Painter painter, juce::LookAndFeel* lookAndFeel = nullptr)
         : painter(std::move(painter))
@@ -58,8 +59,15 @@ public:
     void mouseEnter(const juce::MouseEvent&) override { state.isHovered = true;  repaint(); }
     void mouseExit (const juce::MouseEvent&) override { state.isHovered = false; repaint(); }
 
-    void mouseDown(const juce::MouseEvent&) override
+    void mouseDown(const juce::MouseEvent& e) override
     {
+        if (e.mods.isRightButtonDown()) {
+            if (onRightClick) {
+                onRightClick();
+            }
+            return;
+        }
+
         state.isDown = true;
         repaint();
     }
@@ -74,6 +82,8 @@ public:
             onClick();
         }
     }
+
+    void toggleSelected() { setSelected(! state.isSelected); }
 
 private:
 

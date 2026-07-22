@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "../UI/Node/Node.h"
@@ -15,7 +7,6 @@
 
 
 
-//==============================================================================
 SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
@@ -98,10 +89,14 @@ void SequenceTreeAudioProcessor::changeProgramName (int index, const juce::Strin
 }
 
 //==============================================================================
-void SequenceTreeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) { }
+void SequenceTreeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+{
+    traversalSession.prepare();
+}
 
 void SequenceTreeAudioProcessor::releaseResources()
 {
+    retiredSnapshots.clear();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -157,37 +152,59 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
     copyXmlToBinary(*xml, destData);
 }
 
-void SequenceTreeAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void SequenceTreeAudioProcessor::applyRestoredState()
 {
-    if (data == nullptr || sizeInBytes == 0) {
-        pendingRestoreState = juce::ValueTree();
-
-        if (applyStateToUi) {
-            applyStateToUi(juce::ValueTree(ValueTreeIdentifiers::NodeMap));
-        }
-        else {
-            graphState.nodeMap.removeAllChildren(nullptr);
-        }
+    if (!pendingRestoreState.isValid()) {
         return;
     }
 
-    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+    const juce::ValueTree restoredTree = pendingRestoreState;
 
-    if (xmlState == nullptr) { DBG("INVALID STATE DATA"); return; }
+    if (suspendStateListeners) {
+        suspendStateListeners();
+    }
 
-    juce::ValueTree restoredTree = juce::ValueTree::fromXml (*xmlState);
+    graphState.replaceState(restoredTree);
+    rtGraphBuilder.rebuildAllGraphs();
 
-    if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
+    pendingRestoreState = juce::ValueTree();
 
-    pendingRestoreState = restoredTree;
-
-    if (applyStateToUi) {
-        applyStateToUi(restoredTree);
+    if (resumeStateListeners) {
+        resumeStateListeners();
     }
 }
 
-//==============================================================================
-// This creates new instances of the plugin.
+void SequenceTreeAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+{
+    if (data == nullptr || sizeInBytes == 0) {
+        pendingRestoreState = juce::ValueTree(ValueTreeIdentifiers::NodeMap);
+    }
+    else {
+        std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+
+        if (xmlState == nullptr) { DBG("INVALID STATE DATA"); return; }
+
+        juce::ValueTree restoredTree = juce::ValueTree::fromXml (*xmlState);
+
+        if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
+
+        pendingRestoreState = restoredTree;
+    }
+
+    if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        applyRestoredState();
+        return;
+    }
+
+    juce::WeakReference<SequenceTreeAudioProcessor> safeThis (this);
+
+    juce::MessageManager::callAsync([safeThis]() mutable {
+        if (safeThis != nullptr) {
+            safeThis->applyRestoredState();
+        }
+    });
+}
+
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new SequenceTreeAudioProcessor();
@@ -196,6 +213,15 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
+
+    struct BlockScope
+    {
+        std::atomic<std::uint64_t>& counter;
+        ~BlockScope() { counter.fetch_add(1, std::memory_order_release); }
+    };
+
+    const BlockScope blockScope { blocksCompleted };
+
     const int numSamples = buffer.getNumSamples();
 
     buffer.clear();
@@ -207,7 +233,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         traversalSession.silenceAllNotes(midiMessages);
     }
 
-    auto snap = std::atomic_load(&audioSnapshot);
+    AudioSnapshot* snap = currentSnapshot.load(std::memory_order_acquire);
 
     if (isPlaying.load() == false || !snap || !snap->globalNodes) {
         if (resetHit) {
@@ -259,7 +285,7 @@ void SequenceTreeAudioProcessor::clearOldEvents(int traversalId)
 
 void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)
 {
-    auto oldSnap = std::atomic_load(&audioSnapshot);
+    const AudioSnapshot* oldSnap = publishedSnapshot.get();
 
     auto newSnap = std::make_shared<AudioSnapshot>();
 
@@ -295,20 +321,38 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)
 
 void SequenceTreeAudioProcessor::publishAudioSnapshot(std::shared_ptr<AudioSnapshot> snapshot)
 {
-    auto retired = std::atomic_exchange(&audioSnapshot, std::move(snapshot));
+    static_assert(std::atomic<AudioSnapshot*>::is_always_lock_free,
+                  "the audio thread must be able to read the snapshot without a lock");
 
-    auto isUnreferencedByAudioThread = [](const std::shared_ptr<AudioSnapshot>& candidate) {
-        return candidate.use_count() == 1;
+    AudioSnapshot* raw = snapshot.get();
+
+    auto retired      = std::move(publishedSnapshot);
+    publishedSnapshot = std::move(snapshot);
+
+    currentSnapshot.store(raw, std::memory_order_release);
+
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+
+    if (retired != nullptr) {
+        retiredSnapshots.push_back({ std::move(retired),
+                                     blocksCompleted.load(std::memory_order_acquire) });
+    }
+
+    collectRetiredSnapshots();
+}
+
+void SequenceTreeAudioProcessor::collectRetiredSnapshots()
+{
+    const std::uint64_t completed = blocksCompleted.load(std::memory_order_acquire);
+
+    auto isUnreachableByAudioThread = [completed](const RetiredSnapshot& entry) {
+        return completed > entry.retiredAtBlock;
     };
 
     retiredSnapshots.erase(std::remove_if(retiredSnapshots.begin(),
                                           retiredSnapshots.end(),
-                                          isUnreferencedByAudioThread),
+                                          isUnreachableByAudioThread),
                            retiredSnapshots.end());
-
-    if (retired != nullptr) {
-        retiredSnapshots.push_back(std::move(retired));
-    }
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::createParameterLayout()

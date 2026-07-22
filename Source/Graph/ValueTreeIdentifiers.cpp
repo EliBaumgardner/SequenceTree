@@ -62,7 +62,6 @@ const juce::Identifier ValueTreeIdentifiers::ModulationType       {"ModulationTy
 const juce::Identifier ValueTreeIdentifiers::PitchMod             {"PitchMod"};
 const juce::Identifier ValueTreeIdentifiers::VelocityMod          {"VelocityMod"};
 const juce::Identifier ValueTreeIdentifiers::DurationMod          {"DurationMod"};
-const juce::Identifier ValueTreeIdentifiers::ColorIntensityFactor {"ColorIntensityFactor"};
 
 const juce::Identifier ValueTreeIdentifiers::TraversalData        {"TraversalData"};
 const juce::Identifier ValueTreeIdentifiers::TraversalId          {"TraversalId"};

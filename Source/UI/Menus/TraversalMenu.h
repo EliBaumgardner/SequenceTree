@@ -8,13 +8,13 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 
-#include "TraversalDisplayMenu.h"
-#include "Node/ValueEditor.h"
+#include "ItemSelector.h"
+#include "../Node/ValueEditor.h"
 #include "ColourSelector.h"
-#include "Buttons/IconButton.h"
+#include "../Buttons/IconButton.h"
 #include "TraversalRulesMenu.h"
-#include "PopupWindow.h"
-#include "ResizablePanel.h"
+#include "../PopupWindow.h"
+#include "../ResizablePanel.h"
 
 class TraversalMenuListener;
 
@@ -29,11 +29,12 @@ public:
     void resized() override;
 
     void selectTraversal(int traversalId);
+    void addTraversalToMenu(int traversalId);
 
     static constexpr int resizerWidth = 15;
     static constexpr int minMenuWidth = resizerWidth;
 
-    TraversalDisplayMenu displayMenu;
+    ItemSelector displayMenu;
 
     juce::Label multiplierLabel;
     ValueEditor multiplierEditor;

@@ -3,7 +3,6 @@
 //
 
 #include "TraversalFlagNode.h"
-#include "NodeTextEditor.h"
 #include "../../Graph/ValueTreeState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
@@ -43,9 +42,7 @@ TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context
         rebuildOwnGraph();
     };
 
-    if (nodeTextEditor != nullptr) {
-        nodeTextEditor->setVisible(false);
-    }
+    nodeValueEditor.setVisible(false);
 }
 
 void TraversalFlagNode::setDisplayMode(NodeDisplayMode mode)
@@ -126,7 +123,7 @@ bool TraversalFlagNode::hitTest(int x, int y)
     if (switchCountEditor.isVisible() && switchCountEditor.getBounds().contains(p)) {
         return true;
     }
-    if (nodeTextEditor != nullptr && nodeTextEditor->isVisible() && nodeTextEditor->getBounds().contains(p)) {
+    if (nodeValueEditor.isVisible() && nodeValueEditor.getBounds().contains(p)) {
         return true;
     }
 

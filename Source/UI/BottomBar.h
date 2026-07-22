@@ -2,8 +2,9 @@
 
 #include "../Util/PluginModules.h"
 #include "../Util/ApplicationContext.h"
-#include "Buttons/PaintTool.h"
-#include "Buttons/ArrowTool.h"
+#include "Buttons/IconButton.h"
+#include "Buttons/PaintToolSettings.h"
+#include "PopupWindow.h"
 
 class BottomBar : public juce::Component
 {
@@ -19,6 +20,23 @@ private:
 
     static constexpr int cellGap = 10;
 
-    std::unique_ptr<PaintTool> paintTool;
-    std::unique_ptr<ArrowTool> arrowTool;
+    void togglePaintMode();
+    void toggleArrowMode();
+
+    void showPaintSettings();
+    void applyPaintSetting(PaintToolSettings::PaintSetting setting);
+
+    PopupWindowLauncher paintSettingsLauncher {
+        "Paint Brush Settings",
+        [this]() {
+            auto content = std::make_unique<PaintToolSettings>(applicationContext);
+            content->setSize(PaintToolSettings::defaultWidth, PaintToolSettings::defaultHeight);
+
+            return content;
+        },
+        juce::Colours::black
+    };
+
+    std::unique_ptr<IconButton> paintTool;
+    std::unique_ptr<IconButton> arrowTool;
 };

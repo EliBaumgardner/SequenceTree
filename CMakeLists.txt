@@ -59,31 +59,28 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
         Source/UI/Node/Arrow.cpp
-        Source/UI/Node/NodeTextEditor.cpp
         Source/UI/Node/ValueEditor.cpp
         Source/UI/Node/Modulator.cpp
         Source/UI/Node/TraversalFlagNode.cpp
-        Source/UI/Theme/Theme.cpp
         Source/UI/Theme/CustomLookAndFeel.cpp
         Source/UI/Theme/CustomLookAndFeel_Nodes.cpp
         Source/UI/Theme/CustomLookAndFeel_Buttons.cpp
         Source/UI/Theme/CustomTextEditor.cpp
         Source/UI/Theme/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp
-        Source/UI/Buttons/DisplayMenu.cpp
-        Source/UI/TraversalMenu.cpp
-        Source/UI/MenuArea.cpp
+        Source/UI/Menus/ItemSelector.cpp
+        Source/UI/Menus/TraversalMenu.cpp
+        Source/UI/Menus/MenuArea.cpp
         Source/UI/ResizablePanel.cpp
-        Source/UI/NodeMenu.cpp
-        Source/UI/TraversalDisplayMenu.cpp
-        Source/UI/AllowedTraversalsMenu.cpp
-        Source/UI/TraversalRulesMenu.cpp
+        Source/UI/Menus/NodeMenu.cpp
+        Source/UI/Menus/AllowedTraversalsMenu.cpp
+        Source/UI/Menus/TraversalRulesMenu.cpp
         Source/UI/PopupWindow.cpp
-        Source/UI/ColourSelector.cpp
+        Source/UI/Menus/ColourSelector.cpp
         Source/UI/PianoRoll.cpp
         Source/UI/Titlebar.cpp
         Source/UI/BottomBar.cpp
-        Source/UI/MenuBar.cpp
+        Source/UI/Menus/MenuBar.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE

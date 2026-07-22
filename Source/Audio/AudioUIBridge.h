@@ -56,7 +56,13 @@ public:
     std::array<CountCommand, kCountFifoSize>       countBuffer {};
 
 
-    void highlightNode(const RTNode& node, bool shouldHighlight, int traversalId = -1);
+    void highlightNode(int nodeId, bool shouldHighlight, int traversalId = -1);
+
+    void highlightNode(const RTNode& node, bool shouldHighlight, int traversalId = -1)
+    {
+        highlightNode(node.nodeID, shouldHighlight, traversalId);
+    }
+
     void pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId, int traversalId, bool isConnection = false);
     void pushArrowReset(int rootId, int traversalId = -1);
     void pushCount(int nodeId, int currentCount, int countLimit);

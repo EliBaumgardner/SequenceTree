@@ -16,17 +16,17 @@
 #include <memory>
 #include <unordered_map>
 
-class NodeCanvas;
-struct ApplicationContext;
+class SequenceTreeAudioProcessor;
+class ValueTreeState;
 
 class RTGraphBuilder
 {
 public:
-    RTGraphBuilder(ApplicationContext& context, NodeCanvas& canvas);
+    RTGraphBuilder(SequenceTreeAudioProcessor& processor, ValueTreeState& valueTreeState);
 
     void makeRTGraph(const juce::ValueTree& nodeValueTree);
+    void rebuildAllGraphs();
     void updateDurationMap(int nodeId);
-    void destroyRTGraph(class Node* root);
 
     std::unordered_map<int, std::shared_ptr<RTGraph>> rtGraphs;
 
@@ -38,10 +38,12 @@ private:
     void createRTNodeConnections(std::shared_ptr<RTGraph> rtGraph,
                                  std::unordered_map<int, juce::ValueTree>& tempNodeMap);
 
+    void fillDurationMap(const juce::ValueTree& nodeValueTree, RTNode& rtNode);
+
     RTtraversal buildRTtraversal(int traversalId);
 
     void rebuildGraphsForTraversal(int traversalId);
 
-    ApplicationContext& applicationContext;
-    NodeCanvas&         canvas;
+    SequenceTreeAudioProcessor& processor;
+    ValueTreeState&             valueTreeState;
 };

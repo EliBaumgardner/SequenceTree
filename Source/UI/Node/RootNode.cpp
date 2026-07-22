@@ -3,7 +3,6 @@
 //
 
 #include "RootNode.h"
-#include "NodeTextEditor.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Graph/ValueTreeState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
@@ -124,8 +123,7 @@ void RootNode::resized() {
     upButton->setBounds(editorArea.removeFromTop(4));
     downButton->setBounds(editorArea.removeFromBottom(4));
 
-    nodeTextEditor->setBounds(editorArea);
-    nodeTextEditor->setJustification(juce::Justification::centred);
+    nodeValueEditor.setBounds(editorArea);
 
     countEditor.setBounds(circleArea.getRight() - 18, circleArea.getY(), 18, 12);
     switchCountEditor.setBounds( circleArea.getRight() - 18, circleArea.getBottom() - 12, 18, 12);

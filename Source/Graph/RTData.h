@@ -104,7 +104,6 @@ struct RTGraph {
 
 
     std::unordered_map<int, RTNode> nodeMap;
-    std::atomic<bool> traversalRequested;
 
     int rootID    = 0;
     int graphID   = 0;
@@ -114,7 +113,6 @@ struct RTGraph {
 
     RTGraph(RTGraph&& other) noexcept
         : nodeMap(std::move(other.nodeMap)),
-          traversalRequested(other.traversalRequested.load()),
           rootID(other.rootID),
           graphID(other.graphID),
           loopLimit(other.loopLimit)
@@ -123,7 +121,6 @@ struct RTGraph {
     RTGraph& operator=(RTGraph&& other) noexcept {
         if(this != &other) {
             nodeMap   = std::move(other.nodeMap);
-            traversalRequested.store(other.traversalRequested.load());
             rootID    = other.rootID;
             graphID   = other.graphID;
             loopLimit = other.loopLimit;

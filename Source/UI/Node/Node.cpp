@@ -8,10 +8,10 @@
   ==============================================================================
 */
 #include "../../Graph/ValueTreeState.h"
-#include "NodeTextEditor.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
+#include "../../Graph/RTGraphBuilder.h"
 #include "Arrow.h"
 
 #include "Node.h"
@@ -21,7 +21,7 @@
 
 Node::Node(ApplicationContext& context)
     : applicationContext(context),
-      countEditor(context), switchCountEditor(context), subLoopLimitEditor(context)
+      nodeValueEditor(context), countEditor(context), switchCountEditor(context), subLoopLimitEditor(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
 
@@ -39,9 +39,13 @@ Node::Node(ApplicationContext& context)
 
     downButton->setInterceptsMouseClicks(true,false);
 
-    nodeTextEditor = std::make_unique<NodeTextEditor>(this, context);
-    nodeTextEditor->bindEditor(midiNoteData,ValueTreeIdentifiers::MidiPitch);
-    nodeTextEditor->toBack();
+    nodeValueEditor.setInterceptsMouseClicks(false, false);
+    nodeValueEditor.enableAutoFitText();
+    nodeValueEditor.setPitchMode(true);
+    nodeValueEditor.setEditable(false);
+    nodeValueEditor.setMinimumValue(0);
+    nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
+    nodeValueEditor.toBack();
 
     countEditor.setInterceptsMouseClicks(true, false);
     countEditor.setTooltip("Count Limit");
@@ -53,16 +57,16 @@ Node::Node(ApplicationContext& context)
     switchCountEditor.setTooltip("Loop Limit");
 
     upButton->onClick = [this]() {
-        incrementNodeTextEditorValue(1);
+        incrementNodeValue(1);
     };
 
     downButton->onClick = [this]() {
-        incrementNodeTextEditorValue(-1);
+        incrementNodeValue(-1);
     };
 
     addAndMakeVisible(upButton.get());
     addAndMakeVisible(downButton.get());
-    addAndMakeVisible(nodeTextEditor.get());
+    addAndMakeVisible(nodeValueEditor);
 
     addAndMakeVisible(switchCountEditor);
     addAndMakeVisible(countEditor);
@@ -83,8 +87,7 @@ void Node::resized()
     upButton->setBounds(editorArea.removeFromTop(buttonHeight));
     downButton->setBounds(editorArea.removeFromBottom(buttonHeight));
 
-    nodeTextEditor->setBounds(editorArea);
-    nodeTextEditor->setJustification(juce::Justification::centred);
+    nodeValueEditor.setBounds(editorArea);
 
     int editorWidth  = (int)(getWidth()  * nodeEditorWidthFactor);
     int editorHeight = (int)(getHeight() * nodeEditorHeightFactor);
@@ -193,26 +196,33 @@ void Node::setDisplayMode(NodeDisplayMode mode)
         subLoopLimitEditor.bindEditor(nodeValueTree, subLoopProperty);
     }
 
+    if (mode == NodeDisplayMode::CountLimit) {
+        nodeValueEditor.enableDualValue(ValueTreeIdentifiers::TriggerLimit);
+    }
+    else {
+        nodeValueEditor.disableDualValue();
+    }
+
     switch (mode) {
 
         case NodeDisplayMode::Pitch:
-            nodeTextEditor->bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
+            nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
             break;
 
         case NodeDisplayMode::Velocity:
-            nodeTextEditor->bindEditor(midiNoteData, ValueTreeIdentifiers::MidiVelocity);
+            nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiVelocity);
             break;
 
         case NodeDisplayMode::CountLimit:
-            nodeTextEditor->bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
+            nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
             break;
 
         case NodeDisplayMode::Channel:
-            nodeTextEditor->bindEditor(midiNoteData, ValueTreeIdentifiers::MidiChannel);
+            nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiChannel);
             break;
 
         case NodeDisplayMode::RepeatValue:
-            nodeTextEditor->bindEditor(nodeValueTree, ValueTreeIdentifiers::RepeatValue);
+            nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::RepeatValue);
             break;
 
         default:
@@ -220,16 +230,27 @@ void Node::setDisplayMode(NodeDisplayMode mode)
     }
 
     const bool pitchMode = (mode == NodeDisplayMode::Pitch);
-    nodeTextEditor->setReadOnly(pitchMode);
-    nodeTextEditor->setCaretVisible(! pitchMode);
+    nodeValueEditor.setPitchMode(pitchMode);
+    nodeValueEditor.setEditable(! pitchMode);
+    nodeValueEditor.setMinimumValue(mode == NodeDisplayMode::Channel || mode == NodeDisplayMode::RepeatValue ? 1 : 0);
 
-    nodeTextEditor->formatDisplay(mode);
+    nodeValueEditor.repaint();
+    repaint();
 }
 
-void Node::incrementNodeTextEditorValue(int incrementValue) {
-    double editorValue = nodeTextEditor->bindValue.toString().getDoubleValue();
+void Node::incrementNodeValue(int incrementValue) {
+    double editorValue = nodeValueEditor.boundValue.toString().getDoubleValue();
     editorValue += incrementValue;
 
-    nodeTextEditor->bindValue.setValue(editorValue);
-    nodeTextEditor->formatDisplay(nodeTextEditor->mode);
+    nodeValueEditor.boundValue.setValue(editorValue);
+    refreshValueDisplay();
+}
+
+void Node::refreshValueDisplay() {
+    nodeValueEditor.repaint();
+    repaint();
+
+    if (nodeValueTree.isValid() && applicationContext.rtGraphBuilder != nullptr) {
+        applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);
+    }
 }

@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "TraversalMenu.h"
-#include "../Graph/ValueTreeIdentifiers.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
 
 class TraversalMenuListener : public juce::ValueTree::Listener {
 
@@ -20,9 +20,9 @@ public:
         if (child.getType() == ValueTreeIdentifiers::TraversalData) {
 
             int traversalId = child.getProperty(ValueTreeIdentifiers::TraversalId);
-            traversalMenu.displayMenu.addTraversalToMenu(traversalId);
+            traversalMenu.addTraversalToMenu(traversalId);
 
-            if (traversalMenu.displayMenu.selectedOption.isEmpty()) {
+            if (traversalMenu.displayMenu.getSelectedLabel().isEmpty()) {
                 traversalMenu.selectTraversal(traversalId);
             }
         }
@@ -33,7 +33,7 @@ public:
         if (child.getType() == ValueTreeIdentifiers::TraversalData) {
 
             int traversalId = child.getProperty(ValueTreeIdentifiers::TraversalId);
-            traversalMenu.displayMenu.removeTraversalFromMenu(traversalId);
+            traversalMenu.displayMenu.removeItem(traversalId);
         }
     }
 

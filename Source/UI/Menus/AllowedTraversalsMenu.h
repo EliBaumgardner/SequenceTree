@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-#include "../Util/ApplicationContext.h"
+#include "../../Util/ApplicationContext.h"
 
 class AllowedTraversalsMenu : public juce::Component {
 

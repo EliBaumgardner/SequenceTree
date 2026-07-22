@@ -12,6 +12,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../../Util/ApplicationContext.h"
+#include "../../Graph/ArrowDuration.h"
 #include "ArrowProgress.h"
 
 class Node;
@@ -75,7 +76,6 @@ public:
   juce::ValueTree boundNodeValueTree;
   juce::Value bindValue;
 
-  static inline const float durationAmount      {5.0f};
   static inline const int   animationTimerHz    {60};
   static inline const float snapSpringStiffness {0.20f};
   static inline const float snapSpringDamping   {0.30f};

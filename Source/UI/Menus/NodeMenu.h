@@ -7,12 +7,12 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <array>
-#include "../Util/ApplicationContext.h"
-#include "Node/ValueEditor.h"
+#include "../../Util/ApplicationContext.h"
+#include "../Node/ValueEditor.h"
 #include "ColourSelector.h"
-#include "Buttons/IconButton.h"
+#include "../Buttons/IconButton.h"
 #include "TraversalRulesMenu.h"
-#include "PopupWindow.h"
+#include "../PopupWindow.h"
 
 class Node;
 
