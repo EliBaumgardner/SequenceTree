@@ -20,11 +20,12 @@
 #include "ValueField.h"
 #include "AudioCommandDrainer.h"
 #include "DanglingArrowLayer.h"
+#include "NodeManager.h"
+#include "ArrowManager.h"
 
 class Node;
 class RootNode;
-class NodeArrow;
-class DanglingArrow;
+class Arrow;
 
 class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
@@ -48,60 +49,15 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         void paint(juce::Graphics& g) override;
 
-        void addLinePoints(Node* startNode, Node* endNode);
-        void updateLinePoints(Node* movedNode);
-
-        void removeLinePoints(Node* node);
-        void removeArrow(NodeArrow* arrow);
-
-        void handleArrowAdded(int parentNodeId, int childNodeId);
-        void handleArrowRemoved(int parentNodeId, int childNodeId);
-
-        void setSelectionMode(NodeDisplayMode mode) const;
-
-        void addNodeToCanvas(int nodeId);
-        void removeNodeFromCanvas(int nodeId);
-
-        Node* instantiateNodeFromTree(const juce::ValueTree& nodeValueTree);
-
-        void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY);
-        void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY, std::unordered_set<int>& visited);
-
-        void setNodePosition(int nodeId);
-
         void setProcessorPlayblack(bool isPlaying);
-        void equipRootTraversals();
 
         void setValueTreeState(const juce::ValueTree& stateTree);
 
         void clearCanvas();
 
-        void setSelectedArrow(NodeArrow* arrow);
-        void setSelectedDanglingArrow(DanglingArrow* arrow);
-        void clearArrowSelection();
-
-        void triggerArrowSnapForNode(int nodeId);
-        void showSnapGhostArrow(Node* from, Node* to);
-        void hideSnapGhostArrow();
-
         void handleAsyncUpdate() override;
 
-        void resetAllArrowProgress();
-        void resetGraphArrowProgress(int graphId, int traversalId);
-
         void setPaintMode(bool enabled);
-        void setBrushColour(juce::Colour colour);
-        void setBrushRadius(float radius);
-        void setActivePaintLayer(int index);
-        void setViewZoom(float z);
-        void refreshValueField();
-        void paintStroke(juce::Point<float> canvasPos, bool isStart, bool erase = false);
-        void endStroke();
-
-        juce::OwnedArray<NodeArrow> nodeArrows;
-        NodeArrow* snapGhostArrow = nullptr;
-
-        std::unordered_map<int, Node*> nodeMap;
 
         juce::Colour canvasColour = juce::Colours::white;
         juce::String infoText;
@@ -122,7 +78,9 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         ValueField valueField { *this };
 
-        AudioCommandDrainer drainer          { *this, applicationContext };
+        NodeManager         nodeManager        { *this, applicationContext };
+        ArrowManager        arrowManager       { *this, applicationContext };
+        AudioCommandDrainer drainer            { *this, applicationContext };
         DanglingArrowLayer  danglingArrowLayer { *this, applicationContext };
 
         ApplicationContext& getApplicationContext() { return applicationContext; }

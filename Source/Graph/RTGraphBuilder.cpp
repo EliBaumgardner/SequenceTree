@@ -15,8 +15,7 @@
 #include "../Plugin/PluginProcessor.h"
 #include "../UI/Canvas/NodeCanvas.h"
 #include "../UI/Node/Node.h"
-#include "../UI/Node/NodeArrow.h"
-#include "../UI/Node/DanglingArrow.h"
+#include "../UI/Node/Arrow.h"
 #include "../Util/ApplicationContext.h"
 #include "ValueTreeState.h"
 #include "ValueTreeIdentifiers.h"
@@ -203,15 +202,14 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
                 }
             }
 
-            auto nodeIt = canvas.nodeMap.find(nodeId);
+            Node* nodeFromTree = canvas.nodeManager.find(nodeId);
 
-            if (nodeIt != canvas.nodeMap.end()) {
-                Node* nodeFromTree = nodeIt->second;
+            if (nodeFromTree != nullptr) {
                 for (auto& [childId, nodeArrow] : nodeFromTree->nodeArrows) {
-                    rtNode.durationMap[childId] = nodeArrow->duration;
+                    rtNode.durationMap[childId] = nodeArrow->getDuration();
                 }
-                for (DanglingArrow* danglingArrow : canvas.danglingArrowLayer.arrows) {
-                    if (danglingArrow->startNode == nodeFromTree) {
+                for (Arrow* danglingArrow : canvas.arrowManager.all()) {
+                    if (danglingArrow->isDangling() && danglingArrow->startNode == nodeFromTree) {
                         rtNode.durationMap[nodeId] = danglingArrow->getDuration();
 
                         juce::ValueTree disabledTraversals = danglingArrow->arrowTree.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
@@ -369,12 +367,10 @@ void RTGraphBuilder::updateDurationMap(int nodeId)
         return;
     }
 
-    auto nodeIt = canvas.nodeMap.find(nodeId);
-    if (nodeIt == canvas.nodeMap.end()) {
+    Node* node = canvas.nodeManager.find(nodeId);
+    if (node == nullptr) {
         return;
     }
-
-    Node* node = nodeIt->second;
 
     juce::ValueTree nodeVT = applicationContext.valueTreeState->getNode(nodeId);
     if (!nodeVT.isValid()) {
@@ -389,9 +385,9 @@ void RTGraphBuilder::updateDurationMap(int nodeId)
     if (globalNodeIt != newSnap->globalNodes->end()) {
         globalNodeIt->second.durationMap.clear();
         for (auto& [childId, arrow] : node->nodeArrows)
-            globalNodeIt->second.durationMap[childId] = arrow->duration;
-        for (DanglingArrow* danglingArrow : canvas.danglingArrowLayer.arrows) {
-            if (danglingArrow->startNode == node) {
+            globalNodeIt->second.durationMap[childId] = arrow->getDuration();
+        for (Arrow* danglingArrow : canvas.arrowManager.all()) {
+            if (danglingArrow->isDangling() && danglingArrow->startNode == node) {
                 globalNodeIt->second.durationMap[nodeId] = danglingArrow->getDuration();
             }
         }
@@ -400,17 +396,16 @@ void RTGraphBuilder::updateDurationMap(int nodeId)
     juce::ValueTree parentVT = applicationContext.valueTreeState->getNodeParent(nodeId);
     if (parentVT.isValid()) {
         int parentId = parentVT.getProperty(ValueTreeIdentifiers::Id);
-        auto parentIt = canvas.nodeMap.find(parentId);
-        if (parentIt != canvas.nodeMap.end()) {
-            Node* parentNode = parentIt->second;
+        Node* parentNode = canvas.nodeManager.find(parentId);
+        if (parentNode != nullptr) {
             auto globalParentIt = newSnap->globalNodes->find(parentId);
             if (globalParentIt != newSnap->globalNodes->end()) {
                 globalParentIt->second.durationMap.clear();
                 for (auto& [childId, arrow] : parentNode->nodeArrows) {
-                    globalParentIt->second.durationMap[childId] = arrow->duration;
+                    globalParentIt->second.durationMap[childId] = arrow->getDuration();
                 }
-                for (DanglingArrow* danglingArrow : canvas.danglingArrowLayer.arrows) {
-                    if (danglingArrow->startNode == parentNode) {
+                for (Arrow* danglingArrow : canvas.arrowManager.all()) {
+                    if (danglingArrow->isDangling() && danglingArrow->startNode == parentNode) {
                         globalParentIt->second.durationMap[parentId] = danglingArrow->getDuration();
                     }
                 }

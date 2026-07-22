@@ -12,8 +12,8 @@ Modulator::Modulator(ApplicationContext& context) : Node(context)
 void Modulator::resized() {
     auto editorArea = getLocalBounds().reduced(10.0f);
 
-    upButton.setBounds(editorArea.removeFromTop(4.0f));
-    downButton.setBounds(editorArea.removeFromBottom(4.0f));
+    upButton->setBounds(editorArea.removeFromTop(4.0f));
+    downButton->setBounds(editorArea.removeFromBottom(4.0f));
 
     nodeTextEditor.get()->setBounds(editorArea);
     nodeTextEditor.get()->setJustification(juce::Justification::centred);

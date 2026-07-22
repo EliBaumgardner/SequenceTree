@@ -7,8 +7,7 @@
 #include "NodeCanvas.h"
 #include "DanglingArrowLayer.h"
 #include "../Node/Node.h"
-#include "../Node/NodeArrow.h"
-#include "../Node/DanglingArrow.h"
+#include "../Node/Arrow.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/ValueTreeState.h"
 #include "../../Plugin/PluginProcessor.h"
@@ -52,8 +51,8 @@ void AudioCommandDrainer::drainHighlights()
 
     auto apply = [this](const AudioUIBridge::HighlightCommand& command)
     {
-        auto nodeIt = canvas.nodeMap.find(command.nodeId);
-        if (nodeIt == canvas.nodeMap.end()) {
+        Node* node = canvas.nodeManager.find(command.nodeId);
+        if (node == nullptr) {
             return;
         }
 
@@ -61,7 +60,7 @@ void AudioCommandDrainer::drainHighlights()
             ? getTraversalColour(command.traversalId)
             : juce::Colours::white;
 
-        nodeIt->second->setHighlightVisual(command.traversalId, command.shouldHighlight, highlightColour);
+        node->setHighlightVisual(command.traversalId, command.shouldHighlight, highlightColour);
     };
 
     for (int i = 0; i < scope.blockSize1; ++i)
@@ -77,24 +76,24 @@ void AudioCommandDrainer::drainProgress()
 
     auto apply = [this](const AudioUIBridge::ProgressCommand& command)
     {
-        auto parentIt = canvas.nodeMap.find(command.parentNodeId);
-        if (parentIt == canvas.nodeMap.end()) {
+        Node* parentNode = canvas.nodeManager.find(command.parentNodeId);
+        if (parentNode == nullptr) {
             return;
         }
 
         const juce::Colour progressColour = getTraversalColour(command.traversalId);
 
         if (command.parentNodeId == command.childNodeId) {
-            for (DanglingArrow* danglingArrow : canvas.danglingArrowLayer.arrows) {
-                if (danglingArrow->startNode == parentIt->second) {
-                    danglingArrow->startProgress(command.traversalId, command.durationMs, progressColour, command.isConnection);
+            for (Arrow* arrow : canvas.arrowManager.all()) {
+                if (arrow->isDangling() && arrow->startNode == parentNode) {
+                    arrow->startProgress(command.traversalId, command.durationMs, progressColour, command.isConnection);
                 }
             }
             return;
         }
 
-        auto arrowIt = parentIt->second->nodeArrows.find(command.childNodeId);
-        if (arrowIt == parentIt->second->nodeArrows.end() || arrowIt->second == nullptr) {
+        auto arrowIt = parentNode->nodeArrows.find(command.childNodeId);
+        if (arrowIt == parentNode->nodeArrows.end() || arrowIt->second == nullptr) {
             return;
         }
 
@@ -114,7 +113,7 @@ void AudioCommandDrainer::drainArrowResets()
 
     auto apply = [this](const AudioUIBridge::ResetCommand& command)
     {
-        canvas.resetGraphArrowProgress(command.rootId, command.traversalId);
+        canvas.arrowManager.resetGraphProgress(command.rootId, command.traversalId);
     };
 
     for (int i = 0; i < scope.blockSize1; ++i)
@@ -130,12 +129,11 @@ void AudioCommandDrainer::drainCounts()
 
     auto apply = [this](const AudioUIBridge::CountCommand& command)
     {
-        auto nodeIt = canvas.nodeMap.find(command.nodeId);
-        if (nodeIt == canvas.nodeMap.end()) {
+        Node* node = canvas.nodeManager.find(command.nodeId);
+        if (node == nullptr) {
             return;
         }
 
-        Node* node = nodeIt->second;
         node->displayCurrentCount = command.currentCount;
         node->displayCountLimit   = juce::jmax(1, command.countLimit);
         node->repaint();

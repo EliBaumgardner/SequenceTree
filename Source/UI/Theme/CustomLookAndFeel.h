@@ -7,39 +7,22 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Theme.h"
+#include "ButtonState.h"
+#include "NodeVisual.h"
 
 class NodeCanvas;
 
-class Node;
-class RootNode;
-class RootRectangle;
-
-class NodeArrow;
-
-class NodeButton;
-class ModulatorButton;
-class TraversalFlagButton;
-
-class PlayButton;
-class SyncButton;
+class Arrow;
+struct ArrowGeometry;
 
 class CustomTextEditor;
 class NodeTextEditor;
-
-class UndoButton;
-class RedoButton;
-
-class UndoRedoPane;
-class ResetButton;
 
 class PaintTool;
 
 class PaintToolSettings;
 
-class DanglingArrow;
 class ArrowTool;
-
-class IconButton;
 
 class CustomLookAndFeel : public juce::LookAndFeel_V4, public Theme
 {
@@ -66,42 +49,34 @@ public:
     void drawCanvas         (juce::Graphics& g, const NodeCanvas& canvas);
 
 
-    void drawNodeIcon       (juce::Graphics& g, const IconButton& iconButton);
-    void drawTreeIcon       (juce::Graphics& g, const IconButton& iconButton);
-    void drawTraversalIcon   (juce::Graphics& g, const IconButton& iconButton);
+    void drawNodeIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawTreeIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawTraversalIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
 
 
-
-
-
-
-    void drawNodeInteractionEffects(juce::Graphics &g, const Node &node, juce::Rectangle<float> bounds);
 
     static juce::Rectangle<float> getNodeCircleBounds(juce::Rectangle<float> componentBounds);
 
-    void drawNode           (juce::Graphics& g, const Node& node);
-    void drawNode           (juce::Graphics& g, const Node& node, juce::Rectangle<float> circleBoundsOverride);
-    void drawRootNode       (juce::Graphics& g, const RootNode& node);
-    void drawRootNodeRectangle(juce::Graphics& g, const RootRectangle& rootRectangle);
+    void drawNode          (juce::Graphics& g, const NodeVisual& visual);
+    void drawRootRectangle (juce::Graphics& g, juce::Rectangle<float> bounds);
 
-    void drawNodeArrowText          (juce::Graphics &g, const NodeArrow &nodeArrow, const juce::TextEditor &editor, TextCords textCords);
+    void drawArrow          (juce::Graphics& g, const Arrow& arrow);
 
-    void drawNodeArrow      (juce::Graphics& g, const NodeArrow& nodeArrow, const juce::TextEditor& editor);
-    void drawDanglingArrow  (juce::Graphics& g, const DanglingArrow& danglingArrow);
+    void drawPlayIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawSyncIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawPlayButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const PlayButton& button);
-    void drawSyncButton     (juce::Graphics& g, bool isMouseOver, bool isButtonDown, const SyncButton& button);
+    void drawNodeModeIcon      (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawModulatorIcon     (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawTraversalFlagIcon (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawNodeButton     (juce::Graphics& g, const NodeButton& nodeButton);
-    void drawModulatorButton(juce::Graphics& g, const ModulatorButton& modulatorButton);
-    void drawTraversalFlagButton(juce::Graphics& g, const TraversalFlagButton& traversalFlagButton);
+    void drawDisplayArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawIncrementIcon     (juce::Graphics& g, juce::Rectangle<float> bounds, bool pointsUp);
 
+    void drawTextButton        (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
 
-
-    void drawUndoButton     (juce::Graphics& g, const UndoButton& undoButton, bool isButtonDown);
-    void drawRedoButton     (juce::Graphics& g, const RedoButton& redoButton, bool isButtonDown);
-    void drawUndoRedoPane   (juce::Graphics& g, const UndoRedoPane& undoRedoPane);
-    void drawResetButton    (juce::Graphics& g, const ResetButton& resetButton, bool isButtonDown);
+    void drawUndoIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawRedoIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawResetIcon      (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
 
     void drawPaintTool         (juce::Graphics& g, const PaintTool& paintTool);
     void drawPaintToolSettings (juce::Graphics& g, const PaintToolSettings& paintToolSettings);

@@ -8,21 +8,20 @@ MenuBar::MenuBar(ApplicationContext& context): context(context)
 {
     setLookAndFeel(context.lookAndFeel);
 
-    treeIcon      = std::make_unique<IconButton>(context);
-    nodeIcon      = std::make_unique<IconButton>(context);
-    traversalIcon = std::make_unique<IconButton>(context);
+    treeIcon = std::make_unique<IconButton>(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawTreeIcon(g, bounds, state);
+        }, context.lookAndFeel);
 
-    treeIcon->repainted = [this](juce::Graphics& g) {
-        CustomLookAndFeel::get(*this).drawTreeIcon(g, *treeIcon);
-    };
+    nodeIcon = std::make_unique<IconButton>(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawNodeIcon(g, bounds, state);
+        }, context.lookAndFeel);
 
-    nodeIcon->repainted = [this](juce::Graphics& g) {
-        CustomLookAndFeel::get(*this).drawNodeIcon(g, *nodeIcon);
-    };
-
-    traversalIcon->repainted = [this](juce::Graphics& g) {
-        CustomLookAndFeel::get(*this).drawTraversalIcon(g, *traversalIcon);
-    };
+    traversalIcon = std::make_unique<IconButton>(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawTraversalIcon(g, bounds, state);
+        }, context.lookAndFeel);
 
     addAndMakeVisible(treeIcon.get());
     addAndMakeVisible(nodeIcon.get());

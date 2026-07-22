@@ -51,4 +51,7 @@ struct Theme
     static constexpr float outerButtonBoundsReduction = 2.0f;
 
     static constexpr float labelFontHeight = 9.0f;
+
+    static constexpr int textButtonHeight = 22;
+    static constexpr int menuEdgeInset    = 6;
 };

@@ -145,24 +145,6 @@ void MainComponent::updateCursorPosition(juce::Colour selectedColour) {
 }
 
 
-MainWindow::MainWindow (const juce::String& name, juce::Colour backgroundColour, int requiredButtons, bool addToDesktop)
-: DocumentWindow (name, backgroundColour, requiredButtons, addToDesktop) {
-    
-    component = new MainComponent();
-    setContentOwned(component, true);
-    setResizable(true,true);
-}
-
-void MainWindow::closeButtonPressed() {
-    
-    setVisible(false);
-}
-
-MainComponent* MainWindow::getContent() {
-    return component;
-}
-
-
 ColourSelector::ColourSelector(ApplicationContext& context)
     : applicationContext(context)
 {
@@ -185,16 +167,15 @@ void ColourSelector::paint(juce::Graphics& g) {
 
 void ColourSelector::mouseDown(const juce::MouseEvent& event) {
 
-    if(mainWindow != nullptr) {
-        mainWindow.reset();
+    pickerLauncher.show();
+
+    MainComponent* picker = pickerLauncher.getContentAs<MainComponent>();
+    if (picker == nullptr) {
+        return;
     }
 
-    mainWindow = std::make_unique<MainWindow>("",juce::Colours::white,juce::DocumentWindow::closeButton,true);
-    mainWindow->centreWithSize(160, 145);
-    mainWindow->setVisible(true);
-
-    mainWindow->getContent()->updateCursorPosition(colour);
-    mainWindow->getContent()->colourPicked =[this](juce::Colour c) {
+    picker->updateCursorPosition(colour);
+    picker->colourPicked = [this](juce::Colour c) {
 
         if(node != nullptr) {
             node->nodeColour = c;
@@ -223,9 +204,9 @@ void ColourSelector::setNode(Node* node) {
     colour = node->nodeColour;
     repaint();
     
-    if(mainWindow != nullptr && mainWindow->getContent() != nullptr) {
-        mainWindow->toFront(true);
-        mainWindow->getContent()->updateCursorPosition(colour);
+    if (MainComponent* picker = pickerLauncher.getContentAs<MainComponent>()) {
+        pickerLauncher.toFront();
+        picker->updateCursorPosition(colour);
     }
 }
 
@@ -254,11 +235,11 @@ void ColourSelector::applyColourToDescendants(Node* n, juce::Colour c, std::unor
             continue;
         }
 
-        auto it = canvas->nodeMap.find(childId);
-        if (it != canvas->nodeMap.end()) {
-            it->second->nodeColour = c;
-            it->second->repaint();
-            applyColourToDescendants(it->second, c, visited);
+        Node* childNode = canvas->nodeManager.find(childId);
+        if (childNode != nullptr) {
+            childNode->nodeColour = c;
+            childNode->repaint();
+            applyColourToDescendants(childNode, c, visited);
         }
     }
 }

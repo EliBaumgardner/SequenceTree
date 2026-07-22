@@ -9,6 +9,7 @@
 #include "../../Util/ApplicationContext.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Buttons/PaintToolSettings.h"
+#include "../PopupWindow.h"
 #include "../Canvas/NodeCanvas.h"
 
 
@@ -18,18 +19,26 @@ public:
 
     ApplicationContext& context;
 
-    std::unique_ptr<PaintToolSettingsWindow> settingsWindow;
+    PopupWindowLauncher settingsLauncher {
+        "Paint Brush Settings",
+        [this]() {
+            auto content = std::make_unique<PaintToolSettings>(this->context);
+            content->setSize(PaintToolSettings::defaultWidth, PaintToolSettings::defaultHeight);
+
+            return content;
+        },
+        juce::Colours::black
+    };
 
     bool isSelected = false;
 
 
     PaintTool(ApplicationContext& context) : context(context) {
         setLookAndFeel(context.lookAndFeel);
-        settingsWindow = std::make_unique<PaintToolSettingsWindow>(context);
-        settingsWindow->centreWithSize(100, 200);
+        settingsLauncher.createIfNeeded();
 
         context.onDisplayModeChanged = [this](NodeDisplayMode mode) {
-            auto* settings = dynamic_cast<PaintToolSettings*>(settingsWindow->getContentComponent());
+            auto* settings = settingsLauncher.getContentAs<PaintToolSettings>();
             if (settings == nullptr) { return; }
 
             switch (mode) {
@@ -60,7 +69,7 @@ public:
 
             if (isSelected) {
                 context.canvas->setPaintMode(true);
-                if (auto* settings = dynamic_cast<PaintToolSettings*>(settingsWindow->getContentComponent())) {
+                if (auto* settings = settingsLauncher.getContentAs<PaintToolSettings>()) {
                     settings->setPaintMode(settings->paintSetting);
                 }
             } else {
@@ -69,7 +78,7 @@ public:
         }
 
         if (e.mods.isRightButtonDown()) {
-            if (auto* settings = dynamic_cast<PaintToolSettings*>(settingsWindow->getContentComponent())) {
+            if (auto* settings = settingsLauncher.getContentAs<PaintToolSettings>()) {
                 switch (context.currentDisplayMode) {
                     case NodeDisplayMode::Pitch:
                         settings->displayMenu->selectedOption = "Pitch";
@@ -89,8 +98,7 @@ public:
                 }
             }
 
-            settingsWindow->setVisible(true);
-            settingsWindow->toFront(true);
+            settingsLauncher.show();
         }
 
     }

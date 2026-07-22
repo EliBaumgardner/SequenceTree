@@ -78,7 +78,7 @@ void RootNode::equipTraversals()
             traversalChildrenIds.removeChild(i, nullptr);
 
             if (applicationContext.canvas != nullptr) {
-                applicationContext.canvas->resetGraphArrowProgress(graphId, existingId);
+                applicationContext.canvas->arrowManager.resetGraphProgress(graphId, existingId);
             }
         }
     }
@@ -102,7 +102,10 @@ void RootNode::equipTraversals()
 
 void RootNode::paint(juce::Graphics& g)
 {
-    CustomLookAndFeel::get(*this).drawRootNode(g, *this);
+    auto circleBounds = getLocalBounds().toFloat()
+                            .withTrimmedLeft((float) loopLimitRectangleWidth);
+
+    CustomLookAndFeel::get(*this).drawNode(g, getNodeVisual(circleBounds));
 }
 
 void RootNode::resized() {
@@ -118,8 +121,8 @@ void RootNode::resized() {
     juce::Rectangle<int> circleArea = bounds.withTrimmedLeft(rw);
     juce::Rectangle<int> editorArea = CustomLookAndFeel::getNodeCircleBounds(circleArea.toFloat()).toNearestInt().reduced(6);
 
-    upButton.setBounds(editorArea.removeFromTop(4));
-    downButton.setBounds(editorArea.removeFromBottom(4));
+    upButton->setBounds(editorArea.removeFromTop(4));
+    downButton->setBounds(editorArea.removeFromBottom(4));
 
     nodeTextEditor->setBounds(editorArea);
     nodeTextEditor->setJustification(juce::Justification::centred);

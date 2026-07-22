@@ -22,33 +22,51 @@ Titlebar::Titlebar(ApplicationContext& context)
       displaySelector(context),
       tempoDisplay(context),
       colorIntensityControl(context),
-      playButton(context),
-      resetButton(context),
       undoRedoPane(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
-    addAndMakeVisible(playButton);
-    addAndMakeVisible(resetButton);
+
+    playButton = std::make_unique<IconButton>(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawPlayIcon(g, bounds, state);
+        }, context.lookAndFeel);
+
+    resetButton = std::make_unique<IconButton>(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawResetIcon(g, bounds, state);
+        }, context.lookAndFeel);
+
+    playButton->setTooltip("Play / Pause");
+    playButton->setSelected(true);
+    resetButton->setTooltip("Reset");
+
+    addAndMakeVisible(playButton.get());
+    addAndMakeVisible(resetButton.get());
     addAndMakeVisible(tempoDisplay);
     //addAndMakeVisible(colorIntensityControl);
     addAndMakeVisible(buttonPane);
     addAndMakeVisible(displaySelector);
     addAndMakeVisible(undoRedoPane);
 
+    configureModePane();
+    configureUndoRedoPane();
+
     displaySelector.selectedOption = "show pitch";
 
-    playButton.onClick = [this]() {
+    playButton->onClick = [this]() {
         NodeCanvas& canvas = *applicationContext.canvas;
         jassert(&canvas);
+
+        playButton->setSelected(!playButton->isSelected());
 
         canvas.start = !canvas.start;
         canvas.setProcessorPlayblack(canvas.start);
     };
 
-    resetButton.onClick = [this]() {
+    resetButton->onClick = [this]() {
         applicationContext.processor->resetRequested.store(true);
         if (auto* canvas = applicationContext.canvas) {
-            canvas->resetAllArrowProgress();
+            canvas->arrowManager.resetAllProgress();
         }
     };
 
@@ -64,6 +82,56 @@ Titlebar::Titlebar(ApplicationContext& context)
 
     tempoDisplay.editor.onReturnKey = applyMultiplier;
     tempoDisplay.editor.onFocusLost = applyMultiplier;
+}
+
+void Titlebar::configureModePane()
+{
+    buttonPane.enableToggleSelection();
+
+    IconButton& nodeButton = buttonPane.addButton(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawNodeModeIcon(g, bounds, state);
+        },
+        "Node Mode",
+        [this]() { setControllerMode(NodeController::NodeControllerMode::Node); });
+
+    buttonPane.addButton(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawModulatorIcon(g, bounds, state);
+        },
+        "Modulator Mode",
+        [this]() { setControllerMode(NodeController::NodeControllerMode::Modulator); });
+
+    buttonPane.addButton(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawTraversalFlagIcon(g, bounds, state);
+        },
+        "Traversal Flag Mode",
+        [this]() { setControllerMode(NodeController::NodeControllerMode::TraversalFlag); });
+
+    buttonPane.setSelectedButton(&nodeButton);
+}
+
+void Titlebar::configureUndoRedoPane()
+{
+    undoRedoPane.addButton(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawUndoIcon(g, bounds, state);
+        },
+        "Undo",
+        [this]() { applicationContext.undoManager->undo(); });
+
+    undoRedoPane.addButton(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawRedoIcon(g, bounds, state);
+        },
+        "Redo",
+        [this]() { applicationContext.undoManager->redo(); });
+}
+
+void Titlebar::setControllerMode(NodeController::NodeControllerMode mode)
+{
+    applicationContext.nodeController->nodeControllerMode = mode;
 }
 
 void Titlebar::paint(juce::Graphics& g)
@@ -90,7 +158,7 @@ void Titlebar::paint(juce::Graphics& g)
         g.drawVerticalLine(x, inset, getHeight() - inset);
     };
 
-    drawSep((resetButton.getRight() + tempoDisplay.getX()) / 2);
+    drawSep((resetButton->getRight() + tempoDisplay.getX()) / 2);
     drawSep((tempoDisplay.getRight() + colorIntensityControl.getX()) / 2);
     drawSep((colorIntensityControl.getRight() + undoRedoPane.getX()) / 2);
     drawSep((buttonPane.getRight() + displaySelector.getX()) / 2);
@@ -110,10 +178,10 @@ void Titlebar::resized()
 
     auto area = bounds;
 
-    playButton.setBounds(area.removeFromLeft(buttonSize));
+    playButton->setBounds(area.removeFromLeft(buttonSize));
     area.removeFromLeft(spacing);
 
-    resetButton.setBounds(area.removeFromLeft(buttonSize));
+    resetButton->setBounds(area.removeFromLeft(buttonSize));
     area.removeFromLeft(spacing);
 
     tempoDisplay.setBounds(area.removeFromLeft(tempoDisplayWidth));

@@ -126,7 +126,7 @@ void ValueField::render()
     float* totalWeight  = fieldTotalWeight.data();
     float* coverageProd = fieldCoverageProd.data();
 
-    for (auto& [id, node] : owner.nodeMap) {
+    for (auto& [id, node] : owner.nodeManager.all()) {
         if (node == nullptr) {
             continue;
         }
@@ -246,7 +246,7 @@ void ValueField::seedStrokeDensityFromNodes()
     const juce::Identifier valueId = paintLayerValueId();
     std::vector<float>& density = paintDensity[activePaintLayer];
 
-    for (auto& [id, node] : owner.nodeMap) {
+    for (auto& [id, node] : owner.nodeManager.all()) {
         if (node == nullptr) {
             continue;
         }
@@ -358,7 +358,7 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
     const int w = owner.getWidth();
     const int h = owner.getHeight();
 
-    if (w <= 0 || h <= 0 || owner.nodeMap.empty()) {
+    if (w <= 0 || h <= 0 || owner.nodeManager.all().empty()) {
         return;
     }
 
@@ -374,7 +374,7 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
     const float dy      = to.y - from.y;
     const float segLen2 = dx * dx + dy * dy;
 
-    for (auto& [id, node] : owner.nodeMap) {
+    for (auto& [id, node] : owner.nodeManager.all()) {
         if (node == nullptr) {
             continue;
         }

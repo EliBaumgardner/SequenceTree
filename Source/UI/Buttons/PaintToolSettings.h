@@ -42,6 +42,9 @@ public:
     static constexpr float minBrushFlow = 0.002f;
     static constexpr float maxBrushFlow = 0.25f;
 
+    static constexpr int defaultWidth  = 100;
+    static constexpr int defaultHeight = 200;
+
     enum class PaintSetting {Pitch, Duration, Velocity};
 
     struct ColourVariablePair {
@@ -88,12 +91,12 @@ public:
         velocityPair.setting = PaintSetting::Velocity;
         durationPair.setting = PaintSetting::Duration;
 
-        displayMenu->button.onClick = [this] {
-            displayMenu->button.isSelected = true;
+        displayMenu->button->onClick = [this] {
+            displayMenu->button->setSelected(true);
             repaint();
 
             displayMenu->menu.showMenuAsync(juce::PopupMenu::Options(), [this] (int result) {
-                displayMenu->button.isSelected = false;
+                displayMenu->button->setSelected(false);
 
                 switch (result) {
                     case 1: displayMenu->selectedOption  = "Pitch";
@@ -118,8 +121,8 @@ public:
             currentPair().colour = c;
 
             if (this->context.canvas != nullptr) {
-                this->context.canvas->setBrushColour(c);
-                this->context.canvas->refreshValueField();
+                this->context.canvas->valueField.setBrushColour(c);
+                this->context.canvas->valueField.refresh();
             }
         };
 
@@ -127,7 +130,7 @@ public:
             if (this->context.canvas != nullptr) {
                 float value  = (float)valueSlider->boundValue.getValue();
                 float radius = juce::jmap(value, 0.0f, 1.0f, 1.0f, 200.0f);
-                this->context.canvas->setBrushRadius(radius);
+                this->context.canvas->valueField.setBrushRadius(radius);
             }
         };
 
@@ -186,32 +189,12 @@ public:
         colourSelector->repaint();
 
         if (context.canvas != nullptr) {
-            context.canvas->setBrushColour(saved);
-            context.canvas->setActivePaintLayer((int)setting);
+            context.canvas->valueField.setBrushColour(saved);
+            context.canvas->valueField.setActivePaintLayer((int)setting);
         }
     }
 
 
-};
-
-class PaintToolSettingsWindow : public juce::DocumentWindow {
-
-public:
-
-    PaintToolSettingsWindow(ApplicationContext& context)
-        : juce::DocumentWindow("Paint Brush Settings", juce::Colours::black,
-                               juce::DocumentWindow::closeButton, true)
-    {
-        auto* content = new PaintToolSettings(context);
-        content->setSize(100, 200);
-
-        setContentOwned(content, true);
-        setResizable(true, true);
-    }
-
-    void closeButtonPressed() override {
-        setVisible(false);
-    }
 };
 
 #endif //SEQUENCETREE_PAINTTOOLSETTINGS_H

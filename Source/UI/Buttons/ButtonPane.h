@@ -8,107 +8,88 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/ApplicationContext.h"
-#include "../../Input/NodeController.h"
-#include "NodeButton.h"
-#include "ModulatorButton.h"
-#include "TraversalFlagButton.h"
-
+#include "IconButton.h"
 
 class ButtonPane : public juce::Component {
 
-    ApplicationContext& applicationContext;
+public:
 
-    public:
-
-    NodeButton nodeButton;
-    ModulatorButton modulatorButton;
-    TraversalFlagButton traversalFlagButton;
-
-    ButtonPane(ApplicationContext& context)
-        : applicationContext(context), nodeButton(context), modulatorButton(context), traversalFlagButton(context)
+    explicit ButtonPane(ApplicationContext& context) : applicationContext(context)
     {
         setLookAndFeel(applicationContext.lookAndFeel);
-        addAndMakeVisible(nodeButton);
-        addAndMakeVisible(modulatorButton);
-        addAndMakeVisible(traversalFlagButton);
+    }
 
-        NodeController& nodeController = *applicationContext.nodeController;
+    IconButton& addButton(IconButton::Painter painter, const juce::String& tooltip, std::function<void()> onClick)
+    {
+        auto* button = buttons.add(new IconButton(std::move(painter), applicationContext.lookAndFeel));
 
-        nodeButton.onClick = [this, &nodeController]() {
+        button->setTooltip(tooltip);
 
-            jassert(&nodeController);
-
-            nodeButton.isSelected = true;
-            nodeButton.repaint();
-
-            modulatorButton.isSelected = false;
-            modulatorButton.repaint();
-
-            traversalFlagButton.isSelected = false;
-            traversalFlagButton.repaint();
-
-            nodeController.nodeControllerMode = NodeController::NodeControllerMode::Node;
+        button->onClick = [this, button, action = std::move(onClick)]() {
+            if (toggleSelection) {
+                setSelectedButton(button);
+            }
+            if (action) {
+                action();
+            }
         };
 
-        modulatorButton.onClick = [this, &nodeController]() {
+        addAndMakeVisible(button);
+        resized();
 
-            jassert(&nodeController);
+        return *button;
+    }
 
-            modulatorButton.isSelected = true;
-            modulatorButton.repaint();
+    void enableToggleSelection(bool shouldToggle = true)
+    {
+        toggleSelection = shouldToggle;
+    }
 
-            nodeButton.isSelected = false;
-            nodeButton.repaint();
-
-            traversalFlagButton.isSelected = false;
-            traversalFlagButton.repaint();
-
-            nodeController.nodeControllerMode = NodeController::NodeControllerMode::Modulator;
-        };
-
-        traversalFlagButton.onClick = [this, &nodeController]() {
-
-            jassert(&nodeController);
-
-            traversalFlagButton.isSelected = true;
-            traversalFlagButton.repaint();
-
-            nodeButton.isSelected = false;
-            nodeButton.repaint();
-
-            modulatorButton.isSelected = false;
-            modulatorButton.repaint();
-
-            nodeController.nodeControllerMode = NodeController::NodeControllerMode::TraversalFlag;
-        };
+    void setSelectedButton(const IconButton* selected)
+    {
+        for (IconButton* button : buttons) {
+            button->setSelected(button == selected);
+        }
     }
 
     void paint(juce::Graphics& g) override
     {
         const Theme& theme = CustomLookAndFeel::get(*this);
         auto bounds = getLocalBounds().reduced(Theme::outerButtonBoundsReduction).toFloat();
+
         g.setColour(theme.buttonBarColour);
         g.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
     }
 
-    void resized () override
+    void resized() override
     {
-        auto bounds = getLocalBounds().reduced(2.0f);
-        int buttonSize = bounds.getHeight();
-        int numButtons = 3;
-        float totalButtonWidth = buttonSize * numButtons;
+        const int numButtons = buttons.size();
 
-        float spacing = (bounds.getWidth() - totalButtonWidth) / (numButtons + 1);
+        if (numButtons == 0) {
+            return;
+        }
+
+        auto bounds = getLocalBounds().reduced(2.0f);
+
+        int   buttonSize       = bounds.getHeight();
+        float totalButtonWidth = buttonSize * numButtons;
+        float spacing          = (bounds.getWidth() - totalButtonWidth) / (numButtons + 1);
 
         int x = static_cast<int>(bounds.getX() + spacing);
-        nodeButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
 
-        x += buttonSize + spacing;
-        modulatorButton.setBounds(x, bounds.getY(), buttonSize,buttonSize);
-
-        x += buttonSize + spacing;
-        traversalFlagButton.setBounds(x, bounds.getY(), buttonSize, buttonSize);
+        for (IconButton* button : buttons) {
+            button->setBounds(x, bounds.getY(), buttonSize, buttonSize);
+            x += buttonSize + spacing;
+        }
     }
+
+private:
+
+    ApplicationContext& applicationContext;
+
+    juce::OwnedArray<IconButton> buttons;
+
+    bool toggleSelection = false;
 };
 
 #endif //SEQUENCETREE_BUTTONPANE_H

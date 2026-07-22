@@ -16,11 +16,12 @@
 
 #include "../../Util/NodeInfo.h"
 #include "../../Util/ApplicationContext.h"
-#include "../Buttons/IncrementButton.h"
+#include "../Buttons/IconButton.h"
+#include "../Theme/NodeVisual.h"
 #include "ValueEditor.h"
 
 
-class NodeArrow;
+class Arrow;
 
 class NodeTextEditor;
 
@@ -35,6 +36,12 @@ public:
     void paint  (juce::Graphics& g) override;
     void resized() override;
 
+    NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const {
+        return { bounds, nodeColour, activeHighlights, isHovered, isSelected };
+    }
+
+    NodeVisual getNodeVisual() const { return getNodeVisual(getLocalBounds().toFloat()); }
+
     void setHoverVisual    (bool isHovered);
     void setSelectVisual   (bool isSelected);
     void setSelectVisual   ();
@@ -48,8 +55,8 @@ public:
     virtual void setDisplayMode(NodeDisplayMode mode);
     void incrementNodeTextEditorValue(int incrementValue);
 
-    NodeArrow* nodeArrow = nullptr;
-    std::unordered_map<int, NodeArrow*> nodeArrows;
+    Arrow* nodeArrow = nullptr;
+    std::unordered_map<int, Arrow*> nodeArrows;
 
     juce::ValueTree nodeValueTree;
     juce::ValueTree midiNoteData;
@@ -57,8 +64,8 @@ public:
     NodeDisplayMode mode;
     std::unique_ptr<NodeTextEditor> nodeTextEditor = nullptr;
 
-    IncrementButton upButton   { true };
-    IncrementButton downButton { false };
+    std::unique_ptr<IconButton> upButton;
+    std::unique_ptr<IconButton> downButton;
 
     ValueEditor countEditor;
     ValueEditor switchCountEditor;

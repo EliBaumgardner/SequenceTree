@@ -37,6 +37,17 @@ struct ApplicationContext
 
     NodeDisplayMode currentDisplayMode = NodeDisplayMode::Pitch;
 
+    bool isComplete() const
+    {
+        return processor      != nullptr
+            && canvas         != nullptr
+            && lookAndFeel    != nullptr
+            && undoManager    != nullptr
+            && valueTreeState != nullptr
+            && nodeController != nullptr
+            && rtGraphBuilder != nullptr;
+    }
+
     void addNodeSelectedListener(std::function<void(Node*, bool)> listener)
     {
         onNodeSelectedListeners.push_back(std::move(listener));

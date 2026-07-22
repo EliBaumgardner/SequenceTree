@@ -3,20 +3,9 @@
 //
 
 #include "CustomLookAndFeel.h"
-#include "../Node/Node.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../Node/NodeArrow.h"
-#include "../Node/RootNode.h"
-#include "../Node/DanglingArrow.h"
-
-void CustomLookAndFeel::drawNodeInteractionEffects(juce::Graphics &g, const Node &node, juce::Rectangle<float> bounds) {
-
-}
-
-void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node)
-{
-    drawNode(g, node, node.getLocalBounds().toFloat());
-}
+#include "../Node/Arrow.h"
+#include "../Node/Node.h"
 
 juce::Rectangle<float> CustomLookAndFeel::getNodeCircleBounds(juce::Rectangle<float> componentBounds)
 {
@@ -27,8 +16,10 @@ juce::Rectangle<float> CustomLookAndFeel::getNodeCircleBounds(juce::Rectangle<fl
                .withPosition(componentBounds.getX() + nodeCirclePad, componentBounds.getY() + nodeCirclePad);
 }
 
-void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rectangle<float> componentBounds)
+void CustomLookAndFeel::drawNode(juce::Graphics& g, const NodeVisual& visual)
 {
+    const juce::Rectangle<float> componentBounds = visual.bounds;
+
     static constexpr float shadowDX   = 2.0f;
     static constexpr float shadowDY   = 2.0f;
     static constexpr float shadowBlur = 4.0f;
@@ -54,20 +45,15 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
         g.fillEllipse(shadowBounds);
     }
 
-    float velocity        = (float)(int)node.midiNoteData.getProperty(ValueTreeIdentifiers::MidiVelocity, 100);
-    float brightnessFactor = juce::jmap(velocity, 0.0f, 127.0f, 0.4f, 1.6f);
-
-    juce::Colour nodeColour = node.nodeColour;
-
-    g.setColour(nodeColour);
+    g.setColour(visual.colour);
     g.fillEllipse(circleFill);
 
-    if (! node.activeHighlights.empty()) {
+    if (! visual.highlights.empty()) {
         constexpr float highlightRingWidth = 1.25f;
         constexpr float highlightRingSpacing = 2.0f;
 
         int ringIndex = 0;
-        for (const auto& highlight : node.activeHighlights) {
+        for (const auto& highlight : visual.highlights) {
             float inset = highlightRingWidth * 0.5f + static_cast<float>(ringIndex) * highlightRingSpacing;
             auto highlightRing = circleFill.reduced(inset);
 
@@ -77,11 +63,11 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
         }
     }
 
-    if (node.isHovered) {
+    if (visual.isHovered) {
         g.drawEllipse(circleHover, 2.0f);
     }
 
-    if (node.isSelected) {
+    if (visual.isSelected) {
         juce::Path dottedPath;
         dottedPath.addEllipse(circleSelect);
 
@@ -94,89 +80,12 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const Node& node, juce::Rect
     }
 }
 
-void CustomLookAndFeel::drawRootNode(juce::Graphics& g, const RootNode& node)
+void CustomLookAndFeel::drawRootRectangle(juce::Graphics &g, juce::Rectangle<float> bounds)
 {
-    auto circleBounds = node.getLocalBounds().toFloat()
-                            .withTrimmedLeft((float)RootNode::loopLimitRectangleWidth);
-    drawNode(g, node, circleBounds);
-}
-
-void CustomLookAndFeel::drawRootNodeRectangle(juce::Graphics &g, const RootRectangle &rootRectangle) {
-
-    juce::Rectangle<float> rootBounds = rootRectangle.getLocalBounds().toFloat();
-
     g.setColour(baseDarkColour2.darker());
-    g.fillRect(rootBounds);
-
+    g.fillRect(bounds);
 }
 
-void CustomLookAndFeel::drawNodeArrowText(juce::Graphics &g, const NodeArrow &nodeArrow, const juce::TextEditor &editor,TextCords textCord) {
-
-    int parentX = textCord.parentNodeX;
-    int parentY = textCord.parentNodeY;
-    int childX  = textCord.childNodeX;
-    int childY  = textCord.childNodeY;
-    int arrowEndX = textCord.newX;
-    int arrowEndY = textCord.newY;
-
-
-    juce::String labelText = editor.getText();
-    if (labelText.isNotEmpty() && nodeArrow.animT > 0.8f) {
-        float deltaX = float(arrowEndX - parentX);
-        float deltaY = float(arrowEndY - parentY);
-
-        const float arrowHeadLength = 12.0f;
-        const float parentRadius = float(nodeArrow.startNode->getHeight()) * 0.5f;
-
-        float shaftStartX = float(parentX);
-        float shaftStartY = float(parentY);
-        float shaftEndX = float(arrowEndX);
-        float shaftEndY = float(arrowEndY);
-        float length = std::sqrt(deltaX * deltaX + deltaY * deltaY);
-        if (length > 0.0f) {
-            float ux = deltaX / length;
-            float uy = deltaY / length;
-            shaftStartX += ux * parentRadius;
-            shaftStartY += uy * parentRadius;
-            shaftEndX   -= ux * arrowHeadLength;
-            shaftEndY   -= uy * arrowHeadLength;
-        }
-
-        float midX = (shaftStartX + shaftEndX) * 0.5f;
-        float midY = (shaftStartY + shaftEndY) * 0.5f;
-
-        float angle = std::atan2(deltaY, deltaX);
-
-        const float halfPi = juce::MathConstants<float>::halfPi;
-
-        while (angle >  halfPi) {
-            angle -= juce::MathConstants<float>::pi;
-        }
-
-        while (angle <= -halfPi) {
-            angle += juce::MathConstants<float>::pi;
-        }
-
-        const float verticalArrowTextThreshold = 0.2f;
-        const bool isVertical = std::abs(deltaX) < std::abs(deltaY) * verticalArrowTextThreshold;
-        if (isVertical) {
-            angle = 0.0f;
-        }
-
-        juce::Graphics::ScopedSaveState savedState(g);
-
-        g.addTransform(juce::AffineTransform::rotation(angle).translated(midX, midY));
-
-        g.setFont(juce::Font(8.5f));
-        g.setColour(juce::Colours::darkgrey);
-
-        float textW = 60.0f;
-        float textH = 12.0f;
-
-        g.drawText(labelText, -textW * 0.5f, -textH, textW, textH,
-                   juce::Justification::centredBottom, true);
-    }
-}
 
 namespace {
     juce::Path trimPathToFraction(const juce::Path& source, float t)
@@ -235,347 +144,112 @@ namespace {
     }
 }
 
-void CustomLookAndFeel::drawNodeArrow(juce::Graphics &g, const NodeArrow& nodeArrow, const juce::TextEditor& editor)
-{
-    auto* a = nodeArrow.startNode;
-    auto* b = nodeArrow.endNode;
-
-    juce::Point<int> parentCentre = a->getNodeCentre();
-    juce::Point<int> childCentre  = b->getNodeCentre();
-
-    bool  emphasised   = nodeArrow.hovered || nodeArrow.selected;
-    float arrowLength  = emphasised ? 15.0f : 12.0f;
-    float arrowWidth   = emphasised ? 7.5f  : 6.0f;
-    int   childRadius  = b->getHeight() / 2;
-    int   parentRadius = a->getHeight() / 2;
-
-    g.setColour(arrowColour);
-    float ghostAlpha;
-    if (nodeArrow.isGhost) {
-        ghostAlpha = 0.5f;
-    }
-    else {
-        ghostAlpha = 1.0f;
-    }
-
-    float parentCenterX = float(parentCentre.x - nodeArrow.getX());
-    float parentCenterY = float(parentCentre.y - nodeArrow.getY());
-    float childCenterX  = float(childCentre.x  - nodeArrow.getX());
-    float childCenterY  = float(childCentre.y  - nodeArrow.getY());
-
-    float arrowEndX = parentCenterX + (childCenterX - parentCenterX) * nodeArrow.animT;
-    float arrowEndY = parentCenterY + (childCenterY - parentCenterY) * nodeArrow.animT;
-
-    float deltaX = arrowEndX - parentCenterX;
-    float deltaY = arrowEndY - parentCenterY;
-    float length = std::sqrt(deltaX * deltaX + deltaY * deltaY);
-
-    if (length < 1.0f) {
-        return;
-    }
-
-    float dirX = deltaX / length;
-    float dirY = deltaY / length;
-
-    bool childIsTraversalFlag = b->nodeType == NodeType::TraversalFlag;
-
-    if (! childIsTraversalFlag) {
-        arrowEndX -= dirX * float(childRadius);
-        arrowEndY -= dirY * float(childRadius);
-    }
-    else {
-        float childHalf      = std::min(b->getWidth(), b->getHeight()) * 0.5f;
-        float baseHalfHeight = (childHalf - 4.0f) * 0.7f * 0.5f;
-        arrowEndX += dirX * baseHalfHeight;
-        arrowEndY += dirY * baseHalfHeight;
-    }
-
-    bool isRootTargetArrow = b->nodeType == NodeType::Root && !a->isAlternativeNode;
-    bool isFlagSourceArrow = a->nodeType == NodeType::TraversalFlag;
-
-    bool drawHead = nodeArrow.animT > 0.3f && ! childIsTraversalFlag;
-
-    juce::Path linePath;
-
+namespace {
+    void strokeArrowShaft(juce::Graphics& g, const juce::Path& shaft, bool emphasised, float alpha, juce::Colour colour)
     {
-        float dx = arrowEndX - parentCenterX;
-        float dy = arrowEndY - parentCenterY;
-        float absDx = std::abs(dx);
-        float absDy = std::abs(dy);
+        juce::Path shadowPath    = shaft;
+        juce::Path highlightPath = shaft;
+        shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
+        highlightPath.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
 
-        if (absDx < 1.0f || absDy < 1.0f || childIsTraversalFlag) {
-            float shaftEndX = arrowEndX - (drawHead ? dirX * arrowLength : 0.0f);
-            float shaftEndY = arrowEndY - (drawHead ? dirY * arrowLength : 0.0f);
+        const juce::PathStrokeType stroke(emphasised ? 3.25f : 2.0f);
 
-            linePath.startNewSubPath(parentCenterX, parentCenterY);
-            linePath.lineTo(shaftEndX, shaftEndY);
-        }
-        else {
-            float sign;
-            if (dx >= 0.0f) {
-                sign = 1.0f;
-            }
-            else {
-                sign = -1.0f;
-            }
-            float perpX = -dirY * 0.8f * sign;
-            float perpY =  dirX * 0.8f * sign;
-
-            float segLen = std::sqrt(dx * dx + dy * dy);
-            float offset = segLen * 0.15f;
-
-            float cp1X = parentCenterX + dx * 0.33f + perpX * offset;
-            float cp1Y = parentCenterY + dy * 0.33f + perpY * offset;
-            float cp2X = parentCenterX + dx * 0.67f - perpX * offset;
-            float cp2Y = parentCenterY + dy * 0.67f - perpY * offset;
-
-            float neckX = arrowEndX - cp2X;
-            float neckY = arrowEndY - cp2Y;
-            float neckLen = std::sqrt(neckX * neckX + neckY * neckY);
-            if (neckLen > 0.0f) {
-                dirX = neckX / neckLen;
-                dirY = neckY / neckLen;
-            }
-
-            float shaftEndX = arrowEndX - (drawHead ? dirX * arrowLength : 0.0f);
-            float shaftEndY = arrowEndY - (drawHead ? dirY * arrowLength : 0.0f);
-
-            linePath.startNewSubPath(parentCenterX, parentCenterY);
-            linePath.cubicTo(cp1X, cp1Y, cp2X, cp2Y, shaftEndX, shaftEndY);
-        }
+        g.setColour(colour.darker(0.4f).withAlpha(0.35f * alpha));
+        g.strokePath(shadowPath, stroke);
+        g.setColour(colour.brighter(0.4f).withAlpha(0.18f * alpha));
+        g.strokePath(highlightPath, stroke);
+        g.setColour(colour.withAlpha(alpha));
+        g.strokePath(shaft, stroke);
     }
 
-    if (isRootTargetArrow || isFlagSourceArrow || nodeArrow.isGhost) {
-        juce::PathStrokeType stroke(2.0f);
-        float dashLengths[] = { 6.0f, 10.0f };
-        stroke.createDashedStroke(linePath, linePath, dashLengths, 2);
-    }
-
-    juce::PathStrokeType lineStroke(emphasised ? 3.25f : 2.0f);
-    auto shadowPath    = linePath;
-    auto highlightPath = linePath;
-    shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
-    highlightPath.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
-
-    g.setColour(arrowColour.darker(0.4f).withAlpha(0.35f * ghostAlpha));
-    g.strokePath(shadowPath,    lineStroke);
-    g.setColour(arrowColour.brighter(0.4f).withAlpha(0.18f * ghostAlpha));
-    g.strokePath(highlightPath, lineStroke);
-    g.setColour(arrowColour.withAlpha(ghostAlpha));
-    g.strokePath(linePath, lineStroke);
-
-    if (! nodeArrow.isGhost && nodeArrow.progress.hasTracks()) {
-        const float shaftDeltaX = arrowEndX - parentCenterX;
-        const float shaftDeltaY = arrowEndY - parentCenterY;
-        const float shaftLength = std::sqrt(shaftDeltaX * shaftDeltaX + shaftDeltaY * shaftDeltaY);
-
-        if (shaftLength > 0.0f) {
-            const float unitX = shaftDeltaX / shaftLength;
-            const float unitY = shaftDeltaY / shaftLength;
-
-            const float baseOffset = 3.5f;
-            const float trackSpacing = 3.0f;
-
-            int drawnCount = 0;
-            for (const auto& entry : nodeArrow.progress.tracks) {
-                const ArrowProgress::Track& track = entry.second;
-                if (track.t <= 0.0f) {
-                    continue;
-                }
-
-                const float offsetDistance = baseOffset + static_cast<float>(drawnCount) * trackSpacing;
-                const float perpX = -unitY * offsetDistance;
-                const float perpY =  unitX * offsetDistance;
-
-                juce::Path offsetLine = linePath;
-                offsetLine.applyTransform(juce::AffineTransform::translation(perpX, perpY));
-
-                juce::Path progressPath = trimPathToFraction(offsetLine, track.t);
-                if (! progressPath.isEmpty()) {
-                    g.setColour(track.colour);
-                    g.strokePath(progressPath, juce::PathStrokeType(1.25f,
-                                                                    juce::PathStrokeType::curved,
-                                                                    juce::PathStrokeType::butt));
-                }
-                ++drawnCount;
-            }
-        }
-    }
-
-    if (drawHead) {
-        float leftX  = arrowEndX - arrowLength * dirX + arrowWidth * dirY;
-        float leftY  = arrowEndY - arrowLength * dirY - arrowWidth * dirX;
-        float rightX = arrowEndX - arrowLength * dirX - arrowWidth * dirY;
-        float rightY = arrowEndY - arrowLength * dirY + arrowWidth * dirX;
-
-        juce::Path arrowHead;
-        arrowHead.startNewSubPath(leftX, leftY);
-        arrowHead.lineTo(arrowEndX, arrowEndY);
-        arrowHead.lineTo(rightX, rightY);
-        arrowHead.closeSubPath();
-
-        g.setColour(arrowHeadColour.withAlpha(ghostAlpha));
-        g.fillPath(arrowHead);
-
-        auto headShadow    = arrowHead;
-        auto headHighlight = arrowHead;
-        headShadow   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
-        headHighlight.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
-
-        juce::PathStrokeType headStroke(0.75f);
-        g.setColour(arrowHeadColour.darker(0.3f).withAlpha(0.2f));
-        g.strokePath(headShadow,    headStroke);
-        g.setColour(arrowHeadColour.brighter(0.3f).withAlpha(0.1f));
-        g.strokePath(headHighlight, headStroke);
-    }
-
-    TextCords textCords;
-    textCords.parentNodeX = parentCenterX;
-    textCords.parentNodeY = parentCenterY;
-    textCords.childNodeX = childCenterX;
-    textCords.childNodeY = childCenterY;
-    textCords.newX = arrowEndX;
-    textCords.newY = arrowEndY;
-
-    drawNodeArrowText(g, nodeArrow, editor, textCords);
-}
-
-void CustomLookAndFeel::drawDanglingArrow(juce::Graphics &g, const DanglingArrow &danglingArrow)
-{
-    Node* node = danglingArrow.startNode;
-    if (node == nullptr) {
-        return;
-    }
-
-    juce::Point<int> startCentre = node->getNodeCentre();
-    juce::Point<int> tip         = danglingArrow.getTip();
-
-    float startX = float(startCentre.x - danglingArrow.getX());
-    float startY = float(startCentre.y - danglingArrow.getY());
-    float endX   = float(tip.x - danglingArrow.getX());
-    float endY   = float(tip.y - danglingArrow.getY());
-
-    float dx = endX - startX;
-    float dy = endY - startY;
-    float length = std::sqrt(dx * dx + dy * dy);
-
-    if (length < 1.0f) {
-        return;
-    }
-
-    float dirX = dx / length;
-    float dirY = dy / length;
-
-    float parentRadius = node->getHeight() / 2.0f;
-    startX += dirX * parentRadius;
-    startY += dirY * parentRadius;
-
-    bool danglingEmphasised = danglingArrow.hovered || danglingArrow.selected;
-
-    const float arrowLength = danglingEmphasised ? 15.0f : 12.0f;
-    const float arrowWidth  = danglingEmphasised ? 7.5f  : 6.0f;
-
-    float shaftEndX = endX - dirX * arrowLength;
-    float shaftEndY = endY - dirY * arrowLength;
-
-    juce::Path linePath;
-    linePath.startNewSubPath(startX, startY);
-    linePath.lineTo(shaftEndX, shaftEndY);
-
-    if (danglingArrow.dashed) {
-        juce::PathStrokeType dashStroke(2.0f);
-        float dashLengths[] = { 6.0f, 10.0f };
-        dashStroke.createDashedStroke(linePath, linePath, dashLengths, 2);
-    }
-
-    juce::PathStrokeType lineStroke(danglingEmphasised ? 3.25f : 2.0f);
-    auto shadowPath    = linePath;
-    auto highlightPath = linePath;
-    shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
-    highlightPath.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
-
-    g.setColour(arrowColour.darker(0.4f).withAlpha(0.35f));
-    g.strokePath(shadowPath,    lineStroke);
-    g.setColour(arrowColour.brighter(0.4f).withAlpha(0.18f));
-    g.strokePath(highlightPath, lineStroke);
-    g.setColour(arrowColour);
-    g.strokePath(linePath, lineStroke);
-
-    if (danglingArrow.progress.hasTracks()) {
-        const float baseOffset = 3.5f;
-        const float trackSpacing = 3.0f;
+    void drawArrowProgress(juce::Graphics& g, const Arrow& arrow, const juce::Path& shaft, juce::Point<float> chord)
+    {
+        static constexpr float baseOffset   = 3.5f;
+        static constexpr float trackSpacing = 3.0f;
 
         int drawnCount = 0;
-        for (const auto& entry : danglingArrow.progress.tracks) {
+
+        for (const auto& entry : arrow.progress.tracks)
+        {
             const ArrowProgress::Track& track = entry.second;
             if (track.t <= 0.0f) {
                 continue;
             }
 
-            const float offsetDistance = baseOffset + static_cast<float>(drawnCount) * trackSpacing;
-            const float perpX = -dirY * offsetDistance;
-            const float perpY =  dirX * offsetDistance;
+            const float offsetDistance = baseOffset + (float)drawnCount * trackSpacing;
 
-            juce::Path offsetLine = linePath;
-            offsetLine.applyTransform(juce::AffineTransform::translation(perpX, perpY));
+            juce::Path offsetLine = shaft;
+            offsetLine.applyTransform(juce::AffineTransform::translation(-chord.y * offsetDistance,
+                                                                         chord.x * offsetDistance));
 
-            juce::Path progressPath = trimPathToFraction(offsetLine, track.t);
+            const juce::Path progressPath = trimPathToFraction(offsetLine, track.t);
             if (! progressPath.isEmpty()) {
                 g.setColour(track.colour);
                 g.strokePath(progressPath, juce::PathStrokeType(1.25f,
-                                                                juce::PathStrokeType::curved,
-                                                                juce::PathStrokeType::butt));
+                                                               juce::PathStrokeType::curved,
+                                                               juce::PathStrokeType::butt));
             }
             ++drawnCount;
         }
     }
 
-    float leftX  = endX - arrowLength * dirX + arrowWidth * dirY;
-    float leftY  = endY - arrowLength * dirY - arrowWidth * dirX;
-    float rightX = endX - arrowLength * dirX - arrowWidth * dirY;
-    float rightY = endY - arrowLength * dirY + arrowWidth * dirX;
+    void drawArrowHead(juce::Graphics& g, juce::Point<float> tip, juce::Point<float> direction,
+                       float headLength, float headWidth, float alpha, juce::Colour colour)
+    {
+        const juce::Point<float> base = tip - direction * headLength;
+        const juce::Point<float> side { -direction.y * headWidth, direction.x * headWidth };
 
-    juce::Path arrowHead;
-    arrowHead.startNewSubPath(leftX, leftY);
-    arrowHead.lineTo(endX, endY);
-    arrowHead.lineTo(rightX, rightY);
-    arrowHead.closeSubPath();
+        juce::Path head;
+        head.startNewSubPath(base - side);
+        head.lineTo(tip);
+        head.lineTo(base + side);
+        head.closeSubPath();
 
-    g.setColour(arrowHeadColour);
-    g.fillPath(arrowHead);
+        g.setColour(colour.withAlpha(alpha));
+        g.fillPath(head);
 
-    juce::String labelText = danglingArrow.getDurationLabel();
-    if (labelText.isNotEmpty()) {
-        float rawStartX = float(startCentre.x - danglingArrow.getX());
-        float rawStartY = float(startCentre.y - danglingArrow.getY());
+        juce::Path headShadow    = head;
+        juce::Path headHighlight = head;
+        headShadow   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
+        headHighlight.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
 
-        float deltaX = endX - rawStartX;
-        float deltaY = endY - rawStartY;
+        const juce::PathStrokeType headStroke(0.75f);
+        g.setColour(colour.darker(0.3f).withAlpha(0.2f));
+        g.strokePath(headShadow, headStroke);
+        g.setColour(colour.brighter(0.3f).withAlpha(0.1f));
+        g.strokePath(headHighlight, headStroke);
+    }
 
-        const float startRadius = float(node->getHeight()) * 0.5f;
+    void drawArrowLabel(juce::Graphics& g, const Arrow& arrow, const ArrowGeometry& geometry,
+                        float headLength, juce::Point<float> origin)
+    {
+        const juce::String labelText = arrow.getDurationLabel();
 
-        float shaftStartX = rawStartX;
-        float shaftStartY = rawStartY;
-        float shaftEndX = endX;
-        float shaftEndY = endY;
-        float shaftLength = std::sqrt(deltaX * deltaX + deltaY * deltaY);
-        if (shaftLength > 0.0f) {
-            float ux = deltaX / shaftLength;
-            float uy = deltaY / shaftLength;
-            shaftStartX += ux * startRadius;
-            shaftStartY += uy * startRadius;
-            shaftEndX   -= ux * arrowLength;
-            shaftEndY   -= uy * arrowLength;
+        if (labelText.isEmpty() || arrow.animT <= Arrow::labelVisibleThreshold) {
+            return;
         }
 
-        float midX = (shaftStartX + shaftEndX) * 0.5f;
-        float midY = (shaftStartY + shaftEndY) * 0.5f;
+        const juce::Point<float> centre = geometry.centre - origin;
+        const juce::Point<float> tip    = geometry.tip    - origin;
+        const juce::Point<float> delta  = tip - centre;
 
-        float angle = std::atan2(deltaY, deltaX);
+        juce::Point<float> shaftStart = centre;
+        juce::Point<float> shaftEnd   = tip;
+
+        const float length = delta.getDistanceFromOrigin();
+        if (length > 0.0f) {
+            const juce::Point<float> unit = delta / length;
+            shaftStart += unit * (arrow.startNode->getHeight() * 0.5f);
+            shaftEnd   -= unit * headLength;
+        }
+
+        const juce::Point<float> mid = (shaftStart + shaftEnd) * 0.5f;
+
+        float angle = std::atan2(delta.y, delta.x);
 
         const float halfPi = juce::MathConstants<float>::halfPi;
 
-        while (angle >  halfPi) {
+        while (angle > halfPi) {
             angle -= juce::MathConstants<float>::pi;
         }
 
@@ -583,23 +257,58 @@ void CustomLookAndFeel::drawDanglingArrow(juce::Graphics &g, const DanglingArrow
             angle += juce::MathConstants<float>::pi;
         }
 
-        const float verticalArrowTextThreshold = 0.2f;
-        const bool isVertical = std::abs(deltaX) < std::abs(deltaY) * verticalArrowTextThreshold;
-        if (isVertical) {
+        static constexpr float verticalArrowTextThreshold = 0.2f;
+        if (std::abs(delta.x) < std::abs(delta.y) * verticalArrowTextThreshold) {
             angle = 0.0f;
         }
 
-        juce::Graphics::ScopedSaveState savedState(g);
+        const juce::Graphics::ScopedSaveState savedState(g);
 
-        g.addTransform(juce::AffineTransform::rotation(angle).translated(midX, midY));
+        g.addTransform(juce::AffineTransform::rotation(angle).translated(mid.x, mid.y));
 
         g.setFont(juce::Font(8.5f));
         g.setColour(juce::Colours::darkgrey);
 
-        float textW = 60.0f;
-        float textH = 12.0f;
+        static constexpr float textW = 60.0f;
+        static constexpr float textH = 12.0f;
 
         g.drawText(labelText, -textW * 0.5f, -textH, textW, textH,
                    juce::Justification::centredBottom, true);
     }
+}
+
+void CustomLookAndFeel::drawArrow(juce::Graphics& g, const Arrow& arrow)
+{
+    ArrowGeometry geometry = arrow.getGeometry(arrow.animT);
+
+    if (! geometry.valid) {
+        return;
+    }
+
+    const bool  emphasised = arrow.hovered || arrow.selected;
+    const float headLength = emphasised ? 15.0f : 12.0f;
+    const float headWidth  = emphasised ? 7.5f  : 6.0f;
+    const float alpha      = arrow.isGhost ? 0.5f : 1.0f;
+
+    const juce::Point<float> origin { (float)arrow.getX(), (float)arrow.getY() };
+
+    juce::Path shaft = arrow.buildShaftPath(geometry, headLength, origin);
+
+    if (arrow.isDashed()) {
+        juce::PathStrokeType dashStroke(2.0f);
+        float dashLengths[] = { 6.0f, 10.0f };
+        dashStroke.createDashedStroke(shaft, shaft, dashLengths, 2);
+    }
+
+    strokeArrowShaft(g, shaft, emphasised, alpha, arrowColour);
+
+    if (! arrow.isGhost && arrow.progress.hasTracks()) {
+        drawArrowProgress(g, arrow, shaft, geometry.chord);
+    }
+
+    if (geometry.drawHead) {
+        drawArrowHead(g, geometry.tip - origin, geometry.direction, headLength, headWidth, alpha, arrowHeadColour);
+    }
+
+    drawArrowLabel(g, arrow, geometry, headLength, origin);
 }

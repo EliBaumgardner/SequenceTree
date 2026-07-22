@@ -18,11 +18,21 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     applicationContext.lookAndFeel    = &lookAndFeel;
     applicationContext.valueTreeState = &p.graphState;
 
-    canvas         = std::make_unique<NodeCanvas>(applicationContext);
+    canvas = std::make_unique<NodeCanvas>(applicationContext);
+    applicationContext.canvas = canvas.get();
+
     rtGraphBuilder = std::make_unique<RTGraphBuilder>(applicationContext, *canvas);
+    applicationContext.rtGraphBuilder = rtGraphBuilder.get();
+
     nodeController = std::make_unique<NodeController>(applicationContext);
-    port           = std::make_unique<DynamicPort>(canvas.get());
-    menuArea       = std::make_unique<MenuArea>(applicationContext);
+    applicationContext.nodeController = nodeController.get();
+
+    jassert(applicationContext.isComplete());
+
+    port      = std::make_unique<DynamicPort>(canvas.get());
+    menuArea  = std::make_unique<MenuArea>(applicationContext);
+    titleBar  = std::make_unique<Titlebar>(applicationContext);
+    bottomBar = std::make_unique<BottomBar>(applicationContext);
 
     menuArea->onWidthDragged = [this](int newWidth) {
         int total = getWidth();
@@ -31,8 +41,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
         resized();
     };
 
-    applicationContext.canvas            = canvas.get();
-    port->onZoomChanged = [canvasPtr = canvas.get()](float z) { canvasPtr->setViewZoom(z); };
+    port->onZoomChanged = [canvasPtr = canvas.get()](float z) { canvasPtr->valueField.setViewZoom(z); };
 
     audioProcessor.notifyUi = [canvasPtr = canvas.get()] {
         if (canvasPtr) {
@@ -95,13 +104,6 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     else if (applicationContext.valueTreeState->nodeMap.getNumChildren() > 0) {
         canvas->setValueTreeState(applicationContext.valueTreeState->nodeMap);
     }
-
-    applicationContext.rtGraphBuilder = rtGraphBuilder.get();
-    applicationContext.nodeController = nodeController.get();
-
-
-    titleBar  = std::make_unique<Titlebar>(applicationContext);
-    bottomBar = std::make_unique<BottomBar>(applicationContext);
 
     canvas->addMouseListener(nodeController.get(),true);
 

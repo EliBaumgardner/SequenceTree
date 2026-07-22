@@ -13,13 +13,12 @@
 
 #include "../Util/PluginModules.h"
 #include "../Util/ApplicationContext.h"
-#include "Buttons/PlayButton.h"
-#include "Buttons/ResetButton.h"
+#include "Buttons/IconButton.h"
 #include "Buttons/ButtonPane.h"
 #include "Buttons/DisplayMenu.h"
 #include "Buttons/TempoDisplay.h"
-#include "Buttons/UndoRedoPane.h"
 #include "Buttons/ColorIntensityControl.h"
+#include "../Input/NodeController.h"
 
 class Titlebar : public juce::Component {
 
@@ -34,13 +33,17 @@ public:
 
 private:
 
+    void configureModePane();
+    void configureUndoRedoPane();
+    void setControllerMode(NodeController::NodeControllerMode mode);
+
     ApplicationContext& applicationContext;
 
     ButtonPane           buttonPane;
     DisplayMenu          displaySelector;
     TempoDisplay         tempoDisplay;
     ColorIntensityControl colorIntensityControl;
-    PlayButton           playButton;
-    ResetButton          resetButton;
-    UndoRedoPane         undoRedoPane;
+    std::unique_ptr<IconButton> playButton;
+    std::unique_ptr<IconButton> resetButton;
+    ButtonPane           undoRedoPane;
 };

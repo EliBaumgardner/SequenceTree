@@ -54,9 +54,11 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Canvas/ValueField.cpp
         Source/UI/Canvas/AudioCommandDrainer.cpp
         Source/UI/Canvas/DanglingArrowLayer.cpp
+        Source/UI/Canvas/NodeManager.cpp
+        Source/UI/Canvas/ArrowManager.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
-        Source/UI/Node/NodeArrow.cpp
+        Source/UI/Node/Arrow.cpp
         Source/UI/Node/NodeTextEditor.cpp
         Source/UI/Node/ValueEditor.cpp
         Source/UI/Node/Modulator.cpp
@@ -71,11 +73,12 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Buttons/DisplayMenu.cpp
         Source/UI/TraversalMenu.cpp
         Source/UI/MenuArea.cpp
+        Source/UI/ResizablePanel.cpp
         Source/UI/NodeMenu.cpp
         Source/UI/TraversalDisplayMenu.cpp
         Source/UI/AllowedTraversalsMenu.cpp
         Source/UI/TraversalRulesMenu.cpp
-        Source/UI/Buttons/EditTraversalRulesButton.cpp
+        Source/UI/PopupWindow.cpp
         Source/UI/ColourSelector.cpp
         Source/UI/PianoRoll.cpp
         Source/UI/Titlebar.cpp

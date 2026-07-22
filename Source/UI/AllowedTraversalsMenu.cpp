@@ -141,18 +141,3 @@ void AllowedTraversalsMenu::resized() {
         row.label->setBounds(rowArea);
     }
 }
-
-AllowedTraversalsWindow::AllowedTraversalsWindow(ApplicationContext& context, juce::ValueTree connection)
-    : juce::DocumentWindow("Allowed Traversals", juce::Colour::fromRGB(30, 30, 30),
-                           juce::DocumentWindow::closeButton, true)
-{
-    auto* content = new AllowedTraversalsMenu(context, connection);
-    content->setSize(160, content->getIdealHeight());
-
-    setContentOwned(content, true);
-    setResizable(true, true);
-}
-
-void AllowedTraversalsWindow::closeButtonPressed() {
-    setVisible(false);
-}
