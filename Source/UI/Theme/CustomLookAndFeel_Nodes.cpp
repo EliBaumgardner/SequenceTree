@@ -108,7 +108,9 @@ namespace {
                 totalLength += std::sqrt(dx * dx + dy * dy);
             }
         }
-        if (totalLength <= 0.0f) return {};
+        if (totalLength <= 0.0f) {
+            return {};
+        }
 
         const float target = totalLength * t;
         juce::Path  out;
@@ -152,7 +154,13 @@ namespace {
         shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
         highlightPath.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
 
-        const juce::PathStrokeType stroke(emphasised ? 3.25f : 2.0f);
+        float strokeWidth = 2.0f;
+
+        if (emphasised) {
+            strokeWidth = 3.25f;
+        }
+
+        const juce::PathStrokeType stroke(strokeWidth);
 
         g.setColour(colour.darker(0.4f).withAlpha(0.35f * alpha));
         g.strokePath(shadowPath, stroke);
@@ -286,9 +294,19 @@ void CustomLookAndFeel::drawArrow(juce::Graphics& g, const Arrow& arrow)
     }
 
     const bool  emphasised = arrow.hovered || arrow.selected;
-    const float headLength = emphasised ? 15.0f : 12.0f;
-    const float headWidth  = emphasised ? 7.5f  : 6.0f;
-    const float alpha      = arrow.isGhost ? 0.5f : 1.0f;
+    float headLength = 12.0f;
+    float headWidth  = 6.0f;
+    float alpha      = 1.0f;
+
+    if (emphasised) {
+        headLength = 15.0f;
+        headWidth  = 7.5f;
+    }
+
+    if (arrow.isGhost) {
+        alpha = 0.5f;
+    }
+
 
     const juce::Point<float> origin { (float)arrow.getX(), (float)arrow.getY() };
 

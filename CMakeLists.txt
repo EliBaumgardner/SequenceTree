@@ -38,7 +38,6 @@ target_compile_definitions(SequenceTree PRIVATE
 target_sources(SequenceTree PRIVATE
         Source/Plugin/PluginProcessor.cpp
         Source/Plugin/PluginEditor.cpp
-        Source/Audio/AudioUIBridge.cpp
         Source/Audio/EventManager.cpp
         Source/Audio/NoteScheduler.cpp
         Source/Audio/TraversalLogic.cpp
@@ -77,7 +76,6 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Menus/TraversalRulesMenu.cpp
         Source/UI/PopupWindow.cpp
         Source/UI/Menus/ColourSelector.cpp
-        Source/UI/PianoRoll.cpp
         Source/UI/Titlebar.cpp
         Source/UI/BottomBar.cpp
         Source/UI/Menus/MenuBar.cpp

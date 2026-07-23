@@ -25,7 +25,9 @@ public:
     Arrow* find(int parentNodeId, int childNodeId) const;
 
     Arrow* connect(Node* startNode, Node* endNode);
+    Arrow* connectParentToChild(Node* parentNode, Node* childNode);
     void   adopt(Arrow* arrow);
+    void   attach(Arrow& arrow);
 
     void remove(Arrow* arrow);
     void removeForNode(Node* node);
@@ -50,6 +52,8 @@ public:
     Arrow* snapGhost() const { return snapGhostArrow; }
 
 private:
+
+    void detach(Arrow* arrow);
 
     NodeCanvas& canvas;
     ApplicationContext& applicationContext;

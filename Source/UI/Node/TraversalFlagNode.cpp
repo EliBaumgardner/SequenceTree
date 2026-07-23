@@ -61,14 +61,21 @@ void TraversalFlagNode::rebuildOwnGraph()
     }
 }
 
+float TraversalFlagNode::getBladeLength() const
+{
+    auto bounds = getLocalBounds().toFloat();
+    float half = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f;
+
+    return (half - 4.0f) * 0.7f;
+}
+
 void TraversalFlagNode::resized() {
 
     auto bounds = getLocalBounds().toFloat();
     float cx = bounds.getCentreX();
     float cy = bounds.getCentreY();
 
-    float half = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f;
-    float bladeLength =  (half - 4.0f) * 0.7f;
+    float bladeLength = getBladeLength();
 
     juce::Point<float> centre(cx + bladeLength / 3.0f, cy);
     centre.applyTransform(juce::AffineTransform::rotation(incomingAngle + juce::MathConstants<float>::halfPi,
@@ -97,10 +104,8 @@ juce::Path TraversalFlagNode::buildTrianglePath() const
     float cx = bounds.getCentreX();
     float cy = bounds.getCentreY();
 
-    float half = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f;
-    float bladeLength =  (half - 4.0f) * 0.7f;
-
-    float baseHalfHeight  = bladeLength * 0.5f;
+    float bladeLength    = getBladeLength();
+    float baseHalfHeight = bladeLength * 0.5f;
 
     juce::Path triangle;
     triangle.startNewSubPath(cx + bladeLength, cy);

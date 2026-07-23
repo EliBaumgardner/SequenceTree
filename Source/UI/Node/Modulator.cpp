@@ -30,9 +30,15 @@ void Modulator::paint(juce::Graphics& g) {
     g.drawRect(squareBorder, 1.0f);
 
     float pulseExpansion = 4.0f * std::sin(pulsePhase * juce::MathConstants<float>::pi);
-    auto pulsedFill = isHighlighted ? squareFill.expanded(pulseExpansion) : squareFill;
+    auto pulsedFill = squareFill;
 
-    g.setColour(isHighlighted ? nodeColour.darker() : nodeColour);
+    if (isHighlighted) {
+        pulsedFill = squareFill.expanded(pulseExpansion);
+        g.setColour(nodeColour.darker());
+    } else {
+        g.setColour(nodeColour);
+    }
+
     g.fillRect(pulsedFill);
 
     if (isHovered) {

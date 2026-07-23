@@ -57,6 +57,10 @@ public:
     std::unique_ptr<ValueSlider>          valueSlider;
     std::unique_ptr<ValueSlider>          flowSlider;
 
+    juce::Label colourLabel;
+    juce::Label valueLabel;
+    juce::Label flowLabel;
+
 
     PaintToolSettings(ApplicationContext& context) : context(context) {
         setLookAndFeel(context.lookAndFeel);
@@ -123,6 +127,18 @@ public:
         valueSlider->setTooltip("Brush size");
         flowSlider->setTooltip("Brush rate");
 
+        auto setUpLabel = [this](juce::Label& label, juce::String text) {
+            label.setText(std::move(text), juce::dontSendNotification);
+            label.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+            label.setFont(juce::Font(juce::FontOptions(9.0f)));
+            label.setJustificationType(juce::Justification::centredLeft);
+            addAndMakeVisible(label);
+        };
+
+        setUpLabel(colourLabel, "Colour");
+        setUpLabel(valueLabel,  "Size");
+        setUpLabel(flowLabel,   "Rate");
+
         addAndMakeVisible(displayMenu.get());
         addAndMakeVisible(colourSelector.get());
         addAndMakeVisible(valueSlider.get());
@@ -142,9 +158,16 @@ public:
         auto bounds = getLocalBounds();
 
         displayMenu->setBounds(bounds.removeFromTop(displayMenuHeight));
-        colourSelector->setBounds(bounds.removeFromTop(displayMenuHeight));
-        valueSlider->setBounds(bounds.removeFromTop(displayMenuHeight));
-        flowSlider->setBounds(bounds.removeFromTop(displayMenuHeight));
+
+        auto layoutRow = [&bounds, displayMenuHeight](juce::Label& label, juce::Component& control) {
+            auto rowArea = bounds.removeFromTop(displayMenuHeight);
+            label.setBounds(rowArea.removeFromLeft(rowArea.getWidth() / 3));
+            control.setBounds(rowArea);
+        };
+
+        layoutRow(colourLabel, *colourSelector);
+        layoutRow(valueLabel,  *valueSlider);
+        layoutRow(flowLabel,   *flowSlider);
     };
 
     void setPaintMode(PaintSetting setting) {

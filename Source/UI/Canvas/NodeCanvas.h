@@ -46,17 +46,11 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         ~NodeCanvas();
 
         void enqueueAsyncUpdate(const AsyncUpdate& update);
-
         void paint(juce::Graphics& g) override;
-
         void setProcessorPlayblack(bool isPlaying);
-
         void setValueTreeState(const juce::ValueTree& stateTree);
-
         void clearCanvas();
-
         void handleAsyncUpdate() override;
-
         void setPaintMode(bool enabled);
 
         juce::Colour canvasColour = juce::Colours::white;

@@ -46,6 +46,7 @@ private:
     void applyPaintToNodes(juce::Point<float> from, juce::Point<float> to);
     juce::Colour     mapFieldColour(float factor) const;
     juce::Identifier paintLayerValueId() const;
+    juce::ValueTree  firstMidiNote(int nodeId) const;
     void timerCallback() override;
 
     NodeCanvas& owner;

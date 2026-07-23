@@ -38,6 +38,10 @@ void TraversalSession::restartActiveTraversals(const NodeMap& nodes, RTGraphs& r
 {
     std::unordered_set<int> rootsToRestart;
     for (const auto& [id, traverser] : traversals) {
+        if (traverser.isSpawned()) {
+            continue;
+        }
+
         rootsToRestart.insert(traverser.rootId);
     }
 
@@ -127,7 +131,7 @@ void TraversalSession::startMissingTraversals(const NodeMap& nodes, RTGraphs& rt
     activeRootIdScratch.clear();
 
     for (const auto& [id, traverser] : traversals) {
-        if (traverser.isFlagSpawned) {
+        if (traverser.isSpawned()) {
             continue;
         }
 

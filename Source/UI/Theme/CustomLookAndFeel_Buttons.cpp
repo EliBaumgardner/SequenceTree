@@ -6,6 +6,51 @@
 #include "Buttons/ButtonConstants.h"
 #include "../Buttons/PaintToolSettings.h"
 
+namespace {
+    void fillArrowGlyph(juce::Graphics& g, juce::Rectangle<float> glyphArea,
+                        float shaftThicknessFactor, float headLengthFactor, float headWidthFactor)
+    {
+        juce::Point<float> tail(glyphArea.getX(),     glyphArea.getCentreY());
+        juce::Point<float> head(glyphArea.getRight(), glyphArea.getCentreY());
+
+        juce::Path shaft;
+        shaft.addLineSegment(juce::Line<float>(tail, head), glyphArea.getHeight() * shaftThicknessFactor);
+        g.fillPath(shaft);
+
+        const float headLength = glyphArea.getWidth()  * headLengthFactor;
+        const float headWidth  = glyphArea.getHeight() * headWidthFactor;
+
+        juce::Path arrowHead;
+        arrowHead.startNewSubPath(head.x, head.y);
+        arrowHead.lineTo(head.x - headLength, head.y - headWidth);
+        arrowHead.lineTo(head.x - headLength, head.y + headWidth);
+        arrowHead.closeSubPath();
+        g.fillPath(arrowHead);
+    }
+}
+
+juce::Colour CustomLookAndFeel::pressableButtonColour(const ButtonState& state) const
+{
+    if (state.isDown) {
+        return buttonColour.darker();
+    }
+
+    if (state.isHovered) {
+        return buttonColour.brighter();
+    }
+
+    return buttonColour;
+}
+
+juce::Colour CustomLookAndFeel::selectableButtonColour(const ButtonState& state) const
+{
+    if (state.isSelected) {
+        return buttonColour.darker();
+    }
+
+    return buttonColour;
+}
+
 void CustomLookAndFeel::drawPlayIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
     auto area = bounds.toNearestInt().reduced(5);
@@ -60,24 +105,14 @@ void CustomLookAndFeel::drawNodeModeIcon(juce::Graphics &g, juce::Rectangle<floa
 {
     auto bounds = boundsIn.reduced(outerButtonBoundsReduction);
 
-    if (state.isSelected) {
-        g.setColour(buttonColour.darker());
-    }
-    else {
-        g.setColour(buttonColour);
-    }
+    g.setColour(selectableButtonColour(state));
     g.fillEllipse(bounds);
 }
 
 void CustomLookAndFeel::drawModulatorIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, const ButtonState& state) {
     juce::Rectangle<float> bounds = boundsIn.reduced(outerButtonBoundsReduction);
 
-    if (state.isSelected) {
-        g.setColour(buttonColour.darker());
-    }
-    else{
-        g.setColour(buttonColour);
-    }
+    g.setColour(selectableButtonColour(state));
 
     g.fillRect(bounds);
     g.drawRect(bounds, 1.0f);
@@ -87,12 +122,7 @@ void CustomLookAndFeel::drawTraversalFlagIcon(juce::Graphics &g, juce::Rectangle
 {
     juce::Rectangle<float> bounds = boundsIn.reduced(outerButtonBoundsReduction);
 
-    if (state.isSelected) {
-        g.setColour(buttonColour.darker());
-    }
-    else {
-        g.setColour(buttonColour);
-    }
+    g.setColour(selectableButtonColour(state));
 
     juce::Path triangle;
     triangle.startNewSubPath(bounds.getCentreX(), bounds.getY());
@@ -108,15 +138,7 @@ void CustomLookAndFeel::drawUndoIcon(juce::Graphics &g, juce::Rectangle<float> b
 {
     auto area = bounds.reduced(outerButtonBoundsReduction);
 
-    if (state.isDown) {
-        g.setColour(buttonColour.darker());
-    }
-    else if (state.isHovered) {
-        g.setColour(buttonColour.brighter());
-    }
-    else {
-        g.setColour(buttonColour);
-    }
+    g.setColour(pressableButtonColour(state));
 
     juce::Path path;
     path.startNewSubPath((float)area.getRight(), (float)area.getY());
@@ -130,15 +152,7 @@ void CustomLookAndFeel::drawRedoIcon(juce::Graphics &g, juce::Rectangle<float> b
 {
     auto area = bounds.reduced(outerButtonBoundsReduction);
 
-    if (state.isDown) {
-        g.setColour(buttonColour.darker());
-    }
-    else if (state.isHovered) {
-        g.setColour(buttonColour.brighter());
-    }
-    else {
-        g.setColour(buttonColour);
-    }
+    g.setColour(pressableButtonColour(state));
 
     juce::Path path;
     path.startNewSubPath((float)area.getX(), (float)area.getY());
@@ -152,15 +166,7 @@ void CustomLookAndFeel::drawResetIcon(juce::Graphics &g, juce::Rectangle<float> 
 {
     auto area = bounds.reduced(outerButtonBoundsReduction);
 
-    if (state.isDown) {
-        g.setColour(buttonColour.darker());
-    }
-    else if (state.isHovered) {
-        g.setColour(buttonColour.brighter());
-    }
-    else {
-        g.setColour(buttonColour);
-    }
+    g.setColour(pressableButtonColour(state));
 
     g.fillRect(area);
 }
@@ -169,7 +175,8 @@ void CustomLookAndFeel::drawDisplayArrowIcon(juce::Graphics &g, juce::Rectangle<
 {
     auto bounds = boundsIn.reduced(outerButtonBoundsReduction);
 
-    g.setColour(state.isSelected ? buttonColour.darker() : buttonColour);
+    g.setColour(selectableButtonColour(state));
+
 
     float triangleHeight = bounds.getHeight() * 0.9f;
     float centreY = bounds.getCentreY();
@@ -214,16 +221,7 @@ void CustomLookAndFeel::drawTextButton(juce::Graphics &g, juce::Rectangle<float>
 {
     auto area = bounds.reduced(outerButtonBoundsReduction);
 
-    juce::Colour fill = buttonColour;
-
-    if (state.isDown) {
-        fill = buttonColour.darker();
-    }
-    else if (state.isHovered) {
-        fill = buttonColour.brighter();
-    }
-
-    g.setColour(fill);
+    g.setColour(pressableButtonColour(state));
     g.fillRoundedRectangle(area, paneCornerRadius);
 
     g.setColour(juce::Colours::black.withAlpha(0.5f));
@@ -237,7 +235,12 @@ void CustomLookAndFeel::drawTextButton(juce::Graphics &g, juce::Rectangle<float>
 void CustomLookAndFeel::drawPaintToolIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state) {
 
     auto area = bounds.reduced(outerButtonBoundsReduction);
-    g.setColour(state.isSelected ? buttonColour.brighter(0.3f) : buttonColour);
+    if (state.isSelected) {
+        g.setColour(buttonColour.brighter(0.3f));
+    } else {
+        g.setColour(buttonColour);
+    }
+
     g.fillRect(area);
 
     int wandBoundsReduction = 2;
@@ -268,37 +271,31 @@ void CustomLookAndFeel::drawPaintToolIcon(juce::Graphics &g, juce::Rectangle<flo
 void CustomLookAndFeel::drawArrowToolIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
     auto area = bounds.reduced(outerButtonBoundsReduction);
-    g.setColour(state.isSelected ? buttonColour.brighter(0.3f) : buttonColour);
+    if (state.isSelected) {
+        g.setColour(buttonColour.brighter(0.3f));
+    } else {
+        g.setColour(buttonColour);
+    }
+
     g.fillRect(area);
 
     auto glyphArea = area.reduced(area.getWidth() * 0.22f, area.getHeight() * 0.34f);
 
-    juce::Point<float> tail(glyphArea.getX(), glyphArea.getCentreY());
-    juce::Point<float> head(glyphArea.getRight(), glyphArea.getCentreY());
-
     g.setColour(juce::Colours::black);
-
-    juce::Path shaft;
-    shaft.addLineSegment(juce::Line<float>(tail, head), glyphArea.getHeight() * 0.16f);
-    g.fillPath(shaft);
-
-    const float headLength = glyphArea.getWidth() * 0.32f;
-    const float headWidth  = glyphArea.getHeight() * 0.5f;
-
-    juce::Path arrowHead;
-    arrowHead.startNewSubPath(head.x, head.y);
-    arrowHead.lineTo(head.x - headLength, head.y - headWidth);
-    arrowHead.lineTo(head.x - headLength, head.y + headWidth);
-    arrowHead.closeSubPath();
-    g.fillPath(arrowHead);
+    fillArrowGlyph(g, glyphArea, 0.16f, 0.32f, 0.5f);
 }
 
 void CustomLookAndFeel::drawPaintToolSettings(juce::Graphics &g, const PaintToolSettings &paintToolSettings) {
 
-    auto bounds = paintToolSettings.getLocalBounds();
+    auto bounds = paintToolSettings.getLocalBounds().toFloat();
 
-    g.setColour(buttonColour);
+    juce::ColourGradient gradient(barColour.brighter(0.06f), 0, bounds.getY(),
+                                  barColour.darker(0.04f),   0, bounds.getBottom(), false);
+    g.setGradientFill(gradient);
     g.fillRect(bounds);
+
+    g.setColour(barColour.brighter(0.12f));
+    g.drawRect(bounds, 1.0f);
 }
 
 void CustomLookAndFeel::drawNodeIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState&) {
@@ -344,22 +341,6 @@ void CustomLookAndFeel::drawTraversalIcon(juce::Graphics &g, juce::Rectangle<flo
 
     auto glyphArea = bounds.reduced(bounds.getWidth() * 0.26f, bounds.getHeight() * 0.38f);
 
-    juce::Point<float> tail(glyphArea.getX(),     glyphArea.getCentreY());
-    juce::Point<float> head(glyphArea.getRight(), glyphArea.getCentreY());
-
     g.setColour(juce::Colours::black);
-
-    juce::Path shaft;
-    shaft.addLineSegment(juce::Line<float>(tail, head), glyphArea.getHeight() * 0.24f);
-    g.fillPath(shaft);
-
-    const float headLength = glyphArea.getWidth() * 0.4f;
-    const float headWidth  = glyphArea.getHeight() * 0.65f;
-
-    juce::Path arrowHead;
-    arrowHead.startNewSubPath(head.x, head.y);
-    arrowHead.lineTo(head.x - headLength, head.y - headWidth);
-    arrowHead.lineTo(head.x - headLength, head.y + headWidth);
-    arrowHead.closeSubPath();
-    g.fillPath(arrowHead);
+    fillArrowGlyph(g, glyphArea, 0.24f, 0.4f, 0.65f);
 }

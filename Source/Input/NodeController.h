@@ -95,6 +95,16 @@ private:
     void finishDanglingArrowCreation (NodeCanvas& canvas);
     void connectDraggedNodeToRoot    (NodeCanvas& canvas);
 
+    void connectWithSnapAnimation (int parentNodeId, int childNodeId);
+    void setDraggedNodeVisible    (bool shouldBeVisible);
+
+    struct ArrowOwnership {
+        int ownerNodeId;
+        int childNodeId;
+    };
+
+    ArrowOwnership resolveArrowOwnership (Arrow* arrow) const;
+
     void endDrag  (NodeCanvas& canvas);
     void hideGrid (NodeCanvas& canvas) const;
     void showGrid (NodeCanvas& canvas) const;

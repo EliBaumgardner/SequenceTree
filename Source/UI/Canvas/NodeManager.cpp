@@ -25,7 +25,11 @@ NodeManager::~NodeManager() = default;
 Node* NodeManager::find(int nodeId) const
 {
     auto nodePair = nodes.find(nodeId);
-    return nodePair == nodes.end() ? nullptr : nodePair->second;
+    if (nodePair == nodes.end()) {
+        return nullptr;
+    }
+
+    return nodePair->second;
 }
 
 Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
@@ -92,17 +96,7 @@ void NodeManager::add(int nodeId)
         Node* parentNode = find(parentNodeId);
 
         if (parentNode != nullptr) {
-            Node* startNode = parentNode;
-            Node* endNode   = childNode;
-
-            if (nodeChildTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
-                startNode = childNode;
-                endNode   = parentNode;
-            }
-
-            endNode->nodeColour = startNode->nodeColour;
-            canvas.arrowManager.connect(startNode, endNode);
-            canvas.arrowManager.refreshFor(endNode);
+            canvas.arrowManager.connectParentToChild(parentNode, childNode);
         }
     }
 

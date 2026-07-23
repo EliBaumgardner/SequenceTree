@@ -8,7 +8,12 @@ namespace ArrowDuration
 
     inline int fromDelta(int deltaX, int deltaY, bool sourceIsAlternative)
     {
-        const int span = sourceIsAlternative ? std::abs(deltaY) : std::abs(deltaX);
+        int span = std::abs(deltaX);
+
+        if (sourceIsAlternative) {
+            span = std::abs(deltaY);
+        }
+
         return static_cast<int>(static_cast<float>(span) * millisecondsPerPixel);
     }
 }

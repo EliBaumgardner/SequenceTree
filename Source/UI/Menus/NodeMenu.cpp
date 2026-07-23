@@ -63,7 +63,12 @@ NodeMenu::NodeMenu(ApplicationContext& context)
     addAndMakeVisible(editTraversalRulesButton.get());
 
     applicationContext.addNodeSelectedListener([this](Node* node, bool selected) {
-        colourSelector.setNode(selected ? node : nullptr);
+        if (selected) {
+            colourSelector.setNode(node);
+        } else {
+            colourSelector.setNode(nullptr);
+        }
+
 
         if (selected && node != nullptr) {
             bindToNode(node);
@@ -137,8 +142,9 @@ void NodeMenu::resized() {
     bounds.removeFromTop(rowGap);
 
     for (auto& row : labeledRows) {
-        if (!row.editor.isVisible())
+        if (!row.editor.isVisible()) {
             continue;
+        }
 
         auto rowBounds = bounds.removeFromTop(rowHeight);
         row.label.setBounds(rowBounds.removeFromLeft(rowBounds.getWidth() / 3));

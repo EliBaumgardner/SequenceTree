@@ -60,9 +60,11 @@ void TraversalDispatcher::applyStepResult(const TraversalLogic::StepResult& step
                 }
 
                 int limit = childIt->second.countLimit;
-                int fill  = (step.countSourceCount % limit == 0)
-                              ? limit
-                              : (step.countSourceCount % limit);
+                int fill  = step.countSourceCount % limit;
+
+                if (fill == 0) {
+                    fill = limit;
+                }
                 bridge.pushCount(childId, fill, limit);
             }
         }
@@ -500,7 +502,12 @@ void TraversalDispatcher::dispatchModulator(const RTNode& node, const DispatchCo
 
         if (isDescendant && !isPrimaryRepeat) {
             auto targetIt = nodes.find(traversalLogic.modulator.target);
-            int modulatorRepeatValue = (targetIt != nodes.end()) ? targetIt->second.repeatValue : 1;
+            int modulatorRepeatValue = 1;
+
+            if (targetIt != nodes.end()) {
+                modulatorRepeatValue = targetIt->second.repeatValue;
+            }
+
 
             traversalLogic.modulatorRepeatCount++;
 
@@ -517,7 +524,12 @@ void TraversalDispatcher::dispatchModulator(const RTNode& node, const DispatchCo
     }
 
     auto targetIt = nodes.find(traversalLogic.modulator.target);
-    modulatorNode = (targetIt != nodes.end()) ? &targetIt->second : nullptr;
+    modulatorNode = nullptr;
+
+    if (targetIt != nodes.end()) {
+        modulatorNode = &targetIt->second;
+    }
+
 
     if (modulatorNode != nullptr) {
         bridge.highlightNode(*modulatorNode, true, traversalLogic.traversal.traversalId);
@@ -577,7 +589,12 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
 
             if (activeAltId != -1) {
                 auto altIt = nodes.find(activeAltId);
-                repeatValue = (altIt != nodes.end()) ? altIt->second.repeatValue : 1;
+                repeatValue = 1;
+
+                if (altIt != nodes.end()) {
+                    repeatValue = altIt->second.repeatValue;
+                }
+
             } else {
                 repeatValue = currentNode.repeatValue;
             }
@@ -639,9 +656,13 @@ void TraversalDispatcher::startCrossTreeTraversal(const RTNode& targetRootNode, 
         instanceId = processor.traversalSession.nextTraversalInstanceId();
     }
 
-    if (prepareTraversal(instanceId, rootId, rootId, traversal, context) == nullptr) {
+    TraversalLogic* traversalLogic = prepareTraversal(instanceId, rootId, rootId, traversal, context);
+
+    if (traversalLogic == nullptr) {
         return;
     }
+
+    traversalLogic->isCrossTreeSpawned = true;
 
     bridge.highlightNode(targetRootNode, true, traversalId);
     pushNote(targetRootNode, instanceId, context, sample);
@@ -678,9 +699,13 @@ TraversalLogic* TraversalDispatcher::prepareTraversal(int instanceId, int rootId
 {
     auto existingIt = context.traversalMap.find(instanceId);
 
-    TraversalLogic* traversalLogic = (existingIt != context.traversalMap.end())
-                                       ? &existingIt->second
-                                       : context.traversalMap.acquire(instanceId, rootId, traversal);
+    TraversalLogic* traversalLogic = nullptr;
+
+    if (existingIt != context.traversalMap.end()) {
+        traversalLogic = &existingIt->second;
+    } else {
+        traversalLogic = context.traversalMap.acquire(instanceId, rootId, traversal);
+    }
 
     if (traversalLogic == nullptr) {
         return nullptr;

@@ -44,6 +44,7 @@ public:
     bool isFirstEvent  = false;
     bool isLooping     = false;
     bool isFlagSpawned = false;
+    bool isCrossTreeSpawned = false;
     bool pendingRemoval = false;
 
     int  flagSourceNodeId = -1;
@@ -121,6 +122,8 @@ public:
     static bool isDescendantOf(const NodeMap& nodes, int nodeId, int ancestorId);
 
     bool shouldTraverse() const;
+
+    bool isSpawned() const { return isFlagSpawned || isCrossTreeSpawned; }
 
     void resetCounts() {
         primary.counts.clear();

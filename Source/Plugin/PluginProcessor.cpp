@@ -272,10 +272,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
 bool SequenceTreeAudioProcessor::hasPendingUiCommands() const
 {
-    return eventManager.bridge.highlightFifo.getNumReady()  > 0
-        || eventManager.bridge.progressFifo.getNumReady()   > 0
-        || eventManager.bridge.arrowResetFifo.getNumReady() > 0
-        || eventManager.bridge.countFifo.getNumReady()      > 0;
+    return eventManager.bridge.hasPendingCommands();
 }
 
 void SequenceTreeAudioProcessor::clearOldEvents(int traversalId)
@@ -289,13 +286,17 @@ void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)
 
     auto newSnap = std::make_shared<AudioSnapshot>();
 
-    newSnap->globalNodes = (oldSnap && oldSnap->globalNodes)
-        ? std::make_shared<NodeMap>(*oldSnap->globalNodes)
-        : std::make_shared<NodeMap>();
+    if (oldSnap && oldSnap->globalNodes) {
+        newSnap->globalNodes = std::make_shared<NodeMap>(*oldSnap->globalNodes);
+    } else {
+        newSnap->globalNodes = std::make_shared<NodeMap>();
+    }
 
-    newSnap->rtGraphs = (oldSnap && oldSnap->rtGraphs)
-        ? std::make_shared<RTGraphs>(*oldSnap->rtGraphs)
-        : std::make_shared<RTGraphs>();
+    if (oldSnap && oldSnap->rtGraphs) {
+        newSnap->rtGraphs = std::make_shared<RTGraphs>(*oldSnap->rtGraphs);
+    } else {
+        newSnap->rtGraphs = std::make_shared<RTGraphs>();
+    }
 
     (*newSnap->rtGraphs)[graph->graphID] = graph;
 

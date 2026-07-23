@@ -63,10 +63,7 @@ void NodeCanvas::handleAsyncUpdate() {
             int rootNodeId = asyncUpdate.rootNodeId;
             if (rootNodeId != nodeId) {
 
-                juce::ValueTree rootTree = applicationContext.valueTreeState->getNode(rootNodeId);
-                if (rootTree.isValid()) {
-                    applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
-                }
+                applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(rootNodeId));
             } else {
 
                 auto emptyGraph = std::make_shared<RTGraph>();

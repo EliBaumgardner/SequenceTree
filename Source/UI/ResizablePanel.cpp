@@ -67,9 +67,11 @@ void ResizablePanel::applyResizedWidth(int newWidth)
         return;
     }
 
-    const int newX = (edge == ResizeEdge::Right)
-                   ? dragStartX
-                   : dragStartX + (dragStartWidth - clamped);
+    int newX = dragStartX + (dragStartWidth - clamped);
+
+    if (edge == ResizeEdge::Right) {
+        newX = dragStartX;
+    }
 
     setBounds(newX, getY(), clamped, getHeight());
 }
@@ -82,7 +84,12 @@ void ResizablePanel::beginResize()
 
 void ResizablePanel::dragResize(int deltaX)
 {
-    const int signedDelta = (edge == ResizeEdge::Right) ? deltaX : -deltaX;
+    int signedDelta = -deltaX;
+
+    if (edge == ResizeEdge::Right) {
+        signedDelta = deltaX;
+    }
+
 
     applyResizedWidth(dragStartWidth + signedDelta);
 }

@@ -34,8 +34,7 @@ void DanglingArrowLayer::updatePreview(Node* node, juce::Point<int> tipOffset, b
 
     if (preview == nullptr || preview->startNode != node) {
         preview = std::make_unique<Arrow>(node, tipOffset, applicationContext);
-        canvas.addAndMakeVisible(*preview);
-        preview->toBack();
+        canvas.arrowManager.attach(*preview);
     }
 
     preview->dashed = dashed;
@@ -157,8 +156,7 @@ void DanglingArrowLayer::rebuildForNode(int nodeId)
 
         auto arrow = std::make_unique<Arrow>(node, tipOffset, applicationContext);
         arrow->arrowTree = arrowTree;
-        canvas.addAndMakeVisible(*arrow);
-        arrow->toBack();
+        canvas.arrowManager.attach(*arrow);
         arrow->setArrowBounds();
         canvas.arrowManager.adopt(arrow.release());
     }
@@ -173,12 +171,7 @@ void DanglingArrowLayer::removeForNode(Node* node)
 
 void DanglingArrowLayer::removeForNodeId(int nodeId)
 {
-    canvas.arrowManager.removeMatching([nodeId](Arrow* arrow) {
-        if (! arrow->isDangling() || arrow->startNode == nullptr) {
-            return false;
-        }
-        return arrow->startNode->getComponentID().getIntValue() == nodeId;
-    });
+    removeForNode(canvas.nodeManager.find(nodeId));
 }
 
 void DanglingArrowLayer::clear()

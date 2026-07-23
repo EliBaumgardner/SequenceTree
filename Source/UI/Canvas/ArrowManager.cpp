@@ -50,14 +50,13 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
     auto arrow = std::make_unique<Arrow>(parentNode, childNode, applicationContext);
 
     parentNode->nodeArrows[childNodeId] = arrow.get();
-    canvas.addAndMakeVisible(arrow.get());
 
     if (parentNode->nodeType == NodeType::TraversalFlag) {
         arrow->sourceHovered = parentNode->isHovered;
         arrow->initHoverState(parentNode->isHovered);
     }
 
-    arrow->toBack();
+    attach(*arrow);
     arrow->setInterceptsMouseClicks(false, false);
 
     if (parentMidiNoteData.isValid() && childNode->nodeType != NodeType::Root) {
@@ -69,11 +68,50 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
     return raw;
 }
 
+Arrow* ArrowManager::connectParentToChild(Node* parentNode, Node* childNode)
+{
+    Node* startNode = parentNode;
+    Node* endNode   = childNode;
+
+    if (childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
+        startNode = childNode;
+        endNode   = parentNode;
+    }
+
+    const int endNodeId = endNode->getComponentID().getIntValue();
+    if (startNode->nodeArrows.count(endNodeId) > 0) {
+        return nullptr;
+    }
+
+    endNode->nodeColour = startNode->nodeColour;
+
+    Arrow* arrow = connect(startNode, endNode);
+    refreshFor(endNode);
+
+    return arrow;
+}
+
 void ArrowManager::adopt(Arrow* arrow)
 {
     if (arrow != nullptr) {
         arrows.add(arrow);
     }
+}
+
+void ArrowManager::attach(Arrow& arrow)
+{
+    canvas.addAndMakeVisible(arrow);
+    arrow.toBack();
+}
+
+void ArrowManager::detach(Arrow* arrow)
+{
+    if (arrow->startNode != nullptr && arrow->endNode != nullptr) {
+        const int childNodeId = arrow->endNode->getComponentID().getIntValue();
+        arrow->startNode->nodeArrows.erase(childNodeId);
+    }
+
+    canvas.removeChildComponent(arrow);
 }
 
 void ArrowManager::remove(Arrow* arrow)
@@ -82,35 +120,19 @@ void ArrowManager::remove(Arrow* arrow)
         return;
     }
 
-    if (arrow->startNode != nullptr && arrow->endNode != nullptr) {
-        const int childNodeId = arrow->endNode->getComponentID().getIntValue();
-        arrow->startNode->nodeArrows.erase(childNodeId);
-    }
-
     const int index = arrows.indexOf(arrow);
     if (index >= 0) {
-        canvas.removeChildComponent(arrow);
+        detach(arrow);
         arrows.remove(index);
     }
 }
 
 void ArrowManager::removeForNode(Node* node)
 {
-    for (int i = arrows.size() - 1; i >= 0; i--) {
-        Arrow* arrow = arrows[i];
-
-        if (arrow->isDangling()) {
-            continue;
-        }
-        if (arrow->startNode != node && arrow->endNode != node) {
-            continue;
-        }
-
-        const int childNodeId = arrow->endNode->getComponentID().getIntValue();
-        arrow->startNode->nodeArrows.erase(childNodeId);
-
-        arrows.remove(i);
-    }
+    removeMatching([node](Arrow* arrow) {
+        return ! arrow->isDangling()
+            && (arrow->startNode == node || arrow->endNode == node);
+    });
 }
 
 void ArrowManager::removeMatching(const std::function<bool(Arrow*)>& predicate)
@@ -119,7 +141,7 @@ void ArrowManager::removeMatching(const std::function<bool(Arrow*)>& predicate)
         Arrow* arrow = arrows[i];
 
         if (predicate(arrow)) {
-            canvas.removeChildComponent(arrow);
+            detach(arrow);
             arrows.remove(i);
         }
     }
@@ -159,27 +181,11 @@ void ArrowManager::handleArrowAdded(int parentNodeId, int childNodeId)
         return;
     }
 
-    Node* startNode = parentNode;
-    Node* endNode   = childNode;
-
-    if (childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
-        startNode = childNode;
-        endNode   = parentNode;
-    }
-
-    const int endNodeId = endNode->getComponentID().getIntValue();
-    if (startNode->nodeArrows.count(endNodeId) > 0) {
+    if (connectParentToChild(parentNode, childNode) == nullptr) {
         return;
     }
 
-    endNode->nodeColour = startNode->nodeColour;
-    connect(startNode, endNode);
-    refreshFor(endNode);
-
-    juce::ValueTree rootTree = applicationContext.valueTreeState->getRootNode(parentNodeId);
-    if (rootTree.isValid()) {
-        applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
-    }
+    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(parentNodeId));
 }
 
 void ArrowManager::handleArrowRemoved(int parentNodeId, int childNodeId)
@@ -192,10 +198,7 @@ void ArrowManager::handleArrowRemoved(int parentNodeId, int childNodeId)
 
     remove(target);
 
-    juce::ValueTree rootTree = applicationContext.valueTreeState->getRootNode(parentNodeId);
-    if (rootTree.isValid()) {
-        applicationContext.rtGraphBuilder->makeRTGraph(rootTree);
-    }
+    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(parentNodeId));
 }
 
 void ArrowManager::setSelected(Arrow* arrow)
@@ -263,20 +266,19 @@ void ArrowManager::triggerSnapForNode(int nodeId)
 
 void ArrowManager::showSnapGhost(Node* from, Node* to)
 {
-    if (snapGhostArrow != nullptr) {
-        if (snapGhostArrow->startNode == from && snapGhostArrow->endNode == to) {
-            return;
-        }
-        canvas.removeChildComponent(snapGhostArrow);
-        delete snapGhostArrow;
-        snapGhostArrow = nullptr;
+    if (snapGhostArrow != nullptr
+        && snapGhostArrow->startNode == from && snapGhostArrow->endNode == to) {
+        return;
     }
+
+    hideSnapGhost();
 
     snapGhostArrow = new Arrow(from, to, applicationContext);
     snapGhostArrow->isGhost = true;
     snapGhostArrow->setInterceptsMouseClicks(false, false);
-    canvas.addAndMakeVisible(snapGhostArrow);
-    snapGhostArrow->toBack();
+
+    attach(*snapGhostArrow);
+
     snapGhostArrow->setArrowBounds();
     snapGhostArrow->triggerSnapAnimation();
 }

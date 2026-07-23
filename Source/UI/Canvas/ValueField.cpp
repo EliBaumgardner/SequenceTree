@@ -16,6 +16,11 @@ ValueField::~ValueField()
     stopTimer();
 }
 
+juce::ValueTree ValueField::firstMidiNote(int nodeId) const
+{
+    return owner.getApplicationContext().valueTreeState->getMidiNotes(nodeId).getChild(0);
+}
+
 void ValueField::setBrushColour(juce::Colour colour)
 {
     brushColour = colour;
@@ -131,8 +136,7 @@ void ValueField::render()
             continue;
         }
 
-        juce::ValueTree notes = owner.getApplicationContext().valueTreeState->getMidiNotes(id);
-        juce::ValueTree note  = notes.getChild(0);
+        juce::ValueTree note = firstMidiNote(id);
 
         if (!note.isValid()) {
             continue;
@@ -251,8 +255,7 @@ void ValueField::seedStrokeDensityFromNodes()
             continue;
         }
 
-        juce::ValueTree notes = owner.getApplicationContext().valueTreeState->getMidiNotes(id);
-        juce::ValueTree note  = notes.getChild(0);
+        juce::ValueTree note = firstMidiNote(id);
 
         if (!note.isValid()) {
             continue;
@@ -319,7 +322,12 @@ void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to
             const float px = (float) x - from.x;
             const float py = (float) y - from.y;
 
-            float t = segLen2 > 0.0f ? (px * dx + py * dy) / segLen2 : 0.0f;
+            float t = 0.0f;
+
+            if (segLen2 > 0.0f) {
+                t = (px * dx + py * dy) / segLen2;
+            }
+
             t = juce::jlimit(0.0f, 1.0f, t);
 
             const float ox   = px - t * dx;
@@ -346,9 +354,13 @@ void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to
             const float delta = brushFlow * (coverage - strokeMask[index]);
             strokeMask[index] = coverage;
 
-            density[index] = juce::jlimit(0.0f, 1.0f,
-                                          brushErase ? density[index] - delta
-                                                     : density[index] + delta);
+            float painted = density[index] + delta;
+
+            if (brushErase) {
+                painted = density[index] - delta;
+            }
+
+            density[index] = juce::jlimit(0.0f, 1.0f, painted);
         }
     }
 }
@@ -385,7 +397,12 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
         const float px = centre.x - from.x;
         const float py = centre.y - from.y;
 
-        float t = segLen2 > 0.0f ? (px * dx + py * dy) / segLen2 : 0.0f;
+        float t = 0.0f;
+
+        if (segLen2 > 0.0f) {
+            t = (px * dx + py * dy) / segLen2;
+        }
+
         t = juce::jlimit(0.0f, 1.0f, t);
 
         const float ox = px - t * dx;
@@ -403,8 +420,13 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
         const int y0 = juce::jmax(0,     (int) std::floor(centre.y - nodeR));
         const int y1 = juce::jmin(h - 1, (int) std::ceil (centre.y + nodeR));
 
-        float sample = brushErase ? 1.0f : 0.0f;
-        bool  found  = false;
+        float sample = 0.0f;
+
+        if (brushErase) {
+            sample = 1.0f;
+        }
+
+        bool found = false;
 
         for (int y = y0; y <= y1; ++y) {
             const float ddy = (float) y - centre.y;
@@ -414,8 +436,13 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
                     continue;
                 }
                 const float dv = density[(size_t) y * (size_t) w + (size_t) x];
-                sample = brushErase ? juce::jmin(sample, dv) : juce::jmax(sample, dv);
-                found  = true;
+                if (brushErase) {
+                    sample = juce::jmin(sample, dv);
+                } else {
+                    sample = juce::jmax(sample, dv);
+                }
+
+                found = true;
             }
         }
 
@@ -425,8 +452,7 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
 
         const int value = juce::jlimit(0, 127, (int) std::round(sample * 127.0f));
 
-        juce::ValueTree notes = owner.getApplicationContext().valueTreeState->getMidiNotes(id);
-        juce::ValueTree note  = notes.getChild(0);
+        juce::ValueTree note = firstMidiNote(id);
 
         if (!note.isValid()) {
             continue;
