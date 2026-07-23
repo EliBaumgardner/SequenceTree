@@ -23,7 +23,12 @@ void Cursor::paint(juce::Graphics& g) {
 }
 
 void PresetSwatch::paint(juce::Graphics& g) {
-    g.fillAll(isSet ? colour : juce::Colour(0xff3a3a3a));
+    if (isSet) {
+        g.fillAll(colour);
+    } else {
+        g.fillAll(juce::Colour(0xff3a3a3a));
+    }
+
     g.setColour(juce::Colours::black.withAlpha(0.5f));
     g.drawRect(getLocalBounds(), 1);
 }

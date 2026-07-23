@@ -39,13 +39,24 @@ void DynamicPort::mouseWheelMove(const juce::MouseEvent& e,
 {
     if (e.mods.isShiftDown()) {
         auto pivot = e.getEventRelativeTo(this).getPosition().toFloat();
-        float delta = wheel.isReversed ? -wheel.deltaY : wheel.deltaY;
+        float delta = wheel.deltaY;
+
+        if (wheel.isReversed) {
+            delta = -wheel.deltaY;
+        }
+
         float newZoom = std::clamp(zoom * (1.0f + delta * 0.15f), 0.1f, 5.0f);
         setZoom(newZoom, pivot);
     }
     else {
-        float dx = wheel.isReversed ? -wheel.deltaX : wheel.deltaX;
-        float dy = wheel.isReversed ? -wheel.deltaY : wheel.deltaY;
+        float dx = wheel.deltaX;
+        float dy = wheel.deltaY;
+
+        if (wheel.isReversed) {
+            dx = -wheel.deltaX;
+            dy = -wheel.deltaY;
+        }
+
         translateX -= dx * 100.0f;
         translateY -= dy * 100.0f;
         applyTransform();
@@ -74,8 +85,9 @@ void DynamicPort::setZoom(float newZoom, juce::Point<float> pivot)
 
     applyTransform();
 
-    if (onZoomChanged)
+    if (onZoomChanged) {
         onZoomChanged(zoom);
+    }
 }
 
 void DynamicPort::centerOnCanvas()

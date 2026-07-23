@@ -81,8 +81,12 @@ juce::Font ValueEditor::displayFont() const
     }
 
     float heightRatio = bounds.getHeight() / textHeight;
-    float ratio       = textWidth > 0.0f ? std::min(bounds.getWidth() / textWidth, heightRatio)
-                                         : heightRatio;
+    float ratio        = heightRatio;
+
+    if (textWidth > 0.0f) {
+        ratio = std::min(bounds.getWidth() / textWidth, heightRatio);
+    }
+
     float fittedHeight = textHeight * ratio;
 
     if (fittedHeight <= 0.0f || ! std::isfinite(fittedHeight)) {
@@ -105,7 +109,11 @@ juce::String ValueEditor::getDisplayText() const
         double value = (double) boundValue.getValue();
         juce::String text(value, 3);
         text = text.trimCharactersAtEnd("0").trimCharactersAtEnd(".");
-        return text.isEmpty() ? "0" : text;
+        if (text.isEmpty()) {
+            return "0";
+        }
+
+        return text;
     }
 
     int primaryValue = (int) boundValue.getValue();
@@ -157,8 +165,13 @@ void ValueEditor::mouseDown(const juce::MouseEvent&)
     textEditor->applyFontToAllText(font);
 
     textEditor->setVisible(true);
-    textEditor->setText(pitchMode ? juce::String((int) boundValue.getValue()) : getDisplayText(),
-                        juce::dontSendNotification);
+    juce::String editorText = getDisplayText();
+
+    if (pitchMode) {
+        editorText = juce::String((int) boundValue.getValue());
+    }
+
+    textEditor->setText(editorText, juce::dontSendNotification);
     textEditor->grabKeyboardFocus();
     textEditor->selectAll();
     repaint();
@@ -330,7 +343,12 @@ void ValueEditor::commitSingleValue(const juce::String& text)
             magnitude = maxValue;
         }
 
-        boundValue.setValue(removes ? -magnitude : magnitude);
+        if (removes) {
+            boundValue.setValue(-magnitude);
+        } else {
+            boundValue.setValue(magnitude);
+        }
+
         return;
     }
 
@@ -396,6 +414,7 @@ void ValueEditor::valueChanged(juce::Value&)
         repaint();
     }
 
-    if (onValueChange)
+    if (onValueChange) {
         onValueChange();
+    }
 }

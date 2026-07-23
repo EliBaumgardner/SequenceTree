@@ -46,7 +46,12 @@ void MenuArea::resized() {
 }
 
 void MenuArea::togglePanel(ActivePanel panel) {
-    activePanel = (activePanel == panel) ? ActivePanel::None : panel;
+    if (activePanel == panel) {
+        activePanel = ActivePanel::None;
+    } else {
+        activePanel = panel;
+    }
+
 
     traversalMenu->setVisible(activePanel == ActivePanel::Traversal);
     nodeMenu->setVisible(activePanel == ActivePanel::Node);

@@ -39,6 +39,7 @@ public:
     juce::CaretComponent* createCaretComponent(juce::Component* keyFocusOwner) override;
 
     void drawCanvas         (juce::Graphics& g, const NodeCanvas& canvas);
+    void drawBar            (juce::Graphics& g, juce::Rectangle<float> bounds, bool isLitFromTop);
 
 
     void drawNodeIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
@@ -46,6 +47,9 @@ public:
     void drawTraversalIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
 
 
+
+    juce::Colour pressableButtonColour(const ButtonState& state) const;
+    juce::Colour selectableButtonColour(const ButtonState& state) const;
 
     static juce::Rectangle<float> getNodeCircleBounds(juce::Rectangle<float> componentBounds);
 

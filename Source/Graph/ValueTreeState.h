@@ -27,6 +27,12 @@ public:
     juce::ValueTree addModulatorRoot    (int parentNodeId, juce::UndoManager* undoManager);
     juce::ValueTree addModulator        (int parentNodeId, juce::UndoManager* undoManager);
 
+    juce::ValueTree addChildNode(juce::ValueTree parentNode, const juce::Identifier& nodeType,
+                                 juce::UndoManager* undoManager);
+
+    juce::ValueTree addModulatorNode(juce::ValueTree parentNode, const juce::Identifier& nodeType,
+                                     int newNodeId, juce::UndoManager* undoManager);
+
     void replaceState(const juce::ValueTree& restoredTree);
 
     void connectNodes   (int parentNodeId, int childNodeId, juce::UndoManager* undoManager);

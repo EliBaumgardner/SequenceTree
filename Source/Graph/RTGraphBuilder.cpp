@@ -155,10 +155,7 @@ void RTGraphBuilder::rebuildGraphsForTraversal(int traversalId)
     }
 
     for (int rootId : rootsToRebuild) {
-        juce::ValueTree rootNode = valueTreeState.getNode(rootId);
-        if (rootNode.isValid()) {
-            makeRTGraph(rootNode);
-        }
+        makeRTGraph(valueTreeState.getNode(rootId));
     }
 }
 
@@ -212,28 +209,8 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
             for (int i = 0; i < nodeValueTreeTraversals.getNumChildren(); i++) {
                 juce::ValueTree traversalIdTree = nodeValueTreeTraversals.getChild(i);
                 int traversalId = traversalIdTree.getProperty(ValueTreeIdentifiers::TraversalId);
-                juce::ValueTree traversalData = valueTreeState.traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
-                RTtraversal rtTraversal;
 
-                rtTraversal.traversalId = traversalId;
-
-                if (traversalData.isValid()) {
-                    rtTraversal.tempoMultiplier = traversalData.getProperty(ValueTreeIdentifiers::TempoMultiplier);
-
-                    if (traversalData.hasProperty(ValueTreeIdentifiers::TraversalChannel)) {
-                        rtTraversal.channel = traversalData.getProperty(ValueTreeIdentifiers::TraversalChannel);
-                    }
-
-                    if (traversalData.hasProperty(ValueTreeIdentifiers::TraversalTranspose)) {
-                        rtTraversal.transpose = traversalData.getProperty(ValueTreeIdentifiers::TraversalTranspose);
-                    }
-
-                    if (traversalData.hasProperty(ValueTreeIdentifiers::TraversalVelocity)) {
-                        rtTraversal.velocityMultiplier = traversalData.getProperty(ValueTreeIdentifiers::TraversalVelocity);
-                    }
-                }
-
-                rtNode.traversals.push_back(rtTraversal);
+                rtNode.traversals.push_back(buildRTtraversal(traversalId));
             }
 
             if (nodeParentValueTree.isValid()) {
@@ -284,7 +261,12 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
 
                 int flagValue = currentValueTree.getProperty(ValueTreeIdentifiers::TraversalFlagValue, 0);
                 if (flagValue != 0) {
-                    int traversalNumber = (flagValue < 0) ? -flagValue : flagValue;
+                    int traversalNumber = flagValue;
+
+                    if (flagValue < 0) {
+                        traversalNumber = -flagValue;
+                    }
+
 
                     rtNode.flagTraversal        = buildRTtraversal(traversalNumber);
                     rtNode.flagRemovesTraversal = (flagValue < 0);
@@ -360,14 +342,8 @@ void RTGraphBuilder::createRTNodeConnections(std::shared_ptr<RTGraph> rtGraph, s
 
             rtGraph->nodeMap[id].children.push_back(childId);
 
-            juce::ValueTree disabledTraversals = childIdTree.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
-            if (disabledTraversals.isValid()) {
-                std::unordered_set<int>& disabledSet = rtGraph->nodeMap[id].disabledTraversalsByChild[childId];
-
-                for (int j = 0; j < disabledTraversals.getNumChildren(); j++) {
-                    int disabledTraversalId = disabledTraversals.getChild(j).getProperty(ValueTreeIdentifiers::TraversalId);
-                    disabledSet.insert(disabledTraversalId);
-                }
+            if (childIdTree.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds).isValid()) {
+                collectDisabledTraversals(childIdTree, rtGraph->nodeMap[id].disabledTraversalsByChild[childId]);
             }
         }
     }

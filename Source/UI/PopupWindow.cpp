@@ -67,5 +67,9 @@ bool PopupWindowLauncher::isShowing() const {
 }
 
 juce::Component* PopupWindowLauncher::getContent() const {
-    return window != nullptr ? window->getContentComponent() : nullptr;
+    if (window != nullptr) {
+        return window->getContentComponent();
+    }
+
+    return nullptr;
 }

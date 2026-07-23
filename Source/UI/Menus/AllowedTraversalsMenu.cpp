@@ -14,15 +14,28 @@ void AllowedTraversalsMenu::ToggleButton::paint(juce::Graphics& g) {
     juce::Colour onColour  = juce::Colour::fromRGB(195, 174, 132);
     juce::Colour offColour = juce::Colour::fromRGB(40, 40, 38);
 
-    g.setColour(isOn ? onColour : offColour);
+    if (isOn) {
+        g.setColour(onColour);
+    } else {
+        g.setColour(offColour);
+    }
+
     g.fillRoundedRectangle(bounds, 4.0f);
 
     g.setColour(juce::Colours::black.withAlpha(0.5f));
     g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
 
-    g.setColour(isOn ? juce::Colours::black.withAlpha(0.7f) : juce::Colour::fromRGB(195, 174, 132));
+    juce::Colour textColour = juce::Colour::fromRGB(195, 174, 132);
+    juce::String stateText  = "off";
+
+    if (isOn) {
+        textColour = juce::Colours::black.withAlpha(0.7f);
+        stateText  = "on";
+    }
+
+    g.setColour(textColour);
     g.setFont(juce::Font(juce::FontOptions(9.0f)));
-    g.drawText(isOn ? "on" : "off", getLocalBounds(), juce::Justification::centred);
+    g.drawText(stateText, getLocalBounds(), juce::Justification::centred);
 }
 
 void AllowedTraversalsMenu::ToggleButton::mouseDown(const juce::MouseEvent& e) {

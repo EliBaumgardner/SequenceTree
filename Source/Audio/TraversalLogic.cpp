@@ -37,10 +37,11 @@ void TraversalLogic::reset(int root, const RTtraversal& newTraversal)
     activeModulatorRootId = -1;
     modulatorHostId       = -1;
 
-    isFirstEvent   = false;
-    isLooping      = false;
-    isFlagSpawned  = false;
-    pendingRemoval = false;
+    isFirstEvent        = false;
+    isLooping           = false;
+    isFlagSpawned       = false;
+    isCrossTreeSpawned  = false;
+    pendingRemoval      = false;
 
     flagSourceNodeId = -1;
 
@@ -312,7 +313,12 @@ void TraversalLogic::advance(const NodeMap& nodes)
     auto targetIterator = nodes.find(targetId);
 
     if (targetIterator == nodes.end() || targetIterator->second.children.empty()) {
-        state = isLooping ? TraversalState::Reset : TraversalState::End;
+        if (isLooping) {
+            state = TraversalState::Reset;
+        } else {
+            state = TraversalState::End;
+        }
+
         return;
     }
 
@@ -351,14 +357,24 @@ void TraversalLogic::advance(const NodeMap& nodes)
     }
 
     if (primary.target == primary.last) {
-        state = isLooping ? TraversalState::Reset : TraversalState::End;
+        if (isLooping) {
+            state = TraversalState::Reset;
+        } else {
+            state = TraversalState::End;
+        }
+
     }
 }
 
 const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes)
 {
     auto cIt = primary.counts.find(primary.target);
-    int count = (cIt != primary.counts.end() ? cIt->second : 0) + 1;
+
+    int count = 1;
+
+    if (cIt != primary.counts.end()) {
+        count = cIt->second + 1;
+    }
 
     int peekTargetId = selectNextChild(nodes,primary.target, count, &isAudibleChild);
 
@@ -367,7 +383,12 @@ const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes)
     }
 
     auto itPeek = nodes.find(peekTargetId);
-    return (itPeek != nodes.end()) ? &itPeek->second : nullptr;
+
+    if (itPeek != nodes.end()) {
+        return &itPeek->second;
+    }
+
+    return nullptr;
 }
 
 void TraversalLogic::peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& traverserIds)
@@ -436,8 +457,13 @@ const RTNode* TraversalLogic::peekModulators(const NodeMap& nodes) {
         return nullptr;
     }
 
-    auto cIt  = modulator.counts.find(modulator.target);
-    int count = (cIt != modulator.counts.end() ? cIt->second : 0) + 1;
+    auto cIt = modulator.counts.find(modulator.target);
+
+    int count = 1;
+
+    if (cIt != modulator.counts.end()) {
+        count = cIt->second + 1;
+    }
 
     int peekId = selectNextChild(nodes,modulator.target, count, &isModulatorChild);
     if (peekId == -1) {
@@ -445,7 +471,12 @@ const RTNode* TraversalLogic::peekModulators(const NodeMap& nodes) {
     }
 
     auto peekIt = nodes.find(peekId);
-    return (peekIt != nodes.end()) ? &peekIt->second : nullptr;
+
+    if (peekIt != nodes.end()) {
+        return &peekIt->second;
+    }
+
+    return nullptr;
 }
 
 const RTNode& TraversalLogic::getTargetNode   (const NodeMap& nodes) const { return nodes.at(primary.target);    }
@@ -516,9 +547,11 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(const NodeMap& nodes)
 
                         if (primary.subRootNode != -1) {
                             auto subRootIt = nodes.find(primary.subRootNode);
-                            int subRootLimit = (subRootIt != nodes.end())
-                                                 ? subRootIt->second.subLoopCountLimit
-                                                 : 0;
+                            int subRootLimit = 0;
+
+                            if (subRootIt != nodes.end()) {
+                                subRootLimit = subRootIt->second.subLoopCountLimit;
+                            }
 
                             int subRootCount = ++primary.subRootCounts[primary.subRootNode];
 
@@ -630,7 +663,12 @@ int TraversalLogic::findActiveModulatorRoot(const NodeMap& nodes, int regularNod
     }
 
     auto countIt = primary.counts.find(regularNodeId);
-    int hostCount = (countIt != primary.counts.end() ? countIt->second : 0) + 1;
+
+    int hostCount = 1;
+
+    if (countIt != primary.counts.end()) {
+        hostCount = countIt->second + 1;
+    }
 
     if (hostCount % modRoot->countLimit == 0) {
         return modRoot->nodeID;

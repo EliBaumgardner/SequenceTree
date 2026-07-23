@@ -4,6 +4,48 @@
 #include "../Graph/RTData.h"
 #include <array>
 
+template <typename Command, int Capacity = 512>
+class CommandFifo
+{
+public:
+
+    void push(const Command& command)
+    {
+        const auto scope = fifo.write(1);
+
+        if (scope.blockSize1 > 0) {
+            buffer[static_cast<size_t>(scope.startIndex1)] = command;
+        }
+        else if (scope.blockSize2 > 0) {
+            buffer[static_cast<size_t>(scope.startIndex2)] = command;
+        }
+        else {
+            jassertfalse;
+        }
+    }
+
+    template <typename ApplyCommand>
+    void drain(ApplyCommand&& apply)
+    {
+        const auto scope = fifo.read(fifo.getNumReady());
+
+        for (int i = 0; i < scope.blockSize1; ++i) {
+            apply(buffer[static_cast<size_t>(scope.startIndex1 + i)]);
+        }
+
+        for (int i = 0; i < scope.blockSize2; ++i) {
+            apply(buffer[static_cast<size_t>(scope.startIndex2 + i)]);
+        }
+    }
+
+    bool hasPending() const { return fifo.getNumReady() > 0; }
+
+private:
+
+    juce::AbstractFifo             fifo { Capacity };
+    std::array<Command, Capacity>  buffer {};
+};
+
 class AudioUIBridge
 {
 public:
@@ -38,32 +80,41 @@ public:
         int traversalId   = -1;
     };
 
+    CommandFifo<HighlightCommand> highlights;
+    CommandFifo<ProgressCommand>  progress;
+    CommandFifo<ResetCommand>     arrowResets;
+    CommandFifo<CountCommand>     counts;
 
-    static constexpr int kHighlightFifoSize = 512;
-    juce::AbstractFifo                                highlightFifo { kHighlightFifoSize };
-    std::array<HighlightCommand, kHighlightFifoSize>  highlightBuffer {};
+    bool hasPendingCommands() const
+    {
+        return highlights.hasPending()
+            || progress.hasPending()
+            || arrowResets.hasPending()
+            || counts.hasPending();
+    }
 
-    static constexpr int kProgressFifoSize = 512;
-    juce::AbstractFifo                                progressFifo { kProgressFifoSize };
-    std::array<ProgressCommand, kProgressFifoSize>    progressBuffer {};
-
-    static constexpr int kArrowResetSize = 512;
-    juce::AbstractFifo                                arrowResetFifo { kArrowResetSize };
-    std::array<ResetCommand,kArrowResetSize>          arrowResetBuffer {};
-
-    static constexpr int kCountFifoSize = 512;
-    juce::AbstractFifo                             countFifo { kCountFifoSize };
-    std::array<CountCommand, kCountFifoSize>       countBuffer {};
-
-
-    void highlightNode(int nodeId, bool shouldHighlight, int traversalId = -1);
+    void highlightNode(int nodeId, bool shouldHighlight, int traversalId = -1)
+    {
+        highlights.push({ nodeId, shouldHighlight, traversalId });
+    }
 
     void highlightNode(const RTNode& node, bool shouldHighlight, int traversalId = -1)
     {
         highlightNode(node.nodeID, shouldHighlight, traversalId);
     }
 
-    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId, int traversalId, bool isConnection = false);
-    void pushArrowReset(int rootId, int traversalId = -1);
-    void pushCount(int nodeId, int currentCount, int countLimit);
+    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId, int traversalId, bool isConnection = false)
+    {
+        progress.push({ parentNodeId, childNodeId, durationMs, graphId, traversalId, isConnection });
+    }
+
+    void pushArrowReset(int rootId, int traversalId = -1)
+    {
+        arrowResets.push({ rootId, traversalId });
+    }
+
+    void pushCount(int nodeId, int currentCount, int countLimit)
+    {
+        counts.push({ nodeId, currentCount, countLimit });
+    }
 };

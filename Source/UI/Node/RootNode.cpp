@@ -60,7 +60,9 @@ void RootNode::equipTraversals()
 
     auto contains = [&words](int id) {
         for (int w : words) {
-            if (w == id) return true;
+            if (w == id) {
+                return true;
+            }
         }
         return false;
     };

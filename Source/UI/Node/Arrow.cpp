@@ -146,7 +146,12 @@ ArrowGeometry Arrow::getGeometry(float animationT) const
     geometry.start     = start;
     geometry.tip       = tip;
     geometry.direction = direction;
-    geometry.chord     = (shaftLength > 0.0f) ? shaft / shaftLength : direction;
+    geometry.chord     = direction;
+
+    if (shaftLength > 0.0f) {
+        geometry.chord = shaft / shaftLength;
+    }
+
     geometry.length    = length;
     geometry.drawHead  = ! endIsTraversalFlag && animationT > headVisibleThreshold;
     geometry.straight  = isDangling() || endIsTraversalFlag
@@ -169,14 +174,23 @@ juce::Path Arrow::buildShaftPath(ArrowGeometry& geometry, float headLength, juce
     const juce::Point<float> shaft = tip - start;
 
     if (geometry.straight) {
-        const juce::Point<float> shaftEnd = geometry.drawHead ? tip - geometry.direction * headLength : tip;
+        juce::Point<float> shaftEnd = tip;
+
+        if (geometry.drawHead) {
+            shaftEnd = tip - geometry.direction * headLength;
+        }
 
         path.startNewSubPath(start);
         path.lineTo(shaftEnd);
         return path;
     }
 
-    const float sign = (shaft.x >= 0.0f) ? 1.0f : -1.0f;
+    float sign = -1.0f;
+
+    if (shaft.x >= 0.0f) {
+        sign = 1.0f;
+    }
+
 
     const juce::Point<float> perpendicular { -geometry.direction.y * curvePerpScale * sign,
                                               geometry.direction.x * curvePerpScale * sign };
@@ -193,7 +207,11 @@ juce::Path Arrow::buildShaftPath(ArrowGeometry& geometry, float headLength, juce
         geometry.direction = neck / neckLen;
     }
 
-    const juce::Point<float> shaftEnd = geometry.drawHead ? tip - geometry.direction * headLength : tip;
+    juce::Point<float> shaftEnd = tip;
+
+    if (geometry.drawHead) {
+        shaftEnd = tip - geometry.direction * headLength;
+    }
 
     path.startNewSubPath(start);
     path.cubicTo(control1, control2, shaftEnd);
@@ -258,7 +276,12 @@ void Arrow::triggerSnapAnimation()
 
 void Arrow::setHoverFade(bool shouldBeVisible)
 {
-    hoverAlphaTarget = shouldBeVisible ? 1.0f : 0.0f;
+    if (shouldBeVisible) {
+        hoverAlphaTarget = 1.0f;
+    } else {
+        hoverAlphaTarget = 0.0f;
+    }
+
 
     if (shouldBeVisible && ! isVisible()) {
         setVisible(true);
@@ -269,7 +292,12 @@ void Arrow::setHoverFade(bool shouldBeVisible)
 
 void Arrow::initHoverState(bool visibleNow)
 {
-    hoverAlpha       = visibleNow ? 1.0f : 0.0f;
+    if (visibleNow) {
+        hoverAlpha = 1.0f;
+    } else {
+        hoverAlpha = 0.0f;
+    }
+
     hoverAlphaTarget = hoverAlpha;
     setAlpha(hoverAlpha);
     setVisible(visibleNow);
@@ -292,7 +320,12 @@ bool Arrow::advanceHoverFade()
         return true;
     }
 
-    float step = (hoverAlpha < hoverAlphaTarget) ? hoverFadeStep : -hoverFadeStep;
+    float step = -hoverFadeStep;
+
+    if (hoverAlpha < hoverAlphaTarget) {
+        step = hoverFadeStep;
+    }
+
     hoverAlpha = juce::jlimit(0.0f, 1.0f, hoverAlpha + step);
     setAlpha(hoverAlpha);
     return false;

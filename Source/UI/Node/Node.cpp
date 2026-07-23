@@ -189,9 +189,11 @@ void Node::setDisplayMode(NodeDisplayMode mode)
         countEditor       .bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
         switchCountEditor .bindEditor(nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
 
-        juce::Identifier subLoopProperty = (nodeType == NodeType::Root)
-            ? ValueTreeIdentifiers::LoopLimit
-            : ValueTreeIdentifiers::SubLoopCountLimit;
+        juce::Identifier subLoopProperty = ValueTreeIdentifiers::SubLoopCountLimit;
+
+        if (nodeType == NodeType::Root) {
+            subLoopProperty = ValueTreeIdentifiers::LoopLimit;
+        }
 
         subLoopLimitEditor.bindEditor(nodeValueTree, subLoopProperty);
     }
@@ -232,7 +234,13 @@ void Node::setDisplayMode(NodeDisplayMode mode)
     const bool pitchMode = (mode == NodeDisplayMode::Pitch);
     nodeValueEditor.setPitchMode(pitchMode);
     nodeValueEditor.setEditable(! pitchMode);
-    nodeValueEditor.setMinimumValue(mode == NodeDisplayMode::Channel || mode == NodeDisplayMode::RepeatValue ? 1 : 0);
+    int minimumValue = 0;
+
+    if (mode == NodeDisplayMode::Channel || mode == NodeDisplayMode::RepeatValue) {
+        minimumValue = 1;
+    }
+
+    nodeValueEditor.setMinimumValue(minimumValue);
 
     nodeValueEditor.repaint();
     repaint();

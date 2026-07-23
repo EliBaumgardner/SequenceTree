@@ -13,47 +13,31 @@ TraversalMenu::TraversalMenu(ApplicationContext& context, bool showResizer)
       displayMenu(context), multiplierEditor(context), channelEditor(context), transposeEditor(context), velocityEditor(context), colourSelector(context) {
     addAndMakeVisible(displayMenu);
 
-    multiplierLabel.setText("Multiplier", juce::dontSendNotification);
-    multiplierLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    multiplierLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
-    multiplierLabel.setJustificationType(juce::Justification::centredLeft);
-    addAndMakeVisible(multiplierLabel);
+    auto setUpLabel = [this](juce::Label& label, juce::String text) {
+        label.setText(std::move(text), juce::dontSendNotification);
+        label.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+        label.setFont(juce::Font(juce::FontOptions(9.0f)));
+        label.setJustificationType(juce::Justification::centredLeft);
+        addAndMakeVisible(label);
+    };
 
+    setUpLabel(multiplierLabel, "Multiplier");
     multiplierEditor.enableDecimalValue(0.1);
     addAndMakeVisible(multiplierEditor);
 
-    channelLabel.setText("Channel", juce::dontSendNotification);
-    channelLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    channelLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
-    channelLabel.setJustificationType(juce::Justification::centredLeft);
-    addAndMakeVisible(channelLabel);
-
+    setUpLabel(channelLabel, "Channel");
     channelEditor.setMinimumValue(1);
     addAndMakeVisible(channelEditor);
 
-    transposeLabel.setText("Transpose", juce::dontSendNotification);
-    transposeLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    transposeLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
-    transposeLabel.setJustificationType(juce::Justification::centredLeft);
-    addAndMakeVisible(transposeLabel);
-
+    setUpLabel(transposeLabel, "Transpose");
     transposeEditor.enableSignedValue(-24, 24);
     addAndMakeVisible(transposeEditor);
 
-    velocityLabel.setText("Velocity", juce::dontSendNotification);
-    velocityLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    velocityLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
-    velocityLabel.setJustificationType(juce::Justification::centredLeft);
-    addAndMakeVisible(velocityLabel);
-
+    setUpLabel(velocityLabel, "Velocity");
     velocityEditor.enableDecimalValue(0.0, 1.0);
     addAndMakeVisible(velocityEditor);
 
-    colourLabel.setText("Colour", juce::dontSendNotification);
-    colourLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    colourLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
-    colourLabel.setJustificationType(juce::Justification::centredLeft);
-    addAndMakeVisible(colourLabel);
+    setUpLabel(colourLabel, "Colour");
 
     colourSelector.requiresNode = false;
     colourSelector.onColourPicked = [this](juce::Colour c) {
@@ -112,25 +96,27 @@ void TraversalMenu::selectTraversal(int traversalId) {
 
     currentTraversalData = traversalData;
 
+    auto bindWithDefault = [&traversalData](ValueEditor& editor, const juce::Identifier& propertyId,
+                                           const juce::var& defaultValue) {
+        if (!traversalData.hasProperty(propertyId)) {
+            traversalData.setProperty(propertyId, defaultValue, nullptr);
+        }
+        editor.bindEditor(traversalData, propertyId);
+    };
+
     multiplierEditor.bindEditor(traversalData, ValueTreeIdentifiers::TempoMultiplier);
 
-    if (!traversalData.hasProperty(ValueTreeIdentifiers::TraversalChannel)) {
-        traversalData.setProperty(ValueTreeIdentifiers::TraversalChannel, 1, nullptr);
-    }
-    channelEditor.bindEditor(traversalData, ValueTreeIdentifiers::TraversalChannel);
-
-    if (!traversalData.hasProperty(ValueTreeIdentifiers::TraversalTranspose)) {
-        traversalData.setProperty(ValueTreeIdentifiers::TraversalTranspose, 0, nullptr);
-    }
-    transposeEditor.bindEditor(traversalData, ValueTreeIdentifiers::TraversalTranspose);
-
-    if (!traversalData.hasProperty(ValueTreeIdentifiers::TraversalVelocity)) {
-        traversalData.setProperty(ValueTreeIdentifiers::TraversalVelocity, 1.0, nullptr);
-    }
-    velocityEditor.bindEditor(traversalData, ValueTreeIdentifiers::TraversalVelocity);
+    bindWithDefault(channelEditor,   ValueTreeIdentifiers::TraversalChannel,   1);
+    bindWithDefault(transposeEditor, ValueTreeIdentifiers::TraversalTranspose, 0);
+    bindWithDefault(velocityEditor,  ValueTreeIdentifiers::TraversalVelocity,  1.0);
 
     juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
-    colourSelector.colour = colourString.isNotEmpty() ? juce::Colour::fromString(colourString) : juce::Colours::white;
+    if (colourString.isNotEmpty()) {
+        colourSelector.colour = juce::Colour::fromString(colourString);
+    } else {
+        colourSelector.colour = juce::Colours::white;
+    }
+
     colourSelector.repaint();
 
     displayMenu.setSelectedItem(traversalId);
@@ -169,23 +155,16 @@ void TraversalMenu::resized() {
     displayMenu.setBounds(barArea.reduced(4));
 
     int rowHeight = juce::jmax(18, barHeight);
-    auto rowArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
-    multiplierLabel.setBounds(rowArea.removeFromLeft(rowArea.getWidth() / 2));
-    multiplierEditor.setBounds(rowArea);
 
-    auto channelArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
-    channelLabel.setBounds(channelArea.removeFromLeft(channelArea.getWidth() / 2));
-    channelEditor.setBounds(channelArea);
+    auto layoutRow = [&bounds, rowHeight](juce::Label& label, juce::Component& control) {
+        auto rowArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
+        label.setBounds(rowArea.removeFromLeft(rowArea.getWidth() / 2));
+        control.setBounds(rowArea);
+    };
 
-    auto transposeArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
-    transposeLabel.setBounds(transposeArea.removeFromLeft(transposeArea.getWidth() / 2));
-    transposeEditor.setBounds(transposeArea);
-
-    auto velocityArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
-    velocityLabel.setBounds(velocityArea.removeFromLeft(velocityArea.getWidth() / 2));
-    velocityEditor.setBounds(velocityArea);
-
-    auto colourArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
-    colourLabel.setBounds(colourArea.removeFromLeft(colourArea.getWidth() / 2));
-    colourSelector.setBounds(colourArea);
+    layoutRow(multiplierLabel, multiplierEditor);
+    layoutRow(channelLabel,    channelEditor);
+    layoutRow(transposeLabel,  transposeEditor);
+    layoutRow(velocityLabel,   velocityEditor);
+    layoutRow(colourLabel,     colourSelector);
 }

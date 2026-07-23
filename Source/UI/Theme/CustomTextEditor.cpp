@@ -85,9 +85,14 @@ void CustomTextEditor::formatDisplay(DisplayMode mode)
         display = pitchNames[pitchValue] + juce::String(octave);
     }
     
-    if(mode == DisplayMode::Velocity) { int velocity = (int)value; display = juce::String(velocity); }
-    
-    if(mode == DisplayMode::Duration) { display = juce::String(value); }
+    if (mode == DisplayMode::Velocity) {
+        int velocity = (int) value;
+        display = juce::String(velocity);
+    }
+
+    if (mode == DisplayMode::Duration) {
+        display = juce::String(value);
+    }
     
     setText(display);
     refit();
