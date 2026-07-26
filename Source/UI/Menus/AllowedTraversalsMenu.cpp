@@ -9,10 +9,10 @@
 #include "../Theme/CustomLookAndFeel.h"
 
 void AllowedTraversalsMenu::ToggleButton::paint(juce::Graphics& g) {
-    auto bounds = getLocalBounds().toFloat().reduced(2.0f);
+    const auto bounds = getLocalBounds().toFloat().reduced(2.0f);
 
-    juce::Colour onColour  = juce::Colour::fromRGB(195, 174, 132);
-    juce::Colour offColour = juce::Colour::fromRGB(40, 40, 38);
+    const juce::Colour onColour  = juce::Colour::fromRGB(195, 174, 132);
+    const juce::Colour offColour = juce::Colour::fromRGB(40, 40, 38);
 
     if (isOn) {
         g.setColour(onColour);
@@ -53,13 +53,13 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(ApplicationContext& context, juce::
     setLookAndFeel(context.lookAndFeel);
 
     for (int i = 0; i < applicationContext.valueTreeState->traversalMap.getNumChildren(); ++i) {
-        juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap.getChild(i);
+        const juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap.getChild(i);
 
         if (traversalData.getType() != ValueTreeIdentifiers::TraversalData) {
             continue;
         }
 
-        int traversalId = traversalData.getProperty(ValueTreeIdentifiers::TraversalId);
+        const int traversalId = traversalData.getProperty(ValueTreeIdentifiers::TraversalId);
 
         TraversalRow row;
         row.traversalId = traversalId;
@@ -87,7 +87,7 @@ int AllowedTraversalsMenu::getIdealHeight() const {
 }
 
 bool AllowedTraversalsMenu::isTraversalEnabled(int traversalId) const {
-    juce::ValueTree disabled = connection.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
+    const juce::ValueTree disabled = connection.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
 
     if (!disabled.isValid()) {
         return true;
@@ -101,7 +101,7 @@ void AllowedTraversalsMenu::setTraversalEnabled(int traversalId, bool enabled) {
         return;
     }
 
-    juce::UndoManager* undoManager = applicationContext.undoManager;
+    juce::UndoManager* const undoManager = applicationContext.undoManager;
     undoManager->beginNewTransaction();
 
     juce::ValueTree disabled = connection.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
@@ -111,7 +111,7 @@ void AllowedTraversalsMenu::setTraversalEnabled(int traversalId, bool enabled) {
             return;
         }
 
-        juce::ValueTree entry = disabled.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+        const juce::ValueTree entry = disabled.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
         if (entry.isValid()) {
             disabled.removeChild(entry, undoManager);
         }
@@ -130,7 +130,7 @@ void AllowedTraversalsMenu::setTraversalEnabled(int traversalId, bool enabled) {
     }
 
     if (applicationContext.rtGraphBuilder != nullptr) {
-        juce::ValueTree ownerNode = connection.getParent().getParent();
+        const juce::ValueTree ownerNode = connection.getParent().getParent();
         if (ownerNode.isValid()) {
             applicationContext.rtGraphBuilder->makeRTGraph(ownerNode);
         }

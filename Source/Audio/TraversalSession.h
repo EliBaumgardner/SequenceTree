@@ -26,8 +26,8 @@ public:
     bool startTraversalsFromFirstRoot(const NodeMap& nodes, RTGraphs& rtGraphs,
                                       juce::MidiBuffer& midiMessages);
 
-    TraversalMap&       getTraversals()       { return traversals; }
-    const TraversalMap& getTraversals() const { return traversals; }
+    TraversalPool&       getTraversals()       { return traversals; }
+    const TraversalPool& getTraversals() const { return traversals; }
 
     bool isIdle() const { return traversals.empty(); }
 
@@ -54,7 +54,7 @@ private:
 
     EventManager& eventManager;
 
-    TraversalMap traversals;
+    TraversalPool traversals;
 
     static constexpr int scratchCapacity           = 256;
     static constexpr int maxConcurrentTraversals   = 128;

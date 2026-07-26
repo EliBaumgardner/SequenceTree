@@ -13,6 +13,8 @@
 #include "../Util/ApplicationContext.h"
 #include "../Util/NodeInfo.h"
 #include "../UI/PopupWindow.h"
+#include "NodeCreationDispatcher.h"
+#include "ConnectionOps.h"
 
 
 class NodeCanvas;
@@ -35,10 +37,10 @@ class NodeController : public juce::MouseListener {
 
 public:
 
-    enum class NodeControllerMode {Node, Modulator, TraversalFlag};
+    using NodeControllerMode = NodeCreationMode;
     NodeControllerMode nodeControllerMode;
 
-    NodeController(ApplicationContext& context);
+    explicit NodeController(ApplicationContext& context);
     ~NodeController() override;
 
     void mouseEnter          (const juce::MouseEvent& e) override;
@@ -58,14 +60,9 @@ public:
 
     void checkRootNodeSnap   (const NodePosition& pos);
 
-    Node* findConnectionTarget (juce::Point<int> point, int excludeNodeId) const;
     void  commitFlagConnection (int sourceNodeId, Node* target);
 
-    Arrow* findArrowNear     (juce::Point<float> point, float radius) const;
-    Arrow* findArrowHeadNear (juce::Point<float> point, float radius) const;
-    void   deleteArrow       (Arrow* arrow);
     void   showArrowContextMenu (Arrow* arrow);
-    juce::ValueTree getArrowConnectionTree (Arrow* arrow) const;
 
 private:
 
@@ -98,26 +95,20 @@ private:
     void connectWithSnapAnimation (int parentNodeId, int childNodeId);
     void setDraggedNodeVisible    (bool shouldBeVisible);
 
-    struct ArrowOwnership {
-        int ownerNodeId;
-        int childNodeId;
-    };
-
-    ArrowOwnership resolveArrowOwnership (Arrow* arrow) const;
-
     void endDrag  (NodeCanvas& canvas);
     void hideGrid (NodeCanvas& canvas) const;
     void showGrid (NodeCanvas& canvas) const;
 
-    static constexpr float rootSnapThreshold      = 60.0f;
+    static constexpr float rootSnapThreshold       = 60.0f;
     static constexpr float danglingArrowGrabRadius = 14.0f;
-    static constexpr float flagArrowVicinity       = 28.0f;
     static constexpr float arrowHoverRadius        = 8.0f;
     static constexpr float arrowHeadGrabRadius     = 16.0f;
     static constexpr int   dragThreshold           = 5;
     static constexpr int   defaultNodeRadius       = 20;
 
     ApplicationContext& applicationContext;
+
+    ConnectionOps connectionOps { applicationContext };
 
     DragState dragState = DragState::Idle;
 

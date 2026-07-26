@@ -8,11 +8,29 @@
 #include <utility>
 #include <vector>
 
+struct TraversalRuntime
+{
+    bool asFlag         = false;
+    bool asCrossTree    = false;
+    int  sourceNodeId   = -1;
+    bool pendingRemoval = false;
+
+    int  repeatCount = 0;
+
+    bool isSpawned() const { return asFlag || asCrossTree; }
+};
+
 class TraversalPool
 {
 public:
 
-    using Entry = std::pair<int, TraversalLogic>;
+    struct Instance
+    {
+        TraversalLogic   logic;
+        TraversalRuntime runtime;
+    };
+
+    using Entry = std::pair<int, Instance>;
 
 private:
 
@@ -24,17 +42,13 @@ private:
 
 public:
 
-    void prepare(int capacity, AudioUIBridge& bridge)
+    void prepare(int capacity)
     {
         if (slotCount() == capacity) {
             return;
         }
 
         slots.assign(static_cast<std::size_t>(capacity), Slot{});
-
-        for (auto& slot : slots) {
-            slot.entry.second.bridge = &bridge;
-        }
 
         activeCount = 0;
     }
@@ -104,9 +118,7 @@ public:
     iterator       find(int id)       { return iterator      (this, findSlotIndex(id)); }
     const_iterator find(int id) const { return const_iterator(this, findSlotIndex(id)); }
 
-    TraversalLogic& at(int id) { return slots[static_cast<std::size_t>(findSlotIndex(id))].entry.second; }
-
-    TraversalLogic* acquire(int id, int rootId, const RTtraversal& traversal)
+    Instance* acquire(int id, int rootId, const RTtraversal& traversal)
     {
         for (auto& slot : slots) {
             if (slot.active) {
@@ -115,7 +127,8 @@ public:
 
             slot.active      = true;
             slot.entry.first = id;
-            slot.entry.second.reset(rootId, traversal);
+            slot.entry.second.logic.reset(rootId, traversal);
+            slot.entry.second.runtime = {};
 
             ++activeCount;
 
@@ -167,4 +180,3 @@ private:
     int activeCount = 0;
 };
 
-using TraversalMap = TraversalPool;

@@ -18,7 +18,7 @@ class TempoDisplay : public juce::Component, public juce::SettableTooltipClient 
     std::unique_ptr<IconButton> syncButton;
     CustomTextEditor editor;
 
-    TempoDisplay(ApplicationContext& context)
+    explicit TempoDisplay(ApplicationContext& context)
         : editor(context)
     {
         setLookAndFeel(context.lookAndFeel);
@@ -49,7 +49,7 @@ class TempoDisplay : public juce::Component, public juce::SettableTooltipClient 
     void resized() override
     {
         auto bounds = getLocalBounds().reduced(2);
-        int syncSize = bounds.getHeight();
+        const int syncSize = bounds.getHeight();
         syncButton->setBounds(bounds.removeFromRight(syncSize));
         bounds.removeFromRight(2);
         editor.setBounds(bounds);

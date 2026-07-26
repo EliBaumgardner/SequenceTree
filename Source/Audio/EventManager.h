@@ -17,10 +17,10 @@ public:
     explicit EventManager(SequenceTreeAudioProcessor* p);
 
     void processEvents(int numSamples, juce::MidiBuffer& midiMessages,
-                       const NodeMap& nodes, TraversalMap& traversalMap);
+                       const NodeMap& nodes, TraversalPool& traversalMap);
 
 private:
 
     void handleOrphanNotes(juce::MidiBuffer& midiMessages,
-                           const NodeMap& nodes, TraversalMap& traversalMap);
+                           const NodeMap& nodes, TraversalPool& traversalMap);
 };

@@ -31,7 +31,6 @@ public:
     void add(Node* node, juce::Point<int> tipOffset);
     void remove(Arrow* arrow);
 
-    Arrow* hitTestHead(juce::Point<int> canvasPos, float radius) const;
 
     void setTip   (Arrow* arrow, juce::Point<int> tipOffset);
     void commitTip(Arrow* arrow);

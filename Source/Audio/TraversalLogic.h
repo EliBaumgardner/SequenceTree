@@ -5,17 +5,13 @@
 #include <vector>
 
 
-class AudioUIBridge;
-
 class TraversalLogic {
 
 public:
 
-    RTtraversal traversal;
-
     struct Walker
     {
-        std::unordered_map<int, int> counts;
+        std::unordered_map<int,int> counts;
         std::unordered_map<int,int>  switchCounts;
         std::unordered_map<int,int>  subRootCounts;
 
@@ -28,42 +24,66 @@ public:
         int alternativeLast   = -1;
     };
 
-    Walker primary;
-    Walker modulator;
+    struct Counters
+    {
+        std::unordered_map<int,int> chord;
+        std::unordered_map<int,int> crossTree;
+        std::unordered_map<int,int> crossTreeSwitch;
+        std::unordered_map<int,int> trigger;
+    };
 
-    NodeStateMap nodeStates;
+    struct LoopState
+    {
+        bool active = false;
+        int  count  = 0;
+        int  limit  = 0;
+    };
 
-    std::unordered_map<int,int> chordCounts;
-    std::unordered_map<int,int> crossTreeCounts;
-    std::unordered_map<int,int> crossTreeSwitchCounts;
-    std::unordered_map<int,int> triggerCounts;
+    struct ModulatorGate
+    {
+        int activeRootId = -1;
+        int hostId       = -1;
+        int repeatCount  = 0;
+    };
 
-    int activeModulatorRootId = -1;
-    int modulatorHostId       = -1;
+    struct ModulatorWalk
+    {
+        Walker        walker;
+        ModulatorGate gate;
 
-    bool isFirstEvent  = false;
-    bool isLooping     = false;
-    bool isFlagSpawned = false;
-    bool isCrossTreeSpawned = false;
-    bool pendingRemoval = false;
+        bool isActive() const { return gate.activeRootId != -1; }
 
-    int  flagSourceNodeId = -1;
+        void activate(int rootId, int hostId)
+        {
+            gate.activeRootId = rootId;
+            gate.hostId       = hostId;
+            gate.repeatCount  = 0;
+            walker.target     = rootId;
+            walker.last       = -1;
+        }
 
-    int  instanceId        = 0;
-    int  rootId            = 0;
-    int  referenceTargetId = 0;
+        void deactivate()
+        {
+            gate          = {};
+            walker.target = -1;
+            walker.last   = -1;
+        }
 
-    int  loopCount            = 0;
-    int  loopLimit            = 0;
-    int  repeatCount          = 0;
-    int  modulatorRepeatCount = 0;
+        bool tickRepeat(int repeatLimit)
+        {
+            gate.repeatCount++;
+            if (gate.repeatCount >= repeatLimit) {
+                gate.repeatCount = 0;
+                return true;
+            }
+            return false;
+        }
+
+        bool          advance(const NodeMap& nodes, TraversalLogic& owner);
+        const RTNode* peek   (const NodeMap& nodes, TraversalLogic& owner) const;
+    };
 
     enum class TraversalState { Start, Active, End, Reset };
-    enum class EventType      { Node, Modulator,  };
-
-    TraversalState state = TraversalState::Start;
-
-    AudioUIBridge* bridge;
 
     struct StepResult
     {
@@ -85,8 +105,22 @@ public:
         int  countSourceCount  = 0;
     };
 
+    using ChildPredicate = bool (*)(RTNode::NodeType);
+
+    RTtraversal    traversal;
+    NodeStateMap   nodeStates;
+
+    Walker         primary;
+    Counters       counters;
+    LoopState      loop;
+    ModulatorWalk  mod;
+
+    int            instanceId = 0;
+    int            rootId     = 0;
+
+    TraversalState state = TraversalState::Start;
+
     TraversalLogic() = default;
-    TraversalLogic(int root, AudioUIBridge& bridge, RTtraversal traversal);
 
     void reset(int root, const RTtraversal& newTraversal);
 
@@ -94,40 +128,37 @@ public:
 
     void advanceAlternative(const NodeMap& nodes, int parentId);
 
-    void selectSwitchNode(const NodeMap& nodes, int targetId, int& chosenNodeId);
-
     void advance(const NodeMap& nodes);
-    void advanceModulator(const NodeMap& nodes);
-    int advanceAlternativeNode(const NodeMap& nodes);
+
+    int advanceModulator(const NodeMap& nodes);
 
     const RTNode* peekNextTarget(const NodeMap& nodes);
-
-    using ChildPredicate = bool (*)(RTNode::NodeType);
-    int selectNextChild(const NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible);
-
-    void registerTrigger(const NodeMap& nodes, int nodeId);
 
     void peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& traverserIds);
     const RTNode* peekModulators(const NodeMap& nodes);
 
-    const RTNode& getTargetNode   (const NodeMap& nodes) const;
-    const RTNode& getLastNode     (const NodeMap& nodes) const;
-    const RTNode& getReferenceNode(const NodeMap& nodes) const;
-    const RTNode& getRootNode     (const NodeMap& nodes) const;
-    static const RTNode& getRelayNode(int relayNodeId, const NodeMap& nodes);
+    const RTNode& getTargetNode(const NodeMap& nodes) const;
+    const RTNode& getRootNode  (const NodeMap& nodes) const;
 
-    const RTNode* getModulatorNode(const NodeMap& nodes, int nodeId);
-    int           findActiveModulatorRoot(const NodeMap& nodes, int regularNodeId);
+    int findActiveModulatorRoot(const NodeMap& nodes, int regularNodeId) const;
 
     static bool isDescendantOf(const NodeMap& nodes, int nodeId, int ancestorId);
 
     bool shouldTraverse() const;
 
-    bool isSpawned() const { return isFlagSpawned || isCrossTreeSpawned; }
+private:
 
-    void resetCounts() {
-        primary.counts.clear();
-        chordCounts.clear();
-        nodeStates.clear();
-    }
+    int  selectNextChild(const NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible);
+    void selectSwitchNode(const NodeMap& nodes, int targetId, int& chosenNodeId);
+    void registerTrigger(const NodeMap& nodes, int nodeId);
+
+    const RTNode* getModulatorNode(const NodeMap& nodes, int nodeId) const;
+
+    StepResult enterRoot(const NodeMap& nodes);
+    StepResult stepActive(const NodeMap& nodes);
+    void       handleLoopReset(const NodeMap& nodes, StepResult& result);
+    void       advanceSubRoot(const NodeMap& nodes, StepResult& result);
+    void       fillEndedResult(StepResult& result) const;
+
+    int referenceTargetId = 0;
 };

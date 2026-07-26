@@ -54,7 +54,6 @@ public:
     void incrementNodeValue(int incrementValue);
     void refreshValueDisplay();
 
-    Arrow* nodeArrow = nullptr;
     std::unordered_map<int, Arrow*> nodeArrows;
 
     juce::ValueTree nodeValueTree;

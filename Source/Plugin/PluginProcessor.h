@@ -46,7 +46,6 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    void clearOldEvents(int traversalId);
     void setNewGraph(std::shared_ptr<RTGraph> graph);
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
@@ -82,14 +81,12 @@ public:
     RTGraphBuilder rtGraphBuilder { *this, graphState };
 
 
-    struct {
-        double currentSampleRate;
-        int samplesPerBeat;
-        int currentStep;
-        int stepLengthInSamples;
-        int samplesIntoStep;
-        int bpm;
-    } TempoInfo { 44100, 0, 0, 0, 0, 120 };
+    struct TempoInfo
+    {
+        double currentSampleRate = 44100.0;
+    };
+
+    TempoInfo tempoInfo;
 
     EventManager     eventManager     { this };
     TraversalSession traversalSession { eventManager };

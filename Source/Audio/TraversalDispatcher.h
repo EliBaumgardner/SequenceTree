@@ -12,7 +12,7 @@ class SequenceTreeAudioProcessor;
 struct DispatchContext
 {
     const NodeMap&    nodes;
-    TraversalMap&     traversalMap;
+    TraversalPool&     traversalMap;
     juce::MidiBuffer& midiMessages;
 };
 
@@ -60,14 +60,14 @@ private:
                            double sampleRate, double tempoMultiplier,
                            const DispatchContext& context, TraversalLogic& traversal);
 
-    bool hasActiveTraversalOnTree(int treeRootId, const TraversalMap& traversalMap) const;
+    bool hasActiveTraversalOnTree(int treeRootId, const TraversalPool& traversalMap) const;
 
-    int findTraversalInstance(int rootId, int typeId, const TraversalMap& traversalMap) const;
+    int findTraversalInstance(int rootId, int typeId, const TraversalPool& traversalMap) const;
 
     void applyGraphLoopLimit(TraversalLogic& traversalLogic, int rootId);
 
-    TraversalLogic* prepareTraversal(int instanceId, int rootId, int startNodeId,
-                                     const RTtraversal& traversal, const DispatchContext& context);
+    TraversalPool::Instance* prepareTraversal(int instanceId, int rootId, int startNodeId,
+                                             const RTtraversal& traversal, const DispatchContext& context);
 
     void startCrossTreeTraversal(const RTNode& targetRootNode, const RTtraversal& traversal,
                                  int sample, const DispatchContext& context);
@@ -78,7 +78,8 @@ private:
     void startFlagTraversal(const RTNode& flagNode, int hostTypeId, int sample,
                             const DispatchContext& context);
 
-    void queueFlagRemoval(const RTNode& flagNode, int hostInstanceId, int hostTypeId, TraversalMap& traversalMap);
+    void queueFlagRemoval(const RTNode& flagNode, int hostInstanceId, int hostTypeId, TraversalPool& traversalMap);
+
 
     SequenceTreeAudioProcessor& processor;
     NoteScheduler&              scheduler;
