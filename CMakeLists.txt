@@ -25,6 +25,8 @@ juce_add_plugin(SequenceTree
 
 juce_add_binary_data(MyBinaryData SOURCES  assets/Node.png assets/Counter.png assets/Traverser.png )
 
+target_compile_features(SequenceTree PRIVATE cxx_std_20)
+
 target_include_directories(SequenceTree PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}/juce_binarydata_MyBinaryData
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/UI
@@ -55,6 +57,10 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Canvas/DanglingArrowLayer.cpp
         Source/UI/Canvas/NodeManager.cpp
         Source/UI/Canvas/ArrowManager.cpp
+        Source/UI/Canvas/CanvasHitTester.cpp
+        Source/UI/Canvas/ArrowHoverController.cpp
+        Source/Input/NodeCreationDispatcher.cpp
+        Source/Input/ConnectionOps.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
         Source/UI/Node/Arrow.cpp
@@ -91,6 +97,5 @@ target_link_libraries(SequenceTree PRIVATE
         juce::juce_audio_processors
         juce::juce_audio_devices
         juce::juce_audio_utils
-        juce::juce_animation
         MyBinaryData
 )

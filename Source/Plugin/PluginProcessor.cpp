@@ -91,6 +91,7 @@ void SequenceTreeAudioProcessor::changeProgramName (int index, const juce::Strin
 //==============================================================================
 void SequenceTreeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    tempoInfo.currentSampleRate = sampleRate;
     traversalSession.prepare();
 }
 
@@ -273,11 +274,6 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 bool SequenceTreeAudioProcessor::hasPendingUiCommands() const
 {
     return eventManager.bridge.hasPendingCommands();
-}
-
-void SequenceTreeAudioProcessor::clearOldEvents(int traversalId)
-{
-    eventManager.scheduler.clearTraversalNotes(traversalId);
 }
 
 void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)

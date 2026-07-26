@@ -7,7 +7,7 @@ EventManager::EventManager(SequenceTreeAudioProcessor* p)
     jassert(p != nullptr);
 }
 
-void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, const NodeMap& nodes, TraversalMap& traversalMap)
+void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, const NodeMap& nodes, TraversalPool& traversalMap)
 {
     auto& activeNotes = scheduler.activeNotes;
 
@@ -34,7 +34,7 @@ void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, const NodeM
             continue;
         }
 
-        TraversalLogic& traversal = traversalIt->second;
+        TraversalLogic& traversal = traversalIt->second.logic;
         auto rootIt = nodes.find(traversal.rootId);
 
         if (rootIt == nodes.end()) {
@@ -50,7 +50,7 @@ void EventManager::handleOrphanNotes(juce::MidiBuffer& midiMessages, const NodeM
 }
 
 void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
-                                   const NodeMap& nodes, TraversalMap& traversalMap)
+                                   const NodeMap& nodes, TraversalPool& traversalMap)
 {
     handleOrphanNotes(midiMessages, nodes, traversalMap);
 

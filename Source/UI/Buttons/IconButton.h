@@ -87,7 +87,7 @@ public:
 
 private:
 
-    Painter painter;
+    const Painter painter;
     ButtonState state;
 };
 

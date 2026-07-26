@@ -43,7 +43,6 @@ public:
 
     void sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
     void removeNote(int index);
-    void clearTraversalNotes(int instanceId);
     void handleOrphanNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages);
 
     static bool isNodeAudible(RTNode::NodeType nodeType);

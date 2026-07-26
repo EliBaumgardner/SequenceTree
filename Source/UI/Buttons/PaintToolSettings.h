@@ -62,7 +62,7 @@ public:
     juce::Label flowLabel;
 
 
-    PaintToolSettings(ApplicationContext& context) : context(context) {
+    explicit PaintToolSettings(ApplicationContext& context) : context(context) {
         setLookAndFeel(context.lookAndFeel);
 
         displayMenu = std::make_unique<ItemSelector>(context);
@@ -76,7 +76,7 @@ public:
         velocityPair.setting = PaintSetting::Velocity;
         durationPair.setting = PaintSetting::Duration;
 
-        auto addPaintSetting = [this](PaintSetting setting, juce::String label) {
+        const auto addPaintSetting = [this](PaintSetting setting, juce::String label) {
             displayMenu->addItem(itemIdFor(setting), std::move(label), [this, setting]() {
                 setPaintMode(setting);
                 resized();
@@ -100,8 +100,8 @@ public:
 
         valueSlider->valueChanged = [this] {
             if (this->context.canvas != nullptr) {
-                float value  = (float)valueSlider->boundValue.getValue();
-                float radius = juce::jmap(value, 0.0f, 1.0f, 1.0f, 200.0f);
+                const float value  = (float)valueSlider->boundValue.getValue();
+                const float radius = juce::jmap(value, 0.0f, 1.0f, 1.0f, 200.0f);
                 this->context.canvas->valueField.setBrushRadius(radius);
             }
         };
@@ -112,13 +112,13 @@ public:
 
         flowSlider->valueChanged = [this] {
             if (this->context.canvas != nullptr) {
-                float value = (float)flowSlider->boundValue.getValue();
+                const float value = (float)flowSlider->boundValue.getValue();
                 this->context.canvas->valueField.brushFlow = juce::jmap(value, 0.0f, 1.0f, minBrushFlow, maxBrushFlow);
             }
         };
 
         if (context.canvas != nullptr) {
-            float flow = juce::jlimit(minBrushFlow, maxBrushFlow, context.canvas->valueField.brushFlow);
+            const float flow = juce::jlimit(minBrushFlow, maxBrushFlow, context.canvas->valueField.brushFlow);
             flowSlider->boundValue = juce::jmap(flow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);
         }
 
@@ -127,7 +127,7 @@ public:
         valueSlider->setTooltip("Brush size");
         flowSlider->setTooltip("Brush rate");
 
-        auto setUpLabel = [this](juce::Label& label, juce::String text) {
+        const auto setUpLabel = [this](juce::Label& label, juce::String text) {
             label.setText(std::move(text), juce::dontSendNotification);
             label.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
             label.setFont(juce::Font(juce::FontOptions(9.0f)));
@@ -146,20 +146,20 @@ public:
 
     };
 
-    void paint(juce::Graphics& g) {
+    void paint(juce::Graphics& g) override {
         CustomLookAndFeel::get(*this).drawPaintToolSettings(g,*this);
     };
 
-    void resized() {
+    void resized() override {
 
-        int height = getLocalBounds().getHeight();
-        int displayMenuHeight = height * 0.2f;
+        const int height = getLocalBounds().getHeight();
+        const int displayMenuHeight = height * 0.2f;
 
         auto bounds = getLocalBounds();
 
         displayMenu->setBounds(bounds.removeFromTop(displayMenuHeight));
 
-        auto layoutRow = [&bounds, displayMenuHeight](juce::Label& label, juce::Component& control) {
+        const auto layoutRow = [&bounds, displayMenuHeight](juce::Label& label, juce::Component& control) {
             auto rowArea = bounds.removeFromTop(displayMenuHeight);
             label.setBounds(rowArea.removeFromLeft(rowArea.getWidth() / 3));
             control.setBounds(rowArea);
@@ -175,7 +175,7 @@ public:
         paintSetting = setting;
         displayMenu->setSelectedItem(itemIdFor(setting));
 
-        juce::Colour saved = currentPair().colour;
+        const juce::Colour saved = currentPair().colour;
 
         colourSelector->colour = saved;
         colourSelector->repaint();

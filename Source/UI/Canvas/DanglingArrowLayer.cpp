@@ -93,26 +93,6 @@ void DanglingArrowLayer::remove(Arrow* arrow)
     }
 }
 
-Arrow* DanglingArrowLayer::hitTestHead(juce::Point<int> canvasPos, float radius) const
-{
-    Arrow* nearest = nullptr;
-    float minDist = radius;
-
-    for (Arrow* arrow : canvas.arrowManager.all()) {
-        if (! arrow->isDangling() || arrow->startNode == nullptr) {
-            continue;
-        }
-
-        float dist = (float) canvasPos.getDistanceFrom(arrow->getTip());
-        if (dist < minDist) {
-            minDist = dist;
-            nearest = arrow;
-        }
-    }
-
-    return nearest;
-}
-
 void DanglingArrowLayer::setTip(Arrow* arrow, juce::Point<int> tipOffset)
 {
     if (arrow == nullptr) {

@@ -12,7 +12,7 @@
 class RootRectangle : public juce::Component {
 
 public:
-    RootRectangle(ApplicationContext& context);
+    explicit RootRectangle(ApplicationContext& context);
 
     void resized() override;
     void paint(juce::Graphics& g) override;

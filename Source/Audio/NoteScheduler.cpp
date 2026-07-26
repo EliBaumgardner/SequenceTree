@@ -81,16 +81,6 @@ void NoteScheduler::removeNote(int index)
     activeNotes.pop_back();
 }
 
-void NoteScheduler::clearTraversalNotes(int instanceId)
-{
-    for (auto& note : activeNotes)
-    {
-        if (note.instanceId == instanceId) {
-            note.instanceId = -1;
-        }
-    }
-}
-
 void NoteScheduler::handleOrphanNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages)
 {
     if (isNodeAudible(note.nodeType) && !note.isConnectionTrigger) {

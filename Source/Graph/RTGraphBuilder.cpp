@@ -223,17 +223,12 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
 
                     if (isAlternativeNode) {
                         if (parentNode->nodeType != RTNode::NodeType::Alternative) {
-                            rtNode.isAlternativeRoot = true;
                             parentNode->alternativeRootId = nodeId;
-                            rtNode.alternativeRootId = nodeId;
+                            rtNode.alternativeRootId      = nodeId;
                         }
-                        else if (parentNode->nodeType == RTNode::NodeType::Alternative) {
-                            rtNode.isAlternativeNode = true;
+                        else {
                             rtNode.alternativeRootId = parentNode->alternativeRootId;
                         }
-                    }
-                    if (parentNode->isConnectedToModulator == true) {
-                        rtNode.isConnectedToModulator = true;
                     }
                 }
             }
@@ -303,17 +298,9 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
                     int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
                     juce::ValueTree childDataTree = valueTreeState.getNode(childId);
 
-                   if (childDataTree.getType() == ValueTreeIdentifiers::ModulatorRootData) {
-                       rtNode.isConnectedToModulator = true;
-                   }
-
                     jassert(childDataTree.isValid());
                     stack.push_back(childDataTree);
                 }
-            }
-
-            if (nodeValueTreeChildren.getNumChildren() == 0) {
-                rtNode.isLeafNode = true;
             }
 
             rtGraph->nodeMap[nodeId] = std::move(rtNode);

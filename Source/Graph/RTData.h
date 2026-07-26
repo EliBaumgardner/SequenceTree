@@ -38,34 +38,19 @@ struct RTtraversal {
 
 struct RTNode {
 
-    int alternativeRootId   = -1;
+    int alternativeRootId = -1;
 
-    int modulatorId = 0;
-
-    int nodeID      = 0;
-    int parentId    = 0;
-    int countLimit  = 0;
+    int nodeID       = 0;
+    int parentId     = 0;
+    int countLimit   = 0;
     int triggerLimit = 0;
-    int repeatValue = 1;
+    int repeatValue  = 1;
 
-    int switchCount      = 0;
-    int switchCountLimit = 0;
+    int switchCountLimit  = 0;
+    int subLoopCountLimit = 0;
 
-    int loopCount      = 0;
-    int loopCountLimit = 0;
-
-    int subLoopCount   = 0;
-    int subLoopCountLimit   = 0;
-
-
-    bool isConnectedToModulator = false;
     bool isAlternativeNode = false;
-    bool isLeafNode = false;
-    bool isAlternativeRoot = false;
 
-    // Set on TraversalFlagData nodes: the traversal to spawn and the node it
-    // starts on (reached via the flag's dashed arrow) when this flag's parent
-    // is reached during traversal.
     int flagTargetId = -1;
 
     bool flagRemovesTraversal = false;
@@ -82,7 +67,7 @@ struct RTNode {
 
     std::unordered_map<int, std::unordered_set<int>> disabledTraversalsByChild;
 
-    // The traversal a TraversalFlagData node spawns; traversalId <= 0 means unset.
+
     RTtraversal flagTraversal;
 
     int graphID = 0;
@@ -94,7 +79,6 @@ using NodeMap = std::unordered_map<int, RTNode>;
 struct NodeRuntimeState {
 
     int activeAlternativeId = -1;
-    int lastAlternativeId   = -1;
     int lastNodeId          = -1;
 };
 

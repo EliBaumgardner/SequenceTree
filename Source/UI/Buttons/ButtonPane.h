@@ -21,7 +21,7 @@ public:
 
     IconButton& addButton(IconButton::Painter painter, const juce::String& tooltip, std::function<void()> onClick)
     {
-        auto* button = buttons.add(new IconButton(std::move(painter), applicationContext.lookAndFeel));
+        auto* const button = buttons.add(new IconButton(std::move(painter), applicationContext.lookAndFeel));
 
         button->setTooltip(tooltip);
 
@@ -45,7 +45,7 @@ public:
         toggleSelection = shouldToggle;
     }
 
-    void setSelectedButton(const IconButton* selected)
+    void setSelectedButton(const IconButton* selected) const
     {
         for (IconButton* button : buttons) {
             button->setSelected(button == selected);
@@ -55,7 +55,7 @@ public:
     void paint(juce::Graphics& g) override
     {
         const Theme& theme = CustomLookAndFeel::get(*this);
-        auto bounds = getLocalBounds().reduced(Theme::outerButtonBoundsReduction).toFloat();
+        const auto bounds = getLocalBounds().reduced(Theme::outerButtonBoundsReduction).toFloat();
 
         g.setColour(theme.buttonBarColour);
         g.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
@@ -69,11 +69,11 @@ public:
             return;
         }
 
-        auto bounds = getLocalBounds().reduced(2.0f);
+        const auto bounds = getLocalBounds().reduced(2.0f);
 
-        int   buttonSize       = bounds.getHeight();
-        float totalButtonWidth = buttonSize * numButtons;
-        float spacing          = (bounds.getWidth() - totalButtonWidth) / (numButtons + 1);
+        const int   buttonSize       = bounds.getHeight();
+        const float totalButtonWidth = buttonSize * numButtons;
+        const float spacing          = (bounds.getWidth() - totalButtonWidth) / (numButtons + 1);
 
         int x = static_cast<int>(bounds.getX() + spacing);
 
