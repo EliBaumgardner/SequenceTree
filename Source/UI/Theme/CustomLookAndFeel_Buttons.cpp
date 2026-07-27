@@ -271,17 +271,37 @@ void CustomLookAndFeel::drawPaintToolIcon(juce::Graphics &g, juce::Rectangle<flo
 void CustomLookAndFeel::drawArrowToolIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
     auto area = bounds.reduced(outerButtonBoundsReduction);
-    if (state.isSelected) {
-        g.setColour(buttonColour.brighter(0.3f));
-    } else {
-        g.setColour(buttonColour);
-    }
 
+    g.setColour(pressableButtonColour(state));
     g.fillRect(area);
 
     auto glyphArea = area.reduced(area.getWidth() * 0.22f, area.getHeight() * 0.34f);
 
     g.setColour(juce::Colours::black);
+    fillArrowGlyph(g, glyphArea, 0.16f, 0.32f, 0.5f);
+}
+
+void CustomLookAndFeel::drawNodeArrowIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
+{
+    auto area = bounds.reduced(outerButtonBoundsReduction);
+
+    juce::Colour tileColour = state.isSelected ? buttonColour.brighter(0.3f) : buttonColour;
+
+    if (state.isHovered) {
+        tileColour = tileColour.brighter(0.15f);
+    }
+
+    g.setColour(tileColour);
+    g.fillRoundedRectangle(area, paneCornerRadius);
+
+    auto glyphArea = area.reduced(area.getWidth() * 0.18f, area.getHeight() * 0.34f);
+
+    const float nodeDiameter = glyphArea.getHeight();
+    const auto  nodeBounds    = juce::Rectangle<float>(nodeDiameter, nodeDiameter)
+                                    .withCentre({ glyphArea.getX(), glyphArea.getCentreY() });
+
+    g.setColour(juce::Colours::black);
+    g.fillEllipse(nodeBounds);
     fillArrowGlyph(g, glyphArea, 0.16f, 0.32f, 0.5f);
 }
 

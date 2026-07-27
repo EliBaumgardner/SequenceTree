@@ -52,7 +52,7 @@ MainComponent::MainComponent() {
 
     for (int i = 0; i < numPresets; ++i)
     {
-        auto* s = swatches.add(new PresetSwatch());
+        auto* const s = swatches.add(new PresetSwatch());
         s->colour = presetColours[i];
         s->isSet  = presetSet[i];
 
@@ -85,14 +85,14 @@ void MainComponent::generateImage() {
     for (int y = 0; y < height; ++y)
         for (int x = 0; x < width; ++x)
         {
-            float hue        = juce::jmap((float)x, 0.0f, (float)width,  0.0f, 1.0f);
-            float saturation = juce::jmap((float)y, 0.0f, (float)height, 1.0f, 0.0f);
+            const float hue        = juce::jmap((float)x, 0.0f, (float)width,  0.0f, 1.0f);
+            const float saturation = juce::jmap((float)y, 0.0f, (float)height, 1.0f, 0.0f);
             image.setPixelAt(x, y, juce::Colour::fromHSV(hue, saturation, 1.0f, 1.0f));
         }
 }
 
 void MainComponent::paint(juce::Graphics& g) {
-    int pickerH = getHeight() - presetRowHeight;
+    const int pickerH = getHeight() - presetRowHeight;
     if (image.isValid()) {
         g.drawImageWithin(image, 0, 0, getWidth(), pickerH, juce::RectanglePlacement::stretchToFit);
     }
@@ -102,11 +102,11 @@ void MainComponent::paint(juce::Graphics& g) {
 }
 
 void MainComponent::resized() {
-    int pickerH   = getHeight() - presetRowHeight;
-    int swatchSize = presetRowHeight - 4;
-    int padding    = 2;
-    int startX     = padding;
-    int swatchY    = pickerH + (presetRowHeight - swatchSize) / 2;
+    const int pickerH   = getHeight() - presetRowHeight;
+    const int swatchSize = presetRowHeight - 4;
+    const int padding    = 2;
+    const int startX     = padding;
+    const int swatchY    = pickerH + (presetRowHeight - swatchSize) / 2;
 
     for (int i = 0; i < numPresets; ++i)
         swatches[i]->setBounds(startX + i * (swatchSize + padding), swatchY, swatchSize, swatchSize);
@@ -115,7 +115,7 @@ void MainComponent::resized() {
 }
 
 void MainComponent::mouseDrag(const juce::MouseEvent& event) {
-    int pickerH = getHeight() - presetRowHeight;
+    const int pickerH = getHeight() - presetRowHeight;
     if (event.y >= pickerH) {
         return;
     }
@@ -123,11 +123,11 @@ void MainComponent::mouseDrag(const juce::MouseEvent& event) {
     cursor.setCentrePosition(event.getPosition());
 
     if (image.isValid()) {
-        float imageX = juce::jmap<float>(event.x, 0.0f, (float)getWidth(),  0.0f, (float)image.getWidth());
-        float imageY = juce::jmap<float>(event.y, 0.0f, (float)pickerH,     0.0f, (float)image.getHeight());
+        const float imageX = juce::jmap<float>(event.x, 0.0f, (float)getWidth(),  0.0f, (float)image.getWidth());
+        const float imageY = juce::jmap<float>(event.y, 0.0f, (float)pickerH,     0.0f, (float)image.getHeight());
 
-        int ix = juce::jlimit(0, image.getWidth()  - 1, (int)imageX);
-        int iy = juce::jlimit(0, image.getHeight() - 1, (int)imageY);
+        const int ix = juce::jlimit(0, image.getWidth()  - 1, (int)imageX);
+        const int iy = juce::jlimit(0, image.getHeight() - 1, (int)imageY);
 
         colour = image.getPixelAt(ix, iy);
         if (colourPicked) {
@@ -142,9 +142,9 @@ void MainComponent::updateCursorPosition(juce::Colour selectedColour) {
     float h, s, v;
     colour.getHSB(h, s, v);
 
-    int pickerH = getHeight() - presetRowHeight;
-    int x = (int)juce::jmap(h, 0.0f, 1.0f, 0.0f, (float)getWidth());
-    int y = (int)juce::jmap(s, 1.0f, 0.0f, 0.0f, (float)pickerH);
+    const int pickerH = getHeight() - presetRowHeight;
+    const int x = (int)juce::jmap(h, 0.0f, 1.0f, 0.0f, (float)getWidth());
+    const int y = (int)juce::jmap(s, 1.0f, 0.0f, 0.0f, (float)pickerH);
 
     cursor.setBounds(x, y, 10, 10);
 }
@@ -174,7 +174,7 @@ void ColourSelector::mouseDown(const juce::MouseEvent& event) {
 
     pickerLauncher.show();
 
-    MainComponent* picker = pickerLauncher.getContentAs<MainComponent>();
+    MainComponent* const picker = pickerLauncher.getContentAs<MainComponent>();
     if (picker == nullptr) {
         return;
     }
@@ -209,38 +209,38 @@ void ColourSelector::setNode(Node* node) {
     colour = node->nodeColour;
     repaint();
     
-    if (MainComponent* picker = pickerLauncher.getContentAs<MainComponent>()) {
+    if (MainComponent* const picker = pickerLauncher.getContentAs<MainComponent>()) {
         pickerLauncher.toFront();
         picker->updateCursorPosition(colour);
     }
 }
 
-void ColourSelector::applyColourToDescendants(Node* n, juce::Colour c)
+void ColourSelector::applyColourToDescendants(const Node* n, juce::Colour c)
 {
     std::unordered_set<int> visited { n->nodeId };
     applyColourToDescendants(n, c, visited);
 }
 
-void ColourSelector::applyColourToDescendants(Node* n, juce::Colour c, std::unordered_set<int>& visited)
+void ColourSelector::applyColourToDescendants(const Node* n, juce::Colour c, std::unordered_set<int>& visited)
 {
-    NodeCanvas* canvas = applicationContext.canvas;
+    NodeCanvas* const canvas = applicationContext.canvas;
     if (canvas == nullptr) {
         return;
     }
 
-    juce::ValueTree childrenIds = n->nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+    const juce::ValueTree childrenIds = n->nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
     if (! childrenIds.isValid()) {
         return;
     }
 
     for (int i = 0; i < childrenIds.getNumChildren(); ++i)
     {
-        int childId = childrenIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+        const int childId = childrenIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
         if (! visited.insert(childId).second) {
             continue;
         }
 
-        Node* childNode = canvas->nodeManager.find(childId);
+        Node* const childNode = canvas->nodeManager.find(childId);
         if (childNode != nullptr) {
             childNode->nodeColour = c;
             childNode->repaint();

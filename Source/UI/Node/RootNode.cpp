@@ -40,7 +40,7 @@ void RootNode::equipTraversals()
         return;
     }
 
-    juce::String text = rootRectangle->traversalEditor.editorText;
+    const juce::String text = rootRectangle->traversalEditor.editorText;
 
     std::vector<int> words;
     juce::String word;
@@ -73,7 +73,7 @@ void RootNode::equipTraversals()
 
     for (int i = traversalChildrenIds.getNumChildren() - 1; i >= 0; i--) {
 
-        int existingId = traversalChildrenIds.getChild(i).getProperty(ValueTreeIdentifiers::TraversalId);
+        const int existingId = traversalChildrenIds.getChild(i).getProperty(ValueTreeIdentifiers::TraversalId);
 
         if (!contains(existingId)) {
             traversalChildrenIds.removeChild(i, nullptr);
@@ -84,7 +84,7 @@ void RootNode::equipTraversals()
         }
     }
 
-    for (int traversalId : words) {
+    for (const int traversalId : words) {
 
         if (!applicationContext.valueTreeState->traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
             applicationContext.valueTreeState->createTraversalData(traversalId, nullptr);
@@ -103,7 +103,7 @@ void RootNode::equipTraversals()
 
 void RootNode::paint(juce::Graphics& g)
 {
-    auto circleBounds = getLocalBounds().toFloat()
+    const auto circleBounds = getLocalBounds().toFloat()
                             .withTrimmedLeft((float) loopLimitRectangleWidth);
 
     CustomLookAndFeel::get(*this).drawNode(g, getNodeVisual(circleBounds));
@@ -112,14 +112,14 @@ void RootNode::paint(juce::Graphics& g)
 void RootNode::resized() {
     const int rw = loopLimitRectangleWidth;
 
-    juce::Rectangle<int> bounds = getLocalBounds();
+    const juce::Rectangle<int> bounds = getLocalBounds();
 
-    int rectHeight = bounds.getHeight() / 2;
-    int rectY      = (bounds.getHeight() - rectHeight) / 2;
+    const int rectHeight = bounds.getHeight() / 2;
+    const int rectY      = (bounds.getHeight() - rectHeight) / 2;
 
     rootRectangle->setBounds(0, rectY, rw + 8, rectHeight);
 
-    juce::Rectangle<int> circleArea = bounds.withTrimmedLeft(rw);
+    const juce::Rectangle<int> circleArea = bounds.withTrimmedLeft(rw);
     juce::Rectangle<int> editorArea = CustomLookAndFeel::getNodeCircleBounds(circleArea.toFloat()).toNearestInt().reduced(6);
 
     upButton->setBounds(editorArea.removeFromTop(4));

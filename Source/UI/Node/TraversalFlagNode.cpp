@@ -63,31 +63,31 @@ void TraversalFlagNode::rebuildOwnGraph()
 
 float TraversalFlagNode::getBladeLength() const
 {
-    auto bounds = getLocalBounds().toFloat();
-    float half = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f;
+    const auto bounds = getLocalBounds().toFloat();
+    const float half = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f;
 
     return (half - 4.0f) * 0.7f;
 }
 
 void TraversalFlagNode::resized() {
 
-    auto bounds = getLocalBounds().toFloat();
-    float cx = bounds.getCentreX();
-    float cy = bounds.getCentreY();
+    const auto bounds = getLocalBounds().toFloat();
+    const float cx = bounds.getCentreX();
+    const float cy = bounds.getCentreY();
 
-    float bladeLength = getBladeLength();
+    const float bladeLength = getBladeLength();
 
     juce::Point<float> centre(cx + bladeLength / 3.0f, cy);
     centre.applyTransform(juce::AffineTransform::rotation(incomingAngle + juce::MathConstants<float>::halfPi,
                                                           cx, cy));
 
-    int size = juce::roundToInt(bladeLength * 0.7f);
+    const int size = juce::roundToInt(bladeLength * 0.7f);
     traversalNumEditor->setBounds(juce::Rectangle<int>(0, 0, size, size).withCentre(centre.roundToInt()));
 
-    auto triangleBounds = buildTrianglePath().getBounds();
+    const auto triangleBounds = buildTrianglePath().getBounds();
 
-    int editorWidth  = juce::roundToInt(bladeLength * 0.45f);
-    int editorHeight = juce::roundToInt(bladeLength * 0.30f);
+    const int editorWidth  = juce::roundToInt(bladeLength * 0.45f);
+    const int editorHeight = juce::roundToInt(bladeLength * 0.30f);
 
     countEditor.setBounds(juce::roundToInt(triangleBounds.getRight()) - editorWidth,
                           juce::roundToInt(triangleBounds.getY()),
@@ -100,12 +100,12 @@ void TraversalFlagNode::resized() {
 
 juce::Path TraversalFlagNode::buildTrianglePath() const
 {
-    auto bounds = getLocalBounds().toFloat();
-    float cx = bounds.getCentreX();
-    float cy = bounds.getCentreY();
+    const auto bounds = getLocalBounds().toFloat();
+    const float cx = bounds.getCentreX();
+    const float cy = bounds.getCentreY();
 
-    float bladeLength    = getBladeLength();
-    float baseHalfHeight = bladeLength * 0.5f;
+    const float bladeLength    = getBladeLength();
+    const float baseHalfHeight = bladeLength * 0.5f;
 
     juce::Path triangle;
     triangle.startNewSubPath(cx + bladeLength, cy);
@@ -120,7 +120,7 @@ juce::Path TraversalFlagNode::buildTrianglePath() const
 
 bool TraversalFlagNode::hitTest(int x, int y)
 {
-    juce::Point<int> p(x, y);
+    const juce::Point<int> p(x, y);
 
     if (countEditor.isVisible() && countEditor.getBounds().contains(p)) {
         return true;
@@ -137,12 +137,12 @@ bool TraversalFlagNode::hitTest(int x, int y)
 
 void TraversalFlagNode::paint(juce::Graphics& g)
 {
-    auto bounds = getLocalBounds().toFloat();
+    const auto bounds = getLocalBounds().toFloat();
 
     juce::Path triangle = buildTrianglePath();
 
     if (isHighlighted) {
-        float pulseScale = 1.0f + 0.1f * std::sin(pulsePhase * juce::MathConstants<float>::pi);
+        const float pulseScale = 1.0f + 0.1f * std::sin(pulsePhase * juce::MathConstants<float>::pi);
         triangle.applyTransform(juce::AffineTransform::scale(pulseScale, pulseScale,
                                                              bounds.getCentreX(),
                                                              bounds.getCentreY()));
@@ -166,8 +166,8 @@ void TraversalFlagNode::paint(juce::Graphics& g)
     if (isSelected) {
         juce::Path dottedPath = triangle;
 
-        juce::PathStrokeType stroke(0.325f);
-        float dashLengths[] = { 2.935f, 2.935f };
+        const juce::PathStrokeType stroke(0.325f);
+        const float dashLengths[] = { 2.935f, 2.935f };
         stroke.createDashedStroke(dottedPath, dottedPath, dashLengths, 2);
 
         g.setColour(juce::Colours::black);

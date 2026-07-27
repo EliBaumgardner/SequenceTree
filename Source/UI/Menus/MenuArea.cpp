@@ -29,8 +29,8 @@ MenuArea::~MenuArea() = default;
 void MenuArea::paint(juce::Graphics &g) {
     ResizablePanel::paint(g);
 
-    auto bounds = getLocalBounds().toFloat();
-    auto barHeight = std::floor(bounds.getHeight() * 0.05f);
+    const auto bounds = getLocalBounds().toFloat();
+    const auto barHeight = std::floor(bounds.getHeight() * 0.05f);
 
     drawTopBar(g, bounds.withHeight(barHeight).withTrimmedRight((float) resizerWidth));
 }

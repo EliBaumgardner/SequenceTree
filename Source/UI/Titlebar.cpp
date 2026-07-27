@@ -107,6 +107,11 @@ void Titlebar::configureDisplaySelector()
 void Titlebar::configureModePane()
 {
     buttonPane.enableToggleSelection();
+    buttonPane.allowEmptySelection();
+
+    buttonPane.onSelectionChanged = [this](const IconButton* selected) {
+        setDanglingArrowMode(selected == nullptr);
+    };
 
     IconButton& nodeButton = buttonPane.addButton(
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
@@ -152,6 +157,11 @@ void Titlebar::configureUndoRedoPane()
 void Titlebar::setControllerMode(NodeController::NodeControllerMode mode)
 {
     applicationContext.nodeController->nodeControllerMode = mode;
+}
+
+void Titlebar::setDanglingArrowMode(bool shouldBeActive)
+{
+    applicationContext.canvas->danglingArrowLayer.setArrowMode(shouldBeActive);
 }
 
 void Titlebar::paint(juce::Graphics& g)

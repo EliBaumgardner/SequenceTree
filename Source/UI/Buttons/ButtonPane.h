@@ -6,6 +6,7 @@
 #define SEQUENCETREE_BUTTONPANE_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <optional>
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/ApplicationContext.h"
 #include "IconButton.h"
@@ -14,25 +15,27 @@ class ButtonPane : public juce::Component {
 
 public:
 
+    struct Grid {
+        int cellWidth;
+        int cellHeight;
+        int gap;
+        int edgeInset;
+    };
+
+    std::function<void(const IconButton*)> onSelectionChanged;
+
     explicit ButtonPane(ApplicationContext& context) : applicationContext(context)
     {
         setLookAndFeel(applicationContext.lookAndFeel);
     }
 
-    IconButton& addButton(IconButton::Painter painter, const juce::String& tooltip, std::function<void()> onClick)
+    IconButton& addButton(IconButton::Painter painter, const juce::String& tooltip, std::function<void()> onClick = nullptr)
     {
         auto* const button = buttons.add(new IconButton(std::move(painter), applicationContext.lookAndFeel));
 
         button->setTooltip(tooltip);
 
-        button->onClick = [this, button, action = std::move(onClick)]() {
-            if (toggleSelection) {
-                setSelectedButton(button);
-            }
-            if (action) {
-                action();
-            }
-        };
+        button->onClick = [this, button, action = std::move(onClick)]() { handleClick(button, action); };
 
         addAndMakeVisible(button);
         resized();
@@ -45,12 +48,35 @@ public:
         toggleSelection = shouldToggle;
     }
 
-    void setSelectedButton(const IconButton* selected) const
+    void allowEmptySelection(bool shouldAllow = true)
     {
+        emptySelectionAllowed = shouldAllow;
+    }
+
+    void useGridLayout(Grid layout)
+    {
+        gridLayout = layout;
+        resized();
+    }
+
+    void setSelectedButton(const IconButton* selected)
+    {
+        if (selectedButton == selected) {
+            return;
+        }
+
+        selectedButton = selected;
+
         for (IconButton* button : buttons) {
             button->setSelected(button == selected);
         }
+
+        if (onSelectionChanged) {
+            onSelectionChanged(selected);
+        }
     }
+
+    const IconButton* getSelectedButton() const { return selectedButton; }
 
     void paint(juce::Graphics& g) override
     {
@@ -63,13 +89,24 @@ public:
 
     void resized() override
     {
-        const int numButtons = buttons.size();
-
-        if (numButtons == 0) {
+        if (buttons.isEmpty()) {
             return;
         }
 
-        const auto bounds = getLocalBounds().reduced(2.0f);
+        if (gridLayout.has_value()) {
+            layOutAsGrid(*gridLayout);
+            return;
+        }
+
+        layOutAsRow();
+    }
+
+private:
+
+    void layOutAsRow()
+    {
+        const int  numButtons = buttons.size();
+        const auto bounds     = getLocalBounds().reduced(2.0f);
 
         const int   buttonSize       = bounds.getHeight();
         const float totalButtonWidth = buttonSize * numButtons;
@@ -83,13 +120,60 @@ public:
         }
     }
 
-private:
+    void layOutAsGrid(const Grid& layout)
+    {
+        const auto bounds = getLocalBounds().reduced(layout.edgeInset);
+
+        if (bounds.isEmpty()) {
+            return;
+        }
+
+        const int columns = juce::jmax(1, (bounds.getWidth() + layout.gap) / (layout.cellWidth + layout.gap));
+
+        int column = 0;
+        int row    = 0;
+
+        for (IconButton* button : buttons) {
+            button->setBounds(bounds.getX() + column * (layout.cellWidth  + layout.gap),
+                              bounds.getY() + row    * (layout.cellHeight + layout.gap),
+                              layout.cellWidth,
+                              layout.cellHeight);
+
+            if (++column >= columns) {
+                column = 0;
+                ++row;
+            }
+        }
+    }
+
+    void handleClick(const IconButton* button, const std::function<void()>& action)
+    {
+        if (!toggleSelection) {
+            if (action) {
+                action();
+            }
+            return;
+        }
+
+        const bool shouldDeselect = emptySelectionAllowed && button->isSelected();
+
+        setSelectedButton(shouldDeselect ? nullptr : button);
+
+        if (!shouldDeselect && action) {
+            action();
+        }
+    }
 
     ApplicationContext& applicationContext;
 
     juce::OwnedArray<IconButton> buttons;
 
-    bool toggleSelection = false;
+    const IconButton* selectedButton = nullptr;
+
+    std::optional<Grid> gridLayout;
+
+    bool toggleSelection       = false;
+    bool emptySelectionAllowed = false;
 };
 
 #endif //SEQUENCETREE_BUTTONPANE_H

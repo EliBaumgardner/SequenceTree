@@ -3,7 +3,7 @@
 #include "../Node/Arrow.h"
 #include "../Node/Node.h"
 
-void ArrowHoverController::update(juce::Point<float> cursor)
+void ArrowHoverController::update(juce::Point<float> cursor) const
 {
     for (Arrow* arrow : canvas.arrowManager.all()) {
         if (arrow->startNode == nullptr || arrow->endNode == nullptr) {
@@ -13,21 +13,21 @@ void ArrowHoverController::update(juce::Point<float> cursor)
             continue;
         }
 
-        float dist = CanvasHitTester::distanceToSegment(cursor,
+        const float dist = CanvasHitTester::distanceToSegment(cursor,
                                        arrow->startNode->getNodeCentre().toFloat(),
                                        arrow->endNode->getNodeCentre().toFloat());
 
-        bool nearby = dist < flagProximityRadius;
+        const bool nearby = dist < flagProximityRadius;
         if (nearby != arrow->proximityHovered) {
             arrow->proximityHovered = nearby;
             arrow->refreshHoverVisibility();
         }
     }
 
-    Arrow* hoveredArrow = canvas.hitTester.arrowNear(cursor, boldHoverRadius);
+    Arrow* const hoveredArrow = canvas.hitTester.arrowNear(cursor, boldHoverRadius);
 
     for (Arrow* arrow : canvas.arrowManager.all()) {
-        bool shouldBold = (arrow == hoveredArrow);
+        const bool shouldBold = (arrow == hoveredArrow);
         if (shouldBold != arrow->hovered) {
             arrow->hovered = shouldBold;
             arrow->repaint();

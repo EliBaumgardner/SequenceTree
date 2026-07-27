@@ -20,12 +20,12 @@ auto nearest(const Range& range, Project project, Keep keep, Dist dist, float ra
     float      minDist = radius;
 
     for (const auto& element : range) {
-        Candidate candidate = project(element);
+        Candidate const candidate = project(element);
         if (candidate == nullptr || ! keep(candidate)) {
             continue;
         }
 
-        float d = dist(candidate);
+        const float d = dist(candidate);
         if (d < minDist) {
             minDist = d;
             best    = candidate;
@@ -43,8 +43,8 @@ Node* nodeOf(const std::pair<const int, Node*>& entry) { return entry.second; }
 
 float CanvasHitTester::distanceToSegment(juce::Point<float> p, juce::Point<float> a, juce::Point<float> b)
 {
-    juce::Point<float> ab = b - a;
-    float lengthSquared = ab.x * ab.x + ab.y * ab.y;
+    const juce::Point<float> ab = b - a;
+    const float lengthSquared = ab.x * ab.x + ab.y * ab.y;
 
     if (lengthSquared < 1.0e-6f) {
         return p.getDistanceFrom(a);
@@ -53,7 +53,7 @@ float CanvasHitTester::distanceToSegment(juce::Point<float> p, juce::Point<float
     float t = ((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / lengthSquared;
     t = juce::jlimit(0.0f, 1.0f, t);
 
-    juce::Point<float> projection = a + ab * t;
+    const juce::Point<float> projection = a + ab * t;
     return p.getDistanceFrom(projection);
 }
 

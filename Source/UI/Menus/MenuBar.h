@@ -13,7 +13,7 @@
 class MenuBar : public juce::Component {
 public:
 
-    MenuBar(ApplicationContext& context);
+    explicit MenuBar(ApplicationContext& context);
     void paint(juce::Graphics& g) override;
     void resized() override;
 

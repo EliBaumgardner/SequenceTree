@@ -19,14 +19,15 @@ BottomBar::BottomBar(ApplicationContext& context)
 
     addAndMakeVisible(*paintTool);
 
-    arrowTool = std::make_unique<IconButton>(
+    arrowButton = std::make_unique<IconButton>(
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
             CustomLookAndFeel::get(*this).drawArrowToolIcon(g, bounds, state);
         }, applicationContext.lookAndFeel);
 
-    arrowTool->onClick = [this]() { toggleArrowMode(); };
+    arrowButton->setTooltip("Arrow Types");
+    arrowButton->onClick = [this]() { arrowWindowLauncher.show(); };
 
-    addAndMakeVisible(*arrowTool);
+    addAndMakeVisible(*arrowButton);
 
     applicationContext.onDisplayModeChanged = [this](NodeDisplayMode mode) {
         switch (mode) {
@@ -49,12 +50,6 @@ void BottomBar::togglePaintMode()
             settings->setPaintMode(settings->paintSetting);
         }
     }
-}
-
-void BottomBar::toggleArrowMode()
-{
-    arrowTool->toggleSelected();
-    applicationContext.canvas->danglingArrowLayer.setArrowMode(arrowTool->isSelected());
 }
 
 void BottomBar::showPaintSettings()
@@ -89,5 +84,5 @@ void BottomBar::resized()
 
     paintTool->setBounds(bounds.removeFromRight(height));
     bounds.removeFromRight(cellGap);
-    arrowTool->setBounds(bounds.removeFromRight(height));
+    arrowButton->setBounds(bounds.removeFromRight(height));
 }

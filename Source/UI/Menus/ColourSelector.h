@@ -67,7 +67,7 @@ class ColourSelector : public juce::Component, public juce::SettableTooltipClien
 
     public:
 
-    ColourSelector(ApplicationContext& context);
+    explicit ColourSelector(ApplicationContext& context);
     void paint(juce::Graphics& g) override;
     void mouseDown(const juce::MouseEvent& event) override;
     void setNode(Node* node);
@@ -97,6 +97,6 @@ private:
         juce::Colours::white
     };
 
-    void applyColourToDescendants(Node* n, juce::Colour c);
-    void applyColourToDescendants(Node* n, juce::Colour c, std::unordered_set<int>& visited);
+    void applyColourToDescendants(const Node* n, juce::Colour c);
+    void applyColourToDescendants(const Node* n, juce::Colour c, std::unordered_set<int>& visited);
 };

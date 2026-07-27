@@ -55,7 +55,7 @@ void ItemSelector::clearItems()
 
 void ItemSelector::setSelectedItem(int itemId)
 {
-    const Item* item = findItem(itemId);
+    const Item* const item = findItem(itemId);
     if (item == nullptr) {
         return;
     }
@@ -103,7 +103,7 @@ void ItemSelector::handleResult(int itemId)
         return;
     }
 
-    const Item* item = findItem(itemId);
+    const Item* const item = findItem(itemId);
     if (item == nullptr) {
         return;
     }
@@ -125,7 +125,7 @@ void ItemSelector::handleResult(int itemId)
 void ItemSelector::paint(juce::Graphics& g)
 {
     const Theme& theme = CustomLookAndFeel::get(*this);
-    auto bounds = getLocalBounds().toFloat().reduced(Theme::outerButtonBoundsReduction);
+    const auto bounds = getLocalBounds().toFloat().reduced(Theme::outerButtonBoundsReduction);
     g.setColour(theme.buttonBarColour);
     g.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
 }
@@ -133,7 +133,7 @@ void ItemSelector::paint(juce::Graphics& g)
 void ItemSelector::resized()
 {
     auto contentBounds = getLocalBounds().reduced(buttonContentBounds);
-    auto displayWidth = contentBounds.getWidth() * 2/3;
+    const auto displayWidth = contentBounds.getWidth() * 2/3;
 
     display.setBounds(contentBounds.removeFromLeft(displayWidth));
     display.setText(selectedLabel);

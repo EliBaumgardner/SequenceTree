@@ -60,7 +60,7 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
 
     jassert(node);
 
-    juce::ValueTree midiNotes = nodeValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
+    const juce::ValueTree midiNotes = nodeValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
 
     node->setComponentID(std::to_string(nodeId));
     node->nodeValueTree = nodeValueTree;
@@ -74,7 +74,7 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
     canvas.addAndMakeVisible(node.get());
     node->setInterceptsMouseClicks(!canvas.paintMode, !canvas.paintMode);
 
-    Node* raw = node.release();
+    Node* const raw = node.release();
     nodes[nodeId] = raw;
 
     setPosition(nodeId);
@@ -84,16 +84,16 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
 
 void NodeManager::add(int nodeId)
 {
-    juce::ValueTree nodeChildTree  = applicationContext.valueTreeState->getNode(nodeId);
-    juce::ValueTree nodeParentTree = applicationContext.valueTreeState->getNodeParent(nodeId);
+    const juce::ValueTree nodeChildTree  = applicationContext.valueTreeState->getNode(nodeId);
+    const juce::ValueTree nodeParentTree = applicationContext.valueTreeState->getNodeParent(nodeId);
 
     jassert(nodeChildTree.isValid());
 
-    Node* childNode = instantiateFromTree(nodeChildTree);
+    Node* const childNode = instantiateFromTree(nodeChildTree);
 
     if (nodeParentTree.isValid()) {
-        int parentNodeId = nodeParentTree.getProperty(ValueTreeIdentifiers::Id);
-        Node* parentNode = find(parentNodeId);
+        const int parentNodeId = nodeParentTree.getProperty(ValueTreeIdentifiers::Id);
+        Node* const parentNode = find(parentNodeId);
 
         if (parentNode != nullptr) {
             canvas.arrowManager.connectParentToChild(parentNode, childNode);
@@ -101,7 +101,7 @@ void NodeManager::add(int nodeId)
     }
 
     if (!canvas.gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
-        NodePosition pos = applicationContext.valueTreeState->getNodePosition(nodeId);
+        const NodePosition pos = applicationContext.valueTreeState->getNodePosition(nodeId);
         canvas.gridOrigin    = { (float)pos.xPosition, (float)pos.yPosition };
         canvas.gridSpacing   = 50.0f;
         canvas.gridOriginSet = true;
@@ -112,7 +112,7 @@ void NodeManager::add(int nodeId)
 
 void NodeManager::remove(int nodeId)
 {
-    Node* node = find(nodeId);
+    Node* const node = find(nodeId);
     if (node == nullptr) {
         return;
     }
@@ -133,24 +133,24 @@ void NodeManager::clear()
     nodes.clear();
 }
 
-void NodeManager::setPosition(int nodeId)
+void NodeManager::setPosition(int nodeId) const
 {
-    Node* node = find(nodeId);
+    Node* const node = find(nodeId);
     if (node == nullptr) {
         return;
     }
 
-    juce::ValueTree nodeValueTree = applicationContext.valueTreeState->getNode(nodeId);
+    const juce::ValueTree nodeValueTree = applicationContext.valueTreeState->getNode(nodeId);
     if (!nodeValueTree.isValid()) {
         return;
     }
 
-    NodePosition nodePosition = applicationContext.valueTreeState->getNodePosition(nodeId);
+    const NodePosition nodePosition = applicationContext.valueTreeState->getNodePosition(nodeId);
 
-    int xPosition = nodePosition.xPosition;
-    int yPosition = nodePosition.yPosition;
-    int radius    = nodePosition.radius;
-    int height    = radius * 2;
+    const int xPosition = nodePosition.xPosition;
+    const int yPosition = nodePosition.yPosition;
+    const int radius    = nodePosition.radius;
+    const int height    = radius * 2;
 
     if (node->nodeType == NodeType::Root) {
         const int rw = RootNode::loopLimitRectangleWidth;
@@ -175,18 +175,18 @@ static std::unordered_set<int> collectAncestorIds(const juce::ValueTree& nodeMap
     std::vector<int> frontier { nodeId };
 
     while (! frontier.empty()) {
-        int current = frontier.back();
+        const int current = frontier.back();
         frontier.pop_back();
 
         for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
-            juce::ValueTree candidate = nodeMap.getChild(i);
-            juce::ValueTree candidateChildren = candidate.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+            const juce::ValueTree candidate = nodeMap.getChild(i);
+            const juce::ValueTree candidateChildren = candidate.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
             if (! candidateChildren.getChildWithProperty(ValueTreeIdentifiers::Id, current).isValid()) {
                 continue;
             }
 
-            int parentId = candidate.getProperty(ValueTreeIdentifiers::Id);
+            const int parentId = candidate.getProperty(ValueTreeIdentifiers::Id);
             if (parentId == nodeId) {
                 continue;
             }
@@ -200,9 +200,9 @@ static std::unordered_set<int> collectAncestorIds(const juce::ValueTree& nodeMap
     return ancestors;
 }
 
-void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY)
+void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY) const
 {
-    int rootId = (int) nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+    const int rootId = (int) nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
     std::unordered_set<int> visited = collectAncestorIds(applicationContext.valueTreeState->nodeMap, rootId);
     visited.insert(rootId);
@@ -210,19 +210,19 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
     moveDescendants(nodeValueTree, deltaX, deltaY, visited);
 }
 
-void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY, std::unordered_set<int>& visited)
+void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY, std::unordered_set<int>& visited) const
 {
-    juce::ValueTree nodeValueTreeChildren = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+    const juce::ValueTree nodeValueTreeChildren = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
     for (int i = 0; i < nodeValueTreeChildren.getNumChildren(); i++) {
-        juce::ValueTree childIdTree = nodeValueTreeChildren.getChild(i);
-        int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
+        const juce::ValueTree childIdTree = nodeValueTreeChildren.getChild(i);
+        const int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
 
         if (! visited.insert(childId).second) {
             continue;
         }
 
-        juce::ValueTree childNodeTree = applicationContext.valueTreeState->getNode(childId);
+        const juce::ValueTree childNodeTree = applicationContext.valueTreeState->getNode(childId);
 
         NodePosition childPosition = applicationContext.valueTreeState->getNodePosition(childId);
         childPosition.xPosition += deltaX;

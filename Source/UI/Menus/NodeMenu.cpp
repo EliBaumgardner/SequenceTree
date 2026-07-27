@@ -37,7 +37,7 @@ NodeMenu::NodeMenu(ApplicationContext& context)
     pitchLabel                .setText("PIT", juce::dontSendNotification);
     channelLabel              .setText("CH",  juce::dontSendNotification);
 
-    for (auto& row : labeledRows) {
+    for (const auto& row : labeledRows) {
         row.label.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
         row.label.setFont(juce::Font(juce::FontOptions(9.0f)));
         row.label.setJustificationType(juce::Justification::centredLeft);
@@ -85,7 +85,7 @@ NodeMenu::~NodeMenu() {
     setLookAndFeel(nullptr);
 }
 
-void NodeMenu::bindToNode(Node* node) {
+void NodeMenu::bindToNode(const Node* node) {
     const bool hasNodeTree = node->nodeValueTree.isValid();
     const bool hasMidi     = node->midiNoteData.isValid();
 
@@ -119,7 +119,7 @@ void NodeMenu::bindToNode(Node* node) {
 }
 
 void NodeMenu::clearBindings() {
-    for (auto& row : labeledRows) {
+    for (const auto& row : labeledRows) {
         row.label.setVisible(false);
         row.editor.setVisible(false);
     }
@@ -141,7 +141,7 @@ void NodeMenu::resized() {
     colourSelector.setBounds(colourRowBounds);
     bounds.removeFromTop(rowGap);
 
-    for (auto& row : labeledRows) {
+    for (const auto& row : labeledRows) {
         if (!row.editor.isVisible()) {
             continue;
         }

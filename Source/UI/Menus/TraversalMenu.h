@@ -12,7 +12,7 @@
 #include "../Node/ValueEditor.h"
 #include "ColourSelector.h"
 #include "../Buttons/IconButton.h"
-#include "TraversalRulesMenu.h"
+#include "TraversalRulesWindow.h"
 #include "../PopupWindow.h"
 #include "../ResizablePanel.h"
 
@@ -22,7 +22,7 @@ class TraversalMenu : public ResizablePanel {
 
 public:
 
-    TraversalMenu(ApplicationContext& context, bool showResizer = true);
+    explicit TraversalMenu(ApplicationContext& context, bool showResizer = true);
     ~TraversalMenu() override;
 
     void paint(juce::Graphics& g) override;
@@ -56,8 +56,8 @@ public:
     PopupWindowLauncher traversalRulesLauncher {
         "Traversal Rules",
         [this]() {
-            auto content = std::make_unique<TraversalRulesMenu>(applicationContext);
-            content->setSize(TraversalRulesMenu::defaultWidth, TraversalRulesMenu::defaultHeight);
+            auto content = std::make_unique<TraversalRulesWindow>(applicationContext);
+            content->setSize(TraversalRulesWindow::defaultWidth, TraversalRulesWindow::defaultHeight);
 
             return content;
         }

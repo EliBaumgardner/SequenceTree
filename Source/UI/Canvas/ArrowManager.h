@@ -27,25 +27,25 @@ public:
     Arrow* connect(Node* startNode, Node* endNode);
     Arrow* connectParentToChild(Node* parentNode, Node* childNode);
     void   adopt(Arrow* arrow);
-    void   attach(Arrow& arrow);
+    void   attach(Arrow& arrow) const;
 
     void remove(Arrow* arrow);
-    void removeForNode(Node* node);
+    void removeForNode(const Node* node);
     void removeMatching(const std::function<bool(Arrow*)>& predicate);
     void clear();
 
-    void refreshFor(Node* movedNode);
+    void refreshFor(const Node* movedNode) const;
 
     void handleArrowAdded  (int parentNodeId, int childNodeId);
     void handleArrowRemoved(int parentNodeId, int childNodeId);
 
-    void setSelected(Arrow* arrow);
-    void clearSelection();
+    void setSelected(Arrow* arrow) const;
+    void clearSelection() const;
 
-    void resetAllProgress();
-    void resetGraphProgress(int graphId, int traversalId);
+    void resetAllProgress() const;
+    void resetGraphProgress(int graphId, int traversalId) const;
 
-    void triggerSnapForNode(int nodeId);
+    void triggerSnapForNode(int nodeId) const;
 
     void   showSnapGhost(Node* from, Node* to);
     void   hideSnapGhost();
@@ -53,7 +53,7 @@ public:
 
 private:
 
-    void detach(Arrow* arrow);
+    void detach(Arrow* arrow) const;
 
     NodeCanvas& canvas;
     ApplicationContext& applicationContext;

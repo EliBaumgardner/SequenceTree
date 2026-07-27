@@ -22,7 +22,7 @@ ArrowManager::~ArrowManager() = default;
 
 Arrow* ArrowManager::find(int parentNodeId, int childNodeId) const
 {
-    for (Arrow* arrow : arrows) {
+    for (Arrow* const arrow : arrows) {
         if (arrow->startNode == nullptr || arrow->endNode == nullptr) {
             continue;
         }
@@ -44,8 +44,8 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
     const int parentNodeId = parentNode->getComponentID().getIntValue();
     const int childNodeId  = childNode->getComponentID().getIntValue();
 
-    juce::ValueTree parentMidiNotesData = applicationContext.valueTreeState->getMidiNotes(parentNodeId);
-    juce::ValueTree parentMidiNoteData  = parentMidiNotesData.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+    const juce::ValueTree parentMidiNotesData = applicationContext.valueTreeState->getMidiNotes(parentNodeId);
+    const juce::ValueTree parentMidiNoteData  = parentMidiNotesData.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
 
     auto arrow = std::make_unique<Arrow>(parentNode, childNode, applicationContext);
 
@@ -63,7 +63,7 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
         arrow->bindToProperty(parentMidiNoteData, ValueTreeIdentifiers::MidiDuration);
     }
 
-    Arrow* raw = arrow.release();
+    Arrow* const raw = arrow.release();
     arrows.add(raw);
     return raw;
 }
@@ -85,7 +85,7 @@ Arrow* ArrowManager::connectParentToChild(Node* parentNode, Node* childNode)
 
     endNode->nodeColour = startNode->nodeColour;
 
-    Arrow* arrow = connect(startNode, endNode);
+    Arrow* const arrow = connect(startNode, endNode);
     refreshFor(endNode);
 
     return arrow;
@@ -98,13 +98,13 @@ void ArrowManager::adopt(Arrow* arrow)
     }
 }
 
-void ArrowManager::attach(Arrow& arrow)
+void ArrowManager::attach(Arrow& arrow) const
 {
     canvas.addAndMakeVisible(arrow);
     arrow.toBack();
 }
 
-void ArrowManager::detach(Arrow* arrow)
+void ArrowManager::detach(Arrow* arrow) const
 {
     if (arrow->startNode != nullptr && arrow->endNode != nullptr) {
         const int childNodeId = arrow->endNode->getComponentID().getIntValue();
@@ -127,7 +127,7 @@ void ArrowManager::remove(Arrow* arrow)
     }
 }
 
-void ArrowManager::removeForNode(Node* node)
+void ArrowManager::removeForNode(const Node* node)
 {
     removeMatching([node](Arrow* arrow) {
         return ! arrow->isDangling()
@@ -138,7 +138,7 @@ void ArrowManager::removeForNode(Node* node)
 void ArrowManager::removeMatching(const std::function<bool(Arrow*)>& predicate)
 {
     for (int i = arrows.size() - 1; i >= 0; --i) {
-        Arrow* arrow = arrows[i];
+        Arrow* const arrow = arrows[i];
 
         if (predicate(arrow)) {
             detach(arrow);
@@ -153,11 +153,11 @@ void ArrowManager::clear()
     arrows.clear();
 }
 
-void ArrowManager::refreshFor(Node* movedNode)
+void ArrowManager::refreshFor(const Node* movedNode) const
 {
-    for (Arrow* arrow : arrows) {
-        Node* parentNode = arrow->startNode;
-        Node* childNode  = arrow->endNode;
+    for (Arrow* const arrow : arrows) {
+        Node* const parentNode = arrow->startNode;
+        Node* const childNode  = arrow->endNode;
 
         if (parentNode != movedNode && childNode != movedNode) {
             continue;
@@ -201,7 +201,7 @@ void ArrowManager::handleArrowRemoved(int parentNodeId, int childNodeId)
     applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(parentNodeId));
 }
 
-void ArrowManager::setSelected(Arrow* arrow)
+void ArrowManager::setSelected(Arrow* arrow) const
 {
     clearSelection();
 
@@ -211,9 +211,9 @@ void ArrowManager::setSelected(Arrow* arrow)
     }
 }
 
-void ArrowManager::clearSelection()
+void ArrowManager::clearSelection() const
 {
-    for (Arrow* arrow : arrows) {
+    for (Arrow* const arrow : arrows) {
         if (arrow->selected) {
             arrow->selected = false;
             arrow->repaint();
@@ -221,18 +221,18 @@ void ArrowManager::clearSelection()
     }
 }
 
-void ArrowManager::resetAllProgress()
+void ArrowManager::resetAllProgress() const
 {
-    for (Arrow* arrow : arrows) {
+    for (Arrow* const arrow : arrows) {
         if (arrow != nullptr) {
             arrow->resetProgress();
         }
     }
 }
 
-void ArrowManager::resetGraphProgress(int graphId, int traversalId)
+void ArrowManager::resetGraphProgress(int graphId, int traversalId) const
 {
-    for (Arrow* arrow : arrows) {
+    for (Arrow* const arrow : arrows) {
         if (arrow == nullptr || arrow->startNode == nullptr) {
             continue;
         }
@@ -249,14 +249,14 @@ void ArrowManager::resetGraphProgress(int graphId, int traversalId)
     }
 }
 
-void ArrowManager::triggerSnapForNode(int nodeId)
+void ArrowManager::triggerSnapForNode(int nodeId) const
 {
-    Node* node = canvas.nodeManager.find(nodeId);
+    Node* const node = canvas.nodeManager.find(nodeId);
     if (node == nullptr) {
         return;
     }
 
-    for (Arrow* arrow : arrows) {
+    for (Arrow* const arrow : arrows) {
         if (arrow->endNode == node) {
             arrow->triggerSnapAnimation();
             return;

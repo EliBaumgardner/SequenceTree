@@ -13,7 +13,7 @@ TraversalMenu::TraversalMenu(ApplicationContext& context, bool showResizer)
       displayMenu(context), multiplierEditor(context), channelEditor(context), transposeEditor(context), velocityEditor(context), colourSelector(context) {
     addAndMakeVisible(displayMenu);
 
-    auto setUpLabel = [this](juce::Label& label, juce::String text) {
+    const auto setUpLabel = [this](juce::Label& label, juce::String text) {
         label.setText(std::move(text), juce::dontSendNotification);
         label.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
         label.setFont(juce::Font(juce::FontOptions(9.0f)));
@@ -68,9 +68,9 @@ TraversalMenu::TraversalMenu(ApplicationContext& context, bool showResizer)
     int firstTraversalId = -1;
 
     for (int i = 0; i < applicationContext.valueTreeState->traversalMap.getNumChildren(); ++i) {
-        juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap.getChild(i);
+        const juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap.getChild(i);
         if (traversalData.getType() == ValueTreeIdentifiers::TraversalData) {
-            int traversalId = traversalData.getProperty(ValueTreeIdentifiers::TraversalId);
+            const int traversalId = traversalData.getProperty(ValueTreeIdentifiers::TraversalId);
             addTraversalToMenu(traversalId);
             if (firstTraversalId == -1) {
                 firstTraversalId = traversalId;
@@ -96,7 +96,7 @@ void TraversalMenu::selectTraversal(int traversalId) {
 
     currentTraversalData = traversalData;
 
-    auto bindWithDefault = [&traversalData](ValueEditor& editor, const juce::Identifier& propertyId,
+    const auto bindWithDefault = [&traversalData](ValueEditor& editor, const juce::Identifier& propertyId,
                                            const juce::var& defaultValue) {
         if (!traversalData.hasProperty(propertyId)) {
             traversalData.setProperty(propertyId, defaultValue, nullptr);
@@ -110,7 +110,7 @@ void TraversalMenu::selectTraversal(int traversalId) {
     bindWithDefault(transposeEditor, ValueTreeIdentifiers::TraversalTranspose, 0);
     bindWithDefault(velocityEditor,  ValueTreeIdentifiers::TraversalVelocity,  1.0);
 
-    juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
+    const juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
     if (colourString.isNotEmpty()) {
         colourSelector.colour = juce::Colour::fromString(colourString);
     } else {
@@ -129,8 +129,8 @@ TraversalMenu::~TraversalMenu() {
 void TraversalMenu::paint(juce::Graphics &g) {
     ResizablePanel::paint(g);
 
-    auto bounds = getLocalBounds().toFloat();
-    auto barHeight = std::floor(bounds.getHeight() * 0.05f);
+    const auto bounds = getLocalBounds().toFloat();
+    const auto barHeight = std::floor(bounds.getHeight() * 0.05f);
     auto barBounds = bounds.withHeight(barHeight);
 
     if (hasResizer()) {

@@ -31,8 +31,8 @@ public:
     void remove(int nodeId);
     void clear();
 
-    void setPosition(int nodeId);
-    void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY);
+    void setPosition(int nodeId) const;
+    void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY) const;
 
     void setDisplayMode(NodeDisplayMode mode) const;
     void equipRootTraversals() const;
@@ -40,7 +40,7 @@ public:
 
 private:
 
-    void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY, std::unordered_set<int>& visited);
+    void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY, std::unordered_set<int>& visited) const;
 
     NodeCanvas& canvas;
     ApplicationContext& applicationContext;

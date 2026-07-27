@@ -28,16 +28,16 @@ public:
     void cancelPreview();
     bool hasPreview() const { return preview != nullptr; }
 
-    void add(Node* node, juce::Point<int> tipOffset);
-    void remove(Arrow* arrow);
+    void add(const Node* node, juce::Point<int> tipOffset) const;
+    void remove(Arrow* arrow) const;
 
 
-    void setTip   (Arrow* arrow, juce::Point<int> tipOffset);
-    void commitTip(Arrow* arrow);
+    void setTip   (Arrow* arrow, juce::Point<int> tipOffset) const;
+    void commitTip(Arrow* arrow) const;
 
-    void rebuildForNode  (int nodeId);
-    void removeForNode   (Node* node);
-    void removeForNodeId (int nodeId);
+    void rebuildForNode  (int nodeId) const;
+    void removeForNode   (const Node* node) const;
+    void removeForNodeId (int nodeId) const;
 
     void clear();
 

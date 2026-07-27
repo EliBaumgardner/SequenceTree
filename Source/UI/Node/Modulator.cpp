@@ -20,16 +20,16 @@ void Modulator::resized() {
 
 void Modulator::paint(juce::Graphics& g) {
 
-    auto bounds = getLocalBounds().toFloat();
-    auto squareBorder = bounds.reduced(2.5f);
-    auto squareSelect = bounds.reduced(0.5f);
-    auto squareHover = bounds.reduced(4.5f);
-    auto squareFill = bounds.reduced(5.5f);
+    const auto bounds = getLocalBounds().toFloat();
+    const auto squareBorder = bounds.reduced(2.5f);
+    const auto squareSelect = bounds.reduced(0.5f);
+    const auto squareHover = bounds.reduced(4.5f);
+    const auto squareFill = bounds.reduced(5.5f);
 
     g.setColour(juce::Colours::black);
     g.drawRect(squareBorder, 1.0f);
 
-    float pulseExpansion = 4.0f * std::sin(pulsePhase * juce::MathConstants<float>::pi);
+    const float pulseExpansion = 4.0f * std::sin(pulsePhase * juce::MathConstants<float>::pi);
     auto pulsedFill = squareFill;
 
     if (isHighlighted) {
@@ -49,9 +49,9 @@ void Modulator::paint(juce::Graphics& g) {
         juce::Path dottedPath;
         dottedPath.addRectangle(squareSelect);
 
-        juce::PathStrokeType stroke(0.325f);
+        const juce::PathStrokeType stroke(0.325f);
 
-        float dashLengths[] = { 2.935f, 2.935f };
+        const float dashLengths[] = { 2.935f, 2.935f };
         stroke.createDashedStroke(dottedPath, dottedPath, dashLengths, 2);
 
         g.setColour(juce::Colours::black);

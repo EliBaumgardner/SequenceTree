@@ -16,7 +16,7 @@ class RootNode : public Node {
 
     static constexpr int loopLimitRectangleWidth = 10;
 
-    RootNode(ApplicationContext& context);
+    explicit RootNode(ApplicationContext& context);
     ~RootNode() override;
     void paint(juce::Graphics& g) override;
     void resized() override;

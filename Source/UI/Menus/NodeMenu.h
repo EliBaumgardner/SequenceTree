@@ -11,7 +11,7 @@
 #include "../Node/ValueEditor.h"
 #include "ColourSelector.h"
 #include "../Buttons/IconButton.h"
-#include "TraversalRulesMenu.h"
+#include "TraversalRulesWindow.h"
 #include "../PopupWindow.h"
 
 class Node;
@@ -28,7 +28,7 @@ public:
 
 private:
 
-    void bindToNode(Node* node);
+    void bindToNode(const Node* node);
     void clearBindings();
 
     ApplicationContext& applicationContext;
@@ -73,8 +73,8 @@ private:
     PopupWindowLauncher traversalRulesLauncher {
         "Traversal Rules",
         [this]() {
-            auto content = std::make_unique<TraversalRulesMenu>(applicationContext);
-            content->setSize(TraversalRulesMenu::defaultWidth, TraversalRulesMenu::defaultHeight);
+            auto content = std::make_unique<TraversalRulesWindow>(applicationContext);
+            content->setSize(TraversalRulesWindow::defaultWidth, TraversalRulesWindow::defaultHeight);
 
             return content;
         }
