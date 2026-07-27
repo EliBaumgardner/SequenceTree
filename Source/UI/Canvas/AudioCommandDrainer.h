@@ -16,14 +16,14 @@ public:
 
     AudioCommandDrainer(NodeCanvas& canvas, ApplicationContext& context);
 
-    void drainAll();
+    void drainAll() const;
 
 private:
 
-    void drainHighlights();
-    void drainProgress();
-    void drainArrowResets();
-    void drainCounts();
+    void drainHighlights() const;
+    void drainProgress() const;
+    void drainArrowResets() const;
+    void drainCounts() const;
 
     juce::Colour getTraversalColour(int traversalId) const;
 

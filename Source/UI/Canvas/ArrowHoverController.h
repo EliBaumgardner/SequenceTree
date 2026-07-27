@@ -10,7 +10,7 @@ public:
 
     explicit ArrowHoverController(NodeCanvas& canvas) : canvas(canvas) {}
 
-    void update(juce::Point<float> cursor);
+    void update(juce::Point<float> cursor) const;
 
 private:
 

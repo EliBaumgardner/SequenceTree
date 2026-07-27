@@ -36,6 +36,7 @@ private:
     void configureModePane();
     void configureUndoRedoPane();
     void setControllerMode(NodeController::NodeControllerMode mode);
+    void setDanglingArrowMode(bool shouldBeActive);
 
     ApplicationContext& applicationContext;
 

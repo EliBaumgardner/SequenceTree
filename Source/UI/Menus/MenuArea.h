@@ -17,7 +17,7 @@ class MenuArea : public ResizablePanel {
 
 public:
 
-    MenuArea(ApplicationContext& context);
+    explicit MenuArea(ApplicationContext& context);
     ~MenuArea() override;
 
     void paint(juce::Graphics& g) override;

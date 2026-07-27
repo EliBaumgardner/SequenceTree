@@ -18,7 +18,7 @@ AudioCommandDrainer::AudioCommandDrainer(NodeCanvas& canvasRef, ApplicationConte
 {
 }
 
-void AudioCommandDrainer::drainAll()
+void AudioCommandDrainer::drainAll() const
 {
     drainHighlights();
     drainArrowResets();
@@ -28,14 +28,14 @@ void AudioCommandDrainer::drainAll()
 
 juce::Colour AudioCommandDrainer::getTraversalColour(int traversalId) const
 {
-    juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap
+    const juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap
         .getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
 
     if (!traversalData.isValid()) {
         return juce::Colours::white;
     }
 
-    juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
+    const juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
 
     if (colourString.isEmpty()) {
         return juce::Colours::white;
@@ -44,12 +44,12 @@ juce::Colour AudioCommandDrainer::getTraversalColour(int traversalId) const
     return juce::Colour::fromString(colourString);
 }
 
-void AudioCommandDrainer::drainHighlights()
+void AudioCommandDrainer::drainHighlights() const
 {
     applicationContext.processor->eventManager.bridge.highlights.drain(
         [this](const AudioUIBridge::HighlightCommand& command)
     {
-        Node* node = canvas.nodeManager.find(command.nodeId);
+        Node* const node = canvas.nodeManager.find(command.nodeId);
         if (node == nullptr) {
             return;
         }
@@ -64,12 +64,12 @@ void AudioCommandDrainer::drainHighlights()
     });
 }
 
-void AudioCommandDrainer::drainProgress()
+void AudioCommandDrainer::drainProgress() const
 {
     applicationContext.processor->eventManager.bridge.progress.drain(
         [this](const AudioUIBridge::ProgressCommand& command)
     {
-        Node* parentNode = canvas.nodeManager.find(command.parentNodeId);
+        Node* const parentNode = canvas.nodeManager.find(command.parentNodeId);
         if (parentNode == nullptr) {
             return;
         }
@@ -77,7 +77,7 @@ void AudioCommandDrainer::drainProgress()
         const juce::Colour progressColour = getTraversalColour(command.traversalId);
 
         if (command.parentNodeId == command.childNodeId) {
-            for (Arrow* arrow : canvas.arrowManager.all()) {
+            for (Arrow* const arrow : canvas.arrowManager.all()) {
                 if (arrow->isDangling() && arrow->startNode == parentNode) {
                     arrow->startProgress(command.traversalId, command.durationMs, progressColour, command.isConnection);
                 }
@@ -85,7 +85,7 @@ void AudioCommandDrainer::drainProgress()
             return;
         }
 
-        auto arrowIt = parentNode->nodeArrows.find(command.childNodeId);
+        const auto arrowIt = parentNode->nodeArrows.find(command.childNodeId);
         if (arrowIt == parentNode->nodeArrows.end() || arrowIt->second == nullptr) {
             return;
         }
@@ -94,7 +94,7 @@ void AudioCommandDrainer::drainProgress()
     });
 }
 
-void AudioCommandDrainer::drainArrowResets()
+void AudioCommandDrainer::drainArrowResets() const
 {
     applicationContext.processor->eventManager.bridge.arrowResets.drain(
         [this](const AudioUIBridge::ResetCommand& command)
@@ -103,12 +103,12 @@ void AudioCommandDrainer::drainArrowResets()
     });
 }
 
-void AudioCommandDrainer::drainCounts()
+void AudioCommandDrainer::drainCounts() const
 {
     applicationContext.processor->eventManager.bridge.counts.drain(
         [this](const AudioUIBridge::CountCommand& command)
     {
-        Node* node = canvas.nodeManager.find(command.nodeId);
+        Node* const node = canvas.nodeManager.find(command.nodeId);
         if (node == nullptr) {
             return;
         }

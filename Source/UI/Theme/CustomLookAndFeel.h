@@ -76,6 +76,7 @@ public:
 
     void drawPaintToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawArrowToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawNodeArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
 
     void drawPaintToolSettings (juce::Graphics& g, const PaintToolSettings& paintToolSettings);
 

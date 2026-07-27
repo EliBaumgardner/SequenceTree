@@ -73,13 +73,14 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Theme/CustomTextEditor.cpp
         Source/UI/Theme/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp
+        Source/UI/Menus/ArrowWindow.cpp
         Source/UI/Menus/ItemSelector.cpp
         Source/UI/Menus/TraversalMenu.cpp
         Source/UI/Menus/MenuArea.cpp
         Source/UI/ResizablePanel.cpp
         Source/UI/Menus/NodeMenu.cpp
         Source/UI/Menus/AllowedTraversalsMenu.cpp
-        Source/UI/Menus/TraversalRulesMenu.cpp
+        Source/UI/Menus/TraversalRulesWindow.cpp
         Source/UI/PopupWindow.cpp
         Source/UI/Menus/ColourSelector.cpp
         Source/UI/Titlebar.cpp

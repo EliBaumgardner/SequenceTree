@@ -67,8 +67,8 @@ public:
   void resetProgress(int traversalId);
   void timerCallback() override;
 
-  Node* startNode = nullptr;
-  Node* endNode   = nullptr;
+  Node* const startNode = nullptr;
+  Node* const endNode   = nullptr;
 
   juce::Point<int> tipOffset;
 

@@ -14,7 +14,7 @@ class Modulator : public Node {
 
     public:
 
-    Modulator(ApplicationContext& context);
+    explicit Modulator(ApplicationContext& context);
     void resized() override;
     void paint(juce::Graphics& g) override;
 

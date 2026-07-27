@@ -7,12 +7,16 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Theme/ButtonState.h"
+#include "../Theme/Theme.h"
 
 class IconButton : public juce::Component, public juce::SettableTooltipClient {
 
 public:
 
     using Painter = std::function<void(juce::Graphics&, juce::Rectangle<float>, const ButtonState&)>;
+
+    static constexpr int captionHeight = 12;
+    static constexpr int captionGap    = 2;
 
     std::function<void()> onClick;
     std::function<void()> onRightClick;
@@ -21,6 +25,10 @@ public:
         : painter(std::move(painter))
     {
         jassert(this->painter != nullptr);
+
+        caption.setJustificationType(juce::Justification::centredTop);
+        caption.setInterceptsMouseClicks(false, false);
+        addChildComponent(caption);
 
         if (lookAndFeel != nullptr) {
             setLookAndFeel(lookAndFeel);
@@ -40,6 +48,15 @@ public:
         repaint();
     }
 
+    void setCaption(const juce::String& newCaption)
+    {
+        caption.setText(newCaption, juce::dontSendNotification);
+        caption.setVisible(newCaption.isNotEmpty());
+        resized();
+    }
+
+    bool hasCaption() const { return caption.isVisible(); }
+
     void setSelected(bool shouldBeSelected)
     {
         if (state.isSelected == shouldBeSelected) {
@@ -52,7 +69,22 @@ public:
     void paint(juce::Graphics& g) override
     {
         if (painter) {
-            painter(g, getLocalBounds().toFloat(), state);
+            painter(g, getIconBounds().toFloat(), state);
+        }
+    }
+
+    void resized() override
+    {
+        if (hasCaption()) {
+            caption.setBounds(getLocalBounds().removeFromBottom(captionHeight));
+        }
+    }
+
+    void lookAndFeelChanged() override
+    {
+        if (const auto* theme = dynamic_cast<const Theme*>(&getLookAndFeel())) {
+            caption.setColour(juce::Label::textColourId, theme->getTextColour());
+            caption.setFont(juce::Font(juce::FontOptions(Theme::labelFontHeight)));
         }
     }
 
@@ -87,8 +119,22 @@ public:
 
 private:
 
+    juce::Rectangle<int> getIconBounds() const
+    {
+        auto bounds = getLocalBounds();
+
+        if (hasCaption()) {
+            bounds.removeFromBottom(captionHeight + captionGap);
+            bounds = bounds.withSizeKeepingCentre(juce::jmin(bounds.getWidth(), bounds.getHeight()),
+                                                  bounds.getHeight());
+        }
+
+        return bounds;
+    }
+
     const Painter painter;
-    ButtonState state;
+    ButtonState   state;
+    juce::Label   caption;
 };
 
 #endif //SEQUENCETREE_ICONBUTTON_H

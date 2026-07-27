@@ -60,13 +60,13 @@ void DanglingArrowLayer::cancelPreview()
     preview.reset();
 }
 
-void DanglingArrowLayer::add(Node* node, juce::Point<int> tipOffset)
+void DanglingArrowLayer::add(const Node* node, juce::Point<int> tipOffset) const
 {
     if (node == nullptr || !node->nodeValueTree.isValid()) {
         return;
     }
 
-    juce::UndoManager* undoManager = applicationContext.undoManager;
+    juce::UndoManager* const undoManager = applicationContext.undoManager;
     juce::ValueTree nodeTree = node->nodeValueTree;
 
     juce::ValueTree arrowList = nodeTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
@@ -81,7 +81,7 @@ void DanglingArrowLayer::add(Node* node, juce::Point<int> tipOffset)
     arrowList.addChild(arrowTree, -1, undoManager);
 }
 
-void DanglingArrowLayer::remove(Arrow* arrow)
+void DanglingArrowLayer::remove(Arrow* arrow) const
 {
     if (arrow == nullptr || !arrow->arrowTree.isValid()) {
         return;
@@ -93,7 +93,7 @@ void DanglingArrowLayer::remove(Arrow* arrow)
     }
 }
 
-void DanglingArrowLayer::setTip(Arrow* arrow, juce::Point<int> tipOffset)
+void DanglingArrowLayer::setTip(Arrow* arrow, juce::Point<int> tipOffset) const
 {
     if (arrow == nullptr) {
         return;
@@ -102,34 +102,34 @@ void DanglingArrowLayer::setTip(Arrow* arrow, juce::Point<int> tipOffset)
     arrow->setTipOffset(tipOffset);
 }
 
-void DanglingArrowLayer::commitTip(Arrow* arrow)
+void DanglingArrowLayer::commitTip(Arrow* arrow) const
 {
     if (arrow == nullptr || !arrow->arrowTree.isValid()) {
         return;
     }
 
-    juce::UndoManager* undoManager = applicationContext.undoManager;
+    juce::UndoManager* const undoManager = applicationContext.undoManager;
     arrow->arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipX, arrow->tipOffset.x, undoManager);
     arrow->arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, arrow->tipOffset.y, undoManager);
 }
 
-void DanglingArrowLayer::rebuildForNode(int nodeId)
+void DanglingArrowLayer::rebuildForNode(int nodeId) const
 {
     removeForNodeId(nodeId);
 
-    Node* node = canvas.nodeManager.find(nodeId);
+    Node* const node = canvas.nodeManager.find(nodeId);
     if (node == nullptr) {
         return;
     }
-    juce::ValueTree arrowList = node->nodeValueTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+    const juce::ValueTree arrowList = node->nodeValueTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
     if (!arrowList.isValid()) {
         return;
     }
 
     for (int i = 0; i < arrowList.getNumChildren(); ++i) {
-        juce::ValueTree arrowTree = arrowList.getChild(i);
+        const juce::ValueTree arrowTree = arrowList.getChild(i);
 
-        juce::Point<int> tipOffset {
+        const juce::Point<int> tipOffset {
             (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX),
             (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)
         };
@@ -142,14 +142,14 @@ void DanglingArrowLayer::rebuildForNode(int nodeId)
     }
 }
 
-void DanglingArrowLayer::removeForNode(Node* node)
+void DanglingArrowLayer::removeForNode(const Node* node) const
 {
     canvas.arrowManager.removeMatching([node](Arrow* arrow) {
         return arrow->isDangling() && arrow->startNode == node;
     });
 }
 
-void DanglingArrowLayer::removeForNodeId(int nodeId)
+void DanglingArrowLayer::removeForNodeId(int nodeId) const
 {
     removeForNode(canvas.nodeManager.find(nodeId));
 }

@@ -37,13 +37,13 @@ void MenuBar::paint(juce::Graphics &g)
 
 void MenuBar::resized()
 {
-    auto bounds = getLocalBounds();
+    const auto bounds = getLocalBounds();
 
     constexpr int numIcons = 3;
-    int iconSize = juce::jmin(bounds.getWidth() - 12, 24);
+    const int iconSize = juce::jmin(bounds.getWidth() - 12, 24);
 
-    int gap = (bounds.getHeight() - iconSize * numIcons) / (numIcons + 1);
-    int x   = (bounds.getWidth() - iconSize) / 2;
+    const int gap = (bounds.getHeight() - iconSize * numIcons) / (numIcons + 1);
+    const int x   = (bounds.getWidth() - iconSize) / 2;
     int y   = gap;
 
     treeIcon->setBounds(x, y, iconSize, iconSize);

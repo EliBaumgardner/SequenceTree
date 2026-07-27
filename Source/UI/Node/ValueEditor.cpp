@@ -72,22 +72,22 @@ juce::Font ValueEditor::displayFont() const
         return font;
     }
 
-    auto  bounds     = getLocalBounds().toFloat().reduced(autoFitInset);
-    float textWidth  = font.getStringWidthFloat(getDisplayText());
-    float textHeight = font.getHeight();
+    const auto bounds     = getLocalBounds().toFloat().reduced(autoFitInset);
+    const float textWidth  = font.getStringWidthFloat(getDisplayText());
+    const float textHeight = font.getHeight();
 
     if (bounds.getWidth() <= 0.0f || bounds.getHeight() <= 0.0f || textHeight <= 0.0f) {
         return font;
     }
 
-    float heightRatio = bounds.getHeight() / textHeight;
+    const float heightRatio = bounds.getHeight() / textHeight;
     float ratio        = heightRatio;
 
     if (textWidth > 0.0f) {
         ratio = std::min(bounds.getWidth() / textWidth, heightRatio);
     }
 
-    float fittedHeight = textHeight * ratio;
+    const float fittedHeight = textHeight * ratio;
 
     if (fittedHeight <= 0.0f || ! std::isfinite(fittedHeight)) {
         return font;

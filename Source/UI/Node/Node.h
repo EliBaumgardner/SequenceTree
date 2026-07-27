@@ -29,7 +29,7 @@ class Node : public juce::Component, public juce::Timer {
 
 public:
 
-    Node(ApplicationContext& context);
+    explicit Node(ApplicationContext& context);
 
     void paint  (juce::Graphics& g) override;
     void resized() override;
@@ -93,5 +93,5 @@ public:
     const int editorAreaBoundsReduction = 6;
 
 protected:
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 };

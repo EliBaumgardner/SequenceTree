@@ -17,7 +17,7 @@ public:
 
     std::function<void()> onValueChanged;
 
-    ValueEditor(ApplicationContext& context);
+    explicit ValueEditor(ApplicationContext& context);
 
     std::function<void()> onValueChange;
 
@@ -58,7 +58,7 @@ private:
     void commitDualValue  (const juce::String& text);
     void commitMultipleValues(const juce::String& text);
 
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
     juce::Value boundSecondaryValue;
 
