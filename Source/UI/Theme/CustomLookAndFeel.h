@@ -68,7 +68,8 @@ public:
     void drawDisplayArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawIncrementIcon     (juce::Graphics& g, juce::Rectangle<float> bounds, bool pointsUp);
 
-    void drawTextButton        (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawTextButton        (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state,
+                                float fontHeight = labelFontHeight);
 
     void drawUndoIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawRedoIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
@@ -77,6 +78,9 @@ public:
     void drawPaintToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawArrowToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawNodeArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawPolyphonicArrowIcon (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+
+    juce::Colour arrowIconTileColour(const ButtonState& state) const;
 
     void drawPaintToolSettings (juce::Graphics& g, const PaintToolSettings& paintToolSettings);
 

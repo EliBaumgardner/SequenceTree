@@ -27,6 +27,54 @@ namespace {
         arrowHead.closeSubPath();
         g.fillPath(arrowHead);
     }
+
+    void strokeChevronGlyph(juce::Graphics& g, juce::Point<float> tip,
+                            float headLength, float headWidth, float thickness)
+    {
+        juce::Path chevron;
+        chevron.startNewSubPath(tip.x - headLength, tip.y - headWidth);
+        chevron.lineTo(tip.x, tip.y);
+        chevron.lineTo(tip.x - headLength, tip.y + headWidth);
+
+        g.strokePath(chevron, juce::PathStrokeType(thickness,
+                                                   juce::PathStrokeType::curved,
+                                                   juce::PathStrokeType::butt));
+    }
+
+    void strokePolyphonicArrowGlyph(juce::Graphics& g, juce::Rectangle<float> glyphArea,
+                                    float shaftThicknessFactor, float headLengthFactor, float headWidthFactor)
+    {
+        const float headLength = glyphArea.getWidth()  * headLengthFactor;
+        const float headWidth  = glyphArea.getHeight() * headWidthFactor;
+        const float thickness  = glyphArea.getHeight() * shaftThicknessFactor;
+
+        juce::Point<float> frontTip(glyphArea.getRight(),               glyphArea.getCentreY());
+        juce::Point<float> rearTip (frontTip.x - headLength * 0.85f,    glyphArea.getCentreY());
+
+        juce::Path shaft;
+        shaft.addLineSegment(juce::Line<float>({ glyphArea.getX(), glyphArea.getCentreY() }, rearTip), thickness);
+        g.fillPath(shaft);
+
+        strokeChevronGlyph(g, rearTip,  headLength, headWidth, thickness);
+        strokeChevronGlyph(g, frontTip, headLength, headWidth, thickness);
+    }
+
+    juce::Rectangle<float> fillArrowIconTile(juce::Graphics& g, juce::Rectangle<float> area,
+                                             juce::Colour tileColour, float cornerRadius)
+    {
+        g.setColour(tileColour);
+        g.fillRoundedRectangle(area, cornerRadius);
+
+        const auto glyphArea = area.reduced(area.getWidth() * 0.18f, area.getHeight() * 0.34f);
+
+        const float nodeDiameter = glyphArea.getHeight();
+
+        g.setColour(juce::Colours::black);
+        g.fillEllipse(juce::Rectangle<float>(nodeDiameter, nodeDiameter)
+                          .withCentre({ glyphArea.getX(), glyphArea.getCentreY() }));
+
+        return glyphArea;
+    }
 }
 
 juce::Colour CustomLookAndFeel::pressableButtonColour(const ButtonState& state) const
@@ -217,7 +265,8 @@ void CustomLookAndFeel::drawIncrementIcon(juce::Graphics &g, juce::Rectangle<flo
     g.fillPath(path);
 }
 
-void CustomLookAndFeel::drawTextButton(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
+void CustomLookAndFeel::drawTextButton(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state,
+                                       float fontHeight)
 {
     auto area = bounds.reduced(outerButtonBoundsReduction);
 
@@ -228,7 +277,7 @@ void CustomLookAndFeel::drawTextButton(juce::Graphics &g, juce::Rectangle<float>
     g.drawRoundedRectangle(area, paneCornerRadius, 1.0f);
 
     g.setColour(juce::Colours::black.withAlpha(0.8f));
-    g.setFont(juce::Font(juce::FontOptions(labelFontHeight)));
+    g.setFont(juce::Font(juce::FontOptions(fontHeight)));
     g.drawText(state.text, bounds, juce::Justification::centred);
 }
 
@@ -281,28 +330,31 @@ void CustomLookAndFeel::drawArrowToolIcon(juce::Graphics &g, juce::Rectangle<flo
     fillArrowGlyph(g, glyphArea, 0.16f, 0.32f, 0.5f);
 }
 
-void CustomLookAndFeel::drawNodeArrowIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
+juce::Colour CustomLookAndFeel::arrowIconTileColour(const ButtonState& state) const
 {
-    auto area = bounds.reduced(outerButtonBoundsReduction);
-
     juce::Colour tileColour = state.isSelected ? buttonColour.brighter(0.3f) : buttonColour;
 
     if (state.isHovered) {
-        tileColour = tileColour.brighter(0.15f);
+        return tileColour.brighter(0.15f);
     }
 
-    g.setColour(tileColour);
-    g.fillRoundedRectangle(area, paneCornerRadius);
+    return tileColour;
+}
 
-    auto glyphArea = area.reduced(area.getWidth() * 0.18f, area.getHeight() * 0.34f);
+void CustomLookAndFeel::drawNodeArrowIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
+{
+    const auto glyphArea = fillArrowIconTile(g, bounds.reduced(outerButtonBoundsReduction),
+                                             arrowIconTileColour(state), paneCornerRadius);
 
-    const float nodeDiameter = glyphArea.getHeight();
-    const auto  nodeBounds    = juce::Rectangle<float>(nodeDiameter, nodeDiameter)
-                                    .withCentre({ glyphArea.getX(), glyphArea.getCentreY() });
-
-    g.setColour(juce::Colours::black);
-    g.fillEllipse(nodeBounds);
     fillArrowGlyph(g, glyphArea, 0.16f, 0.32f, 0.5f);
+}
+
+void CustomLookAndFeel::drawPolyphonicArrowIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
+{
+    const auto glyphArea = fillArrowIconTile(g, bounds.reduced(outerButtonBoundsReduction),
+                                             arrowIconTileColour(state), paneCornerRadius);
+
+    strokePolyphonicArrowGlyph(g, glyphArea, 0.16f, 0.32f, 0.5f);
 }
 
 void CustomLookAndFeel::drawPaintToolSettings(juce::Graphics &g, const PaintToolSettings &paintToolSettings) {

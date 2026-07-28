@@ -18,6 +18,11 @@ public:
                 juce::Colour backgroundColour = juce::Colour::fromRGB(30, 30, 30));
 
     void closeButtonPressed() override;
+
+private:
+
+    static constexpr float minimumSizeRatio = 0.7f;
+    static constexpr float maximumSizeRatio = 4.0f;
 };
 
 class PopupWindowLauncher {
