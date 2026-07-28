@@ -30,13 +30,23 @@ void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
 
 void TraversalSession::clearTraversals()
 {
+    eventManager.dispatcher.clearPendingFlags();
     traversals.clear();
+}
+
+void TraversalSession::suspendActiveNotes(juce::MidiBuffer& midiMessages)
+{
+    for (const auto& note : eventManager.scheduler.activeNotes) {
+        eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
+    }
 }
 
 void TraversalSession::restartActiveTraversals(const NodeMap& nodes, RTGraphs& rtGraphs,
                                                juce::MidiBuffer& midiMessages)
 {
     restartRootScratch.clear();
+
+    eventManager.dispatcher.clearPendingFlags();
 
     for (const auto& [id, instance] : traversals) {
         if (instance.runtime.isSpawned()) {

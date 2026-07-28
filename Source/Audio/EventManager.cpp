@@ -54,6 +54,8 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
 {
     handleOrphanNotes(midiMessages, nodes, traversalMap);
 
+    dispatcher.advancePendingFlags(numSamples, { nodes, traversalMap, midiMessages });
+
     auto& activeNotes = scheduler.activeNotes;
 
     while (true)

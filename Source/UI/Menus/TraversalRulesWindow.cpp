@@ -6,12 +6,13 @@
 #include "../Theme/CustomLookAndFeel.h"
 
 TraversalRulesWindow::TraversalRulesWindow(ApplicationContext& context)
-    : rulesPanel(context)
+    : titlebar(context), rulesPanel(context)
 {
     setLookAndFeel(context.lookAndFeel);
 
     rulesPanel.onWidthDragged = [this](int newWidth) { setPanelWidth(newWidth); };
 
+    addAndMakeVisible(titlebar);
     addAndMakeVisible(rulesPanel);
 }
 
@@ -32,7 +33,10 @@ void TraversalRulesWindow::paint(juce::Graphics& g) {
 void TraversalRulesWindow::resized() {
     panelWidth = clampPanelWidth(panelWidth);
 
-    rulesPanel.setBounds(getLocalBounds().removeFromLeft(panelWidth));
+    auto bounds = getLocalBounds();
+
+    titlebar.setBounds(bounds.removeFromTop(RulesTitlebar::preferredHeight));
+    rulesPanel.setBounds(bounds.removeFromLeft(panelWidth));
 }
 
 int TraversalRulesWindow::clampPanelWidth(int newWidth) const {
@@ -51,6 +55,55 @@ void TraversalRulesWindow::setPanelWidth(int newWidth) {
 
     panelWidth = clamped;
     resized();
+}
+
+TraversalRulesWindow::RulesTitlebar::RulesTitlebar(ApplicationContext& context)
+    : Bar(context, { Orientation::horizontal, Background::litFromTop }),
+      undoRedoPane(context)
+{
+    playButton = std::make_unique<IconButton>(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            ButtonState triangleState = state;
+            triangleState.isSelected = true;
+
+            CustomLookAndFeel::get(*this).drawPlayIcon(g, bounds, triangleState);
+        }, context.lookAndFeel);
+
+    playButton->setTooltip("Run Rules");
+
+    addAndMakeVisible(playButton.get());
+    addAndMakeVisible(undoRedoPane);
+
+    configureUndoRedoPane();
+}
+
+void TraversalRulesWindow::RulesTitlebar::configureUndoRedoPane() {
+    undoRedoPane.addButton(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawUndoIcon(g, bounds, state);
+        },
+        "Undo");
+
+    undoRedoPane.addButton(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawRedoIcon(g, bounds, state);
+        },
+        "Redo");
+}
+
+void TraversalRulesWindow::RulesTitlebar::paintOverBar(juce::Graphics& g) {
+    drawSeparator(g, (playButton->getRight() + undoRedoPane.getX()) / 2);
+}
+
+void TraversalRulesWindow::RulesTitlebar::resized() {
+    auto bounds = getContentBounds();
+
+    const int buttonSize = bounds.getHeight();
+
+    playButton->setBounds(bounds.removeFromLeft(buttonSize));
+    bounds.removeFromLeft(contentSpacing);
+
+    undoRedoPane.setBounds(bounds.removeFromLeft(buttonSize * 3));
 }
 
 TraversalRulesWindow::RulesPanel::RulesPanel(ApplicationContext& context)

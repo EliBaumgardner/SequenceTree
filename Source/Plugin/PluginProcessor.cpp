@@ -234,9 +234,17 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         traversalSession.silenceAllNotes(midiMessages);
     }
 
+    const bool playing = isPlaying.load();
+
+    if (wasPlaying && !playing) {
+        traversalSession.suspendActiveNotes(midiMessages);
+    }
+
+    wasPlaying = playing;
+
     AudioSnapshot* snap = currentSnapshot.load(std::memory_order_acquire);
 
-    if (isPlaying.load() == false || !snap || !snap->globalNodes) {
+    if (!playing || !snap || !snap->globalNodes) {
         if (resetHit) {
             traversalSession.clearTraversals();
             if (notifyUi) {
