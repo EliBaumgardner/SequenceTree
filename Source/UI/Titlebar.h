@@ -11,34 +11,31 @@
 #pragma once
 
 
-#include "../Util/PluginModules.h"
-#include "../Util/ApplicationContext.h"
+#include "Bar.h"
 #include "Buttons/IconButton.h"
 #include "Buttons/ButtonPane.h"
 #include "Menus/ItemSelector.h"
 #include "Buttons/TempoDisplay.h"
 #include "../Input/NodeController.h"
 
-class Titlebar : public juce::Component {
+class Titlebar : public Bar {
 
 public:
 
     Titlebar(ApplicationContext& context);
 
-    void paint(juce::Graphics& g) override;
-    void resized() override;
-
     std::function<void()> toggled;
 
 private:
+
+    void paintOverBar(juce::Graphics& g) override;
+    void resized() override;
 
     void configureDisplaySelector();
     void configureModePane();
     void configureUndoRedoPane();
     void setControllerMode(NodeController::NodeControllerMode mode);
     void setDanglingArrowMode(bool shouldBeActive);
-
-    ApplicationContext& applicationContext;
 
     ButtonPane           buttonPane;
     ItemSelector         displaySelector;

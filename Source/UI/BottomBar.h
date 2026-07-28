@@ -1,23 +1,19 @@
 #pragma once
 
-#include "../Util/PluginModules.h"
-#include "../Util/ApplicationContext.h"
+#include "Bar.h"
 #include "Buttons/IconButton.h"
 #include "Buttons/PaintToolSettings.h"
 #include "Menus/ArrowWindow.h"
 #include "PopupWindow.h"
 
-class BottomBar : public juce::Component
+class BottomBar : public Bar
 {
 public:
     explicit BottomBar(ApplicationContext& context);
 
-    void paint(juce::Graphics& g) override;
-    void resized() override;
-
 private:
 
-    ApplicationContext& applicationContext;
+    void resized() override;
 
     static constexpr int cellGap = 10;
 

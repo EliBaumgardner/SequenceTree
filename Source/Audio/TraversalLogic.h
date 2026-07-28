@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Graph/RTData.h"
+#include "TraversalRule.h"
 #include <unordered_map>
 #include <vector>
 
@@ -11,10 +12,6 @@ public:
 
     struct Walker
     {
-        std::unordered_map<int,int> counts;
-        std::unordered_map<int,int>  switchCounts;
-        std::unordered_map<int,int>  subRootCounts;
-
         int target = 0;
         int last   = 0;
 
@@ -22,14 +19,6 @@ public:
 
         int alternativeTarget = -1;
         int alternativeLast   = -1;
-    };
-
-    struct Counters
-    {
-        std::unordered_map<int,int> chord;
-        std::unordered_map<int,int> crossTree;
-        std::unordered_map<int,int> crossTreeSwitch;
-        std::unordered_map<int,int> trigger;
     };
 
     struct LoopState
@@ -105,13 +94,12 @@ public:
         int  countSourceCount  = 0;
     };
 
-    using ChildPredicate = bool (*)(RTNode::NodeType);
+    using ChildPredicate = ::ChildPredicate;
 
     RTtraversal    traversal;
-    NodeStateMap   nodeStates;
+    NodeStateTable nodeState;
 
     Walker         primary;
-    Counters       counters;
     LoopState      loop;
     ModulatorWalk  mod;
 
@@ -119,6 +107,8 @@ public:
     int            rootId     = 0;
 
     TraversalState state = TraversalState::Start;
+
+    const TraversalRule* rule = &NativeTraversalRule::instance();
 
     TraversalLogic() = default;
 

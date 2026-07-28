@@ -52,6 +52,8 @@ private:
 
     int findFirstUnlinkedRootId(const NodeMap& nodes) const;
 
+    static bool isLinkedAsChild(const NodeMap& nodes, int nodeId);
+
     EventManager& eventManager;
 
     TraversalPool traversals;
@@ -60,6 +62,7 @@ private:
     static constexpr int maxConcurrentTraversals   = 128;
 
     std::vector<int> activeRootIdScratch;
+    std::vector<int> restartRootScratch;
 
     int traversalInstanceCounter = 0;
 };

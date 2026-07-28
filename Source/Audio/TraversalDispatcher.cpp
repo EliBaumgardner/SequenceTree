@@ -178,8 +178,8 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
     int pitchOverride    = -1;
     int velocityOverride = -1;
 
-    if (traversalLogic.nodeStates[node.nodeID].activeAlternativeId != -1 && !node.notes.empty()) {
-        auto altIt = nodes.find(traversalLogic.nodeStates[node.nodeID].activeAlternativeId);
+    if (traversalLogic.nodeState.get(NodeStateSlot::ActiveAlternative, node.nodeID) != -1 && !node.notes.empty()) {
+        auto altIt = nodes.find(traversalLogic.nodeState.get(NodeStateSlot::ActiveAlternative, node.nodeID));
 
         if (altIt != nodes.end()) {
             alternativeNode = &altIt->second;
@@ -209,7 +209,7 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
 
     scheduler.scheduleNote(node, instanceId, sample, context.midiMessages, sampleRate, tempoMultiplier, duration, false, traversalLogic.traversal.channel, traversalLogic.traversal.transpose, traversalLogic.traversal.velocityMultiplier, pitchOverride, velocityOverride);
 
-    int chordParentCount = traversalLogic.primary.counts[node.nodeID] + 1;
+    int chordParentCount = traversalLogic.nodeState.get(NodeStateSlot::Count, node.nodeID) + 1;
     pushChordNotes(node, sample, duration, sampleRate, tempoMultiplier, context, chordParentCount, traversalLogic);
 
     const int wallClockMs = static_cast<int>(duration / tempoMultiplier);
@@ -296,13 +296,13 @@ void TraversalDispatcher::dispatchCrossTree(const RTNode& node, int sourceInstan
         if (durIt != node.durationMap.end()) {
             connectionDuration = durIt->second;
         }
-        else if (traversal.nodeStates[node.nodeID].activeAlternativeId != -1) {
-            auto altIt = nodes.find(traversal.nodeStates[node.nodeID].activeAlternativeId);
+        else if (traversal.nodeState.get(NodeStateSlot::ActiveAlternative, node.nodeID) != -1) {
+            auto altIt = nodes.find(traversal.nodeState.get(NodeStateSlot::ActiveAlternative, node.nodeID));
             if (altIt != nodes.end()) {
                 auto altDurIt = altIt->second.durationMap.find(crossTreeRootId);
                 if (altDurIt != altIt->second.durationMap.end()) {
                     connectionDuration = altDurIt->second;
-                    progressSourceId = traversal.nodeStates[node.nodeID].activeAlternativeId;
+                    progressSourceId = traversal.nodeState.get(NodeStateSlot::ActiveAlternative, node.nodeID);
                 }
             }
         }
@@ -456,7 +456,7 @@ void TraversalDispatcher::pushChordNotes(const RTNode& node, int sample, int dur
 
             bridge.highlightNode(chordNode, true, traversalLogic.traversal.traversalId);
 
-            int chordPlayCount = ++traversalLogic.counters.chord[chordNode.nodeID];
+            int chordPlayCount = traversalLogic.nodeState.increment(NodeStateSlot::Chord, chordNode.nodeID);
             chordFrontier.push_back({ chordNode.nodeID, chordPlayCount });
         }
     }
@@ -574,7 +574,7 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
 
         if (currentIt != nodes.end()) {
             const RTNode& currentNode = currentIt->second;
-            int activeAltId = traversal.nodeStates[currentNode.nodeID].activeAlternativeId;
+            int activeAltId = traversal.nodeState.get(NodeStateSlot::ActiveAlternative, currentNode.nodeID);
 
             if (activeAltId != -1) {
                 auto altIt = nodes.find(activeAltId);

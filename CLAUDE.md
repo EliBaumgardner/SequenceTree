@@ -51,6 +51,7 @@ SequenceTree is a JUCE plugin that generates MIDI by traversing a user-designed 
 - `NodeCanvas` owns the node map (int→`Node*`) and the `NodeArrow` array. It delegates FIFO draining to `AudioCommandDrainer` and all dangling-arrow state to `DanglingArrowLayer`.
 - `Theme` (`Theme/Theme.h`) is the palette and metrics, with no knowledge of any component. `CustomLookAndFeel` inherits it, so `CustomLookAndFeel::get(*this)` yields a `const Theme&` that components paint against.
 - `DynamicPort` is a zoom/pan viewport; left-drag pans, Shift+Scroll or pinch zooms (0.1×–5.0×).
+- `Bar` is the base class for every bar (`Titlebar`, `BottomBar`, `MenuBar`). It owns the look-and-feel hookup, background paint, content inset, and separator drawing; a `Bar::Style` picks orientation, background, and inset. `paint` is `final` — subclasses lay out in `resized` off `getContentBounds()`, and decorate by overriding `paintOverBar`.
 - `MenuArea` hosts `MenuBar` plus the `TraversalMenu` and `NodeMenu` panels.
 - `Node` (and `RootNode`, `TraversalFlagNode`, `Modulator`) renders one graph node; `NodeArrow` / `DanglingArrow` render connections, with arrow length encoding note duration.
 

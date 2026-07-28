@@ -17,14 +17,12 @@
 
 
 Titlebar::Titlebar(ApplicationContext& context)
-    : applicationContext(context),
+    : Bar(context, { Orientation::horizontal, Background::litFromTop }),
       buttonPane(context),
       displaySelector(context),
       tempoDisplay(context),
       undoRedoPane(context)
 {
-    setLookAndFeel(applicationContext.lookAndFeel);
-
     playButton = std::make_unique<IconButton>(
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
             CustomLookAndFeel::get(*this).drawPlayIcon(g, bounds, state);
@@ -164,28 +162,16 @@ void Titlebar::setDanglingArrowMode(bool shouldBeActive)
     applicationContext.canvas->danglingArrowLayer.setArrowMode(shouldBeActive);
 }
 
-void Titlebar::paint(juce::Graphics& g)
+void Titlebar::paintOverBar(juce::Graphics& g)
 {
-    auto& laf = CustomLookAndFeel::get(*this);
-
-    laf.drawBar(g, getLocalBounds().toFloat(), true);
-
-    g.setColour(laf.getTextColour().withAlpha(0.12f));
-    float inset = getHeight() * 0.22f;
-
-    auto drawSep = [&](int x) {
-        g.drawVerticalLine(x, inset, getHeight() - inset);
-    };
-
-    drawSep((resetButton->getRight() + tempoDisplay.getX()) / 2);
-    drawSep((tempoDisplay.getRight() + undoRedoPane.getX()) / 2);
-    drawSep((buttonPane.getRight() + displaySelector.getX()) / 2);
+    drawSeparator(g, (resetButton->getRight() + tempoDisplay.getX()) / 2);
+    drawSeparator(g, (tempoDisplay.getRight() + undoRedoPane.getX()) / 2);
+    drawSeparator(g, (buttonPane.getRight() + displaySelector.getX()) / 2);
 }
 
 void Titlebar::resized()
 {
-    auto bounds = getLocalBounds().reduced(4.0f);
-    int spacing = 12;
+    auto bounds = getContentBounds();
 
     int buttonSize = std::min(bounds.getHeight(), bounds.getWidth() / 25);
     int tempoDisplayWidth = bounds.getWidth() / 8;
@@ -193,22 +179,20 @@ void Titlebar::resized()
     int displaySelectorWidth = bounds.getWidth() / 8;
     int undoRedoPaneWidth = bounds.getWidth() / 8;
 
-    auto area = bounds;
+    playButton->setBounds(bounds.removeFromLeft(buttonSize));
+    bounds.removeFromLeft(contentSpacing);
 
-    playButton->setBounds(area.removeFromLeft(buttonSize));
-    area.removeFromLeft(spacing);
+    resetButton->setBounds(bounds.removeFromLeft(buttonSize));
+    bounds.removeFromLeft(contentSpacing);
 
-    resetButton->setBounds(area.removeFromLeft(buttonSize));
-    area.removeFromLeft(spacing);
+    tempoDisplay.setBounds(bounds.removeFromLeft(tempoDisplayWidth));
+    bounds.removeFromLeft(contentSpacing);
 
-    tempoDisplay.setBounds(area.removeFromLeft(tempoDisplayWidth));
-    area.removeFromLeft(spacing);
+    undoRedoPane.setBounds(bounds.removeFromLeft(undoRedoPaneWidth));
+    bounds.removeFromLeft(contentSpacing);
 
-    undoRedoPane.setBounds(area.removeFromLeft(undoRedoPaneWidth));
-    area.removeFromLeft(spacing);
+    displaySelector.setBounds(bounds.removeFromRight(displaySelectorWidth));
+    bounds.removeFromRight(contentSpacing);
 
-    displaySelector.setBounds(area.removeFromRight(displaySelectorWidth));
-    area.removeFromRight(spacing);
-
-    buttonPane.setBounds(area.removeFromRight(buttonPaneWidth));
+    buttonPane.setBounds(bounds.removeFromRight(buttonPaneWidth));
 }

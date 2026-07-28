@@ -221,7 +221,7 @@ void CustomLookAndFeel::drawTextButton(juce::Graphics &g, juce::Rectangle<float>
 {
     auto area = bounds.reduced(outerButtonBoundsReduction);
 
-    g.setColour(pressableButtonColour(state));
+    g.setColour(state.isSelected ? selectableButtonColour(state) : pressableButtonColour(state));
     g.fillRoundedRectangle(area, paneCornerRadius);
 
     g.setColour(juce::Colours::black.withAlpha(0.5f));

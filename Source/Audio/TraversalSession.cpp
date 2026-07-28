@@ -2,11 +2,11 @@
 #include "EventManager.h"
 
 #include <algorithm>
-#include <unordered_set>
 
 TraversalSession::TraversalSession(EventManager& eventManager) : eventManager(eventManager)
 {
     activeRootIdScratch.reserve(scratchCapacity);
+    restartRootScratch.reserve(scratchCapacity);
 }
 
 void TraversalSession::prepare()
@@ -36,18 +36,24 @@ void TraversalSession::clearTraversals()
 void TraversalSession::restartActiveTraversals(const NodeMap& nodes, RTGraphs& rtGraphs,
                                                juce::MidiBuffer& midiMessages)
 {
-    std::unordered_set<int> rootsToRestart;
+    restartRootScratch.clear();
+
     for (const auto& [id, instance] : traversals) {
         if (instance.runtime.isSpawned()) {
             continue;
         }
 
-        rootsToRestart.insert(instance.logic.rootId);
+        const int rootId = instance.logic.rootId;
+
+        if (std::find(restartRootScratch.begin(), restartRootScratch.end(), rootId)
+            == restartRootScratch.end()) {
+            restartRootScratch.push_back(rootId);
+        }
     }
 
     traversals.clear();
 
-    for (int rootId : rootsToRestart) {
+    for (int rootId : restartRootScratch) {
         auto rootIt = nodes.find(rootId);
         if (rootIt == nodes.end()) {
             continue;
@@ -104,6 +110,7 @@ void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiB
 
         bool stillAssigned = false;
         auto rootIt = nodes.find(traverser.rootId);
+
         if (rootIt != nodes.end()) {
             if (instance.runtime.asFlag) {
                 stillAssigned = true;
@@ -204,22 +211,34 @@ void TraversalSession::syncTraversalLoopLimits(const NodeMap& nodes, RTGraphs& r
     }
 }
 
-int TraversalSession::findFirstUnlinkedRootId(const NodeMap& nodes) const
+bool TraversalSession::isLinkedAsChild(const NodeMap& nodes, int nodeId)
 {
-    std::unordered_set<int> linkedRootIds;
-    for (const auto& [nodeId, node] : nodes) {
-        for (int childId : node.children) {
-            linkedRootIds.insert(childId);
+    for (const auto& [otherId, other] : nodes) {
+        for (int childId : other.children) {
+            if (childId == nodeId) {
+                return true;
+            }
         }
     }
 
+    return false;
+}
+
+int TraversalSession::findFirstUnlinkedRootId(const NodeMap& nodes) const
+{
     int rootId = -1;
 
     for (const auto& [nodeId, node] : nodes) {
-        if (node.nodeID == node.graphID && linkedRootIds.find(nodeId) == linkedRootIds.end()) {
-            if (rootId == -1 || nodeId < rootId) {
-                rootId = nodeId;
-            }
+        if (node.nodeID != node.graphID) {
+            continue;
+        }
+
+        if (rootId != -1 && nodeId >= rootId) {
+            continue;
+        }
+
+        if (!isLinkedAsChild(nodes, nodeId)) {
+            rootId = nodeId;
         }
     }
 

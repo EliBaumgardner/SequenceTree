@@ -44,13 +44,15 @@ public:
 
     void prepare(int capacity)
     {
-        if (slotCount() == capacity) {
-            return;
+        if (slotCount() != capacity) {
+            slots.assign(static_cast<std::size_t>(capacity), Slot{});
+
+            activeCount = 0;
         }
 
-        slots.assign(static_cast<std::size_t>(capacity), Slot{});
-
-        activeCount = 0;
+        for (auto& slot : slots) {
+            slot.entry.second.logic.nodeState.prepare();
+        }
     }
 
     template <bool IsConst>
