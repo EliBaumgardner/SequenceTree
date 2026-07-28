@@ -8,6 +8,7 @@
 #include "../Bar.h"
 #include "../Buttons/IconButton.h"
 #include "../Node/ValueEditor.h"
+#include "ItemSelector.h"
 
 class ArrowBindBar : public Bar {
 
@@ -15,31 +16,65 @@ public:
 
     explicit ArrowBindBar(ApplicationContext& context);
 
-    static constexpr int rowHeight       = 24;
-    static constexpr int preferredHeight = rowHeight * 2 + 8;
+    static constexpr int preferredHeight = 34;
+    static constexpr int minimumHeight   = 26;
 
 private:
 
-    struct BindRow {
-        juce::Label                  label;
+    struct AxisControl {
+        std::unique_ptr<IconButton>  toggle;
         std::unique_ptr<ValueEditor> editor;
-        std::unique_ptr<IconButton>  xToggle;
-        std::unique_ptr<IconButton>  yToggle;
+    };
+
+    struct BindField {
+        AxisControl x;
+        AxisControl y;
+    };
+
+    struct Metrics {
+        int selectorWidth;
+        int toggleWidth;
+        int editorWidth;
+        int axisGap;
+        int itemGap;
     };
 
     void resized() override;
 
-    void configureRow(BindRow& row, const juce::String& labelText);
-    void layOutRow(BindRow& row, juce::Rectangle<int> bounds);
+    void configureFieldSelector();
+    void configureField(BindField& field);
+    void configureAxis(AxisControl& axis, const juce::String& text);
 
-    std::unique_ptr<IconButton> createToggle(const juce::String& text);
+    void showField(int itemId);
 
-    static constexpr int toggleWidth = 20;
-    static constexpr int editorWidth = 34;
-    static constexpr int itemGap     = 6;
+    Metrics metricsFor(juce::Rectangle<int> bounds) const;
 
-    BindRow pitchRow;
-    BindRow durationRow;
+    void layOutField(BindField& field, juce::Rectangle<int> bounds, const Metrics& metrics);
+    void layOutAxis (AxisControl& axis, juce::Rectangle<int>& bounds, const Metrics& metrics);
+
+    static int scaled(int total, float ratio, int minimum);
+
+    static constexpr int pitchItemId    = 1;
+    static constexpr int durationItemId = 2;
+
+    static constexpr float selectorWidthRatio = 0.29f;
+    static constexpr float toggleWidthRatio   = 0.10f;
+    static constexpr float editorWidthRatio   = 0.14f;
+    static constexpr float axisGapRatio       = 0.01f;
+    static constexpr float itemGapRatio       = 0.03f;
+
+    static constexpr float toggleFontRatio  = 0.4f;
+    static constexpr float minimumFontHeight = 8.0f;
+
+    static constexpr int minimumSelectorWidth = 34;
+    static constexpr int minimumToggleWidth   = 14;
+    static constexpr int minimumEditorWidth   = 18;
+    static constexpr int minimumGap           = 1;
+
+    ItemSelector fieldSelector;
+
+    BindField pitchField;
+    BindField durationField;
 };
 
 #endif //SEQUENCETREE_ARROWBINDBAR_H

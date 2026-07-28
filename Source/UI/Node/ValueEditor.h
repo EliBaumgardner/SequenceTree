@@ -30,6 +30,7 @@ public:
     void enableDualValue(const juce::Identifier& secondaryPropertyID);
     void disableDualValue();
     void enableDecimalValue(double min, double max = std::numeric_limits<double>::max());
+    void enableMultiplierValue(int defaultValue = 1);
     void enableAutoFitText();
     void setPitchMode(bool shouldShowPitchNames);
     void setEditable(bool shouldBeEditable);
@@ -74,8 +75,11 @@ private:
     bool decimalMode      = false;
     bool acceptMultiple   = false;
     bool pitchMode        = false;
+    bool multiplierMode   = false;
     bool autoFitText      = false;
     bool editable         = true;
+
+    static constexpr const char* multiplierPrefix = "x";
 
     static constexpr float baseFontHeight = 9.0f;
     static constexpr float autoFitInset   = 4.0f;

@@ -99,6 +99,10 @@ juce::Font ValueEditor::displayFont() const
 
 juce::String ValueEditor::getDisplayText() const
 {
+    if (multiplierMode) {
+        return multiplierPrefix + juce::String((int) boundValue.getValue());
+    }
+
     if (pitchMode) {
         int midiNote = juce::jlimit(0, 127, (int) boundValue.getValue());
 
@@ -167,7 +171,7 @@ void ValueEditor::mouseDown(const juce::MouseEvent&)
     textEditor->setVisible(true);
     juce::String editorText = getDisplayText();
 
-    if (pitchMode) {
+    if (pitchMode || multiplierMode) {
         editorText = juce::String((int) boundValue.getValue());
     }
 
@@ -246,6 +250,17 @@ void ValueEditor::enableDecimalValue(double min, double max)
     maxDecimalValue = max;
 
     textEditor->setInputRestrictions(6, "0123456789.");
+}
+
+void ValueEditor::enableMultiplierValue(int defaultValue)
+{
+    multiplierMode = true;
+    minValue       = 1;
+
+    textEditor->setInputRestrictions(4, "0123456789");
+
+    boundValue.setValue(defaultValue);
+    repaint();
 }
 
 void ValueEditor::enableSignedValue(int min, int max)

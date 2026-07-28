@@ -10,6 +10,11 @@ PopupWindow::PopupWindow(const juce::String& title, std::unique_ptr<juce::Compon
 {
     setContentOwned(content.release(), true);
     setResizable(true, true);
+
+    setResizeLimits(juce::roundToInt(getWidth()  * minimumSizeRatio),
+                    juce::roundToInt(getHeight() * minimumSizeRatio),
+                    juce::roundToInt(getWidth()  * maximumSizeRatio),
+                    juce::roundToInt(getHeight() * maximumSizeRatio));
 }
 
 void PopupWindow::closeButtonPressed() {

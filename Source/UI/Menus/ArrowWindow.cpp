@@ -12,7 +12,6 @@ ArrowWindow::ArrowWindow(ApplicationContext& context)
 
     arrowTypePane.enableToggleSelection();
     arrowTypePane.allowEmptySelection();
-    arrowTypePane.useGridLayout(arrowGrid);
 
     arrowTypePane.onSelectionChanged = [this](const IconButton* selected) {
         if (onArrowTypeChanged) {
@@ -26,6 +25,11 @@ ArrowWindow::ArrowWindow(ApplicationContext& context)
     addArrowType(ArrowType::Node, "node arrow",
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
             CustomLookAndFeel::get(*this).drawNodeArrowIcon(g, bounds, state);
+        });
+
+    addArrowType(ArrowType::Polyphonic, "polyphonic arrow",
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawPolyphonicArrowIcon(g, bounds, state);
         });
 }
 
@@ -65,9 +69,25 @@ void ArrowWindow::paint(juce::Graphics& g) {
     g.drawRect(getLocalBounds(), 1);
 }
 
+ButtonPane::Grid ArrowWindow::arrowGridFor(juce::Rectangle<int> bounds) {
+    const int cellSize = juce::jmax(minimumCellSize,
+                                    juce::jmin(juce::roundToInt(bounds.getWidth()  * cellWidthRatio),
+                                               juce::roundToInt(bounds.getHeight() * cellHeightRatio)));
+
+    return { cellSize,
+             cellSize,
+             juce::jmax(minimumGridGap, juce::roundToInt(bounds.getWidth() * gridGapRatio)),
+             juce::jmax(minimumGridGap, juce::roundToInt(bounds.getWidth() * gridInsetRatio)) };
+}
+
 void ArrowWindow::resized() {
     auto bounds = getLocalBounds();
 
-    bindBar.setBounds(bounds.removeFromBottom(ArrowBindBar::preferredHeight));
+    const int bindBarHeight = juce::jmax(ArrowBindBar::minimumHeight,
+                                         juce::roundToInt(bounds.getHeight() * bindBarHeightRatio));
+
+    bindBar.setBounds(bounds.removeFromBottom(bindBarHeight));
+
     arrowTypePane.setBounds(bounds);
+    arrowTypePane.useGridLayout(arrowGridFor(bounds));
 }
