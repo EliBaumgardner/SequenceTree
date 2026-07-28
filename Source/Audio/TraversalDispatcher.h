@@ -2,6 +2,7 @@
 
 #include "TraversalPool.h"
 #include "NoteScheduler.h"
+#include <array>
 #include <memory>
 #include <atomic>
 #include <unordered_set>
@@ -33,7 +34,19 @@ public:
 
     void applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes, int traversalId);
 
+    void advancePendingFlags(int numSamples, const DispatchContext& context);
+
+    void clearPendingFlags();
+
 private:
+
+    struct PendingFlagStart
+    {
+        int  flagNodeId       = -1;
+        int  hostTypeId       = 0;
+        int  remainingSamples = 0;
+        bool active           = false;
+    };
 
     void pushRootNodeConnection(int rootNodeId, const DispatchContext& context, int sample);
 
@@ -73,10 +86,15 @@ private:
                                  int sample, const DispatchContext& context);
 
     void dispatchFlag(const RTNode& node, int hostInstanceId, int hostTypeId,
-                      int parentCount, int sample, const DispatchContext& context);
+                      int parentCount, int sample, double sampleRate, double tempoMultiplier,
+                      const DispatchContext& context);
 
     void startFlagTraversal(const RTNode& flagNode, int hostTypeId, int sample,
                             const DispatchContext& context);
+
+    void queueFlagStart(const RTNode& flagNode, int hostTypeId, int delayMs,
+                        int sample, double sampleRate, double tempoMultiplier,
+                        const DispatchContext& context);
 
     void queueFlagRemoval(const RTNode& flagNode, int hostInstanceId, int hostTypeId, TraversalPool& traversalMap);
 
@@ -85,9 +103,13 @@ private:
     NoteScheduler&              scheduler;
     AudioUIBridge&              bridge;
 
-    static constexpr int scratchCapacity = 256;
+    static constexpr int scratchCapacity     = 256;
+    static constexpr int maxPendingFlagStarts = 64;
 
     std::unordered_set<int>            chordVisited;
     std::vector<std::pair<int, int>>   chordFrontier;
     std::vector<int>                   crossTreeScratch;
+
+    std::array<PendingFlagStart, maxPendingFlagStarts> pendingFlagStarts {};
+    std::array<PendingFlagStart, maxPendingFlagStarts> dueFlagStarts {};
 };

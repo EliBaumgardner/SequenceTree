@@ -65,6 +65,12 @@ bool Arrow::isDashed() const
         && ! startNode->isAlternativeNode;
 }
 
+bool Arrow::connectsTraversalFlag() const
+{
+    return (startNode != nullptr && startNode->nodeType == NodeType::TraversalFlag)
+        || (endNode   != nullptr && endNode->nodeType   == NodeType::TraversalFlag);
+}
+
 int Arrow::getDuration() const
 {
     if (startNode == nullptr) {
@@ -333,6 +339,10 @@ bool Arrow::advanceHoverFade()
 
 void Arrow::startProgress(int traversalId, int durationMs, juce::Colour colour, bool oneShot)
 {
+    if (connectsTraversalFlag()) {
+        return;
+    }
+
     progress.start(traversalId, durationMs, colour, oneShot);
     ensureAnimationTimerRunning();
     repaint();

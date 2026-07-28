@@ -17,6 +17,8 @@ public:
     void silenceAllNotes(juce::MidiBuffer& midiMessages);
     void clearTraversals();
 
+    void suspendActiveNotes(juce::MidiBuffer& midiMessages);
+
     void restartActiveTraversals(const NodeMap& nodes, RTGraphs& rtGraphs,
                                  juce::MidiBuffer& midiMessages);
 

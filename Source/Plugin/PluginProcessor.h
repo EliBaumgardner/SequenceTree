@@ -72,6 +72,7 @@ public:
 
     std::atomic<bool>   isPlaying       = false;
     std::atomic<bool>   resetRequested  = false;
+    bool                wasPlaying      = false;
     std::atomic<double> tempoMultiplier { 1.0 };
 
     juce::AudioProcessorValueTreeState valueTreeState;

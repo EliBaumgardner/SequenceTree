@@ -45,6 +45,8 @@ public:
     void removeNote(int index);
     void handleOrphanNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages);
 
+    static bool isNoteSounding(const ActiveNote& note);
+
     static bool isNodeAudible(RTNode::NodeType nodeType);
 
 private:

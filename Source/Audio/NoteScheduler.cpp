@@ -68,9 +68,14 @@ void NoteScheduler::scheduleNote(const RTNode& node, int instanceId, int sample,
     }
 }
 
+bool NoteScheduler::isNoteSounding(const ActiveNote& note)
+{
+    return isNodeAudible(note.nodeType) && !note.isConnectionTrigger;
+}
+
 void NoteScheduler::sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample)
 {
-    if (isNodeAudible(note.nodeType) && !note.isConnectionTrigger) {
+    if (isNoteSounding(note)) {
         midiMessages.addEvent(juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch), sample);
     }
 }
@@ -83,7 +88,7 @@ void NoteScheduler::removeNote(int index)
 
 void NoteScheduler::handleOrphanNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages)
 {
-    if (isNodeAudible(note.nodeType) && !note.isConnectionTrigger) {
+    if (isNoteSounding(note)) {
         midiMessages.addEvent(juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch), 0);
     }
 }

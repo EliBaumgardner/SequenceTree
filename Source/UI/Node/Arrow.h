@@ -41,6 +41,7 @@ public:
 
   bool isDangling() const { return endNode == nullptr; }
   bool isDashed() const;
+  bool connectsTraversalFlag() const;
 
   juce::Point<int>   getTip() const;
   juce::Point<float> getHeadAnchor() const;
