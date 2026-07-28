@@ -67,7 +67,6 @@ struct RTNode {
 
     std::unordered_map<int, std::unordered_set<int>> disabledTraversalsByChild;
 
-
     RTtraversal flagTraversal;
 
     int graphID = 0;
@@ -75,14 +74,6 @@ struct RTNode {
 
 
 using NodeMap = std::unordered_map<int, RTNode>;
-
-struct NodeRuntimeState {
-
-    int activeAlternativeId = -1;
-    int lastNodeId          = -1;
-};
-
-using NodeStateMap = std::unordered_map<int, NodeRuntimeState>;
 
 struct RTGraph {
 

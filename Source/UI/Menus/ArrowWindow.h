@@ -13,6 +13,7 @@
 
 #include "../../Util/ApplicationContext.h"
 #include "../Buttons/ButtonPane.h"
+#include "ArrowBindBar.h"
 
 enum class ArrowType { Node };
 
@@ -31,7 +32,7 @@ public:
     void resized() override;
 
     static constexpr int defaultWidth  = 220;
-    static constexpr int defaultHeight = 140;
+    static constexpr int defaultHeight = 140 + ArrowBindBar::preferredHeight;
 
 private:
 
@@ -46,7 +47,8 @@ private:
 
     static constexpr ButtonPane::Grid arrowGrid { 56, 56, 8, 10 };
 
-    ButtonPane arrowTypePane;
+    ButtonPane   arrowTypePane;
+    ArrowBindBar bindBar;
 
     std::vector<ArrowTypeButton> arrowTypeButtons;
 };

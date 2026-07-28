@@ -3,10 +3,8 @@
 #include "Canvas/NodeCanvas.h"
 
 BottomBar::BottomBar(ApplicationContext& context)
-    : applicationContext(context)
+    : Bar(context, { Orientation::horizontal, Background::litFromBottom })
 {
-    setLookAndFeel(applicationContext.lookAndFeel);
-
     paintSettingsLauncher.createIfNeeded();
 
     paintTool = std::make_unique<IconButton>(
@@ -72,15 +70,10 @@ void BottomBar::applyPaintSetting(PaintToolSettings::PaintSetting setting)
     }
 }
 
-void BottomBar::paint(juce::Graphics& g)
-{
-    CustomLookAndFeel::get(*this).drawBar(g, getLocalBounds().toFloat(), false);
-}
-
 void BottomBar::resized()
 {
-    auto bounds= getLocalBounds().reduced(4);
-    int  height               = bounds.getHeight();
+    auto bounds = getContentBounds();
+    int  height = bounds.getHeight();
 
     paintTool->setBounds(bounds.removeFromRight(height));
     bounds.removeFromRight(cellGap);

@@ -45,6 +45,8 @@ target_sources(SequenceTree PRIVATE
         Source/Audio/TraversalLogic.cpp
         Source/Audio/TraversalDispatcher.cpp
         Source/Audio/TraversalSession.cpp
+        Source/Audio/TraversalRule.cpp
+        Source/Audio/NodeStateTable.cpp
         Source/Graph/RTGraphBuilder.cpp
         Source/Graph/ValueTreeState.cpp
         Source/Graph/ValueTreeIdentifiers.cpp
@@ -74,6 +76,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Theme/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp
         Source/UI/Menus/ArrowWindow.cpp
+        Source/UI/Menus/ArrowBindBar.cpp
         Source/UI/Menus/ItemSelector.cpp
         Source/UI/Menus/TraversalMenu.cpp
         Source/UI/Menus/MenuArea.cpp
@@ -83,6 +86,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Menus/TraversalRulesWindow.cpp
         Source/UI/PopupWindow.cpp
         Source/UI/Menus/ColourSelector.cpp
+        Source/UI/Bar.cpp
         Source/UI/Titlebar.cpp
         Source/UI/BottomBar.cpp
         Source/UI/Menus/MenuBar.cpp

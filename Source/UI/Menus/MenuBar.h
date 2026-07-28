@@ -5,23 +5,25 @@
 #ifndef SEQUENCETREE_MENUBAR_H
 #define SEQUENCETREE_MENUBAR_H
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include "../../Util/ApplicationContext.h"
+#include "../Bar.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Buttons/IconButton.h"
 
-class MenuBar : public juce::Component {
+class MenuBar : public Bar {
 public:
 
     explicit MenuBar(ApplicationContext& context);
-    void paint(juce::Graphics& g) override;
-    void resized() override;
-
-    ApplicationContext& context;
 
     std::unique_ptr<IconButton> treeIcon = nullptr;
     std::unique_ptr<IconButton> nodeIcon = nullptr;
     std::unique_ptr<IconButton> traversalIcon = nullptr;
+
+private:
+
+    void resized() override;
+
+    static constexpr int iconInset   = 6;
+    static constexpr int maxIconSize = 24;
 };
 
 

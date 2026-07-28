@@ -4,10 +4,9 @@
 
 #include "MenuBar.h"
 
-MenuBar::MenuBar(ApplicationContext& context): context(context)
+MenuBar::MenuBar(ApplicationContext& context)
+    : Bar(context, { Orientation::vertical, Background::flat, iconInset })
 {
-    setLookAndFeel(context.lookAndFeel);
-
     treeIcon = std::make_unique<IconButton>(
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
             CustomLookAndFeel::get(*this).drawTreeIcon(g, bounds, state);
@@ -28,23 +27,17 @@ MenuBar::MenuBar(ApplicationContext& context): context(context)
     addAndMakeVisible(traversalIcon.get());
 }
 
-void MenuBar::paint(juce::Graphics &g)
-{
-    const Theme& theme = CustomLookAndFeel::get(*this);
-    g.setColour(theme.buttonBarColour);
-    g.fillRect(getLocalBounds().toFloat());
-}
-
 void MenuBar::resized()
 {
-    const auto bounds = getLocalBounds();
+    const auto bounds = getContentBounds();
 
     constexpr int numIcons = 3;
-    const int iconSize = juce::jmin(bounds.getWidth() - 12, 24);
 
-    const int gap = (bounds.getHeight() - iconSize * numIcons) / (numIcons + 1);
-    const int x   = (bounds.getWidth() - iconSize) / 2;
-    int y   = gap;
+    const int iconSize = juce::jmin(bounds.getWidth(), maxIconSize);
+    const int gap      = (bounds.getHeight() - iconSize * numIcons) / (numIcons + 1);
+    const int x        = bounds.getX() + (bounds.getWidth() - iconSize) / 2;
+
+    int y = bounds.getY() + gap;
 
     treeIcon->setBounds(x, y, iconSize, iconSize);
     y += iconSize + gap;

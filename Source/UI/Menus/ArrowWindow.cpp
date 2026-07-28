@@ -6,7 +6,7 @@
 #include "../Theme/CustomLookAndFeel.h"
 
 ArrowWindow::ArrowWindow(ApplicationContext& context)
-    : arrowTypePane(context)
+    : arrowTypePane(context), bindBar(context)
 {
     setLookAndFeel(context.lookAndFeel);
 
@@ -21,6 +21,7 @@ ArrowWindow::ArrowWindow(ApplicationContext& context)
     };
 
     addAndMakeVisible(arrowTypePane);
+    addAndMakeVisible(bindBar);
 
     addArrowType(ArrowType::Node, "node arrow",
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
@@ -65,5 +66,8 @@ void ArrowWindow::paint(juce::Graphics& g) {
 }
 
 void ArrowWindow::resized() {
-    arrowTypePane.setBounds(getLocalBounds());
+    auto bounds = getLocalBounds();
+
+    bindBar.setBounds(bounds.removeFromBottom(ArrowBindBar::preferredHeight));
+    arrowTypePane.setBounds(bounds);
 }
