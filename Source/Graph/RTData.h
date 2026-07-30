@@ -49,6 +49,8 @@ struct RTNode {
     int switchCountLimit  = 0;
     int subLoopCountLimit = 0;
 
+    int pitchOffset = 0;
+
     bool isAlternativeNode = false;
 
     int flagTargetId = -1;

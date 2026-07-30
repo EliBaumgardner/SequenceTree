@@ -104,7 +104,7 @@ juce::Point<float> Arrow::getHeadAnchor() const
         return getTip().toFloat();
     }
 
-    const float endRadius = endNode->getHeight() * 0.5f;
+    const float endRadius = endNode->getVisualRadius();
     return endNode->getNodeCentre().toFloat() - geometry.chord * (endRadius + headAnchorInset);
 }
 
@@ -134,7 +134,7 @@ ArrowGeometry Arrow::getGeometry(float animationT) const
     const bool endIsTraversalFlag = endNode != nullptr && endNode->nodeType == NodeType::TraversalFlag;
 
     if (isDangling()) {
-        start += direction * (startNode->getHeight() * 0.5f);
+        start += direction * startNode->getVisualRadius();
     }
     else if (endIsTraversalFlag) {
         const float endHalf        = std::min(endNode->getWidth(), endNode->getHeight()) * 0.5f;
@@ -142,7 +142,7 @@ ArrowGeometry Arrow::getGeometry(float animationT) const
         tip += direction * baseHalfHeight;
     }
     else {
-        tip -= direction * (endNode->getHeight() * 0.5f);
+        tip -= direction * endNode->getVisualRadius();
     }
 
     const juce::Point<float> shaft = tip - start;

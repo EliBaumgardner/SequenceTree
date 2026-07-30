@@ -161,6 +161,12 @@ void NodeManager::setPosition(int nodeId) const
         node->setSize(radius * 4, radius * 4);
         node->setCentrePosition(xPosition, yPosition);
     }
+    else if (node->nodeType == NodeType::Modulator) {
+        const int cornerEditorHeight = juce::roundToInt(height * Modulator::cornerEditorHeightFactor);
+
+        node->setSize(radius * 2, height + cornerEditorHeight * 2);
+        node->setCentrePosition(xPosition, yPosition);
+    }
     else {
         node->setSize(radius * 2, radius * 2);
         node->setCentrePosition(xPosition, yPosition);
@@ -237,6 +243,15 @@ void NodeManager::setDisplayMode(NodeDisplayMode mode) const
 {
     for (auto& [nodeId, node] : nodes) {
         node->setDisplayMode(mode);
+    }
+}
+
+void NodeManager::clearHighlights() const
+{
+    for (auto& [nodeId, node] : nodes) {
+        if (node != nullptr) {
+            node->setHighlightVisual(-1, false, juce::Colours::white);
+        }
     }
 }
 

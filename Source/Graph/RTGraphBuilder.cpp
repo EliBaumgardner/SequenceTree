@@ -185,6 +185,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
         int subLoopLimit     = currentValueTree.getProperty(ValueTreeIdentifiers::SubLoopCountLimit);
 
         int repeatValue = currentValueTree.getProperty(ValueTreeIdentifiers::RepeatValue, ValueTreeState::defaultRepeatValue);
+        int modAmount   = currentValueTree.getProperty(ValueTreeIdentifiers::ModAmount, ValueTreeState::defaultModAmount);
 
         bool isAlternativeNode = (nodeType == ValueTreeIdentifiers::AlternativeNodeData);
 
@@ -246,10 +247,12 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, std::share
                 rtNode.nodeType = RTNode::NodeType::RootNode;
             }
             if (nodeType == ValueTreeIdentifiers::ModulatorRootData) {
-                rtNode.nodeType = RTNode::NodeType::ModulatorRoot;
+                rtNode.nodeType    = RTNode::NodeType::ModulatorRoot;
+                rtNode.pitchOffset = modAmount;
             }
             if (nodeType == ValueTreeIdentifiers::ModulatorData) {
-                rtNode.nodeType = RTNode::NodeType::Modulator;
+                rtNode.nodeType    = RTNode::NodeType::Modulator;
+                rtNode.pitchOffset = modAmount;
             }
             if (nodeType == ValueTreeIdentifiers::TraversalFlagData) {
                 rtNode.nodeType = RTNode::NodeType::TraversalFlagData;

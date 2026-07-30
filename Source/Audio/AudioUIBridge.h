@@ -93,9 +93,16 @@ public:
             || counts.hasPending();
     }
 
+    static constexpr int allNodes = -1;
+
     void highlightNode(int nodeId, bool shouldHighlight, int traversalId = -1)
     {
         highlights.push({ nodeId, shouldHighlight, traversalId });
+    }
+
+    void clearAllHighlights()
+    {
+        highlightNode(allNodes, false);
     }
 
     void highlightNode(const RTNode& node, bool shouldHighlight, int traversalId = -1)

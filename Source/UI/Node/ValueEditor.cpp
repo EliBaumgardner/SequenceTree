@@ -272,6 +272,19 @@ void ValueEditor::enableSignedValue(int min, int max)
     textEditor->setInputRestrictions(4, "-0123456789");
 }
 
+void ValueEditor::disableSignedValue()
+{
+    if (! signedMode) {
+        return;
+    }
+
+    signedMode = false;
+    minValue   = 1;
+    maxValue   = std::numeric_limits<int>::max();
+
+    textEditor->setInputRestrictions(4, "0123456789");
+}
+
 void ValueEditor::enablePlusRequiredValue()
 {
     requirePlusMode = true;
@@ -292,6 +305,15 @@ void ValueEditor::textEditorFocusLost(juce::TextEditor&)
 void ValueEditor::setMinimumValue(int min)
 {
     minValue = min;
+}
+
+double ValueEditor::clampToRange(double value) const
+{
+    if (decimalMode) {
+        return juce::jlimit(minDecimalValue, maxDecimalValue, value);
+    }
+
+    return juce::jlimit((double) minValue, (double) maxValue, value);
 }
 
 void ValueEditor::commitValue()

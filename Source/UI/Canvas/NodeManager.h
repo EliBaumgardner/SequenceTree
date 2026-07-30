@@ -35,6 +35,7 @@ public:
     void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY) const;
 
     void setDisplayMode(NodeDisplayMode mode) const;
+    void clearHighlights() const;
     void equipRootTraversals() const;
     void setInterceptsClicks(bool shouldIntercept) const;
 

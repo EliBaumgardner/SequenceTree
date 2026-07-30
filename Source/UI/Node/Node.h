@@ -50,6 +50,8 @@ public:
 
     virtual juce::Point<int> getNodeCentre() const { return getBounds().getCentre(); }
 
+    virtual float getVisualRadius() const { return getHeight() * 0.5f; }
+
     virtual void setDisplayMode(NodeDisplayMode mode);
     void incrementNodeValue(int incrementValue);
     void refreshValueDisplay();

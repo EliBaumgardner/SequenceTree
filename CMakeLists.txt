@@ -46,6 +46,8 @@ target_sources(SequenceTree PRIVATE
         Source/Audio/TraversalDispatcher.cpp
         Source/Audio/TraversalSession.cpp
         Source/Audio/TraversalRule.cpp
+        Source/Audio/RTScript.cpp
+        Source/Audio/ScriptTraversalRule.cpp
         Source/Audio/NodeStateTable.cpp
         Source/Graph/RTGraphBuilder.cpp
         Source/Graph/ValueTreeState.cpp

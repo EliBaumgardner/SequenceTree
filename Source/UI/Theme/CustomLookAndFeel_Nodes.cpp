@@ -16,24 +16,20 @@ juce::Rectangle<float> CustomLookAndFeel::getNodeCircleBounds(juce::Rectangle<fl
                .withPosition(componentBounds.getX() + nodeCirclePad, componentBounds.getY() + nodeCirclePad);
 }
 
-void CustomLookAndFeel::drawNode(juce::Graphics& g, const NodeVisual& visual)
-{
-    const juce::Rectangle<float> componentBounds = visual.bounds;
+namespace {
+    constexpr float highlightRingWidth   = 1.25f;
+    constexpr float highlightRingSpacing = 2.0f;
 
-    static constexpr float shadowDX   = 2.0f;
-    static constexpr float shadowDY   = 2.0f;
-    static constexpr float shadowBlur = 4.0f;
-
-    auto  circleBounds = getNodeCircleBounds(componentBounds);
-    auto circleFill   = circleBounds.reduced(0.5f);
-    auto circleSelect = circleBounds.reduced(2.0f);
-    auto circleHover  = circleBounds.reduced(0.5f);
-
+    void paintNodeShadow(juce::Graphics& g, juce::Rectangle<float> shapeBounds)
     {
-        float innerR       = circleBounds.getWidth() * 0.5f;
-        float outerR       = innerR + shadowBlur;
-        auto  shadowCenter = circleBounds.getCentre() + juce::Point<float>(shadowDX, shadowDY);
-        auto  shadowBounds = juce::Rectangle<float>(outerR * 2.0f, outerR * 2.0f).withCentre(shadowCenter);
+        static constexpr float shadowDX   = 2.0f;
+        static constexpr float shadowDY   = 2.0f;
+        static constexpr float shadowBlur = 4.0f;
+
+        const float innerR       = shapeBounds.getWidth() * 0.5f;
+        const float outerR       = innerR + shadowBlur;
+        const auto  shadowCenter = shapeBounds.getCentre() + juce::Point<float>(shadowDX, shadowDY);
+        const auto  shadowBounds = juce::Rectangle<float>(outerR * 2.0f, outerR * 2.0f).withCentre(shadowCenter);
 
         juce::ColourGradient gradient(
             juce::Colours::black.withAlpha(0.15f), shadowCenter.x, shadowCenter.y,
@@ -45,31 +41,14 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const NodeVisual& visual)
         g.fillEllipse(shadowBounds);
     }
 
-    g.setColour(visual.colour);
-    g.fillEllipse(circleFill);
-
-    if (! visual.highlights.empty()) {
-        constexpr float highlightRingWidth = 1.25f;
-        constexpr float highlightRingSpacing = 2.0f;
-
-        int ringIndex = 0;
-        for (const auto& highlight : visual.highlights) {
-            float inset = highlightRingWidth * 0.5f + static_cast<float>(ringIndex) * highlightRingSpacing;
-            auto highlightRing = circleFill.reduced(inset);
-
-            g.setColour(highlight.second);
-            g.drawEllipse(highlightRing, highlightRingWidth);
-            ++ringIndex;
-        }
+    float highlightRingInset(int ringIndex)
+    {
+        return highlightRingWidth * 0.5f + static_cast<float>(ringIndex) * highlightRingSpacing;
     }
 
-    if (visual.isHovered) {
-        g.drawEllipse(circleHover, 2.0f);
-    }
-
-    if (visual.isSelected) {
-        juce::Path dottedPath;
-        dottedPath.addEllipse(circleSelect);
+    void strokeDashedOutline(juce::Graphics& g, const juce::Path& outline)
+    {
+        juce::Path dottedPath = outline;
 
         juce::PathStrokeType stroke(0.325f);
         float dashLengths[] = { 0.935f, 0.935f };
@@ -77,6 +56,66 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const NodeVisual& visual)
 
         g.setColour(juce::Colours::black);
         g.strokePath(dottedPath, stroke);
+    }
+}
+
+void CustomLookAndFeel::drawNode(juce::Graphics& g, const NodeVisual& visual)
+{
+    auto circleBounds = getNodeCircleBounds(visual.bounds);
+    auto circleFill   = circleBounds.reduced(0.5f);
+    auto circleSelect = circleBounds.reduced(2.0f);
+    auto circleHover  = circleBounds.reduced(0.5f);
+
+    paintNodeShadow(g, circleBounds);
+
+    g.setColour(visual.colour);
+    g.fillEllipse(circleFill);
+
+    int ringIndex = 0;
+    for (const auto& highlight : visual.highlights) {
+        g.setColour(highlight.second);
+        g.drawEllipse(circleFill.reduced(highlightRingInset(ringIndex)), highlightRingWidth);
+        ++ringIndex;
+    }
+
+    if (visual.isHovered) {
+        g.drawEllipse(circleHover, 2.0f);
+    }
+
+    if (visual.isSelected) {
+        juce::Path outline;
+        outline.addEllipse(circleSelect);
+        strokeDashedOutline(g, outline);
+    }
+}
+
+void CustomLookAndFeel::drawModulatorNode(juce::Graphics& g, const NodeVisual& visual)
+{
+    auto squareBounds = visual.bounds;
+    auto squareFill   = squareBounds.reduced(0.5f);
+    auto squareSelect = squareBounds.reduced(2.0f);
+    auto squareHover  = squareBounds.reduced(0.5f);
+
+    paintNodeShadow(g, squareBounds);
+
+    g.setColour(visual.colour);
+    g.fillRect(squareFill);
+
+    int ringIndex = 0;
+    for (const auto& highlight : visual.highlights) {
+        g.setColour(highlight.second);
+        g.drawRect(squareFill.reduced(highlightRingInset(ringIndex)), highlightRingWidth);
+        ++ringIndex;
+    }
+
+    if (visual.isHovered) {
+        g.drawRect(squareHover, 2.0f);
+    }
+
+    if (visual.isSelected) {
+        juce::Path outline;
+        outline.addRectangle(squareSelect);
+        strokeDashedOutline(g, outline);
     }
 }
 
@@ -247,7 +286,7 @@ namespace {
         const float length = delta.getDistanceFromOrigin();
         if (length > 0.0f) {
             const juce::Point<float> unit = delta / length;
-            shaftStart += unit * (arrow.startNode->getHeight() * 0.5f);
+            shaftStart += unit * arrow.startNode->getVisualRadius();
             shaftEnd   -= unit * headLength;
         }
 

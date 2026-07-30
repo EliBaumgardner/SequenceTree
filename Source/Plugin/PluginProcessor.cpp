@@ -234,9 +234,10 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         traversalSession.silenceAllNotes(midiMessages);
     }
 
-    const bool playing = isPlaying.load();
+    const bool playing   = isPlaying.load();
+    const bool suspended = wasPlaying && !playing;
 
-    if (wasPlaying && !playing) {
+    if (suspended) {
         traversalSession.suspendActiveNotes(midiMessages);
     }
 
@@ -247,9 +248,10 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     if (!playing || !snap || !snap->globalNodes) {
         if (resetHit) {
             traversalSession.clearTraversals();
-            if (notifyUi) {
-                notifyUi();
-            }
+        }
+
+        if ((resetHit || suspended) && notifyUi) {
+            notifyUi();
         }
         return;
     }

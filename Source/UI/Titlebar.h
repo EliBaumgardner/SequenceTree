@@ -33,14 +33,19 @@ private:
 
     void configureDisplaySelector();
     void configureModePane();
+    void configureTransportPane();
     void configureUndoRedoPane();
     void setControllerMode(NodeController::NodeControllerMode mode);
     void setDanglingArrowMode(bool shouldBeActive);
 
+    void togglePlayback();
+    void resetTraversals();
+
+    ButtonPane           transportPane;
     ButtonPane           buttonPane;
     ItemSelector         displaySelector;
     TempoDisplay         tempoDisplay;
-    std::unique_ptr<IconButton> playButton;
-    std::unique_ptr<IconButton> resetButton;
     ButtonPane           undoRedoPane;
+
+    IconButton*          playButton = nullptr;
 };
