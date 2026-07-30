@@ -248,7 +248,7 @@ void Node::setDisplayMode(NodeDisplayMode mode)
 
 void Node::incrementNodeValue(int incrementValue) {
     double editorValue = nodeValueEditor.boundValue.toString().getDoubleValue();
-    editorValue += incrementValue;
+    editorValue = nodeValueEditor.clampToRange(editorValue + incrementValue);
 
     nodeValueEditor.boundValue.setValue(editorValue);
     refreshValueDisplay();

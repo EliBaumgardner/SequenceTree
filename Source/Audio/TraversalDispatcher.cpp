@@ -206,17 +206,21 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
         duration = resolveDuration(node, nextTarget, traversalLogic.primary.last, nodes, activeTraversalId);
     }
 
+    int transpose = traversalLogic.traversal.transpose;
+
     if (modulatorNode != nullptr && traversalLogic.mod.walker.target != -1) {
         nextModulatorTarget = traversalLogic.peekModulators(nodes);
         int modulatorDuration = resolveDuration(*modulatorNode, nextModulatorTarget, traversalLogic.mod.walker.last, nodes, activeTraversalId);
         duration = static_cast<int>(duration * (0.001 * modulatorDuration));
+
+        transpose += modulatorNode->pitchOffset;
     }
 
 
-    scheduler.scheduleNote(node, instanceId, sample, context.midiMessages, sampleRate, tempoMultiplier, duration, false, traversalLogic.traversal.channel, traversalLogic.traversal.transpose, traversalLogic.traversal.velocityMultiplier, pitchOverride, velocityOverride);
+    scheduler.scheduleNote(node, instanceId, sample, context.midiMessages, sampleRate, tempoMultiplier, duration, false, traversalLogic.traversal.channel, transpose, traversalLogic.traversal.velocityMultiplier, pitchOverride, velocityOverride);
 
     int chordParentCount = traversalLogic.nodeState.get(NodeStateSlot::Count, node.nodeID) + 1;
-    pushChordNotes(node, sample, duration, sampleRate, tempoMultiplier, context, chordParentCount, traversalLogic);
+    pushChordNotes(node, sample, duration, sampleRate, tempoMultiplier, context, chordParentCount, traversalLogic, transpose);
 
     const int wallClockMs = static_cast<int>(duration / tempoMultiplier);
 
@@ -505,7 +509,7 @@ void TraversalDispatcher::startFlagTraversal(const RTNode& flagNode, int hostTyp
 void TraversalDispatcher::pushChordNotes(const RTNode& node, int sample, int duration,
                                           double sampleRate, double tempoMultiplier,
                                           const DispatchContext& context, int parentCount,
-                                          TraversalLogic& traversalLogic)
+                                          TraversalLogic& traversalLogic, int transpose)
 {
     const NodeMap& nodes = context.nodes;
 
@@ -551,7 +555,7 @@ void TraversalDispatcher::pushChordNotes(const RTNode& node, int sample, int dur
             }
 
             scheduler.scheduleNote(chordNode, -1, sample, context.midiMessages,
-                                   sampleRate, tempoMultiplier, duration, false, traversalLogic.traversal.channel, traversalLogic.traversal.transpose, traversalLogic.traversal.velocityMultiplier);
+                                   sampleRate, tempoMultiplier, duration, false, traversalLogic.traversal.channel, transpose, traversalLogic.traversal.velocityMultiplier);
 
             bridge.highlightNode(chordNode, true, traversalLogic.traversal.traversalId);
 

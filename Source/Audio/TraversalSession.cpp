@@ -11,7 +11,15 @@ TraversalSession::TraversalSession(EventManager& eventManager) : eventManager(ev
 
 void TraversalSession::prepare()
 {
-    traversals.prepare(maxConcurrentTraversals);
+    selectChildScript = makeNativeSelectChildScript();
+    scriptRule.setScript(&selectChildScript);
+
+    if (useScriptedChildSelection) {
+        traversals.prepare(maxConcurrentTraversals, scriptRule);
+    }
+    else {
+        traversals.prepare(maxConcurrentTraversals, NativeTraversalRule::instance());
+    }
 }
 
 void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
@@ -21,10 +29,9 @@ void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
         if (NoteScheduler::isNodeAudible(note.nodeType) && !note.isConnectionTrigger) {
             midiMessages.addEvent(juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch), 0);
         }
-
-        eventManager.bridge.highlightNode(note.nodeId, false);
     }
 
+    eventManager.bridge.clearAllHighlights();
     eventManager.scheduler.activeNotes.clear();
 }
 
@@ -39,6 +46,8 @@ void TraversalSession::suspendActiveNotes(juce::MidiBuffer& midiMessages)
     for (const auto& note : eventManager.scheduler.activeNotes) {
         eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
     }
+
+    eventManager.bridge.clearAllHighlights();
 }
 
 void TraversalSession::restartActiveTraversals(const NodeMap& nodes, RTGraphs& rtGraphs,

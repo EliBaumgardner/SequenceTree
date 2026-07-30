@@ -2,6 +2,7 @@
 
 #include "../Util/PluginModules.h"
 #include "TraversalPool.h"
+#include "ScriptTraversalRule.h"
 #include "../Graph/RTData.h"
 
 class EventManager;
@@ -59,6 +60,11 @@ private:
     EventManager& eventManager;
 
     TraversalPool traversals;
+
+    RTScript            selectChildScript;
+    ScriptTraversalRule scriptRule;
+
+    static constexpr bool useScriptedChildSelection = true;
 
     static constexpr int scratchCapacity           = 256;
     static constexpr int maxConcurrentTraversals   = 128;

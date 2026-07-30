@@ -3,10 +3,13 @@
 //
 
 #include "CustomLookAndFeel.h"
+#include "Glyphs.h"
 #include "Buttons/ButtonConstants.h"
 #include "../Buttons/PaintToolSettings.h"
 
 namespace {
+    constexpr float transportGlyphInsetRatio = 0.2f;
+
     void fillArrowGlyph(juce::Graphics& g, juce::Rectangle<float> glyphArea,
                         float shaftThicknessFactor, float headLengthFactor, float headWidthFactor)
     {
@@ -20,12 +23,8 @@ namespace {
         const float headLength = glyphArea.getWidth()  * headLengthFactor;
         const float headWidth  = glyphArea.getHeight() * headWidthFactor;
 
-        juce::Path arrowHead;
-        arrowHead.startNewSubPath(head.x, head.y);
-        arrowHead.lineTo(head.x - headLength, head.y - headWidth);
-        arrowHead.lineTo(head.x - headLength, head.y + headWidth);
-        arrowHead.closeSubPath();
-        g.fillPath(arrowHead);
+        fillTriangle(g, { head.x - headLength, head.y - headWidth, headLength, headWidth * 2.0f },
+                     TriangleDirection::right);
     }
 
     void strokeChevronGlyph(juce::Graphics& g, juce::Point<float> tip,
@@ -101,40 +100,19 @@ juce::Colour CustomLookAndFeel::selectableButtonColour(const ButtonState& state)
 
 void CustomLookAndFeel::drawPlayIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
-    auto area = bounds.toNearestInt().reduced(5);
+    const auto area = bounds.reduced(bounds.getWidth() * transportGlyphInsetRatio);
 
-    if (state.isHovered) {
-        g.setColour(buttonColour.brighter());
-
-    }
-    else if (state.isDown) {
-        g.setColour(buttonColour.darker());
-    }
-    else {
-        g.setColour(buttonColour);
-    }
+    g.setColour(pressableButtonColour(state));
 
     if (state.isSelected) {
-        juce::Path playButton;
-        playButton.startNewSubPath((float)area.getX(), (float)area.getY());
-        playButton.lineTo((float)area.getRight(), (float)area.getCentreY());
-        playButton.lineTo((float)area.getX(), (float)area.getBottom());
-        playButton.closeSubPath();
-        g.fillPath(playButton);
+        fillTriangle(g, area, TriangleDirection::right);
+        return;
     }
-    else {
-        int barWidth = area.getWidth() / 5;
-        int gap = barWidth;
-        int barHeight = area.getHeight();
-        int x1 = area.getX() + barWidth;
-        int x2 = x1 + barWidth + gap;
 
-        juce::Rectangle<int> leftBar(x1, area.getY(), barWidth, barHeight);
-        juce::Rectangle<int> rightBar(x2, area.getY(), barWidth, barHeight);
+    const float barWidth = area.getWidth() / 5.0f;
 
-        g.fillRect(leftBar);
-        g.fillRect(rightBar);
-    }
+    g.fillRect(area.withWidth(barWidth).withX(area.getX() + barWidth));
+    g.fillRect(area.withWidth(barWidth).withX(area.getX() + barWidth * 3.0f));
 }
 
 void CustomLookAndFeel::drawSyncIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
@@ -188,12 +166,7 @@ void CustomLookAndFeel::drawUndoIcon(juce::Graphics &g, juce::Rectangle<float> b
 
     g.setColour(pressableButtonColour(state));
 
-    juce::Path path;
-    path.startNewSubPath((float)area.getRight(), (float)area.getY());
-    path.lineTo((float)area.getX(), (float)area.getCentreY());
-    path.lineTo((float)area.getRight(), (float)area.getBottom());
-    path.closeSubPath();
-    g.fillPath(path);
+    fillTriangle(g, area, TriangleDirection::left);
 }
 
 void CustomLookAndFeel::drawRedoIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
@@ -202,21 +175,20 @@ void CustomLookAndFeel::drawRedoIcon(juce::Graphics &g, juce::Rectangle<float> b
 
     g.setColour(pressableButtonColour(state));
 
-    juce::Path path;
-    path.startNewSubPath((float)area.getX(), (float)area.getY());
-    path.lineTo((float)area.getRight(), (float)area.getCentreY());
-    path.lineTo((float)area.getX(), (float)area.getBottom());
-    path.closeSubPath();
-    g.fillPath(path);
+    fillTriangle(g, area, TriangleDirection::right);
 }
 
 void CustomLookAndFeel::drawResetIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
-    auto area = bounds.reduced(outerButtonBoundsReduction);
+    auto area = bounds.reduced(bounds.getWidth() * transportGlyphInsetRatio);
+
+    const float gap           = area.getWidth() * 0.1f;
+    const float triangleWidth = (area.getWidth() - gap) * 0.5f;
 
     g.setColour(pressableButtonColour(state));
 
-    g.fillRect(area);
+    fillTriangle(g, area.removeFromLeft (triangleWidth), TriangleDirection::left);
+    fillTriangle(g, area.removeFromRight(triangleWidth), TriangleDirection::left);
 }
 
 void CustomLookAndFeel::drawDisplayArrowIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, const ButtonState& state)
@@ -225,44 +197,16 @@ void CustomLookAndFeel::drawDisplayArrowIcon(juce::Graphics &g, juce::Rectangle<
 
     g.setColour(selectableButtonColour(state));
 
-
-    float triangleHeight = bounds.getHeight() * 0.9f;
-    float centreY = bounds.getCentreY();
-    float topY    = centreY - triangleHeight / 2.0f;
-    float bottomY = centreY + triangleHeight / 2.0f;
-
-    juce::Path vPath;
-    vPath.startNewSubPath(bounds.getX(), topY);
-    vPath.lineTo(bounds.getCentreX(), bottomY);
-    vPath.lineTo(bounds.getRight(), topY);
-    vPath.closeSubPath();
-
-    g.fillPath(vPath);
+    fillTriangle(g, bounds.withSizeKeepingCentre(bounds.getWidth(), bounds.getHeight() * 0.9f),
+                 TriangleDirection::down);
 }
 
 void CustomLookAndFeel::drawIncrementIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, bool pointsUp)
 {
-    auto bounds = boundsIn.reduced(4.0f, 1.0f);
-    auto w = bounds.getWidth();
-    auto h = bounds.getHeight();
-    auto x = bounds.getX();
-    auto y = bounds.getY();
-
-    juce::Path path;
-    if (pointsUp) {
-        path.startNewSubPath(x,              y + h);
-        path.lineTo         (x + w * 0.5f,   y);
-        path.lineTo         (x + w,          y + h);
-    }
-    else {
-        path.startNewSubPath(x,              y);
-        path.lineTo         (x + w * 0.5f,   y + h);
-        path.lineTo         (x + w,          y);
-    }
-    path.closeSubPath();
-
     g.setColour(juce::Colours::black);
-    g.fillPath(path);
+
+    fillTriangle(g, boundsIn.reduced(4.0f, 1.0f),
+                 pointsUp ? TriangleDirection::up : TriangleDirection::down);
 }
 
 void CustomLookAndFeel::drawTextButton(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state,

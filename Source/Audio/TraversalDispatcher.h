@@ -60,7 +60,7 @@ private:
     void pushChordNotes(const RTNode& node, int sample, int duration,
                         double sampleRate, double tempoMultiplier,
                         const DispatchContext& context, int parentCount,
-                        TraversalLogic& traversalLogic);
+                        TraversalLogic& traversalLogic, int transpose);
 
     void dispatchPrimaryArrow(const RTNode& node, const RTNode* nextTarget,
                               int rootId, int wallClockMs, int colourTraversalId);

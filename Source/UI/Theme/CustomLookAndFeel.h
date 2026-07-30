@@ -54,6 +54,7 @@ public:
     static juce::Rectangle<float> getNodeCircleBounds(juce::Rectangle<float> componentBounds);
 
     void drawNode          (juce::Graphics& g, const NodeVisual& visual);
+    void drawModulatorNode (juce::Graphics& g, const NodeVisual& visual);
     void drawRootRectangle (juce::Graphics& g, juce::Rectangle<float> bounds);
 
     void drawArrow          (juce::Graphics& g, const Arrow& arrow);

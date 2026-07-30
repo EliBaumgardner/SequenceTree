@@ -68,7 +68,7 @@ public:
     static constexpr int defaultSubLoopCountLimit {1};
     static constexpr int defaultRootLoopLimit     {0};
     static constexpr int defaultRepeatValue       {1};
-    static constexpr int defaultModAmount         {1};
+    static constexpr int defaultModAmount         {0};
     static constexpr int defaultMidiChannel       {1};
     static constexpr int defaultTempoMult         {1};
 

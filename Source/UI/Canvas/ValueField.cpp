@@ -265,7 +265,7 @@ void ValueField::seedStrokeDensityFromNodes()
         const float seed  = juce::jlimit(0.0f, 1.0f, value / 127.0f);
 
         const auto  centre = node->getNodeCentre().toFloat();
-        const float nodeR  = node->getBounds().getHeight() * 0.5f;
+        const float nodeR  = node->getVisualRadius();
         const float nodeR2 = nodeR * nodeR;
 
         const int x0 = juce::jmax(0,     (int) std::floor(centre.x - nodeR));
@@ -392,7 +392,7 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
         }
 
         const auto  centre = node->getNodeCentre().toFloat();
-        const float nodeR  = node->getBounds().getHeight() * 0.5f;
+        const float nodeR  = node->getVisualRadius();
 
         const float px = centre.x - from.x;
         const float py = centre.y - from.y;

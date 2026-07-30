@@ -15,11 +15,19 @@ class Modulator : public Node {
     public:
 
     explicit Modulator(ApplicationContext& context);
-    void resized() override;
-    void paint(juce::Graphics& g) override;
+    void  paint(juce::Graphics& g) override;
+    void  resized() override;
+    bool  hitTest(int x, int y) override;
+    float getVisualRadius() const override;
+    void  setDisplayMode(NodeDisplayMode mode) override;
 
-    private:
-    juce::Colour outlineColour = juce::Colours::black;
+    juce::Rectangle<float> getSquareBounds() const;
+
+    static constexpr int minimumPitchOffset = -48;
+    static constexpr int maximumPitchOffset =  48;
+
+    static constexpr float cornerEditorHeightFactor = 0.30f;
+    static constexpr float cornerEditorWidthFactor  = 0.45f;
 };
 
 #endif //SEQUENCETREE_MODULATOR_H

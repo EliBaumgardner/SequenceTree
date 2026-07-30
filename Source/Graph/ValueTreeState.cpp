@@ -206,6 +206,7 @@ juce::ValueTree ValueTreeState::addModulatorNode(juce::ValueTree parentNode, con
     setNodeCountProperties(undoManager, modulatorNode);
 
     modulatorNode.setProperty(ValueTreeIdentifiers::RootNodeId, rootId, undoManager);
+    modulatorNode.setProperty(ValueTreeIdentifiers::ModAmount, defaultModAmount, undoManager);
     modulatorNode.setProperty(ValueTreeIdentifiers::Id, newNodeId, undoManager);
     modulatorNodeId.setProperty(ValueTreeIdentifiers::Id, newNodeId, undoManager);
 

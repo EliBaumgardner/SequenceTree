@@ -35,8 +35,10 @@ public:
     void setPitchMode(bool shouldShowPitchNames);
     void setEditable(bool shouldBeEditable);
     void enableSignedValue(int min, int max);
+    void disableSignedValue();
     void enablePlusRequiredValue();
     void setMinimumValue(int min);
+    double clampToRange(double value) const;
     void valueChanged(juce::Value&) override;
     void commitValue();
 

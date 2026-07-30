@@ -49,6 +49,11 @@ void AudioCommandDrainer::drainHighlights() const
     applicationContext.processor->eventManager.bridge.highlights.drain(
         [this](const AudioUIBridge::HighlightCommand& command)
     {
+        if (command.nodeId == AudioUIBridge::allNodes) {
+            canvas.nodeManager.clearHighlights();
+            return;
+        }
+
         Node* const node = canvas.nodeManager.find(command.nodeId);
         if (node == nullptr) {
             return;

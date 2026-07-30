@@ -18,53 +18,23 @@
 
 Titlebar::Titlebar(ApplicationContext& context)
     : Bar(context, { Orientation::horizontal, Background::litFromTop }),
+      transportPane(context),
       buttonPane(context),
       displaySelector(context),
       tempoDisplay(context),
       undoRedoPane(context)
 {
-    playButton = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawPlayIcon(g, bounds, state);
-        }, context.lookAndFeel);
-
-    resetButton = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawResetIcon(g, bounds, state);
-        }, context.lookAndFeel);
-
-    playButton->setTooltip("Play / Pause");
-    playButton->setSelected(true);
-    resetButton->setTooltip("Reset");
-
-    addAndMakeVisible(playButton.get());
-    addAndMakeVisible(resetButton.get());
+    addAndMakeVisible(transportPane);
     addAndMakeVisible(tempoDisplay);
     addAndMakeVisible(buttonPane);
     addAndMakeVisible(displaySelector);
     addAndMakeVisible(undoRedoPane);
 
+    configureTransportPane();
     configureModePane();
     configureUndoRedoPane();
 
     configureDisplaySelector();
-
-    playButton->onClick = [this]() {
-        NodeCanvas& canvas = *applicationContext.canvas;
-        jassert(&canvas);
-
-        playButton->setSelected(!playButton->isSelected());
-
-        canvas.start = !canvas.start;
-        canvas.setProcessorPlayblack(canvas.start);
-    };
-
-    resetButton->onClick = [this]() {
-        applicationContext.processor->resetRequested.store(true);
-        if (auto* canvas = applicationContext.canvas) {
-            canvas->arrowManager.resetAllProgress();
-        }
-    };
 
     auto applyMultiplier = [this]() {
         double value = tempoDisplay.editor.getText().getDoubleValue();
@@ -100,6 +70,45 @@ void Titlebar::configureDisplaySelector()
     addDisplayMode(5, "show repeatValue", NodeDisplayMode::RepeatValue);
 
     displaySelector.setSelectedItem(1);
+}
+
+void Titlebar::configureTransportPane()
+{
+    playButton = &transportPane.addButton(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawPlayIcon(g, bounds, state);
+        },
+        "Play / Pause",
+        [this]() { togglePlayback(); });
+
+    playButton->setSelected(true);
+
+    transportPane.addButton(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawResetIcon(g, bounds, state);
+        },
+        "Reset",
+        [this]() { resetTraversals(); });
+}
+
+void Titlebar::togglePlayback()
+{
+    NodeCanvas& canvas = *applicationContext.canvas;
+    jassert(&canvas);
+
+    playButton->setSelected(!playButton->isSelected());
+
+    canvas.start = !canvas.start;
+    canvas.setProcessorPlayblack(canvas.start);
+}
+
+void Titlebar::resetTraversals()
+{
+    applicationContext.processor->resetRequested.store(true);
+
+    if (auto* canvas = applicationContext.canvas) {
+        canvas->arrowManager.resetAllProgress();
+    }
 }
 
 void Titlebar::configureModePane()
@@ -164,7 +173,7 @@ void Titlebar::setDanglingArrowMode(bool shouldBeActive)
 
 void Titlebar::paintOverBar(juce::Graphics& g)
 {
-    drawSeparator(g, (resetButton->getRight() + tempoDisplay.getX()) / 2);
+    drawSeparator(g, (transportPane.getRight() + tempoDisplay.getX()) / 2);
     drawSeparator(g, (tempoDisplay.getRight() + undoRedoPane.getX()) / 2);
     drawSeparator(g, (buttonPane.getRight() + displaySelector.getX()) / 2);
 }
@@ -173,16 +182,13 @@ void Titlebar::resized()
 {
     auto bounds = getContentBounds();
 
-    int buttonSize = std::min(bounds.getHeight(), bounds.getWidth() / 25);
+    int transportPaneWidth = bounds.getWidth() / 8;
     int tempoDisplayWidth = bounds.getWidth() / 8;
     int buttonPaneWidth = bounds.getWidth() / 8;
     int displaySelectorWidth = bounds.getWidth() / 8;
     int undoRedoPaneWidth = bounds.getWidth() / 8;
 
-    playButton->setBounds(bounds.removeFromLeft(buttonSize));
-    bounds.removeFromLeft(contentSpacing);
-
-    resetButton->setBounds(bounds.removeFromLeft(buttonSize));
+    transportPane.setBounds(bounds.removeFromLeft(transportPaneWidth));
     bounds.removeFromLeft(contentSpacing);
 
     tempoDisplay.setBounds(bounds.removeFromLeft(tempoDisplayWidth));
