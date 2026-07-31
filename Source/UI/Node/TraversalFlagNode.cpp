@@ -7,6 +7,7 @@
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
 #include "../../Util/ApplicationContext.h"
+#include "../Theme/CustomLookAndFeel.h"
 
 #include <cmath>
 
@@ -139,14 +140,16 @@ void TraversalFlagNode::paint(juce::Graphics& g)
 {
     const auto bounds = getLocalBounds().toFloat();
 
-    juce::Path triangle = buildTrianglePath();
+    const float pulseScale = isHighlighted
+                           ? 1.0f + 0.1f * std::sin(pulsePhase * juce::MathConstants<float>::pi)
+                           : 1.0f;
 
-    if (isHighlighted) {
-        const float pulseScale = 1.0f + 0.1f * std::sin(pulsePhase * juce::MathConstants<float>::pi);
-        triangle.applyTransform(juce::AffineTransform::scale(pulseScale, pulseScale,
+    const auto pulseTransform = juce::AffineTransform::scale(pulseScale, pulseScale,
                                                              bounds.getCentreX(),
-                                                             bounds.getCentreY()));
-    }
+                                                             bounds.getCentreY());
+
+    juce::Path triangle = buildTrianglePath();
+    triangle.applyTransform(pulseTransform);
 
     if (isHighlighted) {
         g.setColour(nodeColour.darker());
@@ -164,13 +167,9 @@ void TraversalFlagNode::paint(juce::Graphics& g)
     }
 
     if (isSelected) {
-        juce::Path dottedPath = triangle;
+        const auto& theme = CustomLookAndFeel::get(*this);
 
-        const juce::PathStrokeType stroke(0.325f);
-        const float dashLengths[] = { 2.935f, 2.935f };
-        stroke.createDashedStroke(dottedPath, dottedPath, dashLengths, 2);
-
-        g.setColour(juce::Colours::black);
-        g.strokePath(dottedPath, stroke);
+        g.setColour(theme.selectionRingColour);
+        g.strokePath(triangle, juce::PathStrokeType(Theme::selectionRimWidth));
     }
 }

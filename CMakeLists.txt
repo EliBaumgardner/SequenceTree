@@ -65,6 +65,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Canvas/ArrowHoverController.cpp
         Source/Input/NodeCreationDispatcher.cpp
         Source/Input/ConnectionOps.cpp
+        Source/Input/SelectionOps.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
         Source/UI/Node/Arrow.cpp

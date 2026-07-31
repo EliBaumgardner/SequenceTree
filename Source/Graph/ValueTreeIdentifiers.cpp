@@ -21,6 +21,8 @@ const juce::Identifier ValueTreeIdentifiers::ModulatorData        {"ModulatorDat
 
 const juce::Identifier ValueTreeIdentifiers::NodeChildrenIds      {"NodeChildrenIds"};
 
+const juce::Identifier ValueTreeIdentifiers::SelectionClipboard   {"SelectionClipboard"};
+
 const juce::Identifier ValueTreeIdentifiers::MidiNotesData        {"MidiNotesData"};
 const juce::Identifier ValueTreeIdentifiers::MidiNoteData         {"MidiNoteData"};
 

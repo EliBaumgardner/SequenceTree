@@ -104,6 +104,29 @@ void NodeController::showArrowContextMenu(Arrow* arrow)
     });
 }
 
+void NodeController::showSelectionMenu(juce::Point<int> canvasPoint)
+{
+    const bool hasSelection = selectionOps.hasSelection();
+
+    juce::PopupMenu menu;
+    menu.setLookAndFeel(applicationContext.lookAndFeel);
+
+    menu.addItem(SelectionMenuItem::copy,   "copy",   hasSelection);
+    menu.addItem(SelectionMenuItem::paste,  "paste",  selectionOps.hasClipboard());
+    menu.addItem(SelectionMenuItem::remove, "delete", hasSelection);
+
+    menu.showMenuAsync(juce::PopupMenu::Options(), [this, canvasPoint] (int result)
+    {
+        switch (result)
+        {
+            case SelectionMenuItem::copy:   selectionOps.copySelection();   break;
+            case SelectionMenuItem::paste:  selectionOps.pasteAt(canvasPoint); break;
+            case SelectionMenuItem::remove: selectionOps.deleteSelection(); break;
+            default: break;
+        }
+    });
+}
+
 void NodeController::hideGrid(NodeCanvas& canvas) const
 {
     if (canvas.showGrid) {
@@ -237,6 +260,11 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
         return;
     }
 
+    if (dragState == DragState::BoxSelecting) {
+        finishBoxSelection(*canvas);
+        return;
+    }
+
     if (dragState == DragState::ArrowSelected) {
         dragState = DragState::Idle;
     }
@@ -298,6 +326,9 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e, NodeCanvas
             showArrowContextMenu(clickedArrow);
             return;
         }
+
+        showSelectionMenu(e.getEventRelativeTo(&canvas).getPosition());
+        return;
     }
 
     if (!e.mods.isShiftDown()) {
@@ -325,6 +356,7 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e, NodeCanvas
         }
 
         canvas.arrowManager.clearSelection();
+        clearNodeSelection(canvas);
     }
 
     if (auto* dynamicPort = dynamic_cast<DynamicPort*>(canvas.getParentComponent())) {
@@ -332,6 +364,11 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e, NodeCanvas
     }
 
     if (e.mods.isShiftDown() && e.mods.isLeftButtonDown()) {
+        if (!isNodeCreationModeActive(canvas)) {
+            beginBoxSelection(e.getEventRelativeTo(&canvas).getPosition(), canvas);
+            return;
+        }
+
         NodePosition nodePosition;
         nodePosition.xPosition = e.x;
         nodePosition.yPosition = e.y;
@@ -340,6 +377,54 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e, NodeCanvas
         undoManager->beginNewTransaction();
         NodeFactory::createRootNode(*applicationContext.valueTreeState, nodePosition, undoManager);
     }
+}
+
+bool NodeController::isNodeCreationModeActive(const NodeCanvas& canvas) const
+{
+    return !canvas.danglingArrowLayer.isArrowMode();
+}
+
+void NodeController::clearNodeSelection(NodeCanvas& canvas)
+{
+    for (auto& [nodeId, node] : canvas.nodeManager.all()) {
+        if (node->isSelected) {
+            node->setSelectVisual(false);
+        }
+    }
+}
+
+void NodeController::beginBoxSelection(const juce::Point<int>& clickPoint, NodeCanvas& canvas)
+{
+    dragState       = DragState::BoxSelecting;
+    selectionAnchor = clickPoint;
+
+    canvas.selectionBounds = {};
+
+    clearNodeSelection(canvas);
+}
+
+void NodeController::updateBoxSelection(const juce::MouseEvent& e, NodeCanvas& canvas)
+{
+    const juce::Point<int> cursor = e.getEventRelativeTo(&canvas).getPosition();
+
+    canvas.selectionBounds = juce::Rectangle<int>(selectionAnchor, cursor);
+    canvas.repaint();
+}
+
+void NodeController::finishBoxSelection(NodeCanvas& canvas)
+{
+    const juce::Rectangle<int> selection = canvas.selectionBounds;
+
+    for (auto& [nodeId, node] : canvas.nodeManager.all()) {
+        if (selection.contains(node->getNodeCentre())) {
+            node->setSelectVisual(true);
+        }
+    }
+
+    canvas.selectionBounds = {};
+    dragState              = DragState::Idle;
+
+    canvas.repaint();
 }
 
 void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
@@ -517,6 +602,11 @@ void NodeController::handleCanvasMouseDrag(const juce::MouseEvent& e, NodeCanvas
         newPosition.radius    = defaultNodeRadius;
 
         handleNodeDrag(applicationContext.undoManager, nodeId, newPosition);
+        return;
+    }
+
+    if (dragState == DragState::BoxSelecting) {
+        updateBoxSelection(e, canvas);
         return;
     }
 
