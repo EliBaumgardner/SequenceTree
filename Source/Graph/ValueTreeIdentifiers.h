@@ -29,6 +29,8 @@ public:
 
     static const juce::Identifier NodeChildrenIds;
 
+    static const juce::Identifier SelectionClipboard;
+
     static const juce::Identifier MidiNotesData;
     static const juce::Identifier MidiNoteData;
 

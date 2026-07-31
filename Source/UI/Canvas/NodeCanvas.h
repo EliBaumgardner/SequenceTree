@@ -66,6 +66,8 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         juce::Point<float> gridOrigin { 0.0f, 0.0f };
         float gridSpacing = 50.0f;
 
+        juce::Rectangle<int> selectionBounds;
+
         juce::ValueTree canvasTree {"CanvasTree"};
 
         std::vector<AsyncUpdate> asyncUpdates;

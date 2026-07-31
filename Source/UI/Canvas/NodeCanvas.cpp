@@ -38,6 +38,16 @@ void NodeCanvas::paint(juce::Graphics& g)
         g.setImageResamplingQuality(juce::Graphics::mediumResamplingQuality);
         g.drawImage(valueField.image, getLocalBounds().toFloat());
     }
+
+    if (!selectionBounds.isEmpty()) {
+        const Theme& theme = CustomLookAndFeel::get(*this);
+
+        g.setColour(theme.selectionBoxColour.withAlpha(0.15f));
+        g.fillRect(selectionBounds);
+
+        g.setColour(theme.selectionBoxColour);
+        g.drawRect(selectionBounds, 1);
+    }
 }
 
 void NodeCanvas::enqueueAsyncUpdate(const AsyncUpdate& update)

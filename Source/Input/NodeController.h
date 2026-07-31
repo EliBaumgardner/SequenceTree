@@ -15,6 +15,7 @@
 #include "../UI/PopupWindow.h"
 #include "NodeCreationDispatcher.h"
 #include "ConnectionOps.h"
+#include "SelectionOps.h"
 
 
 class NodeCanvas;
@@ -73,7 +74,14 @@ private:
         MovingDanglingTip,
         ArrowSelected,
         CreatingDanglingArrow,
-        ConnectingFlag
+        ConnectingFlag,
+        BoxSelecting
+    };
+
+    enum SelectionMenuItem {
+        copy = 1,
+        paste,
+        remove
     };
 
     void handleCanvasMouseDown (const juce::MouseEvent& e, NodeCanvas& canvas);
@@ -85,6 +93,15 @@ private:
     void dragValue         (const juce::MouseEvent& e);
     void dragDanglingTip   (const juce::MouseEvent& e, NodeCanvas& canvas);
     void dragFlagConnection(const juce::MouseEvent& e, Node& node, const NodePosition& newPosition);
+
+    bool isNodeCreationModeActive (const NodeCanvas& canvas) const;
+
+    void clearNodeSelection (NodeCanvas& canvas);
+    void beginBoxSelection  (const juce::Point<int>& clickPoint, NodeCanvas& canvas);
+    void updateBoxSelection (const juce::MouseEvent& e, NodeCanvas& canvas);
+    void finishBoxSelection (NodeCanvas& canvas);
+
+    void showSelectionMenu(juce::Point<int> canvasPoint);
 
     void finishArrowHeadDrag         (NodeCanvas& canvas);
     void finishDanglingTipDrag       (NodeCanvas& canvas);
@@ -109,6 +126,7 @@ private:
     ApplicationContext& applicationContext;
 
     ConnectionOps connectionOps { applicationContext };
+    SelectionOps  selectionOps  { applicationContext };
 
     DragState dragState = DragState::Idle;
 
@@ -129,6 +147,8 @@ private:
     Node*  draggingValueNode       = nullptr;
 
     juce::Point<float> dragParentCenter;
+
+    juce::Point<int> selectionAnchor;
 
     juce::ValueTree draggedNodeTree;
 

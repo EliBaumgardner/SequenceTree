@@ -30,11 +30,18 @@ struct Theme
     juce::Colour traversalMenuColour = darkBrownColour;
     juce::Colour textColour          = baseLightColour1;
 
+    juce::Colour selectionBoxColour  = baseDarkColour2;
+    juce::Colour selectionRingColour = juce::Colours::black;
+
     juce::Colour arrowColour         = juce::Colours::black;
     juce::Colour arrowProgressColour = baseLightColour2;
     juce::Colour arrowHeadColour     = juce::Colours::black;
 
-    static constexpr float nodeCirclePad = 2.0f;
+    static constexpr float selectionRingGap   = 1.5f;
+    static constexpr float selectionRingWidth = 1.25f;
+    static constexpr float selectionRimWidth  = 3.0f;
+
+    static constexpr float nodeCirclePad = 4.0f;
 
     static constexpr float paneCornerRadius = 4.0f;
 

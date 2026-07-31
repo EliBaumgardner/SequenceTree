@@ -82,23 +82,57 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
     return raw;
 }
 
+void NodeManager::connectIncomingArrows(int nodeId, Node* node) const
+{
+    const juce::ValueTree nodeMapTree = applicationContext.valueTreeState->nodeMap;
+
+    for (int i = 0; i < nodeMapTree.getNumChildren(); ++i) {
+        const juce::ValueTree parentTree = nodeMapTree.getChild(i);
+        const juce::ValueTree parentChildrenIds = parentTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+        if (! parentChildrenIds.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId).isValid()) {
+            continue;
+        }
+
+        const int parentNodeId = parentTree.getProperty(ValueTreeIdentifiers::Id);
+        Node* const parentNode = find(parentNodeId);
+
+        if (parentNode == nullptr || parentNodeId == nodeId) {
+            continue;
+        }
+
+        canvas.arrowManager.connectParentToChild(parentNode, node);
+        applicationContext.rtGraphBuilder->makeRTGraph(parentTree);
+    }
+}
+
+void NodeManager::connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node) const
+{
+    const int nodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+    const juce::ValueTree nodeChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+    for (int i = 0; i < nodeChildrenIds.getNumChildren(); ++i) {
+        const int childNodeId = nodeChildrenIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+        Node* const childNode = find(childNodeId);
+
+        if (childNode == nullptr || childNodeId == nodeId) {
+            continue;
+        }
+
+        canvas.arrowManager.connectParentToChild(node, childNode);
+    }
+}
+
 void NodeManager::add(int nodeId)
 {
-    const juce::ValueTree nodeChildTree  = applicationContext.valueTreeState->getNode(nodeId);
-    const juce::ValueTree nodeParentTree = applicationContext.valueTreeState->getNodeParent(nodeId);
+    const juce::ValueTree nodeChildTree = applicationContext.valueTreeState->getNode(nodeId);
 
     jassert(nodeChildTree.isValid());
 
     Node* const childNode = instantiateFromTree(nodeChildTree);
 
-    if (nodeParentTree.isValid()) {
-        const int parentNodeId = nodeParentTree.getProperty(ValueTreeIdentifiers::Id);
-        Node* const parentNode = find(parentNodeId);
-
-        if (parentNode != nullptr) {
-            canvas.arrowManager.connectParentToChild(parentNode, childNode);
-        }
-    }
+    connectIncomingArrows(nodeId, childNode);
+    connectOutgoingArrows(nodeChildTree, childNode);
 
     if (!canvas.gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
         const NodePosition pos = applicationContext.valueTreeState->getNodePosition(nodeId);

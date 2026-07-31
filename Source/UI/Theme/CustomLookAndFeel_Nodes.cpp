@@ -46,24 +46,13 @@ namespace {
         return highlightRingWidth * 0.5f + static_cast<float>(ringIndex) * highlightRingSpacing;
     }
 
-    void strokeDashedOutline(juce::Graphics& g, const juce::Path& outline)
-    {
-        juce::Path dottedPath = outline;
-
-        juce::PathStrokeType stroke(0.325f);
-        float dashLengths[] = { 0.935f, 0.935f };
-        stroke.createDashedStroke(dottedPath, dottedPath, dashLengths, 2);
-
-        g.setColour(juce::Colours::black);
-        g.strokePath(dottedPath, stroke);
-    }
 }
 
 void CustomLookAndFeel::drawNode(juce::Graphics& g, const NodeVisual& visual)
 {
     auto circleBounds = getNodeCircleBounds(visual.bounds);
     auto circleFill   = circleBounds.reduced(0.5f);
-    auto circleSelect = circleBounds.reduced(2.0f);
+    auto circleSelect = circleBounds.expanded(selectionRingGap + selectionRingWidth * 0.5f);
     auto circleHover  = circleBounds.reduced(0.5f);
 
     paintNodeShadow(g, circleBounds);
@@ -83,9 +72,8 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const NodeVisual& visual)
     }
 
     if (visual.isSelected) {
-        juce::Path outline;
-        outline.addEllipse(circleSelect);
-        strokeDashedOutline(g, outline);
+        g.setColour(selectionRingColour);
+        g.drawEllipse(circleSelect, selectionRingWidth);
     }
 }
 
@@ -93,8 +81,8 @@ void CustomLookAndFeel::drawModulatorNode(juce::Graphics& g, const NodeVisual& v
 {
     auto squareBounds = visual.bounds;
     auto squareFill   = squareBounds.reduced(0.5f);
-    auto squareSelect = squareBounds.reduced(2.0f);
     auto squareHover  = squareBounds.reduced(0.5f);
+    auto squareRim    = squareBounds.reduced(selectionRimWidth * 0.5f);
 
     paintNodeShadow(g, squareBounds);
 
@@ -113,9 +101,8 @@ void CustomLookAndFeel::drawModulatorNode(juce::Graphics& g, const NodeVisual& v
     }
 
     if (visual.isSelected) {
-        juce::Path outline;
-        outline.addRectangle(squareSelect);
-        strokeDashedOutline(g, outline);
+        g.setColour(selectionRingColour);
+        g.drawRect(squareRim, selectionRimWidth);
     }
 }
 
