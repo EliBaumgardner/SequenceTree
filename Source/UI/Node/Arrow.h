@@ -12,7 +12,6 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../../Util/ApplicationContext.h"
-#include "../../Graph/ArrowDuration.h"
 #include "ArrowProgress.h"
 
 class Node;
@@ -41,6 +40,7 @@ public:
 
   bool isDangling() const { return endNode == nullptr; }
   bool isDashed() const;
+  bool isTraversalArrow() const;
   bool connectsTraversalFlag() const;
 
   juce::Point<int>   getTip() const;

@@ -2,6 +2,12 @@
 
 const RTNode* RuleContext::eligibleChild(int childId) const
 {
+    const bool isTreeJumpChild = parent.treeJumpChildren.count(childId) > 0;
+
+    if (isTreeJumpChild && !allowTreeJumpChildren) {
+        return nullptr;
+    }
+
     const auto childIt = nodes.find(childId);
     if (childIt == nodes.end()) {
         return nullptr;
@@ -23,9 +29,11 @@ const RTNode* RuleContext::eligibleChild(int childId) const
         }
     }
 
-    const auto durIt = parent.durationMap.find(childId);
-    if (durIt != parent.durationMap.end() && durIt->second == 0) {
-        return nullptr;
+    if (!isTreeJumpChild) {
+        const auto durIt = parent.durationMap.find(childId);
+        if (durIt != parent.durationMap.end() && durIt->second == 0) {
+            return nullptr;
+        }
     }
 
     const auto disabledIt = parent.disabledTraversalsByChild.find(childId);

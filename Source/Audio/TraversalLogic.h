@@ -72,11 +72,11 @@ public:
         const RTNode* peek   (const NodeMap& nodes, TraversalLogic& owner) const;
     };
 
-    enum class TraversalState { Start, Active, End, Reset };
+    enum class TraversalState { Start, Active, End, Reset, Jump };
 
     struct StepResult
     {
-        enum class Kind { None, EnteredRoot, Advanced, LoopedToRoot, Ended };
+        enum class Kind { None, EnteredRoot, Advanced, LoopedToRoot, JumpedToTree, Ended };
 
         Kind kind = Kind::None;
 
@@ -84,6 +84,8 @@ public:
         int  enteredId      = -1;
         int  referenceOffId = -1;
         int  rootForReset   = -1;
+
+        int  jumpedFromRootId = -1;
 
         int leftAlternativeId    = -1;
         int enteredAlternativeId = -1;
@@ -139,6 +141,7 @@ public:
 private:
 
     int  selectNextChild(const NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible);
+    int  selectTreeJumpChild(const NodeMap& nodes, const RTNode& parent, int parentCount) const;
     void selectSwitchNode(const NodeMap& nodes, int targetId, int& chosenNodeId);
     void registerTrigger(const NodeMap& nodes, int nodeId);
 
@@ -147,8 +150,10 @@ private:
     StepResult enterRoot(const NodeMap& nodes);
     StepResult stepActive(const NodeMap& nodes);
     void       handleLoopReset(const NodeMap& nodes, StepResult& result);
+    void       handleTreeJump(const NodeMap& nodes, StepResult& result);
     void       advanceSubRoot(const NodeMap& nodes, StepResult& result);
     void       fillEndedResult(StepResult& result) const;
 
-    int referenceTargetId = 0;
+    int referenceTargetId   = 0;
+    int pendingJumpTargetId = -1;
 };

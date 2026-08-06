@@ -36,8 +36,9 @@ public:
 
     void refreshFor(const Node* movedNode) const;
 
-    void handleArrowAdded  (int parentNodeId, int childNodeId);
-    void handleArrowRemoved(int parentNodeId, int childNodeId);
+    void handleArrowAdded      (int parentNodeId, int childNodeId);
+    void handleArrowRemoved    (int parentNodeId, int childNodeId);
+    void handleArrowTypeChanged(int parentNodeId, int childNodeId);
 
     void setSelected(Arrow* arrow) const;
     void clearSelection() const;
@@ -52,6 +53,8 @@ public:
     Arrow* snapGhost() const { return snapGhostArrow; }
 
 private:
+
+    juce::ValueTree connectionTreeFor(int startNodeId, int endNodeId) const;
 
     void detach(Arrow* arrow) const;
 

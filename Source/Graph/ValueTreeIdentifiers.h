@@ -38,6 +38,7 @@ public:
     static const juce::Identifier DanglingArrow;
     static const juce::Identifier ArrowTipX;
     static const juce::Identifier ArrowTipY;
+    static const juce::Identifier ArrowType;
 
     // Property Identifiers
 

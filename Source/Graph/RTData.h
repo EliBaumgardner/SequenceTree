@@ -69,6 +69,8 @@ struct RTNode {
 
     std::unordered_map<int, std::unordered_set<int>> disabledTraversalsByChild;
 
+    std::unordered_set<int> treeJumpChildren;
+
     RTtraversal flagTraversal;
 
     int graphID = 0;

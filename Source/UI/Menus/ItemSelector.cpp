@@ -84,6 +84,7 @@ void ItemSelector::showMenu()
     repaint();
 
     juce::PopupMenu menu;
+    menu.setLookAndFeel(applicationContext.lookAndFeel);
 
     for (const Item& item : items) {
         menu.addItem(item.id, item.label);

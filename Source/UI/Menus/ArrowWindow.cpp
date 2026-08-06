@@ -6,7 +6,7 @@
 #include "../Theme/CustomLookAndFeel.h"
 
 ArrowWindow::ArrowWindow(ApplicationContext& context)
-    : arrowTypePane(context), bindBar(context)
+    : applicationContext(context), arrowTypePane(context), bindBar(context)
 {
     setLookAndFeel(context.lookAndFeel);
 
@@ -14,8 +14,12 @@ ArrowWindow::ArrowWindow(ApplicationContext& context)
     arrowTypePane.allowEmptySelection();
 
     arrowTypePane.onSelectionChanged = [this](const IconButton* selected) {
+        const std::optional<ArrowType> arrowType = arrowTypeFor(selected);
+
+        applicationContext.currentArrowType = arrowType.value_or(ArrowType::Node);
+
         if (onArrowTypeChanged) {
-            onArrowTypeChanged(arrowTypeFor(selected));
+            onArrowTypeChanged(arrowType);
         }
     };
 
@@ -31,6 +35,13 @@ ArrowWindow::ArrowWindow(ApplicationContext& context)
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
             CustomLookAndFeel::get(*this).drawPolyphonicArrowIcon(g, bounds, state);
         });
+
+    addArrowType(ArrowType::Traversal, "traversal arrow",
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawTraversalArrowIcon(g, bounds, state);
+        });
+
+    showSelectedArrowType();
 }
 
 ArrowWindow::~ArrowWindow() {
@@ -57,6 +68,19 @@ std::optional<ArrowType> ArrowWindow::arrowTypeFor(const IconButton* button) con
 
 std::optional<ArrowType> ArrowWindow::getSelectedArrowType() const {
     return arrowTypeFor(arrowTypePane.getSelectedButton());
+}
+
+void ArrowWindow::showSelectedArrowType() {
+    if (applicationContext.currentArrowType == ArrowType::Node) {
+        return;
+    }
+
+    for (const ArrowTypeButton& arrowTypeButton : arrowTypeButtons) {
+        if (arrowTypeButton.type == applicationContext.currentArrowType) {
+            arrowTypePane.setSelectedButton(arrowTypeButton.button);
+            return;
+        }
+    }
 }
 
 void ArrowWindow::paint(juce::Graphics& g) {

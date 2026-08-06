@@ -7,8 +7,6 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Theme.h"
-#include "ButtonState.h"
-#include "NodeVisual.h"
 
 class NodeCanvas;
 
@@ -33,7 +31,25 @@ public:
         int newY;
     };
 
+    CustomLookAndFeel();
+
     static CustomLookAndFeel& get(juce::Component& c) { return static_cast<CustomLookAndFeel&>(c.getLookAndFeel()); }
+
+    void drawPopupMenuBackgroundWithOptions (juce::Graphics& g, int width, int height,
+                                             const juce::PopupMenu::Options& options) override;
+
+    void drawPopupMenuItem (juce::Graphics& g, const juce::Rectangle<int>& area,
+                            bool isSeparator, bool isActive, bool isHighlighted, bool isTicked,
+                            bool hasSubMenu, const juce::String& text,
+                            const juce::String& shortcutKeyText,
+                            const juce::Drawable* icon, const juce::Colour* textColourToUse) override;
+
+    void getIdealPopupMenuItemSize (const juce::String& text, bool isSeparator,
+                                    int standardMenuItemHeight,
+                                    int& idealWidth, int& idealHeight) override;
+
+    juce::Font getPopupMenuFont() override;
+    int getPopupMenuBorderSize() override;
 
     void drawEditor         (juce::Graphics& g, CustomTextEditor& editor);
     juce::CaretComponent* createCaretComponent(juce::Component* keyFocusOwner) override;
@@ -80,9 +96,7 @@ public:
     void drawArrowToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawNodeArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawPolyphonicArrowIcon (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-
-    juce::Colour arrowIconTileColour(const ButtonState& state) const;
-
+    void drawTraversalArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawPaintToolSettings (juce::Graphics& g, const PaintToolSettings& paintToolSettings);
 
 };

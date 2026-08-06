@@ -37,6 +37,7 @@ public:
 
     void connectNodes   (int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
     void disconnectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
+    void setArrowType   (int parentNodeId, int childNodeId, ArrowType arrowType, juce::UndoManager* undoManager);
     void removeRootNode (int rootNodeId, juce::UndoManager* undoManager);
     void removeNode     (int nodeId, juce::UndoManager* undoManager);
     void removeNodeTree (int treeId, juce::UndoManager* undoManager);
@@ -50,6 +51,7 @@ public:
     juce::ValueTree getNodeParent   (int nodeId);
     juce::ValueTree getMidiNotes    (int nodeId);
     juce::ValueTree getNodeTree     (int treeId);
+    juce::ValueTree getConnection   (int parentNodeId, int childNodeId);
 
     int  getNodeIdIncrement() const  { return nodeIdIncrement; }
     void setNodeIdIncrement(int value) { nodeIdIncrement = value; }

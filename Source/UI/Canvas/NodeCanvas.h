@@ -36,7 +36,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
     public:
 
-        enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved,DurationOnly,ValueChanged,DanglingArrowsChanged,ArrowAdded,ArrowRemoved};
+        enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved,DurationOnly,ValueChanged,DanglingArrowsChanged,ArrowAdded,ArrowRemoved,ArrowTypeChanged};
 
         struct AsyncUpdate {
             AsyncUpdateType type;

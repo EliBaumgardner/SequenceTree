@@ -60,9 +60,24 @@ bool Arrow::isDashed() const
         return true;
     }
 
+    if (isTraversalArrow()) {
+        return false;
+    }
+
     return endNode != nullptr
         && endNode->nodeType == NodeType::Root
         && ! startNode->isAlternativeNode;
+}
+
+bool Arrow::isTraversalArrow() const
+{
+    if (isDangling() || ! arrowTree.isValid()) {
+        return false;
+    }
+
+    const int storedType = arrowTree.getProperty(ValueTreeIdentifiers::ArrowType, (int) ArrowType::Node);
+
+    return storedType == (int) ArrowType::Traversal;
 }
 
 bool Arrow::connectsTraversalFlag() const
@@ -79,7 +94,7 @@ int Arrow::getDuration() const
 
     const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
 
-    return ArrowDuration::fromDelta(delta.x, delta.y, startNode->isAlternativeNode);
+    return arrowDurationFromDelta(delta.x, delta.y, startNode->isAlternativeNode);
 }
 
 juce::String Arrow::getDurationLabel() const

@@ -14,6 +14,8 @@ struct RuleContext
     ChildPredicate        isEligible;
     const NodeStateTable& nodeState;
 
+    bool allowTreeJumpChildren = false;
+
     const RTNode* eligibleChild(int childId) const;
 };
 

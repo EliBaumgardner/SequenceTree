@@ -3,12 +3,47 @@
 //
 
 #include "CustomLookAndFeel.h"
-#include "Glyphs.h"
 #include "Buttons/ButtonConstants.h"
 #include "../Buttons/PaintToolSettings.h"
 
 namespace {
     constexpr float transportGlyphInsetRatio = 0.2f;
+
+    enum class TriangleDirection { left, right, up, down };
+
+    void fillTriangle(juce::Graphics& g, juce::Rectangle<float> bounds, TriangleDirection direction)
+    {
+        juce::Path triangle;
+
+        switch (direction) {
+            case TriangleDirection::left:
+                triangle.startNewSubPath(bounds.getX(),       bounds.getCentreY());
+                triangle.lineTo         (bounds.getRight(),   bounds.getY());
+                triangle.lineTo         (bounds.getRight(),   bounds.getBottom());
+                break;
+
+            case TriangleDirection::right:
+                triangle.startNewSubPath(bounds.getRight(),   bounds.getCentreY());
+                triangle.lineTo         (bounds.getX(),       bounds.getBottom());
+                triangle.lineTo         (bounds.getX(),       bounds.getY());
+                break;
+
+            case TriangleDirection::up:
+                triangle.startNewSubPath(bounds.getCentreX(), bounds.getY());
+                triangle.lineTo         (bounds.getRight(),   bounds.getBottom());
+                triangle.lineTo         (bounds.getX(),       bounds.getBottom());
+                break;
+
+            case TriangleDirection::down:
+                triangle.startNewSubPath(bounds.getCentreX(), bounds.getBottom());
+                triangle.lineTo         (bounds.getX(),       bounds.getY());
+                triangle.lineTo         (bounds.getRight(),   bounds.getY());
+                break;
+        }
+
+        triangle.closeSubPath();
+        g.fillPath(triangle);
+    }
 
     void fillArrowGlyph(juce::Graphics& g, juce::Rectangle<float> glyphArea,
                         float shaftThicknessFactor, float headLengthFactor, float headWidthFactor)
@@ -27,41 +62,13 @@ namespace {
                      TriangleDirection::right);
     }
 
-    void strokeChevronGlyph(juce::Graphics& g, juce::Point<float> tip,
-                            float headLength, float headWidth, float thickness)
-    {
-        juce::Path chevron;
-        chevron.startNewSubPath(tip.x - headLength, tip.y - headWidth);
-        chevron.lineTo(tip.x, tip.y);
-        chevron.lineTo(tip.x - headLength, tip.y + headWidth);
-
-        g.strokePath(chevron, juce::PathStrokeType(thickness,
-                                                   juce::PathStrokeType::curved,
-                                                   juce::PathStrokeType::butt));
-    }
-
-    void strokePolyphonicArrowGlyph(juce::Graphics& g, juce::Rectangle<float> glyphArea,
-                                    float shaftThicknessFactor, float headLengthFactor, float headWidthFactor)
-    {
-        const float headLength = glyphArea.getWidth()  * headLengthFactor;
-        const float headWidth  = glyphArea.getHeight() * headWidthFactor;
-        const float thickness  = glyphArea.getHeight() * shaftThicknessFactor;
-
-        juce::Point<float> frontTip(glyphArea.getRight(),               glyphArea.getCentreY());
-        juce::Point<float> rearTip (frontTip.x - headLength * 0.85f,    glyphArea.getCentreY());
-
-        juce::Path shaft;
-        shaft.addLineSegment(juce::Line<float>({ glyphArea.getX(), glyphArea.getCentreY() }, rearTip), thickness);
-        g.fillPath(shaft);
-
-        strokeChevronGlyph(g, rearTip,  headLength, headWidth, thickness);
-        strokeChevronGlyph(g, frontTip, headLength, headWidth, thickness);
-    }
-
     juce::Rectangle<float> fillArrowIconTile(juce::Graphics& g, juce::Rectangle<float> area,
-                                             juce::Colour tileColour, float cornerRadius)
+                                             const ButtonState& state, juce::Colour buttonColour,
+                                             float cornerRadius)
     {
-        g.setColour(tileColour);
+        const juce::Colour tileColour = state.isSelected ? buttonColour.brighter(0.3f) : buttonColour;
+
+        g.setColour(state.isHovered ? tileColour.brighter(0.15f) : tileColour);
         g.fillRoundedRectangle(area, cornerRadius);
 
         const auto glyphArea = area.reduced(area.getWidth() * 0.18f, area.getHeight() * 0.34f);
@@ -274,31 +281,67 @@ void CustomLookAndFeel::drawArrowToolIcon(juce::Graphics &g, juce::Rectangle<flo
     fillArrowGlyph(g, glyphArea, 0.16f, 0.32f, 0.5f);
 }
 
-juce::Colour CustomLookAndFeel::arrowIconTileColour(const ButtonState& state) const
-{
-    juce::Colour tileColour = state.isSelected ? buttonColour.brighter(0.3f) : buttonColour;
-
-    if (state.isHovered) {
-        return tileColour.brighter(0.15f);
-    }
-
-    return tileColour;
-}
-
 void CustomLookAndFeel::drawNodeArrowIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
-    const auto glyphArea = fillArrowIconTile(g, bounds.reduced(outerButtonBoundsReduction),
-                                             arrowIconTileColour(state), paneCornerRadius);
+    const auto glyphArea = fillArrowIconTile(g, bounds.reduced(outerButtonBoundsReduction), state,
+                                             buttonColour, paneCornerRadius);
 
     fillArrowGlyph(g, glyphArea, 0.16f, 0.32f, 0.5f);
 }
 
 void CustomLookAndFeel::drawPolyphonicArrowIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
-    const auto glyphArea = fillArrowIconTile(g, bounds.reduced(outerButtonBoundsReduction),
-                                             arrowIconTileColour(state), paneCornerRadius);
+    const auto glyphArea = fillArrowIconTile(g, bounds.reduced(outerButtonBoundsReduction), state,
+                                             buttonColour, paneCornerRadius);
 
-    strokePolyphonicArrowGlyph(g, glyphArea, 0.16f, 0.32f, 0.5f);
+    const float headLength = glyphArea.getWidth()  * 0.32f;
+    const float headWidth  = glyphArea.getHeight() * 0.5f;
+    const float thickness  = glyphArea.getHeight() * 0.16f;
+
+    const juce::Point<float> frontTip(glyphArea.getRight(),            glyphArea.getCentreY());
+    const juce::Point<float> rearTip (frontTip.x - headLength * 0.85f, glyphArea.getCentreY());
+
+    juce::Path shaft;
+    shaft.addLineSegment(juce::Line<float>({ glyphArea.getX(), glyphArea.getCentreY() }, rearTip), thickness);
+    g.fillPath(shaft);
+
+    juce::Path chevrons;
+
+    for (juce::Point<float> tip : { rearTip, frontTip }) {
+        chevrons.startNewSubPath(tip.x - headLength, tip.y - headWidth);
+        chevrons.lineTo(tip);
+        chevrons.lineTo(tip.x - headLength, tip.y + headWidth);
+    }
+
+    g.strokePath(chevrons, juce::PathStrokeType(thickness, juce::PathStrokeType::curved,
+                                                juce::PathStrokeType::butt));
+}
+
+void CustomLookAndFeel::drawTraversalArrowIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
+{
+    const auto glyphArea = fillArrowIconTile(g, bounds.reduced(outerButtonBoundsReduction), state,
+                                             buttonColour, paneCornerRadius);
+
+    const float headLength = glyphArea.getWidth()  * 0.32f;
+    const float headWidth  = glyphArea.getHeight() * 0.5f;
+    const float thickness  = glyphArea.getHeight() * 0.16f;
+
+    const juce::Point<float> tip (glyphArea.getRight(), glyphArea.getCentreY());
+    const juce::Point<float> base(tip.x - headLength,   glyphArea.getCentreY());
+
+    juce::Path shaft;
+    shaft.addLineSegment(juce::Line<float>({ glyphArea.getX(), glyphArea.getCentreY() }, base), thickness);
+    g.fillPath(shaft);
+
+    juce::Path head;
+    head.startNewSubPath(base.x, base.y - headWidth);
+    head.lineTo(tip);
+    head.lineTo(base.x, base.y + headWidth);
+    head.closeSubPath();
+
+    g.strokePath(head, juce::PathStrokeType(juce::jmax(1.0f, thickness * 0.6f),
+                                            juce::PathStrokeType::curved,
+                                            juce::PathStrokeType::rounded));
 }
 
 void CustomLookAndFeel::drawPaintToolSettings(juce::Graphics &g, const PaintToolSettings &paintToolSettings) {

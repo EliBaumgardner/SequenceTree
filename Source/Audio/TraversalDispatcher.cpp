@@ -75,6 +75,22 @@ void TraversalDispatcher::applyStepResult(const TraversalLogic::StepResult& step
     }
 }
 
+void TraversalDispatcher::applyTreeJump(const TraversalLogic::StepResult& step,
+                                        TraversalLogic& traversal, TraversalRuntime& runtime)
+{
+    if (step.kind != TraversalLogic::StepResult::Kind::JumpedToTree) {
+        return;
+    }
+
+    if (runtime.originRootId == -1) {
+        runtime.originRootId = step.jumpedFromRootId;
+    }
+
+    bridge.pushArrowReset(step.jumpedFromRootId, traversal.traversal.traversalId);
+
+    applyGraphLoopLimit(traversal, traversal.rootId);
+}
+
 static bool isChordMember(const RTNode& node)
 {
     return NoteScheduler::isNodeAudible(node.nodeType)
@@ -698,7 +714,11 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
             pushNote(traversal.getTargetNode(nodes), instanceId, context, priorityNoteDuration, true);
         } else {
             runtime.repeatCount = 0;
-            applyStepResult(traversal.handleNodeEvent(nodes), nodes, traversal.traversal.traversalId);
+
+            const TraversalLogic::StepResult step = traversal.handleNodeEvent(nodes);
+
+            applyStepResult(step, nodes, traversal.traversal.traversalId);
+            applyTreeJump(step, traversal, runtime);
 
             if (traversal.shouldTraverse() && nodes.find(traversal.primary.target) != nodes.end()) {
                 pushNote(traversal.getTargetNode(nodes), instanceId, context, priorityNoteDuration);

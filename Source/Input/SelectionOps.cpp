@@ -4,7 +4,6 @@
 #include "../UI/Node/NodeFactory.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "../Graph/ValueTreeState.h"
-#include "../Graph/ArrowDuration.h"
 
 #include <algorithm>
 
@@ -144,7 +143,7 @@ bool SelectionOps::wasChordMember(const juce::ValueTree& source) const
 
     const bool parentIsAlternative = parent.getType() == ValueTreeIdentifiers::AlternativeNodeData;
 
-    return ArrowDuration::fromDelta(deltaX, deltaY, parentIsAlternative) == 0;
+    return arrowDurationFromDelta(deltaX, deltaY, parentIsAlternative) == 0;
 }
 
 std::set<int> SelectionOps::findDiscardedOrphans(const std::map<int,int>& parentOf) const
@@ -502,11 +501,16 @@ void SelectionOps::connectClipboardNodes(const PasteLayout& layout) const
         const juce::ValueTree childrenIds = source.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
         for (int child = 0; child < childrenIds.getNumChildren(); ++child) {
-            const int originalChildId = childrenIds.getChild(child).getProperty(ValueTreeIdentifiers::Id);
-            const auto copiedChild    = layout.idMap.find(originalChildId);
+            const juce::ValueTree childId = childrenIds.getChild(child);
+            const int  originalChildId    = childId.getProperty(ValueTreeIdentifiers::Id);
+            const auto copiedChild        = layout.idMap.find(originalChildId);
 
             if (copiedChild != layout.idMap.end()) {
                 state.connectNodes(parentId, copiedChild->second, undoManager);
+
+                const auto arrowType = static_cast<ArrowType>((int) childId.getProperty(ValueTreeIdentifiers::ArrowType,
+                                                                                        (int) ArrowType::Node));
+                state.setArrowType(parentId, copiedChild->second, arrowType, undoManager);
             }
         }
     }

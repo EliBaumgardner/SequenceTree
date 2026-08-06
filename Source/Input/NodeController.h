@@ -84,6 +84,11 @@ private:
         remove
     };
 
+    enum ArrowMenuItem {
+        editAllowedTraversals = 1,
+        traversalArrow
+    };
+
     void handleCanvasMouseDown (const juce::MouseEvent& e, NodeCanvas& canvas);
     void handleNodeMouseDown   (const juce::MouseEvent& e, Node& node);
 
@@ -109,6 +114,10 @@ private:
     void finishDanglingArrowCreation (NodeCanvas& canvas);
     void connectDraggedNodeToRoot    (NodeCanvas& canvas);
 
+    Node* findDanglingSnapRoot   (const Node* startNode, juce::Point<int> tip) const;
+    juce::Point<int> danglingTipFor (const Node* startNode, juce::Point<int> cursor);
+    void  connectDanglingToRoot  (const Node* startNode);
+
     void connectWithSnapAnimation (int parentNodeId, int childNodeId);
     void setDraggedNodeVisible    (bool shouldBeVisible);
 
@@ -131,6 +140,8 @@ private:
     DragState dragState = DragState::Idle;
 
     Arrow* draggingDanglingArrow = nullptr;
+
+    Node* danglingSnapRoot = nullptr;
 
     PopupWindowLauncher allowedTraversalsLauncher { "Allowed Traversals" };
 

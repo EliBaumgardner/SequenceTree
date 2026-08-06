@@ -75,6 +75,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Theme/CustomLookAndFeel.cpp
         Source/UI/Theme/CustomLookAndFeel_Nodes.cpp
         Source/UI/Theme/CustomLookAndFeel_Buttons.cpp
+        Source/UI/Theme/CustomLookAndFeel_Menus.cpp
         Source/UI/Theme/CustomTextEditor.cpp
         Source/UI/Theme/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp

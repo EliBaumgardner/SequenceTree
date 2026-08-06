@@ -72,20 +72,22 @@ void NodeController::showArrowContextMenu(Arrow* arrow)
 
     juce::PopupMenu menu;
     menu.setLookAndFeel(applicationContext.lookAndFeel);
-    menu.addItem(1, "edit allowed traversals");
+    menu.addItem(ArrowMenuItem::editAllowedTraversals, "edit allowed traversals");
+    menu.addItem(ArrowMenuItem::traversalArrow, "traversal arrow",
+                 connectionOps.canBeTraversalArrow(arrow), arrow->isTraversalArrow());
 
     juce::Component::SafePointer<Arrow> safeArrow(arrow);
 
     menu.showMenuAsync(juce::PopupMenu::Options(), [this, safeArrow] (int result)
     {
+        if (safeArrow == nullptr) {
+            return;
+        }
+
         switch (result)
         {
-            case 1:
+            case ArrowMenuItem::editAllowedTraversals:
             {
-                if (safeArrow == nullptr) {
-                    break;
-                }
-
                 juce::ValueTree connection = connectionOps.connectionTreeFor(safeArrow);
                 if (!connection.isValid()) {
                     break;
@@ -97,6 +99,12 @@ void NodeController::showArrowContextMenu(Arrow* arrow)
 
                     return content;
                 });
+                break;
+            }
+            case ArrowMenuItem::traversalArrow:
+            {
+                connectionOps.setArrowType(safeArrow, safeArrow->isTraversalArrow() ? ArrowType::Node
+                                                                                    : ArrowType::Traversal);
                 break;
             }
             default: break;
@@ -149,6 +157,7 @@ void NodeController::endDrag(NodeCanvas& canvas)
     isDragStart      = true;
     snapTargetRoot   = nullptr;
     snapSourceNodeId = -1;
+    danglingSnapRoot = nullptr;
 
     hideGrid(canvas);
 }
@@ -167,11 +176,19 @@ void NodeController::finishArrowHeadDrag(NodeCanvas& canvas)
 
 void NodeController::finishDanglingTipDrag(NodeCanvas& canvas)
 {
-    applicationContext.undoManager->beginNewTransaction();
-    canvas.danglingArrowLayer.commitTip(draggingDanglingArrow);
+    Arrow* const arrow = draggingDanglingArrow;
 
     draggingDanglingArrow = nullptr;
     dragState             = DragState::Idle;
+
+    if (danglingSnapRoot != nullptr) {
+        connectDanglingToRoot(arrow->startNode);
+        canvas.danglingArrowLayer.remove(arrow);
+    }
+    else {
+        applicationContext.undoManager->beginNewTransaction();
+        canvas.danglingArrowLayer.commitTip(arrow);
+    }
 
     hideGrid(canvas);
 }
@@ -193,13 +210,65 @@ void NodeController::finishFlagConnection(NodeCanvas& canvas)
 
 void NodeController::finishDanglingArrowCreation(NodeCanvas& canvas)
 {
-    applicationContext.undoManager->beginNewTransaction();
-    canvas.danglingArrowLayer.commitPreview();
+    if (danglingSnapRoot != nullptr) {
+        Node* const startNode = canvas.danglingArrowLayer.previewStartNode();
+
+        canvas.danglingArrowLayer.cancelPreview();
+        connectDanglingToRoot(startNode);
+    }
+    else {
+        applicationContext.undoManager->beginNewTransaction();
+        canvas.danglingArrowLayer.commitPreview();
+    }
 
     dragState   = DragState::Idle;
     isDragStart = true;
 
     hideGrid(canvas);
+}
+
+Node* NodeController::findDanglingSnapRoot(const Node* startNode, juce::Point<int> tip) const
+{
+    if (startNode == nullptr) {
+        return nullptr;
+    }
+
+    const int startNodeId = startNode->getComponentID().getIntValue();
+
+    Node* const nearestRoot = applicationContext.canvas->hitTester.rootNear(tip.toFloat(), rootSnapThreshold, startNodeId);
+    if (nearestRoot == nullptr) {
+        return nullptr;
+    }
+
+    if (startNode->nodeArrows.count(nearestRoot->getComponentID().getIntValue()) > 0) {
+        return nullptr;
+    }
+
+    return nearestRoot;
+}
+
+juce::Point<int> NodeController::danglingTipFor(const Node* startNode, juce::Point<int> cursor)
+{
+    danglingSnapRoot = findDanglingSnapRoot(startNode, cursor);
+
+    if (danglingSnapRoot != nullptr) {
+        return danglingSnapRoot->getNodeCentre();
+    }
+
+    return snapPointToGrid(cursor);
+}
+
+void NodeController::connectDanglingToRoot(const Node* startNode)
+{
+    Node* const targetRoot = danglingSnapRoot;
+    danglingSnapRoot = nullptr;
+
+    if (startNode == nullptr || targetRoot == nullptr) {
+        return;
+    }
+
+    connectWithSnapAnimation(startNode->getComponentID().getIntValue(),
+                             targetRoot->getComponentID().getIntValue());
 }
 
 void NodeController::connectDraggedNodeToRoot(NodeCanvas& canvas)
@@ -489,6 +558,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
     dragState             = DragState::Idle;
     draggingArrowHeadNode = nullptr;
+    danglingSnapRoot      = nullptr;
 
     if (canvas->paintMode) {
         if (e.mods.isLeftButtonDown() || e.mods.isRightButtonDown()) {
@@ -561,10 +631,10 @@ void NodeController::dragDanglingTip(const juce::MouseEvent& e, NodeCanvas& canv
         return;
     }
 
-    const juce::Point<int> snapped = snapPointToGrid(e.getEventRelativeTo(&canvas).getPosition());
-    const juce::Point<int> centre  = startNode->getNodeCentre();
+    const juce::Point<int> tip    = danglingTipFor(startNode, e.getEventRelativeTo(&canvas).getPosition());
+    const juce::Point<int> centre = startNode->getNodeCentre();
 
-    canvas.danglingArrowLayer.setTip(draggingDanglingArrow, { snapped.x - centre.x, snapped.y - centre.y });
+    canvas.danglingArrowLayer.setTip(draggingDanglingArrow, { tip.x - centre.x, tip.y - centre.y });
 }
 
 void NodeController::dragFlagConnection(const juce::MouseEvent& e, Node& node, const NodePosition& newPosition)
@@ -715,9 +785,9 @@ void NodeController::updateConnectionPreview(Node *node, const NodePosition& new
 
     showGrid(*canvas);
 
-    juce::Point<int> snapped = snapPointToGrid({ newPosition.xPosition, newPosition.yPosition });
-    juce::Point<int> centre  = node->getNodeCentre();
-    canvas->danglingArrowLayer.updatePreview(node, { snapped.x - centre.x, snapped.y - centre.y }, dashed);
+    juce::Point<int> tip    = danglingTipFor(node, { newPosition.xPosition, newPosition.yPosition });
+    juce::Point<int> centre = node->getNodeCentre();
+    canvas->danglingArrowLayer.updatePreview(node, { tip.x - centre.x, tip.y - centre.y }, dashed);
 }
 
 void NodeController::commitFlagConnection(int sourceNodeId, Node* target)

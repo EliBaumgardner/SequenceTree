@@ -39,6 +39,19 @@ Arrow* ArrowManager::find(int parentNodeId, int childNodeId) const
     return nullptr;
 }
 
+juce::ValueTree ArrowManager::connectionTreeFor(int startNodeId, int endNodeId) const
+{
+    ValueTreeState& state = *applicationContext.valueTreeState;
+
+    const juce::ValueTree connection = state.getConnection(startNodeId, endNodeId);
+
+    if (connection.isValid()) {
+        return connection;
+    }
+
+    return state.getConnection(endNodeId, startNodeId);
+}
+
 Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
 {
     const int parentNodeId = parentNode->getComponentID().getIntValue();
@@ -48,6 +61,8 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
     const juce::ValueTree parentMidiNoteData  = parentMidiNotesData.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
 
     auto arrow = std::make_unique<Arrow>(parentNode, childNode, applicationContext);
+
+    arrow->arrowTree = connectionTreeFor(parentNodeId, childNodeId);
 
     parentNode->nodeArrows[childNodeId] = arrow.get();
 
@@ -183,6 +198,18 @@ void ArrowManager::handleArrowAdded(int parentNodeId, int childNodeId)
 
     if (connectParentToChild(parentNode, childNode) == nullptr) {
         return;
+    }
+
+    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(parentNodeId));
+}
+
+void ArrowManager::handleArrowTypeChanged(int parentNodeId, int childNodeId)
+{
+    Arrow* const arrow = find(parentNodeId, childNodeId);
+
+    if (arrow != nullptr) {
+        arrow->arrowTree = connectionTreeFor(parentNodeId, childNodeId);
+        arrow->repaint();
     }
 
     applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(parentNodeId));

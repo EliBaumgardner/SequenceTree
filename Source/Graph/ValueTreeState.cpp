@@ -276,6 +276,16 @@ void ValueTreeState::disconnectNodes(int parentNodeId, int childNodeId, juce::Un
     }
 }
 
+void ValueTreeState::setArrowType(int parentNodeId, int childNodeId, ArrowType arrowType,
+                                  juce::UndoManager* undoManager)
+{
+    juce::ValueTree connection = getConnection(parentNodeId, childNodeId);
+
+    if (connection.isValid()) {
+        connection.setProperty(ValueTreeIdentifiers::ArrowType, static_cast<int>(arrowType), undoManager);
+    }
+}
+
 void ValueTreeState::removeNodeTree(int treeId, juce::UndoManager* undoManager)
 {
     juce::ValueTree nodeTree = nodeTreeMap.getChildWithProperty(ValueTreeIdentifiers::Id,treeId);
@@ -387,6 +397,13 @@ juce::ValueTree ValueTreeState::getNodeParent(int nodeId) {
 juce::ValueTree ValueTreeState::getNodeTree(int nodeTreeId)
 {
     return nodeTreeMap.getChildWithProperty(ValueTreeIdentifiers::Id, nodeTreeId);
+}
+
+juce::ValueTree ValueTreeState::getConnection(int parentNodeId, int childNodeId)
+{
+    juce::ValueTree nodeChildrenIds = getNode(parentNodeId).getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+    return nodeChildrenIds.getChildWithProperty(ValueTreeIdentifiers::Id, childNodeId);
 }
 
 juce::ValueTree ValueTreeState::getNode(int nodeId)

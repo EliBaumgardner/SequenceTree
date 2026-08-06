@@ -37,6 +37,8 @@ struct ApplicationContext
 
     NodeDisplayMode currentDisplayMode = NodeDisplayMode::Pitch;
 
+    ArrowType currentArrowType = ArrowType::Node;
+
     bool isComplete() const
     {
         return processor      != nullptr
