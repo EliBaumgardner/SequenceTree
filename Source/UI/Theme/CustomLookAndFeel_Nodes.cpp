@@ -227,8 +227,8 @@ namespace {
         }
     }
 
-    void drawArrowHead(juce::Graphics& g, juce::Point<float> tip, juce::Point<float> direction,
-                       float headLength, float headWidth, float alpha, juce::Colour colour)
+    juce::Path buildArrowHeadPath(juce::Point<float> tip, juce::Point<float> direction,
+                                  float headLength, float headWidth)
     {
         const juce::Point<float> base = tip - direction * headLength;
         const juce::Point<float> side { -direction.y * headWidth, direction.x * headWidth };
@@ -238,6 +238,26 @@ namespace {
         head.lineTo(tip);
         head.lineTo(base + side);
         head.closeSubPath();
+
+        return head;
+    }
+
+    void strokeArrowHead(juce::Graphics& g, juce::Point<float> tip, juce::Point<float> direction,
+                         float headLength, float headWidth, float alpha, juce::Colour colour,
+                         float thickness)
+    {
+        const juce::Path head = buildArrowHeadPath(tip, direction, headLength, headWidth);
+
+        g.setColour(colour.withAlpha(alpha));
+        g.strokePath(head, juce::PathStrokeType(thickness,
+                                                juce::PathStrokeType::curved,
+                                                juce::PathStrokeType::rounded));
+    }
+
+    void drawArrowHead(juce::Graphics& g, juce::Point<float> tip, juce::Point<float> direction,
+                       float headLength, float headWidth, float alpha, juce::Colour colour)
+    {
+        const juce::Path head = buildArrowHeadPath(tip, direction, headLength, headWidth);
 
         g.setColour(colour.withAlpha(alpha));
         g.fillPath(head);
@@ -351,7 +371,13 @@ void CustomLookAndFeel::drawArrow(juce::Graphics& g, const Arrow& arrow)
     }
 
     if (geometry.drawHead) {
-        drawArrowHead(g, geometry.tip - origin, geometry.direction, headLength, headWidth, alpha, arrowHeadColour);
+        if (arrow.isTraversalArrow()) {
+            strokeArrowHead(g, geometry.tip - origin, geometry.direction, headLength, headWidth, alpha,
+                            arrowHeadColour, arrowHeadOutlineThickness);
+        }
+        else {
+            drawArrowHead(g, geometry.tip - origin, geometry.direction, headLength, headWidth, alpha, arrowHeadColour);
+        }
     }
 
     drawArrowLabel(g, arrow, geometry, headLength, origin);

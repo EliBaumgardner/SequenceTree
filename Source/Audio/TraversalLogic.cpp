@@ -18,6 +18,10 @@ bool isAudibleChild(RTNode::NodeType t) {
     return t == RTNode::NodeType::Node;
 }
 
+bool isTreeJumpChild(RTNode::NodeType t) {
+    return t == RTNode::NodeType::RootNode;
+}
+
 }
 
 static void resetWalker(TraversalLogic::Walker& walker)
@@ -42,9 +46,10 @@ void TraversalLogic::reset(int root, const RTtraversal& newTraversal)
     mod  = {};
     loop = {};
 
-    instanceId        = 0;
-    rootId            = root;
-    referenceTargetId = 0;
+    instanceId          = 0;
+    rootId              = root;
+    referenceTargetId   = 0;
+    pendingJumpTargetId = -1;
 
     state = TraversalState::Start;
 }
@@ -63,6 +68,38 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
     const int chosen = rule->selectChild(context);
 
     nodeState.set(NodeStateSlot::LastNode, parentId, chosen);
+    return chosen;
+}
+
+int TraversalLogic::selectTreeJumpChild(const NodeMap& nodes, const RTNode& parent, int parentCount) const
+{
+    if (parent.treeJumpChildren.empty()) {
+        return -1;
+    }
+
+    const RuleContext context { nodes, parent, parentCount,
+                                traversal.traversalId, &isTreeJumpChild, nodeState, true };
+
+    int chosen   = -1;
+    int maxLimit = 0;
+
+    for (const int childId : parent.children) {
+        if (parent.treeJumpChildren.count(childId) == 0) {
+            continue;
+        }
+
+        const RTNode* child = context.eligibleChild(childId);
+
+        if (child == nullptr) {
+            continue;
+        }
+
+        if (parentCount % child->countLimit == 0 && child->countLimit > maxLimit) {
+            chosen   = childId;
+            maxLimit = child->countLimit;
+        }
+    }
+
     return chosen;
 }
 
@@ -228,6 +265,15 @@ void TraversalLogic::advance(const NodeMap& nodes)
 
     if (chosenNodeId == -1) {
         const int count = nodeState.increment(NodeStateSlot::Count, targetId);
+
+        const int jumpTargetId = selectTreeJumpChild(nodes, targetIterator->second, count);
+
+        if (jumpTargetId != -1) {
+            pendingJumpTargetId = jumpTargetId;
+            state               = TraversalState::Jump;
+            return;
+        }
+
         chosenNodeId = selectNextChild(nodes,targetId, count, &isAdvanceableChild);
 
         if (chosenNodeId != -1) {
@@ -267,6 +313,20 @@ const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes)
 {
     const int count = nodeState.get(NodeStateSlot::Count, primary.target) + 1;
 
+    const auto targetIt = nodes.find(primary.target);
+
+    if (targetIt != nodes.end()) {
+        const int jumpTargetId = selectTreeJumpChild(nodes, targetIt->second, count);
+
+        if (jumpTargetId != -1) {
+            const auto jumpTargetIt = nodes.find(jumpTargetId);
+
+            if (jumpTargetIt != nodes.end()) {
+                return &jumpTargetIt->second;
+            }
+        }
+    }
+
     const int peekTargetId = selectNextChild(nodes,primary.target, count, &isAudibleChild);
 
     if (peekTargetId == -1 || peekTargetId == primary.target) {
@@ -293,6 +353,10 @@ void TraversalLogic::peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& t
         }
 
         for (const int childId : hostIterator->second.children) {
+            if (hostIterator->second.treeJumpChildren.count(childId) > 0) {
+                continue;
+            }
+
             const auto childIterator = nodes.find(childId);
             if (childIterator == nodes.end()) {
                 continue;
@@ -445,6 +509,42 @@ void TraversalLogic::handleLoopReset(const NodeMap& nodes, StepResult& result)
     state = TraversalState::Active;
 }
 
+void TraversalLogic::handleTreeJump(const NodeMap& nodes, StepResult& result)
+{
+    const int jumpTargetId = pendingJumpTargetId;
+    pendingJumpTargetId = -1;
+
+    state = TraversalState::Active;
+
+    const auto jumpTargetIt = nodes.find(jumpTargetId);
+
+    if (jumpTargetIt == nodes.end()) {
+        return;
+    }
+
+    result.kind              = StepResult::Kind::JumpedToTree;
+    result.leftId            = primary.target;
+    result.leftAlternativeId = primary.alternativeLast;
+    result.jumpedFromRootId  = rootId;
+
+    rootId = jumpTargetIt->second.nodeID;
+
+    primary.target            = rootId;
+    primary.subRootNode       = -1;
+    primary.alternativeTarget = -1;
+    primary.alternativeLast   = -1;
+
+    advanceAlternative(nodes, rootId);
+
+    result.enteredId            = rootId;
+    result.enteredAlternativeId = primary.alternativeTarget;
+    result.rootForReset         = rootId;
+
+    loop.active = true;
+    loop.count  = 0;
+    loop.limit  = 0;
+}
+
 TraversalLogic::StepResult TraversalLogic::stepActive(const NodeMap& nodes)
 {
     advance(nodes);
@@ -469,6 +569,10 @@ TraversalLogic::StepResult TraversalLogic::stepActive(const NodeMap& nodes)
 
         case TraversalState::Reset:
             handleLoopReset(nodes, result);
+            break;
+
+        case TraversalState::Jump:
+            handleTreeJump(nodes, result);
             break;
 
         case TraversalState::End:

@@ -17,7 +17,6 @@
 #include "../../Util/NodeInfo.h"
 #include "../../Util/ApplicationContext.h"
 #include "../Buttons/IconButton.h"
-#include "../Theme/NodeVisual.h"
 #include "ValueEditor.h"
 
 

@@ -13,7 +13,6 @@
 #include <unordered_set>
 
 #include "../Plugin/PluginProcessor.h"
-#include "ArrowDuration.h"
 #include "ValueTreeState.h"
 #include "ValueTreeIdentifiers.h"
 
@@ -42,6 +41,26 @@ static void collectDisabledTraversals(const juce::ValueTree& owner, std::unorder
     }
 }
 
+static bool isTreeJumpConnection(const juce::ValueTree& parentValueTree,
+                                 const juce::ValueTree& childIdTree,
+                                 const juce::ValueTree& childValueTree)
+{
+    const int arrowType = childIdTree.getProperty(ValueTreeIdentifiers::ArrowType,
+                                                  static_cast<int>(ArrowType::Node));
+
+    if (arrowType != static_cast<int>(ArrowType::Traversal)) {
+        return false;
+    }
+
+    if (childValueTree.getType() != ValueTreeIdentifiers::RootNodeData) {
+        return false;
+    }
+
+    const int childId = childValueTree.getProperty(ValueTreeIdentifiers::Id);
+
+    return (int) parentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId) != childId;
+}
+
 void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNode& rtNode)
 {
     const bool isAlternative = (nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData);
@@ -49,7 +68,7 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
 
     auto durationTo = [&](const juce::ValueTree& other) {
         const juce::Point<int> delta = nodeCentre(other) - centre;
-        return ArrowDuration::fromDelta(delta.x, delta.y, isAlternative);
+        return arrowDurationFromDelta(delta.x, delta.y, isAlternative);
     };
 
     if (isAlternative) {
@@ -81,7 +100,7 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
         const int tipX = arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX);
         const int tipY = arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY);
 
-        rtNode.durationMap[rtNode.nodeID] = ArrowDuration::fromDelta(tipX, tipY, isAlternative);
+        rtNode.durationMap[rtNode.nodeID] = arrowDurationFromDelta(tipX, tipY, isAlternative);
 
         collectDisabledTraversals(arrowTree, rtNode.disabledTraversalsByChild[rtNode.nodeID]);
     }
@@ -331,6 +350,10 @@ void RTGraphBuilder::createRTNodeConnections(std::shared_ptr<RTGraph> rtGraph, s
             }
 
             rtGraph->nodeMap[id].children.push_back(childId);
+
+            if (isTreeJumpConnection(nodeValueTree, childIdTree, childDataTree)) {
+                rtGraph->nodeMap[id].treeJumpChildren.insert(childId);
+            }
 
             if (childIdTree.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds).isValid()) {
                 collectDisabledTraversals(childIdTree, rtGraph->nodeMap[id].disabledTraversalsByChild[childId]);

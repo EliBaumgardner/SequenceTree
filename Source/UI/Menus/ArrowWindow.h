@@ -15,8 +15,6 @@
 #include "../Buttons/ButtonPane.h"
 #include "ArrowBindBar.h"
 
-enum class ArrowType { Node, Polyphonic };
-
 class ArrowWindow : public juce::Component {
 
 public:
@@ -43,6 +41,8 @@ private:
 
     void addArrowType(ArrowType type, const juce::String& caption, IconButton::Painter painter);
 
+    void showSelectedArrowType();
+
     std::optional<ArrowType> arrowTypeFor(const IconButton* button) const;
 
     static ButtonPane::Grid arrowGridFor(juce::Rectangle<int> bounds);
@@ -56,6 +56,8 @@ private:
 
     static constexpr int minimumCellSize = 24;
     static constexpr int minimumGridGap  = 2;
+
+    ApplicationContext& applicationContext;
 
     ButtonPane   arrowTypePane;
     ArrowBindBar bindBar;

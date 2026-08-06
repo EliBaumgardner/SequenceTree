@@ -15,6 +15,8 @@ struct TraversalRuntime
     int  sourceNodeId   = -1;
     bool pendingRemoval = false;
 
+    int  originRootId   = -1;
+
     int  repeatCount = 0;
 
     bool isSpawned() const { return asFlag || asCrossTree; }

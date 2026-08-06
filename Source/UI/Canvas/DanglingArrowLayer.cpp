@@ -55,6 +55,11 @@ void DanglingArrowLayer::commitPreview()
     add(node, tipOffset);
 }
 
+Node* DanglingArrowLayer::previewStartNode() const
+{
+    return preview != nullptr ? preview->startNode : nullptr;
+}
+
 void DanglingArrowLayer::cancelPreview()
 {
     preview.reset();

@@ -52,12 +52,65 @@ juce::ValueTree ConnectionOps::connectionTreeFor(const Arrow* arrow) const
     return ownerChildren.getChildWithProperty(ValueTreeIdentifiers::Id, childNodeId);
 }
 
+bool ConnectionOps::connectsToOtherTreeRoot(int parentNodeId, int childNodeId) const
+{
+    const juce::ValueTree childTree = applicationContext.valueTreeState->getNode(childNodeId);
+
+    if (childTree.getType() != ValueTreeIdentifiers::RootNodeData) {
+        return false;
+    }
+
+    const juce::ValueTree parentTree = applicationContext.valueTreeState->getNode(parentNodeId);
+
+    return (int) parentTree.getProperty(ValueTreeIdentifiers::RootNodeId) != childNodeId;
+}
+
+bool ConnectionOps::canBeTraversalArrow(const Arrow* arrow) const
+{
+    if (arrow == nullptr || arrow->startNode == nullptr || arrow->endNode == nullptr) {
+        return false;
+    }
+
+    const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
+
+    return connectsToOtherTreeRoot(ownerNodeId, childNodeId);
+}
+
+void ConnectionOps::setArrowType(const Arrow* arrow, ArrowType arrowType)
+{
+    if (! canBeTraversalArrow(arrow)) {
+        return;
+    }
+
+    const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
+
+    juce::UndoManager* undoManager = applicationContext.undoManager;
+
+    undoManager->beginNewTransaction();
+    applicationContext.valueTreeState->setArrowType(ownerNodeId, childNodeId, arrowType, undoManager);
+}
+
+void ConnectionOps::applySelectedArrowType(int parentNodeId, int childNodeId)
+{
+    if (applicationContext.currentArrowType != ArrowType::Traversal) {
+        return;
+    }
+
+    if (! connectsToOtherTreeRoot(parentNodeId, childNodeId)) {
+        return;
+    }
+
+    applicationContext.valueTreeState->setArrowType(parentNodeId, childNodeId, ArrowType::Traversal,
+                                                    applicationContext.undoManager);
+}
+
 void ConnectionOps::connect(int parentNodeId, int childNodeId)
 {
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
     undoManager->beginNewTransaction();
     applicationContext.valueTreeState->connectNodes(parentNodeId, childNodeId, undoManager);
+    applySelectedArrowType(parentNodeId, childNodeId);
 
     applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(parentNodeId));
 }

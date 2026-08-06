@@ -6,7 +6,6 @@
 #define SEQUENCETREE_ICONBUTTON_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../Theme/ButtonState.h"
 #include "../Theme/Theme.h"
 
 class IconButton : public juce::Component, public juce::SettableTooltipClient {

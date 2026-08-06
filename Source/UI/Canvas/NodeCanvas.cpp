@@ -98,6 +98,9 @@ void NodeCanvas::handleAsyncUpdate() {
         else if (updateType == AsyncUpdateType::ArrowRemoved) {
             arrowManager.handleArrowRemoved(nodeId, asyncUpdate.rootNodeId);
         }
+        else if (updateType == AsyncUpdateType::ArrowTypeChanged) {
+            arrowManager.handleArrowTypeChanged(nodeId, asyncUpdate.rootNodeId);
+        }
     }
 
     const bool fieldNeedsRefresh = ! asyncUpdates.empty();

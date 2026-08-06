@@ -34,6 +34,9 @@ public:
 
     void applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes, int traversalId);
 
+    void applyTreeJump(const TraversalLogic::StepResult& step, TraversalLogic& traversal,
+                       TraversalRuntime& runtime);
+
     void advancePendingFlags(int numSamples, const DispatchContext& context);
 
     void clearPendingFlags();

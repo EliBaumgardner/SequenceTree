@@ -112,4 +112,11 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
 
         enqueueDanglingArrowsChanged(tree.getParent().getParent());
     }
+    else if (propertyIdentifier == ValueTreeIdentifiers::ArrowType) {
+        NodeCanvas::AsyncUpdate update;
+        update.type       = NodeCanvas::AsyncUpdateType::ArrowTypeChanged;
+        update.nodeId     = tree.getParent().getParent().getProperty(ValueTreeIdentifiers::Id);
+        update.rootNodeId = tree.getProperty(ValueTreeIdentifiers::Id);
+        canvas.enqueueAsyncUpdate(update);
+    }
 }

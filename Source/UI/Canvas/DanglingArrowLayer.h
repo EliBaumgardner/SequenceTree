@@ -27,6 +27,7 @@ public:
     void commitPreview();
     void cancelPreview();
     bool hasPreview() const { return preview != nullptr; }
+    Node* previewStartNode() const;
 
     void add(const Node* node, juce::Point<int> tipOffset) const;
     void remove(Arrow* arrow) const;

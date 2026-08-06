@@ -3,6 +3,15 @@
 
 #include <algorithm>
 
+static int homeRootId(const TraversalPool::Instance& instance)
+{
+    if (instance.runtime.originRootId != -1) {
+        return instance.runtime.originRootId;
+    }
+
+    return instance.logic.rootId;
+}
+
 TraversalSession::TraversalSession(EventManager& eventManager) : eventManager(eventManager)
 {
     activeRootIdScratch.reserve(scratchCapacity);
@@ -62,7 +71,7 @@ void TraversalSession::restartActiveTraversals(const NodeMap& nodes, RTGraphs& r
             continue;
         }
 
-        const int rootId = instance.logic.rootId;
+        const int rootId = homeRootId(instance);
 
         if (std::find(restartRootScratch.begin(), restartRootScratch.end(), rootId)
             == restartRootScratch.end()) {
@@ -107,7 +116,7 @@ void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
             continue;
         }
 
-        auto rootIt = nodes.find(logic.rootId);
+        auto rootIt = nodes.find(homeRootId(instance));
         if (rootIt == nodes.end()) {
             continue;
         }
@@ -128,7 +137,7 @@ void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiB
         const TraversalLogic&          traverser = instance.logic;
 
         bool stillAssigned = false;
-        auto rootIt = nodes.find(traverser.rootId);
+        auto rootIt = nodes.find(homeRootId(instance));
 
         if (rootIt != nodes.end()) {
             if (instance.runtime.asFlag) {
@@ -164,15 +173,15 @@ void TraversalSession::startMissingTraversals(const NodeMap& nodes, RTGraphs& rt
             continue;
         }
 
-        if (std::find(activeRootIdScratch.begin(), activeRootIdScratch.end(), instance.logic.rootId)
+        if (std::find(activeRootIdScratch.begin(), activeRootIdScratch.end(), homeRootId(instance))
             == activeRootIdScratch.end()) {
-            activeRootIdScratch.push_back(instance.logic.rootId);
+            activeRootIdScratch.push_back(homeRootId(instance));
         }
     }
 
     auto isActive = [this](int rootId, int traversalId) {
         for (const auto& [id, instance] : traversals) {
-            if (instance.logic.rootId == rootId && instance.logic.traversal.traversalId == traversalId) {
+            if (homeRootId(instance) == rootId && instance.logic.traversal.traversalId == traversalId) {
                 return true;
             }
         }
