@@ -31,6 +31,8 @@ void ArrowBindBar::configureFieldSelector()
 }
 
 void ArrowBindBar::configureField(BindField& field)
+
+
 {
     configureAxis(field.x, "X");
     configureAxis(field.y, "Y");

@@ -13,6 +13,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../../Util/ApplicationContext.h"
 #include "ArrowProgress.h"
+#include "ValueEditor.h"
 
 class Node;
 
@@ -73,6 +74,8 @@ public:
 
   juce::Point<int> tipOffset;
 
+  std::unique_ptr<ValueEditor> valueEditor;
+
   juce::ValueTree arrowTree;
   juce::ValueTree boundNodeValueTree;
   juce::Value bindValue;
@@ -89,6 +92,8 @@ public:
   static inline const float labelVisibleThreshold {0.8f};
   static inline const float headAnchorInset     {8.0f};
   static inline const int   arrowBoundsPadding  {40};
+  static inline const int   valueEditorWidth    {30};
+  static inline const int   valueEditorHeight   {12};
 
   float animT = 1.0f;
 

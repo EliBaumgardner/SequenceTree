@@ -12,6 +12,7 @@
 #include "../Buttons/ButtonPane.h"
 #include "../Buttons/IconButton.h"
 #include "../ResizablePanel.h"
+#include "../UI/LabelPanel.h"
 
 class TraversalRulesWindow : public juce::Component {
 
@@ -64,7 +65,25 @@ private:
 
     private:
 
+        class PanelTitlebar : public Bar {
+
+        public:
+
+            explicit PanelTitlebar(ApplicationContext& context);
+
+            std::function<void()> onAddClicked;
+
+        private:
+
+            void resized() override;
+
+            std::unique_ptr<IconButton> addButton;
+        };
+
         int minimumWidth() const override { return minPanelWidth; }
+
+        PanelTitlebar               panelTitlebar;
+        std::unique_ptr<LabelPanel> labelPanel = nullptr;
     };
 
     int  clampPanelWidth(int newWidth) const;
@@ -74,6 +93,7 @@ private:
     RulesPanel    rulesPanel;
 
     int panelWidth = RulesPanel::defaultPanelWidth;
+
 };
 
 #endif //SEQUENCETREE_TRAVERSALRULESWINDOW_H

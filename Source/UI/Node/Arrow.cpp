@@ -25,8 +25,11 @@ Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, ApplicationContext& co
     : startNode(startNode), tipOffset(tipOffset)
 {
     setLookAndFeel(context.lookAndFeel);
-    setInterceptsMouseClicks(false, false);
+    setInterceptsMouseClicks(false, true);
     bindValue.addListener(this);
+
+    valueEditor = std::make_unique<ValueEditor>(context);
+    addAndMakeVisible(*valueEditor);
 }
 
 void Arrow::paint(juce::Graphics &g) {
@@ -267,6 +270,12 @@ void Arrow::setArrowBounds()
     const juce::Path shaft = buildShaftPath(geometry, 0.0f, {});
 
     setBounds(shaft.getBounds().expanded((float)arrowBoundsPadding).toNearestInt());
+
+    if (valueEditor != nullptr) {
+        valueEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight)
+                                   .withCentre(getTip() - getPosition()));
+    }
+
     repaint();
 }
 

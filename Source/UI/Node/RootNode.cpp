@@ -120,15 +120,20 @@ void RootNode::resized() {
     rootRectangle->setBounds(0, rectY, rw + 8, rectHeight);
 
     const juce::Rectangle<int> circleArea = bounds.withTrimmedLeft(rw);
-    juce::Rectangle<int> editorArea = CustomLookAndFeel::getNodeCircleBounds(circleArea.toFloat()).toNearestInt().reduced(6);
+    juce::Rectangle<int> editorArea = CustomLookAndFeel::getNodeCircleBounds(circleArea.toFloat()).toNearestInt().reduced(editorAreaBoundsReduction);
 
-    upButton->setBounds(editorArea.removeFromTop(4));
-    downButton->setBounds(editorArea.removeFromBottom(4));
+    const int buttonHeight = juce::jmax(2, (int)(editorArea.getHeight() * 0.2f));
+
+    upButton->setBounds(editorArea.removeFromTop(buttonHeight));
+    downButton->setBounds(editorArea.removeFromBottom(buttonHeight));
 
     nodeValueEditor.setBounds(editorArea);
 
-    countEditor.setBounds(circleArea.getRight() - 18, circleArea.getY(), 18, 12);
-    switchCountEditor.setBounds( circleArea.getRight() - 18, circleArea.getBottom() - 12, 18, 12);
-    subLoopLimitEditor.setBounds(circleArea.getBottomLeft().getX(), circleArea.getBottom() - 12, 18, 12);
+    const int editorWidth  = (int)(circleArea.getWidth()  * nodeEditorWidthFactor);
+    const int editorHeight = (int)(circleArea.getHeight() * nodeEditorHeightFactor);
+
+    countEditor.setBounds(circleArea.getRight() - editorWidth, circleArea.getY(), editorWidth, editorHeight);
+    switchCountEditor.setBounds(circleArea.getRight() - editorWidth, circleArea.getBottom() - editorHeight, editorWidth, editorHeight);
+    subLoopLimitEditor.setBounds(circleArea.getX(), circleArea.getBottom() - editorHeight, editorWidth, editorHeight);
 }
 
