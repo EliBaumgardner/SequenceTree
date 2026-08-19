@@ -12,6 +12,7 @@ TraversalRulesWindow::TraversalRulesWindow(ApplicationContext& context)
 
     rulesPanel.onWidthDragged = [this](int newWidth) { setPanelWidth(newWidth); };
 
+
     addAndMakeVisible(titlebar);
     addAndMakeVisible(rulesPanel);
 }
@@ -35,8 +36,8 @@ void TraversalRulesWindow::resized() {
 
     auto bounds = getLocalBounds();
 
-    titlebar.setBounds(bounds.removeFromTop(RulesTitlebar::preferredHeight));
     rulesPanel.setBounds(bounds.removeFromLeft(panelWidth));
+    titlebar.setBounds(bounds.removeFromTop(RulesTitlebar::preferredHeight));
 }
 
 int TraversalRulesWindow::clampPanelWidth(int newWidth) const {
@@ -107,17 +108,56 @@ void TraversalRulesWindow::RulesTitlebar::resized() {
 }
 
 TraversalRulesWindow::RulesPanel::RulesPanel(ApplicationContext& context)
-    : ResizablePanel(context, ResizeEdge::Right, resizerWidth)
+    : ResizablePanel(context, ResizeEdge::Right, resizerWidth),
+      panelTitlebar(context)
 {
+
+    labelPanel = std::make_unique<LabelPanel>(context);
+
+    panelTitlebar.onAddClicked = [this] {
+        labelPanel->addFileLabel("rule " + juce::String(labelPanel->labels.size() + 1));
+    };
+
+    addAndMakeVisible(panelTitlebar);
+    addAndMakeVisible(labelPanel.get());
 }
 
 void TraversalRulesWindow::RulesPanel::paint(juce::Graphics& g) {
     const Theme& theme = CustomLookAndFeel::get(*this);
 
-    g.setColour(theme.baseDarkColour1);
+    g.setColour(theme.baseDarkColour2);
     g.fillRect(getLocalBounds());
 }
 
 void TraversalRulesWindow::RulesPanel::resized() {
-    resizer.setBounds(getLocalBounds().removeFromRight(resizerWidth));
+    auto bounds = getLocalBounds();
+
+    resizer.setBounds(bounds.removeFromRight(resizerWidth));
+    panelTitlebar.setBounds(bounds.removeFromTop(RulesTitlebar::preferredHeight));
+    labelPanel->setBounds(bounds);
+}
+
+TraversalRulesWindow::RulesPanel::PanelTitlebar::PanelTitlebar(ApplicationContext& context)
+    : Bar(context, { Orientation::horizontal, Background::litFromTop })
+{
+    addButton = std::make_unique<IconButton>(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawAddIcon(g, bounds, state);
+        }, context.lookAndFeel);
+
+    addButton->setTooltip("Add Rule");
+
+    addButton->onClick = [this] {
+        if (onAddClicked) {
+            onAddClicked();
+        }
+    };
+
+    addAndMakeVisible(addButton.get());
+}
+
+void TraversalRulesWindow::RulesPanel::PanelTitlebar::resized() {
+    auto bounds = getContentBounds();
+
+    addButton->setBounds(bounds.removeFromLeft(bounds.getHeight()));
 }

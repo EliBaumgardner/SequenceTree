@@ -94,6 +94,8 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Titlebar.cpp
         Source/UI/BottomBar.cpp
         Source/UI/Menus/MenuBar.cpp
+        Source/UI/LabelPanel.cpp
+        Source/UI/Buttons/FileLabel.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE

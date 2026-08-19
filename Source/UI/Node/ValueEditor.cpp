@@ -99,6 +99,10 @@ juce::Font ValueEditor::displayFont() const
 
 juce::String ValueEditor::getDisplayText() const
 {
+    if (textMode) {
+        return boundValue.getValue().toString();
+    }
+
     if (multiplierMode) {
         return multiplierPrefix + juce::String((int) boundValue.getValue());
     }
@@ -263,6 +267,25 @@ void ValueEditor::enableMultiplierValue(int defaultValue)
     repaint();
 }
 
+void ValueEditor::enableTextValue()
+{
+    textMode = true;
+
+    textEditor->setInputRestrictions(maxTextLength, textCharacters);
+    repaint();
+}
+
+void ValueEditor::setText(const juce::String& text)
+{
+    boundValue.setValue(text);
+    repaint();
+}
+
+juce::String ValueEditor::getText() const
+{
+    return boundValue.getValue().toString();
+}
+
 void ValueEditor::enableSignedValue(int min, int max)
 {
     signedMode = true;
@@ -348,6 +371,11 @@ void ValueEditor::acceptMultipleValues() {
 
 void ValueEditor::commitSingleValue(const juce::String& text)
 {
+    if (textMode) {
+        boundValue.setValue(text.trim());
+        return;
+    }
+
     if (decimalMode) {
         double value = text.getDoubleValue();
         if (value < minDecimalValue) {

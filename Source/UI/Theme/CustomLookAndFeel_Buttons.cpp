@@ -5,6 +5,7 @@
 #include "CustomLookAndFeel.h"
 #include "Buttons/ButtonConstants.h"
 #include "../Buttons/PaintToolSettings.h"
+#include "../Buttons/FileLabel.h"
 
 namespace {
     constexpr float transportGlyphInsetRatio = 0.2f;
@@ -43,6 +44,28 @@ namespace {
 
         triangle.closeSubPath();
         g.fillPath(triangle);
+    }
+
+    constexpr float squareGlyphInsetRatio     = 0.18f;
+    constexpr float squareGlyphOutlineRatio   = 0.06f;
+    constexpr float squareGlyphBarInsetRatio  = 0.28f;
+    constexpr float squareGlyphBarWidthRatio  = 0.12f;
+
+    void fillSquareGlyph(juce::Graphics& g, juce::Rectangle<float> area, bool includeVerticalBar)
+    {
+        const float side   = juce::jmin(area.getWidth(), area.getHeight()) * (1.0f - squareGlyphInsetRatio * 2.0f);
+        const auto  square = area.withSizeKeepingCentre(side, side);
+
+        g.drawRect(square, juce::jmax(1.0f, side * squareGlyphOutlineRatio));
+
+        const auto  bar       = square.reduced(side * squareGlyphBarInsetRatio);
+        const float thickness = juce::jmax(1.0f, side * squareGlyphBarWidthRatio);
+
+        g.fillRect(bar.withSizeKeepingCentre(bar.getWidth(), thickness));
+
+        if (includeVerticalBar) {
+            g.fillRect(bar.withSizeKeepingCentre(thickness, bar.getHeight()));
+        }
     }
 
     void fillArrowGlyph(juce::Graphics& g, juce::Rectangle<float> glyphArea,
@@ -165,6 +188,20 @@ void CustomLookAndFeel::drawTraversalFlagIcon(juce::Graphics &g, juce::Rectangle
 
     g.fillPath(triangle);
     g.strokePath(triangle, juce::PathStrokeType(1.0f));
+}
+
+void CustomLookAndFeel::drawAddIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, const ButtonState& state)
+{
+    g.setColour(pressableButtonColour(state));
+
+    fillSquareGlyph(g, boundsIn, true);
+}
+
+void CustomLookAndFeel::drawRemoveIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, const ButtonState& state)
+{
+    g.setColour(pressableButtonColour(state));
+
+    fillSquareGlyph(g, boundsIn, false);
 }
 
 void CustomLookAndFeel::drawUndoIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
@@ -402,4 +439,15 @@ void CustomLookAndFeel::drawTraversalIcon(juce::Graphics &g, juce::Rectangle<flo
 
     g.setColour(juce::Colours::black);
     fillArrowGlyph(g, glyphArea, 0.24f, 0.4f, 0.65f);
+}
+
+void CustomLookAndFeel::drawFileLabel(juce::Graphics& g, const FileLabel& fileLabel) {
+
+    auto bounds = fileLabel.getLocalBounds().toFloat();
+
+    g.setColour(fileLabel.isGrabbed() ? baseDarkColour1.brighter(0.3f) : baseDarkColour1);
+    g.fillRect(bounds);
+
+    g.setColour(juce::Colours::black.withAlpha(0.35f));
+    g.drawHorizontalLine((int) bounds.getBottom() - 1, bounds.getX(), bounds.getRight());
 }

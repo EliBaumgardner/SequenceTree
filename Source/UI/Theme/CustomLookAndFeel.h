@@ -17,6 +17,8 @@ class CustomTextEditor;
 
 class PaintToolSettings;
 
+class FileLabel;
+
 class CustomLookAndFeel : public juce::LookAndFeel_V4, public Theme
 {
 
@@ -88,6 +90,8 @@ public:
     void drawTextButton        (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state,
                                 float fontHeight = labelFontHeight);
 
+    void drawAddIcon        (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawRemoveIcon     (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawUndoIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawRedoIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawResetIcon      (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
@@ -98,6 +102,8 @@ public:
     void drawPolyphonicArrowIcon (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawTraversalArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawPaintToolSettings (juce::Graphics& g, const PaintToolSettings& paintToolSettings);
+
+    void drawFileLabel(juce::Graphics& g, const FileLabel& fileLabel);
 
 };
 
