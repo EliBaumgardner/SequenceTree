@@ -52,9 +52,10 @@ Node::Node(ApplicationContext& context)
     countEditor.enableDualValue(ValueTreeIdentifiers::TriggerLimit);
 
     subLoopLimitEditor.setMinimumValue(0);
+    subLoopLimitEditor.setTooltip("Sub Loop Count Limit");
 
     switchCountEditor.setInterceptsMouseClicks(true, false);
-    switchCountEditor.setTooltip("Loop Limit");
+    switchCountEditor.setTooltip("Switch Count Limit");
 
     upButton->onClick = [this]() {
         incrementNodeValue(1);

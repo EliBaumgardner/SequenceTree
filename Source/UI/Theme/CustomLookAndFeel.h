@@ -53,6 +53,11 @@ public:
     juce::Font getPopupMenuFont() override;
     int getPopupMenuBorderSize() override;
 
+    int  getDefaultScrollbarWidth() override;
+    void drawScrollbar (juce::Graphics& g, juce::ScrollBar& scrollBar, int x, int y, int width, int height,
+                        bool isScrollbarVertical, int thumbStartPosition, int thumbSize,
+                        bool isMouseOver, bool isMouseDown) override;
+
     void drawEditor         (juce::Graphics& g, CustomTextEditor& editor);
     juce::CaretComponent* createCaretComponent(juce::Component* keyFocusOwner) override;
 

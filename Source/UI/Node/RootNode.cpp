@@ -21,15 +21,28 @@ RootNode::RootNode(ApplicationContext& context) : Node(context)
 
     subLoopLimitEditor.setTooltip("Loop Limit");
 
-    ValueEditor& traversalEditor = rootRectangle->traversalEditor;
-
-    traversalEditor.boundValue.setValue(1);
-    traversalEditor.editorText = "1";
-    traversalEditor.textEditor->setText("1", juce::dontSendNotification);
-
-    traversalEditor.onValueChange = [this]() {
+    rootRectangle->traversalEditor.onValueChange = [this]() {
         equipTraversals();
     };
+}
+
+void RootNode::setDisplayMode(NodeDisplayMode mode)
+{
+    Node::setDisplayMode(mode);
+
+    if (! nodeValueTree.isValid()) {
+        return;
+    }
+
+    const juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
+
+    juce::StringArray equippedIds;
+
+    for (int i = 0; i < traversalChildrenIds.getNumChildren(); i++) {
+        equippedIds.add(traversalChildrenIds.getChild(i).getProperty(ValueTreeIdentifiers::TraversalId).toString());
+    }
+
+    rootRectangle->traversalEditor.setText(equippedIds.joinIntoString(" "));
 }
 
 RootNode::~RootNode() = default;
@@ -40,23 +53,7 @@ void RootNode::equipTraversals()
         return;
     }
 
-    const juce::String text = rootRectangle->traversalEditor.editorText;
-
-    std::vector<int> words;
-    juce::String word;
-
-    for (int i = 0; i <= text.length(); i++) {
-
-        bool isDigit = i < text.length() && juce::CharacterFunctions::isDigit(text[i]);
-
-        if (isDigit) {
-            word += text[i];
-        }
-        else if (word.isNotEmpty()) {
-            words.push_back(word.getIntValue());
-            word.clear();
-        }
-    }
+    const std::vector<int> words = IntListFormat::parse(rootRectangle->traversalEditor.getText());
 
     auto contains = [&words](int id) {
         for (int w : words) {

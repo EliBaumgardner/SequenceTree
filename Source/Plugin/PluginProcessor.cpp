@@ -137,6 +137,11 @@ juce::AudioProcessorEditor* SequenceTreeAudioProcessor::createEditor()
 //==============================================================================
 void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
+    if (pendingRestoreState.isValid()
+        && juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        applyRestoredState();
+    }
+
     juce::ValueTree state;
 
     if (pendingRestoreState.isValid()) {

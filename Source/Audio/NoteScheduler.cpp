@@ -13,19 +13,21 @@ bool NoteScheduler::isNodeAudible(RTNode::NodeType nodeType)
         && nodeType != RTNode::NodeType::TraversalFlagData;
 }
 
-void NoteScheduler::scheduleNote(const RTNode& node, int instanceId, int sample,
+void NoteScheduler::scheduleNote(const RTNode& node, int instanceId, double sample,
                                  juce::MidiBuffer& midiMessages,
                                  double sampleRate, double tempoMultiplier,
                                  int duration, bool isConnectionTrigger, int channel, int transpose,
                                  double velocityMultiplier,
                                  int pitchOverride, int velocityOverride)
 {
+    const double lengthInSamples = juce::jmax(1.0, (duration / 1000.0) * sampleRate / tempoMultiplier);
+
     ActiveNote newNote;
     newNote.instanceId          = instanceId;
     newNote.event.pitch         = 63;
     newNote.event.velocity      = 63;
     newNote.event.duration      = duration;
-    newNote.remainingSamples    = static_cast<int>((duration / 1000.0) * sampleRate / tempoMultiplier);
+    newNote.remainingSamples    = sample + lengthInSamples;
     newNote.nodeId              = node.nodeID;
     newNote.nodeType            = node.nodeType;
     newNote.isConnectionTrigger = isConnectionTrigger;
@@ -64,7 +66,7 @@ void NoteScheduler::scheduleNote(const RTNode& node, int instanceId, int sample,
 
     if (!isConnectionTrigger && isNodeAudible(node.nodeType)) {
         midiMessages.addEvent(juce::MidiMessage::noteOn(newNote.event.midiChannel, newNote.event.pitch,
-                              static_cast<juce::uint8>(newNote.event.velocity)), sample);
+                              static_cast<juce::uint8>(newNote.event.velocity)), static_cast<int>(sample));
     }
 }
 

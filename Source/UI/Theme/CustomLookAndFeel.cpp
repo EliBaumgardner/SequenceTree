@@ -88,7 +88,30 @@ void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
 
 juce::CaretComponent* CustomLookAndFeel::createCaretComponent(juce::Component* keyFocusOwner) {
     auto* caret = new CustomTextCaret(keyFocusOwner);
-    caret->caretColour = baseDarkColour1;
-    caret->caretWidth  = 1.0f;
+    caret->caretWidth = 1.0f;
     return caret;
+}
+
+int CustomLookAndFeel::getDefaultScrollbarWidth()
+{
+    return scrollBarThickness;
+}
+
+void CustomLookAndFeel::drawScrollbar(juce::Graphics& g, juce::ScrollBar&, int x, int y, int width, int height,
+                                      bool isScrollbarVertical, int thumbStartPosition, int thumbSize,
+                                      bool isMouseOver, bool isMouseDown)
+{
+    g.setColour(scrollBarTrackColour);
+    g.fillRect(juce::Rectangle<int>(x, y, width, height));
+
+    if (thumbSize <= 0) {
+        return;
+    }
+
+    const juce::Rectangle<int> thumb = isScrollbarVertical
+        ? juce::Rectangle<int>(x, thumbStartPosition, width, thumbSize)
+        : juce::Rectangle<int>(thumbStartPosition, y, thumbSize, height);
+
+    g.setColour(isMouseOver || isMouseDown ? scrollBarThumbHoverColour : scrollBarThumbColour);
+    g.fillRoundedRectangle(thumb.toFloat().reduced(scrollBarThumbInset), scrollBarCornerRadius);
 }

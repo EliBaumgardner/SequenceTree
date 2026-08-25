@@ -11,6 +11,7 @@ CustomLookAndFeel::CustomLookAndFeel()
     setColour(juce::PopupMenu::headerTextColourId,            popupMenuTextColour);
     setColour(juce::PopupMenu::highlightedBackgroundColourId, popupMenuHighlightColour);
     setColour(juce::PopupMenu::highlightedTextColourId,       popupMenuHighlightTextColour);
+    setColour(juce::CaretComponent::caretColourId,            baseDarkColour1);
 }
 
 juce::Font CustomLookAndFeel::getPopupMenuFont()

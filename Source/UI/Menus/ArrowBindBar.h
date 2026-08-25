@@ -7,7 +7,7 @@
 
 #include "../Bar.h"
 #include "../Buttons/IconButton.h"
-#include "../Node/ValueEditor.h"
+#include "../Editors/ValueEditor.h"
 #include "ItemSelector.h"
 
 class ArrowBindBar : public Bar {

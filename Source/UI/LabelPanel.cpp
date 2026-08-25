@@ -8,7 +8,6 @@
 LabelPanel::LabelPanel(ApplicationContext &context) : context(context) {
 
     setLookAndFeel(context.lookAndFeel);
-
 }
 
 void LabelPanel::paint(juce::Graphics &g) {
@@ -19,18 +18,21 @@ void LabelPanel::paint(juce::Graphics &g) {
 
 void LabelPanel::resized() {
     labelHeight = juce::roundToInt(getWidth() * labelAspectRatio);
+    labelGap    = juce::roundToInt(labelHeight * labelGapRatio);
 
     auto bounds = getLocalBounds();
 
-    for (auto& label : labels)
+    for (auto& label : labels) {
         label->setBounds(bounds.removeFromTop(labelHeight));
+        bounds.removeFromTop(labelGap);
+    }
 }
 
 int LabelPanel::labelIndexAt(int y) const {
     if (labels.empty() || labelHeight <= 0)
         return -1;
 
-    return juce::jlimit(0, (int) labels.size() - 1, y / labelHeight);
+    return juce::jlimit(0, (int) labels.size() - 1, y / (labelHeight + labelGap));
 }
 
 void LabelPanel::mouseDrag(const juce::MouseEvent &e) {
@@ -68,7 +70,7 @@ void LabelPanel::addFileLabel(juce::String fileName)
     fileLabel->setFileName(fileName);
     fileLabel->addMouseListener(this, true);
 
-    const FileLabel* addedLabel = fileLabel.get();
+    FileLabel* addedLabel = fileLabel.get();
     const juce::Component::SafePointer<LabelPanel> panel(this);
 
     fileLabel->onRemove = [panel, addedLabel] {
@@ -78,10 +80,29 @@ void LabelPanel::addFileLabel(juce::String fileName)
         });
     };
 
+    fileLabel->onMouseClicked = [panel, addedLabel] {
+        if (panel == nullptr) {
+            return;
+        }
+
+        panel->setSelectedLabel(addedLabel);
+
+        if (panel->onLabelClicked != nullptr) {
+            panel->onLabelClicked(addedLabel);
+        }
+    };
+
     addAndMakeVisible(*fileLabel);
     labels.push_back(std::move(fileLabel));
 
     resized();
+}
+
+void LabelPanel::setSelectedLabel(const FileLabel* label)
+{
+    for (auto& candidate : labels) {
+        candidate->setSelected(candidate.get() == label);
+    }
 }
 
 void LabelPanel::removeFileLabel(const FileLabel* label)

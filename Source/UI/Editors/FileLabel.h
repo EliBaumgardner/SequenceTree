@@ -7,9 +7,9 @@
 
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../Node/ValueEditor.h"
+#include "ValueEditor.h"
 #include "../../Util/ApplicationContext.h"
-#include "IconButton.h"
+#include "../Buttons/IconButton.h"
 
 class FileLabel : public juce::Component {
 public:
@@ -18,6 +18,7 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void mouseDown(const juce::MouseEvent& event) override;
 
     void setFileName(const juce::String fileName);
     juce::String getFileName() const;
@@ -25,12 +26,18 @@ public:
     void setGrabbed(bool shouldBeGrabbed);
     bool isGrabbed() const { return grabbed; }
 
+    void setSelected(bool shouldBeSelected);
+    bool isSelected() const { return selected; }
+
     std::function<void()> onRemove;
+    std::function<void()> onMouseClicked;
 
     static constexpr float contentInsetRatio   = 0.06f;
     static constexpr float removeButtonRatio   = 0.7f;
     static constexpr float fileTextWidthRatio  = 0.5f;
     static constexpr float fileTextHeightRatio = 0.6f;
+
+    int fileId;
 
 private:
 
@@ -38,8 +45,8 @@ private:
     std::unique_ptr<ValueEditor> fileText     = nullptr;
     std::unique_ptr<IconButton>  removeButton = nullptr;
 
-    bool grabbed = false;
-
+    bool grabbed  = false;
+    bool selected = false;
 };
 
 

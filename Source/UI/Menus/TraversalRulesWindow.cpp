@@ -5,16 +5,24 @@
 #include "TraversalRulesWindow.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-TraversalRulesWindow::TraversalRulesWindow(ApplicationContext& context)
-    : titlebar(context), rulesPanel(context)
+TraversalRulesWindow::TraversalRulesWindow(ApplicationContext& context) : context(context),
+    titlebar(context), rulesPanel(context)
 {
     setLookAndFeel(context.lookAndFeel);
 
     rulesPanel.onWidthDragged = [this](int newWidth) { setPanelWidth(newWidth); };
 
+    filePageViewport.setScrollBarsShown(true, false);
 
     addAndMakeVisible(titlebar);
     addAndMakeVisible(rulesPanel);
+    addAndMakeVisible(filePageViewport);
+
+    rulesPanel.propagateLabelClicked = [this](int fileId) {\
+        DBG("setting active page to " << fileId);
+        setActivePage(fileId);
+    };
+
 }
 
 TraversalRulesWindow::~TraversalRulesWindow() {
@@ -38,6 +46,36 @@ void TraversalRulesWindow::resized() {
 
     rulesPanel.setBounds(bounds.removeFromLeft(panelWidth));
     titlebar.setBounds(bounds.removeFromTop(RulesTitlebar::preferredHeight));
+
+    filePageViewport.setBounds(bounds);
+
+    if (activePage != nullptr) {
+        const int pageWidth = filePageViewport.getMaximumVisibleWidth();
+
+        activePage->setSize(pageWidth, activePage->preferredHeightForWidth(pageWidth));
+    }
+}
+
+void TraversalRulesWindow::createNewPage(int id) {
+    filePages.emplace(id, std::make_unique<FilePage>(context));
+}
+
+void TraversalRulesWindow::setActivePage(int id) {
+    const auto match = filePages.find(id);
+
+    if (match == filePages.end())
+        return;
+
+    FilePage* page = match->second.get();
+
+    if (page == activePage) {
+        return;
+    }
+
+    activePage = page;
+    filePageViewport.setViewedComponent(page, false);
+
+    resized();
 }
 
 int TraversalRulesWindow::clampPanelWidth(int newWidth) const {
@@ -115,7 +153,21 @@ TraversalRulesWindow::RulesPanel::RulesPanel(ApplicationContext& context)
     labelPanel = std::make_unique<LabelPanel>(context);
 
     panelTitlebar.onAddClicked = [this] {
-        labelPanel->addFileLabel("rule " + juce::String(labelPanel->labels.size() + 1));
+        fileIdIncrement++;
+
+        labelPanel->addFileLabel("rule " + juce::String(fileIdIncrement));
+        labelPanel->labels.back()->fileId = fileIdIncrement;
+
+        if (auto* parentComponent = dynamic_cast<TraversalRulesWindow*>(getParentComponent())) {
+            DBG("parentComponent is creating new pages");
+            parentComponent->createNewPage(fileIdIncrement);
+        }
+    };
+
+    labelPanel->onLabelClicked = [this](FileLabel* label) {
+        DBG("propagating label clicked");
+        int fileId = label->fileId;
+        propagateLabelClicked(fileId);
     };
 
     addAndMakeVisible(panelTitlebar);

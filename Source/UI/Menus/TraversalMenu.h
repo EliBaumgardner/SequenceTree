@@ -9,7 +9,7 @@
 #include <memory>
 
 #include "ItemSelector.h"
-#include "../Node/ValueEditor.h"
+#include "../Editors/ValueEditor.h"
 #include "ColourSelector.h"
 #include "../Buttons/IconButton.h"
 #include "TraversalRulesWindow.h"

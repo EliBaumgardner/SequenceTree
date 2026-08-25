@@ -17,7 +17,7 @@
 #include "../../Util/NodeInfo.h"
 #include "../../Util/ApplicationContext.h"
 #include "../Buttons/IconButton.h"
-#include "ValueEditor.h"
+#include "../Editors/ValueEditor.h"
 
 
 class Arrow;

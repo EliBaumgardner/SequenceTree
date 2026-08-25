@@ -22,7 +22,7 @@ public:
     {
         MidiEvent        event;
         int              instanceId       = 0;
-        int              remainingSamples = 0;
+        double           remainingSamples = 0.0;
         int              nodeId           = 0;
         RTNode::NodeType nodeType         = RTNode::NodeType::Node;
         bool             isConnectionTrigger = false;
@@ -34,7 +34,7 @@ public:
 
     explicit NoteScheduler(AudioUIBridge& bridge);
 
-    void scheduleNote(const RTNode& node, int instanceId, int sample,
+    void scheduleNote(const RTNode& node, int instanceId, double sample,
                       juce::MidiBuffer& midiMessages,
                       double sampleRate, double tempoMultiplier,
                       int duration, bool isConnectionTrigger = false, int channel = -1, int transpose = 0,

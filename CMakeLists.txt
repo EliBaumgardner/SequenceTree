@@ -69,7 +69,8 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
         Source/UI/Node/Arrow.cpp
-        Source/UI/Node/ValueEditor.cpp
+        Source/UI/Editors/ValueEditor.cpp
+        Source/UI/Editors/ValueFormat.cpp
         Source/UI/Node/Modulator.cpp
         Source/UI/Node/TraversalFlagNode.cpp
         Source/UI/Theme/CustomLookAndFeel.cpp
@@ -95,7 +96,10 @@ target_sources(SequenceTree PRIVATE
         Source/UI/BottomBar.cpp
         Source/UI/Menus/MenuBar.cpp
         Source/UI/LabelPanel.cpp
-        Source/UI/Buttons/FileLabel.cpp
+        Source/UI/Editors/FileLabel.cpp
+        Source/UI/Editors/FileLine.cpp
+        Source/UI/Editors/LineEditor.cpp
+        Source/UI/Editors/FilePage.cpp
 )
 
 target_link_libraries(SequenceTree PRIVATE
