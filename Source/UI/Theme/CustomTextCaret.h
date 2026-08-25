@@ -7,6 +7,5 @@ public:
     explicit CustomTextCaret(juce::Component* keyFocusOwner);
     void paint(juce::Graphics& g) override;
 
-    juce::Colour caretColour { juce::Colours::white };
-    float        caretWidth  { 2.0f };   // pixel width of the drawn bar
+    float caretWidth { 2.0f };
 };

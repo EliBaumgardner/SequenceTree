@@ -5,7 +5,7 @@
 #include "CustomLookAndFeel.h"
 #include "Buttons/ButtonConstants.h"
 #include "../Buttons/PaintToolSettings.h"
-#include "../Buttons/FileLabel.h"
+#include "../Editors/FileLabel.h"
 
 namespace {
     constexpr float transportGlyphInsetRatio = 0.2f;
@@ -445,8 +445,23 @@ void CustomLookAndFeel::drawFileLabel(juce::Graphics& g, const FileLabel& fileLa
 
     auto bounds = fileLabel.getLocalBounds().toFloat();
 
-    g.setColour(fileLabel.isGrabbed() ? baseDarkColour1.brighter(0.3f) : baseDarkColour1);
+    juce::Colour background = baseDarkColour1;
+
+    if (fileLabel.isSelected()) {
+        background = baseDarkColour1.brighter(0.18f);
+    }
+
+    if (fileLabel.isGrabbed()) {
+        background = baseDarkColour1.brighter(0.3f);
+    }
+
+    g.setColour(background);
     g.fillRect(bounds);
+
+    if (fileLabel.isSelected()) {
+        g.setColour(baseLightColour2);
+        g.fillRect(bounds.withWidth(fileLabelMarkerWidth));
+    }
 
     g.setColour(juce::Colours::black.withAlpha(0.35f));
     g.drawHorizontalLine((int) bounds.getBottom() - 1, bounds.getX(), bounds.getRight());

@@ -71,8 +71,7 @@ public:
         valueSlider = std::make_unique<ValueSlider>();
         flowSlider  = std::make_unique<ValueSlider>();
 
-
-        pitchPair.setting = PaintSetting::Pitch;
+        pitchPair.setting    = PaintSetting::Pitch;
         velocityPair.setting = PaintSetting::Velocity;
         durationPair.setting = PaintSetting::Duration;
 

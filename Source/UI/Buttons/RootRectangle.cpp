@@ -11,7 +11,7 @@ RootRectangle::RootRectangle(ApplicationContext& context) : traversalEditor(cont
 
     traversalEditor.setMinimumValue(0);
     traversalEditor.setInterceptsMouseClicks(true, false);
-    traversalEditor.setTooltip("Loop Limit");
+    traversalEditor.setTooltip("Starting Traversal");
     traversalEditor.acceptMultipleValues();
     addAndMakeVisible(traversalEditor);
 }

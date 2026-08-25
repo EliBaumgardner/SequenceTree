@@ -13,7 +13,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../../Util/ApplicationContext.h"
 #include "ArrowProgress.h"
-#include "ValueEditor.h"
+#include "../Editors/ValueEditor.h"
 
 class Node;
 

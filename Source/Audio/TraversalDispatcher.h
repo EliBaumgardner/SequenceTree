@@ -26,10 +26,10 @@ public:
                         AudioUIBridge& bridge);
 
     void pushNote(const RTNode& node, int instanceId, const DispatchContext& context,
-                  int sample, bool isPrimaryRepeat = false);
+                  double sample, bool isPrimaryRepeat = false);
 
     void handleExpiredNote(const NoteScheduler::ActiveNote& expiredNote,
-                           int priorityNoteDuration,
+                           double expiryTime,
                            const DispatchContext& context);
 
     void applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes, int traversalId);
@@ -37,7 +37,9 @@ public:
     void applyTreeJump(const TraversalLogic::StepResult& step, TraversalLogic& traversal,
                        TraversalRuntime& runtime);
 
-    void advancePendingFlags(int numSamples, const DispatchContext& context);
+    bool startNextDueFlag(double before, const DispatchContext& context);
+
+    void advancePendingFlags(int numSamples);
 
     void clearPendingFlags();
 
@@ -45,13 +47,13 @@ private:
 
     struct PendingFlagStart
     {
-        int  flagNodeId       = -1;
-        int  hostTypeId       = 0;
-        int  remainingSamples = 0;
-        bool active           = false;
+        int    flagNodeId       = -1;
+        int    hostTypeId       = 0;
+        double remainingSamples = 0.0;
+        bool   active           = false;
     };
 
-    void pushRootNodeConnection(int rootNodeId, const DispatchContext& context, int sample);
+    void pushRootNodeConnection(int rootNodeId, const DispatchContext& context, double sample);
 
     int resolveDuration(const RTNode& node, const RTNode* nextTarget,
                         int lastTargetId, const NodeMap& nodes, int traversalId);
@@ -60,7 +62,7 @@ private:
                            TraversalLogic& traversalLogic, const RTNode*& modulatorNode,
                            bool isPrimaryRepeat);
 
-    void pushChordNotes(const RTNode& node, int sample, int duration,
+    void pushChordNotes(const RTNode& node, double sample, int duration,
                         double sampleRate, double tempoMultiplier,
                         const DispatchContext& context, int parentCount,
                         TraversalLogic& traversalLogic, int transpose);
@@ -72,7 +74,7 @@ private:
                                 int activeModulatorRootId, int rootId,
                                 int wallClockMs, int colourTraversalId);
 
-    void dispatchCrossTree(const RTNode& node, int sourceInstanceId, int sample, int rootId,
+    void dispatchCrossTree(const RTNode& node, int sourceInstanceId, double sample, int rootId,
                            double sampleRate, double tempoMultiplier,
                            const DispatchContext& context, TraversalLogic& traversal);
 
@@ -86,17 +88,17 @@ private:
                                              const RTtraversal& traversal, const DispatchContext& context);
 
     void startCrossTreeTraversal(const RTNode& targetRootNode, const RTtraversal& traversal,
-                                 int sample, const DispatchContext& context);
+                                 double sample, const DispatchContext& context);
 
     void dispatchFlag(const RTNode& node, int hostInstanceId, int hostTypeId,
-                      int parentCount, int sample, double sampleRate, double tempoMultiplier,
+                      int parentCount, double sample, double sampleRate, double tempoMultiplier,
                       const DispatchContext& context);
 
-    void startFlagTraversal(const RTNode& flagNode, int hostTypeId, int sample,
+    void startFlagTraversal(const RTNode& flagNode, int hostTypeId, double sample,
                             const DispatchContext& context);
 
     void queueFlagStart(const RTNode& flagNode, int hostTypeId, int delayMs,
-                        int sample, double sampleRate, double tempoMultiplier,
+                        double sample, double sampleRate, double tempoMultiplier,
                         const DispatchContext& context);
 
     void queueFlagRemoval(const RTNode& flagNode, int hostInstanceId, int hostTypeId, TraversalPool& traversalMap);
@@ -114,5 +116,4 @@ private:
     std::vector<int>                   crossTreeScratch;
 
     std::array<PendingFlagStart, maxPendingFlagStarts> pendingFlagStarts {};
-    std::array<PendingFlagStart, maxPendingFlagStarts> dueFlagStarts {};
 };

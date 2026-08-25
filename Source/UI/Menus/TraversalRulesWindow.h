@@ -13,6 +13,7 @@
 #include "../Buttons/IconButton.h"
 #include "../ResizablePanel.h"
 #include "../UI/LabelPanel.h"
+#include "../Editors/FilePage.h"
 
 class TraversalRulesWindow : public juce::Component {
 
@@ -43,6 +44,9 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    void createNewPage(int id);
+    void setActivePage(int id);
+
     static constexpr int defaultWidth  = 360;
     static constexpr int defaultHeight = 260 + RulesTitlebar::preferredHeight;
 
@@ -55,6 +59,7 @@ private:
     public:
 
         explicit RulesPanel(ApplicationContext& context);
+        std::function<void(int)> propagateLabelClicked;
 
         void paint(juce::Graphics& g) override;
         void resized() override;
@@ -72,7 +77,6 @@ private:
             explicit PanelTitlebar(ApplicationContext& context);
 
             std::function<void()> onAddClicked;
-
         private:
 
             void resized() override;
@@ -84,15 +88,25 @@ private:
 
         PanelTitlebar               panelTitlebar;
         std::unique_ptr<LabelPanel> labelPanel = nullptr;
+
+        int fileIdIncrement = 0;
+
     };
 
     int  clampPanelWidth(int newWidth) const;
     void setPanelWidth(int newWidth);
 
-    RulesTitlebar titlebar;
-    RulesPanel    rulesPanel;
+    RulesTitlebar  titlebar;
+    RulesPanel     rulesPanel;
+    juce::Viewport filePageViewport;
+
+    ApplicationContext& context;
+
+    std::unordered_map<int, std::unique_ptr<FilePage>> filePages;
+    FilePage* activePage = nullptr;
 
     int panelWidth = RulesPanel::defaultPanelWidth;
+
 
 };
 

@@ -6,6 +6,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <limits>
+#include "ValueFormat.h"
 #include "../../Util/ApplicationContext.h"
 
 
@@ -15,9 +16,8 @@ class ValueEditor : public juce::Component,
                     public juce::Value::Listener{
 public:
 
-    std::function<void()> onValueChanged;
-
     explicit ValueEditor(ApplicationContext& context);
+    ~ValueEditor() override;
 
     std::function<void()> onValueChange;
 
@@ -25,7 +25,12 @@ public:
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
 
+    void beginEditing(bool selectAllText = true);
+    void setPersistentEditor(bool shouldStayVisible);
+
     void bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID);
+
+    void setFormat(std::unique_ptr<ValueFormat> newFormat);
 
     void enableDualValue(const juce::Identifier& secondaryPropertyID);
     void disableDualValue();
@@ -35,8 +40,11 @@ public:
     void setText(const juce::String& text);
     juce::String getText() const;
     void enableAutoFitText();
+    void setFontHeight(float newFontHeight);
     void setPitchMode(bool shouldShowPitchNames);
     void setEditable(bool shouldBeEditable);
+    void setJustification(juce::Justification newJustification);
+    void setCaretColour(juce::Colour colour);
     void enableSignedValue(int min, int max);
     void disableSignedValue();
     void enablePlusRequiredValue();
@@ -50,53 +58,37 @@ public:
     std::unique_ptr<juce::TextEditor> textEditor;
     juce::Value boundValue;
 
-    std::vector<juce::Value> values;
-
-    juce::String editorText;
-
-private:
+protected:
     void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
     void textEditorFocusLost      (juce::TextEditor& editor) override;
 
+    juce::Font displayFont() const;
+
+private:
+    ValueBinding makeBinding() const;
+    void         bindSecondaryProperties();
+
     juce::String getDisplayText() const;
-    juce::Font   displayFont() const;
-    void commitSingleValue(const juce::String& text);
-    void commitDualValue  (const juce::String& text);
-    void commitMultipleValues(const juce::String& text);
 
     const ApplicationContext& applicationContext;
 
-    juce::Value boundSecondaryValue;
+    std::unique_ptr<ValueFormat> format;
 
+    juce::ValueTree  boundTree;
     juce::Identifier boundIdentifier;
-    juce::Identifier secondaryIdentifier;
 
-    juce::ValueTree boundTree;
+    std::vector<juce::Value>      secondaryValues;
+    std::vector<juce::Identifier> secondaryIdentifiers;
 
-
-    bool isEditing        = false;
-    bool suppressCallback = false;
-    bool dualNumberMode   = false;
-    bool decimalMode      = false;
-    bool acceptMultiple   = false;
-    bool pitchMode        = false;
-    bool multiplierMode   = false;
-    bool textMode         = false;
-    bool autoFitText      = false;
-    bool editable         = true;
-
-    static constexpr const char* multiplierPrefix = "x";
-    static constexpr const char* textCharacters   =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _-.";
-    static constexpr int maxTextLength = 64;
+    juce::Justification justification { juce::Justification::centred };
 
     static constexpr float baseFontHeight = 9.0f;
     static constexpr float autoFitInset   = 4.0f;
 
-    int  minValue         = 1;
-    int  maxValue         = std::numeric_limits<int>::max();
-    bool signedMode       = false;
-    bool requirePlusMode  = false;
-    double minDecimalValue = 0.1;
-    double maxDecimalValue = std::numeric_limits<double>::max();
+    float fontHeight = baseFontHeight;
+
+    bool isEditing        = false;
+    bool persistentEditor = false;
+    bool autoFitText = false;
+    bool editable    = true;
 };

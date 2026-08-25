@@ -46,6 +46,7 @@ struct Theme
     juce::Colour editorColour        = baseDarkColour1;
     juce::Colour traversalMenuColour = darkBrownColour;
     juce::Colour textColour          = baseLightColour1;
+    juce::Colour lineNumberColour    = juce::Colours::lightgrey.withAlpha(0.4f);
 
     juce::Colour selectionBoxColour  = baseDarkColour2;
     juce::Colour selectionRingColour = juce::Colours::black;
@@ -55,6 +56,10 @@ struct Theme
     juce::Colour popupMenuTextColour          = baseLightColour1;
     juce::Colour popupMenuHighlightColour     = baseLightColour2;
     juce::Colour popupMenuHighlightTextColour = juce::Colours::black.withAlpha(0.8f);
+
+    juce::Colour scrollBarTrackColour      = baseDarkColour2.darker(0.5f);
+    juce::Colour scrollBarThumbColour      = baseLightColour2.withAlpha(0.5f);
+    juce::Colour scrollBarThumbHoverColour = baseLightColour2.withAlpha(0.85f);
 
     juce::Colour arrowColour         = juce::Colours::black;
     juce::Colour arrowProgressColour = baseLightColour2;
@@ -70,6 +75,8 @@ struct Theme
 
     static constexpr float paneCornerRadius = 4.0f;
 
+    static constexpr float fileLabelMarkerWidth = 2.0f;
+
     static constexpr float innerButtonBoundsReduction = 5.0f;
     static constexpr float outerButtonBoundsReduction = 2.0f;
 
@@ -81,6 +88,10 @@ struct Theme
     static constexpr float popupMenuBorderThickness = 1.0f;
     static constexpr float popupMenuItemInset       = 2.0f;
     static constexpr float popupMenuTextInset       = 6.0f;
+    static constexpr int   scrollBarThickness      = 8;
+    static constexpr float scrollBarThumbInset     = 1.5f;
+    static constexpr float scrollBarCornerRadius   = 3.0f;
+
     static constexpr int   popupMenuItemHeight      = 18;
     static constexpr int   popupMenuPadding         = 4;
 };

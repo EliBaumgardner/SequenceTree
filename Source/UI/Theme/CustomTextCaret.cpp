@@ -1,4 +1,4 @@
- #include "CustomTextCaret.h"
+#include "CustomTextCaret.h"
 
 CustomTextCaret::CustomTextCaret(juce::Component* keyFocusOwner)
     : juce::CaretComponent(keyFocusOwner)
@@ -8,6 +8,6 @@ CustomTextCaret::CustomTextCaret(juce::Component* keyFocusOwner)
 void CustomTextCaret::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
-    g.setColour(caretColour);
+    g.setColour(findColour(juce::CaretComponent::caretColourId, true));
     g.fillRect(bounds.withWidth(caretWidth));
 }

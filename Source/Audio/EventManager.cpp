@@ -54,46 +54,53 @@ void EventManager::processEvents(int numSamples, juce::MidiBuffer& midiMessages,
 {
     handleOrphanNotes(midiMessages, nodes, traversalMap);
 
-    dispatcher.advancePendingFlags(numSamples, { nodes, traversalMap, midiMessages });
+    const DispatchContext context { nodes, traversalMap, midiMessages };
 
     auto& activeNotes = scheduler.activeNotes;
 
     while (true)
     {
-        int smallestNoteIndex  = -1;
-        int smallestNoteSamples = numSamples + 1;
+        int    expiringIndex = -1;
+        double expiringTime  = static_cast<double>(numSamples);
 
         for (int i = 0; i < static_cast<int>(activeNotes.size()); ++i)
         {
-            if (activeNotes[i].remainingSamples < smallestNoteSamples) {
-                smallestNoteSamples = activeNotes[i].remainingSamples;
-                smallestNoteIndex   = i;
+            if (activeNotes[i].remainingSamples < expiringTime) {
+                expiringTime  = activeNotes[i].remainingSamples;
+                expiringIndex = i;
             }
         }
 
-        if (smallestNoteIndex == -1 || smallestNoteSamples > numSamples) {
-            break;
-        }
-
-        int priorityNoteDuration = smallestNoteSamples;
-        auto& activeNote = activeNotes[smallestNoteIndex];
-
-        scheduler.sendNoteOff(activeNote, midiMessages, priorityNoteDuration);
-
-        if (activeNote.instanceId == -1) {
-            if (NoteScheduler::isNodeAudible(activeNote.nodeType)) {
-                bridge.highlightNode(activeNote.nodeId, false);
-            }
-            scheduler.removeNote(smallestNoteIndex);
+        if (dispatcher.startNextDueFlag(expiringTime, context)) {
             continue;
         }
 
-        NoteScheduler::ActiveNote expiredNote = activeNote;
-        scheduler.removeNote(smallestNoteIndex);
+        if (expiringIndex == -1) {
+            break;
+        }
 
-        dispatcher.handleExpiredNote(expiredNote, priorityNoteDuration,
-                                     { nodes, traversalMap, midiMessages });
+        const double expiryTime   = juce::jmax(0.0, expiringTime);
+        const int    expirySample = static_cast<int>(expiryTime);
+
+        auto& expiringNote = activeNotes[expiringIndex];
+
+        scheduler.sendNoteOff(expiringNote, midiMessages, expirySample);
+
+        if (expiringNote.instanceId == -1) {
+            if (NoteScheduler::isNodeAudible(expiringNote.nodeType)) {
+                bridge.highlightNode(expiringNote.nodeId, false);
+            }
+            scheduler.removeNote(expiringIndex);
+            continue;
+        }
+
+        const NoteScheduler::ActiveNote expiredNote = expiringNote;
+        scheduler.removeNote(expiringIndex);
+
+        dispatcher.handleExpiredNote(expiredNote, expiryTime, context);
     }
+
+    dispatcher.advancePendingFlags(numSamples);
 
     for (auto& note : activeNotes) {
         note.remainingSamples -= numSamples;

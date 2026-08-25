@@ -6,7 +6,7 @@
 #define SEQUENCETREE_ROOTARROW_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../Node/ValueEditor.h"
+#include "../Editors/ValueEditor.h"
 #include "../../Util/ApplicationContext.h"
 
 class RootRectangle : public juce::Component {

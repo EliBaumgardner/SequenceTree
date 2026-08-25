@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../util/ApplicationContext.h"
-#include "../UI/Buttons/FileLabel.h"
+#include "Editors/FileLabel.h"
 
 
 class LabelPanel : public juce::Component {
@@ -23,16 +23,20 @@ public:
     void mouseUp   (const juce::MouseEvent& e) override;
     void addFileLabel(juce::String fileName);
     void removeFileLabel(const FileLabel* label);
+    void setSelectedLabel(const FileLabel* label);
 
     std::vector<std::unique_ptr<FileLabel>> labels;
 
+    std::function<void(FileLabel*)> onLabelClicked;
     static constexpr float labelAspectRatio = 0.3f;
+    static constexpr float labelGapRatio    = 0.12f;
 
 private:
 
     int labelIndexAt(int y) const;
 
     int labelHeight  = 0;
+    int labelGap     = 0;
     int draggedIndex = -1;
 
     ApplicationContext& context;

@@ -11,6 +11,7 @@ FileLabel::FileLabel(ApplicationContext& context) : context(context) {
     fileText = std::make_unique<ValueEditor>(context);
     fileText->enableTextValue();
     fileText->enableAutoFitText();
+    fileText->setCaretColour(juce::Colours::lightgrey);
 
     removeButton = std::make_unique<IconButton>(
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
@@ -47,6 +48,15 @@ void FileLabel::resized()
         juce::roundToInt(bounds.getHeight() * fileTextHeightRatio)));
 }
 
+void FileLabel::mouseDown(const juce::MouseEvent &event)
+{
+    DBG("file label clicked");
+
+    if (onMouseClicked) {
+        onMouseClicked();
+    }
+}
+
 void FileLabel::setFileName(const juce::String fileName)
 {
     fileText->setText(fileName);
@@ -55,6 +65,16 @@ void FileLabel::setFileName(const juce::String fileName)
 juce::String FileLabel::getFileName() const
 {
     return fileText->getText();
+}
+
+void FileLabel::setSelected(bool shouldBeSelected)
+{
+    if (selected == shouldBeSelected) {
+        return;
+    }
+
+    selected = shouldBeSelected;
+    repaint();
 }
 
 void FileLabel::setGrabbed(bool shouldBeGrabbed)

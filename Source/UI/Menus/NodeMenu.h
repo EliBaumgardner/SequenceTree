@@ -8,7 +8,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <array>
 #include "../../Util/ApplicationContext.h"
-#include "../Node/ValueEditor.h"
+#include "../Editors/ValueEditor.h"
 #include "ColourSelector.h"
 #include "../Buttons/IconButton.h"
 #include "TraversalRulesWindow.h"
