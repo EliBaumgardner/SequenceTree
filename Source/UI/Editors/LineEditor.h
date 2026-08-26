@@ -18,12 +18,14 @@ public:
 
     int  getCaretPosition() const;
     void setCaretPosition(int position);
+    void indent(int indentSize);
 
     std::function<void()> onInsertLine;
     std::function<void()> onMergeWithPreviousLine;
     std::function<void()> onMoveToNextLine;
     std::function<void()> onMoveToPreviousLine;
     std::function<void()> onWrapChanged;
+    std::function<void()> onIndent;
 
 private:
 
@@ -33,6 +35,8 @@ private:
 
     void moveToNextLine();
     void moveToPreviousLine();
+
+     const int indentSize = 10;
 };
 
 
