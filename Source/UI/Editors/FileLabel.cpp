@@ -12,6 +12,9 @@ FileLabel::FileLabel(ApplicationContext& context) : context(context) {
     fileText->enableTextValue();
     fileText->enableAutoFitText();
     fileText->setCaretColour(juce::Colours::lightgrey);
+    fileText->setEditable(false);
+
+    fileText->setInterceptsMouseClicks(false,false);
 
     removeButton = std::make_unique<IconButton>(
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {

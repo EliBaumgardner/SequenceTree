@@ -158,11 +158,11 @@ void FilePage::refreshLines() {
 
         LineEditor& lineEditor = *fileLine.lineEditor;
 
-        lineEditor.onInsertLine         = [this, line = &fileLine] { insertLineAfter(line); };
-        lineEditor.onMoveToNextLine     = [this, line = &fileLine] { focusRelative(line, 1); };
-        lineEditor.onMoveToPreviousLine = [this, line = &fileLine] { focusRelative(line, -1); };
+        lineEditor.onInsertLine            = [this, line = &fileLine] { insertLineAfter(line); };
+        lineEditor.onMoveToNextLine        = [this, line = &fileLine] { focusRelative(line, 1); };
+        lineEditor.onMoveToPreviousLine    = [this, line = &fileLine] { focusRelative(line, -1); };
         lineEditor.onMergeWithPreviousLine = [this, line = &fileLine] { mergeWithPreviousLine(line); };
-        lineEditor.onWrapChanged        = [this] { triggerAsyncUpdate(); };
+        lineEditor.onWrapChanged           = [this] { triggerAsyncUpdate(); };
 
         addAndMakeVisible(fileLine);
     }
@@ -194,7 +194,7 @@ void FilePage::focusRelative(const FileLine* line, int offset) {
 
 void FilePage::mergeWithPreviousLine(const FileLine* line) {
 
-    if (indexOf(line) <= 0) {
+    if (indexOf(line) <= 0 || line == nullptr) {
         return;
     }
 

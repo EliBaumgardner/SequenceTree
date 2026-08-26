@@ -51,6 +51,11 @@ bool LineEditor::keyPressed(const juce::KeyPress& key, juce::Component*)
         return true;
     }
 
+    if (key == juce::KeyPress::tabKey) {
+        indent(indentSize);
+        return true;
+    }
+
     if (key == juce::KeyPress::backspaceKey
         && textEditor->getCaretPosition() == 0
         && textEditor->getHighlightedRegion().isEmpty()
@@ -61,6 +66,11 @@ bool LineEditor::keyPressed(const juce::KeyPress& key, juce::Component*)
     }
 
     return false;
+}
+
+void LineEditor::indent(int indentSize) {
+
+    textEditor->insertTextAtCaret(juce::String::repeatedString(" ", indentSize));
 }
 
 void LineEditor::textEditorReturnKeyPressed(juce::TextEditor&)
