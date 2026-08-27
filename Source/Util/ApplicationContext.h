@@ -13,6 +13,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>
 #include "NodeInfo.h"
+#include "ArrowInfo.h"
 
 class SequenceTreeAudioProcessor;
 class NodeCanvas;
@@ -37,7 +38,7 @@ struct ApplicationContext
 
     NodeDisplayMode currentDisplayMode = NodeDisplayMode::Pitch;
 
-    ArrowType currentArrowType = ArrowType::Node;
+    ArrowInfo currentArrowInfo;
 
     bool isComplete() const
     {

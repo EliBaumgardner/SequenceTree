@@ -16,7 +16,7 @@ ArrowWindow::ArrowWindow(ApplicationContext& context)
     arrowTypePane.onSelectionChanged = [this](const IconButton* selected) {
         const std::optional<ArrowType> arrowType = arrowTypeFor(selected);
 
-        applicationContext.currentArrowType = arrowType.value_or(ArrowType::Node);
+        applicationContext.currentArrowInfo.type = arrowType.value_or(ArrowType::Node);
 
         if (onArrowTypeChanged) {
             onArrowTypeChanged(arrowType);
@@ -71,12 +71,12 @@ std::optional<ArrowType> ArrowWindow::getSelectedArrowType() const {
 }
 
 void ArrowWindow::showSelectedArrowType() {
-    if (applicationContext.currentArrowType == ArrowType::Node) {
+    if (applicationContext.currentArrowInfo.type == ArrowType::Node) {
         return;
     }
 
     for (const ArrowTypeButton& arrowTypeButton : arrowTypeButtons) {
-        if (arrowTypeButton.type == applicationContext.currentArrowType) {
+        if (arrowTypeButton.type == applicationContext.currentArrowInfo.type) {
             arrowTypePane.setSelectedButton(arrowTypeButton.button);
             return;
         }

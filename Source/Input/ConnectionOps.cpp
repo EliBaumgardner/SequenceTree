@@ -90,18 +90,20 @@ void ConnectionOps::setArrowType(const Arrow* arrow, ArrowType arrowType)
     applicationContext.valueTreeState->setArrowType(ownerNodeId, childNodeId, arrowType, undoManager);
 }
 
-void ConnectionOps::applySelectedArrowType(int parentNodeId, int childNodeId)
+void ConnectionOps::applySelectedArrowInfo(int parentNodeId, int childNodeId)
 {
-    if (applicationContext.currentArrowType != ArrowType::Traversal) {
-        return;
+    const ArrowInfo& arrowInfo = applicationContext.currentArrowInfo;
+
+    if (arrowInfo.type == ArrowType::Traversal && connectsToOtherTreeRoot(parentNodeId, childNodeId)) {
+        applicationContext.valueTreeState->setArrowType(parentNodeId, childNodeId, ArrowType::Traversal,
+                                                        applicationContext.undoManager);
     }
 
-    if (! connectsToOtherTreeRoot(parentNodeId, childNodeId)) {
-        return;
-    }
-
-    applicationContext.valueTreeState->setArrowType(parentNodeId, childNodeId, ArrowType::Traversal,
+    applicationContext.valueTreeState->setArrowInfo(parentNodeId, childNodeId, arrowInfo,
                                                     applicationContext.undoManager);
+
+    applicationContext.valueTreeState->applyPitchBindings(parentNodeId, applicationContext.undoManager);
+    applicationContext.valueTreeState->applyPitchBindings(childNodeId,  applicationContext.undoManager);
 }
 
 void ConnectionOps::connect(int parentNodeId, int childNodeId)
@@ -110,7 +112,7 @@ void ConnectionOps::connect(int parentNodeId, int childNodeId)
 
     undoManager->beginNewTransaction();
     applicationContext.valueTreeState->connectNodes(parentNodeId, childNodeId, undoManager);
-    applySelectedArrowType(parentNodeId, childNodeId);
+    applySelectedArrowInfo(parentNodeId, childNodeId);
 
     applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(parentNodeId));
 }

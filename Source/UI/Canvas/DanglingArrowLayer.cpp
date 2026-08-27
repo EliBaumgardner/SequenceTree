@@ -8,6 +8,7 @@
 #include "../Node/Arrow.h"
 #include "../Node/Node.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
+#include "../../Graph/ValueTreeState.h"
 #include "../../Util/ApplicationContext.h"
 
 DanglingArrowLayer::DanglingArrowLayer(NodeCanvas& canvasRef, ApplicationContext& context)
@@ -83,7 +84,12 @@ void DanglingArrowLayer::add(const Node* node, juce::Point<int> tipOffset) const
     juce::ValueTree arrowTree(ValueTreeIdentifiers::DanglingArrow);
     arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
     arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
+
+    ValueTreeState::writeArrowInfo(arrowTree, applicationContext.currentArrowInfo, undoManager);
+
     arrowList.addChild(arrowTree, -1, undoManager);
+
+    applicationContext.valueTreeState->applyPitchBindings(node->getComponentID().getIntValue(), undoManager);
 }
 
 void DanglingArrowLayer::remove(Arrow* arrow) const

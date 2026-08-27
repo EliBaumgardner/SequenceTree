@@ -14,6 +14,7 @@
 #include "../../Util/ApplicationContext.h"
 #include "ArrowProgress.h"
 #include "../Editors/ValueEditor.h"
+#include "../../Util/ArrowInfo.h"
 
 class Node;
 
@@ -40,6 +41,7 @@ public:
   ~Arrow() override { stopTimer(); }
 
   bool isDangling() const { return endNode == nullptr; }
+  ArrowInfo getArrowInfo() const;
   bool isDashed() const;
   bool isTraversalArrow() const;
   bool connectsTraversalFlag() const;

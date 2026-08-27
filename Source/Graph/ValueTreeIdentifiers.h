@@ -39,6 +39,10 @@ public:
     static const juce::Identifier ArrowTipX;
     static const juce::Identifier ArrowTipY;
     static const juce::Identifier ArrowType;
+    static const juce::Identifier ArrowXBinding;
+    static const juce::Identifier ArrowYBinding;
+    static const juce::Identifier ArrowXMultiplier;
+    static const juce::Identifier ArrowYMultiplier;
 
     // Property Identifiers
 
