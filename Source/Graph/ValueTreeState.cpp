@@ -9,9 +9,9 @@ ValueTreeState::ValueTreeState() {
 
     canvasData   = juce::ValueTree(ValueTreeIdentifiers::CanvasData);
     nodeTreeIds  = juce::ValueTree(ValueTreeIdentifiers::NodeTreeIds);
+
     nodeMap      = juce::ValueTree(ValueTreeIdentifiers::NodeMap);
     nodeTreeMap  = juce::ValueTree(ValueTreeIdentifiers::NodeTreeMap);
-
     traversalMap = juce::ValueTree(ValueTreeIdentifiers::TraversalMap);
 
     canvasData.addChild(nodeTreeIds, -1, nullptr);
@@ -286,6 +286,119 @@ void ValueTreeState::setArrowType(int parentNodeId, int childNodeId, ArrowType a
     }
 }
 
+ArrowInfo ValueTreeState::readArrowInfo(const juce::ValueTree& arrowTree, bool sourceIsAlternative)
+{
+    ArrowInfo arrowInfo = defaultArrowInfo(sourceIsAlternative);
+
+    if (! arrowTree.isValid()) {
+        return arrowInfo;
+    }
+
+    arrowInfo.type = static_cast<ArrowType>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowType,
+                                                                       static_cast<int>(arrowInfo.type)));
+
+    if (! arrowTree.hasProperty(ValueTreeIdentifiers::ArrowXBinding)) {
+        return arrowInfo;
+    }
+
+    arrowInfo.xBinding = static_cast<ArrowBinding>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowXBinding));
+    arrowInfo.yBinding = static_cast<ArrowBinding>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowYBinding));
+
+    arrowInfo.xMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowXMultiplier, 1.0);
+    arrowInfo.yMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowYMultiplier, 1.0);
+
+    return arrowInfo;
+}
+
+void ValueTreeState::writeArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo,
+                                    juce::UndoManager* undoManager)
+{
+    if (! arrowTree.isValid() || ! arrowHasCustomBindings(arrowInfo)) {
+        return;
+    }
+
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowXBinding,    static_cast<int>(arrowInfo.xBinding), undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowYBinding,    static_cast<int>(arrowInfo.yBinding), undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, arrowInfo.xMultiplier,                undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowYMultiplier, arrowInfo.yMultiplier,                undoManager);
+}
+
+void ValueTreeState::setArrowInfo(int parentNodeId, int childNodeId, const ArrowInfo& arrowInfo,
+                                  juce::UndoManager* undoManager)
+{
+    writeArrowInfo(getConnection(parentNodeId, childNodeId), arrowInfo, undoManager);
+}
+
+int ValueTreeState::getNotePitch(int nodeId)
+{
+    juce::ValueTree note = getMidiNotes(nodeId).getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+
+    return note.getProperty(ValueTreeIdentifiers::MidiPitch, arrowDefaultBasePitch);
+}
+
+void ValueTreeState::applyPitchBindings(int nodeId, juce::UndoManager* undoManager)
+{
+    juce::ValueTree node = getNode(nodeId);
+
+    if (! node.isValid()) {
+        return;
+    }
+
+    juce::ValueTree note = getMidiNotes(nodeId).getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+
+    if (! note.isValid()) {
+        return;
+    }
+
+    const bool isAlternative = node.getType() == ValueTreeIdentifiers::AlternativeNodeData;
+
+    const int centreX = node.getProperty(ValueTreeIdentifiers::XPosition);
+    const int centreY = node.getProperty(ValueTreeIdentifiers::YPosition);
+
+    juce::ValueTree parent = getNodeParent(nodeId);
+
+    const int basePitch = parent.isValid()
+                        ? getNotePitch((int) parent.getProperty(ValueTreeIdentifiers::Id))
+                        : arrowDefaultBasePitch;
+
+    auto applyBinding = [&](const juce::ValueTree& arrowTree, bool sourceIsAlternative, int deltaX, int deltaY) {
+        const ArrowInfo arrowInfo = readArrowInfo(arrowTree, sourceIsAlternative);
+
+        if (! arrowBindsTo(arrowInfo, ArrowBinding::PitchBind)) {
+            return false;
+        }
+
+        note.setProperty(ValueTreeIdentifiers::MidiPitch,
+                         arrowPitchFromDelta(arrowInfo, basePitch, deltaX, deltaY), undoManager);
+        return true;
+    };
+
+    if (parent.isValid()) {
+        const int parentId = parent.getProperty(ValueTreeIdentifiers::Id);
+
+        const bool parentIsAlternative = parent.getType() == ValueTreeIdentifiers::AlternativeNodeData;
+
+        if (applyBinding(getConnection(parentId, nodeId),
+                         isAlternative || parentIsAlternative,
+                         centreX - (int) parent.getProperty(ValueTreeIdentifiers::XPosition),
+                         centreY - (int) parent.getProperty(ValueTreeIdentifiers::YPosition))) {
+            return;
+        }
+    }
+
+    juce::ValueTree danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+
+    for (int i = 0; i < danglingArrows.getNumChildren(); ++i) {
+        juce::ValueTree arrowTree = danglingArrows.getChild(i);
+
+        if (applyBinding(arrowTree, isAlternative,
+                         (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX),
+                         (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY))) {
+            return;
+        }
+    }
+}
+
 void ValueTreeState::removeNodeTree(int treeId, juce::UndoManager* undoManager)
 {
     juce::ValueTree nodeTree = nodeTreeMap.getChildWithProperty(ValueTreeIdentifiers::Id,treeId);
@@ -437,16 +550,11 @@ juce::ValueTree ValueTreeState::createTraversalData(int traversalId, juce::UndoM
 {
     juce::ValueTree traversalData   {ValueTreeIdentifiers::TraversalData};
 
-    traversalData.setProperty  (ValueTreeIdentifiers::TraversalId, traversalId, undoManager);
-
+    traversalData.setProperty(ValueTreeIdentifiers::TraversalId, traversalId, undoManager);
     traversalData.setProperty(ValueTreeIdentifiers::TempoMultiplier,defaultTempoMult,undoManager);
-
     traversalData.setProperty(ValueTreeIdentifiers::TraversalColour, juce::Colours::white.toString(), undoManager);
-
     traversalData.setProperty(ValueTreeIdentifiers::TraversalChannel, 1, undoManager);
-
     traversalData.setProperty(ValueTreeIdentifiers::TraversalTranspose, 0, undoManager);
-
     traversalData.setProperty(ValueTreeIdentifiers::TraversalVelocity, 1.0, undoManager);
 
     traversalMap.addChild(traversalData, -1, undoManager);

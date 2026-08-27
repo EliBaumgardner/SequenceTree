@@ -72,15 +72,19 @@ bool Arrow::isDashed() const
         && ! startNode->isAlternativeNode;
 }
 
+ArrowInfo Arrow::getArrowInfo() const
+{
+    return ValueTreeState::readArrowInfo(arrowTree,
+                                         startNode != nullptr && startNode->isAlternativeNode);
+}
+
 bool Arrow::isTraversalArrow() const
 {
     if (isDangling() || ! arrowTree.isValid()) {
         return false;
     }
 
-    const int storedType = arrowTree.getProperty(ValueTreeIdentifiers::ArrowType, (int) ArrowType::Node);
-
-    return storedType == (int) ArrowType::Traversal;
+    return getArrowInfo().type == ArrowType::Traversal;
 }
 
 bool Arrow::connectsTraversalFlag() const
@@ -97,14 +101,40 @@ int Arrow::getDuration() const
 
     const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
 
-    return arrowDurationFromDelta(delta.x, delta.y, startNode->isAlternativeNode);
+    return arrowDurationFromDelta(getArrowInfo(), delta.x, delta.y);
 }
 
 juce::String Arrow::getDurationLabel() const
 {
+    if (startNode == nullptr) {
+        return "0";
+    }
+
+    const ArrowInfo arrowInfo = getArrowInfo();
+
+    if (! arrowBindsTo(arrowInfo, ArrowBinding::DurationBind)
+        && arrowBindsTo(arrowInfo, ArrowBinding::PitchBind)) {
+
+        if (isDangling()) {
+            return juce::String((int) startNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch,
+                                                                          arrowDefaultBasePitch));
+        }
+
+        const Node* const parentNode = startNode->isAlternativeNode ? endNode : startNode;
+
+        const juce::Point<int> delta = startNode->isAlternativeNode
+                                     ? startNode->getNodeCentre() - getTip()
+                                     : getTip() - startNode->getNodeCentre();
+
+        const int basePitch = parentNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch,
+                                                                   arrowDefaultBasePitch);
+
+        return juce::String(arrowPitchFromDelta(arrowInfo, basePitch, delta.x, delta.y));
+    }
+
     const int duration = getDuration();
 
-    if (startNode != nullptr && startNode->nodeType == NodeType::Modulator) {
+    if (startNode->nodeType == NodeType::Modulator) {
         return juce::String(duration / 10) + "%";
     }
 

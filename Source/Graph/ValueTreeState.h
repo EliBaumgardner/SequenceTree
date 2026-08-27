@@ -5,6 +5,7 @@
 #pragma once
 
 #include "../Util/NodeInfo.h"
+#include "../Util/ArrowInfo.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 class ValueTreeState {
@@ -38,6 +39,16 @@ public:
     void connectNodes   (int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
     void disconnectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
     void setArrowType   (int parentNodeId, int childNodeId, ArrowType arrowType, juce::UndoManager* undoManager);
+
+    static ArrowInfo readArrowInfo (const juce::ValueTree& arrowTree, bool sourceIsAlternative);
+    static void      writeArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo,
+                                    juce::UndoManager* undoManager);
+
+    void setArrowInfo      (int parentNodeId, int childNodeId, const ArrowInfo& arrowInfo,
+                            juce::UndoManager* undoManager);
+    int  getNotePitch(int nodeId);
+    void applyPitchBindings(int nodeId, juce::UndoManager* undoManager);
+
     void removeRootNode (int rootNodeId, juce::UndoManager* undoManager);
     void removeNode     (int nodeId, juce::UndoManager* undoManager);
     void removeNodeTree (int treeId, juce::UndoManager* undoManager);

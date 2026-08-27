@@ -9,12 +9,13 @@ ArrowBindBar::ArrowBindBar(ApplicationContext& context)
     : Bar(context, { Orientation::horizontal, Background::litFromBottom }),
       fieldSelector(context)
 {
-    configureField(pitchField);
-    configureField(durationField);
+    configureField(pitchField,    durationField);
+    configureField(durationField, pitchField);
 
     addAndMakeVisible(fieldSelector);
 
     configureFieldSelector();
+    showCurrentBindings();
 }
 
 void ArrowBindBar::configureFieldSelector()
@@ -30,15 +31,13 @@ void ArrowBindBar::configureFieldSelector()
     showField(pitchItemId);
 }
 
-void ArrowBindBar::configureField(BindField& field)
-
-
+void ArrowBindBar::configureField(BindField& field, BindField& otherField)
 {
-    configureAxis(field.x, "X");
-    configureAxis(field.y, "Y");
+    configureAxis(field.x, otherField.x, "X");
+    configureAxis(field.y, otherField.y, "Y");
 }
 
-void ArrowBindBar::configureAxis(AxisControl& axis, const juce::String& text)
+void ArrowBindBar::configureAxis(AxisControl& axis, AxisControl& otherAxis, const juce::String& text)
 {
     axis.toggle = std::make_unique<IconButton>(
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
@@ -48,14 +47,78 @@ void ArrowBindBar::configureAxis(AxisControl& axis, const juce::String& text)
         }, applicationContext.lookAndFeel);
 
     axis.toggle->setText(text);
-    axis.toggle->onClick = [button = axis.toggle.get()]() { button->toggleSelected(); };
+
+    axis.toggle->onClick = [this, button = axis.toggle.get(), other = &otherAxis]() {
+        button->toggleSelected();
+
+        if (button->isSelected()) {
+            other->toggle->setSelected(false);
+        }
+
+        publishBindings();
+    };
 
     axis.editor = std::make_unique<ValueEditor>(applicationContext);
-    axis.editor->enableMultiplierValue();
+    axis.editor->enableDecimalValue(arrowMinimumMultiplier, arrowMaximumMultiplier);
     axis.editor->enableAutoFitText();
+    axis.editor->boundValue.setValue(1.0);
+    axis.editor->onValueChange = [this]() { publishBindings(); };
 
     addChildComponent(*axis.toggle);
     addChildComponent(*axis.editor);
+}
+
+void ArrowBindBar::showCurrentBindings()
+{
+    const ArrowInfo& arrowInfo = applicationContext.currentArrowInfo;
+
+    showAxis(xAxis, arrowInfo.xBinding, arrowInfo.xMultiplier);
+    showAxis(yAxis, arrowInfo.yBinding, arrowInfo.yMultiplier);
+}
+
+void ArrowBindBar::showAxis(AxisMember axisMember, ArrowBinding binding, double multiplier)
+{
+    AxisControl& pitchAxis    = pitchField.*axisMember;
+    AxisControl& durationAxis = durationField.*axisMember;
+
+    pitchAxis.toggle   ->setSelected(binding == ArrowBinding::PitchBind);
+    durationAxis.toggle->setSelected(binding == ArrowBinding::DurationBind);
+
+    if (binding == ArrowBinding::PitchBind) {
+        pitchAxis.editor->boundValue.setValue(multiplier);
+    }
+    else if (binding == ArrowBinding::DurationBind) {
+        durationAxis.editor->boundValue.setValue(multiplier);
+    }
+}
+
+void ArrowBindBar::publishBindings()
+{
+    ArrowInfo& arrowInfo = applicationContext.currentArrowInfo;
+
+    resolveAxis(xAxis, arrowInfo.xBinding, arrowInfo.xMultiplier);
+    resolveAxis(yAxis, arrowInfo.yBinding, arrowInfo.yMultiplier);
+}
+
+void ArrowBindBar::resolveAxis(AxisMember axisMember, ArrowBinding& binding, double& multiplier) const
+{
+    const AxisControl& pitchAxis    = pitchField.*axisMember;
+    const AxisControl& durationAxis = durationField.*axisMember;
+
+    if (pitchAxis.toggle->isSelected()) {
+        binding    = ArrowBinding::PitchBind;
+        multiplier = (double) pitchAxis.editor->boundValue.getValue();
+        return;
+    }
+
+    if (durationAxis.toggle->isSelected()) {
+        binding    = ArrowBinding::DurationBind;
+        multiplier = (double) durationAxis.editor->boundValue.getValue();
+        return;
+    }
+
+    binding    = ArrowBinding::NoBind;
+    multiplier = 1.0;
 }
 
 void ArrowBindBar::showField(int itemId)

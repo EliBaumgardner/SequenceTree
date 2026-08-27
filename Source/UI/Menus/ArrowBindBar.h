@@ -5,6 +5,7 @@
 #ifndef SEQUENCETREE_ARROWBINDBAR_H
 #define SEQUENCETREE_ARROWBINDBAR_H
 
+#include "../../Util/ArrowInfo.h"
 #include "../Bar.h"
 #include "../Buttons/IconButton.h"
 #include "../Editors/ValueEditor.h"
@@ -31,6 +32,8 @@ private:
         AxisControl y;
     };
 
+    using AxisMember = AxisControl BindField::*;
+
     struct Metrics {
         int selectorWidth;
         int toggleWidth;
@@ -42,10 +45,16 @@ private:
     void resized() override;
 
     void configureFieldSelector();
-    void configureField(BindField& field);
-    void configureAxis(AxisControl& axis, const juce::String& text);
+    void configureField(BindField& field, BindField& otherField);
+    void configureAxis (AxisControl& axis, AxisControl& otherAxis, const juce::String& text);
 
     void showField(int itemId);
+
+    void showCurrentBindings();
+    void showAxis(AxisMember axisMember, ArrowBinding binding, double multiplier);
+
+    void publishBindings();
+    void resolveAxis(AxisMember axisMember, ArrowBinding& binding, double& multiplier) const;
 
     Metrics metricsFor(juce::Rectangle<int> bounds) const;
 
@@ -53,6 +62,9 @@ private:
     void layOutAxis (AxisControl& axis, juce::Rectangle<int>& bounds, const Metrics& metrics);
 
     static int scaled(int total, float ratio, int minimum);
+
+    static constexpr AxisMember xAxis = &BindField::x;
+    static constexpr AxisMember yAxis = &BindField::y;
 
     static constexpr int pitchItemId    = 1;
     static constexpr int durationItemId = 2;

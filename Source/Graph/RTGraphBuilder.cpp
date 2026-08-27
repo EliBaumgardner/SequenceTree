@@ -64,32 +64,38 @@ static bool isTreeJumpConnection(const juce::ValueTree& parentValueTree,
 void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNode& rtNode)
 {
     const bool isAlternative = (nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData);
+
     const juce::Point<int> centre = nodeCentre(nodeValueTree);
 
-    auto durationTo = [&](const juce::ValueTree& other) {
+    auto durationTo = [&](const juce::ValueTree& connection, const juce::ValueTree& other) {
         const juce::Point<int> delta = nodeCentre(other) - centre;
-        return arrowDurationFromDelta(delta.x, delta.y, isAlternative);
+        return arrowDurationFromDelta(ValueTreeState::readArrowInfo(connection, isAlternative), delta.x, delta.y);
     };
 
     if (isAlternative) {
         juce::ValueTree parent = valueTreeState.getNodeParent(rtNode.nodeID);
 
         if (parent.isValid()) {
-            rtNode.durationMap[(int) parent.getProperty(ValueTreeIdentifiers::Id)] = durationTo(parent);
+            const int parentId = parent.getProperty(ValueTreeIdentifiers::Id);
+
+            rtNode.durationMap[parentId] = durationTo(valueTreeState.getConnection(parentId, rtNode.nodeID),
+                                                      parent);
         }
     }
 
     juce::ValueTree childIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
     for (int i = 0; i < childIds.getNumChildren(); i++) {
-        const int childId = childIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+        juce::ValueTree childIdTree = childIds.getChild(i);
+
+        const int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
         juce::ValueTree childTree = valueTreeState.getNode(childId);
 
         if (!childTree.isValid() || childTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
             continue;
         }
 
-        rtNode.durationMap[childId] = durationTo(childTree);
+        rtNode.durationMap[childId] = durationTo(childIdTree, childTree);
     }
 
     juce::ValueTree danglingArrows = nodeValueTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
@@ -100,7 +106,8 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
         const int tipX = arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX);
         const int tipY = arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY);
 
-        rtNode.durationMap[rtNode.nodeID] = arrowDurationFromDelta(tipX, tipY, isAlternative);
+        rtNode.durationMap[rtNode.nodeID] =
+            arrowDurationFromDelta(ValueTreeState::readArrowInfo(arrowTree, isAlternative), tipX, tipY);
 
         collectDisabledTraversals(arrowTree, rtNode.disabledTraversalsByChild[rtNode.nodeID]);
     }

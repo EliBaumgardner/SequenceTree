@@ -59,7 +59,10 @@ void NodeCanvas::enqueueAsyncUpdate(const AsyncUpdate& update)
 void NodeCanvas::handleAsyncUpdate() {
     drainer.drainAll();
 
-    for (auto& asyncUpdate  : asyncUpdates) {
+    std::vector<AsyncUpdate> pendingUpdates;
+    pendingUpdates.swap(asyncUpdates);
+
+    for (auto& asyncUpdate  : pendingUpdates) {
         int nodeId = asyncUpdate.nodeId;
 
         AsyncUpdateType updateType = asyncUpdate.type;
@@ -83,13 +86,18 @@ void NodeCanvas::handleAsyncUpdate() {
         }
         else if (updateType == AsyncUpdateType::NodeMoved) {
             nodeManager.setPosition(nodeId);
+            applyPitchBindingsAround(nodeId);
             applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
+        }
+        else if (updateType == AsyncUpdateType::ValueChanged) {
+            applyPitchBindingsBelow(nodeId);
         }
         else if (updateType == AsyncUpdateType::DurationOnly) {
             applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
         }
         else if (updateType == AsyncUpdateType::DanglingArrowsChanged) {
             danglingArrowLayer.rebuildForNode(nodeId);
+            applyPitchBindingsAround(nodeId);
             applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
         }
         else if (updateType == AsyncUpdateType::ArrowAdded) {
@@ -103,11 +111,45 @@ void NodeCanvas::handleAsyncUpdate() {
         }
     }
 
-    const bool fieldNeedsRefresh = ! asyncUpdates.empty();
-    asyncUpdates.clear();
+    const bool fieldNeedsRefresh = ! pendingUpdates.empty();
 
     if (paintMode && fieldNeedsRefresh) {
         valueField.refresh();
+    }
+}
+
+void NodeCanvas::applyPitchBindingsAround(int nodeId) const
+{
+    applicationContext.valueTreeState->applyPitchBindings(nodeId, applicationContext.undoManager);
+
+    applyPitchBindingsBelow(nodeId);
+}
+
+void NodeCanvas::applyPitchBindingsBelow(int nodeId) const
+{
+    ValueTreeState& state = *applicationContext.valueTreeState;
+    juce::UndoManager* const undoManager = applicationContext.undoManager;
+
+    std::unordered_set<int> visited { nodeId };
+    std::vector<int> pending { nodeId };
+
+    while (! pending.empty()) {
+        const int currentId = pending.back();
+        pending.pop_back();
+
+        const juce::ValueTree childIds =
+            state.getNode(currentId).getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+        for (int i = 0; i < childIds.getNumChildren(); ++i) {
+            const int childId = childIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+
+            if (! visited.insert(childId).second) {
+                continue;
+            }
+
+            state.applyPitchBindings(childId, undoManager);
+            pending.push_back(childId);
+        }
     }
 }
 

@@ -31,6 +31,10 @@ const juce::Identifier ValueTreeIdentifiers::DanglingArrow        {"DanglingArro
 const juce::Identifier ValueTreeIdentifiers::ArrowTipX            {"ArrowTipX"};
 const juce::Identifier ValueTreeIdentifiers::ArrowTipY            {"ArrowTipY"};
 const juce::Identifier ValueTreeIdentifiers::ArrowType            {"ArrowType"};
+const juce::Identifier ValueTreeIdentifiers::ArrowXBinding        {"ArrowXBinding"};
+const juce::Identifier ValueTreeIdentifiers::ArrowYBinding        {"ArrowYBinding"};
+const juce::Identifier ValueTreeIdentifiers::ArrowXMultiplier     {"ArrowXMultiplier"};
+const juce::Identifier ValueTreeIdentifiers::ArrowYMultiplier     {"ArrowYMultiplier"};
 
 
 const juce::Identifier ValueTreeIdentifiers::Id                   {"Id"};

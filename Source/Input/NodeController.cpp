@@ -777,6 +777,10 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
 
     draggedNodeTree = NodeCreationDispatcher::create(nodeControllerMode,*applicationContext.valueTreeState,
                                                      nodeId,nodeType,mods.isCtrlDown(),newPosition,undoManager);
+
+    if (draggedNodeTree.isValid()) {
+        connectionOps.applySelectedArrowInfo(nodeId, draggedNodeTree.getProperty(ValueTreeIdentifiers::Id));
+    }
 }
 
 void NodeController::updateConnectionPreview(Node *node, const NodePosition& newPosition, bool dashed)

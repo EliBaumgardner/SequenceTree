@@ -17,6 +17,8 @@ public:
     bool canBeTraversalArrow(const Arrow* arrow) const;
     void setArrowType       (const Arrow* arrow, ArrowType arrowType);
 
+    void applySelectedArrowInfo(int parentNodeId, int childNodeId);
+
 private:
 
     struct ArrowOwnership
@@ -28,7 +30,6 @@ private:
     ArrowOwnership resolveOwnership(const Arrow* arrow) const;
 
     bool connectsToOtherTreeRoot(int parentNodeId, int childNodeId) const;
-    void applySelectedArrowType (int parentNodeId, int childNodeId);
 
     ApplicationContext& applicationContext;
 };
