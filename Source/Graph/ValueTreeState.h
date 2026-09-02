@@ -7,6 +7,7 @@
 #include "../Util/NodeInfo.h"
 #include "../Util/ArrowInfo.h"
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <vector>
 
 class ValueTreeState {
 
@@ -44,10 +45,10 @@ public:
     static void      writeArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo,
                                     juce::UndoManager* undoManager);
 
-    void setArrowInfo      (int parentNodeId, int childNodeId, const ArrowInfo& arrowInfo,
-                            juce::UndoManager* undoManager);
-    int  getNotePitch(int nodeId);
-    void applyPitchBindings(int nodeId, juce::UndoManager* undoManager);
+    void setArrowInfo(int parentNodeId, int childNodeId, const ArrowInfo& arrowInfo,
+                      juce::UndoManager* undoManager);
+
+    std::vector<int> syncPitchBindings(int nodeId, juce::UndoManager* undoManager);
 
     void removeRootNode (int rootNodeId, juce::UndoManager* undoManager);
     void removeNode     (int nodeId, juce::UndoManager* undoManager);
@@ -67,11 +68,27 @@ public:
     int  getNodeIdIncrement() const  { return nodeIdIncrement; }
     void setNodeIdIncrement(int value) { nodeIdIncrement = value; }
 
+    juce::ValueTree addTraversalRule   (juce::UndoManager* undoManager);
+    void            removeTraversalRule(int ruleId, juce::UndoManager* undoManager);
+
+    juce::ValueTree getTraversalRule(int ruleId) const;
+
+    void setTraversalRuleName  (int ruleId, const juce::String& name,   juce::UndoManager* undoManager);
+    void setTraversalRuleSource(int ruleId, const juce::String& source, juce::UndoManager* undoManager);
+
+    void setActiveTraversalRuleId(int ruleId, juce::UndoManager* undoManager);
+    int  getActiveTraversalRuleId() const;
+
+    juce::String getActiveTraversalRuleSource() const;
+
+    void ensureDefaultTraversalRule();
+
     juce::ValueTree canvasData;
     juce::ValueTree nodeTreeIds;
     juce::ValueTree nodeMap;
     juce::ValueTree nodeTreeMap;
     juce::ValueTree traversalMap;
+    juce::ValueTree traversalRules;
 
     static constexpr int defaultSwitchCount       {1};
     static constexpr int defaultNodeCount         {1};
@@ -87,5 +104,9 @@ public:
 
 private:
 
+    bool applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId, bool sourceIsAlternative,
+                               int deltaX, int deltaY, juce::UndoManager* undoManager);
+
     int nodeIdIncrement = 0;
+    int ruleIdIncrement = 0;
 };

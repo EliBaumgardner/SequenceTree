@@ -4,7 +4,9 @@
 
 #include "ValueFormat.h"
 
-static const juce::String pitchNames[] = {
+namespace {
+
+const juce::String pitchNames[] = {
     juce::String(L"C"),
     juce::String(L"C♯"),
     juce::String(L"D"),
@@ -18,6 +20,8 @@ static const juce::String pitchNames[] = {
     juce::String(L"A♯"),
     juce::String(L"B")
 };
+
+}
 
 InputRestrictions IntFormat::restrictions() const
 {

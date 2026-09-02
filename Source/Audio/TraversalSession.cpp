@@ -3,7 +3,9 @@
 
 #include <algorithm>
 
-static int homeRootId(const TraversalPool::Instance& instance)
+namespace {
+
+int homeRootId(const TraversalPool::Instance& instance)
 {
     if (instance.runtime.originRootId != -1) {
         return instance.runtime.originRootId;
@@ -12,16 +14,22 @@ static int homeRootId(const TraversalPool::Instance& instance)
     return instance.logic.rootId;
 }
 
+}
+
 TraversalSession::TraversalSession(EventManager& eventManager) : eventManager(eventManager)
 {
     activeRootIdScratch.reserve(scratchCapacity);
     restartRootScratch.reserve(scratchCapacity);
+    linkedRootScratch.reserve(scratchCapacity);
 }
 
 void TraversalSession::prepare()
 {
-    selectChildScript = makeNativeSelectChildScript();
-    scriptRule.setScript(&selectChildScript);
+    syncedGraphGeneration = 0;
+    syncedPoolEpoch       = 0;
+
+    nativeFallbackScript = makeNativeSelectChildScript();
+    scriptRule.setScript(&nativeFallbackScript);
 
     if (useScriptedChildSelection) {
         traversals.prepare(maxConcurrentTraversals, scriptRule);
@@ -29,6 +37,13 @@ void TraversalSession::prepare()
     else {
         traversals.prepare(maxConcurrentTraversals, NativeTraversalRule::instance());
     }
+}
+
+void TraversalSession::setSelectChildScript(const RTScript* script)
+{
+    const bool usable = script != nullptr && !script->isEmpty();
+
+    scriptRule.setScript(usable ? script : &nativeFallbackScript);
 }
 
 void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
@@ -46,7 +61,7 @@ void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
 
 void TraversalSession::clearTraversals()
 {
-    eventManager.dispatcher.clearPendingFlags();
+    eventManager.dispatcher.flagScheduler.clear();
     traversals.clear();
 }
 
@@ -59,12 +74,11 @@ void TraversalSession::suspendActiveNotes(juce::MidiBuffer& midiMessages)
     eventManager.bridge.clearAllHighlights();
 }
 
-void TraversalSession::restartActiveTraversals(const NodeMap& nodes, RTGraphs& rtGraphs,
-                                               juce::MidiBuffer& midiMessages)
+void TraversalSession::restartActiveTraversals(const DispatchContext& context)
 {
     restartRootScratch.clear();
 
-    eventManager.dispatcher.clearPendingFlags();
+    eventManager.dispatcher.flagScheduler.clear();
 
     for (const auto& [id, instance] : traversals) {
         if (instance.runtime.isSpawned()) {
@@ -82,24 +96,31 @@ void TraversalSession::restartActiveTraversals(const NodeMap& nodes, RTGraphs& r
     traversals.clear();
 
     for (int rootId : restartRootScratch) {
-        auto rootIt = nodes.find(rootId);
-        if (rootIt == nodes.end()) {
+        auto rootIt = context.nodes.find(rootId);
+        if (rootIt == context.nodes.end()) {
             continue;
         }
 
-        for (const RTtraversal& assigned : rootIt->second.traversals) {
-            startTraversal(rootIt->second, assigned, nodes, rtGraphs, midiMessages);
+        for (const RTtraversal& assigned : rootIt->second->traversals) {
+            startTraversal(*rootIt->second, assigned, context);
         }
     }
 }
 
-void TraversalSession::syncWithGraph(const NodeMap& nodes, RTGraphs& rtGraphs,
-                                     juce::MidiBuffer& midiMessages)
+void TraversalSession::syncWithGraph(const DispatchContext& context, std::uint64_t graphGeneration)
 {
-    syncActiveTraversals(nodes);
-    removeDeletedTraversals(nodes, midiMessages);
-    startMissingTraversals(nodes, rtGraphs, midiMessages);
-    syncTraversalLoopLimits(nodes, rtGraphs, midiMessages);
+    if (graphGeneration == syncedGraphGeneration
+        && traversals.membershipEpoch() == syncedPoolEpoch) {
+        return;
+    }
+
+    syncActiveTraversals(context.nodes);
+    removeDeletedTraversals(context.nodes, context.midiMessages);
+    startMissingTraversals(context);
+    syncTraversalLoopLimits(context);
+
+    syncedGraphGeneration = graphGeneration;
+    syncedPoolEpoch       = traversals.membershipEpoch();
 }
 
 void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
@@ -110,8 +131,8 @@ void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
         if (instance.runtime.asFlag) {
             auto flagIt = nodes.find(instance.runtime.sourceNodeId);
             if (flagIt != nodes.end()
-                && flagIt->second.flagTraversal.traversalId == logic.traversal.traversalId) {
-                logic.traversal = flagIt->second.flagTraversal;
+                && flagIt->second->flagTraversal.traversalId == logic.traversal.traversalId) {
+                logic.traversal = flagIt->second->flagTraversal;
             }
             continue;
         }
@@ -121,7 +142,7 @@ void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
             continue;
         }
 
-        for (const RTtraversal& assigned : rootIt->second.traversals) {
+        for (const RTtraversal& assigned : rootIt->second->traversals) {
             if (assigned.traversalId == logic.traversal.traversalId) {
                 logic.traversal = assigned;
                 break;
@@ -144,7 +165,7 @@ void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiB
                 stillAssigned = true;
             }
             else {
-                for (const RTtraversal& assigned : rootIt->second.traversals) {
+                for (const RTtraversal& assigned : rootIt->second->traversals) {
                     if (assigned.traversalId == traverser.traversal.traversalId) {
                         stillAssigned = true;
                         break;
@@ -163,8 +184,7 @@ void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiB
     }
 }
 
-void TraversalSession::startMissingTraversals(const NodeMap& nodes, RTGraphs& rtGraphs,
-                                              juce::MidiBuffer& midiMessages)
+void TraversalSession::startMissingTraversals(const DispatchContext& context)
 {
     activeRootIdScratch.clear();
 
@@ -189,30 +209,29 @@ void TraversalSession::startMissingTraversals(const NodeMap& nodes, RTGraphs& rt
     };
 
     for (int rootId : activeRootIdScratch) {
-        auto rootIt = nodes.find(rootId);
-        if (rootIt == nodes.end()) {
+        auto rootIt = context.nodes.find(rootId);
+        if (rootIt == context.nodes.end()) {
             continue;
         }
 
-        for (const RTtraversal& assigned : rootIt->second.traversals) {
+        for (const RTtraversal& assigned : rootIt->second->traversals) {
             if (isActive(rootId, assigned.traversalId)) {
                 continue;
             }
 
-            startTraversal(rootIt->second, assigned, nodes, rtGraphs, midiMessages);
+            startTraversal(*rootIt->second, assigned, context);
         }
     }
 }
 
-void TraversalSession::syncTraversalLoopLimits(const NodeMap& nodes, RTGraphs& rtGraphs,
-                                               juce::MidiBuffer& midiMessages)
+void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
 {
     for (auto& [instanceId, instance] : traversals)
     {
         TraversalLogic& traversal = instance.logic;
 
-        auto rtGraphIt = rtGraphs.find(traversal.rootId);
-        if (rtGraphIt == rtGraphs.end()) {
+        auto rtGraphIt = context.rtGraphs.find(traversal.rootId);
+        if (rtGraphIt == context.rtGraphs.end()) {
             continue;
         }
 
@@ -227,37 +246,47 @@ void TraversalSession::syncTraversalLoopLimits(const NodeMap& nodes, RTGraphs& r
             if (newLoopLimit == 0 || traversal.loop.count < newLoopLimit) {
                 traversal.primary.target = traversal.rootId;
                 traversal.state          = TraversalLogic::TraversalState::Active;
-                traversal.advanceAlternative(nodes, traversal.rootId);
+                traversal.advanceAlternative(context.nodes, traversal.rootId);
 
-                auto rootIt = nodes.find(traversal.rootId);
-                if (rootIt != nodes.end()) {
-                    eventManager.bridge.highlightNode(rootIt->second, true);
-                    eventManager.dispatcher.pushNote(rootIt->second, instanceId, { nodes, traversals, midiMessages }, 0);
+                auto rootIt = context.nodes.find(traversal.rootId);
+                if (rootIt != context.nodes.end()) {
+                    eventManager.bridge.highlightNode(*rootIt->second, true);
+                    eventManager.dispatcher.pushNote(*rootIt->second, instanceId, context, 0);
                 }
             }
         }
     }
 }
 
-bool TraversalSession::isLinkedAsChild(const NodeMap& nodes, int nodeId)
+namespace {
+
+bool isRootNode(const RTNode& node)
 {
-    for (const auto& [otherId, other] : nodes) {
-        for (int childId : other.children) {
-            if (childId == nodeId) {
-                return true;
+    return node.nodeID == node.graphID;
+}
+
+}
+
+int TraversalSession::findFirstUnlinkedRootId(const NodeMap& nodes)
+{
+    linkedRootScratch.clear();
+
+    for (const auto& [nodeId, node] : nodes) {
+        for (int childId : node->children) {
+            const auto childIt = nodes.find(childId);
+
+            if (childIt != nodes.end() && isRootNode(*childIt->second)) {
+                linkedRootScratch.push_back(childId);
             }
         }
     }
 
-    return false;
-}
+    std::sort(linkedRootScratch.begin(), linkedRootScratch.end());
 
-int TraversalSession::findFirstUnlinkedRootId(const NodeMap& nodes) const
-{
     int rootId = -1;
 
     for (const auto& [nodeId, node] : nodes) {
-        if (node.nodeID != node.graphID) {
+        if (!isRootNode(*node)) {
             continue;
         }
 
@@ -265,7 +294,7 @@ int TraversalSession::findFirstUnlinkedRootId(const NodeMap& nodes) const
             continue;
         }
 
-        if (!isLinkedAsChild(nodes, nodeId)) {
+        if (!std::binary_search(linkedRootScratch.begin(), linkedRootScratch.end(), nodeId)) {
             rootId = nodeId;
         }
     }
@@ -273,31 +302,29 @@ int TraversalSession::findFirstUnlinkedRootId(const NodeMap& nodes) const
     return rootId;
 }
 
-bool TraversalSession::startTraversalsFromFirstRoot(const NodeMap& nodes, RTGraphs& rtGraphs,
-                                                    juce::MidiBuffer& midiMessages)
+bool TraversalSession::startTraversalsFromFirstRoot(const DispatchContext& context)
 {
-    const int rootId = findFirstUnlinkedRootId(nodes);
+    const int rootId = findFirstUnlinkedRootId(context.nodes);
 
     if (rootId == -1) {
         return false;
     }
 
-    const RTNode& rootNode = nodes.at(rootId);
+    const RTNode& rootNode = *context.nodes.at(rootId);
 
     for (const RTtraversal& traversal : rootNode.traversals) {
-        startTraversal(rootNode, traversal, nodes, rtGraphs, midiMessages);
+        startTraversal(rootNode, traversal, context);
     }
 
     return true;
 }
 
 void TraversalSession::startTraversal(const RTNode& rootNode, const RTtraversal& traversal,
-                                      const NodeMap& nodes, RTGraphs& rtGraphs,
-                                      juce::MidiBuffer& midiMessages)
+                                      const DispatchContext& context)
 {
     const int rootId      = rootNode.nodeID;
     const int traversalId = traversal.traversalId;
-    const int instanceId  = nextTraversalInstanceId();
+    const int instanceId  = traversals.nextInstanceId();
 
     TraversalPool::Instance* acquired = traversals.acquire(instanceId, rootId, traversal);
 
@@ -312,15 +339,15 @@ void TraversalSession::startTraversal(const RTNode& rootNode, const RTtraversal&
     traversalLogic.state          = TraversalLogic::TraversalState::Active;
     traversalLogic.loop.active    = true;
 
-    auto rtGraphIt = rtGraphs.find(rootId);
-    if (rtGraphIt != rtGraphs.end()) {
+    auto rtGraphIt = context.rtGraphs.find(rootId);
+    if (rtGraphIt != context.rtGraphs.end()) {
         traversalLogic.loop.limit = rtGraphIt->second->loopLimit;
     }
 
-    traversalLogic.advanceAlternative(nodes, rootId);
+    traversalLogic.advanceAlternative(context.nodes, rootId);
 
     eventManager.bridge.highlightNode(rootNode, true, traversalId);
-    eventManager.dispatcher.pushNote(rootNode, instanceId, { nodes, traversals, midiMessages }, 0);
+    eventManager.dispatcher.pushNote(rootNode, instanceId, context, 0);
 }
 
 void TraversalSession::stopTraversalNotes(int instanceId, juce::MidiBuffer& midiMessages)

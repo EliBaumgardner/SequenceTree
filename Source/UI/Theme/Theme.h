@@ -48,6 +48,9 @@ struct Theme
     juce::Colour textColour          = baseLightColour1;
     juce::Colour lineNumberColour    = juce::Colours::lightgrey.withAlpha(0.4f);
 
+    juce::Colour scriptErrorColour   = juce::Colour::fromRGB(207, 102, 90);
+    juce::Colour scriptOkColour      = juce::Colour::fromRGB(126, 168, 116);
+
     juce::Colour selectionBoxColour  = baseDarkColour2;
     juce::Colour selectionRingColour = juce::Colours::black;
 
@@ -65,13 +68,16 @@ struct Theme
     juce::Colour arrowProgressColour = baseLightColour2;
     juce::Colour arrowHeadColour     = juce::Colours::black;
 
-    static constexpr float arrowHeadOutlineThickness = 1.0f;
+    static constexpr float arrowHeadOutlineThickness = 0.75f;
 
     static constexpr float selectionRingGap   = 1.5f;
     static constexpr float selectionRingWidth = 1.25f;
     static constexpr float selectionRimWidth  = 3.0f;
 
     static constexpr float nodeCirclePad = 4.0f;
+
+    static constexpr float incrementIconWidthInset  = 0.30f;
+    static constexpr float incrementIconHeightInset = 0.12f;
 
     static constexpr float paneCornerRadius = 4.0f;
 

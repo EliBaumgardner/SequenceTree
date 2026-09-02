@@ -19,6 +19,7 @@ juce::Rectangle<float> CustomLookAndFeel::getNodeCircleBounds(juce::Rectangle<fl
 namespace {
     constexpr float highlightRingWidth   = 1.25f;
     constexpr float highlightRingSpacing = 2.0f;
+    constexpr float hoverRingWidth       = 2.0f;
 
     void paintNodeShadow(juce::Graphics& g, juce::Rectangle<float> shapeBounds)
     {
@@ -68,7 +69,7 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const NodeVisual& visual)
     }
 
     if (visual.isHovered) {
-        g.drawEllipse(circleHover, 2.0f);
+        g.drawEllipse(circleHover, hoverRingWidth);
     }
 
     if (visual.isSelected) {
@@ -81,7 +82,7 @@ void CustomLookAndFeel::drawModulatorNode(juce::Graphics& g, const NodeVisual& v
 {
     auto squareBounds = visual.bounds;
     auto squareFill   = squareBounds.reduced(0.5f);
-    auto squareHover  = squareBounds.reduced(0.5f);
+    auto squareHover  = squareBounds.reduced(0.5f).expanded(hoverRingWidth * 0.5f);
     auto squareRim    = squareBounds.reduced(selectionRimWidth * 0.5f);
 
     paintNodeShadow(g, squareBounds);
@@ -97,7 +98,7 @@ void CustomLookAndFeel::drawModulatorNode(juce::Graphics& g, const NodeVisual& v
     }
 
     if (visual.isHovered) {
-        g.drawRect(squareHover, 2.0f);
+        g.drawRect(squareHover, hoverRingWidth);
     }
 
     if (visual.isSelected) {
@@ -180,10 +181,10 @@ namespace {
         shadowPath   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
         highlightPath.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
 
-        float strokeWidth = 2.0f;
+        float strokeWidth = 1.25f;
 
         if (emphasised) {
-            strokeWidth = 3.25f;
+            strokeWidth = 2.0f;
         }
 
         const juce::PathStrokeType stroke(strokeWidth);
@@ -198,8 +199,8 @@ namespace {
 
     void drawArrowProgress(juce::Graphics& g, const Arrow& arrow, const juce::Path& shaft, juce::Point<float> chord)
     {
-        static constexpr float baseOffset   = 3.5f;
-        static constexpr float trackSpacing = 3.0f;
+        static constexpr float baseOffset   = 2.0f;
+        static constexpr float trackSpacing = 1.75f;
 
         int drawnCount = 0;
 
@@ -219,7 +220,7 @@ namespace {
             const juce::Path progressPath = trimPathToFraction(offsetLine, track.t);
             if (! progressPath.isEmpty()) {
                 g.setColour(track.colour);
-                g.strokePath(progressPath, juce::PathStrokeType(1.25f,
+                g.strokePath(progressPath, juce::PathStrokeType(0.75f,
                                                                juce::PathStrokeType::curved,
                                                                juce::PathStrokeType::butt));
             }
@@ -267,7 +268,7 @@ namespace {
         headShadow   .applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
         headHighlight.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
 
-        const juce::PathStrokeType headStroke(0.75f);
+        const juce::PathStrokeType headStroke(0.5f);
         g.setColour(colour.darker(0.3f).withAlpha(0.2f));
         g.strokePath(headShadow, headStroke);
         g.setColour(colour.brighter(0.3f).withAlpha(0.1f));
@@ -340,13 +341,13 @@ void CustomLookAndFeel::drawArrow(juce::Graphics& g, const Arrow& arrow)
     }
 
     const bool  emphasised = arrow.hovered || arrow.selected;
-    float headLength = 12.0f;
-    float headWidth  = 6.0f;
+    float headLength = 9.0f;
+    float headWidth  = 4.25f;
     float alpha      = 1.0f;
 
     if (emphasised) {
-        headLength = 15.0f;
-        headWidth  = 7.5f;
+        headLength = 11.0f;
+        headWidth  = 5.25f;
     }
 
     if (arrow.isGhost) {
@@ -359,7 +360,7 @@ void CustomLookAndFeel::drawArrow(juce::Graphics& g, const Arrow& arrow)
     juce::Path shaft = arrow.buildShaftPath(geometry, headLength, origin);
 
     if (arrow.isDashed()) {
-        juce::PathStrokeType dashStroke(2.0f);
+        juce::PathStrokeType dashStroke(1.25f);
         float dashLengths[] = { 6.0f, 10.0f };
         dashStroke.createDashedStroke(shaft, shaft, dashLengths, 2);
     }

@@ -116,21 +116,6 @@ void RootNode::resized() {
 
     rootRectangle->setBounds(0, rectY, rw + 8, rectHeight);
 
-    const juce::Rectangle<int> circleArea = bounds.withTrimmedLeft(rw);
-    juce::Rectangle<int> editorArea = CustomLookAndFeel::getNodeCircleBounds(circleArea.toFloat()).toNearestInt().reduced(editorAreaBoundsReduction);
-
-    const int buttonHeight = juce::jmax(2, (int)(editorArea.getHeight() * 0.2f));
-
-    upButton->setBounds(editorArea.removeFromTop(buttonHeight));
-    downButton->setBounds(editorArea.removeFromBottom(buttonHeight));
-
-    nodeValueEditor.setBounds(editorArea);
-
-    const int editorWidth  = (int)(circleArea.getWidth()  * nodeEditorWidthFactor);
-    const int editorHeight = (int)(circleArea.getHeight() * nodeEditorHeightFactor);
-
-    countEditor.setBounds(circleArea.getRight() - editorWidth, circleArea.getY(), editorWidth, editorHeight);
-    switchCountEditor.setBounds(circleArea.getRight() - editorWidth, circleArea.getBottom() - editorHeight, editorWidth, editorHeight);
-    subLoopLimitEditor.setBounds(circleArea.getX(), circleArea.getBottom() - editorHeight, editorWidth, editorHeight);
+    layoutInterior(bounds.withTrimmedLeft(rw));
 }
 

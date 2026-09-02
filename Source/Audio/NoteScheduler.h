@@ -28,7 +28,16 @@ public:
         bool             isConnectionTrigger = false;
     };
 
-    static constexpr int maxExpectedActiveNotes = 256;
+    struct NoteVoicing
+    {
+        int    channel            = -1;
+        int    transpose          = 0;
+        double velocityMultiplier = 1.0;
+        int    pitchOverride      = -1;
+        int    velocityOverride   = -1;
+    };
+
+    static constexpr int maxExpectedActiveNotes = 1024;
 
     std::vector<ActiveNote> activeNotes;
 
@@ -37,9 +46,8 @@ public:
     void scheduleNote(const RTNode& node, int instanceId, double sample,
                       juce::MidiBuffer& midiMessages,
                       double sampleRate, double tempoMultiplier,
-                      int duration, bool isConnectionTrigger = false, int channel = -1, int transpose = 0,
-                      double velocityMultiplier = 1.0,
-                      int pitchOverride = -1, int velocityOverride = -1);
+                      int duration, bool isConnectionTrigger,
+                      const NoteVoicing& voicing);
 
     void sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
     void removeNote(int index);

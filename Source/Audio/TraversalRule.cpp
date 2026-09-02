@@ -1,4 +1,4 @@
-#include "TraversalRule.h"
+ #include "TraversalRule.h"
 
 const RTNode* RuleContext::eligibleChild(int childId) const
 {
@@ -13,7 +13,7 @@ const RTNode* RuleContext::eligibleChild(int childId) const
         return nullptr;
     }
 
-    const RTNode& child = childIt->second;
+    const RTNode& child = *childIt->second;
 
     if (!isEligible(child.nodeType)) {
         return nullptr;
@@ -36,9 +36,7 @@ const RTNode* RuleContext::eligibleChild(int childId) const
         }
     }
 
-    const auto disabledIt = parent.disabledTraversalsByChild.find(childId);
-    if (disabledIt != parent.disabledTraversalsByChild.end()
-        && disabledIt->second.count(traversalId) > 0) {
+    if (isChildDisabledForTraversal(parent, childId, traversalId)) {
         return nullptr;
     }
 

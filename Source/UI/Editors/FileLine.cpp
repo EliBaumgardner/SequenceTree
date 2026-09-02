@@ -64,6 +64,23 @@ juce::String FileLine::getText() const {
     return lineEditor->getLineText();
 }
 
+void FileLine::setError(const juce::String& message) {
+
+    if (errorMessage == message) {
+        return;
+    }
+
+    errorMessage = message;
+    lineEditor->setTooltip(message);
+
+    repaint();
+}
+
+void FileLine::clearError() {
+
+    setError({});
+}
+
 int FileLine::editorWidthFor(int lineWidth) const {
 
     return lineWidth - gutterWidth - contentInset * 2;
@@ -72,6 +89,11 @@ int FileLine::editorWidthFor(int lineWidth) const {
 void FileLine::paint(juce::Graphics &g) {
 
     const Theme& theme = CustomLookAndFeel::get(*this);
+
+    if (hasError()) {
+        g.setColour(theme.scriptErrorColour.withAlpha(0.14f));
+        g.fillRect(getLocalBounds());
+    }
 
     g.setColour(juce::Colours::black);
     g.drawRect(getLocalBounds(), 1.0f);
@@ -87,7 +109,7 @@ void FileLine::paint(juce::Graphics &g) {
         return;
     }
 
-    g.setColour(theme.lineNumberColour);
+    g.setColour(hasError() ? theme.scriptErrorColour : theme.lineNumberColour);
     g.setFont(juce::Font(juce::FontOptions(fontHeight)));
 
     juce::Rectangle<int> numberBounds = getLocalBounds().withWidth(gutterWidth).withTrimmedLeft(gutterTextInset);

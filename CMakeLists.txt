@@ -40,14 +40,20 @@ target_compile_definitions(SequenceTree PRIVATE
 target_sources(SequenceTree PRIVATE
         Source/Plugin/PluginProcessor.cpp
         Source/Plugin/PluginEditor.cpp
+        Source/Plugin/AudioSnapshotPublisher.cpp
         Source/Audio/EventManager.cpp
         Source/Audio/NoteScheduler.cpp
         Source/Audio/TraversalLogic.cpp
         Source/Audio/TraversalDispatcher.cpp
+        Source/Audio/FlagScheduler.cpp
         Source/Audio/TraversalSession.cpp
         Source/Audio/TraversalRule.cpp
         Source/Audio/RTScript.cpp
         Source/Audio/ScriptTraversalRule.cpp
+        Source/Script/ScriptLexer.cpp
+        Source/Script/ScriptParser.cpp
+        Source/Script/ScriptEmitter.cpp
+        Source/Script/ScriptCompiler.cpp
         Source/Audio/NodeStateTable.cpp
         Source/Graph/RTGraphBuilder.cpp
         Source/Graph/ValueTreeState.cpp

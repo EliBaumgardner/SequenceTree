@@ -29,6 +29,11 @@ public:
     juce::String getText() const;
     int          editorWidthFor(int lineWidth) const;
 
+    void setError  (const juce::String& message);
+    void clearError();
+
+    bool hasError() const { return errorMessage.isNotEmpty(); }
+
     static constexpr int gutterTextInset = 2;
     static constexpr int contentInset    = 2;
 
@@ -37,6 +42,8 @@ public:
     ApplicationContext& context;
 
 private:
+
+    juce::String errorMessage;
 
     int   lineNumber  = 0;
     int   gutterWidth = 0;

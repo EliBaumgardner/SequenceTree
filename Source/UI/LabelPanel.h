@@ -28,6 +28,7 @@ public:
     std::vector<std::unique_ptr<FileLabel>> labels;
 
     std::function<void(FileLabel*)> onLabelClicked;
+    std::function<void(int)>        onLabelRemoved;
     static constexpr float labelAspectRatio = 0.3f;
     static constexpr float labelGapRatio    = 0.12f;
 

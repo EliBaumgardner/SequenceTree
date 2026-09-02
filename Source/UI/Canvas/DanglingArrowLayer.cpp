@@ -88,8 +88,6 @@ void DanglingArrowLayer::add(const Node* node, juce::Point<int> tipOffset) const
     ValueTreeState::writeArrowInfo(arrowTree, applicationContext.currentArrowInfo, undoManager);
 
     arrowList.addChild(arrowTree, -1, undoManager);
-
-    applicationContext.valueTreeState->applyPitchBindings(node->getComponentID().getIntValue(), undoManager);
 }
 
 void DanglingArrowLayer::remove(Arrow* arrow) const

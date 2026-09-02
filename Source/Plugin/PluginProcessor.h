@@ -4,11 +4,11 @@
 #include <memory>
 #include <atomic>
 #include <functional>
-#include "../Graph/RTData.h"
 #include "../Graph/ValueTreeState.h"
 #include "../Graph/RTGraphBuilder.h"
 #include "../Audio/EventManager.h"
 #include "../Audio/TraversalSession.h"
+#include "AudioSnapshotPublisher.h"
 
 class SequenceTreeAudioProcessorEditor;
 
@@ -46,8 +46,6 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    void setNewGraph(std::shared_ptr<RTGraph> graph);
-
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     std::function<void()>                  notifyUi;
@@ -59,17 +57,6 @@ public:
 
     void applyRestoredState();
 
-    struct AudioSnapshot
-    {
-        std::shared_ptr<NodeMap>      globalNodes;
-        std::shared_ptr<RTGraphs>     rtGraphs;
-    };
-
-    std::atomic<AudioSnapshot*> currentSnapshot { nullptr };
-    std::atomic<std::uint64_t>  blocksCompleted { 0 };
-
-    void publishAudioSnapshot(std::shared_ptr<AudioSnapshot> snapshot);
-
     std::atomic<bool>   isPlaying       = false;
     std::atomic<bool>   resetRequested  = false;
     bool                wasPlaying      = false;
@@ -78,6 +65,8 @@ public:
     juce::AudioProcessorValueTreeState valueTreeState;
 
     ValueTreeState graphState;
+
+    AudioSnapshotPublisher snapshots { graphState };
 
     RTGraphBuilder rtGraphBuilder { *this, graphState };
 
@@ -89,27 +78,10 @@ public:
 
     TempoInfo tempoInfo;
 
-    EventManager     eventManager     { this };
+    EventManager     eventManager;
     TraversalSession traversalSession { eventManager };
 
     bool hasPendingUiCommands() const;
-
-private:
-
-    struct RetiredSnapshot
-    {
-        std::shared_ptr<AudioSnapshot> snapshot;
-        std::uint64_t                  retiredAtBlock = 0;
-    };
-
-    void collectRetiredSnapshots();
-
-    std::shared_ptr<AudioSnapshot> publishedSnapshot;
-    std::vector<RetiredSnapshot>   retiredSnapshots;
-
-public:
-
-    const AudioSnapshot* getPublishedSnapshot() const { return publishedSnapshot.get(); }
 
     JUCE_DECLARE_WEAK_REFERENCEABLE (SequenceTreeAudioProcessor)
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessor)

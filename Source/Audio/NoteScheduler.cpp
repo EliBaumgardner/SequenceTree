@@ -16,10 +16,13 @@ bool NoteScheduler::isNodeAudible(RTNode::NodeType nodeType)
 void NoteScheduler::scheduleNote(const RTNode& node, int instanceId, double sample,
                                  juce::MidiBuffer& midiMessages,
                                  double sampleRate, double tempoMultiplier,
-                                 int duration, bool isConnectionTrigger, int channel, int transpose,
-                                 double velocityMultiplier,
-                                 int pitchOverride, int velocityOverride)
+                                 int duration, bool isConnectionTrigger,
+                                 const NoteVoicing& voicing)
 {
+    if (static_cast<int>(activeNotes.size()) >= maxExpectedActiveNotes) {
+        return;
+    }
+
     const double lengthInSamples = juce::jmax(1.0, (duration / 1000.0) * sampleRate / tempoMultiplier);
 
     ActiveNote newNote;
@@ -38,11 +41,11 @@ void NoteScheduler::scheduleNote(const RTNode& node, int instanceId, double samp
         newNote.event.velocity       = static_cast<int>(noteData.velocity);
         newNote.event.midiChannel    = juce::jlimit(1, 16, noteData.midiChannel);
 
-        if (pitchOverride >= 0) {
-            newNote.event.pitch = pitchOverride;
+        if (voicing.pitchOverride >= 0) {
+            newNote.event.pitch = voicing.pitchOverride;
         }
-        if (velocityOverride >= 0) {
-            newNote.event.velocity = velocityOverride;
+        if (voicing.velocityOverride >= 0) {
+            newNote.event.velocity = voicing.velocityOverride;
         }
 
         if (newNote.event.velocity <= 0) {
@@ -50,16 +53,17 @@ void NoteScheduler::scheduleNote(const RTNode& node, int instanceId, double samp
         }
     }
 
-    if (channel >= 1) {
-        newNote.event.midiChannel = juce::jlimit(1, 16, channel);
+    if (voicing.channel >= 1) {
+        newNote.event.midiChannel = juce::jlimit(1, 16, voicing.channel);
     }
 
-    if (transpose != 0) {
-        newNote.event.pitch = juce::jlimit(0, 127, newNote.event.pitch + transpose);
+    if (voicing.transpose != 0) {
+        newNote.event.pitch = juce::jlimit(0, 127, newNote.event.pitch + voicing.transpose);
     }
 
-    if (velocityMultiplier != 1.0) {
-        newNote.event.velocity = juce::jlimit(0, 127, juce::roundToInt(newNote.event.velocity * velocityMultiplier));
+    if (voicing.velocityMultiplier != 1.0) {
+        newNote.event.velocity = juce::jlimit(0, 127,
+            juce::roundToInt(newNote.event.velocity * voicing.velocityMultiplier));
     }
 
     activeNotes.push_back(newNote);

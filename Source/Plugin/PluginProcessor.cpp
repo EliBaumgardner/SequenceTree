@@ -20,7 +20,8 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 #endif
 , valueTreeState(*this,nullptr,"STATE",createParameterLayout())
 {
-
+    graphState.ensureDefaultTraversalRule();
+    snapshots.publishActiveTraversalRule();
 }
 
 SequenceTreeAudioProcessor::~SequenceTreeAudioProcessor()
@@ -97,7 +98,7 @@ void SequenceTreeAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
 
 void SequenceTreeAudioProcessor::releaseResources()
 {
-    retiredSnapshots.clear();
+    snapshots.releaseRetiredSnapshots();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -151,6 +152,7 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
         state = juce::ValueTree(ValueTreeIdentifiers::PluginState);
         state.addChild(graphState.nodeMap.createCopy(),      -1, nullptr);
         state.addChild(graphState.traversalMap.createCopy(), -1, nullptr);
+        state.addChild(graphState.traversalRules.createCopy(), -1, nullptr);
     }
 
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
@@ -171,7 +173,10 @@ void SequenceTreeAudioProcessor::applyRestoredState()
     }
 
     graphState.replaceState(restoredTree);
+    graphState.ensureDefaultTraversalRule();
     rtGraphBuilder.rebuildAllGraphs();
+
+    snapshots.publishActiveTraversalRule();
 
     pendingRestoreState = juce::ValueTree();
 
@@ -222,11 +227,11 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     struct BlockScope
     {
-        std::atomic<std::uint64_t>& counter;
-        ~BlockScope() { counter.fetch_add(1, std::memory_order_release); }
+        AudioSnapshotPublisher& publisher;
+        ~BlockScope() { publisher.blockCompleted(); }
     };
 
-    const BlockScope blockScope { blocksCompleted };
+    const BlockScope blockScope { snapshots };
 
     const int numSamples = buffer.getNumSamples();
 
@@ -248,7 +253,9 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     wasPlaying = playing;
 
-    AudioSnapshot* snap = currentSnapshot.load(std::memory_order_acquire);
+    const AudioSnapshotPublisher::Snapshot* snap = snapshots.acquireForBlock();
+
+    traversalSession.setSelectChildScript(snap != nullptr ? snap->selectChildScript.get() : nullptr);
 
     if (!playing || !snap || !snap->globalNodes) {
         if (resetHit) {
@@ -261,25 +268,31 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         return;
     }
 
-    NodeMap&  nodes    = *snap->globalNodes;
-    RTGraphs& rtGraphs = *snap->rtGraphs;
+    const DispatchContext context {
+        *snap->globalNodes,
+        *snap->rtGraphs,
+        traversalSession.getTraversals(),
+        midiMessages,
+        tempoInfo.currentSampleRate,
+        tempoMultiplier.load()
+    };
 
     if (resetHit) {
-        traversalSession.restartActiveTraversals(nodes, rtGraphs, midiMessages);
+        traversalSession.restartActiveTraversals(context);
 
         if (notifyUi) {
             notifyUi();
         }
     }
 
-    traversalSession.syncWithGraph(nodes, rtGraphs, midiMessages);
+    traversalSession.syncWithGraph(context, snap->generation);
 
     if (traversalSession.isIdle()
-        && !traversalSession.startTraversalsFromFirstRoot(nodes, rtGraphs, midiMessages)) {
+        && !traversalSession.startTraversalsFromFirstRoot(context)) {
         return;
     }
 
-    eventManager.processEvents(numSamples, midiMessages, nodes, traversalSession.getTraversals());
+    eventManager.processEvents(numSamples, context);
 
     if (notifyUi && hasPendingUiCommands()) {
         notifyUi();
@@ -289,82 +302,6 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 bool SequenceTreeAudioProcessor::hasPendingUiCommands() const
 {
     return eventManager.bridge.hasPendingCommands();
-}
-
-void SequenceTreeAudioProcessor::setNewGraph(std::shared_ptr<RTGraph> graph)
-{
-    const AudioSnapshot* oldSnap = publishedSnapshot.get();
-
-    auto newSnap = std::make_shared<AudioSnapshot>();
-
-    if (oldSnap && oldSnap->globalNodes) {
-        newSnap->globalNodes = std::make_shared<NodeMap>(*oldSnap->globalNodes);
-    } else {
-        newSnap->globalNodes = std::make_shared<NodeMap>();
-    }
-
-    if (oldSnap && oldSnap->rtGraphs) {
-        newSnap->rtGraphs = std::make_shared<RTGraphs>(*oldSnap->rtGraphs);
-    } else {
-        newSnap->rtGraphs = std::make_shared<RTGraphs>();
-    }
-
-    (*newSnap->rtGraphs)[graph->graphID] = graph;
-
-
-    for (const auto& [nodeId, node] : graph->nodeMap) {
-        (*newSnap->globalNodes)[nodeId] = node;
-    }
-
-    std::vector<int> staleIds;
-
-    for (const auto& [nodeId, node] : *newSnap->globalNodes) {
-        if (node.graphID == graph->graphID && !graph->nodeMap.count(nodeId)) {
-            staleIds.push_back(nodeId);
-        }
-    }
-
-    for (int id : staleIds) {
-        newSnap->globalNodes->erase(id);
-    }
-
-    publishAudioSnapshot(newSnap);
-}
-
-void SequenceTreeAudioProcessor::publishAudioSnapshot(std::shared_ptr<AudioSnapshot> snapshot)
-{
-    static_assert(std::atomic<AudioSnapshot*>::is_always_lock_free,
-                  "the audio thread must be able to read the snapshot without a lock");
-
-    AudioSnapshot* raw = snapshot.get();
-
-    auto retired      = std::move(publishedSnapshot);
-    publishedSnapshot = std::move(snapshot);
-
-    currentSnapshot.store(raw, std::memory_order_release);
-
-    std::atomic_thread_fence(std::memory_order_seq_cst);
-
-    if (retired != nullptr) {
-        retiredSnapshots.push_back({ std::move(retired),
-                                     blocksCompleted.load(std::memory_order_acquire) });
-    }
-
-    collectRetiredSnapshots();
-}
-
-void SequenceTreeAudioProcessor::collectRetiredSnapshots()
-{
-    const std::uint64_t completed = blocksCompleted.load(std::memory_order_acquire);
-
-    auto isUnreachableByAudioThread = [completed](const RetiredSnapshot& entry) {
-        return completed > entry.retiredAtBlock;
-    };
-
-    retiredSnapshots.erase(std::remove_if(retiredSnapshots.begin(),
-                                          retiredSnapshots.end(),
-                                          isUnreachableByAudioThread),
-                           retiredSnapshots.end());
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::createParameterLayout()

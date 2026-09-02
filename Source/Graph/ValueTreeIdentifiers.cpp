@@ -35,6 +35,7 @@ const juce::Identifier ValueTreeIdentifiers::ArrowXBinding        {"ArrowXBindin
 const juce::Identifier ValueTreeIdentifiers::ArrowYBinding        {"ArrowYBinding"};
 const juce::Identifier ValueTreeIdentifiers::ArrowXMultiplier     {"ArrowXMultiplier"};
 const juce::Identifier ValueTreeIdentifiers::ArrowYMultiplier     {"ArrowYMultiplier"};
+const juce::Identifier ValueTreeIdentifiers::ArrowPitchOffset     {"ArrowPitchOffset"};
 
 
 const juce::Identifier ValueTreeIdentifiers::Id                   {"Id"};
@@ -81,3 +82,10 @@ const juce::Identifier ValueTreeIdentifiers::TraversalVelocity    {"TraversalVel
 const juce::Identifier ValueTreeIdentifiers::TraversalChildrenIds {"TraversalChildrenIds"};
 const juce::Identifier ValueTreeIdentifiers::DisabledTraversalIds {"DisabledTraversalIds"};
 const juce::Identifier ValueTreeIdentifiers::TraversalMap         {"TraversalMap"};
+
+const juce::Identifier ValueTreeIdentifiers::TraversalRules       {"TraversalRules"};
+const juce::Identifier ValueTreeIdentifiers::TraversalRuleData    {"TraversalRuleData"};
+
+const juce::Identifier ValueTreeIdentifiers::RuleName             {"RuleName"};
+const juce::Identifier ValueTreeIdentifiers::RuleSource           {"RuleSource"};
+const juce::Identifier ValueTreeIdentifiers::ActiveRuleId         {"ActiveRuleId"};

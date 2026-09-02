@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 class SequenceTreeAudioProcessor;
 class ValueTreeState;
@@ -26,16 +27,16 @@ public:
 
     void makeRTGraph(const juce::ValueTree& nodeValueTree);
     void rebuildAllGraphs();
-    void updateDurationMap(int nodeId);
+    void updateDurationMaps(const std::vector<int>& nodeIds);
 
     std::unordered_map<int, std::shared_ptr<RTGraph>> rtGraphs;
 
 private:
     void createRTNodes(juce::ValueTree rootNodeValueTree,
-                       std::shared_ptr<RTGraph> rtGraph,
+                       NodeBuildMap& builtNodes,
                        std::unordered_map<int, juce::ValueTree>& tempNodeMap);
 
-    void createRTNodeConnections(std::shared_ptr<RTGraph> rtGraph,
+    void createRTNodeConnections(NodeBuildMap& builtNodes,
                                  std::unordered_map<int, juce::ValueTree>& tempNodeMap);
 
     void fillDurationMap(const juce::ValueTree& nodeValueTree, RTNode& rtNode);
@@ -46,4 +47,6 @@ private:
 
     SequenceTreeAudioProcessor& processor;
     ValueTreeState&             valueTreeState;
+
+    std::vector<int>            durationRefreshScratch;
 };

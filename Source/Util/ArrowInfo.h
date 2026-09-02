@@ -12,11 +12,12 @@ enum class ArrowType    { Node = 0, Polyphonic = 1, Traversal = 2 };
 enum class ArrowBinding { NoBind = 0, PitchBind = 1, DurationBind = 2 };
 
 struct ArrowInfo {
-    ArrowType    type        = ArrowType::Node;
-    ArrowBinding xBinding    = ArrowBinding::DurationBind;
-    ArrowBinding yBinding    = ArrowBinding::NoBind;
-    double       xMultiplier = 1.0;
-    double       yMultiplier = 1.0;
+    ArrowType    type               = ArrowType::Node;
+    ArrowBinding xBinding           = ArrowBinding::DurationBind;
+    ArrowBinding yBinding           = ArrowBinding::NoBind;
+    double       xMultiplier        = 1.0;
+    double       yMultiplier        = 1.0;
+    int          appliedPitchOffset = 0;
 };
 
 inline constexpr float arrowMillisecondsPerPixel = 5.0f;
@@ -66,7 +67,7 @@ inline int arrowDurationFromDelta(const ArrowInfo& info, int deltaX, int deltaY)
     return static_cast<int>(span * arrowMillisecondsPerPixel);
 }
 
-inline int arrowPitchFromDelta(const ArrowInfo& info, int basePitch, int deltaX, int deltaY)
+inline int arrowPitchOffsetFromDelta(const ArrowInfo& info, int deltaX, int deltaY)
 {
     double span = 0.0;
 
@@ -78,9 +79,7 @@ inline int arrowPitchFromDelta(const ArrowInfo& info, int basePitch, int deltaX,
         span -= static_cast<double>(deltaY) * info.yMultiplier;
     }
 
-    const int semitones = static_cast<int>(std::round(span * arrowSemitonesPerPixel));
-
-    return std::clamp(basePitch + semitones, arrowMinimumPitch, arrowMaximumPitch);
+    return static_cast<int>(std::round(span * arrowSemitonesPerPixel));
 }
 
 #endif //SEQUENCETREE_ARROWINFO_H

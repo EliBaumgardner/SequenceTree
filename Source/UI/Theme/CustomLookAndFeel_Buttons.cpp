@@ -249,7 +249,8 @@ void CustomLookAndFeel::drawIncrementIcon(juce::Graphics &g, juce::Rectangle<flo
 {
     g.setColour(juce::Colours::black);
 
-    fillTriangle(g, boundsIn.reduced(4.0f, 1.0f),
+    fillTriangle(g, boundsIn.reduced(boundsIn.getWidth()  * incrementIconWidthInset,
+                                     boundsIn.getHeight() * incrementIconHeightInset),
                  pointsUp ? TriangleDirection::up : TriangleDirection::down);
 }
 

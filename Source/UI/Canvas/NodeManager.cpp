@@ -195,12 +195,6 @@ void NodeManager::setPosition(int nodeId) const
         node->setSize(radius * 4, radius * 4);
         node->setCentrePosition(xPosition, yPosition);
     }
-    else if (node->nodeType == NodeType::Modulator) {
-        const int cornerEditorHeight = juce::roundToInt(height * Modulator::cornerEditorHeightFactor);
-
-        node->setSize(radius * 2, height + cornerEditorHeight * 2);
-        node->setCentrePosition(xPosition, yPosition);
-    }
     else {
         node->setSize(radius * 2, radius * 2);
         node->setCentrePosition(xPosition, yPosition);
@@ -209,7 +203,9 @@ void NodeManager::setPosition(int nodeId) const
     canvas.arrowManager.refreshFor(node);
 }
 
-static std::unordered_set<int> collectAncestorIds(const juce::ValueTree& nodeMap, int nodeId)
+namespace {
+
+std::unordered_set<int> collectAncestorIds(const juce::ValueTree& nodeMap, int nodeId)
 {
     std::unordered_set<int> ancestors;
     std::vector<int> frontier { nodeId };
@@ -238,6 +234,8 @@ static std::unordered_set<int> collectAncestorIds(const juce::ValueTree& nodeMap
     }
 
     return ancestors;
+}
+
 }
 
 void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY) const

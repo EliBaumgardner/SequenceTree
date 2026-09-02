@@ -16,9 +16,7 @@ class Modulator : public Node {
 
     explicit Modulator(ApplicationContext& context);
     void  paint(juce::Graphics& g) override;
-    void  resized() override;
     bool  hitTest(int x, int y) override;
-    float getVisualRadius() const override;
     void  setDisplayMode(NodeDisplayMode mode) override;
 
     juce::Rectangle<float> getSquareBounds() const;
@@ -26,8 +24,7 @@ class Modulator : public Node {
     static constexpr int minimumPitchOffset = -48;
     static constexpr int maximumPitchOffset =  48;
 
-    static constexpr float cornerEditorHeightFactor = 0.30f;
-    static constexpr float cornerEditorWidthFactor  = 0.45f;
+    static constexpr float equalAreaSideFactor = 0.8862f;
 };
 
 #endif //SEQUENCETREE_MODULATOR_H

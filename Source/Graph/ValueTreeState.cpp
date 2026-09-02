@@ -4,6 +4,7 @@
 
 #include "ValueTreeState.h"
 #include "ValueTreeIdentifiers.h"
+#include "../Script/ScriptCompiler.h"
 
 ValueTreeState::ValueTreeState() {
 
@@ -14,27 +15,58 @@ ValueTreeState::ValueTreeState() {
     nodeTreeMap  = juce::ValueTree(ValueTreeIdentifiers::NodeTreeMap);
     traversalMap = juce::ValueTree(ValueTreeIdentifiers::TraversalMap);
 
+    traversalRules = juce::ValueTree(ValueTreeIdentifiers::TraversalRules);
+
     canvasData.addChild(nodeTreeIds, -1, nullptr);
 }
 
-static bool isNoteBearingNode(const juce::ValueTree& node)
+namespace {
+
+bool isNoteBearingNode(const juce::ValueTree& node)
 {
     return node.getType() == ValueTreeIdentifiers::NodeData
         || node.getType() == ValueTreeIdentifiers::AlternativeNodeData
         || node.getType() == ValueTreeIdentifiers::RootNodeData;
 }
 
+}
+
 void ValueTreeState::replaceState(const juce::ValueTree& restoredTree)
 {
     juce::ValueTree restoredNodeMap;
     juce::ValueTree restoredTraversalMap;
+    juce::ValueTree restoredTraversalRules;
 
     if (restoredTree.getType() == ValueTreeIdentifiers::PluginState) {
-        restoredNodeMap      = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
-        restoredTraversalMap = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalMap);
+        restoredNodeMap        = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
+        restoredTraversalMap   = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalMap);
+        restoredTraversalRules = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalRules);
     }
     else {
         restoredNodeMap = restoredTree;
+    }
+
+    traversalRules.removeAllChildren(nullptr);
+    traversalRules.removeAllProperties(nullptr);
+
+    for (int i = 0; i < restoredTraversalRules.getNumChildren(); ++i) {
+        traversalRules.addChild(restoredTraversalRules.getChild(i).createCopy(), -1, nullptr);
+    }
+
+    if (restoredTraversalRules.hasProperty(ValueTreeIdentifiers::ActiveRuleId)) {
+        traversalRules.setProperty(ValueTreeIdentifiers::ActiveRuleId,
+                                   restoredTraversalRules.getProperty(ValueTreeIdentifiers::ActiveRuleId),
+                                   nullptr);
+    }
+
+    ruleIdIncrement = 0;
+
+    for (int i = 0; i < traversalRules.getNumChildren(); ++i) {
+        const int id = traversalRules.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+
+        if (id > ruleIdIncrement) {
+            ruleIdIncrement = id;
+        }
     }
 
     traversalMap.removeAllChildren(nullptr);
@@ -307,6 +339,8 @@ ArrowInfo ValueTreeState::readArrowInfo(const juce::ValueTree& arrowTree, bool s
     arrowInfo.xMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowXMultiplier, 1.0);
     arrowInfo.yMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowYMultiplier, 1.0);
 
+    arrowInfo.appliedPitchOffset = arrowTree.getProperty(ValueTreeIdentifiers::ArrowPitchOffset, 0);
+
     return arrowInfo;
 }
 
@@ -321,6 +355,7 @@ void ValueTreeState::writeArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& 
     arrowTree.setProperty(ValueTreeIdentifiers::ArrowYBinding,    static_cast<int>(arrowInfo.yBinding), undoManager);
     arrowTree.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, arrowInfo.xMultiplier,                undoManager);
     arrowTree.setProperty(ValueTreeIdentifiers::ArrowYMultiplier, arrowInfo.yMultiplier,                undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowPitchOffset, arrowInfo.appliedPitchOffset,         undoManager);
 }
 
 void ValueTreeState::setArrowInfo(int parentNodeId, int childNodeId, const ArrowInfo& arrowInfo,
@@ -329,25 +364,55 @@ void ValueTreeState::setArrowInfo(int parentNodeId, int childNodeId, const Arrow
     writeArrowInfo(getConnection(parentNodeId, childNodeId), arrowInfo, undoManager);
 }
 
-int ValueTreeState::getNotePitch(int nodeId)
+bool ValueTreeState::applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId, bool sourceIsAlternative,
+                                           int deltaX, int deltaY, juce::UndoManager* undoManager)
 {
-    juce::ValueTree note = getMidiNotes(nodeId).getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+    const ArrowInfo arrowInfo = readArrowInfo(arrowTree, sourceIsAlternative);
 
-    return note.getProperty(ValueTreeIdentifiers::MidiPitch, arrowDefaultBasePitch);
+    if (! arrowBindsTo(arrowInfo, ArrowBinding::PitchBind)) {
+        return false;
+    }
+
+    const int offset = arrowPitchOffsetFromDelta(arrowInfo, deltaX, deltaY);
+
+    if (! arrowTree.hasProperty(ValueTreeIdentifiers::ArrowPitchOffset)) {
+        arrowTree.setProperty(ValueTreeIdentifiers::ArrowPitchOffset, offset, undoManager);
+        return false;
+    }
+
+    if (offset == arrowInfo.appliedPitchOffset) {
+        return false;
+    }
+
+    juce::ValueTree note = getMidiNotes(targetNodeId).getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+
+    if (! note.isValid()) {
+        return false;
+    }
+
+    const int currentPitch = note.getProperty(ValueTreeIdentifiers::MidiPitch, arrowDefaultBasePitch);
+    const int wantedPitch  = currentPitch + offset - arrowInfo.appliedPitchOffset;
+    const int newPitch     = std::clamp(wantedPitch, arrowMinimumPitch, arrowMaximumPitch);
+
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowPitchOffset, offset - (wantedPitch - newPitch), undoManager);
+
+    if (newPitch == currentPitch) {
+        return false;
+    }
+
+    note.setProperty(ValueTreeIdentifiers::MidiPitch, newPitch, undoManager);
+
+    return true;
 }
 
-void ValueTreeState::applyPitchBindings(int nodeId, juce::UndoManager* undoManager)
+std::vector<int> ValueTreeState::syncPitchBindings(int nodeId, juce::UndoManager* undoManager)
 {
+    std::vector<int> repitchedNodeIds;
+
     juce::ValueTree node = getNode(nodeId);
 
     if (! node.isValid()) {
-        return;
-    }
-
-    juce::ValueTree note = getMidiNotes(nodeId).getChildWithName(ValueTreeIdentifiers::MidiNoteData);
-
-    if (! note.isValid()) {
-        return;
+        return repitchedNodeIds;
     }
 
     const bool isAlternative = node.getType() == ValueTreeIdentifiers::AlternativeNodeData;
@@ -355,48 +420,53 @@ void ValueTreeState::applyPitchBindings(int nodeId, juce::UndoManager* undoManag
     const int centreX = node.getProperty(ValueTreeIdentifiers::XPosition);
     const int centreY = node.getProperty(ValueTreeIdentifiers::YPosition);
 
-    juce::ValueTree parent = getNodeParent(nodeId);
+    const juce::ValueTree childIds = node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
-    const int basePitch = parent.isValid()
-                        ? getNotePitch((int) parent.getProperty(ValueTreeIdentifiers::Id))
-                        : arrowDefaultBasePitch;
+    for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
+        juce::ValueTree other = nodeMap.getChild(i);
 
-    auto applyBinding = [&](const juce::ValueTree& arrowTree, bool sourceIsAlternative, int deltaX, int deltaY) {
-        const ArrowInfo arrowInfo = readArrowInfo(arrowTree, sourceIsAlternative);
+        const int otherId = other.getProperty(ValueTreeIdentifiers::Id);
 
-        if (! arrowBindsTo(arrowInfo, ArrowBinding::PitchBind)) {
-            return false;
+        if (otherId == nodeId) {
+            continue;
         }
 
-        note.setProperty(ValueTreeIdentifiers::MidiPitch,
-                         arrowPitchFromDelta(arrowInfo, basePitch, deltaX, deltaY), undoManager);
-        return true;
-    };
+        const int otherX = other.getProperty(ValueTreeIdentifiers::XPosition);
+        const int otherY = other.getProperty(ValueTreeIdentifiers::YPosition);
 
-    if (parent.isValid()) {
-        const int parentId = parent.getProperty(ValueTreeIdentifiers::Id);
+        const bool touchesAlternative =
+            isAlternative || other.getType() == ValueTreeIdentifiers::AlternativeNodeData;
 
-        const bool parentIsAlternative = parent.getType() == ValueTreeIdentifiers::AlternativeNodeData;
+        juce::ValueTree incoming = other.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds)
+                                        .getChildWithProperty(ValueTreeIdentifiers::Id, nodeId);
 
-        if (applyBinding(getConnection(parentId, nodeId),
-                         isAlternative || parentIsAlternative,
-                         centreX - (int) parent.getProperty(ValueTreeIdentifiers::XPosition),
-                         centreY - (int) parent.getProperty(ValueTreeIdentifiers::YPosition))) {
-            return;
+        if (applyArrowPitchOffset(incoming, nodeId, touchesAlternative,
+                                  centreX - otherX, centreY - otherY, undoManager)) {
+            repitchedNodeIds.push_back(nodeId);
+        }
+
+        juce::ValueTree outgoing = childIds.getChildWithProperty(ValueTreeIdentifiers::Id, otherId);
+
+        if (applyArrowPitchOffset(outgoing, otherId, touchesAlternative,
+                                  otherX - centreX, otherY - centreY, undoManager)) {
+            repitchedNodeIds.push_back(otherId);
         }
     }
 
-    juce::ValueTree danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+    const juce::ValueTree danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
 
     for (int i = 0; i < danglingArrows.getNumChildren(); ++i) {
         juce::ValueTree arrowTree = danglingArrows.getChild(i);
 
-        if (applyBinding(arrowTree, isAlternative,
-                         (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX),
-                         (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY))) {
-            return;
+        if (applyArrowPitchOffset(arrowTree, nodeId, isAlternative,
+                                  (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX),
+                                  (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY),
+                                  undoManager)) {
+            repitchedNodeIds.push_back(nodeId);
         }
     }
+
+    return repitchedNodeIds;
 }
 
 void ValueTreeState::removeNodeTree(int treeId, juce::UndoManager* undoManager)
@@ -559,4 +629,105 @@ juce::ValueTree ValueTreeState::createTraversalData(int traversalId, juce::UndoM
 
     traversalMap.addChild(traversalData, -1, undoManager);
     return traversalData;
+}
+juce::ValueTree ValueTreeState::addTraversalRule(juce::UndoManager* undoManager)
+{
+    ++ruleIdIncrement;
+
+    juce::ValueTree rule {ValueTreeIdentifiers::TraversalRuleData};
+
+    rule.setProperty(ValueTreeIdentifiers::Id, ruleIdIncrement, undoManager);
+    rule.setProperty(ValueTreeIdentifiers::RuleName, "rule " + juce::String(ruleIdIncrement), undoManager);
+    rule.setProperty(ValueTreeIdentifiers::RuleSource, defaultTraversalScriptSource(), undoManager);
+
+    traversalRules.addChild(rule, -1, undoManager);
+
+    return rule;
+}
+
+void ValueTreeState::removeTraversalRule(int ruleId, juce::UndoManager* undoManager)
+{
+    juce::ValueTree rule = getTraversalRule(ruleId);
+
+    if (!rule.isValid()) {
+        return;
+    }
+
+    traversalRules.removeChild(rule, undoManager);
+
+    if (getActiveTraversalRuleId() != ruleId) {
+        return;
+    }
+
+    const juce::ValueTree replacement = traversalRules.getChild(0);
+
+    setActiveTraversalRuleId(replacement.isValid()
+                             ? (int) replacement.getProperty(ValueTreeIdentifiers::Id)
+                             : -1,
+                             undoManager);
+}
+
+juce::ValueTree ValueTreeState::getTraversalRule(int ruleId) const
+{
+    for (int i = 0; i < traversalRules.getNumChildren(); ++i) {
+        const juce::ValueTree rule = traversalRules.getChild(i);
+
+        if ((int) rule.getProperty(ValueTreeIdentifiers::Id) == ruleId) {
+            return rule;
+        }
+    }
+
+    return {};
+}
+
+void ValueTreeState::setTraversalRuleName(int ruleId, const juce::String& name,
+                                          juce::UndoManager* undoManager)
+{
+    juce::ValueTree rule = getTraversalRule(ruleId);
+
+    if (rule.isValid()) {
+        rule.setProperty(ValueTreeIdentifiers::RuleName, name, undoManager);
+    }
+}
+
+void ValueTreeState::setTraversalRuleSource(int ruleId, const juce::String& source,
+                                            juce::UndoManager* undoManager)
+{
+    juce::ValueTree rule = getTraversalRule(ruleId);
+
+    if (rule.isValid()) {
+        rule.setProperty(ValueTreeIdentifiers::RuleSource, source, undoManager);
+    }
+}
+
+void ValueTreeState::setActiveTraversalRuleId(int ruleId, juce::UndoManager* undoManager)
+{
+    traversalRules.setProperty(ValueTreeIdentifiers::ActiveRuleId, ruleId, undoManager);
+}
+
+int ValueTreeState::getActiveTraversalRuleId() const
+{
+    return traversalRules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1);
+}
+
+juce::String ValueTreeState::getActiveTraversalRuleSource() const
+{
+    const juce::ValueTree rule = getTraversalRule(getActiveTraversalRuleId());
+
+    if (!rule.isValid()) {
+        return {};
+    }
+
+    return rule.getProperty(ValueTreeIdentifiers::RuleSource).toString();
+}
+
+void ValueTreeState::ensureDefaultTraversalRule()
+{
+    if (traversalRules.getNumChildren() == 0) {
+        addTraversalRule(nullptr);
+    }
+
+    if (!getTraversalRule(getActiveTraversalRuleId()).isValid()) {
+        setActiveTraversalRuleId(traversalRules.getChild(0).getProperty(ValueTreeIdentifiers::Id), nullptr);
+    }
 }
