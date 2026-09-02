@@ -224,9 +224,10 @@ void ValueEditor::disableDualValue()
     setFormat(std::make_unique<IntFormat>());
 }
 
-void ValueEditor::enableAutoFitText()
+void ValueEditor::enableAutoFitText(float inset)
 {
-    autoFitText = true;
+    autoFitText  = true;
+    autoFitInset = inset;
 }
 
 void ValueEditor::setFontHeight(float newFontHeight)

@@ -102,8 +102,10 @@ void ConnectionOps::applySelectedArrowInfo(int parentNodeId, int childNodeId)
     applicationContext.valueTreeState->setArrowInfo(parentNodeId, childNodeId, arrowInfo,
                                                     applicationContext.undoManager);
 
-    applicationContext.valueTreeState->applyPitchBindings(parentNodeId, applicationContext.undoManager);
-    applicationContext.valueTreeState->applyPitchBindings(childNodeId,  applicationContext.undoManager);
+    for (const int repitchedNodeId : applicationContext.valueTreeState->syncPitchBindings(childNodeId,
+                                                                                         applicationContext.undoManager)) {
+        applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(repitchedNodeId));
+    }
 }
 
 void ConnectionOps::connect(int parentNodeId, int childNodeId)

@@ -74,15 +74,74 @@ struct RTNode {
     RTtraversal flagTraversal;
 
     int graphID = 0;
+
+    RTNode() = default;
+
+    RTNode(RTNode&&) noexcept            = default;
+    RTNode& operator=(RTNode&&) noexcept = default;
+
+    RTNode(const RTNode&)            = delete;
+    RTNode& operator=(const RTNode&) = delete;
+
+    RTNode clone() const
+    {
+        RTNode copy;
+
+        copy.alternativeRootId     = alternativeRootId;
+        copy.nodeID                = nodeID;
+        copy.parentId              = parentId;
+        copy.countLimit            = countLimit;
+        copy.triggerLimit          = triggerLimit;
+        copy.repeatValue           = repeatValue;
+        copy.switchCountLimit      = switchCountLimit;
+        copy.subLoopCountLimit     = subLoopCountLimit;
+        copy.pitchOffset           = pitchOffset;
+        copy.isAlternativeNode     = isAlternativeNode;
+        copy.flagTargetId          = flagTargetId;
+        copy.flagRemovesTraversal  = flagRemovesTraversal;
+        copy.nodeType              = nodeType;
+        copy.traversals            = traversals;
+        copy.notes                 = notes;
+        copy.children              = children;
+        copy.durationMap           = durationMap;
+        copy.disabledTraversalsByChild = disabledTraversalsByChild;
+        copy.treeJumpChildren      = treeJumpChildren;
+        copy.flagTraversal         = flagTraversal;
+        copy.graphID               = graphID;
+
+        return copy;
+    }
 };
 
 
-using NodeMap = std::unordered_map<int, RTNode>;
+inline bool isChildDisabledForTraversal(const RTNode& parent, int childId, int traversalId)
+{
+    const auto disabledIt = parent.disabledTraversalsByChild.find(childId);
+
+    return disabledIt != parent.disabledTraversalsByChild.end()
+        && disabledIt->second.count(traversalId) > 0;
+}
+
+using NodeMap = std::unordered_map<int, std::shared_ptr<const RTNode>>;
+
+using NodeBuildMap = std::unordered_map<int, RTNode>;
+
+inline NodeMap freezeNodes(NodeBuildMap& source)
+{
+    NodeMap frozen;
+    frozen.reserve(source.size());
+
+    for (auto& [nodeId, node] : source) {
+        frozen.emplace(nodeId, std::make_shared<const RTNode>(std::move(node)));
+    }
+
+    return frozen;
+}
 
 struct RTGraph {
 
 
-    std::unordered_map<int, RTNode> nodeMap;
+    NodeMap nodeMap;
 
     int rootID    = 0;
     int graphID   = 0;

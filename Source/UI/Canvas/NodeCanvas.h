@@ -54,8 +54,6 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         void clearCanvas();
         void handleAsyncUpdate() override;
 
-    void applyPitchBindingsAround(int nodeId) const;
-    void applyPitchBindingsBelow(int nodeId) const;
         void setPaintMode(bool enabled);
 
         juce::Colour canvasColour = juce::Colours::white;

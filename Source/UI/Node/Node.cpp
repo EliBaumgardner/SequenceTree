@@ -40,7 +40,7 @@ Node::Node(ApplicationContext& context)
     downButton->setInterceptsMouseClicks(true,false);
 
     nodeValueEditor.setInterceptsMouseClicks(false, false);
-    nodeValueEditor.enableAutoFitText();
+    nodeValueEditor.enableAutoFitText(nodeValueTextInset);
     nodeValueEditor.setPitchMode(true);
     nodeValueEditor.setEditable(false);
     nodeValueEditor.setMinimumValue(0);
@@ -81,21 +81,28 @@ void Node::paint(juce::Graphics& g)
 
 void Node::resized()
 {
-    const auto circleBounds = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat()).toNearestInt();
-    auto editorArea   = circleBounds.reduced(editorAreaBoundsReduction);
-    const int  buttonHeight = juce::jmax(2, (int)(editorArea.getHeight() * 0.2f));
+    layoutInterior(getLocalBounds());
+}
+
+void Node::layoutInterior(juce::Rectangle<int> nodeSquare)
+{
+    auto editorArea = CustomLookAndFeel::getNodeCircleBounds(nodeSquare.toFloat()).toNearestInt()
+                          .reduced(editorAreaBoundsReduction);
+
+    const int buttonHeight = juce::jmax(2, juce::roundToInt(editorArea.getHeight() * incrementButtonHeightFactor));
 
     upButton->setBounds(editorArea.removeFromTop(buttonHeight));
     downButton->setBounds(editorArea.removeFromBottom(buttonHeight));
 
     nodeValueEditor.setBounds(editorArea);
 
-    const int editorWidth  = (int)(getWidth()  * nodeEditorWidthFactor);
-    const int editorHeight = (int)(getHeight() * nodeEditorHeightFactor);
+    const int editorWidth  = (int)(nodeSquare.getWidth()  * nodeEditorWidthFactor);
+    const int editorHeight = (int)(nodeSquare.getHeight() * nodeEditorHeightFactor);
 
-    countEditor.setBounds(getWidth() - editorWidth, 0, editorWidth, editorHeight);
-    switchCountEditor.setBounds(getWidth() - editorWidth, getHeight() - editorHeight, editorWidth, editorHeight);
-    subLoopLimitEditor.setBounds(0, getHeight() - editorHeight, editorWidth, editorHeight);
+    countEditor.setBounds(nodeSquare.getRight() - editorWidth, nodeSquare.getY(), editorWidth, editorHeight);
+    switchCountEditor.setBounds(nodeSquare.getRight() - editorWidth, nodeSquare.getBottom() - editorHeight,
+                                editorWidth, editorHeight);
+    subLoopLimitEditor.setBounds(nodeSquare.getX(), nodeSquare.getBottom() - editorHeight, editorWidth, editorHeight);
 }
 
 void Node::setHoverVisual(bool isHovered)

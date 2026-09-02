@@ -2,7 +2,10 @@
 
 #include "TraversalLogic.h"
 
+#include <juce_audio_basics/juce_audio_basics.h>
+
 #include <cstddef>
+#include <cstdint>
 #include <iterator>
 #include <type_traits>
 #include <utility>
@@ -50,6 +53,7 @@ public:
             slots.assign(static_cast<std::size_t>(capacity), Slot{});
 
             activeCount = 0;
+            ++epoch;
         }
 
         for (auto& slot : slots) {
@@ -69,8 +73,8 @@ public:
         using pointer           = std::conditional_t<IsConst, const Entry*, Entry*>;
         using reference         = std::conditional_t<IsConst, const Entry&, Entry&>;
 
-        using PoolPointer   = std::conditional_t<IsConst, const TraversalPool*, TraversalPool*>;
-        using SlotReference = std::conditional_t<IsConst, const Slot&, Slot&>;
+        using PoolPointer       = std::conditional_t<IsConst, const TraversalPool*, TraversalPool*>;
+        using SlotReference     = std::conditional_t<IsConst, const Slot&, Slot&>;
 
         Iterator() = default;
 
@@ -136,6 +140,7 @@ public:
             slot.entry.second.runtime = {};
 
             ++activeCount;
+            ++epoch;
 
             return &slot.entry.second;
         }
@@ -149,6 +154,7 @@ public:
 
         slots[static_cast<std::size_t>(index)].active = false;
         --activeCount;
+        ++epoch;
 
         return iterator(this, index + 1);
     }
@@ -160,10 +166,38 @@ public:
         }
 
         activeCount = 0;
+        ++epoch;
     }
 
     bool empty() const { return activeCount == 0; }
     int  size () const { return activeCount; }
+
+    int findInstanceFor(int rootId, int traversalTypeId) const
+    {
+        for (const auto& [instanceId, instance] : *this) {
+            if (instance.logic.rootId == rootId
+                && instance.logic.traversal.traversalId == traversalTypeId) {
+                return instanceId;
+            }
+        }
+
+        return -1;
+    }
+
+    bool hasActiveTraversalOnTree(int treeRootId) const
+    {
+        for (const auto& [instanceId, instance] : *this) {
+            if (instance.logic.rootId == treeRootId && instance.logic.shouldTraverse()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    std::uint64_t membershipEpoch() const { return epoch; }
+
+    int nextInstanceId() { return ++instanceIdCounter; }
 
 private:
 
@@ -183,5 +217,19 @@ private:
     std::vector<Slot> slots;
 
     int activeCount = 0;
+
+    int instanceIdCounter = 0;
+
+    std::uint64_t epoch = 0;
 };
 
+struct DispatchContext
+{
+    const NodeMap&    nodes;
+    const RTGraphs&   rtGraphs;
+    TraversalPool&    traversalMap;
+    juce::MidiBuffer& midiMessages;
+
+    double sampleRate      = 44100.0;
+    double tempoMultiplier = 1.0;
+};

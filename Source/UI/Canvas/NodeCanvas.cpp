@@ -15,6 +15,18 @@
 #include "../Node/Modulator.h"
 #include "../Node/TraversalFlagNode.h"
 
+#include <algorithm>
+
+namespace {
+
+void rememberOnce(std::vector<int>& ids, int id)
+{
+    if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
+        ids.push_back(id);
+    }
+}
+
+}
 
 // Canvas Related Functions //
 NodeCanvas::NodeCanvas(ApplicationContext& context) : applicationContext(context)
@@ -62,6 +74,9 @@ void NodeCanvas::handleAsyncUpdate() {
     std::vector<AsyncUpdate> pendingUpdates;
     pendingUpdates.swap(asyncUpdates);
 
+    std::vector<int> pitchSyncNodeIds;
+    std::vector<int> durationRefreshNodeIds;
+
     for (auto& asyncUpdate  : pendingUpdates) {
         int nodeId = asyncUpdate.nodeId;
 
@@ -81,24 +96,26 @@ void NodeCanvas::handleAsyncUpdate() {
 
                 auto emptyGraph = std::make_shared<RTGraph>();
                 emptyGraph->graphID = rootNodeId;
-                applicationContext.processor->setNewGraph(emptyGraph);
+                applicationContext.processor->snapshots.publishGraph(emptyGraph);
             }
         }
         else if (updateType == AsyncUpdateType::NodeMoved) {
             nodeManager.setPosition(nodeId);
-            applyPitchBindingsAround(nodeId);
-            applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
+            rememberOnce(pitchSyncNodeIds, nodeId);
+            rememberOnce(durationRefreshNodeIds, nodeId);
         }
         else if (updateType == AsyncUpdateType::ValueChanged) {
-            applyPitchBindingsBelow(nodeId);
+            if (Node* const changedNode = nodeManager.find(nodeId)) {
+                arrowManager.refreshFor(changedNode);
+            }
         }
         else if (updateType == AsyncUpdateType::DurationOnly) {
-            applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
+            rememberOnce(durationRefreshNodeIds, nodeId);
         }
         else if (updateType == AsyncUpdateType::DanglingArrowsChanged) {
             danglingArrowLayer.rebuildForNode(nodeId);
-            applyPitchBindingsAround(nodeId);
-            applicationContext.rtGraphBuilder->updateDurationMap(nodeId);
+            rememberOnce(pitchSyncNodeIds, nodeId);
+            rememberOnce(durationRefreshNodeIds, nodeId);
         }
         else if (updateType == AsyncUpdateType::ArrowAdded) {
             arrowManager.handleArrowAdded(nodeId, asyncUpdate.rootNodeId);
@@ -111,45 +128,27 @@ void NodeCanvas::handleAsyncUpdate() {
         }
     }
 
+    ValueTreeState& state = *applicationContext.valueTreeState;
+
+    std::vector<int> repitchedRootIds;
+
+    for (int nodeId : pitchSyncNodeIds) {
+        for (int repitchedNodeId : state.syncPitchBindings(nodeId, applicationContext.undoManager)) {
+            rememberOnce(repitchedRootIds,
+                         (int) state.getNode(repitchedNodeId).getProperty(ValueTreeIdentifiers::RootNodeId));
+        }
+    }
+
+    for (int rootNodeId : repitchedRootIds) {
+        applicationContext.rtGraphBuilder->makeRTGraph(state.getNode(rootNodeId));
+    }
+
+    applicationContext.rtGraphBuilder->updateDurationMaps(durationRefreshNodeIds);
+
     const bool fieldNeedsRefresh = ! pendingUpdates.empty();
 
     if (paintMode && fieldNeedsRefresh) {
         valueField.refresh();
-    }
-}
-
-void NodeCanvas::applyPitchBindingsAround(int nodeId) const
-{
-    applicationContext.valueTreeState->applyPitchBindings(nodeId, applicationContext.undoManager);
-
-    applyPitchBindingsBelow(nodeId);
-}
-
-void NodeCanvas::applyPitchBindingsBelow(int nodeId) const
-{
-    ValueTreeState& state = *applicationContext.valueTreeState;
-    juce::UndoManager* const undoManager = applicationContext.undoManager;
-
-    std::unordered_set<int> visited { nodeId };
-    std::vector<int> pending { nodeId };
-
-    while (! pending.empty()) {
-        const int currentId = pending.back();
-        pending.pop_back();
-
-        const juce::ValueTree childIds =
-            state.getNode(currentId).getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-
-        for (int i = 0; i < childIds.getNumChildren(); ++i) {
-            const int childId = childIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
-
-            if (! visited.insert(childId).second) {
-                continue;
-            }
-
-            state.applyPitchBindings(childId, undoManager);
-            pending.push_back(childId);
-        }
     }
 }
 
@@ -165,7 +164,7 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
     }
 
     for(auto& [graphID,graph] : applicationContext.rtGraphBuilder->rtGraphs) {
-        applicationContext.processor->setNewGraph(graph);
+        applicationContext.processor->snapshots.publishGraph(graph);
     }
 
     if (! isPlaying) {

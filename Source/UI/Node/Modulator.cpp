@@ -32,37 +32,10 @@ void Modulator::setDisplayMode(NodeDisplayMode mode) {
 }
 
 juce::Rectangle<float> Modulator::getSquareBounds() const {
-    const float side = (float) juce::jmin(getWidth(), getHeight());
+    const auto  circleBounds = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
+    const float side         = circleBounds.getWidth() * equalAreaSideFactor;
 
-    return getLocalBounds().toFloat().withSizeKeepingCentre(side, side);
-}
-
-float Modulator::getVisualRadius() const {
-    return getSquareBounds().getWidth() * 0.5f;
-}
-
-void Modulator::resized() {
-    const auto square = getSquareBounds().toNearestInt();
-
-    auto      editorArea   = square.reduced(editorAreaBoundsReduction);
-    const int buttonHeight = juce::jmax(2, (int)(editorArea.getHeight() * 0.2f));
-
-    upButton->setBounds(editorArea.removeFromTop(buttonHeight));
-    downButton->setBounds(editorArea.removeFromBottom(buttonHeight));
-
-    nodeValueEditor.setBounds(editorArea);
-
-    const int editorWidth  = juce::roundToInt(square.getWidth()  * cornerEditorWidthFactor);
-    const int editorHeight = juce::roundToInt(square.getHeight() * cornerEditorHeightFactor);
-
-    countEditor.setBounds(square.getRight() - editorWidth, square.getY() - editorHeight,
-                          editorWidth, editorHeight);
-
-    switchCountEditor.setBounds(square.getRight() - editorWidth, square.getBottom(),
-                                editorWidth, editorHeight);
-
-    subLoopLimitEditor.setBounds(square.getX(), square.getBottom(),
-                                 editorWidth, editorHeight);
+    return circleBounds.withSizeKeepingCentre(side, side);
 }
 
 bool Modulator::hitTest(int x, int y) {

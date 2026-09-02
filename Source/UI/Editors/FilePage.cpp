@@ -162,12 +162,73 @@ void FilePage::refreshLines() {
         lineEditor.onMoveToNextLine        = [this, line = &fileLine] { focusRelative(line, 1); };
         lineEditor.onMoveToPreviousLine    = [this, line = &fileLine] { focusRelative(line, -1); };
         lineEditor.onMergeWithPreviousLine = [this, line = &fileLine] { mergeWithPreviousLine(line); };
-        lineEditor.onWrapChanged           = [this] { triggerAsyncUpdate(); };
+        lineEditor.onWrapChanged           = [this] {
+            triggerAsyncUpdate();
+            notifyTextChanged();
+        };
 
         addAndMakeVisible(fileLine);
     }
 
     applyLineMetrics();
+}
+
+void FilePage::setText(const juce::String& text) {
+
+    juce::StringArray lines;
+    lines.addLines(text);
+
+    if (lines.isEmpty()) {
+        lines.add({});
+    }
+
+    std::vector<std::unique_ptr<FileLine>> newFileLines;
+    newFileLines.reserve(lines.size());
+
+    for (const juce::String& line : lines) {
+        auto fileLine = std::make_unique<FileLine>(context);
+        fileLine->lineEditor->setText(line);
+
+        newFileLines.push_back(std::move(fileLine));
+    }
+
+    const juce::ScopedValueSetter<bool> silence(suppressTextChanged, true);
+
+    setFile(std::move(newFileLines));
+}
+
+juce::String FilePage::getText() const {
+
+    juce::StringArray lines;
+
+    for (const auto& fileLine : fileLines) {
+        lines.add(fileLine->getText());
+    }
+
+    return lines.joinIntoString("\n");
+}
+
+void FilePage::clearLineErrors() {
+
+    for (auto& fileLine : fileLines) {
+        fileLine->clearError();
+    }
+}
+
+void FilePage::setLineError(int lineNumber, const juce::String& message) {
+
+    const int index = lineNumber - 1;
+
+    if (index >= 0 && index < (int) fileLines.size()) {
+        fileLines[index]->setError(message);
+    }
+}
+
+void FilePage::notifyTextChanged() {
+
+    if (!suppressTextChanged && onTextChanged != nullptr) {
+        onTextChanged();
+    }
 }
 
 int FilePage::indexOf(const FileLine* line) const {
@@ -230,6 +291,8 @@ void FilePage::performMerge(const FileLine* line) {
     focusLine(index - 1);
 
     fileLines[index - 1]->lineEditor->setCaretPosition(joinPosition);
+
+    notifyTextChanged();
 }
 
 void FilePage::insertLineAfter(const FileLine* line) {
@@ -260,6 +323,8 @@ void FilePage::insertLineAfter(const FileLine* line) {
     focusLine(index + 1);
 
     fileLines[index + 1]->lineEditor->setCaretPosition(0);
+
+    notifyTextChanged();
 }
 
 void FilePage::focusLine(int index) {

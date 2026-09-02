@@ -43,6 +43,7 @@ public:
     static const juce::Identifier ArrowYBinding;
     static const juce::Identifier ArrowXMultiplier;
     static const juce::Identifier ArrowYMultiplier;
+    static const juce::Identifier ArrowPitchOffset;
 
     // Property Identifiers
 
@@ -92,6 +93,13 @@ public:
     static const juce::Identifier TraversalChildrenIds;
     static const juce::Identifier DisabledTraversalIds;
     static const juce::Identifier TraversalFlagValue;
+
+    static const juce::Identifier TraversalRules;
+    static const juce::Identifier TraversalRuleData;
+
+    static const juce::Identifier RuleName;
+    static const juce::Identifier RuleSource;
+    static const juce::Identifier ActiveRuleId;
 
     static const juce::Identifier TempoMultiplier;
     static const juce::Identifier TraversalColour;

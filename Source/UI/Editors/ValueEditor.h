@@ -16,6 +16,8 @@ class ValueEditor : public juce::Component,
                     public juce::Value::Listener{
 public:
 
+    static constexpr float defaultAutoFitInset = 4.0f;
+
     explicit ValueEditor(ApplicationContext& context);
     ~ValueEditor() override;
 
@@ -39,7 +41,7 @@ public:
     void enableTextValue();
     void setText(const juce::String& text);
     juce::String getText() const;
-    void enableAutoFitText();
+    void enableAutoFitText(float inset = defaultAutoFitInset);
     void setFontHeight(float newFontHeight);
     void setPitchMode(bool shouldShowPitchNames);
     void setEditable(bool shouldBeEditable);
@@ -83,9 +85,9 @@ private:
     juce::Justification justification { juce::Justification::centred };
 
     static constexpr float baseFontHeight = 9.0f;
-    static constexpr float autoFitInset   = 4.0f;
 
-    float fontHeight = baseFontHeight;
+    float fontHeight  = baseFontHeight;
+    float autoFitInset = defaultAutoFitInset;
 
     bool isEditing        = false;
     bool persistentEditor = false;

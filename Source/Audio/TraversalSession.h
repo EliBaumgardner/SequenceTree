@@ -3,7 +3,9 @@
 #include "../Util/PluginModules.h"
 #include "TraversalPool.h"
 #include "ScriptTraversalRule.h"
+#include "TraversalDispatcher.h"
 #include "../Graph/RTData.h"
+#include <cstdint>
 
 class EventManager;
 
@@ -20,48 +22,40 @@ public:
 
     void suspendActiveNotes(juce::MidiBuffer& midiMessages);
 
-    void restartActiveTraversals(const NodeMap& nodes, RTGraphs& rtGraphs,
-                                 juce::MidiBuffer& midiMessages);
+    void restartActiveTraversals(const DispatchContext& context);
 
-    void syncWithGraph(const NodeMap& nodes, RTGraphs& rtGraphs,
-                       juce::MidiBuffer& midiMessages);
+    void syncWithGraph(const DispatchContext& context, std::uint64_t graphGeneration);
 
-    bool startTraversalsFromFirstRoot(const NodeMap& nodes, RTGraphs& rtGraphs,
-                                      juce::MidiBuffer& midiMessages);
+    bool startTraversalsFromFirstRoot(const DispatchContext& context);
 
     TraversalPool&       getTraversals()       { return traversals; }
     const TraversalPool& getTraversals() const { return traversals; }
 
     bool isIdle() const { return traversals.empty(); }
 
-    int nextTraversalInstanceId() { return ++traversalInstanceCounter; }
+    void setSelectChildScript(const RTScript* script);
 
 private:
 
     void syncActiveTraversals   (const NodeMap& nodes);
     void removeDeletedTraversals(const NodeMap& nodes, juce::MidiBuffer& midiMessages);
 
-    void startMissingTraversals (const NodeMap& nodes, RTGraphs& rtGraphs,
-                                 juce::MidiBuffer& midiMessages);
+    void startMissingTraversals (const DispatchContext& context);
 
-    void syncTraversalLoopLimits(const NodeMap& nodes, RTGraphs& rtGraphs,
-                                 juce::MidiBuffer& midiMessages);
+    void syncTraversalLoopLimits(const DispatchContext& context);
 
     void startTraversal(const RTNode& rootNode, const RTtraversal& traversal,
-                        const NodeMap& nodes, RTGraphs& rtGraphs,
-                        juce::MidiBuffer& midiMessages);
+                        const DispatchContext& context);
 
     void stopTraversalNotes(int instanceId, juce::MidiBuffer& midiMessages);
 
-    int findFirstUnlinkedRootId(const NodeMap& nodes) const;
-
-    static bool isLinkedAsChild(const NodeMap& nodes, int nodeId);
+    int findFirstUnlinkedRootId(const NodeMap& nodes);
 
     EventManager& eventManager;
 
     TraversalPool traversals;
 
-    RTScript            selectChildScript;
+    RTScript            nativeFallbackScript;
     ScriptTraversalRule scriptRule;
 
     static constexpr bool useScriptedChildSelection = true;
@@ -71,6 +65,8 @@ private:
 
     std::vector<int> activeRootIdScratch;
     std::vector<int> restartRootScratch;
+    std::vector<int> linkedRootScratch;
 
-    int traversalInstanceCounter = 0;
+    std::uint64_t syncedGraphGeneration = 0;
+    std::uint64_t syncedPoolEpoch       = 0;
 };

@@ -33,6 +33,8 @@ public:
     void paint  (juce::Graphics& g) override;
     void resized() override;
 
+    void layoutInterior(juce::Rectangle<int> nodeSquare);
+
     NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const {
         return { bounds, nodeColour, activeHighlights, isHovered, isSelected };
     }
@@ -91,7 +93,9 @@ public:
     const float nodeEditorWidthFactor = 0.45f;
     const float nodeEditorHeightFactor = 0.30f;
 
-    const int editorAreaBoundsReduction = 6;
+    const int   editorAreaBoundsReduction   = 3;
+    const float incrementButtonHeightFactor = 0.25f;
+    const float nodeValueTextInset          = 2.0f;
 
 protected:
     const ApplicationContext& applicationContext;

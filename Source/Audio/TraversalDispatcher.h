@@ -1,29 +1,18 @@
 #pragma once
 
-#include "TraversalPool.h"
+#include "FlagScheduler.h"
 #include "NoteScheduler.h"
-#include <array>
+#include <cstdint>
 #include <memory>
 #include <atomic>
-#include <unordered_set>
 
 class AudioUIBridge;
-class SequenceTreeAudioProcessor;
-
-struct DispatchContext
-{
-    const NodeMap&    nodes;
-    TraversalPool&     traversalMap;
-    juce::MidiBuffer& midiMessages;
-};
 
 class TraversalDispatcher
 {
 public:
 
-    TraversalDispatcher(SequenceTreeAudioProcessor& processor,
-                        NoteScheduler& scheduler,
-                        AudioUIBridge& bridge);
+    TraversalDispatcher(NoteScheduler& scheduler, AudioUIBridge& bridge);
 
     void pushNote(const RTNode& node, int instanceId, const DispatchContext& context,
                   double sample, bool isPrimaryRepeat = false);
@@ -32,26 +21,17 @@ public:
                            double expiryTime,
                            const DispatchContext& context);
 
-    void applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes, int traversalId);
+    TraversalPool::Instance* prepareTraversal(int instanceId, int rootId, int startNodeId,
+                                              const RTtraversal& traversal, const DispatchContext& context);
 
-    void applyTreeJump(const TraversalLogic::StepResult& step, TraversalLogic& traversal,
-                       TraversalRuntime& runtime);
-
-    bool startNextDueFlag(double before, const DispatchContext& context);
-
-    void advancePendingFlags(int numSamples);
-
-    void clearPendingFlags();
+    FlagScheduler flagScheduler;
 
 private:
 
-    struct PendingFlagStart
-    {
-        int    flagNodeId       = -1;
-        int    hostTypeId       = 0;
-        double remainingSamples = 0.0;
-        bool   active           = false;
-    };
+    void applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes, int traversalId);
+
+    void applyTreeJump(const TraversalLogic::StepResult& step, TraversalLogic& traversal,
+                       TraversalRuntime& runtime, const DispatchContext& context);
 
     void pushRootNodeConnection(int rootNodeId, const DispatchContext& context, double sample);
 
@@ -63,8 +43,7 @@ private:
                            bool isPrimaryRepeat);
 
     void pushChordNotes(const RTNode& node, double sample, int duration,
-                        double sampleRate, double tempoMultiplier,
-                        const DispatchContext& context, int parentCount,
+                        double tempoMultiplier, const DispatchContext& context, int parentCount,
                         TraversalLogic& traversalLogic, int transpose);
 
     void dispatchPrimaryArrow(const RTNode& node, const RTNode* nextTarget,
@@ -75,45 +54,23 @@ private:
                                 int wallClockMs, int colourTraversalId);
 
     void dispatchCrossTree(const RTNode& node, int sourceInstanceId, double sample, int rootId,
-                           double sampleRate, double tempoMultiplier,
-                           const DispatchContext& context, TraversalLogic& traversal);
+                           double tempoMultiplier, const DispatchContext& context,
+                           TraversalLogic& traversal);
 
-    bool hasActiveTraversalOnTree(int treeRootId, const TraversalPool& traversalMap) const;
-
-    int findTraversalInstance(int rootId, int typeId, const TraversalPool& traversalMap) const;
-
-    void applyGraphLoopLimit(TraversalLogic& traversalLogic, int rootId);
-
-    TraversalPool::Instance* prepareTraversal(int instanceId, int rootId, int startNodeId,
-                                             const RTtraversal& traversal, const DispatchContext& context);
+    void applyGraphLoopLimit(TraversalLogic& traversalLogic, int rootId, const DispatchContext& context);
 
     void startCrossTreeTraversal(const RTNode& targetRootNode, const RTtraversal& traversal,
                                  double sample, const DispatchContext& context);
 
-    void dispatchFlag(const RTNode& node, int hostInstanceId, int hostTypeId,
-                      int parentCount, double sample, double sampleRate, double tempoMultiplier,
-                      const DispatchContext& context);
+    NoteScheduler&  scheduler;
+    AudioUIBridge&  bridge;
 
-    void startFlagTraversal(const RTNode& flagNode, int hostTypeId, double sample,
-                            const DispatchContext& context);
+    static constexpr int scratchCapacity = 256;
 
-    void queueFlagStart(const RTNode& flagNode, int hostTypeId, int delayMs,
-                        double sample, double sampleRate, double tempoMultiplier,
-                        const DispatchContext& context);
+    bool markChordVisited(int nodeId);
 
-    void queueFlagRemoval(const RTNode& flagNode, int hostInstanceId, int hostTypeId, TraversalPool& traversalMap);
-
-
-    SequenceTreeAudioProcessor& processor;
-    NoteScheduler&              scheduler;
-    AudioUIBridge&              bridge;
-
-    static constexpr int scratchCapacity     = 256;
-    static constexpr int maxPendingFlagStarts = 64;
-
-    std::unordered_set<int>            chordVisited;
+    std::vector<std::uint32_t>         chordVisitStamps;
+    std::uint32_t                      chordVisitToken = 0;
     std::vector<std::pair<int, int>>   chordFrontier;
     std::vector<int>                   crossTreeScratch;
-
-    std::array<PendingFlagStart, maxPendingFlagStarts> pendingFlagStarts {};
 };

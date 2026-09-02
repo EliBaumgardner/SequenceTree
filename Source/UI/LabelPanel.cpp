@@ -113,6 +113,10 @@ void LabelPanel::removeFileLabel(const FileLabel* label)
     if (match == labels.end())
         return;
 
+    if (onLabelRemoved != nullptr) {
+        onLabelRemoved((*match)->fileId);
+    }
+
     labels.erase(match);
     draggedIndex = -1;
 

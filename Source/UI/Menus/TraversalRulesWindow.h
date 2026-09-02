@@ -15,7 +15,8 @@
 #include "../UI/LabelPanel.h"
 #include "../Editors/FilePage.h"
 
-class TraversalRulesWindow : public juce::Component {
+class TraversalRulesWindow : public juce::Component,
+                             private juce::Timer {
 
 public:
 
@@ -24,6 +25,8 @@ public:
     public:
 
         explicit RulesTitlebar(ApplicationContext& context);
+
+        std::function<void()> onPlayClicked;
 
         static constexpr int preferredHeight = 28;
 
@@ -44,13 +47,15 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    void createNewPage(int id);
     void setActivePage(int id);
 
     static constexpr int defaultWidth  = 360;
     static constexpr int defaultHeight = 260 + RulesTitlebar::preferredHeight;
 
     static constexpr int minContentWidth = 80;
+    static constexpr int statusBarHeight = 18;
+
+    static constexpr int compileDelayMs = 250;
 
 private:
 
@@ -59,7 +64,13 @@ private:
     public:
 
         explicit RulesPanel(ApplicationContext& context);
+
         std::function<void(int)> propagateLabelClicked;
+        std::function<void(int)> propagateLabelRemoved;
+        std::function<void()>    propagateAddClicked;
+
+        void addLabel   (int fileId, const juce::String& name);
+        void selectLabel(int fileId);
 
         void paint(juce::Graphics& g) override;
         void resized() override;
@@ -89,9 +100,21 @@ private:
         PanelTitlebar               panelTitlebar;
         std::unique_ptr<LabelPanel> labelPanel = nullptr;
 
-        int fileIdIncrement = 0;
-
     };
+
+    void timerCallback() override;
+
+    void loadRules();
+    void addRule();
+    void removeRule(int ruleId);
+    void createPage(int ruleId, const juce::String& source);
+
+    void makeViewedRuleActive();
+    void compileViewedPage();
+
+    void setStatus(const juce::String& text, bool isError);
+
+    juce::Rectangle<int> statusBarBounds() const;
 
     int  clampPanelWidth(int newWidth) const;
     void setPanelWidth(int newWidth);
@@ -103,7 +126,11 @@ private:
     ApplicationContext& context;
 
     std::unordered_map<int, std::unique_ptr<FilePage>> filePages;
-    FilePage* activePage = nullptr;
+    FilePage* activePage   = nullptr;
+    int       viewedRuleId = -1;
+
+    juce::String statusText;
+    bool         statusIsError = false;
 
     int panelWidth = RulesPanel::defaultPanelWidth;
 

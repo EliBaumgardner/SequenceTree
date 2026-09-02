@@ -29,6 +29,14 @@ public:
 
     void createNewFile();
 
+    void         setText(const juce::String& text);
+    juce::String getText() const;
+
+    void clearLineErrors();
+    void setLineError(int lineNumber, const juce::String& message);
+
+    std::function<void()> onTextChanged;
+
     int preferredHeightForWidth(int width);
 
     void focusLine(int index);
@@ -49,6 +57,8 @@ private:
     float fontHeight() const;
     int   rowCountFor(const juce::String& text, int editorWidth);
 
+    void notifyTextChanged();
+
     int  indexOf(const FileLine* line) const;
     void focusRelative(const FileLine* line, int offset);
     void refreshLines();
@@ -60,6 +70,8 @@ private:
     constexpr static float baseFontHeight  = 12.0f;
 
     float zoom = 1.0f;
+
+    bool suppressTextChanged = false;
 
     juce::TextEditor textMeasurer;
 

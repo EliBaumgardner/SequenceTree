@@ -4,23 +4,17 @@
 #include "NoteScheduler.h"
 #include "TraversalDispatcher.h"
 
-class SequenceTreeAudioProcessor;
-
 class EventManager
 {
 public:
 
     AudioUIBridge       bridge;
     NoteScheduler       scheduler   { bridge };
-    TraversalDispatcher dispatcher;
+    TraversalDispatcher dispatcher  { scheduler, bridge };
 
-    explicit EventManager(SequenceTreeAudioProcessor* p);
-
-    void processEvents(int numSamples, juce::MidiBuffer& midiMessages,
-                       const NodeMap& nodes, TraversalPool& traversalMap);
+    void processEvents(int numSamples, const DispatchContext& context);
 
 private:
 
-    void handleOrphanNotes(juce::MidiBuffer& midiMessages,
-                           const NodeMap& nodes, TraversalPool& traversalMap);
+    void handleOrphanNotes(const DispatchContext& context);
 };

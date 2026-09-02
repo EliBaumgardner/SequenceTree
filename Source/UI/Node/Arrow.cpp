@@ -115,21 +115,12 @@ juce::String Arrow::getDurationLabel() const
     if (! arrowBindsTo(arrowInfo, ArrowBinding::DurationBind)
         && arrowBindsTo(arrowInfo, ArrowBinding::PitchBind)) {
 
-        if (isDangling()) {
-            return juce::String((int) startNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch,
-                                                                          arrowDefaultBasePitch));
+        const Node* const pitchedNode = (isDangling() || startNode->isAlternativeNode) ? startNode : endNode;
+
+        if (pitchedNode != nullptr) {
+            return juce::String((int) pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch,
+                                                                            arrowDefaultBasePitch));
         }
-
-        const Node* const parentNode = startNode->isAlternativeNode ? endNode : startNode;
-
-        const juce::Point<int> delta = startNode->isAlternativeNode
-                                     ? startNode->getNodeCentre() - getTip()
-                                     : getTip() - startNode->getNodeCentre();
-
-        const int basePitch = parentNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch,
-                                                                   arrowDefaultBasePitch);
-
-        return juce::String(arrowPitchFromDelta(arrowInfo, basePitch, delta.x, delta.y));
     }
 
     const int duration = getDuration();
