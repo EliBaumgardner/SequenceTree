@@ -1,4 +1,5 @@
 #include "ConnectionOps.h"
+#include "../UI/Canvas/NodeCanvas.h"
 #include "../UI/Node/Arrow.h"
 #include "../UI/Node/Node.h"
 #include "../Graph/ValueTreeIdentifiers.h"
@@ -86,21 +87,29 @@ void ConnectionOps::setArrowType(const Arrow* arrow, ArrowType arrowType)
 
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
+    ValueTreeState& state = *applicationContext.valueTreeState;
+
+    const juce::ValueTree connection = state.getConnection(ownerNodeId, childNodeId);
+
+    ArrowInfo arrowInfo = ValueTreeState::getArrowInfo(connection);
+    arrowInfo.type      = arrowType;
+
     undoManager->beginNewTransaction();
-    applicationContext.valueTreeState->setArrowType(ownerNodeId, childNodeId, arrowType, undoManager);
+    state.setArrowInfo(connection, arrowInfo, undoManager);
 }
 
 void ConnectionOps::applySelectedArrowInfo(int parentNodeId, int childNodeId)
 {
-    const ArrowInfo& arrowInfo = applicationContext.currentArrowInfo;
+    ValueTreeState& state = *applicationContext.valueTreeState;
 
-    if (arrowInfo.type == ArrowType::Traversal && connectsToOtherTreeRoot(parentNodeId, childNodeId)) {
-        applicationContext.valueTreeState->setArrowType(parentNodeId, childNodeId, ArrowType::Traversal,
-                                                        applicationContext.undoManager);
+    ArrowInfo arrowInfo = applicationContext.canvas->arrowManager.currentArrowInfo;
+
+    if (arrowInfo.type == ArrowType::Traversal && ! connectsToOtherTreeRoot(parentNodeId, childNodeId)) {
+        arrowInfo.type = ArrowType::Node;
     }
 
-    applicationContext.valueTreeState->setArrowInfo(parentNodeId, childNodeId, arrowInfo,
-                                                    applicationContext.undoManager);
+    state.setArrowInfo(state.getConnection(parentNodeId, childNodeId), arrowInfo,
+                       applicationContext.undoManager);
 
     for (const int repitchedNodeId : applicationContext.valueTreeState->syncPitchBindings(childNodeId,
                                                                                          applicationContext.undoManager)) {

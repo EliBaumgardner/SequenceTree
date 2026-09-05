@@ -45,6 +45,8 @@ private:
 
     void rebuildGraphsForTraversal(int traversalId);
 
+    void discardGraph(int graphId);
+
     SequenceTreeAudioProcessor& processor;
     ValueTreeState&             valueTreeState;
 

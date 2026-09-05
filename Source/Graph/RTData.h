@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <vector>
@@ -36,6 +37,15 @@ struct RTtraversal {
     double velocityMultiplier = 1.0;
 };
 
+struct RTNodeData {
+
+    int  childId    = 0;
+    int  duration   = -1;
+    bool isTreeJump = false;
+
+    std::vector<int> disabledTraversals;
+};
+
 struct RTNode {
 
     int alternativeRootId = -1;
@@ -58,18 +68,24 @@ struct RTNode {
     bool flagRemovesTraversal = false;
 
 
+    struct DanglingArrow
+    {
+        int duration   = 0;
+        int countLimit = 1;
+
+        std::vector<int> disabledTraversals;
+    };
+
     enum class NodeType {RootNode, Node, Alternative, Modulator, ModulatorRoot, TraversalFlagData};
 
     NodeType nodeType = NodeType::Node;
 
     std::vector<RTtraversal> traversals;
     std::vector<RTNote> notes;
-    std::vector<int> children;
-    std::unordered_map<int, int> durationMap;
+    std::vector<RTNodeData> nodeData;
+    std::vector<DanglingArrow> danglingArrows;
 
-    std::unordered_map<int, std::unordered_set<int>> disabledTraversalsByChild;
-
-    std::unordered_set<int> treeJumpChildren;
+    int parentDuration = -1;
 
     RTtraversal flagTraversal;
 
@@ -102,10 +118,9 @@ struct RTNode {
         copy.nodeType              = nodeType;
         copy.traversals            = traversals;
         copy.notes                 = notes;
-        copy.children              = children;
-        copy.durationMap           = durationMap;
-        copy.disabledTraversalsByChild = disabledTraversalsByChild;
-        copy.treeJumpChildren      = treeJumpChildren;
+        copy.nodeData              = nodeData;
+        copy.danglingArrows        = danglingArrows;
+        copy.parentDuration        = parentDuration;
         copy.flagTraversal         = flagTraversal;
         copy.graphID               = graphID;
 
@@ -114,12 +129,69 @@ struct RTNode {
 };
 
 
+inline const RTNodeData* findNodeData(const RTNode& node, int childId)
+{
+    for (const RTNodeData& data : node.nodeData) {
+        if (data.childId == childId) {
+            return &data;
+        }
+    }
+
+    return nullptr;
+}
+
+inline int childDuration(const RTNode& parent, int childId)
+{
+    const RTNodeData* const data = findNodeData(parent, childId);
+
+    return data != nullptr ? data->duration : -1;
+}
+
+inline bool isTraversalDisabled(const std::vector<int>& disabledTraversals, int traversalId)
+{
+    return std::find(disabledTraversals.begin(), disabledTraversals.end(), traversalId)
+        != disabledTraversals.end();
+}
+
 inline bool isChildDisabledForTraversal(const RTNode& parent, int childId, int traversalId)
 {
-    const auto disabledIt = parent.disabledTraversalsByChild.find(childId);
+    const RTNodeData* const data = findNodeData(parent, childId);
 
-    return disabledIt != parent.disabledTraversalsByChild.end()
-        && disabledIt->second.count(traversalId) > 0;
+    return data != nullptr && isTraversalDisabled(data->disabledTraversals, traversalId);
+}
+
+inline int selectDanglingArrow(const RTNode& node, int count, int traversalId)
+{
+    int chosen   = -1;
+    int maxLimit = 0;
+
+    for (std::size_t index = 0; index < node.danglingArrows.size(); ++index) {
+        const RTNode::DanglingArrow& dangling = node.danglingArrows[index];
+
+        if (dangling.duration <= 0 || dangling.countLimit <= 0) {
+            continue;
+        }
+
+        if (isTraversalDisabled(dangling.disabledTraversals, traversalId)) {
+            continue;
+        }
+
+        if (count % dangling.countLimit == 0 && dangling.countLimit > maxLimit) {
+            chosen   = static_cast<int>(index);
+            maxLimit = dangling.countLimit;
+        }
+    }
+
+    return chosen;
+}
+
+inline int danglingArrowDuration(const RTNode& node, int danglingIndex)
+{
+    if (danglingIndex < 0 || danglingIndex >= static_cast<int>(node.danglingArrows.size())) {
+        return 0;
+    }
+
+    return node.danglingArrows[static_cast<std::size_t>(danglingIndex)].duration;
 }
 
 using NodeMap = std::unordered_map<int, std::shared_ptr<const RTNode>>;

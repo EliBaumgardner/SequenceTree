@@ -14,7 +14,7 @@ TraversalRulesWindow::TraversalRulesWindow(ApplicationContext& context) : contex
 {
     setLookAndFeel(context.lookAndFeel);
 
-    rulesPanel.onWidthDragged = [this](int newWidth) { setPanelWidth(newWidth); };
+    rulesPanel.resizer.onWidthDragged = [this](int newWidth) { setPanelWidth(newWidth); };
 
     filePageViewport.setScrollBarsShown(true, false);
 
@@ -322,9 +322,10 @@ void TraversalRulesWindow::RulesTitlebar::resized() {
 }
 
 TraversalRulesWindow::RulesPanel::RulesPanel(ApplicationContext& context)
-    : ResizablePanel(context, ResizeEdge::Right, resizerWidth),
+    : resizer(context, PanelResizer::Edge::Right),
       panelTitlebar(context)
 {
+    setLookAndFeel(context.lookAndFeel);
 
     labelPanel = std::make_unique<LabelPanel>(context);
 
@@ -348,6 +349,11 @@ TraversalRulesWindow::RulesPanel::RulesPanel(ApplicationContext& context)
 
     addAndMakeVisible(panelTitlebar);
     addAndMakeVisible(labelPanel.get());
+    addAndMakeVisible(resizer);
+}
+
+TraversalRulesWindow::RulesPanel::~RulesPanel() {
+    setLookAndFeel(nullptr);
 }
 
 void TraversalRulesWindow::RulesPanel::addLabel(int fileId, const juce::String& name) {

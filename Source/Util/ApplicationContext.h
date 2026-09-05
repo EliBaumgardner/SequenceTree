@@ -11,18 +11,13 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <vector>
-#include "NodeInfo.h"
-#include "ArrowInfo.h"
 
 class SequenceTreeAudioProcessor;
 class NodeCanvas;
 class CustomLookAndFeel;
 class NodeController;
-class NodeFactory;
 class ValueTreeState;
 class RTGraphBuilder;
-class Node;
 
 struct ApplicationContext
 {
@@ -33,36 +28,4 @@ struct ApplicationContext
     ValueTreeState*             valueTreeState = nullptr;
     NodeController*             nodeController = nullptr;
     RTGraphBuilder*             rtGraphBuilder = nullptr;
-
-    std::function<void(NodeDisplayMode)> onDisplayModeChanged;
-
-    NodeDisplayMode currentDisplayMode = NodeDisplayMode::Pitch;
-
-    ArrowInfo currentArrowInfo;
-
-    bool isComplete() const
-    {
-        return processor      != nullptr
-            && canvas         != nullptr
-            && lookAndFeel    != nullptr
-            && undoManager    != nullptr
-            && valueTreeState != nullptr
-            && nodeController != nullptr
-            && rtGraphBuilder != nullptr;
-    }
-
-    void addNodeSelectedListener(std::function<void(Node*, bool)> listener)
-    {
-        onNodeSelectedListeners.push_back(std::move(listener));
-    }
-
-    void notifyNodeSelected(Node* node, bool selected)
-    {
-        for (auto& listener : onNodeSelectedListeners)
-            listener(node, selected);
-    }
-
-private:
-
-    std::vector<std::function<void(Node*, bool)>> onNodeSelectedListeners;
 };

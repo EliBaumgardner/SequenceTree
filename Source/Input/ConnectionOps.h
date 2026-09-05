@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Util/ApplicationContext.h"
+#include "../Util/ArrowInfo.h"
 
 class Arrow;
 

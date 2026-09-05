@@ -65,10 +65,12 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
     node->setComponentID(std::to_string(nodeId));
     node->nodeValueTree = nodeValueTree;
     node->midiNoteData  = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
-    node->setDisplayMode(NodeDisplayMode::Pitch);
+    node->setDisplayMode(displayMode);
 
     node->onSelected = [this](Node* n, bool sel) {
-        applicationContext.notifyNodeSelected(n, sel);
+        for (auto& listener : nodeSelectedListeners) {
+            listener(n, sel);
+        }
     };
 
     canvas.addAndMakeVisible(node.get());
@@ -151,7 +153,6 @@ void NodeManager::remove(int nodeId)
         return;
     }
 
-    canvas.danglingArrowLayer.removeForNode(node);
     canvas.arrowManager.removeForNode(node);
     canvas.removeChildComponent(node);
     delete node;
@@ -271,8 +272,10 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
     }
 }
 
-void NodeManager::setDisplayMode(NodeDisplayMode mode) const
+void NodeManager::setDisplayMode(NodeDisplayMode mode)
 {
+    displayMode = mode;
+
     for (auto& [nodeId, node] : nodes) {
         node->setDisplayMode(mode);
     }

@@ -66,6 +66,9 @@ private:
     static constexpr AxisMember xAxis = &BindField::x;
     static constexpr AxisMember yAxis = &BindField::y;
 
+    static constexpr double minimumMultiplier = 0.1;
+    static constexpr double maximumMultiplier = 100.0;
+
     static constexpr int pitchItemId    = 1;
     static constexpr int durationItemId = 2;
 

@@ -141,14 +141,11 @@ bool SelectionOps::wasChordMember(const juce::ValueTree& source) const
     const int deltaY = (int) source.getProperty(ValueTreeIdentifiers::YPosition)
                      - (int) parent.getProperty(ValueTreeIdentifiers::YPosition);
 
-    const bool parentIsAlternative = parent.getType() == ValueTreeIdentifiers::AlternativeNodeData;
-
     const juce::ValueTree connection =
         applicationContext.valueTreeState->getConnection((int) parent.getProperty(ValueTreeIdentifiers::Id),
                                                          (int) source.getProperty(ValueTreeIdentifiers::Id));
 
-    return arrowDurationFromDelta(ValueTreeState::readArrowInfo(connection, parentIsAlternative),
-                                  deltaX, deltaY) == 0;
+    return ArrowInfo::durationFromDelta(ValueTreeState::getArrowInfo(connection), deltaX, deltaY) == 0;
 }
 
 std::set<int> SelectionOps::findDiscardedOrphans(const std::map<int,int>& parentOf) const
@@ -513,11 +510,8 @@ void SelectionOps::connectClipboardNodes(const PasteLayout& layout) const
             if (copiedChild != layout.idMap.end()) {
                 state.connectNodes(parentId, copiedChild->second, undoManager);
 
-                const bool sourceIsAlternative = source.getType() == ValueTreeIdentifiers::AlternativeNodeData;
-                const ArrowInfo arrowInfo = ValueTreeState::readArrowInfo(childId, sourceIsAlternative);
-
-                state.setArrowType(parentId, copiedChild->second, arrowInfo.type, undoManager);
-                state.setArrowInfo(parentId, copiedChild->second, arrowInfo, undoManager);
+                state.setArrowInfo(state.getConnection(parentId, copiedChild->second),
+                                   ValueTreeState::getArrowInfo(childId), undoManager);
             }
         }
     }

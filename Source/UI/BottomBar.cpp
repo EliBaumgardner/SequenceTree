@@ -26,14 +26,15 @@ BottomBar::BottomBar(ApplicationContext& context)
     arrowButton->onClick = [this]() { arrowWindowLauncher.show(); };
 
     addAndMakeVisible(*arrowButton);
+}
 
-    applicationContext.onDisplayModeChanged = [this](NodeDisplayMode mode) {
-        switch (mode) {
-            case NodeDisplayMode::Pitch:    applyPaintSetting(PaintToolSettings::PaintSetting::Pitch);    break;
-            case NodeDisplayMode::Velocity: applyPaintSetting(PaintToolSettings::PaintSetting::Velocity); break;
-            default: break;
-        }
-    };
+void BottomBar::applyDisplayMode(NodeDisplayMode mode)
+{
+    switch (mode) {
+        case NodeDisplayMode::Pitch:    applyPaintSetting(PaintToolSettings::PaintSetting::Pitch);    break;
+        case NodeDisplayMode::Velocity: applyPaintSetting(PaintToolSettings::PaintSetting::Velocity); break;
+        default: break;
+    }
 }
 
 void BottomBar::togglePaintMode()
@@ -54,7 +55,7 @@ void BottomBar::showPaintSettings()
 {
     PaintToolSettings::PaintSetting setting = PaintToolSettings::PaintSetting::Pitch;
 
-    if (applicationContext.currentDisplayMode == NodeDisplayMode::Velocity) {
+    if (applicationContext.canvas->nodeManager.displayMode == NodeDisplayMode::Velocity) {
         setting = PaintToolSettings::PaintSetting::Velocity;
     }
 

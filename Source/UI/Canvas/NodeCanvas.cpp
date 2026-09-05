@@ -113,7 +113,7 @@ void NodeCanvas::handleAsyncUpdate() {
             rememberOnce(durationRefreshNodeIds, nodeId);
         }
         else if (updateType == AsyncUpdateType::DanglingArrowsChanged) {
-            danglingArrowLayer.rebuildForNode(nodeId);
+            arrowManager.rebuildDanglingForNode(nodeId);
             rememberOnce(pitchSyncNodeIds, nodeId);
             rememberOnce(durationRefreshNodeIds, nodeId);
         }
@@ -175,7 +175,6 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
 void NodeCanvas::clearCanvas()
 {
     arrowManager.clear();
-    danglingArrowLayer.clear();
     nodeManager.clear();
 
     gridOriginSet = false;
@@ -245,7 +244,7 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
     }
 
     for (auto& [nodeId, node] : nodeManager.all()) {
-        danglingArrowLayer.rebuildForNode(nodeId);
+        arrowManager.rebuildDanglingForNode(nodeId);
     }
 
     if (!gridOriginSet && !rootNodeMap.empty()) {

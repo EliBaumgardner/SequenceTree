@@ -113,7 +113,7 @@ void Node::setHoverVisual(bool isHovered)
         for (auto& [childId, arrow] : nodeArrows) {
             if (arrow != nullptr) {
                 arrow->sourceHovered = isHovered;
-                arrow->refreshHoverVisibility();
+                arrow->setHoverFade(arrow->sourceHovered || arrow->proximityHovered);
             }
         }
     }

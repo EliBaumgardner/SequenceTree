@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RTScript.h"
+#include "../Script/RTScript.h"
 #include "TraversalRule.h"
 
 class ScriptTraversalRule : public TraversalRule

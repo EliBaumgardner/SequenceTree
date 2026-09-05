@@ -224,9 +224,6 @@ void ColourSelector::applyColourToDescendants(const Node* n, juce::Colour c)
 void ColourSelector::applyColourToDescendants(const Node* n, juce::Colour c, std::unordered_set<int>& visited)
 {
     NodeCanvas* const canvas = applicationContext.canvas;
-    if (canvas == nullptr) {
-        return;
-    }
 
     const juce::ValueTree childrenIds = n->nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
     if (! childrenIds.isValid()) {

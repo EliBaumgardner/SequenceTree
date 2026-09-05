@@ -10,29 +10,34 @@
 #include "NodeMenu.h"
 
 MenuArea::MenuArea(ApplicationContext& context)
-    : ResizablePanel(context, ResizeEdge::Right, resizerWidth)
+    : resizer(context, PanelResizer::Edge::Right),
+      topBar(context, { Bar::Orientation::horizontal, Bar::Background::litFromTop })
 {
+    setLookAndFeel(context.lookAndFeel);
+
     menuBar = std::make_unique<MenuBar>(context);
     menuBar->traversalIcon->onClick = [this] { togglePanel(ActivePanel::Traversal); };
     menuBar->nodeIcon->onClick      = [this] { togglePanel(ActivePanel::Node); };
 
-    traversalMenu = std::make_unique<TraversalMenu>(context, false);
+    traversalMenu = std::make_unique<TraversalMenu>(context);
     nodeMenu      = std::make_unique<NodeMenu>(context);
 
+    addAndMakeVisible(topBar);
     addAndMakeVisible(menuBar.get());
     addChildComponent(traversalMenu.get());
     addChildComponent(nodeMenu.get());
+    addAndMakeVisible(resizer);
 }
 
-MenuArea::~MenuArea() = default;
+MenuArea::~MenuArea() {
+    setLookAndFeel(nullptr);
+}
 
 void MenuArea::paint(juce::Graphics &g) {
-    ResizablePanel::paint(g);
+    const Theme& theme = CustomLookAndFeel::get(*this);
 
-    const auto bounds = getLocalBounds().toFloat();
-    const auto barHeight = std::floor(bounds.getHeight() * 0.05f);
-
-    drawTopBar(g, bounds.withHeight(barHeight).withTrimmedRight((float) resizerWidth));
+    g.setColour(theme.baseDarkColour2);
+    g.fillRect(getLocalBounds());
 }
 
 void MenuArea::resized() {
@@ -40,6 +45,8 @@ void MenuArea::resized() {
 
     resizer.setBounds(bounds.removeFromRight(resizerWidth));
     menuBar->setBounds(bounds.removeFromRight(menuBarWidth));
+
+    topBar.setBounds(bounds.withHeight(static_cast<int>(getHeight() * 0.05f)));
 
     traversalMenu->setBounds(bounds);
     nodeMenu->setBounds(bounds);

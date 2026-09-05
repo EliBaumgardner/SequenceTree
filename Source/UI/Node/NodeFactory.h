@@ -9,6 +9,7 @@
 
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/ValueTreeState.h"
+#include "../../Util/ArrowInfo.h"
 
 static const int defaultTraversalId = 1;
 
@@ -79,6 +80,51 @@ public:
     static void destroyNode(ValueTreeState& state, const int nodeId, juce::UndoManager* undoManager)
     {
         state.removeNode(nodeId,undoManager);
+    }
+
+    static void createDanglingArrow(ValueTreeState& state, juce::ValueTree nodeTree,
+                                    const juce::Point<int>& tipOffset,
+                                    const ArrowInfo& arrowInfo, juce::UndoManager* undoManager)
+    {
+        if (!nodeTree.isValid()) {
+            return;
+        }
+
+        juce::ValueTree arrowList = nodeTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+
+        if (!arrowList.isValid()) {
+            arrowList = juce::ValueTree(ValueTreeIdentifiers::DanglingArrows);
+            nodeTree.addChild(arrowList, -1, undoManager);
+        }
+
+        juce::ValueTree arrowTree(ValueTreeIdentifiers::DanglingArrow);
+        arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
+        arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
+        arrowTree.setProperty(ValueTreeIdentifiers::CountLimit, ValueTreeState::defaultNodeCountLimit, undoManager);
+
+        state.setArrowInfo(arrowTree, arrowInfo, undoManager);
+
+        arrowList.addChild(arrowTree, -1, undoManager);
+    }
+
+    static void destroyDanglingArrow(juce::ValueTree arrowTree, juce::UndoManager* undoManager)
+    {
+        juce::ValueTree arrowList = arrowTree.getParent();
+
+        if (arrowList.isValid()) {
+            arrowList.removeChild(arrowTree, undoManager);
+        }
+    }
+
+    static void setDanglingArrowTip(juce::ValueTree arrowTree, const juce::Point<int>& tipOffset,
+                                    juce::UndoManager* undoManager)
+    {
+        if (!arrowTree.isValid()) {
+            return;
+        }
+
+        arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
+        arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
     }
 
 private:

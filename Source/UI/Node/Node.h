@@ -13,6 +13,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <map>
 #include <set>
+#include <unordered_map>
 
 #include "../../Util/NodeInfo.h"
 #include "../../Util/ApplicationContext.h"
@@ -57,7 +58,7 @@ public:
     void incrementNodeValue(int incrementValue);
     void refreshValueDisplay();
 
-    std::unordered_map<int, Arrow*> nodeArrows;
+    std::unordered_multimap<int, Arrow*> nodeArrows;
 
     juce::ValueTree nodeValueTree;
     juce::ValueTree midiNoteData;

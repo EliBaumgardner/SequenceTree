@@ -11,8 +11,8 @@
 #include "../Bar.h"
 #include "../Buttons/ButtonPane.h"
 #include "../Buttons/IconButton.h"
-#include "../ResizablePanel.h"
-#include "../UI/LabelPanel.h"
+#include "../PanelResizer.h"
+#include "../LabelPanel.h"
 #include "../Editors/FilePage.h"
 
 class TraversalRulesWindow : public juce::Component,
@@ -59,11 +59,12 @@ public:
 
 private:
 
-    class RulesPanel : public ResizablePanel {
+    class RulesPanel : public juce::Component {
 
     public:
 
         explicit RulesPanel(ApplicationContext& context);
+        ~RulesPanel() override;
 
         std::function<void(int)> propagateLabelClicked;
         std::function<void(int)> propagateLabelRemoved;
@@ -78,6 +79,8 @@ private:
         static constexpr int resizerWidth      = 10;
         static constexpr int minPanelWidth     = 60;
         static constexpr int defaultPanelWidth = 120;
+
+        PanelResizer resizer;
 
     private:
 
@@ -94,8 +97,6 @@ private:
 
             std::unique_ptr<IconButton> addButton;
         };
-
-        int minimumWidth() const override { return minPanelWidth; }
 
         PanelTitlebar               panelTitlebar;
         std::unique_ptr<LabelPanel> labelPanel = nullptr;

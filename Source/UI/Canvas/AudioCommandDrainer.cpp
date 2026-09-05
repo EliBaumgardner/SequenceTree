@@ -5,7 +5,6 @@
 #include "AudioCommandDrainer.h"
 
 #include "NodeCanvas.h"
-#include "DanglingArrowLayer.h"
 #include "../Node/Node.h"
 #include "../Node/Arrow.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
@@ -81,21 +80,16 @@ void AudioCommandDrainer::drainProgress() const
 
         const juce::Colour progressColour = getTraversalColour(command.traversalId);
 
-        if (command.parentNodeId == command.childNodeId) {
-            for (Arrow* const arrow : canvas.arrowManager.all()) {
-                if (arrow->isDangling() && arrow->startNode == parentNode) {
-                    arrow->startProgress(command.traversalId, command.durationMs, progressColour, command.isConnection);
-                }
+        const auto range = parentNode->nodeArrows.equal_range(command.childNodeId);
+
+        for (auto entry = range.first; entry != range.second; ++entry) {
+            if (entry->second == nullptr || entry->second->connectsTraversalFlag()) {
+                continue;
             }
-            return;
-        }
 
-        const auto arrowIt = parentNode->nodeArrows.find(command.childNodeId);
-        if (arrowIt == parentNode->nodeArrows.end() || arrowIt->second == nullptr) {
-            return;
+            entry->second->startProgress(command.trailId, command.durationMs,
+                                         progressColour, command.isConnection);
         }
-
-        arrowIt->second->startProgress(command.traversalId, command.durationMs, progressColour, command.isConnection);
     });
 }
 
@@ -104,7 +98,12 @@ void AudioCommandDrainer::drainArrowResets() const
     applicationContext.processor->eventManager.bridge.arrowResets.drain(
         [this](const AudioUIBridge::ResetCommand& command)
     {
-        canvas.arrowManager.resetGraphProgress(command.rootId, command.traversalId);
+        if (command.trailId == AudioUIBridge::allTrails) {
+            canvas.arrowManager.resetAllProgress();
+            return;
+        }
+
+        canvas.arrowManager.resetTrail(command.trailId);
     });
 }
 

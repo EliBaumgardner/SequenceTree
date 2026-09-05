@@ -24,7 +24,7 @@ public:
 
     Titlebar(ApplicationContext& context);
 
-    std::function<void()> toggled;
+    std::function<void(NodeDisplayMode)> onDisplayModeChanged;
 
 private:
 

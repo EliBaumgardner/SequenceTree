@@ -15,7 +15,7 @@ int readScriptField(const RuleContext& context, ScriptField field,
             return context.parentCount;
 
         case ScriptField::ParentChildCount:
-            return static_cast<int>(context.parent.children.size());
+            return static_cast<int>(context.parent.nodeData.size());
 
         case ScriptField::ParentLastChosenChild:
             return context.nodeState.get(NodeStateSlot::LastNode, context.parent.nodeID);
@@ -169,7 +169,7 @@ int ScriptTraversalRule::selectChild(const RuleContext& context) const
                 }
 
                 const int childIndex = stack[--stackTop];
-                const int childCount = static_cast<int>(context.parent.children.size());
+                const int childCount = static_cast<int>(context.parent.nodeData.size());
 
                 if (childIndex < 0 || childIndex >= childCount) {
                     currentChild   = nullptr;
@@ -177,7 +177,7 @@ int ScriptTraversalRule::selectChild(const RuleContext& context) const
                     break;
                 }
 
-                currentChildId = context.parent.children[static_cast<std::size_t>(childIndex)];
+                currentChildId = context.parent.nodeData[static_cast<std::size_t>(childIndex)].childId;
                 currentChild   = context.eligibleChild(currentChildId);
                 break;
             }

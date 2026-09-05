@@ -19,11 +19,9 @@
 #include "NodeCanvasTreeListener.h"
 #include "ValueField.h"
 #include "AudioCommandDrainer.h"
-#include "DanglingArrowLayer.h"
 #include "NodeManager.h"
 #include "ArrowManager.h"
 #include "CanvasHitTester.h"
-#include "ArrowHoverController.h"
 
 class Node;
 class RootNode;
@@ -80,9 +78,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         NodeManager         nodeManager        { *this, applicationContext };
         ArrowManager        arrowManager       { *this, applicationContext };
         AudioCommandDrainer drainer            { *this, applicationContext };
-        DanglingArrowLayer  danglingArrowLayer { *this, applicationContext };
         CanvasHitTester     hitTester          { *this };
-        ArrowHoverController hoverController    { *this };
 
         ApplicationContext& getApplicationContext() { return applicationContext; }
 };

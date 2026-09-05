@@ -73,20 +73,18 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
 
 int TraversalLogic::selectTreeJumpChild(const NodeMap& nodes, const RTNode& parent, int parentCount) const
 {
-    if (parent.treeJumpChildren.empty()) {
-        return -1;
-    }
-
     const RuleContext context { nodes, parent, parentCount,
                                 traversal.traversalId, &isTreeJumpChild, nodeState, true };
 
     int chosen   = -1;
     int maxLimit = 0;
 
-    for (const int childId : parent.children) {
-        if (parent.treeJumpChildren.count(childId) == 0) {
+    for (const RTNodeData& data : parent.nodeData) {
+        if (!data.isTreeJump) {
             continue;
         }
+
+        const int childId = data.childId;
 
         const RTNode* child = context.eligibleChild(childId);
 
@@ -136,7 +134,9 @@ bool TraversalLogic::ModulatorWalk::advance(const NodeMap& nodes, TraversalLogic
 
     if (chosen == -1) {
         bool hasModulatorChild = false;
-        for (const int childId : targetIt->second->children) {
+        for (const RTNodeData& data : targetIt->second->nodeData) {
+            const int childId = data.childId;
+
             const auto childIt = nodes.find(childId);
             if (childIt != nodes.end()
                 && isModulatorChild(childIt->second->nodeType)
@@ -257,7 +257,13 @@ void TraversalLogic::advance(const NodeMap& nodes)
 
     const auto targetIterator = nodes.find(targetId);
 
-    if (targetIterator == nodes.end() || targetIterator->second->children.empty()) {
+    if (targetIterator == nodes.end()) {
+        state = loop.active ? TraversalState::Reset : TraversalState::End;
+        return;
+    }
+
+    if (targetIterator->second->nodeData.empty()) {
+        nodeState.increment(NodeStateSlot::Count, targetId);
         state = loop.active ? TraversalState::Reset : TraversalState::End;
         return;
     }
@@ -353,14 +359,16 @@ void TraversalLogic::peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& t
             return;
         }
 
-        for (const int childId : hostIterator->second->children) {
-            if (hostIterator->second->treeJumpChildren.count(childId) > 0) {
+        for (const RTNodeData& data : hostIterator->second->nodeData) {
+            if (data.isTreeJump) {
                 continue;
             }
 
-            if (isChildDisabledForTraversal(*hostIterator->second, childId, traversal.traversalId)) {
+            if (isTraversalDisabled(data.disabledTraversals, traversal.traversalId)) {
                 continue;
             }
+
+            const int childId = data.childId;
 
             const auto childIterator = nodes.find(childId);
             if (childIterator == nodes.end()) {
@@ -447,6 +455,7 @@ void TraversalLogic::fillEndedResult(StepResult& result) const
     result.leftId            = primary.target;
     result.leftAlternativeId = primary.alternativeTarget;
     result.referenceOffId    = referenceTargetId;
+    result.clearTrail        = true;
 }
 
 TraversalLogic::StepResult TraversalLogic::enterRoot(const NodeMap& nodes)
@@ -473,12 +482,12 @@ void TraversalLogic::advanceSubRoot(const NodeMap& nodes, StepResult& result)
     if (!subRootLoopsForever && subRootCount >= subRootLimit) {
         nodeState.set(NodeStateSlot::SubRootCount, primary.subRootNode, 0);
         primary.subRootNode = -1;
-        result.rootForReset = rootId;
+        result.clearTrail   = true;
     }
     else {
-        result.rootForReset = primary.subRootNode;
-        primary.target      = primary.subRootNode;
-        result.enteredId    = primary.subRootNode;
+        result.clearTrail = true;
+        primary.target    = primary.subRootNode;
+        result.enteredId  = primary.subRootNode;
     }
 }
 
@@ -491,6 +500,7 @@ void TraversalLogic::handleLoopReset(const NodeMap& nodes, StepResult& result)
         result.kind              = StepResult::Kind::Ended;
         result.leftId            = primary.target;
         result.leftAlternativeId = primary.alternativeTarget;
+        result.clearTrail        = true;
         return;
     }
 
@@ -508,7 +518,7 @@ void TraversalLogic::handleLoopReset(const NodeMap& nodes, StepResult& result)
         advanceSubRoot(nodes, result);
     }
     else {
-        result.rootForReset = rootId;
+        result.clearTrail = true;
     }
 
     state = TraversalState::Active;
@@ -543,7 +553,7 @@ void TraversalLogic::handleTreeJump(const NodeMap& nodes, StepResult& result)
 
     result.enteredId            = rootId;
     result.enteredAlternativeId = primary.alternativeTarget;
-    result.rootForReset         = rootId;
+    result.clearTrail           = true;
 
     loop.active = true;
     loop.count  = 0;
@@ -617,7 +627,9 @@ const RTNode* TraversalLogic::getModulatorNode(const NodeMap& nodes, int nodeId)
         return nullptr;
     }
 
-    for (const int childId : nodeIterator->second->children) {
+    for (const RTNodeData& data : nodeIterator->second->nodeData) {
+        const int childId = data.childId;
+
         const auto childIt = nodes.find(childId);
         if (childIt == nodes.end()) {
             continue;

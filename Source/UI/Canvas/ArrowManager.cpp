@@ -11,6 +11,8 @@
 #include "../../Graph/ValueTreeState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
+#include "../Node/NodeFactory.h"
+#include "../../Audio/AudioUIBridge.h"
 #include "../../Util/ApplicationContext.h"
 
 ArrowManager::ArrowManager(NodeCanvas& canvasRef, ApplicationContext& context)
@@ -57,14 +59,9 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
     const int parentNodeId = parentNode->getComponentID().getIntValue();
     const int childNodeId  = childNode->getComponentID().getIntValue();
 
-    const juce::ValueTree parentMidiNotesData = applicationContext.valueTreeState->getMidiNotes(parentNodeId);
-    const juce::ValueTree parentMidiNoteData  = parentMidiNotesData.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
-
     auto arrow = std::make_unique<Arrow>(parentNode, childNode, applicationContext);
 
     arrow->arrowTree = connectionTreeFor(parentNodeId, childNodeId);
-
-    parentNode->nodeArrows[childNodeId] = arrow.get();
 
     if (parentNode->nodeType == NodeType::TraversalFlag) {
         arrow->sourceHovered = parentNode->isHovered;
@@ -74,12 +71,8 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
     attach(*arrow);
     arrow->setInterceptsMouseClicks(false, false);
 
-    if (parentMidiNoteData.isValid() && childNode->nodeType != NodeType::Root) {
-        arrow->bindToProperty(parentMidiNoteData, ValueTreeIdentifiers::MidiDuration);
-    }
-
     Arrow* const raw = arrow.release();
-    arrows.add(raw);
+    adopt(raw);
     return raw;
 }
 
@@ -108,9 +101,24 @@ Arrow* ArrowManager::connectParentToChild(Node* parentNode, Node* childNode)
 
 void ArrowManager::adopt(Arrow* arrow)
 {
-    if (arrow != nullptr) {
-        arrows.add(arrow);
+    if (arrow == nullptr) {
+        return;
     }
+
+    if (arrow->startNode != nullptr) {
+        arrow->startNode->nodeArrows.insert({ arrowKey(*arrow), arrow });
+    }
+
+    arrows.add(arrow);
+}
+
+int ArrowManager::arrowKey(const Arrow& arrow)
+{
+    if (arrow.isDangling()) {
+        return AudioUIBridge::danglingArrowKey(arrow.danglingIndex);
+    }
+
+    return arrow.endNode->getComponentID().getIntValue();
 }
 
 void ArrowManager::attach(Arrow& arrow) const
@@ -121,9 +129,16 @@ void ArrowManager::attach(Arrow& arrow) const
 
 void ArrowManager::detach(Arrow* arrow) const
 {
-    if (arrow->startNode != nullptr && arrow->endNode != nullptr) {
-        const int childNodeId = arrow->endNode->getComponentID().getIntValue();
-        arrow->startNode->nodeArrows.erase(childNodeId);
+    if (arrow->startNode != nullptr) {
+        auto& nodeArrows = arrow->startNode->nodeArrows;
+        const auto range = nodeArrows.equal_range(arrowKey(*arrow));
+
+        for (auto entry = range.first; entry != range.second; ++entry) {
+            if (entry->second == arrow) {
+                nodeArrows.erase(entry);
+                break;
+            }
+        }
     }
 
     canvas.removeChildComponent(arrow);
@@ -145,8 +160,7 @@ void ArrowManager::remove(Arrow* arrow)
 void ArrowManager::removeForNode(const Node* node)
 {
     removeMatching([node](Arrow* arrow) {
-        return ! arrow->isDangling()
-            && (arrow->startNode == node || arrow->endNode == node);
+        return arrow->startNode == node || arrow->endNode == node;
     });
 }
 
@@ -165,7 +179,88 @@ void ArrowManager::removeMatching(const std::function<bool(Arrow*)>& predicate)
 void ArrowManager::clear()
 {
     hideSnapGhost();
+    preview.reset();
     arrows.clear();
+}
+
+void ArrowManager::updatePreview(Node* node, juce::Point<int> tipOffset, bool dashed)
+{
+    if (node == nullptr) {
+        return;
+    }
+
+    if (preview == nullptr || preview->startNode != node) {
+        preview = std::make_unique<Arrow>(node, tipOffset, applicationContext);
+        attach(*preview);
+    }
+
+    preview->dashed = dashed;
+    preview->setTipOffset(tipOffset);
+}
+
+void ArrowManager::commitPreview()
+{
+    if (preview == nullptr) {
+        return;
+    }
+
+    const Node* const node = preview->startNode;
+    const juce::Point<int> tipOffset = preview->tipOffset;
+
+    preview.reset();
+
+    if (node == nullptr) {
+        return;
+    }
+
+    NodeFactory::createDanglingArrow(*applicationContext.valueTreeState, node->nodeValueTree, tipOffset,
+                                     currentArrowInfo, applicationContext.undoManager);
+}
+
+void ArrowManager::cancelPreview()
+{
+    preview.reset();
+}
+
+Node* ArrowManager::previewStartNode() const
+{
+    return preview != nullptr ? preview->startNode : nullptr;
+}
+
+void ArrowManager::rebuildDanglingForNode(int nodeId)
+{
+    Node* const node = canvas.nodeManager.find(nodeId);
+
+    removeMatching([node](Arrow* arrow) {
+        return arrow->isDangling() && arrow->startNode == node;
+    });
+
+    if (node == nullptr) {
+        return;
+    }
+
+    const juce::ValueTree arrowList = node->nodeValueTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+
+    if (! arrowList.isValid()) {
+        return;
+    }
+
+    for (int i = 0; i < arrowList.getNumChildren(); ++i) {
+        const juce::ValueTree arrowTree = arrowList.getChild(i);
+
+        const juce::Point<int> tipOffset {
+            (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX),
+            (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)
+        };
+
+        auto arrow = std::make_unique<Arrow>(node, tipOffset, applicationContext);
+        arrow->arrowTree     = arrowTree;
+        arrow->danglingIndex = i;
+        arrow->valueEditor->bindEditor(arrowTree, ValueTreeIdentifiers::CountLimit);
+        attach(*arrow);
+        arrow->setArrowBounds();
+        adopt(arrow.release());
+    }
 }
 
 void ArrowManager::refreshFor(const Node* movedNode) const
@@ -257,21 +352,11 @@ void ArrowManager::resetAllProgress() const
     }
 }
 
-void ArrowManager::resetGraphProgress(int graphId, int traversalId) const
+void ArrowManager::resetTrail(int trailId) const
 {
     for (Arrow* const arrow : arrows) {
-        if (arrow == nullptr || arrow->startNode == nullptr) {
-            continue;
-        }
-
-        const int parentId = arrow->startNode->getComponentID().getIntValue();
-        const juce::ValueTree arrowRoot = applicationContext.valueTreeState->getRootNode(parentId);
-        if (! arrowRoot.isValid()) {
-            continue;
-        }
-
-        if (static_cast<int>(arrowRoot.getProperty(ValueTreeIdentifiers::Id)) == graphId) {
-            arrow->resetProgress(traversalId);
+        if (arrow != nullptr) {
+            arrow->resetProgress(trailId);
         }
     }
 }

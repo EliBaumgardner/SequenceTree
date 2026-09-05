@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.22)
 
 project(SequenceTree VERSION 0.0.1)
 
@@ -6,8 +6,17 @@ project(SequenceTree VERSION 0.0.1)
 # Add JUCEIO
 add_subdirectory(JUCE)
 
-# Set the path to your VST2 SDK headers
-juce_set_vst2_sdk_path("/Users/elibaumgardner/Downloads/VST_SDK/VST2_SDK")
+set(SEQUENCETREE_VST2_SDK_PATH "$ENV{HOME}/Downloads/VST_SDK/VST2_SDK"
+        CACHE PATH "VST2 SDK headers; leave empty to build without the VST2 format")
+
+set(SEQUENCETREE_FORMATS AU VST3 Standalone)
+
+if(SEQUENCETREE_VST2_SDK_PATH AND IS_DIRECTORY "${SEQUENCETREE_VST2_SDK_PATH}")
+    juce_set_vst2_sdk_path("${SEQUENCETREE_VST2_SDK_PATH}")
+    list(APPEND SEQUENCETREE_FORMATS VST)
+else()
+    message(STATUS "VST2 SDK not found at '${SEQUENCETREE_VST2_SDK_PATH}' - building without the VST2 format")
+endif()
 
 set(JUCE_COPY_PLUGIN_AFTER_BUILD ON)
 
@@ -18,7 +27,7 @@ juce_add_plugin(SequenceTree
         IS_SYNTH FALSE
         NEEDS_MIDI_INPUT FALSE
         NEEDS_MIDI_OUTPUT TRUE
-        FORMATS AU VST3 VST Standalone
+        FORMATS ${SEQUENCETREE_FORMATS}
         PLUGIN_MANUFACTURER_CODE ANON
         PLUGIN_CODE ST01
 )
@@ -29,8 +38,13 @@ target_compile_features(SequenceTree PRIVATE cxx_std_20)
 
 target_include_directories(SequenceTree PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}/juce_binarydata_MyBinaryData
-        ${CMAKE_CURRENT_SOURCE_DIR}/Source/UI
 )
+
+if(MSVC)
+    target_compile_options(SequenceTree PRIVATE /W4)
+else()
+    target_compile_options(SequenceTree PRIVATE -Wall -Wextra -Wno-unused-parameter)
+endif()
 
 target_compile_definitions(SequenceTree PRIVATE
         JUCE_IGNORE_VST3_MISMATCHED_PARAMETER_ID_WARNING=1
@@ -48,8 +62,8 @@ target_sources(SequenceTree PRIVATE
         Source/Audio/FlagScheduler.cpp
         Source/Audio/TraversalSession.cpp
         Source/Audio/TraversalRule.cpp
-        Source/Audio/RTScript.cpp
         Source/Audio/ScriptTraversalRule.cpp
+        Source/Script/RTScript.cpp
         Source/Script/ScriptLexer.cpp
         Source/Script/ScriptParser.cpp
         Source/Script/ScriptEmitter.cpp
@@ -64,17 +78,16 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Canvas/NodeCanvasTreeListener.cpp
         Source/UI/Canvas/ValueField.cpp
         Source/UI/Canvas/AudioCommandDrainer.cpp
-        Source/UI/Canvas/DanglingArrowLayer.cpp
         Source/UI/Canvas/NodeManager.cpp
         Source/UI/Canvas/ArrowManager.cpp
         Source/UI/Canvas/CanvasHitTester.cpp
-        Source/UI/Canvas/ArrowHoverController.cpp
         Source/Input/NodeCreationDispatcher.cpp
         Source/Input/ConnectionOps.cpp
         Source/Input/SelectionOps.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
         Source/UI/Node/Arrow.cpp
+        Source/UI/Node/ArrowAnimation.cpp
         Source/UI/Editors/ValueEditor.cpp
         Source/UI/Editors/ValueFormat.cpp
         Source/UI/Node/Modulator.cpp
@@ -91,7 +104,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Menus/ItemSelector.cpp
         Source/UI/Menus/TraversalMenu.cpp
         Source/UI/Menus/MenuArea.cpp
-        Source/UI/ResizablePanel.cpp
+        Source/UI/PanelResizer.cpp
         Source/UI/Menus/NodeMenu.cpp
         Source/UI/Menus/AllowedTraversalsMenu.cpp
         Source/UI/Menus/TraversalRulesWindow.cpp

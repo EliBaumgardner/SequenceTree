@@ -39,14 +39,8 @@ public:
 
     void connectNodes   (int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
     void disconnectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
-    void setArrowType   (int parentNodeId, int childNodeId, ArrowType arrowType, juce::UndoManager* undoManager);
 
-    static ArrowInfo readArrowInfo (const juce::ValueTree& arrowTree, bool sourceIsAlternative);
-    static void      writeArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo,
-                                    juce::UndoManager* undoManager);
-
-    void setArrowInfo(int parentNodeId, int childNodeId, const ArrowInfo& arrowInfo,
-                      juce::UndoManager* undoManager);
+    void setArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo, juce::UndoManager* undoManager);
 
     std::vector<int> syncPitchBindings(int nodeId, juce::UndoManager* undoManager);
 
@@ -58,7 +52,7 @@ public:
     void setMidiValue    (int nodeId, NodeNote note, juce::UndoManager* undoManager);
 
     NodePosition    getNodePosition (int nodeId);
-    juce::ValueTree getRootNode     (int nodeId);
+    static ArrowInfo getArrowInfo   (const juce::ValueTree& arrowTree);
     juce::ValueTree getNode         (int nodeId);
     juce::ValueTree getNodeParent   (int nodeId);
     juce::ValueTree getMidiNotes    (int nodeId);
@@ -104,7 +98,7 @@ public:
 
 private:
 
-    bool applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId, bool sourceIsAlternative,
+    bool applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId,
                                int deltaX, int deltaY, juce::UndoManager* undoManager);
 
     int nodeIdIncrement = 0;

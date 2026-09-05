@@ -8,9 +8,13 @@
 #include "../../Graph/ValueTreeState.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-TraversalMenu::TraversalMenu(ApplicationContext& context, bool showResizer)
-    : ResizablePanel(context, ResizeEdge::Left, resizerWidth, showResizer),
-      displayMenu(context), multiplierEditor(context), channelEditor(context), transposeEditor(context), velocityEditor(context), colourSelector(context) {
+TraversalMenu::TraversalMenu(ApplicationContext& context)
+    : displayMenu(context), multiplierEditor(context), channelEditor(context), transposeEditor(context), velocityEditor(context), colourSelector(context),
+      applicationContext(context),
+      topBar(context, { Bar::Orientation::horizontal, Bar::Background::litFromTop }) {
+    setLookAndFeel(context.lookAndFeel);
+
+    addAndMakeVisible(topBar);
     addAndMakeVisible(displayMenu);
 
     const auto setUpLabel = [this](juce::Label& label, juce::String text) {
@@ -124,34 +128,25 @@ void TraversalMenu::selectTraversal(int traversalId) {
 
 TraversalMenu::~TraversalMenu() {
     applicationContext.valueTreeState->traversalMap.removeListener(menuListener.get());
+    setLookAndFeel(nullptr);
 }
 
 void TraversalMenu::paint(juce::Graphics &g) {
-    ResizablePanel::paint(g);
+    const Theme& theme = CustomLookAndFeel::get(*this);
 
-    const auto bounds = getLocalBounds().toFloat();
-    const auto barHeight = std::floor(bounds.getHeight() * 0.05f);
-    auto barBounds = bounds.withHeight(barHeight);
-
-    if (hasResizer()) {
-        barBounds = barBounds.withTrimmedLeft((float) resizerWidth);
-    }
-
-    drawTopBar(g, barBounds);
+    g.setColour(theme.baseDarkColour2);
+    g.fillRect(getLocalBounds());
 }
 
 void TraversalMenu::resized() {
     auto bounds = getLocalBounds();
-
-    if (hasResizer()) {
-        resizer.setBounds(bounds.removeFromLeft(resizerWidth));
-    }
 
     auto editRulesArea = bounds.removeFromBottom(Theme::textButtonHeight + Theme::menuEdgeInset * 2);
     editTraversalRulesButton->setBounds(editRulesArea.reduced(Theme::menuEdgeInset));
 
     int barHeight = static_cast<int>(getHeight() * 0.05f);
     auto barArea = bounds.removeFromTop(barHeight);
+    topBar.setBounds(barArea);
     displayMenu.setBounds(barArea.reduced(4));
 
     int rowHeight = juce::jmax(18, barHeight);

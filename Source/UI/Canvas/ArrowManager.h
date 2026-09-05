@@ -7,6 +7,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <functional>
+#include <memory>
+
+#include "../../Util/ArrowInfo.h"
 
 class NodeCanvas;
 class Node;
@@ -34,6 +37,14 @@ public:
     void removeMatching(const std::function<bool(Arrow*)>& predicate);
     void clear();
 
+    void  updatePreview(Node* node, juce::Point<int> tipOffset, bool dashed = false);
+    void  commitPreview();
+    void  cancelPreview();
+    bool  hasPreview() const { return preview != nullptr; }
+    Node* previewStartNode() const;
+
+    void rebuildDanglingForNode(int nodeId);
+
     void refreshFor(const Node* movedNode) const;
 
     void handleArrowAdded      (int parentNodeId, int childNodeId);
@@ -44,7 +55,7 @@ public:
     void clearSelection() const;
 
     void resetAllProgress() const;
-    void resetGraphProgress(int graphId, int traversalId) const;
+    void resetTrail(int trailId) const;
 
     void triggerSnapForNode(int nodeId) const;
 
@@ -52,7 +63,11 @@ public:
     void   hideSnapGhost();
     Arrow* snapGhost() const { return snapGhostArrow; }
 
+    ArrowInfo currentArrowInfo;
+
 private:
+
+    static int arrowKey(const Arrow& arrow);
 
     juce::ValueTree connectionTreeFor(int startNodeId, int endNodeId) const;
 
@@ -62,6 +77,7 @@ private:
     ApplicationContext& applicationContext;
 
     juce::OwnedArray<Arrow> arrows;
+    std::unique_ptr<Arrow>  preview;
     Arrow* snapGhostArrow = nullptr;
 };
 

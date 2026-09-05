@@ -4,6 +4,13 @@
 #include "../Graph/ValueTreeIdentifiers.h"
 #include <algorithm>
 #include <unordered_set>
+#include <utility>
+
+namespace {
+
+std::vector<juce::MidiMessage> notesStrandedByPreviousInstance;
+
+}
 
 
 
@@ -22,10 +29,20 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 {
     graphState.ensureDefaultTraversalRule();
     snapshots.publishActiveTraversalRule();
+
+    pendingNoteOffs = std::exchange(notesStrandedByPreviousInstance, {});
 }
 
 SequenceTreeAudioProcessor::~SequenceTreeAudioProcessor()
 {
+    notesStrandedByPreviousInstance.clear();
+
+    for (const auto& note : eventManager.scheduler.activeNotes) {
+        if (NoteScheduler::isNoteSounding(note)) {
+            notesStrandedByPreviousInstance.push_back(
+                juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch));
+        }
+    }
 }
 
 //==============================================================================
@@ -238,6 +255,12 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     buffer.clear();
     midiMessages.clear();
 
+    for (const auto& noteOff : pendingNoteOffs) {
+        midiMessages.addEvent(noteOff, 0);
+    }
+
+    pendingNoteOffs.clear();
+
     const bool resetHit = resetRequested.exchange(false);
 
     if (resetHit) {
@@ -289,6 +312,14 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     if (traversalSession.isIdle()
         && !traversalSession.startTraversalsFromFirstRoot(context)) {
+        if (!eventManager.scheduler.activeNotes.empty()) {
+            traversalSession.silenceAllNotes(midiMessages);
+
+            if (notifyUi) {
+                notifyUi();
+            }
+        }
+
         return;
     }
 

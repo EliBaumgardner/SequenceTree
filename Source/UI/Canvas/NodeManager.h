@@ -6,8 +6,10 @@
 #define SEQUENCETREE_NODEMANAGER_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <functional>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "../../Util/NodeInfo.h"
 
@@ -34,10 +36,14 @@ public:
     void setPosition(int nodeId) const;
     void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY) const;
 
-    void setDisplayMode(NodeDisplayMode mode) const;
+    void setDisplayMode(NodeDisplayMode mode);
     void clearHighlights() const;
     void equipRootTraversals() const;
     void setInterceptsClicks(bool shouldIntercept) const;
+
+    NodeDisplayMode displayMode = NodeDisplayMode::Pitch;
+
+    std::vector<std::function<void(Node*, bool)>> nodeSelectedListeners;
 
 private:
 
