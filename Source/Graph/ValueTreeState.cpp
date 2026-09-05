@@ -6,6 +6,8 @@
 #include "ValueTreeIdentifiers.h"
 #include "../Script/ScriptCompiler.h"
 
+#include <algorithm>
+
 ValueTreeState::ValueTreeState() {
 
     canvasData   = juce::ValueTree(ValueTreeIdentifiers::CanvasData);
@@ -158,7 +160,6 @@ juce::ValueTree ValueTreeState::addChildNode(juce::ValueTree parentNode, const j
     int rootId = parentNode.getProperty(ValueTreeIdentifiers::RootNodeId);
     nodeIdIncrement = nodeIdIncrement + 1;
 
-    juce::ValueTree nodeId          {ValueTreeIdentifiers::NodeId};
     juce::ValueTree node            {nodeType};
     juce::ValueTree nodeChildrenIds {ValueTreeIdentifiers::NodeChildrenIds};
     juce::ValueTree midiNotesData   {ValueTreeIdentifiers::MidiNotesData};
@@ -170,9 +171,8 @@ juce::ValueTree ValueTreeState::addChildNode(juce::ValueTree parentNode, const j
 
     node.setProperty(ValueTreeIdentifiers::RootNodeId, rootId, undoManager);
     node.setProperty(ValueTreeIdentifiers::Id, nodeIdIncrement, undoManager);
-    nodeId.setProperty(ValueTreeIdentifiers::Id, nodeIdIncrement, undoManager);
 
-    parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).addChild(nodeId, -1, undoManager);
+    connectNodes(parentNode.getProperty(ValueTreeIdentifiers::Id), nodeIdIncrement, undoManager);
     nodeMap.addChild(node, -1, undoManager);
 
     return node;
@@ -226,7 +226,6 @@ juce::ValueTree ValueTreeState::addModulatorNode(juce::ValueTree parentNode, con
     }
 
     juce::ValueTree modulatorNode        {nodeType};
-    juce::ValueTree modulatorNodeId      {ValueTreeIdentifiers::NodeId};
     juce::ValueTree modulatorChildrenIds {ValueTreeIdentifiers::NodeChildrenIds};
     juce::ValueTree modulatorType        {ValueTreeIdentifiers::ModulationType};
     juce::ValueTree defaultModulatorType {ValueTreeIdentifiers::DurationMod};
@@ -240,9 +239,8 @@ juce::ValueTree ValueTreeState::addModulatorNode(juce::ValueTree parentNode, con
     modulatorNode.setProperty(ValueTreeIdentifiers::RootNodeId, rootId, undoManager);
     modulatorNode.setProperty(ValueTreeIdentifiers::ModAmount, defaultModAmount, undoManager);
     modulatorNode.setProperty(ValueTreeIdentifiers::Id, newNodeId, undoManager);
-    modulatorNodeId.setProperty(ValueTreeIdentifiers::Id, newNodeId, undoManager);
 
-    parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).addChild(modulatorNodeId, -1, undoManager);
+    connectNodes(parentNode.getProperty(ValueTreeIdentifiers::Id), newNodeId, undoManager);
 
     return modulatorNode;
 }
@@ -286,11 +284,19 @@ void ValueTreeState::connectNodes(int parentNodeId, int childNodeId, juce::UndoM
 {
     juce::ValueTree parentNode = getNode(parentNodeId);
 
-    juce::ValueTree nodeChildrenIds = parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-
     juce::ValueTree childId {ValueTreeIdentifiers::NodeId};
     childId.setProperty(ValueTreeIdentifiers::Id, childNodeId, undoManager);
-    nodeChildrenIds.addChild(childId, -1, undoManager);
+
+    ArrowInfo arrowInfo;
+
+    if (parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
+        arrowInfo.xBinding = ArrowBinding::NoBind;
+        arrowInfo.yBinding = ArrowBinding::DurationBind;
+    }
+
+    setArrowInfo(childId, arrowInfo, undoManager);
+
+    parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).addChild(childId, -1, undoManager);
 }
 
 void ValueTreeState::disconnectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager)
@@ -308,19 +314,23 @@ void ValueTreeState::disconnectNodes(int parentNodeId, int childNodeId, juce::Un
     }
 }
 
-void ValueTreeState::setArrowType(int parentNodeId, int childNodeId, ArrowType arrowType,
+void ValueTreeState::setArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo,
                                   juce::UndoManager* undoManager)
 {
-    juce::ValueTree connection = getConnection(parentNodeId, childNodeId);
-
-    if (connection.isValid()) {
-        connection.setProperty(ValueTreeIdentifiers::ArrowType, static_cast<int>(arrowType), undoManager);
+    if (! arrowTree.isValid()) {
+        return;
     }
+
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowType,        static_cast<int>(arrowInfo.type),     undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowXBinding,    static_cast<int>(arrowInfo.xBinding), undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowYBinding,    static_cast<int>(arrowInfo.yBinding), undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, arrowInfo.xMultiplier,                undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowYMultiplier, arrowInfo.yMultiplier,                undoManager);
 }
 
-ArrowInfo ValueTreeState::readArrowInfo(const juce::ValueTree& arrowTree, bool sourceIsAlternative)
+ArrowInfo ValueTreeState::getArrowInfo(const juce::ValueTree& arrowTree)
 {
-    ArrowInfo arrowInfo = defaultArrowInfo(sourceIsAlternative);
+    ArrowInfo arrowInfo;
 
     if (! arrowTree.isValid()) {
         return arrowInfo;
@@ -329,58 +339,36 @@ ArrowInfo ValueTreeState::readArrowInfo(const juce::ValueTree& arrowTree, bool s
     arrowInfo.type = static_cast<ArrowType>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowType,
                                                                        static_cast<int>(arrowInfo.type)));
 
-    if (! arrowTree.hasProperty(ValueTreeIdentifiers::ArrowXBinding)) {
-        return arrowInfo;
-    }
+    arrowInfo.xBinding = static_cast<ArrowBinding>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowXBinding,
+                                                                              static_cast<int>(arrowInfo.xBinding)));
+    arrowInfo.yBinding = static_cast<ArrowBinding>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowYBinding,
+                                                                              static_cast<int>(arrowInfo.yBinding)));
 
-    arrowInfo.xBinding = static_cast<ArrowBinding>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowXBinding));
-    arrowInfo.yBinding = static_cast<ArrowBinding>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowYBinding));
-
-    arrowInfo.xMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowXMultiplier, 1.0);
-    arrowInfo.yMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowYMultiplier, 1.0);
-
-    arrowInfo.appliedPitchOffset = arrowTree.getProperty(ValueTreeIdentifiers::ArrowPitchOffset, 0);
+    arrowInfo.xMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowXMultiplier, arrowInfo.xMultiplier);
+    arrowInfo.yMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowYMultiplier, arrowInfo.yMultiplier);
 
     return arrowInfo;
 }
 
-void ValueTreeState::writeArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo,
-                                    juce::UndoManager* undoManager)
-{
-    if (! arrowTree.isValid() || ! arrowHasCustomBindings(arrowInfo)) {
-        return;
-    }
-
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowXBinding,    static_cast<int>(arrowInfo.xBinding), undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowYBinding,    static_cast<int>(arrowInfo.yBinding), undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, arrowInfo.xMultiplier,                undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowYMultiplier, arrowInfo.yMultiplier,                undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowPitchOffset, arrowInfo.appliedPitchOffset,         undoManager);
-}
-
-void ValueTreeState::setArrowInfo(int parentNodeId, int childNodeId, const ArrowInfo& arrowInfo,
-                                  juce::UndoManager* undoManager)
-{
-    writeArrowInfo(getConnection(parentNodeId, childNodeId), arrowInfo, undoManager);
-}
-
-bool ValueTreeState::applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId, bool sourceIsAlternative,
+bool ValueTreeState::applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId,
                                            int deltaX, int deltaY, juce::UndoManager* undoManager)
 {
-    const ArrowInfo arrowInfo = readArrowInfo(arrowTree, sourceIsAlternative);
+    const ArrowInfo arrowInfo = getArrowInfo(arrowTree);
 
-    if (! arrowBindsTo(arrowInfo, ArrowBinding::PitchBind)) {
+    if (! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind)) {
         return false;
     }
 
-    const int offset = arrowPitchOffsetFromDelta(arrowInfo, deltaX, deltaY);
+    const int offset = ArrowInfo::pitchOffsetFromDelta(arrowInfo, deltaX, deltaY);
 
     if (! arrowTree.hasProperty(ValueTreeIdentifiers::ArrowPitchOffset)) {
         arrowTree.setProperty(ValueTreeIdentifiers::ArrowPitchOffset, offset, undoManager);
         return false;
     }
 
-    if (offset == arrowInfo.appliedPitchOffset) {
+    const int appliedPitchOffset = arrowTree.getProperty(ValueTreeIdentifiers::ArrowPitchOffset, 0);
+
+    if (offset == appliedPitchOffset) {
         return false;
     }
 
@@ -390,9 +378,9 @@ bool ValueTreeState::applyArrowPitchOffset(juce::ValueTree arrowTree, int target
         return false;
     }
 
-    const int currentPitch = note.getProperty(ValueTreeIdentifiers::MidiPitch, arrowDefaultBasePitch);
-    const int wantedPitch  = currentPitch + offset - arrowInfo.appliedPitchOffset;
-    const int newPitch     = std::clamp(wantedPitch, arrowMinimumPitch, arrowMaximumPitch);
+    const int currentPitch = note.getProperty(ValueTreeIdentifiers::MidiPitch, defaultMidiPitch);
+    const int wantedPitch  = currentPitch + offset - appliedPitchOffset;
+    const int newPitch     = std::clamp(wantedPitch, minimumMidiPitch, maximumMidiPitch);
 
     arrowTree.setProperty(ValueTreeIdentifiers::ArrowPitchOffset, offset - (wantedPitch - newPitch), undoManager);
 
@@ -415,8 +403,6 @@ std::vector<int> ValueTreeState::syncPitchBindings(int nodeId, juce::UndoManager
         return repitchedNodeIds;
     }
 
-    const bool isAlternative = node.getType() == ValueTreeIdentifiers::AlternativeNodeData;
-
     const int centreX = node.getProperty(ValueTreeIdentifiers::XPosition);
     const int centreY = node.getProperty(ValueTreeIdentifiers::YPosition);
 
@@ -434,20 +420,17 @@ std::vector<int> ValueTreeState::syncPitchBindings(int nodeId, juce::UndoManager
         const int otherX = other.getProperty(ValueTreeIdentifiers::XPosition);
         const int otherY = other.getProperty(ValueTreeIdentifiers::YPosition);
 
-        const bool touchesAlternative =
-            isAlternative || other.getType() == ValueTreeIdentifiers::AlternativeNodeData;
-
         juce::ValueTree incoming = other.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds)
                                         .getChildWithProperty(ValueTreeIdentifiers::Id, nodeId);
 
-        if (applyArrowPitchOffset(incoming, nodeId, touchesAlternative,
+        if (applyArrowPitchOffset(incoming, nodeId,
                                   centreX - otherX, centreY - otherY, undoManager)) {
             repitchedNodeIds.push_back(nodeId);
         }
 
         juce::ValueTree outgoing = childIds.getChildWithProperty(ValueTreeIdentifiers::Id, otherId);
 
-        if (applyArrowPitchOffset(outgoing, otherId, touchesAlternative,
+        if (applyArrowPitchOffset(outgoing, otherId,
                                   otherX - centreX, otherY - centreY, undoManager)) {
             repitchedNodeIds.push_back(otherId);
         }
@@ -458,7 +441,7 @@ std::vector<int> ValueTreeState::syncPitchBindings(int nodeId, juce::UndoManager
     for (int i = 0; i < danglingArrows.getNumChildren(); ++i) {
         juce::ValueTree arrowTree = danglingArrows.getChild(i);
 
-        if (applyArrowPitchOffset(arrowTree, nodeId, isAlternative,
+        if (applyArrowPitchOffset(arrowTree, nodeId,
                                   (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX),
                                   (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY),
                                   undoManager)) {
@@ -594,17 +577,6 @@ juce::ValueTree ValueTreeState::getNode(int nodeId)
     return nodeMap.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId);
 }
 
-juce::ValueTree ValueTreeState::getRootNode(int nodeId)
-{
-    juce::ValueTree node = getNode(nodeId);
-    int rootId = node.getProperty(ValueTreeIdentifiers::RootNodeId);
-
-    juce::ValueTree rootNode = nodeMap.getChildWithProperty(ValueTreeIdentifiers::Id, rootId);
-    jassert(rootNode.isValid());
-
-    return rootNode;
-}
-
 juce::ValueTree ValueTreeState::getMidiNotes(int nodeId) {
     juce::ValueTree node = getNode(nodeId);
     juce::ValueTree midiNotes = node.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
@@ -665,6 +637,7 @@ void ValueTreeState::removeTraversalRule(int ruleId, juce::UndoManager* undoMana
                              ? (int) replacement.getProperty(ValueTreeIdentifiers::Id)
                              : -1,
                              undoManager);
+
 }
 
 juce::ValueTree ValueTreeState::getTraversalRule(int ruleId) const

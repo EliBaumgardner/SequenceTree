@@ -4,6 +4,7 @@
 
 #include "NodeMenu.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
+#include "../Canvas/NodeCanvas.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Node/Node.h"
 
@@ -62,7 +63,7 @@ NodeMenu::NodeMenu(ApplicationContext& context)
 
     addAndMakeVisible(editTraversalRulesButton.get());
 
-    applicationContext.addNodeSelectedListener([this](Node* node, bool selected) {
+    applicationContext.canvas->nodeManager.nodeSelectedListeners.push_back([this](Node* node, bool selected) {
         if (selected) {
             colourSelector.setNode(node);
         } else {

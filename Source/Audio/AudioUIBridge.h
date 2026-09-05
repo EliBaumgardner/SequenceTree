@@ -62,7 +62,7 @@ public:
         int  parentNodeId = 0;
         int  childNodeId  = 0;
         int  durationMs   = 0;
-        int  graphId      = 0;
+        int  trailId      = -1;
         int  traversalId  = -1;
         bool isConnection = false;
     };
@@ -76,8 +76,7 @@ public:
 
     struct ResetCommand
     {
-        int rootId        = 0;
-        int traversalId   = -1;
+        int trailId = -1;
     };
 
     CommandFifo<HighlightCommand> highlights;
@@ -93,7 +92,13 @@ public:
             || counts.hasPending();
     }
 
-    static constexpr int allNodes = -1;
+    static constexpr int allNodes  = -1;
+    static constexpr int allTrails = -1;
+
+    static int primaryTrail  (int instanceId) { return instanceId * 2; }
+    static int modulatorTrail(int instanceId) { return instanceId * 2 + 1; }
+
+    static int danglingArrowKey(int danglingIndex) { return -(danglingIndex + 1); }
 
     void highlightNode(int nodeId, bool shouldHighlight, int traversalId = -1)
     {
@@ -110,14 +115,14 @@ public:
         highlightNode(node.nodeID, shouldHighlight, traversalId);
     }
 
-    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int graphId, int traversalId, bool isConnection = false)
+    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int trailId, int traversalId, bool isConnection = false)
     {
-        progress.push({ parentNodeId, childNodeId, durationMs, graphId, traversalId, isConnection });
+        progress.push({ parentNodeId, childNodeId, durationMs, trailId, traversalId, isConnection });
     }
 
-    void pushArrowReset(int rootId, int traversalId = -1)
+    void pushArrowReset(int trailId)
     {
-        arrowResets.push({ rootId, traversalId });
+        arrowResets.push({ trailId });
     }
 
     void pushCount(int nodeId, int currentCount, int countLimit)

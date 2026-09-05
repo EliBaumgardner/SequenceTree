@@ -2,7 +2,9 @@
 
 const RTNode* RuleContext::eligibleChild(int childId) const
 {
-    const bool isTreeJumpChild = parent.treeJumpChildren.count(childId) > 0;
+    const RTNodeData* const data = findNodeData(parent, childId);
+
+    const bool isTreeJumpChild = data != nullptr && data->isTreeJump;
 
     if (isTreeJumpChild && !allowTreeJumpChildren) {
         return nullptr;
@@ -29,14 +31,11 @@ const RTNode* RuleContext::eligibleChild(int childId) const
         }
     }
 
-    if (!isTreeJumpChild) {
-        const auto durIt = parent.durationMap.find(childId);
-        if (durIt != parent.durationMap.end() && durIt->second == 0) {
-            return nullptr;
-        }
+    if (!isTreeJumpChild && data != nullptr && data->duration == 0) {
+        return nullptr;
     }
 
-    if (isChildDisabledForTraversal(parent, childId, traversalId)) {
+    if (data != nullptr && isTraversalDisabled(data->disabledTraversals, traversalId)) {
         return nullptr;
     }
 
@@ -48,7 +47,9 @@ int NativeTraversalRule::selectChild(const RuleContext& context) const
     int chosen   = -1;
     int maxLimit = 0;
 
-    for (const int childId : context.parent.children) {
+    for (const RTNodeData& data : context.parent.nodeData) {
+        const int childId = data.childId;
+
         const RTNode* child = context.eligibleChild(childId);
 
         if (child == nullptr) {

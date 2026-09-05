@@ -3,7 +3,7 @@
 //
 
 #include "CustomLookAndFeel.h"
-#include "Buttons/ButtonConstants.h"
+#include "../Buttons/ButtonConstants.h"
 #include "../Buttons/PaintToolSettings.h"
 #include "../Editors/FileLabel.h"
 

@@ -55,10 +55,9 @@ void Titlebar::configureDisplaySelector()
     auto addDisplayMode = [this](int itemId, juce::String label, NodeDisplayMode mode) {
         displaySelector.addItem(itemId, std::move(label), [this, mode]() {
             applicationContext.canvas->nodeManager.setDisplayMode(mode);
-            applicationContext.currentDisplayMode = mode;
 
-            if (applicationContext.onDisplayModeChanged) {
-                applicationContext.onDisplayModeChanged(mode);
+            if (onDisplayModeChanged) {
+                onDisplayModeChanged(mode);
             }
         });
     };
@@ -168,7 +167,7 @@ void Titlebar::setControllerMode(NodeController::NodeControllerMode mode)
 
 void Titlebar::setDanglingArrowMode(bool shouldBeActive)
 {
-    applicationContext.canvas->danglingArrowLayer.setArrowMode(shouldBeActive);
+    applicationContext.nodeController->setArrowMode(shouldBeActive);
 }
 
 void Titlebar::paintOverBar(juce::Graphics& g)

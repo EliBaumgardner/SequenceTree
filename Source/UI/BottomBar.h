@@ -11,6 +11,8 @@ class BottomBar : public Bar
 public:
     explicit BottomBar(ApplicationContext& context);
 
+    void applyDisplayMode(NodeDisplayMode mode);
+
 private:
 
     void resized() override;

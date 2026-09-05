@@ -18,7 +18,6 @@ Arrow::Arrow(Node* startNode, Node* endNode, ApplicationContext& context)
     : startNode(startNode), endNode(endNode)
 {
     setLookAndFeel(context.lookAndFeel);
-    bindValue.addListener(this);
 }
 
 Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, ApplicationContext& context)
@@ -26,9 +25,10 @@ Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, ApplicationContext& co
 {
     setLookAndFeel(context.lookAndFeel);
     setInterceptsMouseClicks(false, true);
-    bindValue.addListener(this);
 
     valueEditor = std::make_unique<ValueEditor>(context);
+    valueEditor->setInterceptsMouseClicks(true, false);
+    valueEditor->setTooltip("Count Limit");
     addAndMakeVisible(*valueEditor);
 }
 
@@ -72,19 +72,13 @@ bool Arrow::isDashed() const
         && ! startNode->isAlternativeNode;
 }
 
-ArrowInfo Arrow::getArrowInfo() const
-{
-    return ValueTreeState::readArrowInfo(arrowTree,
-                                         startNode != nullptr && startNode->isAlternativeNode);
-}
-
 bool Arrow::isTraversalArrow() const
 {
     if (isDangling() || ! arrowTree.isValid()) {
         return false;
     }
 
-    return getArrowInfo().type == ArrowType::Traversal;
+    return ValueTreeState::getArrowInfo(arrowTree).type == ArrowType::Traversal;
 }
 
 bool Arrow::connectsTraversalFlag() const
@@ -101,7 +95,7 @@ int Arrow::getDuration() const
 
     const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
 
-    return arrowDurationFromDelta(getArrowInfo(), delta.x, delta.y);
+    return ArrowInfo::durationFromDelta(ValueTreeState::getArrowInfo(arrowTree), delta.x, delta.y);
 }
 
 juce::String Arrow::getDurationLabel() const
@@ -110,16 +104,16 @@ juce::String Arrow::getDurationLabel() const
         return "0";
     }
 
-    const ArrowInfo arrowInfo = getArrowInfo();
+    const ArrowInfo arrowInfo = ValueTreeState::getArrowInfo(arrowTree);
 
-    if (! arrowBindsTo(arrowInfo, ArrowBinding::DurationBind)
-        && arrowBindsTo(arrowInfo, ArrowBinding::PitchBind)) {
+    if (! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::DurationBind)
+        && ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind)) {
 
         const Node* const pitchedNode = (isDangling() || startNode->isAlternativeNode) ? startNode : endNode;
 
         if (pitchedNode != nullptr) {
             return juce::String((int) pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch,
-                                                                            arrowDefaultBasePitch));
+                                                                            defaultMidiPitch));
         }
     }
 
@@ -203,10 +197,35 @@ ArrowGeometry Arrow::getGeometry(float animationT) const
                       || std::abs(shaft.x) < 1.0f || std::abs(shaft.y) < 1.0f;
     geometry.valid     = true;
 
+    if (geometry.straight) {
+        return geometry;
+    }
+
+    float sign = -1.0f;
+
+    if (shaft.x >= 0.0f) {
+        sign = 1.0f;
+    }
+
+    const juce::Point<float> perpendicular { -direction.y * curvePerpScale * sign,
+                                              direction.x * curvePerpScale * sign };
+
+    const float offset = shaftLength * curveOffsetFactor;
+
+    geometry.control1 = start + shaft * 0.33f + perpendicular * offset;
+    geometry.control2 = start + shaft * 0.67f - perpendicular * offset;
+
+    const juce::Point<float> neck       = tip - geometry.control2;
+    const float              neckLength = neck.getDistanceFromOrigin();
+
+    if (neckLength > 0.0f) {
+        geometry.direction = neck / neckLength;
+    }
+
     return geometry;
 }
 
-juce::Path Arrow::buildShaftPath(ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const
+juce::Path Arrow::buildShaftPath(const ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const
 {
     juce::Path path;
 
@@ -216,41 +235,6 @@ juce::Path Arrow::buildShaftPath(ArrowGeometry& geometry, float headLength, juce
 
     const juce::Point<float> start = geometry.start - origin;
     const juce::Point<float> tip   = geometry.tip   - origin;
-    const juce::Point<float> shaft = tip - start;
-
-    if (geometry.straight) {
-        juce::Point<float> shaftEnd = tip;
-
-        if (geometry.drawHead) {
-            shaftEnd = tip - geometry.direction * headLength;
-        }
-
-        path.startNewSubPath(start);
-        path.lineTo(shaftEnd);
-        return path;
-    }
-
-    float sign = -1.0f;
-
-    if (shaft.x >= 0.0f) {
-        sign = 1.0f;
-    }
-
-
-    const juce::Point<float> perpendicular { -geometry.direction.y * curvePerpScale * sign,
-                                              geometry.direction.x * curvePerpScale * sign };
-
-    const float offset = shaft.getDistanceFromOrigin() * curveOffsetFactor;
-
-    const juce::Point<float> control1 = start + shaft * 0.33f + perpendicular * offset;
-    const juce::Point<float> control2 = start + shaft * 0.67f - perpendicular * offset;
-
-    const juce::Point<float> neck    = tip - control2;
-    const float              neckLen = neck.getDistanceFromOrigin();
-
-    if (neckLen > 0.0f) {
-        geometry.direction = neck / neckLen;
-    }
 
     juce::Point<float> shaftEnd = tip;
 
@@ -259,7 +243,13 @@ juce::Path Arrow::buildShaftPath(ArrowGeometry& geometry, float headLength, juce
     }
 
     path.startNewSubPath(start);
-    path.cubicTo(control1, control2, shaftEnd);
+
+    if (geometry.straight) {
+        path.lineTo(shaftEnd);
+        return path;
+    }
+
+    path.cubicTo(geometry.control1 - origin, geometry.control2 - origin, shaftEnd);
     return path;
 }
 
@@ -279,7 +269,7 @@ void Arrow::setArrowBounds()
         }
     }
 
-    ArrowGeometry geometry = getGeometry(1.0f);
+    const ArrowGeometry geometry = getGeometry(1.0f);
 
     if (! geometry.valid) {
         const juce::Point<int> centre = startNode->getNodeCentre();
@@ -292,12 +282,17 @@ void Arrow::setArrowBounds()
 
     setBounds(shaft.getBounds().expanded((float)arrowBoundsPadding).toNearestInt());
 
-    if (valueEditor != nullptr) {
-        valueEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight)
-                                   .withCentre(getTip() - getPosition()));
+    repaint();
+}
+
+void Arrow::resized()
+{
+    if (valueEditor == nullptr) {
+        return;
     }
 
-    repaint();
+    valueEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight)
+                               .withCentre(getTip() - getPosition()));
 }
 
 void Arrow::setTipOffset(juce::Point<int> offset)
@@ -306,143 +301,86 @@ void Arrow::setTipOffset(juce::Point<int> offset)
     setArrowBounds();
 }
 
-void Arrow::bindToProperty(juce::ValueTree tree, const juce::Identifier propertyID) {
-  boundNodeValueTree = tree;
-  bindValue.referTo(tree.getPropertyAsValue(propertyID,nullptr));
-}
-
-void Arrow::valueChanged(juce::Value&) {
-}
-
-void Arrow::updateBoundProperty(int boundValue) {
-  bindValue.setValue(boundValue);
-}
-
 void Arrow::triggerSnapAnimation()
 {
-    animT        = 0.0f;
-    animVelocity = 0.0f;
-    ensureAnimationTimerRunning();
+    animation.snapT        = 0.0f;
+    animation.snapVelocity = 0.0f;
+
+    if (! isTimerRunning()) {
+        startTimerHz(ArrowAnimation::tickRateHz);
+    }
 }
 
 void Arrow::setHoverFade(bool shouldBeVisible)
 {
-    if (shouldBeVisible) {
-        hoverAlphaTarget = 1.0f;
-    } else {
-        hoverAlphaTarget = 0.0f;
-    }
+    animation.alphaTarget = 0.0f;
 
+    if (shouldBeVisible) {
+        animation.alphaTarget = 1.0f;
+    }
 
     if (shouldBeVisible && ! isVisible()) {
         setVisible(true);
     }
 
-    ensureAnimationTimerRunning();
+    if (! isTimerRunning()) {
+        startTimerHz(ArrowAnimation::tickRateHz);
+    }
 }
 
 void Arrow::initHoverState(bool visibleNow)
 {
+    animation.alpha = 0.0f;
+
     if (visibleNow) {
-        hoverAlpha = 1.0f;
-    } else {
-        hoverAlpha = 0.0f;
+        animation.alpha = 1.0f;
     }
 
-    hoverAlphaTarget = hoverAlpha;
-    setAlpha(hoverAlpha);
+    animation.alphaTarget = animation.alpha;
+
+    setAlpha(animation.alpha);
     setVisible(visibleNow);
 }
 
-bool Arrow::advanceHoverFade()
+void Arrow::startProgress(int trailId, int durationMs, juce::Colour colour, bool oneShot)
 {
-    if (hoverAlphaTarget < hoverAlpha && ! isSnapSettled()) {
-        return false;
+    animation.startTrail(trailId, durationMs, colour, oneShot);
+
+    if (! isTimerRunning()) {
+        startTimerHz(ArrowAnimation::tickRateHz);
     }
 
-    if (std::abs(hoverAlpha - hoverAlphaTarget) < hoverFadeEpsilon) {
-        if (hoverAlpha != hoverAlphaTarget) {
-            hoverAlpha = hoverAlphaTarget;
-            setAlpha(hoverAlpha);
-        }
-        if (hoverAlphaTarget <= 0.0f && isVisible()) {
-            setVisible(false);
-        }
-        return true;
-    }
-
-    float step = -hoverFadeStep;
-
-    if (hoverAlpha < hoverAlphaTarget) {
-        step = hoverFadeStep;
-    }
-
-    hoverAlpha = juce::jlimit(0.0f, 1.0f, hoverAlpha + step);
-    setAlpha(hoverAlpha);
-    return false;
-}
-
-void Arrow::startProgress(int traversalId, int durationMs, juce::Colour colour, bool oneShot)
-{
-    if (connectsTraversalFlag()) {
-        return;
-    }
-
-    progress.start(traversalId, durationMs, colour, oneShot);
-    ensureAnimationTimerRunning();
     repaint();
 }
 
 void Arrow::resetProgress()
 {
-    progress.reset();
+    if (animation.trails.empty()) {
+        return;
+    }
+
+    animation.trails.clear();
     repaint();
 }
 
-void Arrow::resetProgress(int traversalId)
+void Arrow::resetProgress(int trailId)
 {
-    progress.reset(traversalId);
-    repaint();
-}
-
-void Arrow::ensureAnimationTimerRunning()
-{
-    if (! isTimerRunning()) {
-        startTimerHz(animationTimerHz);
+    if (animation.trails.erase(trailId) > 0) {
+        repaint();
     }
-}
-
-bool Arrow::isSnapSettled() const
-{
-    return std::abs(animT - 1.0f) < snapSettledEpsilon
-        && std::abs(animVelocity) < snapSettledEpsilon;
-}
-
-bool Arrow::advanceSnapAnimation()
-{
-    if (isSnapSettled()) {
-        return true;
-    }
-
-    animVelocity += (1.0f - animT) * snapSpringStiffness;
-    animVelocity *= snapSpringDamping;
-    animT        += animVelocity;
-
-    if (isSnapSettled()) {
-        animT        = 1.0f;
-        animVelocity = 0.0f;
-        return true;
-    }
-    return false;
 }
 
 void Arrow::timerCallback()
 {
-    const bool snapDone       = advanceSnapAnimation();
-    const bool progressActive = progress.advance();
-    const bool hoverDone      = advanceHoverFade();
+    const bool stillAnimating = animation.advance();
 
-    if (snapDone && ! progressActive && hoverDone) {
+    setAlpha(animation.alpha);
+
+    if (animation.alpha <= 0.0f && isVisible()) {
+        setVisible(false);
+    }
+
+    if (! stillAnimating) {
         stopTimer();
     }
 

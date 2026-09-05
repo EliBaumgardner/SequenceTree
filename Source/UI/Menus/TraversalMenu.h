@@ -14,15 +14,15 @@
 #include "../Buttons/IconButton.h"
 #include "TraversalRulesWindow.h"
 #include "../PopupWindow.h"
-#include "../ResizablePanel.h"
+#include "../Bar.h"
 
 class TraversalMenuListener;
 
-class TraversalMenu : public ResizablePanel {
+class TraversalMenu : public juce::Component {
 
 public:
 
-    explicit TraversalMenu(ApplicationContext& context, bool showResizer = true);
+    explicit TraversalMenu(ApplicationContext& context);
     ~TraversalMenu() override;
 
     void paint(juce::Graphics& g) override;
@@ -30,9 +30,6 @@ public:
 
     void selectTraversal(int traversalId);
     void addTraversalToMenu(int traversalId);
-
-    static constexpr int resizerWidth = 15;
-    static constexpr int minMenuWidth = resizerWidth;
 
     ItemSelector displayMenu;
 
@@ -65,9 +62,11 @@ public:
 
 private:
 
-    juce::ValueTree currentTraversalData;
+    ApplicationContext& applicationContext;
 
-    int minimumWidth() const override { return minMenuWidth; }
+    Bar topBar;
+
+    juce::ValueTree currentTraversalData;
 
     std::unique_ptr<TraversalMenuListener> menuListener;
 };

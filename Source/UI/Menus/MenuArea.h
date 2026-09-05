@@ -7,13 +7,14 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../ResizablePanel.h"
+#include "../Bar.h"
+#include "../PanelResizer.h"
 
 class MenuBar;
 class TraversalMenu;
 class NodeMenu;
 
-class MenuArea : public ResizablePanel {
+class MenuArea : public juce::Component {
 
 public:
 
@@ -25,7 +26,9 @@ public:
 
     static constexpr int resizerWidth = 10;
     static constexpr int menuBarWidth = 28;
-    static constexpr int minMenuWidth = resizerWidth;
+    static constexpr int minMenuWidth = resizerWidth + menuBarWidth;
+
+    PanelResizer resizer;
 
 private:
 
@@ -33,7 +36,7 @@ private:
 
     void togglePanel(ActivePanel panel);
 
-    int minimumWidth() const override { return minMenuWidth; }
+    Bar topBar;
 
     std::unique_ptr<MenuBar> menuBar = nullptr;
     std::unique_ptr<TraversalMenu> traversalMenu = nullptr;

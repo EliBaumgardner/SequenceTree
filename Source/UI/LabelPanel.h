@@ -6,7 +6,7 @@
 #define SEQUENCETREE_LABELPANEL_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../util/ApplicationContext.h"
+#include "../Util/ApplicationContext.h"
 #include "Editors/FileLabel.h"
 
 

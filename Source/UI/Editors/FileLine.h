@@ -9,7 +9,7 @@
 
 #include "../Theme/Theme.h"
 
-class ApplicationContext;
+struct ApplicationContext;
 class LineEditor;
 
 class FileLine : public juce::Component{

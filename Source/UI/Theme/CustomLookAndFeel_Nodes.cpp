@@ -200,26 +200,26 @@ namespace {
     void drawArrowProgress(juce::Graphics& g, const Arrow& arrow, const juce::Path& shaft, juce::Point<float> chord)
     {
         static constexpr float baseOffset   = 2.0f;
-        static constexpr float trackSpacing = 1.75f;
+        static constexpr float trailSpacing = 1.75f;
 
         int drawnCount = 0;
 
-        for (const auto& entry : arrow.progress.tracks)
+        for (const auto& entry : arrow.animation.trails)
         {
-            const ArrowProgress::Track& track = entry.second;
-            if (track.t <= 0.0f) {
+            const ArrowAnimation::Trail& trail = entry.second;
+            if (trail.t <= 0.0f) {
                 continue;
             }
 
-            const float offsetDistance = baseOffset + (float)drawnCount * trackSpacing;
+            const float offsetDistance = baseOffset + (float)drawnCount * trailSpacing;
 
             juce::Path offsetLine = shaft;
             offsetLine.applyTransform(juce::AffineTransform::translation(-chord.y * offsetDistance,
                                                                          chord.x * offsetDistance));
 
-            const juce::Path progressPath = trimPathToFraction(offsetLine, track.t);
+            const juce::Path progressPath = trimPathToFraction(offsetLine, trail.t);
             if (! progressPath.isEmpty()) {
-                g.setColour(track.colour);
+                g.setColour(trail.colour);
                 g.strokePath(progressPath, juce::PathStrokeType(0.75f,
                                                                juce::PathStrokeType::curved,
                                                                juce::PathStrokeType::butt));
@@ -280,7 +280,7 @@ namespace {
     {
         const juce::String labelText = arrow.getDurationLabel();
 
-        if (labelText.isEmpty() || arrow.animT <= Arrow::labelVisibleThreshold) {
+        if (labelText.isEmpty() || arrow.animation.snapT <= Arrow::labelVisibleThreshold) {
             return;
         }
 
@@ -334,7 +334,7 @@ namespace {
 
 void CustomLookAndFeel::drawArrow(juce::Graphics& g, const Arrow& arrow)
 {
-    ArrowGeometry geometry = arrow.getGeometry(arrow.animT);
+    const ArrowGeometry geometry = arrow.getGeometry(arrow.animation.snapT);
 
     if (! geometry.valid) {
         return;
@@ -367,7 +367,7 @@ void CustomLookAndFeel::drawArrow(juce::Graphics& g, const Arrow& arrow)
 
     strokeArrowShaft(g, shaft, emphasised, alpha, arrowColour);
 
-    if (! arrow.isGhost && arrow.progress.hasTracks()) {
+    if (! arrow.isGhost && ! arrow.animation.trails.empty()) {
         drawArrowProgress(g, arrow, shaft, geometry.chord);
     }
 

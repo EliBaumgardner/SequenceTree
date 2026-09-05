@@ -83,7 +83,7 @@ public:
         int  leftId         = -1;
         int  enteredId      = -1;
         int  referenceOffId = -1;
-        int  rootForReset   = -1;
+        bool clearTrail     = false;
 
         int  jumpedFromRootId = -1;
 

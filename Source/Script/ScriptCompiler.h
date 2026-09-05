@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "../Audio/RTScript.h"
+#include "RTScript.h"
 
 struct ScriptDiagnostic
 {

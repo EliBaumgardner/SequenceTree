@@ -3,6 +3,7 @@
 #include "../Util/PluginModules.h"
 #include <memory>
 #include <atomic>
+#include <vector>
 #include <functional>
 #include "../Graph/ValueTreeState.h"
 #include "../Graph/RTGraphBuilder.h"
@@ -80,6 +81,8 @@ public:
 
     EventManager     eventManager;
     TraversalSession traversalSession { eventManager };
+
+    std::vector<juce::MidiMessage> pendingNoteOffs;
 
     bool hasPendingUiCommands() const;
 

@@ -6,13 +6,9 @@ namespace {
 
 int flagStartDelayMs(const RTNode& hostNode, const RTNode& flagNode)
 {
-    auto it = hostNode.durationMap.find(flagNode.nodeID);
+    const int duration = childDuration(hostNode, flagNode.nodeID);
 
-    if (it == hostNode.durationMap.end()) {
-        return 0;
-    }
-
-    return it->second;
+    return duration > 0 ? duration : 0;
 }
 
 }
@@ -26,7 +22,9 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostInstanceId, int ho
                                   int parentCount, double sample, double tempoMultiplier,
                                   const DispatchContext& context)
 {
-    for (int childId : node.children) {
+    for (const RTNodeData& data : node.nodeData) {
+        const int childId = data.childId;
+
         auto childIt = context.nodes.find(childId);
         if (childIt == context.nodes.end()) {
             continue;

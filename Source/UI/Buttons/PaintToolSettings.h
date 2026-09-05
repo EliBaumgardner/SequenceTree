@@ -91,35 +91,25 @@ public:
         colourSelector->onColourPicked = [this](juce::Colour c) {
             currentPair().colour = c;
 
-            if (this->context.canvas != nullptr) {
-                this->context.canvas->valueField.setBrushColour(c);
-                this->context.canvas->valueField.refresh();
-            }
+            this->context.canvas->valueField.setBrushColour(c);
+            this->context.canvas->valueField.refresh();
         };
 
         valueSlider->valueChanged = [this] {
-            if (this->context.canvas != nullptr) {
-                const float value  = (float)valueSlider->boundValue.getValue();
-                const float radius = juce::jmap(value, 0.0f, 1.0f, 1.0f, 200.0f);
-                this->context.canvas->valueField.setBrushRadius(radius);
-            }
+            const float value  = (float)valueSlider->boundValue.getValue();
+            const float radius = juce::jmap(value, 0.0f, 1.0f, 1.0f, 200.0f);
+            this->context.canvas->valueField.setBrushRadius(radius);
         };
 
-        if (context.canvas != nullptr) {
-            valueSlider->boundValue = juce::jmap(context.canvas->valueField.brushRadius, 1.0f, 200.0f, 0.0f, 1.0f);
-        }
+        valueSlider->boundValue = juce::jmap(context.canvas->valueField.brushRadius, 1.0f, 200.0f, 0.0f, 1.0f);
 
         flowSlider->valueChanged = [this] {
-            if (this->context.canvas != nullptr) {
-                const float value = (float)flowSlider->boundValue.getValue();
-                this->context.canvas->valueField.brushFlow = juce::jmap(value, 0.0f, 1.0f, minBrushFlow, maxBrushFlow);
-            }
+            const float value = (float)flowSlider->boundValue.getValue();
+            this->context.canvas->valueField.brushFlow = juce::jmap(value, 0.0f, 1.0f, minBrushFlow, maxBrushFlow);
         };
 
-        if (context.canvas != nullptr) {
-            const float flow = juce::jlimit(minBrushFlow, maxBrushFlow, context.canvas->valueField.brushFlow);
-            flowSlider->boundValue = juce::jmap(flow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);
-        }
+        const float flow = juce::jlimit(minBrushFlow, maxBrushFlow, context.canvas->valueField.brushFlow);
+        flowSlider->boundValue = juce::jmap(flow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);
 
         displayMenu->setTooltip("Paint mode");
         colourSelector->setTooltip("Brush colour");
@@ -179,10 +169,8 @@ public:
         colourSelector->colour = saved;
         colourSelector->repaint();
 
-        if (context.canvas != nullptr) {
-            context.canvas->valueField.setBrushColour(saved);
-            context.canvas->valueField.setActivePaintLayer((int)setting);
-        }
+        context.canvas->valueField.setBrushColour(saved);
+        context.canvas->valueField.setActivePaintLayer((int)setting);
     }
 
 

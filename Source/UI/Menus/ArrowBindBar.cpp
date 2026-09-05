@@ -3,6 +3,7 @@
 //
 
 #include "ArrowBindBar.h"
+#include "../Canvas/NodeCanvas.h"
 #include "../Theme/CustomLookAndFeel.h"
 
 ArrowBindBar::ArrowBindBar(ApplicationContext& context)
@@ -59,7 +60,7 @@ void ArrowBindBar::configureAxis(AxisControl& axis, AxisControl& otherAxis, cons
     };
 
     axis.editor = std::make_unique<ValueEditor>(applicationContext);
-    axis.editor->enableDecimalValue(arrowMinimumMultiplier, arrowMaximumMultiplier);
+    axis.editor->enableDecimalValue(minimumMultiplier, maximumMultiplier);
     axis.editor->enableAutoFitText();
     axis.editor->boundValue.setValue(1.0);
     axis.editor->onValueChange = [this]() { publishBindings(); };
@@ -70,7 +71,7 @@ void ArrowBindBar::configureAxis(AxisControl& axis, AxisControl& otherAxis, cons
 
 void ArrowBindBar::showCurrentBindings()
 {
-    const ArrowInfo& arrowInfo = applicationContext.currentArrowInfo;
+    const ArrowInfo& arrowInfo = applicationContext.canvas->arrowManager.currentArrowInfo;
 
     showAxis(xAxis, arrowInfo.xBinding, arrowInfo.xMultiplier);
     showAxis(yAxis, arrowInfo.yBinding, arrowInfo.yMultiplier);
@@ -94,7 +95,7 @@ void ArrowBindBar::showAxis(AxisMember axisMember, ArrowBinding binding, double 
 
 void ArrowBindBar::publishBindings()
 {
-    ArrowInfo& arrowInfo = applicationContext.currentArrowInfo;
+    ArrowInfo& arrowInfo = applicationContext.canvas->arrowManager.currentArrowInfo;
 
     resolveAxis(xAxis, arrowInfo.xBinding, arrowInfo.xMultiplier);
     resolveAxis(yAxis, arrowInfo.yBinding, arrowInfo.yMultiplier);

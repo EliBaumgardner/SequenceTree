@@ -28,7 +28,8 @@ public:
 
 private:
 
-    void applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes, int traversalId);
+    void applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes,
+                         int instanceId, int traversalId);
 
     void applyTreeJump(const TraversalLogic::StepResult& step, TraversalLogic& traversal,
                        TraversalRuntime& runtime, const DispatchContext& context);
@@ -36,7 +37,7 @@ private:
     void pushRootNodeConnection(int rootNodeId, const DispatchContext& context, double sample);
 
     int resolveDuration(const RTNode& node, const RTNode* nextTarget,
-                        int lastTargetId, const NodeMap& nodes, int traversalId);
+                        int lastTargetId, const NodeMap& nodes, int danglingIndex);
 
     void dispatchModulator(const RTNode& node, const DispatchContext& context,
                            TraversalLogic& traversalLogic, const RTNode*& modulatorNode,
@@ -46,14 +47,13 @@ private:
                         double tempoMultiplier, const DispatchContext& context, int parentCount,
                         TraversalLogic& traversalLogic, int transpose);
 
-    void dispatchPrimaryArrow(const RTNode& node, const RTNode* nextTarget,
-                              int rootId, int wallClockMs, int colourTraversalId);
+    void dispatchPrimaryArrow(const RTNode& node, const RTNode* nextTarget, int danglingIndex,
+                              int instanceId, int wallClockMs, int colourTraversalId);
 
-    void dispatchModulatorArrow(const RTNode* modulatorNode,const RTNode* nextModulatorTarget,
-                                int activeModulatorRootId, int rootId,
-                                int wallClockMs, int colourTraversalId);
+    void dispatchModulatorArrow(const RTNode* modulatorNode, const RTNode* nextModulatorTarget,
+                                int instanceId, int wallClockMs, int colourTraversalId);
 
-    void dispatchCrossTree(const RTNode& node, int sourceInstanceId, double sample, int rootId,
+    void dispatchCrossTree(const RTNode& node, int sourceInstanceId, double sample,
                            double tempoMultiplier, const DispatchContext& context,
                            TraversalLogic& traversal);
 

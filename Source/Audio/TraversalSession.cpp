@@ -56,12 +56,14 @@ void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
     }
 
     eventManager.bridge.clearAllHighlights();
+    eventManager.bridge.pushArrowReset(AudioUIBridge::allTrails);
     eventManager.scheduler.activeNotes.clear();
 }
 
 void TraversalSession::clearTraversals()
 {
     eventManager.dispatcher.flagScheduler.clear();
+    eventManager.bridge.pushArrowReset(AudioUIBridge::allTrails);
     traversals.clear();
 }
 
@@ -72,6 +74,7 @@ void TraversalSession::suspendActiveNotes(juce::MidiBuffer& midiMessages)
     }
 
     eventManager.bridge.clearAllHighlights();
+    eventManager.bridge.pushArrowReset(AudioUIBridge::allTrails);
 }
 
 void TraversalSession::restartActiveTraversals(const DispatchContext& context)
@@ -93,6 +96,7 @@ void TraversalSession::restartActiveTraversals(const DispatchContext& context)
         }
     }
 
+    eventManager.bridge.pushArrowReset(AudioUIBridge::allTrails);
     traversals.clear();
 
     for (int rootId : restartRootScratch) {
@@ -272,7 +276,9 @@ int TraversalSession::findFirstUnlinkedRootId(const NodeMap& nodes)
     linkedRootScratch.clear();
 
     for (const auto& [nodeId, node] : nodes) {
-        for (int childId : node->children) {
+        for (const RTNodeData& data : node->nodeData) {
+            const int childId = data.childId;
+
             const auto childIt = nodes.find(childId);
 
             if (childIt != nodes.end() && isRootNode(*childIt->second)) {
@@ -368,4 +374,7 @@ void TraversalSession::stopTraversalNotes(int instanceId, juce::MidiBuffer& midi
         eventManager.bridge.highlightNode(note.nodeId, false);
         eventManager.scheduler.removeNote(i);
     }
+
+    eventManager.bridge.pushArrowReset(AudioUIBridge::primaryTrail(instanceId));
+    eventManager.bridge.pushArrowReset(AudioUIBridge::modulatorTrail(instanceId));
 }

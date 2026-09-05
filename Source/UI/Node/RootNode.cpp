@@ -4,11 +4,10 @@
 
 #include "RootNode.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "../Graph/ValueTreeState.h"
+#include "../../Graph/ValueTreeState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
 #include "../../Util/ApplicationContext.h"
-#include "../Canvas/NodeCanvas.h"
 
 RootNode::RootNode(ApplicationContext& context) : Node(context)
 {
@@ -66,18 +65,12 @@ void RootNode::equipTraversals()
 
     juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
 
-    const int graphId = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
-
     for (int i = traversalChildrenIds.getNumChildren() - 1; i >= 0; i--) {
 
         const int existingId = traversalChildrenIds.getChild(i).getProperty(ValueTreeIdentifiers::TraversalId);
 
         if (!contains(existingId)) {
             traversalChildrenIds.removeChild(i, nullptr);
-
-            if (applicationContext.canvas != nullptr) {
-                applicationContext.canvas->arrowManager.resetGraphProgress(graphId, existingId);
-            }
         }
     }
 
