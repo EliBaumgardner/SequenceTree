@@ -10,7 +10,7 @@
 #include "../Node/RootNode.h"
 #include "../Node/Modulator.h"
 #include "../Node/TraversalFlagNode.h"
-#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
 #include "../../Util/ApplicationContext.h"
@@ -86,7 +86,7 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
 
 void NodeManager::connectIncomingArrows(int nodeId, Node* node) const
 {
-    const juce::ValueTree nodeMapTree = applicationContext.valueTreeState->nodeMap;
+    const juce::ValueTree nodeMapTree = applicationContext.graphState->nodeMap;
 
     for (int i = 0; i < nodeMapTree.getNumChildren(); ++i) {
         const juce::ValueTree parentTree = nodeMapTree.getChild(i);
@@ -127,7 +127,7 @@ void NodeManager::connectOutgoingArrows(const juce::ValueTree& nodeValueTree, No
 
 void NodeManager::add(int nodeId)
 {
-    const juce::ValueTree nodeChildTree = applicationContext.valueTreeState->getNode(nodeId);
+    const juce::ValueTree nodeChildTree = applicationContext.graphState->getNode(nodeId);
 
     jassert(nodeChildTree.isValid());
 
@@ -137,7 +137,7 @@ void NodeManager::add(int nodeId)
     connectOutgoingArrows(nodeChildTree, childNode);
 
     if (!canvas.gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
-        const NodePosition pos = applicationContext.valueTreeState->getNodePosition(nodeId);
+        const NodePosition pos = applicationContext.graphState->getNodePosition(nodeId);
         canvas.gridOrigin    = { (float)pos.xPosition, (float)pos.yPosition };
         canvas.gridSpacing   = 50.0f;
         canvas.gridOriginSet = true;
@@ -175,12 +175,12 @@ void NodeManager::setPosition(int nodeId) const
         return;
     }
 
-    const juce::ValueTree nodeValueTree = applicationContext.valueTreeState->getNode(nodeId);
+    const juce::ValueTree nodeValueTree = applicationContext.graphState->getNode(nodeId);
     if (!nodeValueTree.isValid()) {
         return;
     }
 
-    const NodePosition nodePosition = applicationContext.valueTreeState->getNodePosition(nodeId);
+    const NodePosition nodePosition = applicationContext.graphState->getNodePosition(nodeId);
 
     const int xPosition = nodePosition.xPosition;
     const int yPosition = nodePosition.yPosition;
@@ -204,9 +204,7 @@ void NodeManager::setPosition(int nodeId) const
     canvas.arrowManager.refreshFor(node);
 }
 
-namespace {
-
-std::unordered_set<int> collectAncestorIds(const juce::ValueTree& nodeMap, int nodeId)
+static std::unordered_set<int> collectAncestorIds(const GraphState& graphState, int nodeId)
 {
     std::unordered_set<int> ancestors;
     std::vector<int> frontier { nodeId };
@@ -215,15 +213,13 @@ std::unordered_set<int> collectAncestorIds(const juce::ValueTree& nodeMap, int n
         const int current = frontier.back();
         frontier.pop_back();
 
-        for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
-            const juce::ValueTree candidate = nodeMap.getChild(i);
-            const juce::ValueTree candidateChildren = candidate.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+        const auto parents = graphState.parentIdsOf.find(current);
 
-            if (! candidateChildren.getChildWithProperty(ValueTreeIdentifiers::Id, current).isValid()) {
-                continue;
-            }
+        if (parents == graphState.parentIdsOf.end()) {
+            continue;
+        }
 
-            const int parentId = candidate.getProperty(ValueTreeIdentifiers::Id);
+        for (const int parentId : parents->second) {
             if (parentId == nodeId) {
                 continue;
             }
@@ -237,13 +233,11 @@ std::unordered_set<int> collectAncestorIds(const juce::ValueTree& nodeMap, int n
     return ancestors;
 }
 
-}
-
 void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY) const
 {
     const int rootId = (int) nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
-    std::unordered_set<int> visited = collectAncestorIds(applicationContext.valueTreeState->nodeMap, rootId);
+    std::unordered_set<int> visited = collectAncestorIds(*applicationContext.graphState, rootId);
     visited.insert(rootId);
 
     moveDescendants(nodeValueTree, deltaX, deltaY, visited);
@@ -261,13 +255,13 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
             continue;
         }
 
-        const juce::ValueTree childNodeTree = applicationContext.valueTreeState->getNode(childId);
+        const juce::ValueTree childNodeTree = applicationContext.graphState->getNode(childId);
 
-        NodePosition childPosition = applicationContext.valueTreeState->getNodePosition(childId);
+        NodePosition childPosition = applicationContext.graphState->getNodePosition(childId);
         childPosition.xPosition += deltaX;
         childPosition.yPosition += deltaY;
 
-        applicationContext.valueTreeState->setNodePosition(childNodeTree, childPosition, applicationContext.undoManager);
+        GraphState::setNodePosition(childNodeTree, childPosition, applicationContext.undoManager);
         moveDescendants(childNodeTree, deltaX, deltaY, visited);
     }
 }

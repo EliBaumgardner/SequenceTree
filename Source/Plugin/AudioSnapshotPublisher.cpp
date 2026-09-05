@@ -1,10 +1,10 @@
 #include "AudioSnapshotPublisher.h"
-#include "../Graph/ValueTreeState.h"
+#include "../Graph/TraversalRuleState.h"
 
 #include <algorithm>
 
-AudioSnapshotPublisher::AudioSnapshotPublisher(ValueTreeState& graphState)
-    : graphState(graphState)
+AudioSnapshotPublisher::AudioSnapshotPublisher(TraversalRuleState& traversalRuleState)
+    : traversalRuleState(traversalRuleState)
 {
 }
 
@@ -14,35 +14,31 @@ std::shared_ptr<AudioSnapshotPublisher::Snapshot> AudioSnapshotPublisher::beginE
 
     if (publishedSnapshot != nullptr) {
         edit->globalNodes       = publishedSnapshot->globalNodes;
-        edit->rtGraphs          = publishedSnapshot->rtGraphs;
         edit->selectChildScript = publishedSnapshot->selectChildScript;
     }
 
     return edit;
 }
 
-void AudioSnapshotPublisher::publishGraph(std::shared_ptr<RTGraph> graph)
+void AudioSnapshotPublisher::publishGraph(int graphId, NodeMap graphNodes)
 {
     auto edit = beginEdit();
 
-    edit->globalNodes = edit->globalNodes != nullptr
-                      ? std::make_shared<NodeMap>(*edit->globalNodes)
-                      : std::make_shared<NodeMap>();
+    if (edit->globalNodes != nullptr) {
+        edit->globalNodes = std::make_shared<NodeMap>(*edit->globalNodes);
+    }
+    else {
+        edit->globalNodes = std::make_shared<NodeMap>();
+    }
 
-    edit->rtGraphs = edit->rtGraphs != nullptr
-                   ? std::make_shared<RTGraphs>(*edit->rtGraphs)
-                   : std::make_shared<RTGraphs>();
-
-    (*edit->rtGraphs)[graph->graphID] = graph;
-
-    for (const auto& [nodeId, node] : graph->nodeMap) {
+    for (const auto& [nodeId, node] : graphNodes) {
         (*edit->globalNodes)[nodeId] = node;
     }
 
     std::vector<int> staleIds;
 
     for (const auto& [nodeId, node] : *edit->globalNodes) {
-        if (node->graphID == graph->graphID && !graph->nodeMap.count(nodeId)) {
+        if (node->graphID == graphId && !graphNodes.count(nodeId)) {
             staleIds.push_back(nodeId);
         }
     }
@@ -66,7 +62,7 @@ void AudioSnapshotPublisher::publishScript(std::shared_ptr<RTScript> script)
 ScriptCompileResult AudioSnapshotPublisher::publishActiveTraversalRule()
 {
     ScriptCompileResult result =
-        compileTraversalScript(graphState.getActiveTraversalRuleSource().toStdString());
+        compileTraversalScript(traversalRuleState.activeRuleSource().toStdString());
 
     if (result.succeeded()) {
         publishScript(std::make_shared<RTScript>(std::move(result.script)));

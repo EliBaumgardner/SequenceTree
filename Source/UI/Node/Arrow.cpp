@@ -7,7 +7,7 @@
 
   ==============================================================================
 */
-#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "Arrow.h"
 
@@ -78,7 +78,7 @@ bool Arrow::isTraversalArrow() const
         return false;
     }
 
-    return ValueTreeState::getArrowInfo(arrowTree).type == ArrowType::Traversal;
+    return GraphState::getArrowInfo(arrowTree).type == ArrowType::Traversal;
 }
 
 bool Arrow::connectsTraversalFlag() const
@@ -95,7 +95,7 @@ int Arrow::getDuration() const
 
     const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
 
-    return ArrowInfo::durationFromDelta(ValueTreeState::getArrowInfo(arrowTree), delta.x, delta.y);
+    return ArrowInfo::durationFromDelta(GraphState::getArrowInfo(arrowTree), delta.x, delta.y);
 }
 
 juce::String Arrow::getDurationLabel() const
@@ -104,7 +104,7 @@ juce::String Arrow::getDurationLabel() const
         return "0";
     }
 
-    const ArrowInfo arrowInfo = ValueTreeState::getArrowInfo(arrowTree);
+    const ArrowInfo arrowInfo = GraphState::getArrowInfo(arrowTree);
 
     if (! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::DurationBind)
         && ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind)) {

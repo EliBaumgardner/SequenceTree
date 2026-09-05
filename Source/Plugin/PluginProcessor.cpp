@@ -27,7 +27,7 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 #endif
 , valueTreeState(*this,nullptr,"STATE",createParameterLayout())
 {
-    graphState.ensureDefaultTraversalRule();
+    traversalRuleState.ensureDefaultRule();
     snapshots.publishActiveTraversalRule();
 
     pendingNoteOffs = std::exchange(notesStrandedByPreviousInstance, {});
@@ -167,9 +167,9 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
     }
     else {
         state = juce::ValueTree(ValueTreeIdentifiers::PluginState);
-        state.addChild(graphState.nodeMap.createCopy(),      -1, nullptr);
-        state.addChild(graphState.traversalMap.createCopy(), -1, nullptr);
-        state.addChild(graphState.traversalRules.createCopy(), -1, nullptr);
+        state.addChild(graphState.nodeMap.createCopy(),          -1, nullptr);
+        state.addChild(graphState.traversalMap.createCopy(),     -1, nullptr);
+        state.addChild(traversalRuleState.rules.createCopy(),    -1, nullptr);
     }
 
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
@@ -189,8 +189,21 @@ void SequenceTreeAudioProcessor::applyRestoredState()
         suspendStateListeners();
     }
 
-    graphState.replaceState(restoredTree);
-    graphState.ensureDefaultTraversalRule();
+    juce::ValueTree restoredNodeMap = restoredTree;
+    juce::ValueTree restoredTraversalMap;
+    juce::ValueTree restoredRules;
+
+    if (restoredTree.getType() == ValueTreeIdentifiers::PluginState) {
+        restoredNodeMap      = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
+        restoredTraversalMap = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalMap);
+        restoredRules        = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalRules);
+    }
+
+    graphState.replaceState(restoredNodeMap, restoredTraversalMap);
+
+    traversalRuleState.replaceState(restoredRules);
+    traversalRuleState.ensureDefaultRule();
+
     rtGraphBuilder.rebuildAllGraphs();
 
     snapshots.publishActiveTraversalRule();
@@ -278,7 +291,13 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     const AudioSnapshotPublisher::Snapshot* snap = snapshots.acquireForBlock();
 
-    traversalSession.setSelectChildScript(snap != nullptr ? snap->selectChildScript.get() : nullptr);
+    const RTScript* activeScript = nullptr;
+
+    if (snap != nullptr) {
+        activeScript = snap->selectChildScript.get();
+    }
+
+    traversalSession.setSelectChildScript(activeScript);
 
     if (!playing || !snap || !snap->globalNodes) {
         if (resetHit) {
@@ -293,7 +312,6 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     const DispatchContext context {
         *snap->globalNodes,
-        *snap->rtGraphs,
         traversalSession.getTraversals(),
         midiMessages,
         tempoInfo.currentSampleRate,

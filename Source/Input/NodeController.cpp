@@ -17,7 +17,7 @@
 #include "../UI/Canvas/DynamicPort.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "../Graph/RTGraphBuilder.h"
-#include "../Graph/ValueTreeState.h"
+#include "../Graph/GraphState.h"
 #include "../UI/Menus/AllowedTraversalsMenu.h"
 #include "../UI/Theme/CustomLookAndFeel.h"
 
@@ -166,22 +166,6 @@ void NodeController::showSelectionMenu(juce::Point<int> canvasPoint)
     });
 }
 
-void NodeController::hideGrid() const
-{
-    if (canvas.showGrid) {
-        canvas.showGrid = false;
-        canvas.repaint();
-    }
-}
-
-void NodeController::showGrid() const
-{
-    if (canvas.gridOriginSet) {
-        canvas.showGrid = true;
-        canvas.repaint();
-    }
-}
-
 void NodeController::endDrag()
 {
     draggedNodeTree  = juce::ValueTree();
@@ -190,7 +174,7 @@ void NodeController::endDrag()
     snapSourceNodeId = -1;
     danglingSnapRoot = nullptr;
 
-    hideGrid();
+    canvas.hideGrid();
 }
 
 void NodeController::finishArrowHeadDrag()
@@ -202,7 +186,7 @@ void NodeController::finishArrowHeadDrag()
     isDragStart           = true;
 
     canvas.arrowManager.triggerSnapForNode(nodeId);
-    hideGrid();
+    canvas.hideGrid();
 }
 
 void NodeController::finishDanglingTipDrag()
@@ -221,7 +205,7 @@ void NodeController::finishDanglingTipDrag()
         NodeFactory::setDanglingArrowTip(arrow->arrowTree, arrow->tipOffset, applicationContext.undoManager);
     }
 
-    hideGrid();
+    canvas.hideGrid();
 }
 
 void NodeController::finishFlagConnection()
@@ -236,7 +220,7 @@ void NodeController::finishFlagConnection()
     flagConnectionTarget   = nullptr;
     flagConnectionSourceId = -1;
 
-    hideGrid();
+    canvas.hideGrid();
 }
 
 void NodeController::finishDanglingArrowCreation()
@@ -255,7 +239,7 @@ void NodeController::finishDanglingArrowCreation()
     dragState   = DragState::Idle;
     isDragStart = true;
 
-    hideGrid();
+    canvas.hideGrid();
 }
 
 Node* NodeController::findDanglingSnapRoot(const Node* startNode, juce::Point<int> tip) const
@@ -286,7 +270,7 @@ juce::Point<int> NodeController::danglingTipFor(const Node* startNode, juce::Poi
         return danglingSnapRoot->getNodeCentre();
     }
 
-    return snapPointToGrid(cursor);
+    return canvas.snapPointToGrid(cursor);
 }
 
 void NodeController::connectDanglingToRoot(const Node* startNode)
@@ -317,14 +301,7 @@ void NodeController::connectDraggedNodeToRoot()
     juce::UndoManager* undoManager = applicationContext.undoManager;
     undoManager->undo();
 
-    canvas.asyncUpdates.erase(
-        std::remove_if(canvas.asyncUpdates.begin(), canvas.asyncUpdates.end(),
-            [draggedNodeId](const NodeCanvas::AsyncUpdate& update) {
-                return update.nodeId == draggedNodeId
-                    && update.type != NodeCanvas::AsyncUpdateType::NodeRemoved;
-            }),
-        canvas.asyncUpdates.end()
-    );
+    canvas.cancelPendingUpdatesFor(draggedNodeId);
 
     connectWithSnapAnimation(parentNodeId, rootNodeId);
 }
@@ -431,7 +408,7 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
         if (Arrow* arrow = canvas.hitTester.danglingHeadNear(clickPoint, danglingArrowGrabRadius)) {
             draggingDanglingArrow = arrow;
             dragState             = DragState::MovingDanglingTip;
-            showGrid();
+            canvas.showGrid();
             return;
         }
     }
@@ -452,7 +429,7 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
         }
 
         canvas.arrowManager.clearSelection();
-        clearNodeSelection();
+        selectionOps.clearAll();
     }
 
     if (auto* dynamicPort = dynamic_cast<DynamicPort*>(canvas.getParentComponent())) {
@@ -471,7 +448,7 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
         nodePosition.radius    = 20;
 
         undoManager->beginNewTransaction();
-        NodeFactory::createRootNode(*applicationContext.valueTreeState, nodePosition, undoManager);
+        NodeFactory::createRootNode(*applicationContext.graphState, nodePosition, undoManager);
     }
 }
 
@@ -489,15 +466,6 @@ void NodeController::setArrowMode(bool enabled)
     }
 }
 
-void NodeController::clearNodeSelection()
-{
-    for (auto& [nodeId, node] : canvas.nodeManager.all()) {
-        if (node->isSelected) {
-            node->setSelectVisual(false);
-        }
-    }
-}
-
 void NodeController::beginBoxSelection(const juce::Point<int>& clickPoint)
 {
     dragState       = DragState::BoxSelecting;
@@ -505,7 +473,7 @@ void NodeController::beginBoxSelection(const juce::Point<int>& clickPoint)
 
     canvas.selectionBounds = {};
 
-    clearNodeSelection();
+    selectionOps.clearAll();
 }
 
 void NodeController::updateBoxSelection(const juce::MouseEvent& e)
@@ -571,15 +539,11 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
     node.setHoverVisual(true);
     canvas.arrowManager.clearSelection();
 
-    for (auto& [canvasNodeId, canvasNode] : canvas.nodeManager.all()) {
-        if (canvasNode != &node) {
-            canvasNode->setSelectVisual(false);
-        }
-    }
+    selectionOps.deselectAllExcept(node);
 
     if (e.mods.isRightButtonDown() && e.mods.isShiftDown()) {
         undoManager->beginNewTransaction();
-        NodeFactory::destroyNode(*applicationContext.valueTreeState, nodeId, undoManager);
+        applicationContext.graphState->removeNode(nodeId, undoManager);
     }
     else {
         node.setSelectVisual();
@@ -608,39 +572,13 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     }
 }
 
-juce::Point<int> NodeController::snapPointToGrid(juce::Point<int> point) const
-{
-    if (!canvas.gridOriginSet) {
-        return point;
-    }
-
-    float spacing = canvas.gridSpacing;
-    float ox = canvas.gridOrigin.x;
-    float oy = canvas.gridOrigin.y;
-    const float snapThreshold = 12.0f;
-
-    float snappedX = ox + std::round((float(point.x) - ox) / spacing) * spacing;
-    float snappedY = oy + std::round((float(point.y) - oy) / spacing) * spacing;
-
-    juce::Point<int> result = point;
-
-    if (std::abs(float(point.x) - snappedX) < snapThreshold) {
-        result.x = int(snappedX);
-    }
-    if (std::abs(float(point.y) - snappedY) < snapThreshold) {
-        result.y = int(snappedY);
-    }
-
-    return result;
-}
-
 void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree)
 {
-    juce::Point<int> snapped = snapPointToGrid({ newPosition.xPosition, newPosition.yPosition });
+    juce::Point<int> snapped = canvas.snapPointToGrid({ newPosition.xPosition, newPosition.yPosition });
     newPosition.xPosition = snapped.x;
     newPosition.yPosition = snapped.y;
 
-    applicationContext.valueTreeState->setNodePosition(draggedNodeTree, newPosition, undoManager);
+    GraphState::setNodePosition(draggedNodeTree, newPosition, undoManager);
 }
 
 void NodeController::dragValue(const juce::MouseEvent& e)
@@ -669,13 +607,13 @@ void NodeController::dragDanglingTip(const juce::MouseEvent& e)
 
 void NodeController::dragFlagConnection(const juce::MouseEvent& e, Node& node, const NodePosition& newPosition)
 {
-    showGrid();
+    canvas.showGrid();
 
     const juce::Point<int> cursor { newPosition.xPosition, newPosition.yPosition };
     flagConnectionTarget = canvas.hitTester.nodeNear(cursor.toFloat(), rootSnapThreshold, flagConnectionSourceId);
 
     const juce::Point<int> centre = node.getNodeCentre();
-    juce::Point<int> tip = snapPointToGrid(cursor);
+    juce::Point<int> tip = canvas.snapPointToGrid(cursor);
 
     if (flagConnectionTarget != nullptr) {
         tip = flagConnectionTarget->getNodeCentre();
@@ -796,11 +734,11 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
 
     undoManager->beginNewTransaction();
 
-    showGrid();
+    canvas.showGrid();
 
     snapSourceNodeId = nodeId;
 
-    draggedNodeTree = NodeCreationDispatcher::create(nodeControllerMode,*applicationContext.valueTreeState,
+    draggedNodeTree = NodeCreationDispatcher::create(nodeControllerMode,*applicationContext.graphState,
                                                      nodeId,nodeType,mods.isCtrlDown(),newPosition,undoManager);
 
     if (draggedNodeTree.isValid()) {
@@ -810,7 +748,7 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
 
 void NodeController::updateConnectionPreview(Node *node, const NodePosition& newPosition, bool dashed)
 {
-    showGrid();
+    canvas.showGrid();
 
     juce::Point<int> tip    = danglingTipFor(node, { newPosition.xPosition, newPosition.yPosition });
     juce::Point<int> centre = node->getNodeCentre();
@@ -838,11 +776,11 @@ void NodeController::handleNodeDrag(juce::UndoManager *undoManager, int nodeId, 
     if (isDragStart) {
         isDragStart = false;
         undoManager->beginNewTransaction();
-        showGrid();
+        canvas.showGrid();
     }
 
-    juce::ValueTree nodeValueTree = applicationContext.valueTreeState->getNode(nodeId);
-    NodePosition oldPosition = applicationContext.valueTreeState->getNodePosition(nodeId);
+    juce::ValueTree nodeValueTree = applicationContext.graphState->getNode(nodeId);
+    NodePosition oldPosition = applicationContext.graphState->getNodePosition(nodeId);
 
     snapToGrid(undoManager, newPosition, nodeValueTree);
 

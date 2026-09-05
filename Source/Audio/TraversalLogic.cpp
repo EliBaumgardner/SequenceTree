@@ -1,5 +1,7 @@
 #include "TraversalLogic.h"
 
+#include <algorithm>
+
 namespace {
 
 bool isModulatorChild(RTNode::NodeType t) {
@@ -79,12 +81,12 @@ int TraversalLogic::selectTreeJumpChild(const NodeMap& nodes, const RTNode& pare
     int chosen   = -1;
     int maxLimit = 0;
 
-    for (const RTNodeData& data : parent.nodeData) {
-        if (!data.isTreeJump) {
+    for (const RTConnection& connection : parent.connections) {
+        if (!connection.isTreeJump) {
             continue;
         }
 
-        const int childId = data.childId;
+        const int childId = connection.childId;
 
         const RTNode* child = context.eligibleChild(childId);
 
@@ -134,14 +136,18 @@ bool TraversalLogic::ModulatorWalk::advance(const NodeMap& nodes, TraversalLogic
 
     if (chosen == -1) {
         bool hasModulatorChild = false;
-        for (const RTNodeData& data : targetIt->second->nodeData) {
-            const int childId = data.childId;
+        for (const RTConnection& connection : targetIt->second->connections) {
+            const int childId = connection.childId;
+
+            const std::vector<int>& disabled = connection.disabledTraversals;
+            const bool disabledForTraversal = std::find(disabled.begin(), disabled.end(),
+                                                        owner.traversal.traversalId) != disabled.end();
 
             const auto childIt = nodes.find(childId);
             if (childIt != nodes.end()
                 && isModulatorChild(childIt->second->nodeType)
                 && childIt->second->countLimit > 0
-                && !isChildDisabledForTraversal(*targetIt->second, childId, owner.traversal.traversalId)) {
+                && !disabledForTraversal) {
                 hasModulatorChild = true;
                 break;
             }
@@ -262,7 +268,7 @@ void TraversalLogic::advance(const NodeMap& nodes)
         return;
     }
 
-    if (targetIterator->second->nodeData.empty()) {
+    if (targetIterator->second->connections.empty()) {
         nodeState.increment(NodeStateSlot::Count, targetId);
         state = loop.active ? TraversalState::Reset : TraversalState::End;
         return;
@@ -359,16 +365,17 @@ void TraversalLogic::peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& t
             return;
         }
 
-        for (const RTNodeData& data : hostIterator->second->nodeData) {
-            if (data.isTreeJump) {
+        for (const RTConnection& connection : hostIterator->second->connections) {
+            if (connection.isTreeJump) {
                 continue;
             }
 
-            if (isTraversalDisabled(data.disabledTraversals, traversal.traversalId)) {
+            const std::vector<int>& disabled = connection.disabledTraversals;
+            if (std::find(disabled.begin(), disabled.end(), traversal.traversalId) != disabled.end()) {
                 continue;
             }
 
-            const int childId = data.childId;
+            const int childId = connection.childId;
 
             const auto childIterator = nodes.find(childId);
             if (childIterator == nodes.end()) {
@@ -627,8 +634,8 @@ const RTNode* TraversalLogic::getModulatorNode(const NodeMap& nodes, int nodeId)
         return nullptr;
     }
 
-    for (const RTNodeData& data : nodeIterator->second->nodeData) {
-        const int childId = data.childId;
+    for (const RTConnection& connection : nodeIterator->second->connections) {
+        const int childId = connection.childId;
 
         const auto childIt = nodes.find(childId);
         if (childIt == nodes.end()) {
@@ -641,7 +648,8 @@ const RTNode* TraversalLogic::getModulatorNode(const NodeMap& nodes, int nodeId)
             continue;
         }
 
-        if (isChildDisabledForTraversal(*nodeIterator->second, childId, traversal.traversalId)) {
+        const std::vector<int>& disabled = connection.disabledTraversals;
+        if (std::find(disabled.begin(), disabled.end(), traversal.traversalId) != disabled.end()) {
             continue;
         }
 

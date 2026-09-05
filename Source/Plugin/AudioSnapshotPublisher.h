@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-class ValueTreeState;
+class TraversalRuleState;
 
 class AudioSnapshotPublisher
 {
@@ -17,13 +17,12 @@ public:
     struct Snapshot
     {
         std::shared_ptr<NodeMap>      globalNodes;
-        std::shared_ptr<RTGraphs>     rtGraphs;
         std::shared_ptr<RTScript>     selectChildScript;
 
         std::uint64_t                 generation = 0;
     };
 
-    explicit AudioSnapshotPublisher(ValueTreeState& graphState);
+    explicit AudioSnapshotPublisher(TraversalRuleState& traversalRuleState);
 
     const Snapshot* acquireForBlock() const
     {
@@ -41,7 +40,7 @@ public:
 
     void publish(std::shared_ptr<Snapshot> snapshot);
 
-    void publishGraph (std::shared_ptr<RTGraph> graph);
+    void publishGraph (int graphId, NodeMap graphNodes);
     void publishScript(std::shared_ptr<RTScript> script);
 
     ScriptCompileResult publishActiveTraversalRule();
@@ -58,7 +57,7 @@ private:
 
     void collectRetiredSnapshots();
 
-    ValueTreeState& graphState;
+    TraversalRuleState& traversalRuleState;
 
     std::atomic<Snapshot*>       currentSnapshot { nullptr };
     std::atomic<std::uint64_t>   blocksCompleted { 0 };

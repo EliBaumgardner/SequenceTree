@@ -1,7 +1,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../Theme/CustomLookAndFeel.h"
-#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/GraphState.h"
 #include "../../Plugin/PluginProcessor.h"
 #include "../Node/Arrow.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
@@ -16,6 +16,7 @@
 #include "../Node/TraversalFlagNode.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
 
@@ -28,7 +29,6 @@ void rememberOnce(std::vector<int>& ids, int id)
 
 }
 
-// Canvas Related Functions //
 NodeCanvas::NodeCanvas(ApplicationContext& context) : applicationContext(context)
 {
     setPaintingIsUnclipped(true);
@@ -68,6 +68,18 @@ void NodeCanvas::enqueueAsyncUpdate(const AsyncUpdate& update)
     triggerAsyncUpdate();
 }
 
+void NodeCanvas::cancelPendingUpdatesFor(int nodeId)
+{
+    asyncUpdates.erase(
+        std::remove_if(asyncUpdates.begin(), asyncUpdates.end(),
+            [nodeId](const AsyncUpdate& update) {
+                return update.nodeId == nodeId
+                    && update.type != AsyncUpdateType::NodeRemoved;
+            }),
+        asyncUpdates.end()
+    );
+}
+
 void NodeCanvas::handleAsyncUpdate() {
     drainer.drainAll();
 
@@ -91,12 +103,10 @@ void NodeCanvas::handleAsyncUpdate() {
             int rootNodeId = asyncUpdate.rootNodeId;
             if (rootNodeId != nodeId) {
 
-                applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(rootNodeId));
+                applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(rootNodeId));
             } else {
 
-                auto emptyGraph = std::make_shared<RTGraph>();
-                emptyGraph->graphID = rootNodeId;
-                applicationContext.processor->snapshots.publishGraph(emptyGraph);
+                applicationContext.rtGraphBuilder->discardGraph(rootNodeId);
             }
         }
         else if (updateType == AsyncUpdateType::NodeMoved) {
@@ -128,7 +138,7 @@ void NodeCanvas::handleAsyncUpdate() {
         }
     }
 
-    ValueTreeState& state = *applicationContext.valueTreeState;
+    GraphState& state = *applicationContext.graphState;
 
     std::vector<int> repitchedRootIds;
 
@@ -152,8 +162,6 @@ void NodeCanvas::handleAsyncUpdate() {
     }
 }
 
-// processor-related Functions //
-
 void NodeCanvas::setProcessorPlayblack(bool isPlaying)
 {
     start = isPlaying;
@@ -163,9 +171,7 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
         nodeManager.equipRootTraversals();
     }
 
-    for(auto& [graphID,graph] : applicationContext.rtGraphBuilder->rtGraphs) {
-        applicationContext.processor->snapshots.publishGraph(graph);
-    }
+    applicationContext.rtGraphBuilder->rebuildAllGraphs();
 
     if (! isPlaying) {
         arrowManager.resetAllProgress();
@@ -178,10 +184,10 @@ void NodeCanvas::clearCanvas()
     nodeManager.clear();
 
     gridOriginSet = false;
-    showGrid = false;
+    gridVisible = false;
 }
 
-void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
+void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
 {
     asyncUpdates.clear();
     cancelPendingUpdate();
@@ -250,7 +256,7 @@ void NodeCanvas::setValueTreeState(const juce::ValueTree& stateTree)
     if (!gridOriginSet && !rootNodeMap.empty()) {
         auto it = rootNodeMap.begin();
         int firstRootId = it->first;
-        NodePosition pos = applicationContext.valueTreeState->getNodePosition(firstRootId);
+        NodePosition pos = applicationContext.graphState->getNodePosition(firstRootId);
         gridOrigin    = { (float)pos.xPosition,
                           (float)pos.yPosition };
         gridSpacing   = 50.0f;
@@ -279,4 +285,45 @@ void NodeCanvas::setPaintMode(bool enabled)
         setMouseCursor(juce::MouseCursor::NormalCursor);
         repaint();
     }
+}
+
+void NodeCanvas::showGrid()
+{
+    if (gridOriginSet) {
+        gridVisible = true;
+        repaint();
+    }
+}
+
+void NodeCanvas::hideGrid()
+{
+    if (gridVisible) {
+        gridVisible = false;
+        repaint();
+    }
+}
+
+juce::Point<int> NodeCanvas::snapPointToGrid(juce::Point<int> point) const
+{
+    if (!gridOriginSet) {
+        return point;
+    }
+
+    const float originX = gridOrigin.x;
+    const float originY = gridOrigin.y;
+    const float snapThreshold = 12.0f;
+
+    const float snappedX = originX + std::round((float(point.x) - originX) / gridSpacing) * gridSpacing;
+    const float snappedY = originY + std::round((float(point.y) - originY) / gridSpacing) * gridSpacing;
+
+    juce::Point<int> result = point;
+
+    if (std::abs(float(point.x) - snappedX) < snapThreshold) {
+        result.x = int(snappedX);
+    }
+    if (std::abs(float(point.y) - snappedY) < snapThreshold) {
+        result.y = int(snappedY);
+    }
+
+    return result;
 }

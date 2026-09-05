@@ -16,7 +16,8 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     applicationContext.processor      = &p;
     applicationContext.undoManager    = &undoManager;
     applicationContext.lookAndFeel    = &lookAndFeel;
-    applicationContext.valueTreeState = &p.graphState;
+    applicationContext.graphState         = &p.graphState;
+    applicationContext.traversalRuleState = &p.traversalRuleState;
     applicationContext.rtGraphBuilder = &p.rtGraphBuilder;
 
     canvas = std::make_unique<NodeCanvas>(applicationContext);
@@ -50,15 +51,15 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     audioProcessor.suspendStateListeners = [this] { detachStateListeners(); };
 
     audioProcessor.resumeStateListeners = [this] {
-        canvas->setValueTreeState(applicationContext.valueTreeState->nodeMap);
+        canvas->rebuildFromNodeMap(applicationContext.graphState->nodeMap);
         attachStateListeners();
     };
 
     if (audioProcessor.pendingRestoreState.isValid()) {
         audioProcessor.applyRestoredState();
     }
-    else if (applicationContext.valueTreeState->nodeMap.getNumChildren() > 0) {
-        canvas->setValueTreeState(applicationContext.valueTreeState->nodeMap);
+    else if (applicationContext.graphState->nodeMap.getNumChildren() > 0) {
+        canvas->rebuildFromNodeMap(applicationContext.graphState->nodeMap);
     }
 
     canvas->addMouseListener(nodeController.get(),true);
@@ -93,18 +94,14 @@ SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
 
 void SequenceTreeAudioProcessorEditor::attachStateListeners()
 {
-    applicationContext.valueTreeState->canvasData.addListener(&canvas->treeListener);
-    applicationContext.valueTreeState->nodeMap.addListener(&canvas->treeListener);
-    applicationContext.valueTreeState->nodeTreeMap.addListener(&canvas->treeListener);
-    applicationContext.valueTreeState->traversalMap.addListener(&canvas->treeListener);
+    applicationContext.graphState->nodeMap.addListener(&canvas->treeListener);
+    applicationContext.graphState->traversalMap.addListener(&canvas->treeListener);
 }
 
 void SequenceTreeAudioProcessorEditor::detachStateListeners()
 {
-    applicationContext.valueTreeState->canvasData.removeListener(&canvas->treeListener);
-    applicationContext.valueTreeState->nodeMap.removeListener(&canvas->treeListener);
-    applicationContext.valueTreeState->nodeTreeMap.removeListener(&canvas->treeListener);
-    applicationContext.valueTreeState->traversalMap.removeListener(&canvas->treeListener);
+    applicationContext.graphState->nodeMap.removeListener(&canvas->treeListener);
+    applicationContext.graphState->traversalMap.removeListener(&canvas->treeListener);
 }
 
 

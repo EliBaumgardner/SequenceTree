@@ -3,7 +3,7 @@
 //
 
 #include "TraversalFlagNode.h"
-#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
 #include "../../Util/ApplicationContext.h"
@@ -35,9 +35,8 @@ TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context
 
         int traversalId = (int) traversalNumEditor->boundValue.getValue();
 
-        if (traversalId > 0
-            && !applicationContext.valueTreeState->traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
-            applicationContext.valueTreeState->createTraversalData(traversalId, nullptr);
+        if (traversalId > 0) {
+            applicationContext.graphState->addTraversalData(traversalId, nullptr);
         }
 
         rebuildOwnGraph();

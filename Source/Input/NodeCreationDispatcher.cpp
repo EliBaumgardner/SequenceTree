@@ -1,10 +1,10 @@
 #include "NodeCreationDispatcher.h"
 #include "../UI/Node/NodeFactory.h"
 #include "../Graph/ValueTreeIdentifiers.h"
-#include "../Graph/ValueTreeState.h"
+#include "../Graph/GraphState.h"
 
 juce::ValueTree NodeCreationDispatcher::create(NodeCreationMode         mode,
-                                               ValueTreeState&          state,
+                                               GraphState&              state,
                                                int                      parentNodeId,
                                                const juce::Identifier&  parentType,
                                                bool                     makeAlternative,
@@ -16,10 +16,12 @@ juce::ValueTree NodeCreationDispatcher::create(NodeCreationMode         mode,
         case NodeCreationMode::Node:
         {
             if (makeAlternative) {
-                return NodeFactory::createAlternativeNode(state, parentNodeId, position, undoManager);
+                return NodeFactory::createNode(state, parentNodeId, ValueTreeIdentifiers::AlternativeNodeData,
+                                               position, undoManager);
             }
 
-            return NodeFactory::createNode(state, parentNodeId, position, undoManager);
+            return NodeFactory::createNode(state, parentNodeId, ValueTreeIdentifiers::NodeData,
+                                           position, undoManager);
         }
 
         case NodeCreationMode::Modulator:

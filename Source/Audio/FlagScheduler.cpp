@@ -2,16 +2,7 @@
 #include "TraversalDispatcher.h"
 #include "AudioUIBridge.h"
 
-namespace {
-
-int flagStartDelayMs(const RTNode& hostNode, const RTNode& flagNode)
-{
-    const int duration = childDuration(hostNode, flagNode.nodeID);
-
-    return duration > 0 ? duration : 0;
-}
-
-}
+#include <algorithm>
 
 FlagScheduler::FlagScheduler(TraversalDispatcher& owner, AudioUIBridge& bridgeRef)
     : dispatcher(owner), bridge(bridgeRef)
@@ -22,8 +13,8 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostInstanceId, int ho
                                   int parentCount, double sample, double tempoMultiplier,
                                   const DispatchContext& context)
 {
-    for (const RTNodeData& data : node.nodeData) {
-        const int childId = data.childId;
+    for (const RTConnection& connection : node.connections) {
+        const int childId = connection.childId;
 
         auto childIt = context.nodes.find(childId);
         if (childIt == context.nodes.end()) {
@@ -39,7 +30,8 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostInstanceId, int ho
             continue;
         }
 
-        if (isChildDisabledForTraversal(node, childId, hostTypeId)) {
+        const std::vector<int>& disabled = connection.disabledTraversals;
+        if (std::find(disabled.begin(), disabled.end(), hostTypeId) != disabled.end()) {
             continue;
         }
 
@@ -48,7 +40,7 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostInstanceId, int ho
             continue;
         }
 
-        const int delayMs = flagStartDelayMs(node, flagNode);
+        const int delayMs = connection.duration;
 
         if (delayMs <= 0) {
             startFlagTraversal(flagNode, hostTypeId, sample, context);

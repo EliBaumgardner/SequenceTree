@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 3/27/26.
-//
-
 #ifndef SEQUENCETREE_NODEPOSITION_H
 #define SEQUENCETREE_NODEPOSITION_H
 
@@ -22,7 +18,6 @@ inline constexpr int defaultMidiPitch = 60;
 inline constexpr int minimumMidiPitch = 0;
 inline constexpr int maximumMidiPitch = 127;
 
-enum class ModulationType {Pitch,Velocity,Duration};
 enum class NodeType { Node, Root, Modulator, TraversalFlag};
 
 enum class NodeDisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue};

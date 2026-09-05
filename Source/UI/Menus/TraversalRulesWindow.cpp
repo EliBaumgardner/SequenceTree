@@ -4,7 +4,7 @@
 
 #include "TraversalRulesWindow.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/TraversalRuleState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Plugin/PluginProcessor.h"
 #include "../../Script/ScriptCompiler.h"
@@ -87,12 +87,12 @@ void TraversalRulesWindow::resized() {
 }
 
 void TraversalRulesWindow::loadRules() {
-    ValueTreeState& state = *context.valueTreeState;
+    TraversalRuleState& state = *context.traversalRuleState;
 
-    state.ensureDefaultTraversalRule();
+    state.ensureDefaultRule();
 
-    for (int i = 0; i < state.traversalRules.getNumChildren(); ++i) {
-        const juce::ValueTree rule = state.traversalRules.getChild(i);
+    for (int i = 0; i < state.rules.getNumChildren(); ++i) {
+        const juce::ValueTree rule = state.rules.getChild(i);
 
         const int ruleId = rule.getProperty(ValueTreeIdentifiers::Id);
 
@@ -100,7 +100,7 @@ void TraversalRulesWindow::loadRules() {
         createPage(ruleId, rule.getProperty(ValueTreeIdentifiers::RuleSource).toString());
     }
 
-    setActivePage(state.getActiveTraversalRuleId());
+    setActivePage(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
 }
 
 void TraversalRulesWindow::createPage(int ruleId, const juce::String& source) {
@@ -113,7 +113,7 @@ void TraversalRulesWindow::createPage(int ruleId, const juce::String& source) {
 }
 
 void TraversalRulesWindow::addRule() {
-    const juce::ValueTree rule = context.valueTreeState->addTraversalRule(nullptr);
+    const juce::ValueTree rule = context.traversalRuleState->addRule(nullptr);
 
     const int ruleId = rule.getProperty(ValueTreeIdentifiers::Id);
 
@@ -124,11 +124,11 @@ void TraversalRulesWindow::addRule() {
 }
 
 void TraversalRulesWindow::removeRule(int ruleId) {
-    ValueTreeState& state = *context.valueTreeState;
+    TraversalRuleState& state = *context.traversalRuleState;
 
-    const bool wasLiveRule = state.getActiveTraversalRuleId() == ruleId;
+    const bool wasLiveRule = (int) state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1) == ruleId;
 
-    state.removeTraversalRule(ruleId, nullptr);
+    state.removeRule(ruleId, nullptr);
 
     const auto match = filePages.find(ruleId);
 
@@ -143,12 +143,12 @@ void TraversalRulesWindow::removeRule(int ruleId) {
         filePages.erase(match);
     }
 
-    if (state.traversalRules.getNumChildren() == 0) {
+    if (state.rules.getNumChildren() == 0) {
         addRule();
-        state.setActiveTraversalRuleId(viewedRuleId, nullptr);
+        state.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
     }
     else if (activePage == nullptr) {
-        setActivePage(state.getActiveTraversalRuleId());
+        setActivePage(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
     }
 
     if (wasLiveRule) {
@@ -185,7 +185,7 @@ void TraversalRulesWindow::makeViewedRuleActive() {
         return;
     }
 
-    context.valueTreeState->setActiveTraversalRuleId(viewedRuleId, nullptr);
+    context.traversalRuleState->rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
 
     compileViewedPage();
 }
@@ -201,11 +201,11 @@ void TraversalRulesWindow::compileViewedPage() {
         return;
     }
 
-    ValueTreeState& state = *context.valueTreeState;
+    TraversalRuleState& state = *context.traversalRuleState;
 
     const juce::String source = activePage->getText();
 
-    state.setTraversalRuleSource(viewedRuleId, source, nullptr);
+    state.setRuleSource(viewedRuleId, source, nullptr);
 
     ScriptCompileResult result = compileTraversalScript(source.toStdString());
 
@@ -223,7 +223,7 @@ void TraversalRulesWindow::compileViewedPage() {
         return;
     }
 
-    const bool isLiveRule = state.getActiveTraversalRuleId() == viewedRuleId;
+    const bool isLiveRule = (int) state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1) == viewedRuleId;
 
     const juce::String instructionCount = juce::String((int) result.script.instructions.size());
 

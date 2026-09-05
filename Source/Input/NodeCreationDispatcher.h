@@ -3,7 +3,7 @@
 #include "../Util/PluginModules.h"
 #include "../Util/NodeInfo.h"
 
-class ValueTreeState;
+class GraphState;
 
 enum class NodeCreationMode { Node, Modulator, TraversalFlag };
 
@@ -12,7 +12,7 @@ class NodeCreationDispatcher
 public:
 
     static juce::ValueTree create(NodeCreationMode         mode,
-                                  ValueTreeState&          state,
+                                  GraphState&          state,
                                   int                      parentNodeId,
                                   const juce::Identifier&  parentType,
                                   bool                     makeAlternative,
