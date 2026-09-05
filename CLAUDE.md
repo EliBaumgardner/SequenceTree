@@ -28,7 +28,7 @@ SequenceTree is a JUCE plugin that generates MIDI by traversing a user-designed 
 Three things about the model are easy to miss:
 
 - **Arrow geometry is data.** A connection's note duration is derived from the vector between the two node centres (`RTGraphBuilder::fillDurationMap` → `arrowDurationFromDelta`). Dragging a node retimes the sequence, which is why `NodeMoved` triggers `updateDurationMap`.
-- **Duration is derived, pitch is owned.** Duration is recomputed from geometry on every read; pitch is not. A pitch-bound arrow only ever *shifts* the pitch of the node it points at, and the semitone amount it has already contributed is stored on the arrow as `ArrowPitchOffset`. `ValueTreeState::syncPitchBindings` applies the difference between that stored amount and the current geometry, so moving a node transposes it around whatever pitch the user last typed, and no arrow ever recomputes a node's pitch from its parent.
+- **Duration is derived, pitch is owned.** Duration is recomputed from geometry on every read; pitch is not. A pitch-bound arrow only ever *shifts* the pitch of the node it points at, and the semitone amount it has already contributed is stored on the arrow as `ArrowPitchOffset`. `GraphState::syncPitchBindings` applies the difference between that stored amount and the current geometry, so moving a node transposes it around whatever pitch the user last typed, and no arrow ever recomputes a node's pitch from its parent.
 - **Transport is internal.** Playback runs off the plugin's own play button (`Titlebar` → `NodeCanvas::setProcessorPlayblack` → `SequenceTreeAudioProcessor::isPlaying`), not the host transport.
 
 ### Directory Responsibilities
@@ -58,26 +58,27 @@ Three things about the model are easy to miss:
 - `defaultTraversalScriptSource()` is the language-level equivalent of `NativeTraversalRule`.
 
 **`Source/Graph/`** — Data model
-- `ValueTreeState` creates and mutates the graph's `ValueTree`: adds and removes all node types, connects and disconnects them, and writes node properties from argument structs (`setNodePosition`, `setMidiValue`). It stores the traversal rule sources and which rule is active.
+- `GraphState` creates and mutates the graph's `ValueTree`: adds and removes all node types, connects and disconnects them, and writes node properties from argument structs (`setNodePosition`, `addMidiNote`). It is a `ValueTree::Listener` on its own `nodeMap`, and that listener is the only thing that maintains `nodeIndex` (id → node) and the public `parentIdsOf` (child id → parent ids). Because the index is fed by tree callbacks rather than by the mutators, undo, redo and paste keep it correct for free, and `getNode` / `getNodeParent` are constant time instead of scans. `getNodeParent` walks up *through* `TraversalFlagData` parents, so a node hanging off a flag chain still reports the note node the chain belongs to.
+- `TraversalRuleState` owns the traversal rule scripts and which one is active — a separate document from the graph, sharing only the save file.
 - `RTData.h` defines `RTNote` / `RTtraversal` / `RTNode` / `RTGraph` plus the `NodeMap` and `RTGraphs` aliases — plain structs safe to hand to the audio thread.
 - `RTGraphBuilder` builds `RTGraph`s from the `ValueTree`: `makeRTGraph` rebuilds one tree, `rebuildAllGraphs` rebuilds all of them, `updateDurationMaps` recomputes arrow durations for given node ids without a rebuild. Finished graphs are held in `rtGraphs`, keyed by graph id, and published from there.
 - `ValueTreeIdentifiers` lists every `juce::Identifier` used as a tree type or property key.
 
 **`Source/Input/`** — Canvas gestures
-- `NodeController` receives all canvas mouse events: Shift+Click creates a root node, Shift+Right-Click deletes, drag moves nodes and their descendants proportionally, plus arrow creation/selection and context menus. What a gesture means is held in one `DragState` enum, not in a set of booleans; `mouseDown`/`mouseDrag`/`mouseUp` dispatch on it to small named handlers.
-- `SelectionOps` copies, deletes and pastes selections. Pasting builds a `PasteLayout` — new ids, remapped parents, orphans promoted to roots — then inserts the nodes, reconnects them, restores their dangling arrows and selects them.
+- `NodeController` receives all canvas mouse events: Shift+Click creates a root node, Shift+Right-Click deletes, drag moves nodes and their descendants proportionally, plus arrow creation/selection and context menus. What a gesture means is held in one `DragState` enum, not in a set of booleans; `mouseDown`/`mouseDrag`/`mouseUp` dispatch on it to small named handlers. It owns the gesture and nothing else — the selection set belongs to `SelectionOps`, the grid and the update queue to `NodeCanvas`.
+- `SelectionOps` owns the selection: `clearAll` and `deselectAllExcept` change which nodes are selected, and it copies, deletes and pastes them. Pasting builds a `PasteLayout` — new ids, remapped parents, orphans promoted to roots — then inserts the nodes, reconnects them, restores their dangling arrows and selects them.
 - `ConnectionOps` connects and disconnects arrows, resolves which node owns a given arrow, and sets arrow type.
-- `NodeCreationDispatcher::create` maps a `NodeCreationMode` (Node, Modulator, TraversalFlag), the parent's type and the alternative flag onto the matching `NodeFactory::create*`.
+- `NodeCreationDispatcher::create` maps a `NodeCreationMode` (Node, Modulator, TraversalFlag), the parent's type and the alternative flag onto a node type identifier and the matching `NodeFactory::create*`.
 
 **`Source/UI/`** — Components
-- `NodeCanvas` collects `AsyncUpdate{type, nodeId, rootNodeId}` records through `enqueueAsyncUpdate` and applies them in `handleAsyncUpdate` on the message thread. It owns the parts that do the work: `NodeManager` creates, positions and moves `Node`s, `ArrowManager` creates, removes and previews `Arrow`s, `AudioCommandDrainer` drains the bridge FIFOs, `CanvasHitTester` and `ArrowHoverController` handle picking and hover, `ValueField` renders paint mode.
+- `NodeCanvas` collects `AsyncUpdate{type, nodeId, rootNodeId}` records through `enqueueAsyncUpdate` and applies them in `handleAsyncUpdate` on the message thread. `cancelPendingUpdatesFor` drops a node's queued updates when a drag-created node is undone, so the queue is only ever edited by the class that owns it. It owns the parts that do the work: `NodeManager` creates, positions and moves `Node`s, `ArrowManager` creates, removes and previews `Arrow`s, `AudioCommandDrainer` drains the bridge FIFOs, `CanvasHitTester` answers picking queries, `ValueField` renders paint mode. The snap grid is canvas state, so the math lives here too — `gridVisible` / `gridOrigin` / `gridSpacing` with `showGrid`, `hideGrid` and `snapPointToGrid`.
 - `NodeCanvasTreeListener` listens on the graph `ValueTree` and turns child additions, child removals and property changes into `NodeCanvas::AsyncUpdate` records.
 - `Theme` (`Theme/Theme.h`) is the palette and metrics, with no knowledge of any component. `CustomLookAndFeel` inherits it, so `CustomLookAndFeel::get(*this)` yields a `const Theme&` that components paint against.
 - `DynamicPort` is a zoom/pan viewport; left-drag pans, Shift+Scroll or pinch zooms (0.1×–5.0×).
 - `Bar` is the base class for every bar (`Titlebar`, `BottomBar`, `MenuBar`, `ArrowBindBar`, and the rules window's title bars). It owns the look-and-feel hookup, background paint, content inset, and separator drawing; a `Bar::Style` picks orientation, background, and inset. `paint` is `final` — subclasses lay out in `resized` off `getContentBounds()`, and decorate by overriding `paintOverBar`.
 - `MenuArea` hosts `MenuBar` plus the `TraversalMenu` and `NodeMenu` panels.
 - `Node` renders and edits one graph node: it holds the node's `ValueTree` and MIDI note tree, hosts the editors for the displayed value, count limit and switch count, and paints hover, selection and per-traversal highlights. `RootNode`, `TraversalFlagNode` and `Modulator` specialise it. `Arrow` renders every connection — dangling is a mode on it (`isDangling()`), not a separate class — with arrow length encoding note duration.
-- `NodeFactory` assembles a new node out of `ValueTreeState` calls: it adds the node, sets its position, and applies the creation defaults — a root gets a default note and the default traversal, a child inherits its parent's count limits, repeat value and MIDI notes.
+- `NodeFactory` assembles a new node out of `GraphState` calls: it adds the node, sets its position, and applies the creation defaults — a root gets a default note and the default traversal, a child inherits its parent's count limits, repeat value and MIDI notes.
 - `TraversalRulesWindow` is the script editor: a `FilePage` over the active rule's source, recompiled on a 250 ms debounce, with diagnostics pushed back as per-line errors and a status bar showing the instruction count and whether this rule is live.
 
 **`Source/UI/Editors/`** — Text and value editing
@@ -85,15 +86,15 @@ Three things about the model are easy to miss:
 - `LineEditor` extends it into one line of code (caret access, indent, and the key handling that splits, merges, and moves between lines).
 - `FileLine` is a gutter plus a `LineEditor`, and carries any compile error for that line. `FilePage` is the document — line list, zoom, focus movement, and the `onTextChanged` hook.
 
-**`Source/Util/`** — `ApplicationContext` is a struct of pointers (`processor`, `canvas`, `lookAndFeel`, `undoManager`, `valueTreeState`, `nodeController`, `rtGraphBuilder`) passed by reference into components and populated in `PluginEditor`'s constructor. It carries the current `NodeDisplayMode` and the node-selection listener list.
+**`Source/Util/`** — `ApplicationContext` is a struct of pointers (`processor`, `canvas`, `lookAndFeel`, `undoManager`, `graphState`, `traversalRuleState`, `nodeController`, `rtGraphBuilder`) passed by reference into components and populated in `PluginEditor`'s constructor. It carries the current `NodeDisplayMode` and the node-selection listener list.
 
 ### Data Flow
 
-**Node creation:** `NodeController::mouseDown` → `NodeCreationDispatcher` → `NodeFactory::create*` → mutates `ValueTreeState` → `NodeCanvasTreeListener` → `AsyncUpdater` → `NodeManager` adds a `Node` component.
+**Node creation:** `NodeController::mouseDown` → `NodeCreationDispatcher` → `NodeFactory::create*` → mutates `GraphState` → `NodeCanvasTreeListener` → `AsyncUpdater` → `NodeManager` adds a `Node` component.
 
 **GUI → audio:** `RTGraphBuilder::makeRTGraph()` builds an `RTGraph` from the `ValueTree`, then `AudioSnapshotPublisher::publishGraph()` copies the current `Snapshot`, merges the new graph in, prunes stale node IDs, and publishes.
 
-**Script → audio:** `AudioSnapshotPublisher::Snapshot` carries three members — `globalNodes`, `rtGraphs`, and `selectChildScript` — so a recompiled rule is published through exactly the same path as a graph edit, via `publishScript()`. `TraversalSession::setSelectChildScript` swaps it into `ScriptTraversalRule` each block, falling back to a compiled copy of the native rule when the script is empty. A bad script therefore degrades rather than silencing playback.
+**Script → audio:** `AudioSnapshotPublisher` reads its source from `TraversalRuleState`, and its `Snapshot` carries three members — `globalNodes`, `rtGraphs`, and `selectChildScript` — so a recompiled rule is published through exactly the same path as a graph edit, via `publishScript()`. `TraversalSession::setSelectChildScript` swaps it into `ScriptTraversalRule` each block, falling back to a compiled copy of the native rule when the script is empty. A bad script therefore degrades rather than silencing playback.
 
 **Audio → GUI:** `TraversalDispatcher` / `EventManager` push commands into the `AudioUIBridge` FIFOs; `processBlock` calls `notifyUi`, which triggers `NodeCanvas::handleAsyncUpdate()` to drain them on the message thread.
 
@@ -102,9 +103,10 @@ Three things about the model are easy to miss:
 - Carefully analyze the entire API the code affects
 - Closely observe the structure of the API the code affects
 - Understand the data flow of the relevant API section
+- Verify that the relevant code follows all rules in the Key Design Rules section
 - Analyze the broader API the smaller section of the API affects
 - Closely observe the general design of the API and verify the relevant code follows it fully
-- Reapply the same principles from the first step to the broader API
+- Reapply the same principles from the second step to the broader API and repeat 
 
 ### Key Design Rules
 
@@ -116,8 +118,12 @@ Three things about the model are easy to miss:
 - Per-block scratch state lives in reserved member vectors (see `TraversalSession`), not in locals, for the same reason.
 - `ApplicationContext` pointers are valid only after `PluginEditor` construction; do not touch them at static init time.
 - This project uses **no code comments**. Express intent through naming.
-- Do not write functions that are small and obfuscate code, **do not write wrapper functions**  
+- Never write functions that are 1-2 lines **do not write wrapper functions**  
 - Never use ternary operators
 - Always use {} for blocks
-- Avoid encapsulation on very small segments of code
+- Always avoid encapsulation on very small segments of code which repeat
 - Make sure code fits the class's intended purpose, and generally sticks to a single area of concern
+- Never use functions with the keyword `inline`
+- Avoid using getter and setter functions, prefer public variable access when possible
+- Avoid using namespaces
+- Never use functions that perform a single operation (single if statement or boolean operation, etc.)

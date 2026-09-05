@@ -26,6 +26,8 @@ public:
     virtual ~TraversalRule() = default;
 
     virtual int selectChild(const RuleContext& context) const = 0;
+
+    virtual int selectDanglingArrow(const RTNode& node, int count, int traversalId) const;
 };
 
 class NativeTraversalRule : public TraversalRule

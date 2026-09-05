@@ -48,11 +48,17 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         void enqueueAsyncUpdate(const AsyncUpdate& update);
         void paint(juce::Graphics& g) override;
         void setProcessorPlayblack(bool isPlaying);
-        void setValueTreeState(const juce::ValueTree& stateTree);
+        void rebuildFromNodeMap(const juce::ValueTree& stateTree);
         void clearCanvas();
         void handleAsyncUpdate() override;
 
         void setPaintMode(bool enabled);
+
+        void showGrid();
+        void hideGrid();
+        juce::Point<int> snapPointToGrid(juce::Point<int> point) const;
+
+        void cancelPendingUpdatesFor(int nodeId);
 
         juce::Colour canvasColour = juce::Colours::white;
         juce::String infoText;
@@ -60,7 +66,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         bool start     = false;
         bool paintMode = false;
 
-        bool showGrid = false;
+        bool gridVisible = false;
         bool gridOriginSet = false;
         juce::Point<float> gridOrigin { 0.0f, 0.0f };
         float gridSpacing = 50.0f;

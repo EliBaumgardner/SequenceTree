@@ -37,8 +37,8 @@ void NoteScheduler::scheduleNote(const RTNode& node, int instanceId, double samp
 
     if (!isConnectionTrigger && !node.notes.empty()) {
         const RTNote& noteData       = node.notes[0];
-        newNote.event.pitch          = static_cast<int>(noteData.pitch);
-        newNote.event.velocity       = static_cast<int>(noteData.velocity);
+        newNote.event.pitch          = noteData.pitch;
+        newNote.event.velocity       = noteData.velocity;
         newNote.event.midiChannel    = juce::jlimit(1, 16, noteData.midiChannel);
 
         if (voicing.pitchOverride >= 0) {

@@ -3,7 +3,7 @@
 #include "../UI/Node/Arrow.h"
 #include "../UI/Node/Node.h"
 #include "../Graph/ValueTreeIdentifiers.h"
-#include "../Graph/ValueTreeState.h"
+#include "../Graph/GraphState.h"
 #include "../Graph/RTGraphBuilder.h"
 
 ConnectionOps::ArrowOwnership ConnectionOps::resolveOwnership(const Arrow* arrow) const
@@ -11,7 +11,7 @@ ConnectionOps::ArrowOwnership ConnectionOps::resolveOwnership(const Arrow* arrow
     const int startId = arrow->startNode->getComponentID().getIntValue();
     const int endId   = arrow->endNode->getComponentID().getIntValue();
 
-    juce::ValueTree startTree     = applicationContext.valueTreeState->getNode(startId);
+    juce::ValueTree startTree     = applicationContext.graphState->getNode(startId);
     juce::ValueTree startChildren = startTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
     bool startOwnsEnd = startChildren.getChildWithProperty(ValueTreeIdentifiers::Id, endId).isValid();
 
@@ -32,7 +32,7 @@ void ConnectionOps::disconnect(const Arrow* arrow)
 
     juce::UndoManager* undoManager = applicationContext.undoManager;
     undoManager->beginNewTransaction();
-    applicationContext.valueTreeState->disconnectNodes(ownerNodeId, childNodeId, undoManager);
+    applicationContext.graphState->disconnectNodes(ownerNodeId, childNodeId, undoManager);
 }
 
 juce::ValueTree ConnectionOps::connectionTreeFor(const Arrow* arrow) const
@@ -47,7 +47,7 @@ juce::ValueTree ConnectionOps::connectionTreeFor(const Arrow* arrow) const
 
     const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
 
-    juce::ValueTree ownerTree     = applicationContext.valueTreeState->getNode(ownerNodeId);
+    juce::ValueTree ownerTree     = applicationContext.graphState->getNode(ownerNodeId);
     juce::ValueTree ownerChildren = ownerTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
     return ownerChildren.getChildWithProperty(ValueTreeIdentifiers::Id, childNodeId);
@@ -55,13 +55,13 @@ juce::ValueTree ConnectionOps::connectionTreeFor(const Arrow* arrow) const
 
 bool ConnectionOps::connectsToOtherTreeRoot(int parentNodeId, int childNodeId) const
 {
-    const juce::ValueTree childTree = applicationContext.valueTreeState->getNode(childNodeId);
+    const juce::ValueTree childTree = applicationContext.graphState->getNode(childNodeId);
 
     if (childTree.getType() != ValueTreeIdentifiers::RootNodeData) {
         return false;
     }
 
-    const juce::ValueTree parentTree = applicationContext.valueTreeState->getNode(parentNodeId);
+    const juce::ValueTree parentTree = applicationContext.graphState->getNode(parentNodeId);
 
     return (int) parentTree.getProperty(ValueTreeIdentifiers::RootNodeId) != childNodeId;
 }
@@ -87,11 +87,11 @@ void ConnectionOps::setArrowType(const Arrow* arrow, ArrowType arrowType)
 
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
-    ValueTreeState& state = *applicationContext.valueTreeState;
+    GraphState& state = *applicationContext.graphState;
 
     const juce::ValueTree connection = state.getConnection(ownerNodeId, childNodeId);
 
-    ArrowInfo arrowInfo = ValueTreeState::getArrowInfo(connection);
+    ArrowInfo arrowInfo = GraphState::getArrowInfo(connection);
     arrowInfo.type      = arrowType;
 
     undoManager->beginNewTransaction();
@@ -100,7 +100,7 @@ void ConnectionOps::setArrowType(const Arrow* arrow, ArrowType arrowType)
 
 void ConnectionOps::applySelectedArrowInfo(int parentNodeId, int childNodeId)
 {
-    ValueTreeState& state = *applicationContext.valueTreeState;
+    GraphState& state = *applicationContext.graphState;
 
     ArrowInfo arrowInfo = applicationContext.canvas->arrowManager.currentArrowInfo;
 
@@ -111,9 +111,9 @@ void ConnectionOps::applySelectedArrowInfo(int parentNodeId, int childNodeId)
     state.setArrowInfo(state.getConnection(parentNodeId, childNodeId), arrowInfo,
                        applicationContext.undoManager);
 
-    for (const int repitchedNodeId : applicationContext.valueTreeState->syncPitchBindings(childNodeId,
+    for (const int repitchedNodeId : applicationContext.graphState->syncPitchBindings(childNodeId,
                                                                                          applicationContext.undoManager)) {
-        applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(repitchedNodeId));
+        applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(repitchedNodeId));
     }
 }
 
@@ -122,8 +122,8 @@ void ConnectionOps::connect(int parentNodeId, int childNodeId)
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
     undoManager->beginNewTransaction();
-    applicationContext.valueTreeState->connectNodes(parentNodeId, childNodeId, undoManager);
+    applicationContext.graphState->connectNodes(parentNodeId, childNodeId, undoManager);
     applySelectedArrowInfo(parentNodeId, childNodeId);
 
-    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(parentNodeId));
+    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(parentNodeId));
 }

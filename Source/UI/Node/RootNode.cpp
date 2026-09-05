@@ -4,7 +4,7 @@
 
 #include "RootNode.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
 #include "../../Util/ApplicationContext.h"
@@ -76,9 +76,7 @@ void RootNode::equipTraversals()
 
     for (const int traversalId : words) {
 
-        if (!applicationContext.valueTreeState->traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
-            applicationContext.valueTreeState->createTraversalData(traversalId, nullptr);
-        }
+        applicationContext.graphState->addTraversalData(traversalId, nullptr);
 
         if (!traversalChildrenIds.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
 

@@ -18,7 +18,7 @@
 #include "../UI/Titlebar.h"
 #include "../UI/BottomBar.h"
 #include "../UI/Theme/CustomLookAndFeel.h"
-#include "../Graph/ValueTreeState.h"
+#include "../Graph/GraphState.h"
 #include "../UI/Menus/MenuArea.h"
 #include "../Util/ApplicationContext.h"
 

@@ -226,7 +226,6 @@ private:
 struct DispatchContext
 {
     const NodeMap&    nodes;
-    const RTGraphs&   rtGraphs;
     TraversalPool&    traversalMap;
     juce::MidiBuffer& midiMessages;
 

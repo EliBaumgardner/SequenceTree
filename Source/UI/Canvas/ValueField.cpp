@@ -6,7 +6,7 @@
 #include "NodeCanvas.h"
 #include "../Node/Node.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
 ValueField::ValueField(NodeCanvas& ownerIn) : owner(ownerIn) {}
@@ -18,7 +18,7 @@ ValueField::~ValueField()
 
 juce::ValueTree ValueField::firstMidiNote(int nodeId) const
 {
-    return owner.getApplicationContext().valueTreeState->getMidiNotes(nodeId).getChild(0);
+    return owner.getApplicationContext().graphState->getMidiNotes(nodeId).getChild(0);
 }
 
 void ValueField::setBrushColour(juce::Colour colour)

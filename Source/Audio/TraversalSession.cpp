@@ -234,12 +234,14 @@ void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
     {
         TraversalLogic& traversal = instance.logic;
 
-        auto rtGraphIt = context.rtGraphs.find(traversal.rootId);
-        if (rtGraphIt == context.rtGraphs.end()) {
+        auto rootIt = context.nodes.find(traversal.rootId);
+        if (rootIt == context.nodes.end()) {
             continue;
         }
 
-        int newLoopLimit = rtGraphIt->second->loopLimit;
+        const RTNode& rootNode = *rootIt->second;
+
+        int newLoopLimit = rootNode.graphLoopLimit;
         if (newLoopLimit == traversal.loop.limit) {
             continue;
         }
@@ -252,11 +254,8 @@ void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
                 traversal.state          = TraversalLogic::TraversalState::Active;
                 traversal.advanceAlternative(context.nodes, traversal.rootId);
 
-                auto rootIt = context.nodes.find(traversal.rootId);
-                if (rootIt != context.nodes.end()) {
-                    eventManager.bridge.highlightNode(*rootIt->second, true);
-                    eventManager.dispatcher.pushNote(*rootIt->second, instanceId, context, 0);
-                }
+                eventManager.bridge.highlightNode(rootNode, true);
+                eventManager.dispatcher.pushNote(rootNode, instanceId, context, 0);
             }
         }
     }
@@ -276,8 +275,8 @@ int TraversalSession::findFirstUnlinkedRootId(const NodeMap& nodes)
     linkedRootScratch.clear();
 
     for (const auto& [nodeId, node] : nodes) {
-        for (const RTNodeData& data : node->nodeData) {
-            const int childId = data.childId;
+        for (const RTConnection& connection : node->connections) {
+            const int childId = connection.childId;
 
             const auto childIt = nodes.find(childId);
 
@@ -345,10 +344,7 @@ void TraversalSession::startTraversal(const RTNode& rootNode, const RTtraversal&
     traversalLogic.state          = TraversalLogic::TraversalState::Active;
     traversalLogic.loop.active    = true;
 
-    auto rtGraphIt = context.rtGraphs.find(rootId);
-    if (rtGraphIt != context.rtGraphs.end()) {
-        traversalLogic.loop.limit = rtGraphIt->second->loopLimit;
-    }
+    traversalLogic.loop.limit = rootNode.graphLoopLimit;
 
     traversalLogic.advanceAlternative(context.nodes, rootId);
 

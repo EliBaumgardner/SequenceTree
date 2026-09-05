@@ -3,7 +3,7 @@
 #include "../UI/Node/Node.h"
 #include "../UI/Node/NodeFactory.h"
 #include "../Graph/ValueTreeIdentifiers.h"
-#include "../Graph/ValueTreeState.h"
+#include "../Graph/GraphState.h"
 
 #include <algorithm>
 
@@ -22,9 +22,11 @@ namespace {
 
     juce::Identifier rootTypeFor(const juce::ValueTree& node)
     {
-        return node.getType() == ValueTreeIdentifiers::ModulatorData
-             ? ValueTreeIdentifiers::ModulatorRootData
-             : ValueTreeIdentifiers::RootNodeData;
+        if (node.getType() == ValueTreeIdentifiers::ModulatorData) {
+            return ValueTreeIdentifiers::ModulatorRootData;
+        }
+
+        return ValueTreeIdentifiers::RootNodeData;
     }
 }
 
@@ -46,6 +48,24 @@ bool SelectionOps::hasSelection() const
     return !selectedNodeIds().empty();
 }
 
+void SelectionOps::clearAll() const
+{
+    for (auto& [nodeId, node] : applicationContext.canvas->nodeManager.all()) {
+        if (node->isSelected) {
+            node->setSelectVisual(false);
+        }
+    }
+}
+
+void SelectionOps::deselectAllExcept(const Node& keptNode) const
+{
+    for (auto& [nodeId, node] : applicationContext.canvas->nodeManager.all()) {
+        if (node != &keptNode && node->isSelected) {
+            node->setSelectVisual(false);
+        }
+    }
+}
+
 void SelectionOps::copySelection()
 {
     const std::vector<int> ids = selectedNodeIds();
@@ -53,7 +73,7 @@ void SelectionOps::copySelection()
         return;
     }
 
-    ValueTreeState& state = *applicationContext.valueTreeState;
+    GraphState& state = *applicationContext.graphState;
 
     juce::ValueTree copied { ValueTreeIdentifiers::SelectionClipboard };
 
@@ -75,7 +95,7 @@ void SelectionOps::deleteSelection()
         return;
     }
 
-    ValueTreeState& state          = *applicationContext.valueTreeState;
+    GraphState& state          = *applicationContext.graphState;
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
     undoManager->beginNewTransaction();
@@ -86,13 +106,7 @@ void SelectionOps::deleteSelection()
             continue;
         }
 
-        const bool ownsNodeTree = isRootNodeType(node);
-
         state.removeNode(nodeId, undoManager);
-
-        if (ownsNodeTree) {
-            state.removeNodeTree(nodeId, undoManager);
-        }
     }
 }
 
@@ -130,7 +144,7 @@ bool SelectionOps::wasChordMember(const juce::ValueTree& source) const
     }
 
     const juce::ValueTree parent =
-        applicationContext.valueTreeState->getNodeParent(source.getProperty(ValueTreeIdentifiers::Id));
+        applicationContext.graphState->getNodeParent(source.getProperty(ValueTreeIdentifiers::Id));
 
     if (!parent.isValid()) {
         return false;
@@ -142,10 +156,10 @@ bool SelectionOps::wasChordMember(const juce::ValueTree& source) const
                      - (int) parent.getProperty(ValueTreeIdentifiers::YPosition);
 
     const juce::ValueTree connection =
-        applicationContext.valueTreeState->getConnection((int) parent.getProperty(ValueTreeIdentifiers::Id),
+        applicationContext.graphState->getConnection((int) parent.getProperty(ValueTreeIdentifiers::Id),
                                                          (int) source.getProperty(ValueTreeIdentifiers::Id));
 
-    return ArrowInfo::durationFromDelta(ValueTreeState::getArrowInfo(connection), deltaX, deltaY) == 0;
+    return ArrowInfo::durationFromDelta(GraphState::getArrowInfo(connection), deltaX, deltaY) == 0;
 }
 
 std::set<int> SelectionOps::findDiscardedOrphans(const std::map<int,int>& parentOf) const
@@ -203,7 +217,7 @@ bool SelectionOps::isInClipboard(int nodeId) const
 
 bool SelectionOps::hasParentOutsideCopy(int nodeId) const
 {
-    const juce::ValueTree parent = applicationContext.valueTreeState->getNodeParent(nodeId);
+    const juce::ValueTree parent = applicationContext.graphState->getNodeParent(nodeId);
 
     return !parent.isValid() || !isInClipboard(parent.getProperty(ValueTreeIdentifiers::Id));
 }
@@ -302,30 +316,16 @@ std::vector<juce::ValueTree> SelectionOps::pastedSources(const PasteLayout& layo
 
 std::map<int,int> SelectionOps::allocatePastedIds(const PasteLayout& layout) const
 {
-    ValueTreeState& state          = *applicationContext.valueTreeState;
-    juce::UndoManager* undoManager = applicationContext.undoManager;
+    GraphState& state = *applicationContext.graphState;
 
     std::map<int,int> idMap;
 
     for (const juce::ValueTree& node : pastedSources(layout)) {
         const int originalId = node.getProperty(ValueTreeIdentifiers::Id);
 
-        if (isRootNodeType(node) || layout.promotedToRoot.count(originalId) > 0) {
-            juce::ValueTree nodeTree = state.addNodeTree(undoManager);
-            const int newId = nodeTree.getProperty(ValueTreeIdentifiers::Id);
+        ++state.nodeIdIncrement;
 
-            juce::ValueTree rootNodeId { ValueTreeIdentifiers::NodeId };
-            rootNodeId.setProperty(ValueTreeIdentifiers::Id, newId, undoManager);
-
-            nodeTree.setProperty(ValueTreeIdentifiers::RootNodeId, newId, undoManager);
-            nodeTree.addChild(rootNodeId, -1, undoManager);
-
-            idMap[originalId] = newId;
-        }
-        else {
-            state.setNodeIdIncrement(state.getNodeIdIncrement() + 1);
-            idMap[originalId] = state.getNodeIdIncrement();
-        }
+        idMap[originalId] = state.nodeIdIncrement;
     }
 
     return idMap;
@@ -374,7 +374,12 @@ SelectionOps::PasteLayout SelectionOps::buildPasteLayout() const
         const bool linksDiscarded = layout.discarded.count(link->first)  > 0
                                  || layout.discarded.count(link->second) > 0;
 
-        link = linksDiscarded ? layout.parentOf.erase(link) : std::next(link);
+        if (linksDiscarded) {
+            link = layout.parentOf.erase(link);
+        }
+        else {
+            link = std::next(link);
+        }
     }
 
     layout.promotedToRoot = findOrphansToPromote(layout);
@@ -395,13 +400,17 @@ juce::Point<int> SelectionOps::pastedCentre(const PasteLayout& layout) const
     bool                 started = false;
 
     for (const juce::ValueTree& node : pastedSources(layout)) {
-        const juce::Rectangle<int> nodeExtent {
+        juce::Rectangle<int> nodeExtent {
             (int) node.getProperty(ValueTreeIdentifiers::XPosition),
             (int) node.getProperty(ValueTreeIdentifiers::YPosition),
             1, 1
         };
 
-        extent  = started ? extent.getUnion(nodeExtent) : nodeExtent;
+        if (started) {
+            nodeExtent = extent.getUnion(nodeExtent);
+        }
+
+        extent  = nodeExtent;
         started = true;
     }
 
@@ -410,7 +419,13 @@ juce::Point<int> SelectionOps::pastedCentre(const PasteLayout& layout) const
 
 juce::ValueTree SelectionOps::buildPastedNode(const juce::ValueTree& source, bool promoteToRoot) const
 {
-    juce::ValueTree node { promoteToRoot ? rootTypeFor(source) : source.getType() };
+    juce::Identifier nodeType = source.getType();
+
+    if (promoteToRoot) {
+        nodeType = rootTypeFor(source);
+    }
+
+    juce::ValueTree node { nodeType };
 
     node.copyPropertiesFrom(source, nullptr);
 
@@ -419,7 +434,7 @@ juce::ValueTree SelectionOps::buildPastedNode(const juce::ValueTree& source, boo
     }
 
     if (promoteToRoot && node.getType() == ValueTreeIdentifiers::RootNodeData) {
-        node.setProperty(ValueTreeIdentifiers::LoopLimit, ValueTreeState::defaultRootLoopLimit, nullptr);
+        node.setProperty(ValueTreeIdentifiers::LoopLimit, GraphState::defaultRootLoopLimit, nullptr);
         addRootTraversals(node, source.getProperty(ValueTreeIdentifiers::RootNodeId));
     }
 
@@ -428,7 +443,7 @@ juce::ValueTree SelectionOps::buildPastedNode(const juce::ValueTree& source, boo
 
 void SelectionOps::addRootTraversals(juce::ValueTree node, int originalRootId) const
 {
-    ValueTreeState& state = *applicationContext.valueTreeState;
+    GraphState& state = *applicationContext.graphState;
 
     juce::ValueTree traversals = node.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
 
@@ -452,19 +467,17 @@ void SelectionOps::addRootTraversals(juce::ValueTree node, int originalRootId) c
         return;
     }
 
-    if (state.traversalMap.getNumChildren() == 0) {
-        state.createTraversalData(defaultTraversalId, applicationContext.undoManager);
-    }
+    state.addTraversalData(GraphState::defaultTraversalId, applicationContext.undoManager);
 
     juce::ValueTree traversalId { ValueTreeIdentifiers::TraversalId };
-    traversalId.setProperty(ValueTreeIdentifiers::TraversalId, defaultTraversalId, nullptr);
+    traversalId.setProperty(ValueTreeIdentifiers::TraversalId, GraphState::defaultTraversalId, nullptr);
 
     traversals.addChild(traversalId, -1, nullptr);
 }
 
 void SelectionOps::insertClipboardNodes(const PasteLayout& layout, juce::Point<int> offset) const
 {
-    ValueTreeState& state          = *applicationContext.valueTreeState;
+    GraphState& state          = *applicationContext.graphState;
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
     for (const juce::ValueTree& source : pastedSources(layout)) {
@@ -494,7 +507,7 @@ void SelectionOps::insertClipboardNodes(const PasteLayout& layout, juce::Point<i
 
 void SelectionOps::connectClipboardNodes(const PasteLayout& layout) const
 {
-    ValueTreeState& state          = *applicationContext.valueTreeState;
+    GraphState& state          = *applicationContext.graphState;
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
     for (const juce::ValueTree& source : pastedSources(layout)) {
@@ -511,7 +524,7 @@ void SelectionOps::connectClipboardNodes(const PasteLayout& layout) const
                 state.connectNodes(parentId, copiedChild->second, undoManager);
 
                 state.setArrowInfo(state.getConnection(parentId, copiedChild->second),
-                                   ValueTreeState::getArrowInfo(childId), undoManager);
+                                   GraphState::getArrowInfo(childId), undoManager);
             }
         }
     }
@@ -519,7 +532,7 @@ void SelectionOps::connectClipboardNodes(const PasteLayout& layout) const
 
 void SelectionOps::restoreDanglingArrows(const PasteLayout& layout) const
 {
-    ValueTreeState& state          = *applicationContext.valueTreeState;
+    GraphState& state          = *applicationContext.graphState;
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
     for (const juce::ValueTree& source : pastedSources(layout)) {

@@ -8,7 +8,7 @@
 #include "../Node/Node.h"
 #include "../Node/Arrow.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/GraphState.h"
 #include "../../Plugin/PluginProcessor.h"
 #include "../../Util/ApplicationContext.h"
 
@@ -27,7 +27,7 @@ void AudioCommandDrainer::drainAll() const
 
 juce::Colour AudioCommandDrainer::getTraversalColour(int traversalId) const
 {
-    const juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap
+    const juce::ValueTree traversalData = applicationContext.graphState->traversalMap
         .getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
 
     if (!traversalData.isValid()) {

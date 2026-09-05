@@ -5,7 +5,7 @@
 #include "TraversalMenu.h"
 #include "TraversalMenuListener.h"
 #include "../../Util/ApplicationContext.h"
-#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/GraphState.h"
 #include "../Theme/CustomLookAndFeel.h"
 
 TraversalMenu::TraversalMenu(ApplicationContext& context)
@@ -67,12 +67,12 @@ TraversalMenu::TraversalMenu(ApplicationContext& context)
     };
 
     menuListener = std::make_unique<TraversalMenuListener>(*this);
-    applicationContext.valueTreeState->traversalMap.addListener(menuListener.get());
+    applicationContext.graphState->traversalMap.addListener(menuListener.get());
 
     int firstTraversalId = -1;
 
-    for (int i = 0; i < applicationContext.valueTreeState->traversalMap.getNumChildren(); ++i) {
-        const juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap.getChild(i);
+    for (int i = 0; i < applicationContext.graphState->traversalMap.getNumChildren(); ++i) {
+        const juce::ValueTree traversalData = applicationContext.graphState->traversalMap.getChild(i);
         if (traversalData.getType() == ValueTreeIdentifiers::TraversalData) {
             const int traversalId = traversalData.getProperty(ValueTreeIdentifiers::TraversalId);
             addTraversalToMenu(traversalId);
@@ -92,7 +92,7 @@ void TraversalMenu::addTraversalToMenu(int traversalId) {
 }
 
 void TraversalMenu::selectTraversal(int traversalId) {
-    juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+    juce::ValueTree traversalData = applicationContext.graphState->traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
 
     if (!traversalData.isValid()) {
         return;
@@ -127,7 +127,7 @@ void TraversalMenu::selectTraversal(int traversalId) {
 }
 
 TraversalMenu::~TraversalMenu() {
-    applicationContext.valueTreeState->traversalMap.removeListener(menuListener.get());
+    applicationContext.graphState->traversalMap.removeListener(menuListener.get());
     setLookAndFeel(nullptr);
 }
 

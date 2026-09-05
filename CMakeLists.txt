@@ -70,7 +70,8 @@ target_sources(SequenceTree PRIVATE
         Source/Script/ScriptCompiler.cpp
         Source/Audio/NodeStateTable.cpp
         Source/Graph/RTGraphBuilder.cpp
-        Source/Graph/ValueTreeState.cpp
+        Source/Graph/GraphState.cpp
+        Source/Graph/TraversalRuleState.cpp
         Source/Graph/ValueTreeIdentifiers.cpp
         Source/Input/NodeController.cpp
         Source/UI/Canvas/DynamicPort.cpp

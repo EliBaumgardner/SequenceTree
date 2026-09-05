@@ -8,7 +8,7 @@
 #include "NodeManager.h"
 #include "../Node/Arrow.h"
 #include "../Node/Node.h"
-#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
 #include "../Node/NodeFactory.h"
@@ -43,7 +43,7 @@ Arrow* ArrowManager::find(int parentNodeId, int childNodeId) const
 
 juce::ValueTree ArrowManager::connectionTreeFor(int startNodeId, int endNodeId) const
 {
-    ValueTreeState& state = *applicationContext.valueTreeState;
+    GraphState& state = *applicationContext.graphState;
 
     const juce::ValueTree connection = state.getConnection(startNodeId, endNodeId);
 
@@ -213,7 +213,7 @@ void ArrowManager::commitPreview()
         return;
     }
 
-    NodeFactory::createDanglingArrow(*applicationContext.valueTreeState, node->nodeValueTree, tipOffset,
+    NodeFactory::createDanglingArrow(*applicationContext.graphState, node->nodeValueTree, tipOffset,
                                      currentArrowInfo, applicationContext.undoManager);
 }
 
@@ -295,7 +295,7 @@ void ArrowManager::handleArrowAdded(int parentNodeId, int childNodeId)
         return;
     }
 
-    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(parentNodeId));
+    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(parentNodeId));
 }
 
 void ArrowManager::handleArrowTypeChanged(int parentNodeId, int childNodeId)
@@ -307,7 +307,7 @@ void ArrowManager::handleArrowTypeChanged(int parentNodeId, int childNodeId)
         arrow->repaint();
     }
 
-    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(parentNodeId));
+    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(parentNodeId));
 }
 
 void ArrowManager::handleArrowRemoved(int parentNodeId, int childNodeId)
@@ -320,7 +320,7 @@ void ArrowManager::handleArrowRemoved(int parentNodeId, int childNodeId)
 
     remove(target);
 
-    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.valueTreeState->getNode(parentNodeId));
+    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(parentNodeId));
 }
 
 void ArrowManager::setSelected(Arrow* arrow) const

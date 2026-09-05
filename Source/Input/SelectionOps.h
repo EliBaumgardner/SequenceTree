@@ -6,6 +6,8 @@
 #include <set>
 #include <vector>
 
+class Node;
+
 class SelectionOps
 {
 public:
@@ -15,6 +17,9 @@ public:
     void copySelection   ();
     void deleteSelection ();
     void pasteAt         (juce::Point<int> canvasPoint);
+
+    void clearAll           () const;
+    void deselectAllExcept  (const Node& keptNode) const;
 
     bool hasSelection () const;
     bool hasClipboard () const { return clipboard.getNumChildren() > 0; }

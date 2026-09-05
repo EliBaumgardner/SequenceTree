@@ -5,7 +5,8 @@
 #include <atomic>
 #include <vector>
 #include <functional>
-#include "../Graph/ValueTreeState.h"
+#include "../Graph/GraphState.h"
+#include "../Graph/TraversalRuleState.h"
 #include "../Graph/RTGraphBuilder.h"
 #include "../Audio/EventManager.h"
 #include "../Audio/TraversalSession.h"
@@ -65,9 +66,11 @@ public:
 
     juce::AudioProcessorValueTreeState valueTreeState;
 
-    ValueTreeState graphState;
+    GraphState graphState;
 
-    AudioSnapshotPublisher snapshots { graphState };
+    TraversalRuleState traversalRuleState;
+
+    AudioSnapshotPublisher snapshots { traversalRuleState };
 
     RTGraphBuilder rtGraphBuilder { *this, graphState };
 

@@ -52,7 +52,6 @@ public:
     void mouseDown           (const juce::MouseEvent& e) override;
 
     void snapToGrid          (juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree);
-    juce::Point<int> snapPointToGrid (juce::Point<int> point) const;
 
     void handleNodeDrag      (juce::UndoManager *undoManager, int nodeId, NodePosition newPosition);
     void handleNodeDragStart (juce::UndoManager *undoManager, Node *node, int nodeId, NodePosition newPosition, const juce::ModifierKeys& mods);
@@ -106,7 +105,6 @@ private:
     bool isArrowMode () const { return arrowMode; }
     bool isNodeCreationModeActive () const;
 
-    void clearNodeSelection ();
     void beginBoxSelection  (const juce::Point<int>& clickPoint);
     void updateBoxSelection (const juce::MouseEvent& e);
     void finishBoxSelection ();
@@ -127,8 +125,6 @@ private:
     void setDraggedNodeVisible    (bool shouldBeVisible);
 
     void endDrag  ();
-    void hideGrid () const;
-    void showGrid () const;
 
     static constexpr float rootSnapThreshold       = 60.0f;
     static constexpr float danglingArrowGrabRadius = 14.0f;

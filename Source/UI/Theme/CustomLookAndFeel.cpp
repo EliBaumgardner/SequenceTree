@@ -48,7 +48,7 @@ void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
 
     g.fillAll(canvasColour.brighter());
 
-    if (!canvas.showGrid) {
+    if (!canvas.gridVisible) {
         return;
     }
 

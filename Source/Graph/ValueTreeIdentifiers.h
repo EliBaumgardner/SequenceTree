@@ -1,24 +1,14 @@
-//
-// Created by Eli Baumgardner on 4/1/26.
-//
-
 #ifndef SEQUENCETREE_VALUETREEIDENTIFIERS_H
 #define SEQUENCETREE_VALUETREEIDENTIFIERS_H
 
-#include <juce_gui_basics/juce_gui_basics.h>
-
+#include <juce_data_structures/juce_data_structures.h>
 
 class ValueTreeIdentifiers {
 
 public:
 
     static const juce::Identifier PluginState;
-    static const juce::Identifier CanvasData;
     static const juce::Identifier NodeMap;
-    static const juce::Identifier NodeTreeMap;
-
-    static const juce::Identifier NodeTreeIds;
-    static const juce::Identifier NodeTreeData;
 
     static const juce::Identifier RootNodeData;
     static const juce::Identifier NodeData;
@@ -45,15 +35,10 @@ public:
     static const juce::Identifier ArrowYMultiplier;
     static const juce::Identifier ArrowPitchOffset;
 
-    // Property Identifiers
-
     static const juce::Identifier Id;
 
     static const juce::Identifier RootNodeId;
     static const juce::Identifier NodeId;
-    static const juce::Identifier NodeTreeId;
-
-    //Node Property Identifiers
 
     static const juce::Identifier CountLimit;
     static const juce::Identifier TriggerLimit;
@@ -63,13 +48,9 @@ public:
 
     static const juce::Identifier RepeatValue;
 
-    static const juce::Identifier Count;
-    static const juce::Identifier SwitchCount;
-
     static const juce::Identifier XPosition;
     static const juce::Identifier YPosition;
     static const juce::Identifier Radius;
-    static const juce::Identifier ColourId;
 
     static const juce::Identifier MidiPitch;
     static const juce::Identifier MidiVelocity;
@@ -77,14 +58,6 @@ public:
     static const juce::Identifier MidiChannel;
 
     static const juce::Identifier ModAmount;
-
-    static const juce::Identifier ModulationType;
-    static const juce::Identifier PitchMod;
-    static const juce::Identifier VelocityMod;
-    static const juce::Identifier DurationMod;
-
-
-    //Static ValueTrees
 
     static const juce::Identifier TraversalData;
     static const juce::Identifier TraversalMap;
@@ -106,8 +79,6 @@ public:
     static const juce::Identifier TraversalChannel;
     static const juce::Identifier TraversalTranspose;
     static const juce::Identifier TraversalVelocity;
-    // Traversal ValueTrees
 };
-
 
 #endif //SEQUENCETREE_VALUETREEIDENTIFIERS_H

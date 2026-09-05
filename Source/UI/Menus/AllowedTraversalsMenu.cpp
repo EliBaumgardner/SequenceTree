@@ -3,7 +3,7 @@
 //
 
 #include "AllowedTraversalsMenu.h"
-#include "../../Graph/ValueTreeState.h"
+#include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
 #include "../Theme/CustomLookAndFeel.h"
@@ -52,8 +52,8 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(ApplicationContext& context, juce::
 {
     setLookAndFeel(context.lookAndFeel);
 
-    for (int i = 0; i < applicationContext.valueTreeState->traversalMap.getNumChildren(); ++i) {
-        const juce::ValueTree traversalData = applicationContext.valueTreeState->traversalMap.getChild(i);
+    for (int i = 0; i < applicationContext.graphState->traversalMap.getNumChildren(); ++i) {
+        const juce::ValueTree traversalData = applicationContext.graphState->traversalMap.getChild(i);
 
         if (traversalData.getType() != ValueTreeIdentifiers::TraversalData) {
             continue;

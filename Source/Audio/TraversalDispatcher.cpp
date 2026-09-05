@@ -66,8 +66,8 @@ void TraversalDispatcher::applyStepResult(const TraversalLogic::StepResult& step
         auto it = nodes.find(step.countSourceNodeId);
 
         if (it != nodes.end()) {
-            for (const RTNodeData& data : it->second->nodeData) {
-                const int childId = data.childId;
+            for (const RTConnection& connection : it->second->connections) {
+                const int childId = connection.childId;
 
                 auto childIt = nodes.find(childId);
                 if (childIt == nodes.end()) {
@@ -121,7 +121,7 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
     int duration = 1000;
 
     if (!node.notes.empty() && node.notes[0].duration > 0) {
-        duration = static_cast<int>(node.notes[0].duration);
+        duration = node.notes[0].duration;
     }
 
     if (nextTarget != nullptr) {
@@ -129,11 +129,15 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
         int connectionDuration = -1;
 
         if (node.isAlternativeNode) {
-            connectionDuration = node.parentDuration;
+            connectionDuration = node.alternativeArrowDuration;
         }
         else {
             if (nextTarget->nodeType != RTNode::NodeType::TraversalFlagData) {
-                connectionDuration = childDuration(node, nextTarget->nodeID);
+                const RTConnection* const connection = node.findConnection(nextTarget->nodeID);
+
+                if (connection != nullptr) {
+                    connectionDuration = connection->duration;
+                }
             }
         }
 
@@ -142,12 +146,16 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
         }
     }
     else if (node.isAlternativeNode) {
-        if (node.parentDuration > 0) {
-            duration = node.parentDuration;
+        if (node.alternativeArrowDuration > 0) {
+            duration = node.alternativeArrowDuration;
         }
     }
     else {
-        const int danglingDuration = danglingArrowDuration(node, danglingIndex);
+        int danglingDuration = 0;
+
+        if (danglingIndex >= 0 && danglingIndex < static_cast<int>(node.danglingArrows.size())) {
+            danglingDuration = node.danglingArrows[static_cast<std::size_t>(danglingIndex)].duration;
+        }
 
         if (danglingDuration > 0) {
             duration = danglingDuration;
@@ -155,10 +163,10 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
         else {
             auto parentIt = nodes.find(lastTargetId);
             if (parentIt != nodes.end()) {
-                const int parentConnectionDuration = childDuration(*parentIt->second, node.nodeID);
+                const RTConnection* const connection = parentIt->second->findConnection(node.nodeID);
 
-                if (parentConnectionDuration > 0) {
-                    duration = parentConnectionDuration;
+                if (connection != nullptr && connection->duration > 0) {
+                    duration = connection->duration;
                 }
             }
         }
@@ -217,8 +225,8 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
             alternativeNode = altIt->second.get();
 
             if (!alternativeNode->notes.empty()) {
-                pitchOverride    = static_cast<int>(alternativeNode->notes[0].pitch);
-                velocityOverride = static_cast<int>(alternativeNode->notes[0].velocity);
+                pitchOverride    = alternativeNode->notes[0].pitch;
+                velocityOverride = alternativeNode->notes[0].velocity;
             }
         }
     }
@@ -228,7 +236,7 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
     auto danglingArrowFor = [&](const RTNode& target) {
         const int count = traversalLogic.nodeState.get(NodeStateSlot::Count, target.nodeID) + 1;
 
-        return selectDanglingArrow(target, count, activeTraversalId);
+        return traversalLogic.rule->selectDanglingArrow(target, count, activeTraversalId);
     };
 
     const int nodeCount     = traversalLogic.nodeState.get(NodeStateSlot::Count, node.nodeID) + 1;
@@ -348,18 +356,18 @@ void TraversalDispatcher::dispatchCrossTree(const RTNode& node, int sourceInstan
         int connectionDuration = 1000;
         int progressSourceId = node.nodeID;
 
-        const int crossTreeDuration = childDuration(node, crossTreeRootId);
+        const RTConnection* const crossTreeConnection = node.findConnection(crossTreeRootId);
 
-        if (crossTreeDuration >= 0) {
-            connectionDuration = crossTreeDuration;
+        if (crossTreeConnection != nullptr && crossTreeConnection->duration >= 0) {
+            connectionDuration = crossTreeConnection->duration;
         }
         else if (traversal.nodeState.get(NodeStateSlot::ActiveAlternative, node.nodeID) != -1) {
             auto altIt = nodes.find(traversal.nodeState.get(NodeStateSlot::ActiveAlternative, node.nodeID));
             if (altIt != nodes.end()) {
-                const int alternativeDuration = childDuration(*altIt->second, crossTreeRootId);
+                const RTConnection* const alternativeConnection = altIt->second->findConnection(crossTreeRootId);
 
-                if (alternativeDuration >= 0) {
-                    connectionDuration = alternativeDuration;
+                if (alternativeConnection != nullptr && alternativeConnection->duration >= 0) {
+                    connectionDuration = alternativeConnection->duration;
                     progressSourceId = traversal.nodeState.get(NodeStateSlot::ActiveAlternative, node.nodeID);
                 }
             }
@@ -445,14 +453,14 @@ void TraversalDispatcher::pushChordNotes(const RTNode& node, double sample, int 
 
         const RTNode& chainNode = *chainIt->second;
 
-        for (const RTNodeData& data : chainNode.nodeData)
+        for (const RTConnection& connection : chainNode.connections)
         {
-            if (data.duration == 0) {
-                scheduleChordMember(data.childId, chainCount);
+            if (connection.duration == 0) {
+                scheduleChordMember(connection.childId, chainCount);
             }
         }
 
-        if (chainNode.isAlternativeNode && chainNode.parentDuration == 0) {
+        if (chainNode.isAlternativeNode && chainNode.alternativeArrowDuration == 0) {
             scheduleChordMember(chainNode.parentId, chainCount);
         }
     }
@@ -650,10 +658,10 @@ void TraversalDispatcher::startCrossTreeTraversal(const RTNode& targetRootNode, 
 void TraversalDispatcher::applyGraphLoopLimit(TraversalLogic& traversalLogic, int rootId,
                                               const DispatchContext& context)
 {
-    auto rtGraphIt = context.rtGraphs.find(rootId);
+    auto rootIt = context.nodes.find(rootId);
 
-    if (rtGraphIt != context.rtGraphs.end()) {
-        traversalLogic.loop.limit = rtGraphIt->second->loopLimit;
+    if (rootIt != context.nodes.end()) {
+        traversalLogic.loop.limit = rootIt->second->graphLoopLimit;
     }
 }
 
