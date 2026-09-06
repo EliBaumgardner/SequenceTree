@@ -259,7 +259,7 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
         NodePosition pos = applicationContext.graphState->getNodePosition(firstRootId);
         gridOrigin    = { (float)pos.xPosition,
                           (float)pos.yPosition };
-        gridSpacing   = 50.0f;
+        gridSpacing   = ArrowInfo::pixelsPerGridSpace;
         gridOriginSet = true;
     }
 

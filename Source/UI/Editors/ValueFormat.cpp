@@ -77,6 +77,16 @@ void DecimalFormat::commit(const juce::String& text, ValueBinding binding) const
     binding.primary.setValue(clamp(text.getDoubleValue()));
 }
 
+juce::String DecimalMultiplierFormat::displayText(const ValueBinding& binding) const
+{
+    return DecimalFormat::displayText(binding) + "x";
+}
+
+juce::String DecimalMultiplierFormat::editText(const ValueBinding& binding) const
+{
+    return DecimalFormat::displayText(binding);
+}
+
 InputRestrictions PitchFormat::restrictions() const
 {
     return { 4, "0123456789" };

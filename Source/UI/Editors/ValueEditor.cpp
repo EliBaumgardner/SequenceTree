@@ -297,6 +297,14 @@ void ValueEditor::enableDecimalValue(double min, double max)
     format->setMaximum(max);
 }
 
+void ValueEditor::enableDecimalMultiplierValue(double min, double max)
+{
+    setFormat(std::make_unique<DecimalMultiplierFormat>());
+
+    format->setMinimum(min);
+    format->setMaximum(max);
+}
+
 void ValueEditor::enableMultiplierValue(int defaultValue)
 {
     setFormat(std::make_unique<MultiplierFormat>());

@@ -4,7 +4,6 @@
 
 #include "ArrowBindBar.h"
 #include "../Canvas/NodeCanvas.h"
-#include "../Theme/CustomLookAndFeel.h"
 
 ArrowBindBar::ArrowBindBar(ApplicationContext& context)
     : Bar(context, { Orientation::horizontal, Background::litFromBottom }),
@@ -34,38 +33,30 @@ void ArrowBindBar::configureFieldSelector()
 
 void ArrowBindBar::configureField(BindField& field, BindField& otherField)
 {
-    configureAxis(field.x, otherField.x, "X");
-    configureAxis(field.y, otherField.y, "Y");
+    configureAxis(field.x, otherField.x, "X:");
+    configureAxis(field.y, otherField.y, "Y:");
 }
 
 void ArrowBindBar::configureAxis(AxisControl& axis, AxisControl& otherAxis, const juce::String& text)
 {
-    axis.toggle = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawTextButton(g, bounds, state,
-                                                        juce::jmax(minimumFontHeight,
-                                                                   bounds.getHeight() * toggleFontRatio));
-        }, applicationContext.lookAndFeel);
+    axis.label.setText(text, juce::dontSendNotification);
+    axis.label.setColour(juce::Label::textColourId, juce::Colours::lightgrey.withAlpha(0.85f));
+    axis.label.setJustificationType(juce::Justification::centredRight);
+    axis.label.setBorderSize(juce::BorderSize<int>(0));
 
-    axis.toggle->setText(text);
+    axis.editor = std::make_unique<ValueEditor>(applicationContext);
+    axis.editor->enableDecimalMultiplierValue(deactivatedMultiplier, maximumMultiplier);
+    axis.editor->boundValue.setValue(defaultMultiplier);
 
-    axis.toggle->onClick = [this, button = axis.toggle.get(), other = &otherAxis]() {
-        button->toggleSelected();
-
-        if (button->isSelected()) {
-            other->toggle->setSelected(false);
+    axis.editor->onValueChange = [this, editor = axis.editor.get(), other = &otherAxis]() {
+        if ((double) editor->boundValue.getValue() > deactivatedMultiplier) {
+            other->editor->boundValue.setValue(deactivatedMultiplier);
         }
 
         publishBindings();
     };
 
-    axis.editor = std::make_unique<ValueEditor>(applicationContext);
-    axis.editor->enableDecimalValue(minimumMultiplier, maximumMultiplier);
-    axis.editor->enableAutoFitText();
-    axis.editor->boundValue.setValue(1.0);
-    axis.editor->onValueChange = [this]() { publishBindings(); };
-
-    addChildComponent(*axis.toggle);
+    addChildComponent(axis.label);
     addChildComponent(*axis.editor);
 }
 
@@ -82,8 +73,8 @@ void ArrowBindBar::showAxis(AxisMember axisMember, ArrowBinding binding, double 
     AxisControl& pitchAxis    = pitchField.*axisMember;
     AxisControl& durationAxis = durationField.*axisMember;
 
-    pitchAxis.toggle   ->setSelected(binding == ArrowBinding::PitchBind);
-    durationAxis.toggle->setSelected(binding == ArrowBinding::DurationBind);
+    pitchAxis.editor   ->boundValue.setValue(deactivatedMultiplier);
+    durationAxis.editor->boundValue.setValue(deactivatedMultiplier);
 
     if (binding == ArrowBinding::PitchBind) {
         pitchAxis.editor->boundValue.setValue(multiplier);
@@ -106,20 +97,23 @@ void ArrowBindBar::resolveAxis(AxisMember axisMember, ArrowBinding& binding, dou
     const AxisControl& pitchAxis    = pitchField.*axisMember;
     const AxisControl& durationAxis = durationField.*axisMember;
 
-    if (pitchAxis.toggle->isSelected()) {
+    const double pitchMultiplier    = (double) pitchAxis.editor->boundValue.getValue();
+    const double durationMultiplier = (double) durationAxis.editor->boundValue.getValue();
+
+    if (pitchMultiplier > deactivatedMultiplier) {
         binding    = ArrowBinding::PitchBind;
-        multiplier = (double) pitchAxis.editor->boundValue.getValue();
+        multiplier = pitchMultiplier;
         return;
     }
 
-    if (durationAxis.toggle->isSelected()) {
+    if (durationMultiplier > deactivatedMultiplier) {
         binding    = ArrowBinding::DurationBind;
-        multiplier = (double) durationAxis.editor->boundValue.getValue();
+        multiplier = durationMultiplier;
         return;
     }
 
     binding    = ArrowBinding::NoBind;
-    multiplier = 1.0;
+    multiplier = defaultMultiplier;
 }
 
 void ArrowBindBar::showField(int itemId)
@@ -127,9 +121,9 @@ void ArrowBindBar::showField(int itemId)
     const bool showPitch = itemId == pitchItemId;
 
     auto setFieldVisible = [](BindField& field, bool shouldBeVisible) {
-        field.x.toggle->setVisible(shouldBeVisible);
+        field.x.label.setVisible(shouldBeVisible);
         field.x.editor->setVisible(shouldBeVisible);
-        field.y.toggle->setVisible(shouldBeVisible);
+        field.y.label.setVisible(shouldBeVisible);
         field.y.editor->setVisible(shouldBeVisible);
     };
 
@@ -147,18 +141,21 @@ ArrowBindBar::Metrics ArrowBindBar::metricsFor(juce::Rectangle<int> bounds) cons
     const int width = bounds.getWidth();
 
     return { scaled(width, selectorWidthRatio, minimumSelectorWidth),
-             scaled(width, toggleWidthRatio,   minimumToggleWidth),
-             scaled(width, editorWidthRatio,   minimumEditorWidth),
+             scaled(width, controlWidthRatio,  minimumControlWidth),
              scaled(width, axisGapRatio,       minimumGap),
-             scaled(width, itemGapRatio,       minimumGap) };
+             scaled(width, itemGapRatio,       minimumGap),
+             juce::jmax(minimumFontHeight, bounds.getHeight() * fontHeightRatio) };
 }
 
 void ArrowBindBar::layOutAxis(AxisControl& axis, juce::Rectangle<int>& bounds, const Metrics& metrics)
 {
-    axis.editor->setBounds(bounds.removeFromRight(metrics.editorWidth));
+    axis.editor->setFontHeight(metrics.fontHeight);
+    axis.editor->setBounds(bounds.removeFromRight(metrics.controlWidth));
+
     bounds.removeFromRight(metrics.axisGap);
 
-    axis.toggle->setBounds(bounds.removeFromRight(metrics.toggleWidth));
+    axis.label.setFont(juce::Font(juce::FontOptions(metrics.fontHeight)));
+    axis.label.setBounds(bounds.removeFromRight(metrics.controlWidth));
 }
 
 void ArrowBindBar::layOutField(BindField& field, juce::Rectangle<int> bounds, const Metrics& metrics)

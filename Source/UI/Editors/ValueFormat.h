@@ -79,6 +79,14 @@ public:
 };
 
 
+class DecimalMultiplierFormat : public DecimalFormat {
+public:
+
+    juce::String displayText(const ValueBinding& binding) const override;
+    juce::String editText   (const ValueBinding& binding) const override;
+};
+
+
 class PitchFormat : public ValueFormat {
 public:
 
