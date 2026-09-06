@@ -22,6 +22,7 @@
 #include "NodeManager.h"
 #include "ArrowManager.h"
 #include "CanvasHitTester.h"
+#include "../../Util/ArrowInfo.h"
 
 class Node;
 class RootNode;
@@ -69,7 +70,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         bool gridVisible = false;
         bool gridOriginSet = false;
         juce::Point<float> gridOrigin { 0.0f, 0.0f };
-        float gridSpacing = 50.0f;
+        float gridSpacing = ArrowInfo::pixelsPerGridSpace;
 
         juce::Rectangle<int> selectionBounds;
 

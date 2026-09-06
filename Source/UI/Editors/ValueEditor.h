@@ -38,6 +38,7 @@ public:
     void disableDualValue();
     void disablePercentValue();
     void enableDecimalValue(double min, double max = std::numeric_limits<double>::max());
+    void enableDecimalMultiplierValue(double min, double max = std::numeric_limits<double>::max());
     void enableMultiplierValue(int defaultValue = 1);
     void enableTextValue();
     void setText(const juce::String& text);

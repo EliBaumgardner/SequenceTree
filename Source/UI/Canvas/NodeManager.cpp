@@ -139,7 +139,7 @@ void NodeManager::add(int nodeId)
     if (!canvas.gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
         const NodePosition pos = applicationContext.graphState->getNodePosition(nodeId);
         canvas.gridOrigin    = { (float)pos.xPosition, (float)pos.yPosition };
-        canvas.gridSpacing   = 50.0f;
+        canvas.gridSpacing   = ArrowInfo::pixelsPerGridSpace;
         canvas.gridOriginSet = true;
     }
 
