@@ -93,8 +93,8 @@ public:
             return *this;
         }
 
-        bool operator==(const Iterator& other) const { return index == other.index; }
-        bool operator!=(const Iterator& other) const { return index != other.index; }
+        bool operator==(const Iterator& other) const { return pool == other.pool && index == other.index; }
+        bool operator!=(const Iterator& other) const { return pool != other.pool || index != other.index; }
 
         int slotIndex() const { return index; }
 
@@ -124,8 +124,27 @@ public:
     const_iterator begin() const { return const_iterator(this, 0); }
     const_iterator end()   const { return const_iterator(this, slotCount()); }
 
-    iterator       find(int id)       { return iterator      (this, findSlotIndex(id)); }
-    const_iterator find(int id) const { return const_iterator(this, findSlotIndex(id)); }
+    Instance* find(int id)
+    {
+        const int index = findSlotIndex(id);
+
+        if (index == -1) {
+            return nullptr;
+        }
+
+        return &slots[static_cast<std::size_t>(index)].entry.second;
+    }
+
+    const Instance* find(int id) const
+    {
+        const int index = findSlotIndex(id);
+
+        if (index == -1) {
+            return nullptr;
+        }
+
+        return &slots[static_cast<std::size_t>(index)].entry.second;
+    }
 
     Instance* acquire(int id, int rootId, const RTtraversal& traversal)
     {
@@ -157,6 +176,19 @@ public:
         ++epoch;
 
         return iterator(this, index + 1);
+    }
+
+    void erase(int id)
+    {
+        const int index = findSlotIndex(id);
+
+        if (index == -1) {
+            return;
+        }
+
+        slots[static_cast<std::size_t>(index)].active = false;
+        --activeCount;
+        ++epoch;
     }
 
     void clear()
@@ -211,7 +243,7 @@ private:
             }
         }
 
-        return slotCount();
+        return -1;
     }
 
     std::vector<Slot> slots;

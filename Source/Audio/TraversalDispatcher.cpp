@@ -1,5 +1,6 @@
 #include "TraversalDispatcher.h"
 #include "AudioUIBridge.h"
+#include "../Util/ArrowInfo.h"
 #include <algorithm>
 #include <functional>
 
@@ -8,7 +9,7 @@ TraversalDispatcher::TraversalDispatcher(NoteScheduler& s, AudioUIBridge& b)
 {
     chordVisitStamps.assign(NodeStateTable::maxNodeIds, 0);
     chordFrontier.reserve(NodeStateTable::maxNodeIds + 1);
-    crossTreeScratch.reserve(scratchCapacity);
+    crossTreeScratch.reserve(TraversalLogic::maxCrossTreeTargets);
 }
 
 bool TraversalDispatcher::markChordVisited(int nodeId)
@@ -181,9 +182,20 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
 {
     const NodeMap& nodes = context.nodes;
 
-    auto traversalIterator = context.traversalMap.find(instanceId);
-    jassert(traversalIterator != context.traversalMap.end());
-    TraversalLogic& traversalLogic = traversalIterator->second.logic;
+    TraversalPool::Instance* const traversalInstance = context.traversalMap.find(instanceId);
+
+    if (traversalInstance == nullptr) {
+        jassertfalse;
+        return;
+    }
+
+    if (dispatchDepth >= maxDispatchDepth) {
+        return;
+    }
+
+    ++dispatchDepth;
+
+    TraversalLogic& traversalLogic = traversalInstance->logic;
 
     const RTNode* modulatorNode       = nullptr;
     const RTNode* nextModulatorTarget = nullptr;
@@ -209,9 +221,10 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
         traversalMultiplier = 1.0;
     }
 
-    const double tempoMultiplier = context.tempoMultiplier * traversalMultiplier;
+    const double tempoMultiplier = juce::jlimit(RTtraversal::minimumTempoMultiplier,
+                                                RTtraversal::maximumTempoMultiplier,
+                                                context.tempoMultiplier * traversalMultiplier);
     jassert(sampleRate > 0.0);
-    jassert(tempoMultiplier > 0.0);
 
     int duration;
 
@@ -256,7 +269,8 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
         nextModulatorTarget = traversalLogic.peekModulators(nodes);
         int modulatorDuration = resolveDuration(*modulatorNode, nextModulatorTarget, traversalLogic.mod.walker.last,
                                                 nodes, danglingArrowFor(*modulatorNode));
-        duration = static_cast<int>(duration * (0.001 * modulatorDuration));
+        duration = static_cast<int>(juce::jlimit(0.0, ArrowInfo::maximumDurationMs,
+                                                 duration * (0.001 * modulatorDuration)));
 
         transpose += modulatorNode->pitchOffset;
     }
@@ -275,7 +289,8 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
 
     pushChordNotes(node, sample, duration, tempoMultiplier, context, nodeCount, traversalLogic, transpose);
 
-    const int wallClockMs = static_cast<int>(duration / tempoMultiplier);
+    const int wallClockMs = static_cast<int>(juce::jlimit(0.0, ArrowInfo::maximumDurationMs,
+                                                          duration / tempoMultiplier));
 
     if (alternativeNode != nullptr) {
 
@@ -293,6 +308,8 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
     dispatchCrossTree(node, instanceId, sample, tempoMultiplier, context, traversalLogic);
     flagScheduler.dispatchFlags(node, instanceId, activeTraversalId, nodeCount,
                                 sample, tempoMultiplier, context);
+
+    --dispatchDepth;
 }
 
 void TraversalDispatcher::dispatchPrimaryArrow(const RTNode& node, const RTNode* nextTarget, int danglingIndex,
@@ -383,7 +400,8 @@ void TraversalDispatcher::dispatchCrossTree(const RTNode& node, int sourceInstan
                                context.sampleRate, tempoMultiplier, connectionDuration, true,
                                crossTreeVoicing);
 
-        const int wallClockMs = static_cast<int>(connectionDuration / tempoMultiplier);
+        const int wallClockMs = static_cast<int>(juce::jlimit(0.0, ArrowInfo::maximumDurationMs,
+                                                              connectionDuration / tempoMultiplier));
         bridge.pushProgress(progressSourceId, crossTreeRootId, wallClockMs,
                             AudioUIBridge::primaryTrail(sourceInstanceId),
                             traversal.traversal.traversalId, true);
@@ -504,7 +522,11 @@ void TraversalDispatcher::dispatchModulator(const RTNode& node, const DispatchCo
 
         if (isDescendant && !isPrimaryRepeat) {
             auto targetIt = nodes.find(mod.walker.target);
-            int  modulatorRepeatValue = (targetIt != nodes.end()) ? targetIt->second->repeatValue : 1;
+            int  modulatorRepeatValue = 1;
+
+            if (targetIt != nodes.end()) {
+                modulatorRepeatValue = targetIt->second->repeatValue;
+            }
 
             if (mod.tickRepeat(modulatorRepeatValue)) {
                 const int modulatorRootToReset = traversalLogic.advanceModulator(nodes);
@@ -522,7 +544,11 @@ void TraversalDispatcher::dispatchModulator(const RTNode& node, const DispatchCo
     }
 
     auto targetIt = nodes.find(mod.walker.target);
-    modulatorNode = (targetIt != nodes.end()) ? targetIt->second.get() : nullptr;
+    modulatorNode = nullptr;
+
+    if (targetIt != nodes.end()) {
+        modulatorNode = targetIt->second.get();
+    }
 
     if (modulatorNode != nullptr) {
         bridge.highlightNode(*modulatorNode, true, colourId);
@@ -544,21 +570,21 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
 
     int instanceId = expiredNote.instanceId;
 
-    auto traversalIt = context.traversalMap.find(instanceId);
+    TraversalPool::Instance* const traversalInstance = context.traversalMap.find(instanceId);
 
-    if (traversalIt == context.traversalMap.end()) {
+    if (traversalInstance == nullptr) {
         bridge.highlightNode(expiredNote.nodeId, false);
         return;
     }
 
-    TraversalLogic&   traversal = traversalIt->second.logic;
-    TraversalRuntime& runtime   = traversalIt->second.runtime;
+    TraversalLogic&   traversal = traversalInstance->logic;
+    TraversalRuntime& runtime   = traversalInstance->runtime;
 
     if (runtime.pendingRemoval) {
         bridge.highlightNode(expiredNote.nodeId, false, traversal.traversal.traversalId);
         bridge.pushArrowReset(AudioUIBridge::primaryTrail(instanceId));
         bridge.pushArrowReset(AudioUIBridge::modulatorTrail(instanceId));
-        context.traversalMap.erase(traversalIt);
+        context.traversalMap.erase(instanceId);
         return;
     }
 
@@ -668,13 +694,9 @@ void TraversalDispatcher::applyGraphLoopLimit(TraversalLogic& traversalLogic, in
 TraversalPool::Instance* TraversalDispatcher::prepareTraversal(int instanceId, int rootId, int startNodeId,
                                                              const RTtraversal& traversal, const DispatchContext& context)
 {
-    auto existingIt = context.traversalMap.find(instanceId);
+    TraversalPool::Instance* instance = context.traversalMap.find(instanceId);
 
-    TraversalPool::Instance* instance = nullptr;
-
-    if (existingIt != context.traversalMap.end()) {
-        instance = &existingIt->second;
-    } else {
+    if (instance == nullptr) {
         instance = context.traversalMap.acquire(instanceId, rootId, traversal);
     }
 

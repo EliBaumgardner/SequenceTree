@@ -5,6 +5,7 @@
 #ifndef SEQUENCETREE_ARROWINFO_H
 #define SEQUENCETREE_ARROWINFO_H
 
+#include <algorithm>
 #include <cmath>
 
 enum class ArrowType    { Node   = 0, Polyphonic = 1, Traversal    = 2 };
@@ -17,8 +18,9 @@ struct ArrowInfo {
     double       xMultiplier = 1.0;
     double       yMultiplier = 1.0;
 
-    static constexpr float millisecondsPerPixel = 5.0f;
-    static constexpr float semitonesPerPixel    = 0.25f;
+    static constexpr float  millisecondsPerPixel = 5.0f;
+    static constexpr float  semitonesPerPixel    = 0.25f;
+    static constexpr double maximumDurationMs    = 3600000.0;
 
     static bool bindsTo(const ArrowInfo& info, ArrowBinding binding)
     {
@@ -37,7 +39,7 @@ struct ArrowInfo {
             span += std::abs(static_cast<double>(deltaY)) * info.yMultiplier;
         }
 
-        return static_cast<int>(span * millisecondsPerPixel);
+        return static_cast<int>(std::min(span * millisecondsPerPixel, maximumDurationMs));
     }
 
     static int pitchOffsetFromDelta(const ArrowInfo& info, int deltaX, int deltaY)

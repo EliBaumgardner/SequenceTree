@@ -44,11 +44,11 @@ public:
     bool keyPressed (const juce::KeyPress& key, juce::Component* originatingComponent) override;
     void parentHierarchyChanged() override;
 
-private:
-    void toggleFullScreen();
-
     void attachStateListeners();
     void detachStateListeners();
+
+private:
+    void toggleFullScreen();
 
     juce::Component* keyListenerTarget = nullptr;
 
@@ -59,7 +59,10 @@ private:
     ApplicationContext applicationContext;
     juce::TooltipWindow tooltipWindow { this, 400 };
 
+public:
     std::unique_ptr<NodeCanvas>     canvas         = nullptr;
+
+private:
     std::unique_ptr<NodeController> nodeController  = nullptr;
     std::unique_ptr<Titlebar>       titleBar       = nullptr;
     std::unique_ptr<BottomBar>      bottomBar      = nullptr;

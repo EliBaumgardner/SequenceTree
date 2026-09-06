@@ -17,6 +17,7 @@ NodeMenu::NodeMenu(ApplicationContext& context)
     repeatEditor            .setMinimumValue(1);
     switchCountLimitEditor  .setMinimumValue(1);
     subLoopCountLimitEditor .setMinimumValue(1);
+    probabilityEditor       .setFormat(std::make_unique<PercentFormat>());
     velocityEditor          .setMinimumValue(0);
     pitchEditor              .setMinimumValue(0);
     channelEditor            .setMinimumValue(1);
@@ -25,6 +26,7 @@ NodeMenu::NodeMenu(ApplicationContext& context)
     repeatEditor            .setTooltip("Repeat Value");
     switchCountLimitEditor  .setTooltip("Switch Count Limit");
     subLoopCountLimitEditor .setTooltip("Sub Loop Count Limit");
+    probabilityEditor       .setTooltip("Probability");
     velocityEditor           .setTooltip("Velocity");
     pitchEditor               .setTooltip("Pitch");
     channelEditor             .setTooltip("Channel");
@@ -34,6 +36,7 @@ NodeMenu::NodeMenu(ApplicationContext& context)
     repeatLabel             .setText("RPT", juce::dontSendNotification);
     switchCountLimitLabel   .setText("SW",  juce::dontSendNotification);
     subLoopCountLimitLabel  .setText("SUB", juce::dontSendNotification);
+    probabilityLabel        .setText("PRB", juce::dontSendNotification);
     velocityLabel            .setText("VEL", juce::dontSendNotification);
     pitchLabel                .setText("PIT", juce::dontSendNotification);
     channelLabel              .setText("CH",  juce::dontSendNotification);
@@ -95,6 +98,7 @@ void NodeMenu::bindToNode(const Node* node) {
         repeatEditor            .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::RepeatValue);
         switchCountLimitEditor  .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
         subLoopCountLimitEditor .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::SubLoopCountLimit);
+        probabilityEditor       .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::Probability);
     }
 
     if (hasMidi) {
@@ -111,6 +115,8 @@ void NodeMenu::bindToNode(const Node* node) {
     switchCountLimitEditor   .setVisible(hasNodeTree);
     subLoopCountLimitLabel   .setVisible(hasNodeTree);
     subLoopCountLimitEditor  .setVisible(hasNodeTree);
+    probabilityLabel         .setVisible(hasNodeTree);
+    probabilityEditor        .setVisible(hasNodeTree);
     velocityLabel             .setVisible(hasMidi);
     velocityEditor            .setVisible(hasMidi);
     pitchLabel                 .setVisible(hasMidi);

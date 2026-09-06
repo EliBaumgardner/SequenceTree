@@ -40,6 +40,7 @@ const juce::Identifier ValueTreeIdentifiers::LoopLimit            {"LoopLimit"};
 const juce::Identifier ValueTreeIdentifiers::SubLoopCountLimit    {"SubLoopCountLimit"};
 
 const juce::Identifier ValueTreeIdentifiers::RepeatValue          {"RepeatValue"};
+const juce::Identifier ValueTreeIdentifiers::Probability          {"Probability"};
 
 const juce::Identifier ValueTreeIdentifiers::XPosition            {"XPosition"};
 const juce::Identifier ValueTreeIdentifiers::YPosition            {"YPosition"};

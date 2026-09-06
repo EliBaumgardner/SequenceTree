@@ -3,11 +3,14 @@
 #include "../Util/PluginModules.h"
 #include "../Graph/RTData.h"
 #include <array>
+#include <atomic>
 
 template <typename Command, int Capacity = 512>
 class CommandFifo
 {
 public:
+
+    std::atomic<bool> overflowed { false };
 
     void push(const Command& command)
     {
@@ -20,7 +23,7 @@ public:
             buffer[static_cast<size_t>(scope.startIndex2)] = command;
         }
         else {
-            jassertfalse;
+            overflowed.store(true);
         }
     }
 
@@ -79,11 +82,6 @@ public:
         int trailId = -1;
     };
 
-    CommandFifo<HighlightCommand> highlights;
-    CommandFifo<ProgressCommand>  progress;
-    CommandFifo<ResetCommand>     arrowResets;
-    CommandFifo<CountCommand>     counts;
-
     bool hasPendingCommands() const
     {
         return highlights.hasPending()
@@ -99,6 +97,19 @@ public:
     static int modulatorTrail(int instanceId) { return instanceId * 2 + 1; }
 
     static int danglingArrowKey(int danglingIndex) { return -(danglingIndex + 1); }
+
+private:
+
+    friend class EventManager;
+    friend class FlagScheduler;
+    friend class TraversalDispatcher;
+    friend class TraversalSession;
+    friend class AudioCommandDrainer;
+
+    CommandFifo<HighlightCommand> highlights;
+    CommandFifo<ProgressCommand>  progress;
+    CommandFifo<ResetCommand>     arrowResets;
+    CommandFifo<CountCommand>     counts;
 
     void highlightNode(int nodeId, bool shouldHighlight, int traversalId = -1)
     {

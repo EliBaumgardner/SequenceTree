@@ -4,15 +4,6 @@
 #include "../Graph/ValueTreeIdentifiers.h"
 #include <algorithm>
 #include <unordered_set>
-#include <utility>
-
-namespace {
-
-std::vector<juce::MidiMessage> notesStrandedByPreviousInstance;
-
-}
-
-
 
 SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -29,20 +20,6 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 {
     traversalRuleState.ensureDefaultRule();
     snapshots.publishActiveTraversalRule();
-
-    pendingNoteOffs = std::exchange(notesStrandedByPreviousInstance, {});
-}
-
-SequenceTreeAudioProcessor::~SequenceTreeAudioProcessor()
-{
-    notesStrandedByPreviousInstance.clear();
-
-    for (const auto& note : eventManager.scheduler.activeNotes) {
-        if (NoteScheduler::isNoteSounding(note)) {
-            notesStrandedByPreviousInstance.push_back(
-                juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch));
-        }
-    }
 }
 
 //==============================================================================
@@ -115,6 +92,17 @@ void SequenceTreeAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
 
 void SequenceTreeAudioProcessor::releaseResources()
 {
+    pendingNoteOffs.clear();
+
+    for (const auto& note : eventManager.scheduler.activeNotes) {
+        if (NoteScheduler::isNoteSounding(note)) {
+            pendingNoteOffs.push_back(
+                juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch));
+        }
+    }
+
+    eventManager.scheduler.activeNotes.clear();
+
     snapshots.releaseRetiredSnapshots();
 }
 
@@ -185,8 +173,10 @@ void SequenceTreeAudioProcessor::applyRestoredState()
 
     const juce::ValueTree restoredTree = pendingRestoreState;
 
-    if (suspendStateListeners) {
-        suspendStateListeners();
+    auto* editor = dynamic_cast<SequenceTreeAudioProcessorEditor*>(getActiveEditor());
+
+    if (editor != nullptr) {
+        editor->detachStateListeners();
     }
 
     juce::ValueTree restoredNodeMap = restoredTree;
@@ -210,8 +200,9 @@ void SequenceTreeAudioProcessor::applyRestoredState()
 
     pendingRestoreState = juce::ValueTree();
 
-    if (resumeStateListeners) {
-        resumeStateListeners();
+    if (editor != nullptr) {
+        editor->canvas->rebuildFromNodeMap(graphState.nodeMap);
+        editor->attachStateListeners();
     }
 }
 
@@ -304,8 +295,8 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
             traversalSession.clearTraversals();
         }
 
-        if ((resetHit || suspended) && notifyUi) {
-            notifyUi();
+        if (resetHit || suspended) {
+            triggerAsyncUpdate();
         }
         return;
     }
@@ -321,9 +312,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     if (resetHit) {
         traversalSession.restartActiveTraversals(context);
 
-        if (notifyUi) {
-            notifyUi();
-        }
+        triggerAsyncUpdate();
     }
 
     traversalSession.syncWithGraph(context, snap->generation);
@@ -333,9 +322,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         if (!eventManager.scheduler.activeNotes.empty()) {
             traversalSession.silenceAllNotes(midiMessages);
 
-            if (notifyUi) {
-                notifyUi();
-            }
+            triggerAsyncUpdate();
         }
 
         return;
@@ -343,14 +330,23 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     eventManager.processEvents(numSamples, context);
 
-    if (notifyUi && hasPendingUiCommands()) {
-        notifyUi();
+    if (hasPendingUiCommands()) {
+        triggerAsyncUpdate();
     }
 }
 
 bool SequenceTreeAudioProcessor::hasPendingUiCommands() const
 {
     return eventManager.bridge.hasPendingCommands();
+}
+
+void SequenceTreeAudioProcessor::handleAsyncUpdate()
+{
+    auto* editor = dynamic_cast<SequenceTreeAudioProcessorEditor*>(getActiveEditor());
+
+    if (editor != nullptr) {
+        editor->canvas->handleAsyncUpdate();
+    }
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::createParameterLayout()

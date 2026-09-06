@@ -12,7 +12,7 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
             continue;
         }
 
-        scheduler.handleOrphanNoteOff(activeNote, context.midiMessages);
+        scheduler.sendNoteOff(activeNote, context.midiMessages, 0);
 
         int orphanedInstanceId = activeNote.instanceId;
         scheduler.removeNote(i);
@@ -21,13 +21,13 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
             continue;
         }
 
-        auto traversalIt = context.traversalMap.find(orphanedInstanceId);
+        TraversalPool::Instance* const orphanedInstance = context.traversalMap.find(orphanedInstanceId);
 
-        if (traversalIt == context.traversalMap.end()) {
+        if (orphanedInstance == nullptr) {
             continue;
         }
 
-        TraversalLogic& traversal = traversalIt->second.logic;
+        TraversalLogic& traversal = orphanedInstance->logic;
         auto rootIt = context.nodes.find(traversal.rootId);
 
         if (rootIt == context.nodes.end()) {
@@ -48,7 +48,7 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
 
     auto& activeNotes = scheduler.activeNotes;
 
-    while (true)
+    for (int eventsProcessed = 0; eventsProcessed < maxEventsPerBlock; ++eventsProcessed)
     {
         int    expiringIndex = -1;
         double expiringTime  = static_cast<double>(numSamples);

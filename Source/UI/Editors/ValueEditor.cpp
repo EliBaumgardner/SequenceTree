@@ -224,6 +224,15 @@ void ValueEditor::disableDualValue()
     setFormat(std::make_unique<IntFormat>());
 }
 
+void ValueEditor::disablePercentValue()
+{
+    if (dynamic_cast<PercentFormat*>(format.get()) == nullptr) {
+        return;
+    }
+
+    setFormat(std::make_unique<IntFormat>());
+}
+
 void ValueEditor::enableAutoFitText(float inset)
 {
     autoFitText  = true;

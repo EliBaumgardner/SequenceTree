@@ -13,12 +13,12 @@
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
 : AudioProcessorEditor(p), audioProcessor(p)
 {
-    applicationContext.processor      = &p;
-    applicationContext.undoManager    = &undoManager;
-    applicationContext.lookAndFeel    = &lookAndFeel;
+    applicationContext.processor          = &p;
+    applicationContext.undoManager        = &undoManager;
+    applicationContext.lookAndFeel        = &lookAndFeel;
     applicationContext.graphState         = &p.graphState;
     applicationContext.traversalRuleState = &p.traversalRuleState;
-    applicationContext.rtGraphBuilder = &p.rtGraphBuilder;
+    applicationContext.rtGraphBuilder     = &p.rtGraphBuilder;
 
     canvas = std::make_unique<NodeCanvas>(applicationContext);
     applicationContext.canvas = canvas.get();
@@ -42,25 +42,11 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     port->onZoomChanged = [canvasPtr = canvas.get()](float z) { canvasPtr->valueField.setViewZoom(z); };
 
-    audioProcessor.notifyUi = [canvasPtr = canvas.get()] {
-        if (canvasPtr) {
-            canvasPtr->triggerAsyncUpdate();
-        }
-    };
-
-    audioProcessor.suspendStateListeners = [this] { detachStateListeners(); };
-
-    audioProcessor.resumeStateListeners = [this] {
-        canvas->rebuildFromNodeMap(applicationContext.graphState->nodeMap);
-        attachStateListeners();
-    };
-
     if (audioProcessor.pendingRestoreState.isValid()) {
         audioProcessor.applyRestoredState();
     }
-    else if (applicationContext.graphState->nodeMap.getNumChildren() > 0) {
-        canvas->rebuildFromNodeMap(applicationContext.graphState->nodeMap);
-    }
+
+    canvas->rebuildFromNodeMap(applicationContext.graphState->nodeMap);
 
     canvas->addMouseListener(nodeController.get(),true);
 
@@ -78,16 +64,15 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
 SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
 {
-    if (keyListenerTarget != nullptr)
+    if (keyListenerTarget != nullptr) {
         keyListenerTarget->removeKeyListener(this);
+    }
 
     auto& desktop = juce::Desktop::getInstance();
-    if (desktop.getKioskModeComponent() == getTopLevelComponent())
-        desktop.setKioskModeComponent(nullptr);
 
-    audioProcessor.notifyUi              = nullptr;
-    audioProcessor.suspendStateListeners = nullptr;
-    audioProcessor.resumeStateListeners  = nullptr;
+    if (desktop.getKioskModeComponent() == getTopLevelComponent()) {
+        desktop.setKioskModeComponent(nullptr);
+    }
 
     detachStateListeners();
 }
@@ -127,22 +112,27 @@ void SequenceTreeAudioProcessorEditor::resized()
 void SequenceTreeAudioProcessorEditor::parentHierarchyChanged()
 {
     auto* top = getTopLevelComponent();
-    if (top == keyListenerTarget)
-        return;
 
-    if (keyListenerTarget != nullptr)
+    if (top == keyListenerTarget) {
+        return;
+    }
+
+    if (keyListenerTarget != nullptr) {
         keyListenerTarget->removeKeyListener(this);
+    }
 
     keyListenerTarget = top;
 
-    if (keyListenerTarget != nullptr)
+    if (keyListenerTarget != nullptr) {
         keyListenerTarget->addKeyListener(this);
+    }
 }
 
 bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, juce::Component*)
 {
-    if (audioProcessor.wrapperType != juce::AudioProcessor::wrapperType_Standalone)
+    if (audioProcessor.wrapperType != juce::AudioProcessor::wrapperType_Standalone) {
         return false;
+    }
 
     if (key.getModifiers().isShiftDown()
         && (key.getKeyCode() == '1' || key.getTextCharacter() == '!'))
@@ -165,8 +155,10 @@ void SequenceTreeAudioProcessorEditor::toggleFullScreen()
 {
     auto& desktop = juce::Desktop::getInstance();
 
-    if (desktop.getKioskModeComponent() == nullptr)
+    if (desktop.getKioskModeComponent() == nullptr) {
         desktop.setKioskModeComponent(getTopLevelComponent(), true);
-    else
+    }
+    else {
         desktop.setKioskModeComponent(nullptr);
+    }
 }

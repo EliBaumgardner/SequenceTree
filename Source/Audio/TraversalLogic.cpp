@@ -48,6 +48,10 @@ void TraversalLogic::reset(int root, const RTtraversal& newTraversal)
     mod  = {};
     loop = {};
 
+    selectionRandom = (static_cast<unsigned int>(root) * 2654435761u
+                       ^ static_cast<unsigned int>(newTraversal.traversalId) * 40503u
+                       ^ 2463534242u) | 1u;
+
     instanceId          = 0;
     rootId              = root;
     referenceTargetId   = 0;
@@ -65,7 +69,8 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
     }
 
     const RuleContext context { nodes, *parentIt->second, parentCount,
-                                traversal.traversalId, isEligible, nodeState };
+                                traversal.traversalId, isEligible, nodeState,
+                                static_cast<int>(selectionRandom >> 1) };
 
     const int chosen = rule->selectChild(context);
 
@@ -76,7 +81,8 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
 int TraversalLogic::selectTreeJumpChild(const NodeMap& nodes, const RTNode& parent, int parentCount) const
 {
     const RuleContext context { nodes, parent, parentCount,
-                                traversal.traversalId, &isTreeJumpChild, nodeState, true };
+                                traversal.traversalId, &isTreeJumpChild, nodeState,
+                                static_cast<int>(selectionRandom >> 1), true };
 
     int chosen   = -1;
     int maxLimit = 0;
@@ -366,6 +372,10 @@ void TraversalLogic::peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& t
         }
 
         for (const RTConnection& connection : hostIterator->second->connections) {
+            if (static_cast<int>(traverserIds.size()) >= maxCrossTreeTargets) {
+                return;
+            }
+
             if (connection.isTreeJump) {
                 continue;
             }
@@ -570,6 +580,10 @@ void TraversalLogic::handleTreeJump(const NodeMap& nodes, StepResult& result)
 TraversalLogic::StepResult TraversalLogic::stepActive(const NodeMap& nodes)
 {
     advance(nodes);
+
+    selectionRandom ^= selectionRandom << 13;
+    selectionRandom ^= selectionRandom >> 17;
+    selectionRandom ^= selectionRandom << 5;
 
     StepResult result;
 

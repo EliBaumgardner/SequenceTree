@@ -14,11 +14,12 @@
 
 class SequenceTreeAudioProcessorEditor;
 
-class SequenceTreeAudioProcessor  : public juce::AudioProcessor
+class SequenceTreeAudioProcessor  : public juce::AudioProcessor,
+                                    private juce::AsyncUpdater
 {
 public:
     SequenceTreeAudioProcessor();
-    ~SequenceTreeAudioProcessor() override;
+    ~SequenceTreeAudioProcessor() override = default;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -49,11 +50,6 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-
-    std::function<void()>                  notifyUi;
-
-    std::function<void()>                  suspendStateListeners;
-    std::function<void()>                  resumeStateListeners;
 
     juce::ValueTree                        pendingRestoreState;
 
@@ -88,6 +84,8 @@ public:
     std::vector<juce::MidiMessage> pendingNoteOffs;
 
     bool hasPendingUiCommands() const;
+
+    void handleAsyncUpdate() override;
 
     JUCE_DECLARE_WEAK_REFERENCEABLE (SequenceTreeAudioProcessor)
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessor)

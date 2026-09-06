@@ -145,12 +145,12 @@ void FlagScheduler::queueRemoval(const RTNode& flagNode, int hostInstanceId, int
         return;
     }
 
-    auto traversalIt = traversalMap.find(hostInstanceId);
-    if (traversalIt == traversalMap.end()) {
+    TraversalPool::Instance* const hostInstance = traversalMap.find(hostInstanceId);
+    if (hostInstance == nullptr) {
         return;
     }
 
-    traversalIt->second.runtime.pendingRemoval = true;
+    hostInstance->runtime.pendingRemoval = true;
 }
 
 void FlagScheduler::startFlagTraversal(const RTNode& flagNode, int hostTypeId, double sample,
@@ -179,8 +179,12 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, int hostTypeId, d
     if (instanceId == -1) {
         instanceId = context.traversalMap.nextInstanceId();
     }
-    else if (context.traversalMap.find(instanceId)->second.logic.shouldTraverse()) {
-        return;
+    else {
+        const TraversalPool::Instance* const existingInstance = context.traversalMap.find(instanceId);
+
+        if (existingInstance != nullptr && existingInstance->logic.shouldTraverse()) {
+            return;
+        }
     }
 
     TraversalPool::Instance* instance = dispatcher.prepareTraversal(instanceId, rootId, startNode.nodeID,

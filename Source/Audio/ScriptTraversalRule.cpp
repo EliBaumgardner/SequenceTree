@@ -1,6 +1,7 @@
 #include "ScriptTraversalRule.h"
 
 #include <cstddef>
+#include <limits>
 
 namespace {
 
@@ -23,15 +24,22 @@ int readScriptField(const RuleContext& context, ScriptField field,
         case ScriptField::TraversalId:
             return context.traversalId;
 
+        case ScriptField::TraversalRandom:
+            return context.randomValue;
+
         case ScriptField::ChildIsEligible:
-            return currentChild != nullptr ? 1 : 0;
+            return static_cast<int>(currentChild != nullptr);
 
         default:
             break;
     }
 
     if (currentChild == nullptr) {
-        return field == ScriptField::ChildId ? -1 : 0;
+        if (field == ScriptField::ChildId) {
+            return -1;
+        }
+
+        return 0;
     }
 
     switch (field) {
@@ -61,6 +69,9 @@ int readScriptField(const RuleContext& context, ScriptField field,
 
         case ScriptField::ChildSubLoopCountLimit:
             return currentChild->subLoopCountLimit;
+
+        case ScriptField::ChildProbability:
+            return currentChild->probability;
 
         default:
             return 0;
@@ -182,16 +193,23 @@ int ScriptTraversalRule::selectChild(const RuleContext& context) const
                 break;
             }
 
-            case ScriptOpcode::Negate:
+            case ScriptOpcode::Negate: {
+                if (stackTop < 1) {
+                    return -1;
+                }
+
+                const unsigned int wrappingValue = static_cast<unsigned int>(stack[stackTop - 1]);
+
+                stack[stackTop - 1] = static_cast<int>(0u - wrappingValue);
+                break;
+            }
+
             case ScriptOpcode::LogicalNot: {
                 if (stackTop < 1) {
                     return -1;
                 }
 
-                const int value = stack[stackTop - 1];
-
-                stack[stackTop - 1] = instruction.opcode == ScriptOpcode::Negate ? -value
-                                                                                 : (value == 0 ? 1 : 0);
+                stack[stackTop - 1] = static_cast<int>(stack[stackTop - 1] == 0);
                 break;
             }
 
@@ -215,23 +233,87 @@ int ScriptTraversalRule::selectChild(const RuleContext& context) const
                 const int right = stack[--stackTop];
                 const int left  = stack[--stackTop];
 
+                const unsigned int wrappingLeft  = static_cast<unsigned int>(left);
+                const unsigned int wrappingRight = static_cast<unsigned int>(right);
+
+                const bool divisorIsRepresentable = right != 0
+                                                    && !(left == std::numeric_limits<int>::min() && right == -1);
+
                 int result = 0;
 
                 switch (instruction.opcode) {
-                    case ScriptOpcode::Add:            result = left + right;                     break;
-                    case ScriptOpcode::Subtract:       result = left - right;                     break;
-                    case ScriptOpcode::Multiply:       result = left * right;                     break;
-                    case ScriptOpcode::Divide:         result = right != 0 ? left / right : 0;    break;
-                    case ScriptOpcode::Modulo:         result = right != 0 ? left % right : 0;    break;
-                    case ScriptOpcode::Equal:          result = left == right ? 1 : 0;            break;
-                    case ScriptOpcode::NotEqual:       result = left != right ? 1 : 0;            break;
-                    case ScriptOpcode::Less:           result = left <  right ? 1 : 0;            break;
-                    case ScriptOpcode::LessOrEqual:    result = left <= right ? 1 : 0;            break;
-                    case ScriptOpcode::Greater:        result = left >  right ? 1 : 0;            break;
-                    case ScriptOpcode::GreaterOrEqual: result = left >= right ? 1 : 0;            break;
-                    case ScriptOpcode::LogicalAnd:     result = (left != 0 && right != 0) ? 1 : 0; break;
-                    case ScriptOpcode::LogicalOr:      result = (left != 0 || right != 0) ? 1 : 0; break;
-                    default:                                                                      break;
+                    case ScriptOpcode::Add: {
+                        result = static_cast<int>(wrappingLeft + wrappingRight);
+                        break;
+                    }
+
+                    case ScriptOpcode::Subtract: {
+                        result = static_cast<int>(wrappingLeft - wrappingRight);
+                        break;
+                    }
+
+                    case ScriptOpcode::Multiply: {
+                        result = static_cast<int>(wrappingLeft * wrappingRight);
+                        break;
+                    }
+
+                    case ScriptOpcode::Divide: {
+                        if (divisorIsRepresentable) {
+                            result = left / right;
+                        }
+                        break;
+                    }
+
+                    case ScriptOpcode::Modulo: {
+                        if (divisorIsRepresentable) {
+                            result = left % right;
+                        }
+                        break;
+                    }
+
+                    case ScriptOpcode::Equal: {
+                        result = static_cast<int>(left == right);
+                        break;
+                    }
+
+                    case ScriptOpcode::NotEqual: {
+                        result = static_cast<int>(left != right);
+                        break;
+                    }
+
+                    case ScriptOpcode::Less: {
+                        result = static_cast<int>(left < right);
+                        break;
+                    }
+
+                    case ScriptOpcode::LessOrEqual: {
+                        result = static_cast<int>(left <= right);
+                        break;
+                    }
+
+                    case ScriptOpcode::Greater: {
+                        result = static_cast<int>(left > right);
+                        break;
+                    }
+
+                    case ScriptOpcode::GreaterOrEqual: {
+                        result = static_cast<int>(left >= right);
+                        break;
+                    }
+
+                    case ScriptOpcode::LogicalAnd: {
+                        result = static_cast<int>(left != 0 && right != 0);
+                        break;
+                    }
+
+                    case ScriptOpcode::LogicalOr: {
+                        result = static_cast<int>(left != 0 || right != 0);
+                        break;
+                    }
+
+                    default: {
+                        break;
+                    }
                 }
 
                 stack[stackTop++] = result;

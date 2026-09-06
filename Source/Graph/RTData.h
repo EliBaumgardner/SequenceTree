@@ -24,6 +24,9 @@ struct RTNote {
 
 struct RTtraversal {
 
+    static constexpr double minimumTempoMultiplier = 0.01;
+    static constexpr double maximumTempoMultiplier = 100.0;
+
     int traversalId = 0;
     double tempoMultiplier = 1;
     int channel = 1;
@@ -44,11 +47,14 @@ struct RTNode {
 
     int alternativeRootId = -1;
 
+    static constexpr int probabilityScale = 100;
+
     int nodeID       = 0;
     int parentId     = 0;
     int countLimit   = 0;
     int triggerLimit = 0;
     int repeatValue  = 1;
+    int probability  = probabilityScale;
 
     int switchCountLimit  = 0;
     int subLoopCountLimit = 0;

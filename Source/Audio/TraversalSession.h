@@ -51,8 +51,8 @@ private:
 
     int findFirstUnlinkedRootId(const NodeMap& nodes);
 
-    EventManager& eventManager;
 
+    EventManager& eventManager;
     TraversalPool traversals;
 
     RTScript            nativeFallbackScript;

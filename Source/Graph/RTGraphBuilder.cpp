@@ -253,6 +253,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
         int subLoopLimit     = currentValueTree.getProperty(ValueTreeIdentifiers::SubLoopCountLimit);
 
         int repeatValue = currentValueTree.getProperty(ValueTreeIdentifiers::RepeatValue, GraphState::defaultRepeatValue);
+        int probability = currentValueTree.getProperty(ValueTreeIdentifiers::Probability, GraphState::defaultProbability);
         int modAmount   = currentValueTree.getProperty(ValueTreeIdentifiers::ModAmount, GraphState::defaultModAmount);
 
         bool isAlternativeNode = (nodeType == ValueTreeIdentifiers::AlternativeNodeData);
@@ -272,6 +273,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
             rtNode.subLoopCountLimit = subLoopLimit;
             rtNode.switchCountLimit  = switchCountLimit;
             rtNode.repeatValue       = repeatValue;
+            rtNode.probability       = probability;
 
             rtNode.isAlternativeNode = isAlternativeNode;
 
@@ -423,7 +425,13 @@ RTtraversal RTGraphBuilder::buildRTtraversal(int traversalId)
 
     juce::ValueTree traversalData = graphState.traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
     if (traversalData.isValid()) {
-        rtTraversal.tempoMultiplier = traversalData.getProperty(ValueTreeIdentifiers::TempoMultiplier);
+        const double storedTempoMultiplier = traversalData.getProperty(ValueTreeIdentifiers::TempoMultiplier);
+
+        if (storedTempoMultiplier > 0.0) {
+            rtTraversal.tempoMultiplier = juce::jlimit(RTtraversal::minimumTempoMultiplier,
+                                                       RTtraversal::maximumTempoMultiplier,
+                                                       storedTempoMultiplier);
+        }
 
         if (traversalData.hasProperty(ValueTreeIdentifiers::TraversalChannel)) {
             rtTraversal.channel = traversalData.getProperty(ValueTreeIdentifiers::TraversalChannel);

@@ -36,6 +36,7 @@ public:
 
     void enableDualValue(const juce::Identifier& secondaryPropertyID);
     void disableDualValue();
+    void disablePercentValue();
     void enableDecimalValue(double min, double max = std::numeric_limits<double>::max());
     void enableMultiplierValue(int defaultValue = 1);
     void enableTextValue();

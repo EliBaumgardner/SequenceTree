@@ -585,7 +585,7 @@ void NodeController::dragValue(const juce::MouseEvent& e)
 {
     const int    yOffset  = e.getOffsetFromDragStart().y;
     const int    delta    = -yOffset / 3;
-    const double newValue = dragStartValue + delta;
+    const double newValue = draggingValueNode->nodeValueEditor.clampToRange(dragStartValue + delta);
 
     draggingValueNode->nodeValueEditor.boundValue.setValue(newValue);
     draggingValueNode->refreshValueDisplay();

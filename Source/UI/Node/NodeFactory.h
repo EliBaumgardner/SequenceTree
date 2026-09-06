@@ -145,7 +145,8 @@ private:
             ValueTreeIdentifiers::CountLimit,
             ValueTreeIdentifiers::SwitchCountLimit,
             ValueTreeIdentifiers::SubLoopCountLimit,
-            ValueTreeIdentifiers::RepeatValue
+            ValueTreeIdentifiers::RepeatValue,
+            ValueTreeIdentifiers::Probability
         };
 
         for (const auto& prop : propsToCopy) {
