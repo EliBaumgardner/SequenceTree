@@ -39,11 +39,12 @@ Titlebar::Titlebar(ApplicationContext& context)
     auto applyMultiplier = [this]() {
         double value = tempoDisplay.editor.getText().getDoubleValue();
         if (value > 0.0) {
+            value = juce::jlimit(RTtraversal::minimumTempoMultiplier,
+                                 RTtraversal::maximumTempoMultiplier, value);
             applicationContext.processor->tempoMultiplier.store(value);
         }
-        else {
-            tempoDisplay.editor.setText(juce::String(applicationContext.processor->tempoMultiplier.load()), false);
-        }
+
+        tempoDisplay.editor.setText(juce::String(applicationContext.processor->tempoMultiplier.load()), false);
     };
 
     tempoDisplay.editor.onReturnKey = applyMultiplier;
@@ -67,6 +68,7 @@ void Titlebar::configureDisplaySelector()
     addDisplayMode(3, "show countLimit",  NodeDisplayMode::CountLimit);
     addDisplayMode(4, "show channel",     NodeDisplayMode::Channel);
     addDisplayMode(5, "show repeatValue", NodeDisplayMode::RepeatValue);
+    addDisplayMode(6, "show probability", NodeDisplayMode::Probability);
 
     displaySelector.setSelectedItem(1);
 }

@@ -1,5 +1,6 @@
 #include "TraversalSession.h"
 #include "EventManager.h"
+#include "../Script/ScriptCompiler.h"
 
 #include <algorithm>
 
@@ -28,7 +29,7 @@ void TraversalSession::prepare()
     syncedGraphGeneration = 0;
     syncedPoolEpoch       = 0;
 
-    nativeFallbackScript = makeNativeSelectChildScript();
+    nativeFallbackScript = compileTraversalScript(defaultTraversalScriptSource()).script;
     scriptRule.setScript(&nativeFallbackScript);
 
     if (useScriptedChildSelection) {
@@ -41,18 +42,18 @@ void TraversalSession::prepare()
 
 void TraversalSession::setSelectChildScript(const RTScript* script)
 {
-    const bool usable = script != nullptr && !script->isEmpty();
+    if (script != nullptr && !script->isEmpty()) {
+        scriptRule.setScript(script);
+        return;
+    }
 
-    scriptRule.setScript(usable ? script : &nativeFallbackScript);
+    scriptRule.setScript(&nativeFallbackScript);
 }
 
 void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
 {
-    for (auto& note : eventManager.scheduler.activeNotes)
-    {
-        if (NoteScheduler::isNodeAudible(note.nodeType) && !note.isConnectionTrigger) {
-            midiMessages.addEvent(juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch), 0);
-        }
+    for (const auto& note : eventManager.scheduler.activeNotes) {
+        eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
     }
 
     eventManager.bridge.clearAllHighlights();
@@ -363,9 +364,7 @@ void TraversalSession::stopTraversalNotes(int instanceId, juce::MidiBuffer& midi
             continue;
         }
 
-        if (NoteScheduler::isNodeAudible(note.nodeType) && !note.isConnectionTrigger) {
-            midiMessages.addEvent(juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch), 0);
-        }
+        eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
 
         eventManager.bridge.highlightNode(note.nodeId, false);
         eventManager.scheduler.removeNote(i);

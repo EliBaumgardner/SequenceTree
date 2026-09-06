@@ -19,6 +19,20 @@ AudioCommandDrainer::AudioCommandDrainer(NodeCanvas& canvasRef, ApplicationConte
 
 void AudioCommandDrainer::drainAll() const
 {
+    AudioUIBridge& bridge = applicationContext.processor->eventManager.bridge;
+
+    const bool droppedHighlights = bridge.highlights.overflowed.exchange(false);
+    const bool droppedProgress   = bridge.progress.overflowed.exchange(false);
+    const bool droppedResets     = bridge.arrowResets.overflowed.exchange(false);
+
+    if (droppedHighlights) {
+        canvas.nodeManager.clearHighlights();
+    }
+
+    if (droppedProgress || droppedResets) {
+        canvas.arrowManager.resetAllProgress();
+    }
+
     drainHighlights();
     drainArrowResets();
     drainProgress();

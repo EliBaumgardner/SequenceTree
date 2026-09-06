@@ -213,6 +213,13 @@ void Node::setDisplayMode(NodeDisplayMode mode)
         nodeValueEditor.disableDualValue();
     }
 
+    if (mode == NodeDisplayMode::Probability) {
+        nodeValueEditor.setFormat(std::make_unique<PercentFormat>());
+    }
+    else {
+        nodeValueEditor.disablePercentValue();
+    }
+
     switch (mode) {
 
         case NodeDisplayMode::Pitch:
@@ -233,6 +240,10 @@ void Node::setDisplayMode(NodeDisplayMode mode)
 
         case NodeDisplayMode::RepeatValue:
             nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::RepeatValue);
+            break;
+
+        case NodeDisplayMode::Probability:
+            nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::Probability);
             break;
 
         default:

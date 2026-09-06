@@ -13,6 +13,7 @@ struct RuleContext
     int                   traversalId;
     ChildPredicate        isEligible;
     const NodeStateTable& nodeState;
+    int                   randomValue;
 
     bool allowTreeJumpChildren = false;
 

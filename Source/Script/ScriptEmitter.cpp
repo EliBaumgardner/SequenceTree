@@ -25,7 +25,8 @@ const FieldEntry childFieldTable[] = {
     { "pitch",        ScriptField::ChildPitchOffset },
     { "pitchOffset",  ScriptField::ChildPitchOffset },
     { "switchLimit",  ScriptField::ChildSwitchCountLimit },
-    { "subLoopLimit", ScriptField::ChildSubLoopCountLimit }
+    { "subLoopLimit", ScriptField::ChildSubLoopCountLimit },
+    { "probability",  ScriptField::ChildProbability }
 };
 
 const FieldEntry parentFieldTable[] = {
@@ -40,7 +41,8 @@ const FieldEntry childrenFieldTable[] = {
 };
 
 const FieldEntry traversalFieldTable[] = {
-    { "id", ScriptField::TraversalId }
+    { "id",     ScriptField::TraversalId },
+    { "random", ScriptField::TraversalRandom }
 };
 
 template <std::size_t count>

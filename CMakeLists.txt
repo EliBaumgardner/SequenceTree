@@ -63,7 +63,6 @@ target_sources(SequenceTree PRIVATE
         Source/Audio/TraversalSession.cpp
         Source/Audio/TraversalRule.cpp
         Source/Audio/ScriptTraversalRule.cpp
-        Source/Script/RTScript.cpp
         Source/Script/ScriptLexer.cpp
         Source/Script/ScriptParser.cpp
         Source/Script/ScriptEmitter.cpp

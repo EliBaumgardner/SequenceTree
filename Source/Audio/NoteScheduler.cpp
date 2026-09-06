@@ -1,8 +1,6 @@
 #include "NoteScheduler.h"
-#include "AudioUIBridge.h"
 
-NoteScheduler::NoteScheduler(AudioUIBridge& b)
-    : bridge(b)
+NoteScheduler::NoteScheduler()
 {
     activeNotes.reserve(maxExpectedActiveNotes);
 }
@@ -90,11 +88,4 @@ void NoteScheduler::removeNote(int index)
 {
     activeNotes[index] = std::move(activeNotes.back());
     activeNotes.pop_back();
-}
-
-void NoteScheduler::handleOrphanNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages)
-{
-    if (isNoteSounding(note)) {
-        midiMessages.addEvent(juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch), 0);
-    }
 }

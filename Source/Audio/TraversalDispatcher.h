@@ -62,12 +62,14 @@ private:
     void startCrossTreeTraversal(const RTNode& targetRootNode, const RTtraversal& traversal,
                                  double sample, const DispatchContext& context);
 
+    bool markChordVisited(int nodeId);
+
+    static constexpr int maxDispatchDepth = 32;
+
     NoteScheduler&  scheduler;
     AudioUIBridge&  bridge;
 
-    static constexpr int scratchCapacity = 256;
-
-    bool markChordVisited(int nodeId);
+    int                                dispatchDepth = 0;
 
     std::vector<std::uint32_t>         chordVisitStamps;
     std::uint32_t                      chordVisitToken = 0;

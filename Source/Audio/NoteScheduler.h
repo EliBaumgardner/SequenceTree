@@ -4,8 +4,6 @@
 #include "../Graph/RTData.h"
 #include <vector>
 
-class AudioUIBridge;
-
 class NoteScheduler
 {
 public:
@@ -41,7 +39,7 @@ public:
 
     std::vector<ActiveNote> activeNotes;
 
-    explicit NoteScheduler(AudioUIBridge& bridge);
+    NoteScheduler();
 
     void scheduleNote(const RTNode& node, int instanceId, double sample,
                       juce::MidiBuffer& midiMessages,
@@ -51,13 +49,8 @@ public:
 
     void sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
     void removeNote(int index);
-    void handleOrphanNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages);
 
     static bool isNoteSounding(const ActiveNote& note);
 
     static bool isNodeAudible(RTNode::NodeType nodeType);
-
-private:
-
-    AudioUIBridge& bridge;
 };

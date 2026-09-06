@@ -20,6 +20,6 @@ inline constexpr int maximumMidiPitch = 127;
 
 enum class NodeType { Node, Root, Modulator, TraversalFlag};
 
-enum class NodeDisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue};
+enum class NodeDisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue, Probability};
 
 #endif //SEQUENCETREE_NODEPOSITION_H

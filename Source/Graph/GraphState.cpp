@@ -6,13 +6,6 @@
 #include <algorithm>
 #include <unordered_set>
 
-static bool isNoteBearingNode(const juce::ValueTree& node)
-{
-    return node.getType() == ValueTreeIdentifiers::NodeData
-        || node.getType() == ValueTreeIdentifiers::AlternativeNodeData
-        || node.getType() == ValueTreeIdentifiers::RootNodeData;
-}
-
 GraphState::GraphState()
 {
     nodeMap      = juce::ValueTree(ValueTreeIdentifiers::NodeMap);
@@ -135,6 +128,7 @@ void GraphState::setNodeLimitProperties(juce::ValueTree node, juce::UndoManager*
     node.setProperty(ValueTreeIdentifiers::SubLoopCountLimit, defaultSubLoopCountLimit, undoManager);
 
     node.setProperty(ValueTreeIdentifiers::RepeatValue,       defaultRepeatValue,       undoManager);
+    node.setProperty(ValueTreeIdentifiers::Probability,       defaultProbability,       undoManager);
 }
 
 juce::ValueTree GraphState::addRootNode(juce::UndoManager* undoManager)
@@ -195,7 +189,9 @@ juce::ValueTree GraphState::addChildNode(int parentNodeId, const juce::Identifie
 
 juce::ValueTree GraphState::addTraversalFlagNode(int parentNodeId, juce::UndoManager* undoManager)
 {
-    jassert(isNoteBearingNode(getNode(parentNodeId))
+    jassert(getNode(parentNodeId).getType() == ValueTreeIdentifiers::NodeData
+         || getNode(parentNodeId).getType() == ValueTreeIdentifiers::AlternativeNodeData
+         || getNode(parentNodeId).getType() == ValueTreeIdentifiers::RootNodeData
          || getNode(parentNodeId).getType() == ValueTreeIdentifiers::TraversalFlagData);
 
     juce::ValueTree node = addChildNode(parentNodeId, ValueTreeIdentifiers::TraversalFlagData, undoManager);
@@ -238,7 +234,9 @@ juce::ValueTree GraphState::addModulatorRoot(int parentNodeId, juce::UndoManager
     juce::ValueTree parentNode = getNode(parentNodeId);
 
     jassert(parentNode.isValid());
-    jassert(isNoteBearingNode(parentNode));
+    jassert(parentNode.getType() == ValueTreeIdentifiers::NodeData
+         || parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData
+         || parentNode.getType() == ValueTreeIdentifiers::RootNodeData);
 
     nodeIdIncrement = nodeIdIncrement + 1;
 
@@ -494,7 +492,9 @@ void GraphState::addMidiNote(int nodeId, NodeNote note, juce::UndoManager* undoM
     juce::ValueTree node = getNode(nodeId);
 
     jassert(node.isValid());
-    jassert(isNoteBearingNode(node));
+    jassert(node.getType() == ValueTreeIdentifiers::NodeData
+         || node.getType() == ValueTreeIdentifiers::AlternativeNodeData
+         || node.getType() == ValueTreeIdentifiers::RootNodeData);
 
     juce::ValueTree midiNote {ValueTreeIdentifiers::MidiNoteData};
 

@@ -118,7 +118,7 @@ Three things about the model are easy to miss:
 - Per-block scratch state lives in reserved member vectors (see `TraversalSession`), not in locals, for the same reason.
 - `ApplicationContext` pointers are valid only after `PluginEditor` construction; do not touch them at static init time.
 - This project uses **no code comments**. Express intent through naming.
-- Never write functions that are 1-2 lines **do not write wrapper functions**  
+- Never write functions that are 1-2 lines **do not write wrapper functions** The only exception is if the function clearly states some larger process, and by doing so makes the code more readible, even if it is just a few lines.
 - Never use ternary operators
 - Always use {} for blocks
 - Always avoid encapsulation on very small segments of code which repeat
@@ -127,3 +127,4 @@ Three things about the model are easy to miss:
 - Avoid using getter and setter functions, prefer public variable access when possible
 - Avoid using namespaces
 - Never use functions that perform a single operation (single if statement or boolean operation, etc.)
+- It is better to declare an unused variable if it still represents some part of the class's immediate functionality 

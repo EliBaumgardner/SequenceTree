@@ -47,6 +47,7 @@ enum class ScriptField
     ParentLastChosenChild,
 
     TraversalId,
+    TraversalRandom,
 
     ChildId,
     ChildIsEligible,
@@ -57,7 +58,8 @@ enum class ScriptField
     ChildRepeatValue,
     ChildPitchOffset,
     ChildSwitchCountLimit,
-    ChildSubLoopCountLimit
+    ChildSubLoopCountLimit,
+    ChildProbability
 };
 
 struct ScriptInstruction
@@ -90,5 +92,3 @@ struct RTScript
 
     bool isEmpty() const { return instructions.empty(); }
 };
-
-RTScript makeNativeSelectChildScript();

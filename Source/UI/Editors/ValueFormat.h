@@ -101,6 +101,18 @@ public:
 };
 
 
+class PercentFormat : public ValueFormat {
+public:
+
+    PercentFormat();
+
+    InputRestrictions restrictions() const override;
+    juce::String      displayText(const ValueBinding& binding) const override;
+    juce::String      editText   (const ValueBinding& binding) const override;
+    void              commit(const juce::String& text, ValueBinding binding) const override;
+};
+
+
 class TextFormat : public ValueFormat {
 public:
 

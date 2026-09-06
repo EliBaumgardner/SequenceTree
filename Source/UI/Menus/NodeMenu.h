@@ -40,6 +40,7 @@ private:
     ValueEditor repeatEditor            { applicationContext };
     ValueEditor switchCountLimitEditor  { applicationContext };
     ValueEditor subLoopCountLimitEditor { applicationContext };
+    ValueEditor probabilityEditor       { applicationContext };
     ValueEditor velocityEditor          { applicationContext };
     ValueEditor pitchEditor             { applicationContext };
     ValueEditor channelEditor           { applicationContext };
@@ -48,6 +49,7 @@ private:
     juce::Label repeatLabel;
     juce::Label switchCountLimitLabel;
     juce::Label subLoopCountLimitLabel;
+    juce::Label probabilityLabel;
     juce::Label velocityLabel;
     juce::Label pitchLabel;
     juce::Label channelLabel;
@@ -58,11 +60,12 @@ private:
         ValueEditor& editor;
     };
 
-    std::array<LabeledRow, 7> labeledRows {{
+    std::array<LabeledRow, 8> labeledRows {{
         { countLimitLabel,        countLimitEditor        },
         { repeatLabel,            repeatEditor            },
         { switchCountLimitLabel,  switchCountLimitEditor  },
         { subLoopCountLimitLabel, subLoopCountLimitEditor },
+        { probabilityLabel,       probabilityEditor       },
         { velocityLabel,          velocityEditor          },
         { pitchLabel,             pitchEditor              },
         { channelLabel,           channelEditor            }

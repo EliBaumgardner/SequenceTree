@@ -43,8 +43,10 @@ ternary_hits=$(echo "$files" | xargs awk '
 
 comment_hits=$(echo "$files" | xargs awk '
     FNR == 1 { banner = 1 }
-    banner && /^\s*(\/\*|\*|\*\/|\s*$)/ { if (/\*\//) banner = 0; next }
-    { banner = 0 }
+    banner {
+        if ($0 ~ /^[[:space:]]*$/ || $0 ~ /^[[:space:]]*(\/\/|\/\*|\*)/) { next }
+        banner = 0
+    }
     /#endif[[:space:]]*\/\// { next }
     /\/\/[[:space:]]*Created by/ { next }
     /\/\/=+/ { next }

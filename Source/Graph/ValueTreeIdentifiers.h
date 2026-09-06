@@ -47,6 +47,7 @@ public:
     static const juce::Identifier SubLoopCountLimit;
 
     static const juce::Identifier RepeatValue;
+    static const juce::Identifier Probability;
 
     static const juce::Identifier XPosition;
     static const juce::Identifier YPosition;

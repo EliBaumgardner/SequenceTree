@@ -110,6 +110,8 @@ public:
 
     TraversalState state = TraversalState::Start;
 
+    unsigned int selectionRandom = 1;
+
     const TraversalRule* rule = &NativeTraversalRule::instance();
 
     TraversalLogic() = default;
@@ -125,6 +127,8 @@ public:
     int advanceModulator(const NodeMap& nodes);
 
     const RTNode* peekNextTarget(const NodeMap& nodes);
+
+    static constexpr int maxCrossTreeTargets = NodeStateTable::maxNodeIds;
 
     void peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& traverserIds);
     const RTNode* peekModulators(const NodeMap& nodes);

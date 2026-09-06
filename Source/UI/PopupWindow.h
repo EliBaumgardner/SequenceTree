@@ -51,6 +51,8 @@ public:
     template <typename ContentType>
     ContentType* getContentAs() const { return dynamic_cast<ContentType*>(getContent()); }
 
+    std::unique_ptr<PopupWindow> window;
+
 private:
 
     void presentWindow();
@@ -58,8 +60,6 @@ private:
     juce::String   windowTitle;
     ContentFactory contentFactory;
     juce::Colour   windowBackgroundColour;
-
-    std::unique_ptr<PopupWindow> window;
 };
 
 #endif //SEQUENCETREE_POPUPWINDOW_H

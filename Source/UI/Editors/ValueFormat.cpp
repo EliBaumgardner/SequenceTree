@@ -124,6 +124,32 @@ void MultiplierFormat::commit(const juce::String& text, ValueBinding binding) co
     binding.primary.setValue((int) clamp((double) text.getIntValue()));
 }
 
+PercentFormat::PercentFormat()
+{
+    minimum = 0.0;
+    maximum = 100.0;
+}
+
+InputRestrictions PercentFormat::restrictions() const
+{
+    return { 3, "0123456789" };
+}
+
+juce::String PercentFormat::displayText(const ValueBinding& binding) const
+{
+    return juce::String((int) binding.primary.getValue()) + "%";
+}
+
+juce::String PercentFormat::editText(const ValueBinding& binding) const
+{
+    return juce::String((int) binding.primary.getValue());
+}
+
+void PercentFormat::commit(const juce::String& text, ValueBinding binding) const
+{
+    binding.primary.setValue((int) clamp((double) text.getIntValue()));
+}
+
 InputRestrictions TextFormat::restrictions() const
 {
     return { 64, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _-." };
