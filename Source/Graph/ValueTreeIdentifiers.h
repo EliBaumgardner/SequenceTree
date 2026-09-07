@@ -16,8 +16,12 @@ public:
     static const juce::Identifier TraversalFlagData;
     static const juce::Identifier ModulatorData;
     static const juce::Identifier ModulatorRootData;
+    static const juce::Identifier EncapsulatorData;
 
     static const juce::Identifier NodeChildrenIds;
+    static const juce::Identifier EncapsulatedIds;
+    static const juce::Identifier EncapsulatorId;
+    static const juce::Identifier EncapsulatorLabel;
 
     static const juce::Identifier SelectionClipboard;
 

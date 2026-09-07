@@ -199,7 +199,7 @@ void Node::setDisplayMode(NodeDisplayMode mode)
 
         juce::Identifier subLoopProperty = ValueTreeIdentifiers::SubLoopCountLimit;
 
-        if (nodeType == NodeType::Root) {
+        if (nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
             subLoopProperty = ValueTreeIdentifiers::LoopLimit;
         }
 

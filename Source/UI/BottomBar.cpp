@@ -26,6 +26,20 @@ BottomBar::BottomBar(ApplicationContext& context)
     arrowButton->onClick = [this]() { arrowWindowLauncher.show(); };
 
     addAndMakeVisible(*arrowButton);
+
+    spanTool = std::make_unique<IconButton>(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawSpanToolIcon(g, bounds, state);
+        }, applicationContext.lookAndFeel);
+
+    spanTool->setTooltip("Node Span");
+
+    spanTool->onClick = [this]() {
+        spanTool->toggleSelected();
+        applicationContext.canvas->setSpanMode(spanTool->isSelected());
+    };
+
+    addAndMakeVisible(*spanTool);
 }
 
 void BottomBar::applyDisplayMode(NodeDisplayMode mode)
@@ -79,4 +93,6 @@ void BottomBar::resized()
     paintTool->setBounds(bounds.removeFromRight(height));
     bounds.removeFromRight(cellGap);
     arrowButton->setBounds(bounds.removeFromRight(height));
+    bounds.removeFromRight(cellGap);
+    spanTool->setBounds(bounds.removeFromRight(height));
 }

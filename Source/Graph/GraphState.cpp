@@ -458,10 +458,165 @@ std::vector<int> GraphState::syncPitchBindings(int nodeId, juce::UndoManager* un
     return repitchedNodeIds;
 }
 
+juce::ValueTree GraphState::addEncapsulator(const std::vector<int>& memberNodeIds, juce::UndoManager* undoManager)
+{
+    jassert(! memberNodeIds.empty());
+
+    const juce::ValueTree firstMember = getNode(memberNodeIds.front());
+
+    jassert(firstMember.isValid());
+
+    nodeIdIncrement = nodeIdIncrement + 1;
+
+    const int encapsulatorId = nodeIdIncrement;
+
+    juce::ValueTree encapsulator    {ValueTreeIdentifiers::EncapsulatorData};
+    juce::ValueTree encapsulatedIds {ValueTreeIdentifiers::EncapsulatedIds};
+
+    for (const int memberNodeId : memberNodeIds) {
+        juce::ValueTree memberId {ValueTreeIdentifiers::NodeId};
+        memberId.setProperty(ValueTreeIdentifiers::Id, memberNodeId, undoManager);
+
+        encapsulatedIds.addChild(memberId, -1, undoManager);
+
+        getNode(memberNodeId).setProperty(ValueTreeIdentifiers::EncapsulatorId, encapsulatorId, undoManager);
+    }
+
+    encapsulator.addChild(encapsulatedIds, -1, undoManager);
+
+    std::unordered_set<int> usedLabels;
+
+    for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
+        const juce::ValueTree existing = nodeMap.getChild(i);
+
+        if (existing.getType() == ValueTreeIdentifiers::EncapsulatorData) {
+            usedLabels.insert((int) existing.getProperty(ValueTreeIdentifiers::EncapsulatorLabel));
+        }
+    }
+
+    int encapsulatorLabel = 0;
+
+    while (usedLabels.count(encapsulatorLabel) > 0) {
+        encapsulatorLabel = encapsulatorLabel + 1;
+    }
+
+    encapsulator.setProperty(ValueTreeIdentifiers::RootNodeId,
+                             firstMember.getProperty(ValueTreeIdentifiers::RootNodeId), undoManager);
+    encapsulator.setProperty(ValueTreeIdentifiers::Id, encapsulatorId, undoManager);
+    encapsulator.setProperty(ValueTreeIdentifiers::EncapsulatorLabel, encapsulatorLabel, undoManager);
+    encapsulator.setProperty(ValueTreeIdentifiers::SubLoopCountLimit, defaultSubLoopCountLimit, undoManager);
+
+    setNodePosition(encapsulator, getNodePosition(memberNodeIds.front()), undoManager);
+
+    nodeMap.addChild(encapsulator, -1, undoManager);
+
+    return encapsulator;
+}
+
+void GraphState::encapsulateNodeAfter(int nodeId, int siblingNodeId, juce::UndoManager* undoManager)
+{
+    juce::ValueTree node = getNode(nodeId);
+
+    const int encapsulatorId = getNode(siblingNodeId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    juce::ValueTree encapsulatedIds = getNode(encapsulatorId).getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+
+    if (! node.isValid() || ! encapsulatedIds.isValid()) {
+        return;
+    }
+
+    const juce::ValueTree siblingId = encapsulatedIds.getChildWithProperty(ValueTreeIdentifiers::Id, siblingNodeId);
+
+    if (! siblingId.isValid() || encapsulatedIds.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId).isValid()) {
+        return;
+    }
+
+    juce::ValueTree memberId {ValueTreeIdentifiers::NodeId};
+    memberId.setProperty(ValueTreeIdentifiers::Id, nodeId, undoManager);
+
+    encapsulatedIds.addChild(memberId, encapsulatedIds.indexOf(siblingId) + 1, undoManager);
+
+    node.setProperty(ValueTreeIdentifiers::EncapsulatorId, encapsulatorId, undoManager);
+}
+
+void GraphState::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY,
+                                                 juce::UndoManager* undoManager)
+{
+    const int encapsulatorId = getNode(nodeId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    const juce::ValueTree encapsulator    = getNode(encapsulatorId);
+    const juce::ValueTree encapsulatedIds = encapsulator.getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+
+    const int numMembers = encapsulatedIds.getNumChildren();
+
+    if (numMembers == 0 || encapsulatorId == draggedNodeId) {
+        return;
+    }
+
+    const int entryNodeId = encapsulatedIds.getChild(0).getProperty(ValueTreeIdentifiers::Id);
+
+    if (entryNodeId != nodeId) {
+        return;
+    }
+
+    NodePosition encapsulatorPosition = getNodePosition(encapsulatorId);
+
+    encapsulatorPosition.xPosition += deltaX;
+    encapsulatorPosition.yPosition += deltaY;
+
+    setNodePosition(encapsulator, encapsulatorPosition, undoManager);
+}
+
+void GraphState::removeEncapsulator(int encapsulatorId, juce::UndoManager* undoManager)
+{
+    juce::ValueTree encapsulator = getNode(encapsulatorId);
+
+    if (! encapsulator.isValid()) {
+        return;
+    }
+
+    const juce::ValueTree encapsulatedIds = encapsulator.getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+
+    for (int i = 0; i < encapsulatedIds.getNumChildren(); ++i) {
+        juce::ValueTree member = getNode(encapsulatedIds.getChild(i).getProperty(ValueTreeIdentifiers::Id));
+
+        if (member.isValid()) {
+            member.removeProperty(ValueTreeIdentifiers::EncapsulatorId, undoManager);
+        }
+    }
+
+    nodeMap.removeChild(encapsulator, undoManager);
+}
+
+void GraphState::removeEncapsulatedNodes(int encapsulatorId, juce::UndoManager* undoManager)
+{
+    const juce::ValueTree encapsulatedIds =
+        getNode(encapsulatorId).getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+
+    std::vector<int> memberNodeIds;
+
+    for (int i = 0; i < encapsulatedIds.getNumChildren(); ++i) {
+        memberNodeIds.push_back(encapsulatedIds.getChild(i).getProperty(ValueTreeIdentifiers::Id));
+    }
+
+    for (const int memberNodeId : memberNodeIds) {
+        if (getNode(memberNodeId).isValid()) {
+            removeNode(memberNodeId, undoManager);
+        }
+    }
+
+    removeEncapsulator(encapsulatorId, undoManager);
+}
+
 void GraphState::removeNode(int nodeId, juce::UndoManager* undoManager)
 {
     juce::ValueTree node = getNode(nodeId);
     jassert(node.isValid());
+
+    if (node.getType() == ValueTreeIdentifiers::EncapsulatorData) {
+        removeEncapsulatedNodes(nodeId, undoManager);
+        return;
+    }
 
     std::vector<int> parentIds;
 
@@ -471,10 +626,24 @@ void GraphState::removeNode(int nodeId, juce::UndoManager* undoManager)
         parentIds = parents->second;
     }
 
+    const int encapsulatorId = node.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
     nodeMap.removeChild(node, undoManager);
 
     for (const int parentId : parentIds) {
         disconnectNodes(parentId, nodeId, undoManager);
+    }
+
+    juce::ValueTree encapsulatedIds = getNode(encapsulatorId).getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+
+    if (! encapsulatedIds.isValid()) {
+        return;
+    }
+
+    encapsulatedIds.removeChild(encapsulatedIds.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId), undoManager);
+
+    if (encapsulatedIds.getNumChildren() == 0) {
+        removeEncapsulator(encapsulatorId, undoManager);
     }
 }
 
@@ -529,6 +698,105 @@ juce::ValueTree GraphState::getNode(int nodeId) const
     }
 
     return indexed->second;
+}
+
+std::vector<int> GraphState::nodeIdsBetween(int startNodeId, int endNodeId) const
+{
+    std::unordered_map<int, int> previousNodeId;
+    std::vector<int>             frontier;
+    std::vector<int>             neighbourIds;
+
+    previousNodeId[startNodeId] = startNodeId;
+    frontier.push_back(startNodeId);
+
+    while (! frontier.empty() && previousNodeId.count(endNodeId) == 0) {
+        std::vector<int> nextFrontier;
+
+        for (const int nodeId : frontier) {
+            neighbourIds.clear();
+
+            const juce::ValueTree childIds = getNode(nodeId).getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+            for (int i = 0; i < childIds.getNumChildren(); ++i) {
+                neighbourIds.push_back(childIds.getChild(i).getProperty(ValueTreeIdentifiers::Id));
+            }
+
+            const auto parents = parentIdsOf.find(nodeId);
+
+            if (parents != parentIdsOf.end()) {
+                neighbourIds.insert(neighbourIds.end(), parents->second.begin(), parents->second.end());
+            }
+
+            for (const int neighbourId : neighbourIds) {
+                const juce::ValueTree neighbour = getNode(neighbourId);
+
+                const juce::Identifier neighbourType = neighbour.getType();
+
+                const bool isSequenceNode = neighbourType == ValueTreeIdentifiers::NodeData
+                                         || neighbourType == ValueTreeIdentifiers::AlternativeNodeData
+                                         || neighbourType == ValueTreeIdentifiers::RootNodeData;
+
+                if (! isSequenceNode
+                    || neighbour.hasProperty(ValueTreeIdentifiers::EncapsulatorId)
+                    || previousNodeId.count(neighbourId) > 0) {
+                    continue;
+                }
+
+                previousNodeId[neighbourId] = nodeId;
+                nextFrontier.push_back(neighbourId);
+            }
+        }
+
+        frontier = std::move(nextFrontier);
+    }
+
+    std::vector<int> spanNodeIds;
+
+    if (previousNodeId.count(endNodeId) == 0) {
+        return spanNodeIds;
+    }
+
+    for (int nodeId = endNodeId; nodeId != startNodeId; nodeId = previousNodeId.at(nodeId)) {
+        spanNodeIds.push_back(nodeId);
+    }
+
+    spanNodeIds.push_back(startNodeId);
+
+    std::reverse(spanNodeIds.begin(), spanNodeIds.end());
+
+    std::unordered_set<int> spannedIds(spanNodeIds.begin(), spanNodeIds.end());
+
+    std::vector<int> descendantFrontier(spanNodeIds.begin(), spanNodeIds.end() - 1);
+
+    while (! descendantFrontier.empty()) {
+        const int nodeId = descendantFrontier.back();
+        descendantFrontier.pop_back();
+
+        const juce::ValueTree childIds = getNode(nodeId).getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+        for (int i = 0; i < childIds.getNumChildren(); ++i) {
+            const int childId = childIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+
+            const juce::ValueTree child = getNode(childId);
+
+            const juce::Identifier childType = child.getType();
+
+            const bool isSequenceNode = childType == ValueTreeIdentifiers::NodeData
+                                     || childType == ValueTreeIdentifiers::AlternativeNodeData
+                                     || childType == ValueTreeIdentifiers::RootNodeData;
+
+            if (! isSequenceNode
+                || child.hasProperty(ValueTreeIdentifiers::EncapsulatorId)
+                || ! spannedIds.insert(childId).second) {
+                continue;
+            }
+
+            spanNodeIds.push_back(childId);
+            descendantFrontier.push_back(childId);
+        }
+    }
+
+    return spanNodeIds;
 }
 
 juce::ValueTree GraphState::getNodeParent(int nodeId) const

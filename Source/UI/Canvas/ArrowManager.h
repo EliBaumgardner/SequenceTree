@@ -47,6 +47,8 @@ public:
 
     void refreshFor(const Node* movedNode) const;
 
+    void refreshEncapsulatedArrows() const;
+
     void handleArrowAdded      (int parentNodeId, int childNodeId);
     void handleArrowRemoved    (int parentNodeId, int childNodeId);
     void handleArrowTypeChanged(int parentNodeId, int childNodeId);

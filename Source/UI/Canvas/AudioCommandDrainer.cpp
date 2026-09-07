@@ -80,6 +80,8 @@ void AudioCommandDrainer::drainHighlights() const
 
         node->setHighlightVisual(command.traversalId, command.shouldHighlight, highlightColour);
     });
+
+    canvas.nodeManager.syncEncapsulationHighlights();
 }
 
 void AudioCommandDrainer::drainProgress() const

@@ -45,6 +45,8 @@ private:
 
     void fillDurationMap(const juce::ValueTree& nodeValueTree, RTNode& rtNode);
 
+    void fillEncapsulation(const juce::ValueTree& nodeValueTree, RTNode& rtNode);
+
     static void collectDisabledTraversals(const juce::ValueTree& owner, std::vector<int>& disabledIds);
 
     static RTConnection& connectionFor(RTNode& node, int childId);

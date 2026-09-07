@@ -11,6 +11,7 @@
 #include "ColourSelector.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Canvas/NodeCanvas.h"
+#include "../Node/Encapsulator.h"
 
 juce::Colour MainComponent::presetColours[MainComponent::numPresets] {};
 bool         MainComponent::presetSet[MainComponent::numPresets]     {};
@@ -217,11 +218,33 @@ void ColourSelector::setNode(Node* node) {
 
 void ColourSelector::applyColourToDescendants(const Node* n, juce::Colour c)
 {
-    std::unordered_set<int> visited { n->nodeId };
-    applyColourToDescendants(n, c, visited);
+    if (const auto* const encapsulator = dynamic_cast<const Encapsulator*>(n)) {
+        for (const int memberNodeId : encapsulator->memberNodeIds) {
+            Node* const member = applicationContext.canvas->nodeManager.find(memberNodeId);
+
+            if (member == nullptr) {
+                continue;
+            }
+
+            member->encapsulationRingColour = c;
+
+            if (memberNodeId == encapsulator->memberNodeIds.front()) {
+                member->nodeColour = c;
+            }
+
+            member->repaint();
+        }
+        return;
+    }
+
+    const int encapsulatorId = n->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    std::unordered_set<int> visited { (int) n->nodeValueTree.getProperty(ValueTreeIdentifiers::Id) };
+    applyColourToDescendants(n, c, encapsulatorId, visited);
 }
 
-void ColourSelector::applyColourToDescendants(const Node* n, juce::Colour c, std::unordered_set<int>& visited)
+void ColourSelector::applyColourToDescendants(const Node* n, juce::Colour c, int encapsulatorId,
+                                              std::unordered_set<int>& visited)
 {
     NodeCanvas* const canvas = applicationContext.canvas;
 
@@ -238,10 +261,18 @@ void ColourSelector::applyColourToDescendants(const Node* n, juce::Colour c, std
         }
 
         Node* const childNode = canvas->nodeManager.find(childId);
-        if (childNode != nullptr) {
-            childNode->nodeColour = c;
-            childNode->repaint();
-            applyColourToDescendants(childNode, c, visited);
+        if (childNode == nullptr) {
+            continue;
         }
+
+        const int childEncapsulatorId = childNode->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+        if (encapsulatorId >= 0 && childEncapsulatorId != encapsulatorId) {
+            continue;
+        }
+
+        childNode->nodeColour = c;
+        childNode->repaint();
+        applyColourToDescendants(childNode, c, encapsulatorId, visited);
     }
 }

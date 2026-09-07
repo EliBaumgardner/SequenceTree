@@ -78,6 +78,7 @@ public:
 
     void drawNode          (juce::Graphics& g, const NodeVisual& visual);
     void drawModulatorNode (juce::Graphics& g, const NodeVisual& visual);
+    void drawEncapsulatorNode (juce::Graphics& g, const NodeVisual& visual);
     void drawRootRectangle (juce::Graphics& g, juce::Rectangle<float> bounds);
 
     void drawArrow          (juce::Graphics& g, const Arrow& arrow);
@@ -103,6 +104,7 @@ public:
 
     void drawPaintToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawArrowToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawSpanToolIcon   (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawNodeArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawPolyphonicArrowIcon (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawTraversalArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);

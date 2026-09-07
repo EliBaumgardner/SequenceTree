@@ -253,6 +253,14 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
         arrowManager.rebuildDanglingForNode(nodeId);
     }
 
+    for (int i = 0; i < stateTree.getNumChildren(); i++) {
+        const juce::ValueTree nodeValueTree = stateTree.getChild(i);
+
+        if (nodeValueTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
+            nodeManager.collapseEncapsulation(nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
+        }
+    }
+
     if (!gridOriginSet && !rootNodeMap.empty()) {
         auto it = rootNodeMap.begin();
         int firstRootId = it->first;
@@ -275,7 +283,7 @@ void NodeCanvas::setPaintMode(bool enabled)
 {
     paintMode = enabled;
 
-    nodeManager.setInterceptsClicks(!enabled);
+    nodeManager.setInterceptsClicks(!enabled, !enabled && !spanMode);
 
     if (enabled) {
         valueField.updateCursor();
@@ -285,6 +293,28 @@ void NodeCanvas::setPaintMode(bool enabled)
         setMouseCursor(juce::MouseCursor::NormalCursor);
         repaint();
     }
+}
+
+void NodeCanvas::setSpanMode(bool enabled)
+{
+    spanMode         = enabled;
+    spanAnchorNodeId = -1;
+
+    nodeManager.setInterceptsClicks(!paintMode, !paintMode && !enabled);
+    nodeManager.clearOutlines();
+
+    if (! enabled) {
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+        return;
+    }
+
+    juce::Image cursorImage(juce::Image::ARGB, spanCursorSize, spanCursorSize, true);
+    juce::Graphics cursorGraphics(cursorImage);
+
+    cursorGraphics.setColour(juce::Colours::black);
+    cursorGraphics.drawRect(cursorImage.getBounds().reduced(1), 1);
+
+    setMouseCursor(juce::MouseCursor(cursorImage, spanCursorSize / 2, spanCursorSize / 2));
 }
 
 void NodeCanvas::showGrid()

@@ -37,7 +37,8 @@ public:
     void layoutInterior(juce::Rectangle<int> nodeSquare);
 
     NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const {
-        return { bounds, nodeColour, activeHighlights, isHovered, isSelected };
+        return { bounds, nodeColour, activeHighlights, isHovered, isSelected, isOutlined,
+                 isEncapsulationRinged, isEncapsulationEntry, encapsulationRingColour };
     }
 
     NodeVisual getNodeVisual() const { return getNodeVisual(getLocalBounds().toFloat()); }
@@ -74,6 +75,7 @@ public:
     ValueEditor subLoopLimitEditor;
 
     juce::Colour nodeColour = juce::Colour::fromRGB(195,174,132).darker().darker().darker();
+    juce::Colour encapsulationRingColour = juce::Colour::fromRGB(195,174,132).darker().darker().darker();
 
     int nodeId;
     NodeType nodeType    = NodeType::Node;
@@ -81,6 +83,10 @@ public:
 
     bool isHovered           = false;
     bool isSelected          = false;
+    bool isOutlined          = false;
+    bool isEncapsulated      = false;
+    bool isEncapsulationRinged = false;
+    bool isEncapsulationEntry  = false;
     bool isHighlighted       = false;
     std::map<int, juce::Colour> activeHighlights;
     std::set<int>               pendingHighlightOffIds;

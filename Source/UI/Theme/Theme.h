@@ -21,6 +21,10 @@ struct NodeVisual {
     const std::map<int, juce::Colour>& highlights;
     bool isHovered  = false;
     bool isSelected = false;
+    bool isOutlined = false;
+    bool isEncapsulationRinged = false;
+    bool isEncapsulationEntry  = false;
+    juce::Colour encapsulationRingColour;
 };
 
 struct Theme
@@ -53,6 +57,7 @@ struct Theme
 
     juce::Colour selectionBoxColour  = baseDarkColour2;
     juce::Colour selectionRingColour = juce::Colours::black;
+    juce::Colour spanOutlineColour   = baseLightColour3;
 
     juce::Colour popupMenuColour              = baseDarkColour1.withAlpha(0.97f);
     juce::Colour popupMenuBorderColour        = juce::Colours::black.withAlpha(0.5f);
@@ -74,7 +79,15 @@ struct Theme
     static constexpr float selectionRingWidth = 1.25f;
     static constexpr float selectionRimWidth  = 3.0f;
 
+    static constexpr float spanOutlineGap   = 2.5f;
+    static constexpr float spanOutlineWidth = 1.5f;
+
     static constexpr float nodeCirclePad = 4.0f;
+
+    static constexpr float encapsulatorRimInset = 2.5f;
+    static constexpr float encapsulatorRimWidth = 1.0f;
+
+    static constexpr float encapsulationRingWidth = 2.0f;
 
     static constexpr float incrementIconWidthInset  = 0.30f;
     static constexpr float incrementIconHeightInset = 0.12f;

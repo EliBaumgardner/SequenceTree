@@ -21,6 +21,33 @@ const juce::String pitchNames[] = {
     juce::String(L"B")
 };
 
+const juce::String greekLetters[] = {
+    juce::String(L"α"),
+    juce::String(L"β"),
+    juce::String(L"γ"),
+    juce::String(L"δ"),
+    juce::String(L"ε"),
+    juce::String(L"ζ"),
+    juce::String(L"η"),
+    juce::String(L"θ"),
+    juce::String(L"ι"),
+    juce::String(L"κ"),
+    juce::String(L"λ"),
+    juce::String(L"μ"),
+    juce::String(L"ν"),
+    juce::String(L"ξ"),
+    juce::String(L"ο"),
+    juce::String(L"π"),
+    juce::String(L"ρ"),
+    juce::String(L"σ"),
+    juce::String(L"τ"),
+    juce::String(L"υ"),
+    juce::String(L"φ"),
+    juce::String(L"χ"),
+    juce::String(L"ψ"),
+    juce::String(L"ω")
+};
+
 }
 
 InputRestrictions IntFormat::restrictions() const
@@ -156,6 +183,34 @@ juce::String PercentFormat::editText(const ValueBinding& binding) const
 }
 
 void PercentFormat::commit(const juce::String& text, ValueBinding binding) const
+{
+    binding.primary.setValue((int) clamp((double) text.getIntValue()));
+}
+
+const int GreekLetterFormat::letterCount = (int) (sizeof(greekLetters) / sizeof(greekLetters[0]));
+
+GreekLetterFormat::GreekLetterFormat()
+{
+    minimum = 0.0;
+    maximum = (double) (letterCount - 1);
+}
+
+InputRestrictions GreekLetterFormat::restrictions() const
+{
+    return { 2, "0123456789" };
+}
+
+juce::String GreekLetterFormat::displayText(const ValueBinding& binding) const
+{
+    return greekLetters[juce::jlimit(0, letterCount - 1, (int) binding.primary.getValue())];
+}
+
+juce::String GreekLetterFormat::editText(const ValueBinding& binding) const
+{
+    return juce::String((int) binding.primary.getValue());
+}
+
+void GreekLetterFormat::commit(const juce::String& text, ValueBinding binding) const
 {
     binding.primary.setValue((int) clamp((double) text.getIntValue()));
 }

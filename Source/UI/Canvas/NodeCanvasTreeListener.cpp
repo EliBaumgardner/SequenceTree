@@ -12,7 +12,8 @@ void NodeCanvasTreeListener::valueTreeChildAdded(juce::ValueTree& parent, juce::
             || child.getType() == ValueTreeIdentifiers::RootNodeData
             || child.getType() == ValueTreeIdentifiers::ModulatorRootData
             || child.getType() == ValueTreeIdentifiers::ModulatorData
-            || child.getType() == ValueTreeIdentifiers::TraversalFlagData);
+            || child.getType() == ValueTreeIdentifiers::TraversalFlagData
+            || child.getType() == ValueTreeIdentifiers::EncapsulatorData);
 
         NodeCanvas::AsyncUpdate update;
         update.type       = NodeCanvas::AsyncUpdateType::NodeAdded;
@@ -84,7 +85,8 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
             || nodeType == ValueTreeIdentifiers::RootNodeData
             || nodeType == ValueTreeIdentifiers::ModulatorRootData
             || nodeType == ValueTreeIdentifiers::ModulatorData
-            || nodeType == ValueTreeIdentifiers::TraversalFlagData);
+            || nodeType == ValueTreeIdentifiers::TraversalFlagData
+            || nodeType == ValueTreeIdentifiers::EncapsulatorData);
 
         NodeCanvas::AsyncUpdate update;
         update.type   = NodeCanvas::AsyncUpdateType::NodeMoved;

@@ -66,9 +66,79 @@ void SelectionOps::deselectAllExcept(const Node& keptNode) const
     }
 }
 
+std::vector<int> SelectionOps::selectionWithEncapsulatedMembers() const
+{
+    GraphState& state = *applicationContext.graphState;
+
+    std::vector<int> ids;
+    std::set<int>    gathered;
+
+    for (const int nodeId : selectedNodeIds()) {
+        if (gathered.insert(nodeId).second) {
+            ids.push_back(nodeId);
+        }
+
+        const juce::ValueTree encapsulatedIds =
+            state.getNode(nodeId).getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+
+        for (int i = 0; i < encapsulatedIds.getNumChildren(); ++i) {
+            const int memberNodeId = encapsulatedIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+
+            if (gathered.insert(memberNodeId).second) {
+                ids.push_back(memberNodeId);
+            }
+        }
+    }
+
+    return ids;
+}
+
+std::vector<juce::ValueTree> SelectionOps::encapsulatorsCovering(const std::vector<int>& nodeIds) const
+{
+    GraphState& state = *applicationContext.graphState;
+
+    const std::set<int> covered { nodeIds.begin(), nodeIds.end() };
+
+    std::set<int>                visitedEncapsulatorIds;
+    std::vector<juce::ValueTree> encapsulators;
+
+    for (const int nodeId : nodeIds) {
+        const juce::ValueTree node = state.getNode(nodeId);
+
+        int encapsulatorId = node.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+        if (node.getType() == ValueTreeIdentifiers::EncapsulatorData) {
+            encapsulatorId = nodeId;
+        }
+
+        if (encapsulatorId < 0 || ! visitedEncapsulatorIds.insert(encapsulatorId).second) {
+            continue;
+        }
+
+        const juce::ValueTree encapsulator = state.getNode(encapsulatorId);
+
+        const juce::ValueTree encapsulatedIds =
+            encapsulator.getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+
+        bool coversAllMembers = encapsulatedIds.getNumChildren() > 0;
+
+        for (int i = 0; i < encapsulatedIds.getNumChildren(); ++i) {
+            if (covered.count((int) encapsulatedIds.getChild(i).getProperty(ValueTreeIdentifiers::Id)) == 0) {
+                coversAllMembers = false;
+            }
+        }
+
+        if (coversAllMembers) {
+            encapsulators.push_back(encapsulator);
+        }
+    }
+
+    return encapsulators;
+}
+
 void SelectionOps::copySelection()
 {
-    const std::vector<int> ids = selectedNodeIds();
+    const std::vector<int> ids = selectionWithEncapsulatedMembers();
     if (ids.empty()) {
         return;
     }
@@ -80,9 +150,18 @@ void SelectionOps::copySelection()
     for (const int nodeId : ids) {
         const juce::ValueTree node = state.getNode(nodeId);
 
-        if (node.isValid()) {
-            copied.addChild(node.createCopy(), -1, nullptr);
+        if (! node.isValid() || node.getType() == ValueTreeIdentifiers::EncapsulatorData) {
+            continue;
         }
+
+        juce::ValueTree copiedNode = node.createCopy();
+        copiedNode.removeProperty(ValueTreeIdentifiers::EncapsulatorId, nullptr);
+
+        copied.addChild(copiedNode, -1, nullptr);
+    }
+
+    for (const juce::ValueTree& encapsulator : encapsulatorsCovering(ids)) {
+        copied.addChild(encapsulator.createCopy(), -1, nullptr);
     }
 
     clipboard = copied;
@@ -110,17 +189,33 @@ void SelectionOps::deleteSelection()
     }
 }
 
+std::vector<juce::ValueTree> SelectionOps::clipboardNodes() const
+{
+    std::vector<juce::ValueTree> nodes;
+
+    for (int i = 0; i < clipboard.getNumChildren(); ++i) {
+        const juce::ValueTree node = clipboard.getChild(i);
+
+        if (node.getType() != ValueTreeIdentifiers::EncapsulatorData) {
+            nodes.push_back(node);
+        }
+    }
+
+    return nodes;
+}
+
 std::map<int,int> SelectionOps::mapClipboardParents() const
 {
+    const std::vector<juce::ValueTree> nodes = clipboardNodes();
+
     std::set<int> clipboardIds;
-    for (int i = 0; i < clipboard.getNumChildren(); ++i) {
-        clipboardIds.insert((int) clipboard.getChild(i).getProperty(ValueTreeIdentifiers::Id));
+    for (const juce::ValueTree& node : nodes) {
+        clipboardIds.insert((int) node.getProperty(ValueTreeIdentifiers::Id));
     }
 
     std::map<int,int> parentOf;
 
-    for (int i = 0; i < clipboard.getNumChildren(); ++i) {
-        const juce::ValueTree parent = clipboard.getChild(i);
+    for (const juce::ValueTree& parent : nodes) {
         const int parentId = parent.getProperty(ValueTreeIdentifiers::Id);
 
         const juce::ValueTree childrenIds = parent.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
@@ -164,13 +259,14 @@ bool SelectionOps::wasChordMember(const juce::ValueTree& source) const
 
 std::set<int> SelectionOps::findDiscardedOrphans(const std::map<int,int>& parentOf) const
 {
+    const std::vector<juce::ValueTree> nodes = clipboardNodes();
+
     std::set<int> discarded;
 
     for (bool foundMore = true; foundMore; ) {
         foundMore = false;
 
-        for (int i = 0; i < clipboard.getNumChildren(); ++i) {
-            const juce::ValueTree node = clipboard.getChild(i);
+        for (const juce::ValueTree& node : nodes) {
             const int nodeId = node.getProperty(ValueTreeIdentifiers::Id);
 
             if (discarded.count(nodeId) > 0 || isRootNodeType(node)) {
@@ -194,8 +290,7 @@ std::set<int> SelectionOps::findOrphansToPromote(const PasteLayout& layout) cons
 {
     std::set<int> promoted;
 
-    for (int i = 0; i < clipboard.getNumChildren(); ++i) {
-        const juce::ValueTree node = clipboard.getChild(i);
+    for (const juce::ValueTree& node : clipboardNodes()) {
         const int nodeId = node.getProperty(ValueTreeIdentifiers::Id);
 
         if (layout.discarded.count(nodeId) > 0 || isRootNodeType(node)) {
@@ -303,9 +398,7 @@ std::vector<juce::ValueTree> SelectionOps::pastedSources(const PasteLayout& layo
 {
     std::vector<juce::ValueTree> sources;
 
-    for (int i = 0; i < clipboard.getNumChildren(); ++i) {
-        const juce::ValueTree node = clipboard.getChild(i);
-
+    for (const juce::ValueTree& node : clipboardNodes()) {
         if (layout.discarded.count((int) node.getProperty(ValueTreeIdentifiers::Id)) == 0) {
             sources.push_back(node);
         }
@@ -548,9 +641,57 @@ void SelectionOps::restoreDanglingArrows(const PasteLayout& layout) const
     }
 }
 
-void SelectionOps::selectPastedNodes(const PasteLayout& layout) const
+std::vector<int> SelectionOps::createPastedEncapsulators(const PasteLayout& layout) const
 {
-    std::vector<int> pastedIds;
+    GraphState& state              = *applicationContext.graphState;
+    juce::UndoManager* undoManager = applicationContext.undoManager;
+
+    std::vector<int> encapsulatorIds;
+
+    for (int i = 0; i < clipboard.getNumChildren(); ++i) {
+        const juce::ValueTree source = clipboard.getChild(i);
+
+        if (source.getType() != ValueTreeIdentifiers::EncapsulatorData) {
+            continue;
+        }
+
+        const juce::ValueTree memberIds = source.getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+
+        std::vector<int> pastedMemberIds;
+
+        for (int member = 0; member < memberIds.getNumChildren(); ++member) {
+            const int  originalMemberId = memberIds.getChild(member).getProperty(ValueTreeIdentifiers::Id);
+            const auto pastedMember     = layout.idMap.find(originalMemberId);
+
+            if (pastedMember != layout.idMap.end()) {
+                pastedMemberIds.push_back(pastedMember->second);
+            }
+        }
+
+        const bool everyMemberPasted = ! pastedMemberIds.empty()
+                                    && (int) pastedMemberIds.size() == memberIds.getNumChildren();
+
+        if (! everyMemberPasted) {
+            continue;
+        }
+
+        juce::ValueTree encapsulator = state.addEncapsulator(pastedMemberIds, undoManager);
+
+        encapsulator.setProperty(ValueTreeIdentifiers::SubLoopCountLimit,
+                                 source.getProperty(ValueTreeIdentifiers::SubLoopCountLimit,
+                                                    GraphState::defaultSubLoopCountLimit),
+                                 undoManager);
+
+        encapsulatorIds.push_back(encapsulator.getProperty(ValueTreeIdentifiers::Id));
+    }
+
+    return encapsulatorIds;
+}
+
+void SelectionOps::selectPastedNodes(const PasteLayout& layout, const std::vector<int>& encapsulatorIds) const
+{
+    std::vector<int> pastedIds = encapsulatorIds;
+
     for (const auto& [originalId, newId] : layout.idMap) {
         pastedIds.push_back(newId);
     }
@@ -570,7 +711,9 @@ void SelectionOps::selectPastedNodes(const PasteLayout& layout) const
         }
 
         for (const int nodeId : pastedIds) {
-            if (Node* const node = canvas->nodeManager.find(nodeId)) {
+            Node* const node = canvas->nodeManager.find(nodeId);
+
+            if (node != nullptr && node->isVisible()) {
                 node->setSelectVisual(true);
             }
         }
@@ -592,5 +735,5 @@ void SelectionOps::pasteAt(juce::Point<int> canvasPoint)
     connectClipboardNodes(layout);
     restoreDanglingArrows(layout);
 
-    selectPastedNodes(layout);
+    selectPastedNodes(layout, createPastedEncapsulators(layout));
 }

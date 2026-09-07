@@ -98,5 +98,6 @@ private:
     };
 
     void applyColourToDescendants(const Node* n, juce::Colour c);
-    void applyColourToDescendants(const Node* n, juce::Colour c, std::unordered_set<int>& visited);
+    void applyColourToDescendants(const Node* n, juce::Colour c, int encapsulatorId,
+                                  std::unordered_set<int>& visited);
 };

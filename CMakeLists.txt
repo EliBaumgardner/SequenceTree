@@ -91,6 +91,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Editors/ValueEditor.cpp
         Source/UI/Editors/ValueFormat.cpp
         Source/UI/Node/Modulator.cpp
+        Source/UI/Node/Encapsulator.cpp
         Source/UI/Node/TraversalFlagNode.cpp
         Source/UI/Theme/CustomLookAndFeel.cpp
         Source/UI/Theme/CustomLookAndFeel_Nodes.cpp
