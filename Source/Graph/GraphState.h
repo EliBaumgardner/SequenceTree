@@ -44,6 +44,15 @@ public:
                                  juce::UndoManager* undoManager);
     NodePosition getNodePosition(int nodeId) const;
 
+    std::vector<int> nodeIdsBetween(int startNodeId, int endNodeId) const;
+
+    juce::ValueTree addEncapsulator     (const std::vector<int>& memberNodeIds, juce::UndoManager* undoManager);
+    void            removeEncapsulator  (int encapsulatorId, juce::UndoManager* undoManager);
+    void            removeEncapsulatedNodes(int encapsulatorId, juce::UndoManager* undoManager);
+    void            encapsulateNodeAfter(int nodeId, int siblingNodeId, juce::UndoManager* undoManager);
+    void            moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY,
+                                                    juce::UndoManager* undoManager);
+
     juce::ValueTree getNode      (int nodeId) const;
     juce::ValueTree getNodeParent(int nodeId) const;
     juce::ValueTree getMidiNotes (int nodeId) const;

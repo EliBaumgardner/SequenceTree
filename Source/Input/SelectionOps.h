@@ -35,7 +35,10 @@ private:
         std::map<int,int> rootIdOf;
     };
 
-    std::vector<int> selectedNodeIds () const;
+    std::vector<int> selectedNodeIds                 () const;
+    std::vector<int> selectionWithEncapsulatedMembers () const;
+
+    std::vector<juce::ValueTree> encapsulatorsCovering (const std::vector<int>& nodeIds) const;
 
     PasteLayout buildPasteLayout () const;
 
@@ -52,7 +55,8 @@ private:
 
     int chooseComponentHead (const PasteLayout& layout, const std::set<int>& component) const;
 
-    std::vector<juce::ValueTree> pastedSources (const PasteLayout& layout) const;
+    std::vector<juce::ValueTree> clipboardNodes () const;
+    std::vector<juce::ValueTree> pastedSources  (const PasteLayout& layout) const;
 
     juce::Point<int> pastedCentre (const PasteLayout& layout) const;
 
@@ -62,7 +66,10 @@ private:
     void insertClipboardNodes  (const PasteLayout& layout, juce::Point<int> offset) const;
     void connectClipboardNodes (const PasteLayout& layout) const;
     void restoreDanglingArrows (const PasteLayout& layout) const;
-    void selectPastedNodes     (const PasteLayout& layout) const;
+
+    std::vector<int> createPastedEncapsulators (const PasteLayout& layout) const;
+
+    void selectPastedNodes (const PasteLayout& layout, const std::vector<int>& encapsulatorIds) const;
 
     ApplicationContext& applicationContext;
 

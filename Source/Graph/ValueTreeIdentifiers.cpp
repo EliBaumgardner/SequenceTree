@@ -5,12 +5,16 @@ const juce::Identifier ValueTreeIdentifiers::NodeMap              {"NodeMap"};
 
 const juce::Identifier ValueTreeIdentifiers::RootNodeData         {"RootNodeData"};
 const juce::Identifier ValueTreeIdentifiers::ModulatorRootData    {"ModulatorRootData"};
+const juce::Identifier ValueTreeIdentifiers::EncapsulatorData     {"EncapsulatorData"};
 const juce::Identifier ValueTreeIdentifiers::NodeData             {"NodeData"};
 const juce::Identifier ValueTreeIdentifiers::AlternativeNodeData  {"AlternativeNodeData"};
 const juce::Identifier ValueTreeIdentifiers::TraversalFlagData    {"TraversalFlagData"};
 const juce::Identifier ValueTreeIdentifiers::ModulatorData        {"ModulatorData"};
 
 const juce::Identifier ValueTreeIdentifiers::NodeChildrenIds      {"NodeChildrenIds"};
+const juce::Identifier ValueTreeIdentifiers::EncapsulatedIds      {"EncapsulatedIds"};
+const juce::Identifier ValueTreeIdentifiers::EncapsulatorId       {"EncapsulatorId"};
+const juce::Identifier ValueTreeIdentifiers::EncapsulatorLabel    {"EncapsulatorLabel"};
 
 const juce::Identifier ValueTreeIdentifiers::SelectionClipboard   {"SelectionClipboard"};
 

@@ -90,7 +90,9 @@ Arrow* CanvasHitTester::danglingHeadNear(juce::Point<float> point, float radius)
 Node* CanvasHitTester::nodeNear(juce::Point<float> point, float radius, int excludeId) const
 {
     return nearest(canvas.nodeManager.all(), nodeOf,
-        [excludeId] (Node* node) { return node->getComponentID().getIntValue() != excludeId; },
+        [excludeId] (Node* node) {
+            return node->getComponentID().getIntValue() != excludeId && node->isVisible();
+        },
         [point] (Node* node) { return point.getDistanceFrom(node->getNodeCentre().toFloat()); },
         radius);
 }
@@ -100,6 +102,8 @@ Node* CanvasHitTester::rootNear(juce::Point<float> point, float radius, int excl
     return nearest(canvas.nodeManager.all(), nodeOf,
         [excludeId] (Node* node) {
             return node->getComponentID().getIntValue() != excludeId
+                && node->isVisible()
+                && node->nodeType != NodeType::Encapsulator
                 && node->nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData;
         },
         [point] (Node* node) { return point.getDistanceFrom(node->getNodeCentre().toFloat()); },

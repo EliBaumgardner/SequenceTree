@@ -13,6 +13,7 @@
 #include "../UI/Node/Arrow.h"
 #include "NodeController.h"
 #include "../UI/Node/Modulator.h"
+#include "../UI/Node/Encapsulator.h"
 #include "../UI/Node/NodeFactory.h"
 #include "../UI/Canvas/DynamicPort.h"
 #include "../Graph/ValueTreeIdentifiers.h"
@@ -489,7 +490,7 @@ void NodeController::finishBoxSelection()
     const juce::Rectangle<int> selection = canvas.selectionBounds;
 
     for (auto& [nodeId, node] : canvas.nodeManager.all()) {
-        if (selection.contains(node->getNodeCentre())) {
+        if (node->isVisible() && selection.contains(node->getNodeCentre())) {
             node->setSelectVisual(true);
         }
     }
@@ -515,6 +516,10 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
             draggingValueNode = &node;
             return;
         }
+    }
+
+    if (e.mods.isRightButtonDown() && ! e.mods.isShiftDown() && toggleEncapsulationExpansion(node)) {
+        return;
     }
 
     const bool isShiftLeftDrag = e.mods.isLeftButtonDown() && e.mods.isShiftDown();
@@ -550,6 +555,82 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
     }
 }
 
+bool NodeController::toggleEncapsulationExpansion(Node& node)
+{
+    const int nodeId = node.getComponentID().getIntValue();
+
+    if (node.nodeType == NodeType::Encapsulator) {
+        canvas.nodeManager.expandEncapsulation(nodeId);
+        return true;
+    }
+
+    const int owningEncapsulatorId = node.nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(canvas.nodeManager.find(owningEncapsulatorId));
+
+    if (owningEncapsulator == nullptr || ! owningEncapsulator->isExpanded || owningEncapsulator->memberNodeIds.empty()) {
+        return false;
+    }
+
+    const bool isSpanBoundary = nodeId == owningEncapsulator->memberNodeIds.front()
+                             || nodeId == owningEncapsulator->memberNodeIds.back();
+
+    if (! isSpanBoundary) {
+        return false;
+    }
+
+    canvas.nodeManager.collapseEncapsulation(owningEncapsulatorId);
+    return true;
+}
+
+void NodeController::selectSpanNode(Node& node)
+{
+    GraphState& graphState = *applicationContext.graphState;
+    juce::UndoManager* const undoManager = applicationContext.undoManager;
+
+    const int nodeId = node.getComponentID().getIntValue();
+
+    if (node.nodeType == NodeType::Encapsulator) {
+        canvas.nodeManager.clearOutlines();
+        canvas.spanAnchorNodeId = -1;
+
+        undoManager->beginNewTransaction();
+        graphState.removeEncapsulator(nodeId, undoManager);
+        return;
+    }
+
+    if (node.nodeType != NodeType::Node && node.nodeType != NodeType::Root) {
+        return;
+    }
+
+    const int nodeRootId = node.nodeValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
+    const int anchorRootId = graphState.getNode(canvas.spanAnchorNodeId)
+                                       .getProperty(ValueTreeIdentifiers::RootNodeId);
+
+    if (canvas.spanAnchorNodeId < 0 || anchorRootId != nodeRootId) {
+        canvas.nodeManager.clearOutlines();
+
+        canvas.spanAnchorNodeId = nodeId;
+
+        node.isOutlined = true;
+        node.repaint();
+        return;
+    }
+
+    const std::vector<int> spanNodeIds = graphState.nodeIdsBetween(canvas.spanAnchorNodeId, nodeId);
+
+    canvas.spanAnchorNodeId = -1;
+
+    if (spanNodeIds.empty()) {
+        return;
+    }
+
+    canvas.nodeManager.clearOutlines();
+
+    undoManager->beginNewTransaction();
+    graphState.addEncapsulator(spanNodeIds, undoManager);
+}
+
 void NodeController::mouseDown(const juce::MouseEvent& e)
 {
     dragState             = DragState::Idle;
@@ -564,6 +645,13 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
         return;
     }
 
+    if (canvas.spanMode) {
+        if (Node* spanNode = dynamic_cast<Node*>(e.eventComponent)) {
+            selectSpanNode(*spanNode);
+        }
+        return;
+    }
+
     if (dynamic_cast<NodeCanvas*>(e.eventComponent) != nullptr) {
         handleCanvasMouseDown(e);
     }
@@ -574,7 +662,11 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
 void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree)
 {
-    juce::Point<int> snapped = canvas.snapPointToGrid({ newPosition.xPosition, newPosition.yPosition });
+    const int draggedNodeId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
+    const juce::Point<int> collapseShift = canvas.nodeManager.collapsedSpanShift(draggedNodeId);
+
+    juce::Point<int> snapped = canvas.snapPointToGrid({ newPosition.xPosition - collapseShift.x,
+                                                        newPosition.yPosition - collapseShift.y });
     newPosition.xPosition = snapped.x;
     newPosition.yPosition = snapped.y;
 
@@ -693,8 +785,10 @@ void NodeController::handleNodeMouseDrag(const juce::MouseEvent& e, Node& node)
     }
 
     if (draggedNodeTree.isValid()) {
+        const juce::Point<int> cursor { newPosition.xPosition, newPosition.yPosition };
+
         snapToGrid(undoManager, newPosition, draggedNodeTree);
-        checkRootNodeSnap(newPosition);
+        checkRootNodeSnap(cursor);
     }
 }
 
@@ -705,6 +799,10 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
             auto canvasEvent = e.getEventRelativeTo(&canvas);
             canvas.valueField.paintStroke(canvasEvent.position, false);
         }
+        return;
+    }
+
+    if (canvas.spanMode) {
         return;
     }
 
@@ -730,20 +828,60 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
 
 void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *node, int nodeId, NodePosition newPosition, const juce::ModifierKeys& mods)
 {
-    juce::Identifier nodeType = node->nodeValueTree.getType();
+    GraphState& graphState = *applicationContext.graphState;
+
+    int parentNodeId = nodeId;
+
+    auto* const collapsedEncapsulator = dynamic_cast<Encapsulator*>(node);
+
+    if (collapsedEncapsulator != nullptr && ! collapsedEncapsulator->memberNodeIds.empty()) {
+        parentNodeId = collapsedEncapsulator->memberNodeIds.back();
+    }
+
+    Node* const parentNode = canvas.nodeManager.find(parentNodeId);
+
+    if (parentNode == nullptr) {
+        return;
+    }
+
+    const juce::Identifier nodeType = parentNode->nodeValueTree.getType();
 
     undoManager->beginNewTransaction();
 
     canvas.showGrid();
 
-    snapSourceNodeId = nodeId;
+    snapSourceNodeId = parentNodeId;
 
-    draggedNodeTree = NodeCreationDispatcher::create(nodeControllerMode,*applicationContext.graphState,
-                                                     nodeId,nodeType,mods.isCtrlDown(),newPosition,undoManager);
+    const NodePosition     parentPosition = graphState.getNodePosition(parentNodeId);
+    const juce::Point<int> parentCentre   = parentNode->getNodeCentre();
 
-    if (draggedNodeTree.isValid()) {
-        connectionOps.applySelectedArrowInfo(nodeId, draggedNodeTree.getProperty(ValueTreeIdentifiers::Id));
+    newPosition.xPosition += parentPosition.xPosition - parentCentre.x;
+    newPosition.yPosition += parentPosition.yPosition - parentCentre.y;
+
+    draggedNodeTree = NodeCreationDispatcher::create(nodeControllerMode,graphState,
+                                                     parentNodeId,nodeType,mods.isCtrlDown(),newPosition,undoManager);
+
+    if (! draggedNodeTree.isValid()) {
+        return;
     }
+
+    connectionOps.applySelectedArrowInfo(parentNodeId, draggedNodeTree.getProperty(ValueTreeIdentifiers::Id));
+
+    const int owningEncapsulatorId = parentNode->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(canvas.nodeManager.find(owningEncapsulatorId));
+
+    if (owningEncapsulator == nullptr || ! owningEncapsulator->isExpanded
+        || owningEncapsulator->memberNodeIds.empty()) {
+        return;
+    }
+
+    if (parentNodeId == owningEncapsulator->memberNodeIds.back()) {
+        return;
+    }
+
+    graphState.encapsulateNodeAfter(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id),
+                                    parentNodeId, undoManager);
 }
 
 void NodeController::updateConnectionPreview(Node *node, const NodePosition& newPosition, bool dashed)
@@ -790,15 +928,13 @@ void NodeController::handleNodeDrag(juce::UndoManager *undoManager, int nodeId, 
     canvas.nodeManager.moveDescendants(nodeValueTree, deltaX, deltaY);
 }
 
-void NodeController::checkRootNodeSnap(const NodePosition& pos)
+void NodeController::checkRootNodeSnap(juce::Point<int> canvasPoint)
 {
     if (snapSourceNodeId < 0 || !draggedNodeTree.isValid()) {
         return;
     }
 
-    juce::Point<int> dragPoint(pos.xPosition, pos.yPosition);
-
-    Node* nearestRoot = canvas.hitTester.rootNear(dragPoint.toFloat(), rootSnapThreshold, snapSourceNodeId);
+    Node* nearestRoot = canvas.hitTester.rootNear(canvasPoint.toFloat(), rootSnapThreshold, snapSourceNodeId);
 
     if (nearestRoot != nullptr) {
         if (snapTargetRoot != nearestRoot) {

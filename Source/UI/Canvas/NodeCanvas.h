@@ -54,6 +54,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         void handleAsyncUpdate() override;
 
         void setPaintMode(bool enabled);
+        void setSpanMode (bool enabled);
 
         void showGrid();
         void hideGrid();
@@ -66,6 +67,11 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         bool start     = false;
         bool paintMode = false;
+        bool spanMode  = false;
+
+        int  spanAnchorNodeId = -1;
+
+        static constexpr int spanCursorSize = 16;
 
         bool gridVisible = false;
         bool gridOriginSet = false;

@@ -155,6 +155,39 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
     }
 }
 
+void RTGraphBuilder::fillEncapsulation(const juce::ValueTree& nodeValueTree, RTNode& rtNode)
+{
+    const int encapsulatorId = nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    const juce::ValueTree encapsulator = graphState.getNode(encapsulatorId);
+
+    if (! encapsulator.isValid()) {
+        return;
+    }
+
+    const juce::ValueTree encapsulatedIds = encapsulator.getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+
+    if (encapsulatedIds.getNumChildren() == 0) {
+        return;
+    }
+
+    rtNode.encapsulationEntryId = encapsulatedIds.getChild(0).getProperty(ValueTreeIdentifiers::Id);
+
+    if (rtNode.encapsulationEntryId != rtNode.nodeID) {
+        return;
+    }
+
+    const int encapsulationSubLoopLimit = encapsulator.getProperty(ValueTreeIdentifiers::SubLoopCountLimit,
+                                                                   GraphState::defaultSubLoopCountLimit);
+
+    const bool encapsulationSubLoopsForever  = (encapsulationSubLoopLimit == 0);
+    const bool encapsulationSubLoopsFinitely = (encapsulationSubLoopLimit > 1);
+
+    if (encapsulationSubLoopsForever || encapsulationSubLoopsFinitely) {
+        rtNode.subLoopCountLimit = encapsulationSubLoopLimit;
+    }
+}
+
 void RTGraphBuilder::makeRTGraph(const juce::ValueTree& nodeValueTree)
 {
     if (!nodeValueTree.isValid()) {
@@ -305,7 +338,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
             }
 
             fillDurationMap(currentValueTree, rtNode);
-
+            fillEncapsulation(currentValueTree, rtNode);
 
             rtNode.nodeType = rtNodeTypeFor(nodeType);
 

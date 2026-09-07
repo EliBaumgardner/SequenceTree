@@ -59,6 +59,8 @@ struct RTNode {
     int switchCountLimit  = 0;
     int subLoopCountLimit = 0;
 
+    int encapsulationEntryId = -1;
+
     int graphLoopLimit = 0;
 
     int pitchOffset = 0;

@@ -121,6 +121,20 @@ public:
 };
 
 
+class GreekLetterFormat : public ValueFormat {
+public:
+
+    static const int letterCount;
+
+    GreekLetterFormat();
+
+    InputRestrictions restrictions() const override;
+    juce::String      displayText(const ValueBinding& binding) const override;
+    juce::String      editText   (const ValueBinding& binding) const override;
+    void              commit(const juce::String& text, ValueBinding binding) const override;
+};
+
+
 class TextFormat : public ValueFormat {
 public:
 

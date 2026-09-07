@@ -47,4 +47,5 @@ private:
 
     std::unique_ptr<IconButton> paintTool;
     std::unique_ptr<IconButton> arrowButton;
+    std::unique_ptr<IconButton> spanTool;
 };

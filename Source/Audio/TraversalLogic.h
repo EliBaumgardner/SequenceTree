@@ -156,6 +156,8 @@ private:
     void       handleLoopReset(const NodeMap& nodes, StepResult& result);
     void       handleTreeJump(const NodeMap& nodes, StepResult& result);
     void       advanceSubRoot(const NodeMap& nodes, StepResult& result);
+    void       armSubLoop(const RTNode& enteredNode);
+    int        encapsulationLoopTarget(const NodeMap& nodes, int leavingNodeId, int chosenNodeId);
     void       fillEndedResult(StepResult& result) const;
 
     int referenceTargetId   = 0;

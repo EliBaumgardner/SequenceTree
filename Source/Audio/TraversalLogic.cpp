@@ -296,6 +296,12 @@ void TraversalLogic::advance(const NodeMap& nodes)
         chosenNodeId = selectNextChild(nodes,targetId, count, &isAdvanceableChild);
 
         if (chosenNodeId != -1) {
+            const int encapsulationEntryId = encapsulationLoopTarget(nodes, targetId, chosenNodeId);
+
+            if (encapsulationEntryId != -1) {
+                chosenNodeId = encapsulationEntryId;
+            }
+
             registerTrigger(nodes, chosenNodeId);
         }
     }
@@ -312,14 +318,7 @@ void TraversalLogic::advance(const NodeMap& nodes)
             primary.target = chosenNodeId;
             advanceAlternative(nodes,chosenNodeId);
 
-            const int nextSubLoopCountLimit = nextTargetIt->second->subLoopCountLimit;
-            const bool subLoopsForever      = (nextSubLoopCountLimit == 0);
-            const bool subLoopsFinitely     = (nextSubLoopCountLimit > 1);
-
-            if ((subLoopsForever || subLoopsFinitely) && primary.subRootNode == -1) {
-                primary.subRootNode = nextTargetIt->second->nodeID;
-                nodeState.set(NodeStateSlot::SubRootCount, primary.subRootNode, 0);
-            }
+            armSubLoop(*nextTargetIt->second);
         }
     }
 
@@ -481,6 +480,12 @@ TraversalLogic::StepResult TraversalLogic::enterRoot(const NodeMap& nodes)
     primary.target = rootId;
     advanceAlternative(nodes, rootId);
 
+    const auto rootIt = nodes.find(rootId);
+
+    if (rootIt != nodes.end() && rootIt->second->encapsulationEntryId == rootId) {
+        armSubLoop(*rootIt->second);
+    }
+
     StepResult result;
     result.kind                 = StepResult::Kind::EnteredRoot;
     result.enteredId            = primary.target;
@@ -488,10 +493,70 @@ TraversalLogic::StepResult TraversalLogic::enterRoot(const NodeMap& nodes)
     return result;
 }
 
+void TraversalLogic::armSubLoop(const RTNode& enteredNode)
+{
+    if (primary.subRootNode != -1) {
+        return;
+    }
+
+    const bool subLoopsForever  = (enteredNode.subLoopCountLimit == 0);
+    const bool subLoopsFinitely = (enteredNode.subLoopCountLimit > 1);
+
+    if (! subLoopsForever && ! subLoopsFinitely) {
+        return;
+    }
+
+    primary.subRootNode = enteredNode.nodeID;
+    nodeState.set(NodeStateSlot::SubRootCount, primary.subRootNode, 0);
+}
+
+int TraversalLogic::encapsulationLoopTarget(const NodeMap& nodes, int leavingNodeId, int chosenNodeId)
+{
+    const auto leavingIt = nodes.find(leavingNodeId);
+
+    if (leavingIt == nodes.end()) {
+        return -1;
+    }
+
+    const int entryId = leavingIt->second->encapsulationEntryId;
+
+    if (entryId == -1 || primary.subRootNode != entryId) {
+        return -1;
+    }
+
+    const auto chosenIt = nodes.find(chosenNodeId);
+
+    if (chosenIt != nodes.end() && chosenIt->second->encapsulationEntryId == entryId) {
+        return -1;
+    }
+
+    const auto entryIt = nodes.find(entryId);
+
+    if (entryIt == nodes.end()) {
+        return -1;
+    }
+
+    const int subLoopLimit = entryIt->second->subLoopCountLimit;
+    const int subLoopCount = nodeState.increment(NodeStateSlot::SubRootCount, entryId);
+
+    if (subLoopLimit > 0 && subLoopCount >= subLoopLimit) {
+        nodeState.set(NodeStateSlot::SubRootCount, entryId, 0);
+        primary.subRootNode = -1;
+        return -1;
+    }
+
+    return entryId;
+}
+
 void TraversalLogic::advanceSubRoot(const NodeMap& nodes, StepResult& result)
 {
-    const auto subRootIt   = nodes.find(primary.subRootNode);
-    const int  subRootLimit = (subRootIt != nodes.end()) ? subRootIt->second->subLoopCountLimit : 0;
+    const auto subRootIt = nodes.find(primary.subRootNode);
+
+    int subRootLimit = 0;
+
+    if (subRootIt != nodes.end()) {
+        subRootLimit = subRootIt->second->subLoopCountLimit;
+    }
 
     const int  subRootCount        = nodeState.increment(NodeStateSlot::SubRootCount, primary.subRootNode);
     const bool subRootLoopsForever = (subRootLimit == 0);
@@ -536,6 +601,12 @@ void TraversalLogic::handleLoopReset(const NodeMap& nodes, StepResult& result)
     }
     else {
         result.clearTrail = true;
+    }
+
+    const auto enteredIt = nodes.find(primary.target);
+
+    if (enteredIt != nodes.end() && enteredIt->second->encapsulationEntryId == primary.target) {
+        armSubLoop(*enteredIt->second);
     }
 
     state = TraversalState::Active;

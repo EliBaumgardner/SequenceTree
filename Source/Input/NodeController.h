@@ -58,7 +58,7 @@ public:
 
     void updateConnectionPreview (Node *node, const NodePosition& newPosition, bool dashed);
 
-    void checkRootNodeSnap   (const NodePosition& pos);
+    void checkRootNodeSnap   (juce::Point<int> canvasPoint);
 
     void  commitFlagConnection (int sourceNodeId, Node* target);
 
@@ -92,6 +92,10 @@ private:
 
     void handleCanvasMouseDown (const juce::MouseEvent& e);
     void handleNodeMouseDown   (const juce::MouseEvent& e, Node& node);
+
+    void selectSpanNode        (Node& node);
+
+    bool toggleEncapsulationExpansion (Node& node);
 
     void handleCanvasMouseDrag (const juce::MouseEvent& e);
     void handleNodeMouseDrag   (const juce::MouseEvent& e, Node& node);

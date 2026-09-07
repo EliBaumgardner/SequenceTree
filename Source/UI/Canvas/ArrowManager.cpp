@@ -282,6 +282,23 @@ void ArrowManager::refreshFor(const Node* movedNode) const
     }
 }
 
+void ArrowManager::refreshEncapsulatedArrows() const
+{
+    for (Arrow* const arrow : arrows) {
+        if (arrow->startNode == nullptr) {
+            continue;
+        }
+
+        bool endEncapsulated = arrow->startNode->isEncapsulated;
+
+        if (arrow->endNode != nullptr) {
+            endEncapsulated = arrow->endNode->isEncapsulated;
+        }
+
+        arrow->setVisible(! (arrow->startNode->isEncapsulated && endEncapsulated));
+    }
+}
+
 void ArrowManager::handleArrowAdded(int parentNodeId, int childNodeId)
 {
     Node* parentNode = canvas.nodeManager.find(parentNodeId);

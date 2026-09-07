@@ -319,6 +319,31 @@ void CustomLookAndFeel::drawArrowToolIcon(juce::Graphics &g, juce::Rectangle<flo
     fillArrowGlyph(g, glyphArea, 0.16f, 0.32f, 0.5f);
 }
 
+void CustomLookAndFeel::drawSpanToolIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
+{
+    auto area = bounds.reduced(outerButtonBoundsReduction);
+
+    if (state.isSelected) {
+        g.setColour(buttonColour.brighter(0.3f));
+    }
+    else {
+        g.setColour(buttonColour);
+    }
+
+    g.fillRect(area);
+
+    auto glyphArea = area.reduced(area.getWidth() * 0.22f, area.getHeight() * 0.3f);
+
+    g.setColour(juce::Colours::black);
+    g.drawRect(glyphArea, 1.0f);
+
+    const float endpointDiameter = glyphArea.getHeight() * 0.44f;
+    const auto  endpointBounds   = juce::Rectangle<float>(endpointDiameter, endpointDiameter);
+
+    g.fillEllipse(endpointBounds.withCentre({ glyphArea.getX(),     glyphArea.getCentreY() }));
+    g.fillEllipse(endpointBounds.withCentre({ glyphArea.getRight(), glyphArea.getCentreY() }));
+}
+
 void CustomLookAndFeel::drawNodeArrowIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
 {
     const auto glyphArea = fillArrowIconTile(g, bounds.reduced(outerButtonBoundsReduction), state,
