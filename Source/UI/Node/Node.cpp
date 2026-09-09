@@ -138,7 +138,7 @@ void Node::setSelectVisual() {
     repaint();
 }
 
-void Node::setHighlightVisual(int traversalId, bool shouldHighlight, juce::Colour colour)
+void Node::setHighlightVisual(int runId, bool shouldHighlight, juce::Colour colour)
 {
     if (shouldHighlight) {
         for (int pendingId : pendingHighlightOffIds) {
@@ -146,11 +146,11 @@ void Node::setHighlightVisual(int traversalId, bool shouldHighlight, juce::Colou
         }
         pendingHighlightOffIds.clear();
 
-        activeHighlights[traversalId] = colour;
+        activeHighlights[runId] = colour;
         pulsePhase = 0.0f;
         startTimerHz(60);
     }
-    else if (traversalId == -1) {
+    else if (runId == -1) {
         if (isTimerRunning()) {
             for (const auto& entry : activeHighlights) {
                 pendingHighlightOffIds.insert(entry.first);
@@ -161,10 +161,10 @@ void Node::setHighlightVisual(int traversalId, bool shouldHighlight, juce::Colou
         }
     }
     else if (isTimerRunning()) {
-        pendingHighlightOffIds.insert(traversalId);
+        pendingHighlightOffIds.insert(runId);
     }
     else {
-        activeHighlights.erase(traversalId);
+        activeHighlights.erase(runId);
     }
 
     isHighlighted = ! activeHighlights.empty();
@@ -189,23 +189,36 @@ void Node::timerCallback()
     repaint();
 }
 
-void Node::setDisplayMode(NodeDisplayMode mode)
+void Node::bindToTree()
 {
-    this->mode = mode;
-
-    if (nodeValueTree.isValid()) {
-        countEditor       .bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
-        switchCountEditor .bindEditor(nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
-
-        juce::Identifier subLoopProperty = ValueTreeIdentifiers::SubLoopCountLimit;
-
-        if (nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
-            subLoopProperty = ValueTreeIdentifiers::LoopLimit;
-        }
-
-        subLoopLimitEditor.bindEditor(nodeValueTree, subLoopProperty);
+    if (! nodeValueTree.isValid()) {
+        return;
     }
 
+    countEditor       .bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
+    switchCountEditor .bindEditor(nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
+
+    juce::Identifier subLoopProperty = ValueTreeIdentifiers::SubLoopCountLimit;
+
+    if (nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
+        subLoopProperty = ValueTreeIdentifiers::LoopLimit;
+    }
+
+    subLoopLimitEditor.bindEditor(nodeValueTree, subLoopProperty);
+}
+
+void Node::setDisplayMode(NodeDisplayMode newMode)
+{
+    mode = newMode;
+
+    bindValueEditorForMode();
+
+    nodeValueEditor.repaint();
+    repaint();
+}
+
+void Node::bindValueEditorForMode()
+{
     if (mode == NodeDisplayMode::CountLimit) {
         nodeValueEditor.enableDualValue(ValueTreeIdentifiers::TriggerLimit);
     }
@@ -260,9 +273,6 @@ void Node::setDisplayMode(NodeDisplayMode mode)
     }
 
     nodeValueEditor.setMinimumValue(minimumValue);
-
-    nodeValueEditor.repaint();
-    repaint();
 }
 
 void Node::incrementNodeValue(int incrementValue) {

@@ -39,10 +39,10 @@ void AudioCommandDrainer::drainAll() const
     drainCounts();
 }
 
-juce::Colour AudioCommandDrainer::getTraversalColour(int traversalId) const
+juce::Colour AudioCommandDrainer::getTraversalColour(int typeId) const
 {
     const juce::ValueTree traversalData = applicationContext.graphState->traversalMap
-        .getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+        .getChildWithProperty(ValueTreeIdentifiers::TraversalId, typeId);
 
     if (!traversalData.isValid()) {
         return juce::Colours::white;
@@ -75,13 +75,13 @@ void AudioCommandDrainer::drainHighlights() const
         juce::Colour highlightColour = juce::Colours::white;
 
         if (command.shouldHighlight) {
-            highlightColour = getTraversalColour(command.traversalId);
+            highlightColour = getTraversalColour(command.typeId);
         }
 
-        node->setHighlightVisual(command.traversalId, command.shouldHighlight, highlightColour);
+        node->setHighlightVisual(command.runId, command.shouldHighlight, highlightColour);
     });
 
-    canvas.nodeManager.syncEncapsulationHighlights();
+    canvas.encapsulationView.syncHighlights();
 }
 
 void AudioCommandDrainer::drainProgress() const
@@ -94,7 +94,7 @@ void AudioCommandDrainer::drainProgress() const
             return;
         }
 
-        const juce::Colour progressColour = getTraversalColour(command.traversalId);
+        const juce::Colour progressColour = getTraversalColour(command.typeId);
 
         const auto range = parentNode->nodeArrows.equal_range(command.childNodeId);
 

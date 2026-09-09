@@ -49,10 +49,11 @@ void TraversalLogic::reset(int root, const RTtraversal& newTraversal)
     loop = {};
 
     selectionRandom = (static_cast<unsigned int>(root) * 2654435761u
-                       ^ static_cast<unsigned int>(newTraversal.traversalId) * 40503u
+                       ^ static_cast<unsigned int>(newTraversal.key.typeId) * 40503u
+                       ^ static_cast<unsigned int>(newTraversal.key.instance) * 2246822519u
                        ^ 2463534242u) | 1u;
 
-    instanceId          = 0;
+    runId               = 0;
     rootId              = root;
     referenceTargetId   = 0;
     pendingJumpTargetId = -1;
@@ -69,7 +70,7 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
     }
 
     const RuleContext context { nodes, *parentIt->second, parentCount,
-                                traversal.traversalId, isEligible, nodeState,
+                                traversal.key, isEligible, nodeState,
                                 static_cast<int>(selectionRandom >> 1) };
 
     const int chosen = rule->selectChild(context);
@@ -81,7 +82,7 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
 int TraversalLogic::selectTreeJumpChild(const NodeMap& nodes, const RTNode& parent, int parentCount) const
 {
     const RuleContext context { nodes, parent, parentCount,
-                                traversal.traversalId, &isTreeJumpChild, nodeState,
+                                traversal.key, &isTreeJumpChild, nodeState,
                                 static_cast<int>(selectionRandom >> 1), true };
 
     int chosen   = -1;
@@ -136,18 +137,25 @@ bool TraversalLogic::ModulatorWalk::advance(const NodeMap& nodes, TraversalLogic
     }
 
     walker.last = walker.target;
-    const int count   = owner.nodeState.increment(NodeStateSlot::ModulatorCount, walker.target);
 
-    const int chosen = owner.selectNextChild(nodes, walker.target, count, &isModulatorChild);
+    int chosen = -1;
+
+    owner.selectSwitchNode(nodes, walker.target, chosen);
+
+    if (chosen == -1) {
+        const int count = owner.nodeState.increment(NodeStateSlot::ModulatorCount, walker.target);
+
+        chosen = owner.selectNextChild(nodes, walker.target, count, &isModulatorChild);
+    }
 
     if (chosen == -1) {
         bool hasModulatorChild = false;
         for (const RTConnection& connection : targetIt->second->connections) {
             const int childId = connection.childId;
 
-            const std::vector<int>& disabled = connection.disabledTraversals;
+            const std::vector<TraversalKey>& disabled = connection.disabledTraversals;
             const bool disabledForTraversal = std::find(disabled.begin(), disabled.end(),
-                                                        owner.traversal.traversalId) != disabled.end();
+                                                        owner.traversal.key) != disabled.end();
 
             const auto childIt = nodes.find(childId);
             if (childIt != nodes.end()
@@ -164,11 +172,24 @@ bool TraversalLogic::ModulatorWalk::advance(const NodeMap& nodes, TraversalLogic
             return false;
         }
 
+        if (walker.subRootNode != -1 && owner.advanceSubRoot(nodes, walker)) {
+            return true;
+        }
+
         walker.target = gate.activeRootId;
         return true;
     }
 
+    owner.nodeState.set(NodeStateSlot::LastNode, chosen, chosen);
+
     walker.target = chosen;
+
+    const auto chosenIt = nodes.find(chosen);
+
+    if (chosenIt != nodes.end()) {
+        owner.armSubLoop(walker, *chosenIt->second);
+    }
+
     return false;
 }
 
@@ -318,7 +339,7 @@ void TraversalLogic::advance(const NodeMap& nodes)
             primary.target = chosenNodeId;
             advanceAlternative(nodes,chosenNodeId);
 
-            armSubLoop(*nextTargetIt->second);
+            armSubLoop(primary, *nextTargetIt->second);
         }
     }
 
@@ -379,8 +400,8 @@ void TraversalLogic::peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& t
                 continue;
             }
 
-            const std::vector<int>& disabled = connection.disabledTraversals;
-            if (std::find(disabled.begin(), disabled.end(), traversal.traversalId) != disabled.end()) {
+            const std::vector<TraversalKey>& disabled = connection.disabledTraversals;
+            if (std::find(disabled.begin(), disabled.end(), traversal.key) != disabled.end()) {
                 continue;
             }
 
@@ -483,7 +504,7 @@ TraversalLogic::StepResult TraversalLogic::enterRoot(const NodeMap& nodes)
     const auto rootIt = nodes.find(rootId);
 
     if (rootIt != nodes.end() && rootIt->second->encapsulationEntryId == rootId) {
-        armSubLoop(*rootIt->second);
+        armSubLoop(primary, *rootIt->second);
     }
 
     StepResult result;
@@ -493,21 +514,20 @@ TraversalLogic::StepResult TraversalLogic::enterRoot(const NodeMap& nodes)
     return result;
 }
 
-void TraversalLogic::armSubLoop(const RTNode& enteredNode)
+void TraversalLogic::armSubLoop(Walker& walker, const RTNode& enteredNode)
 {
-    if (primary.subRootNode != -1) {
+    if (walker.subRootNode != -1) {
         return;
     }
 
-    const bool subLoopsForever  = (enteredNode.subLoopCountLimit == 0);
-    const bool subLoopsFinitely = (enteredNode.subLoopCountLimit > 1);
+    const bool nodeSubLoops = (enteredNode.subLoopCountLimit != 1);
 
-    if (! subLoopsForever && ! subLoopsFinitely) {
+    if (! nodeSubLoops) {
         return;
     }
 
-    primary.subRootNode = enteredNode.nodeID;
-    nodeState.set(NodeStateSlot::SubRootCount, primary.subRootNode, 0);
+    walker.subRootNode = enteredNode.nodeID;
+    nodeState.set(NodeStateSlot::SubRootCount, walker.subRootNode, 0);
 }
 
 int TraversalLogic::encapsulationLoopTarget(const NodeMap& nodes, int leavingNodeId, int chosenNodeId)
@@ -548,9 +568,9 @@ int TraversalLogic::encapsulationLoopTarget(const NodeMap& nodes, int leavingNod
     return entryId;
 }
 
-void TraversalLogic::advanceSubRoot(const NodeMap& nodes, StepResult& result)
+bool TraversalLogic::advanceSubRoot(const NodeMap& nodes, Walker& walker)
 {
-    const auto subRootIt = nodes.find(primary.subRootNode);
+    const auto subRootIt = nodes.find(walker.subRootNode);
 
     int subRootLimit = 0;
 
@@ -558,19 +578,17 @@ void TraversalLogic::advanceSubRoot(const NodeMap& nodes, StepResult& result)
         subRootLimit = subRootIt->second->subLoopCountLimit;
     }
 
-    const int  subRootCount        = nodeState.increment(NodeStateSlot::SubRootCount, primary.subRootNode);
+    const int  subRootCount        = nodeState.increment(NodeStateSlot::SubRootCount, walker.subRootNode);
     const bool subRootLoopsForever = (subRootLimit == 0);
 
     if (!subRootLoopsForever && subRootCount >= subRootLimit) {
-        nodeState.set(NodeStateSlot::SubRootCount, primary.subRootNode, 0);
-        primary.subRootNode = -1;
-        result.clearTrail   = true;
+        nodeState.set(NodeStateSlot::SubRootCount, walker.subRootNode, 0);
+        walker.subRootNode = -1;
+        return false;
     }
-    else {
-        result.clearTrail = true;
-        primary.target    = primary.subRootNode;
-        result.enteredId  = primary.subRootNode;
-    }
+
+    walker.target = walker.subRootNode;
+    return true;
 }
 
 void TraversalLogic::handleLoopReset(const NodeMap& nodes, StepResult& result)
@@ -596,17 +614,16 @@ void TraversalLogic::handleLoopReset(const NodeMap& nodes, StepResult& result)
     result.enteredId            = rootId;
     result.enteredAlternativeId = primary.alternativeTarget;
 
-    if (primary.subRootNode != -1) {
-        advanceSubRoot(nodes, result);
-    }
-    else {
-        result.clearTrail = true;
+    result.clearTrail = true;
+
+    if (primary.subRootNode != -1 && advanceSubRoot(nodes, primary)) {
+        result.enteredId = primary.target;
     }
 
     const auto enteredIt = nodes.find(primary.target);
 
     if (enteredIt != nodes.end() && enteredIt->second->encapsulationEntryId == primary.target) {
-        armSubLoop(*enteredIt->second);
+        armSubLoop(primary, *enteredIt->second);
     }
 
     state = TraversalState::Active;
@@ -733,8 +750,8 @@ const RTNode* TraversalLogic::getModulatorNode(const NodeMap& nodes, int nodeId)
             continue;
         }
 
-        const std::vector<int>& disabled = connection.disabledTraversals;
-        if (std::find(disabled.begin(), disabled.end(), traversal.traversalId) != disabled.end()) {
+        const std::vector<TraversalKey>& disabled = connection.disabledTraversals;
+        if (std::find(disabled.begin(), disabled.end(), traversal.key) != disabled.end()) {
             continue;
         }
 

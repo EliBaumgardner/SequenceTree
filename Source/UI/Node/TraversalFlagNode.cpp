@@ -23,20 +23,24 @@ TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context
     downButton->setVisible(false);
 
     traversalNumEditor = std::make_unique<ValueEditor>(context);
-    traversalNumEditor->enablePlusRequiredValue();
+    traversalNumEditor->enableTraversalFlagValue();
     traversalNumEditor->setMinimumValue(1);
     traversalNumEditor->setInterceptsMouseClicks(true, false);
-    traversalNumEditor->setTooltip("Type +N to spawn traversal N, -N to remove it");
+    traversalNumEditor->setTooltip("Type +N to spawn traversal N, -N to remove it; +Na targets instance a");
     addAndMakeVisible(traversalNumEditor.get());
 
     traversalNumEditor->boundValue.setValue(0);
 
     traversalNumEditor->onValueChange = [this]() {
 
-        int traversalId = (int) traversalNumEditor->boundValue.getValue();
+        int typeId = (int) traversalNumEditor->boundValue.getValue();
 
-        if (traversalId > 0) {
-            applicationContext.graphState->addTraversalData(traversalId, nullptr);
+        if (typeId < 0) {
+            typeId = -typeId;
+        }
+
+        if (typeId > 0) {
+            applicationContext.graphState->addTraversalData(typeId, nullptr);
         }
 
         rebuildOwnGraph();
@@ -45,9 +49,9 @@ TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context
     nodeValueEditor.setVisible(false);
 }
 
-void TraversalFlagNode::setDisplayMode(NodeDisplayMode mode)
+void TraversalFlagNode::bindToTree()
 {
-    Node::setDisplayMode(mode);
+    Node::bindToTree();
 
     if (nodeValueTree.isValid() && traversalNumEditor != nullptr) {
         traversalNumEditor->bindEditor(nodeValueTree, ValueTreeIdentifiers::TraversalFlagValue);

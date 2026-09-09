@@ -13,7 +13,7 @@ public:
 
     FlagScheduler(TraversalDispatcher& owner, AudioUIBridge& bridgeRef);
 
-    void dispatchFlags(const RTNode& node, int hostInstanceId, int hostTypeId,
+    void dispatchFlags(const RTNode& node, int hostRunId, const TraversalKey& hostKey,
                        int parentCount, double sample, double tempoMultiplier,
                        const DispatchContext& context);
 
@@ -27,19 +27,19 @@ private:
 
     struct PendingStart
     {
-        int    flagNodeId       = -1;
-        int    hostTypeId       = 0;
-        double remainingSamples = 0.0;
-        bool   active           = false;
+        int          flagNodeId       = -1;
+        TraversalKey hostKey;
+        double       remainingSamples = 0.0;
+        bool         active           = false;
     };
 
-    void queueStart(const RTNode& flagNode, int hostTypeId, int delayMs, double sample,
+    void queueStart(const RTNode& flagNode, const TraversalKey& hostKey, int delayMs, double sample,
                     double tempoMultiplier, const DispatchContext& context);
 
-    void queueRemoval(const RTNode& flagNode, int hostInstanceId, int hostTypeId,
+    void queueRemoval(const RTNode& flagNode, int hostRunId, const TraversalKey& hostKey,
                       TraversalPool& traversalMap);
 
-    void startFlagTraversal(const RTNode& flagNode, int hostTypeId, double sample,
+    void startFlagTraversal(const RTNode& flagNode, const TraversalKey& hostKey, double sample,
                             const DispatchContext& context);
 
     static constexpr int maxPendingStarts = 64;

@@ -124,9 +124,9 @@ public:
     const_iterator begin() const { return const_iterator(this, 0); }
     const_iterator end()   const { return const_iterator(this, slotCount()); }
 
-    Instance* find(int id)
+    Instance* find(int runId)
     {
-        const int index = findSlotIndex(id);
+        const int index = findSlotIndex(runId);
 
         if (index == -1) {
             return nullptr;
@@ -135,9 +135,9 @@ public:
         return &slots[static_cast<std::size_t>(index)].entry.second;
     }
 
-    const Instance* find(int id) const
+    const Instance* find(int runId) const
     {
-        const int index = findSlotIndex(id);
+        const int index = findSlotIndex(runId);
 
         if (index == -1) {
             return nullptr;
@@ -146,7 +146,7 @@ public:
         return &slots[static_cast<std::size_t>(index)].entry.second;
     }
 
-    Instance* acquire(int id, int rootId, const RTtraversal& traversal)
+    Instance* acquire(int runId, int rootId, const RTtraversal& traversal)
     {
         for (auto& slot : slots) {
             if (slot.active) {
@@ -154,7 +154,7 @@ public:
             }
 
             slot.active      = true;
-            slot.entry.first = id;
+            slot.entry.first = runId;
             slot.entry.second.logic.reset(rootId, traversal);
             slot.entry.second.runtime = {};
 
@@ -178,9 +178,9 @@ public:
         return iterator(this, index + 1);
     }
 
-    void erase(int id)
+    void erase(int runId)
     {
-        const int index = findSlotIndex(id);
+        const int index = findSlotIndex(runId);
 
         if (index == -1) {
             return;
@@ -204,41 +204,48 @@ public:
     bool empty() const { return activeCount == 0; }
     int  size () const { return activeCount; }
 
-    int findInstanceFor(int rootId, int traversalTypeId) const
+    int findRunFor(int rootId, const TraversalKey& key) const
     {
-        for (const auto& [instanceId, instance] : *this) {
-            if (instance.logic.rootId == rootId
-                && instance.logic.traversal.traversalId == traversalTypeId) {
-                return instanceId;
+        for (const auto& [runId, instance] : *this) {
+            if (instance.logic.rootId == rootId && instance.logic.traversal.key == key) {
+                return runId;
             }
         }
 
         return -1;
     }
 
-    bool hasActiveTraversalOnTree(int treeRootId) const
+    bool hasAllRegisteredRunsOnTree(const RTNode& rootNode) const
     {
-        for (const auto& [instanceId, instance] : *this) {
-            if (instance.logic.rootId == treeRootId && instance.logic.shouldTraverse()) {
-                return true;
+        for (const RTtraversal& registered : rootNode.traversals) {
+            const int runId = findRunFor(rootNode.nodeID, registered.key);
+
+            if (runId == -1) {
+                return false;
+            }
+
+            const Instance* const instance = find(runId);
+
+            if (instance == nullptr || !instance->logic.shouldTraverse()) {
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 
     std::uint64_t membershipEpoch() const { return epoch; }
 
-    int nextInstanceId() { return ++instanceIdCounter; }
+    int nextRunId() { return ++runIdCounter; }
 
 private:
 
     int slotCount() const { return static_cast<int>(slots.size()); }
 
-    int findSlotIndex(int id) const
+    int findSlotIndex(int runId) const
     {
         for (std::size_t i = 0; i < slots.size(); ++i) {
-            if (slots[i].active && slots[i].entry.first == id) {
+            if (slots[i].active && slots[i].entry.first == runId) {
                 return static_cast<int>(i);
             }
         }
@@ -250,7 +257,7 @@ private:
 
     int activeCount = 0;
 
-    int instanceIdCounter = 0;
+    int runIdCounter = 0;
 
     std::uint64_t epoch = 0;
 };

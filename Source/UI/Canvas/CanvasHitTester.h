@@ -19,6 +19,8 @@ public:
     Node*  nodeNear (juce::Point<float> point, float radius, int excludeId) const;
     Node*  rootNear (juce::Point<float> point, float radius, int excludeId) const;
 
+    Node*  nodeContaining (juce::Point<float> point, int excludeId) const;
+
     static float distanceToSegment(juce::Point<float> p, juce::Point<float> a, juce::Point<float> b);
 
 private:

@@ -7,6 +7,9 @@
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
 #include "../Theme/CustomLookAndFeel.h"
+#include "../Editors/ValueFormat.h"
+
+#include <algorithm>
 
 void AllowedTraversalsMenu::ToggleButton::paint(juce::Graphics& g) {
     const auto bounds = getLocalBounds().toFloat().reduced(2.0f);
@@ -52,6 +55,8 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(ApplicationContext& context, juce::
 {
     setLookAndFeel(context.lookAndFeel);
 
+    std::vector<TraversalKey> keys;
+
     for (int i = 0; i < applicationContext.graphState->traversalMap.getNumChildren(); ++i) {
         const juce::ValueTree traversalData = applicationContext.graphState->traversalMap.getChild(i);
 
@@ -59,22 +64,35 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(ApplicationContext& context, juce::
             continue;
         }
 
-        const int traversalId = traversalData.getProperty(ValueTreeIdentifiers::TraversalId);
+        keys.push_back({ (int) traversalData.getProperty(ValueTreeIdentifiers::TraversalId), 0 });
+    }
+
+    applicationContext.graphState->collectTraversalKeys(keys);
+
+    std::sort(keys.begin(), keys.end(), [](const TraversalKey& first, const TraversalKey& second) {
+        if (first.typeId != second.typeId) {
+            return first.typeId < second.typeId;
+        }
+
+        return first.instance < second.instance;
+    });
+
+    for (const TraversalKey& key : keys) {
 
         TraversalRow row;
-        row.traversalId = traversalId;
+        row.key = key;
 
         row.label = std::make_unique<juce::Label>();
-        row.label->setText("Traversal " + juce::String(traversalId), juce::dontSendNotification);
+        row.label->setText("Traversal " + TraversalRefListFormat::describe(key), juce::dontSendNotification);
         row.label->setColour(juce::Label::textColourId, juce::Colours::lightgrey);
         row.label->setFont(juce::Font(juce::FontOptions(9.0f)));
         row.label->setJustificationType(juce::Justification::centredLeft);
         addAndMakeVisible(row.label.get());
 
         row.toggle = std::make_unique<ToggleButton>();
-        row.toggle->isOn = isTraversalEnabled(traversalId);
-        row.toggle->onToggle = [this, traversalId](bool enabled) {
-            setTraversalEnabled(traversalId, enabled);
+        row.toggle->isOn = isTraversalEnabled(key);
+        row.toggle->onToggle = [this, key](bool enabled) {
+            setTraversalEnabled(key, enabled);
         };
         addAndMakeVisible(row.toggle.get());
 
@@ -86,17 +104,17 @@ int AllowedTraversalsMenu::getIdealHeight() const {
     return contentInset * 2 + rowHeight * juce::jmax(1, (int) rows.size());
 }
 
-bool AllowedTraversalsMenu::isTraversalEnabled(int traversalId) const {
+bool AllowedTraversalsMenu::isTraversalEnabled(const TraversalKey& key) const {
     const juce::ValueTree disabled = connection.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
 
     if (!disabled.isValid()) {
         return true;
     }
 
-    return !disabled.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid();
+    return !GraphState::findTraversalReference(disabled, key).isValid();
 }
 
-void AllowedTraversalsMenu::setTraversalEnabled(int traversalId, bool enabled) {
+void AllowedTraversalsMenu::setTraversalEnabled(const TraversalKey& key, bool enabled) {
     if (!connection.isValid()) {
         return;
     }
@@ -111,7 +129,7 @@ void AllowedTraversalsMenu::setTraversalEnabled(int traversalId, bool enabled) {
             return;
         }
 
-        const juce::ValueTree entry = disabled.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+        const juce::ValueTree entry = GraphState::findTraversalReference(disabled, key);
         if (entry.isValid()) {
             disabled.removeChild(entry, undoManager);
         }
@@ -122,9 +140,10 @@ void AllowedTraversalsMenu::setTraversalEnabled(int traversalId, bool enabled) {
             connection.addChild(disabled, -1, undoManager);
         }
 
-        if (!disabled.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
+        if (!GraphState::findTraversalReference(disabled, key).isValid()) {
             juce::ValueTree entry {ValueTreeIdentifiers::TraversalId};
-            entry.setProperty(ValueTreeIdentifiers::TraversalId, traversalId, undoManager);
+            entry.setProperty(ValueTreeIdentifiers::TraversalId,       key.typeId,   undoManager);
+            entry.setProperty(ValueTreeIdentifiers::TraversalInstance, key.instance, undoManager);
             disabled.addChild(entry, -1, undoManager);
         }
     }

@@ -10,7 +10,7 @@ struct RuleContext
     const NodeMap&        nodes;
     const RTNode&         parent;
     int                   parentCount;
-    int                   traversalId;
+    TraversalKey          traversalKey;
     ChildPredicate        isEligible;
     const NodeStateTable& nodeState;
     int                   randomValue;
@@ -28,7 +28,7 @@ public:
 
     virtual int selectChild(const RuleContext& context) const = 0;
 
-    virtual int selectDanglingArrow(const RTNode& node, int count, int traversalId) const;
+    virtual int selectDanglingArrow(const RTNode& node, int count, const TraversalKey& traversalKey) const;
 };
 
 class NativeTraversalRule : public TraversalRule

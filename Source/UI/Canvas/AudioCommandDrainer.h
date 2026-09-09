@@ -25,7 +25,7 @@ private:
     void drainArrowResets() const;
     void drainCounts() const;
 
-    juce::Colour getTraversalColour(int traversalId) const;
+    juce::Colour getTraversalColour(int typeId) const;
 
     NodeCanvas&         canvas;
     ApplicationContext& applicationContext;

@@ -3,6 +3,7 @@
 //
 
 #include "ValueFormat.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
 
 namespace {
 
@@ -47,6 +48,15 @@ const juce::String greekLetters[] = {
     juce::String(L"ψ"),
     juce::String(L"ω")
 };
+
+const juce::String instanceLetters { "abcdefghijklmnopqrstuvwxyz" };
+
+juce::String instanceLetter(int instance)
+{
+    const int index = juce::jlimit(0, TraversalKey::maxInstances - 1, instance);
+
+    return instanceLetters.substring(index, index + 1);
+}
 
 }
 
@@ -245,27 +255,38 @@ void FreeTextFormat::commit(const juce::String& text, ValueBinding binding) cons
     binding.primary.setValue(text);
 }
 
-InputRestrictions PlusRequiredFormat::restrictions() const
+InputRestrictions TraversalFlagFormat::restrictions() const
 {
-    return { 5, "+-0123456789" };
+    return { 6, "+-0123456789" + instanceLetters };
 }
 
-juce::String PlusRequiredFormat::displayText(const ValueBinding& binding) const
+std::vector<juce::Identifier> TraversalFlagFormat::extraProperties() const
+{
+    return { ValueTreeIdentifiers::TraversalInstance };
+}
+
+juce::String TraversalFlagFormat::displayText(const ValueBinding& binding) const
 {
     const int value = (int) binding.primary.getValue();
 
+    if (value == 0) {
+        return juce::String();
+    }
+
+    int instance = 0;
+
+    if (binding.hasSecondary()) {
+        instance = (int) binding.secondaries.front().getValue();
+    }
+
     if (value > 0) {
-        return "+" + juce::String(value);
+        return "+" + juce::String(value) + instanceLetter(instance);
     }
 
-    if (value < 0) {
-        return juce::String(value);
-    }
-
-    return juce::String();
+    return "-" + juce::String(-value) + instanceLetter(instance);
 }
 
-void PlusRequiredFormat::commit(const juce::String& text, ValueBinding binding) const
+void TraversalFlagFormat::commit(const juce::String& text, ValueBinding binding) const
 {
     const juce::String trimmed = text.trim();
 
@@ -277,9 +298,25 @@ void PlusRequiredFormat::commit(const juce::String& text, ValueBinding binding) 
         return;
     }
 
-    const int magnitude = (int) clamp((double) trimmed.substring(1).getIntValue());
+    const std::vector<TraversalKey> parsed = TraversalRefListFormat::parse(trimmed.substring(1));
 
-    binding.primary.setValue(removes ? -magnitude : magnitude);
+    if (parsed.empty()) {
+        binding.primary.setValue(0);
+        return;
+    }
+
+    const int typeId = (int) clamp((double) parsed.front().typeId);
+
+    if (removes) {
+        binding.primary.setValue(-typeId);
+    }
+    else {
+        binding.primary.setValue(typeId);
+    }
+
+    if (binding.hasSecondary()) {
+        binding.secondaries.front().setValue(parsed.front().instance);
+    }
 }
 
 InputRestrictions DualIntFormat::restrictions() const
@@ -337,38 +374,58 @@ void DualIntFormat::commit(const juce::String& text, ValueBinding binding) const
     binding.secondaries.front().setValue(secondaryValue);
 }
 
-std::vector<int> IntListFormat::parse(const juce::String& text)
+std::vector<TraversalKey> TraversalRefListFormat::parse(const juce::String& text)
 {
-    std::vector<int> parsed;
-    juce::String word;
+    std::vector<TraversalKey> parsed;
+    juce::String digits;
 
     for (int i = 0; i <= text.length(); i++) {
 
         const bool isDigit = i < text.length() && juce::CharacterFunctions::isDigit(text[i]);
 
         if (isDigit) {
-            word += text[i];
+            digits += text[i];
+            continue;
         }
-        else if (word.isNotEmpty()) {
-            parsed.push_back(word.getIntValue());
-            word.clear();
+
+        if (digits.isEmpty()) {
+            continue;
         }
+
+        TraversalKey key;
+        key.typeId = digits.getIntValue();
+
+        if (i < text.length()) {
+            const int instance = instanceLetters.indexOfChar(text[i]);
+
+            if (instance != -1) {
+                key.instance = instance;
+            }
+        }
+
+        parsed.push_back(key);
+        digits.clear();
     }
 
     return parsed;
 }
 
-InputRestrictions IntListFormat::restrictions() const
+juce::String TraversalRefListFormat::describe(const TraversalKey& key)
 {
-    return { 8, "0123456789' '," };
+    return juce::String(key.typeId) + instanceLetter(key.instance);
 }
 
-juce::String IntListFormat::displayText(const ValueBinding& binding) const
+InputRestrictions TraversalRefListFormat::restrictions() const
+{
+    return { 24, "0123456789 ," + instanceLetters };
+}
+
+juce::String TraversalRefListFormat::displayText(const ValueBinding& binding) const
 {
     return binding.primary.getValue().toString();
 }
 
-void IntListFormat::commit(const juce::String& text, ValueBinding binding) const
+void TraversalRefListFormat::commit(const juce::String& text, ValueBinding binding) const
 {
     binding.primary.setValue(text);
 }

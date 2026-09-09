@@ -173,7 +173,7 @@ void NodeController::endDrag()
     isDragStart      = true;
     snapTargetRoot   = nullptr;
     snapSourceNodeId = -1;
-    danglingSnapRoot = nullptr;
+    danglingSnapTarget = nullptr;
 
     canvas.hideGrid();
 }
@@ -197,8 +197,8 @@ void NodeController::finishDanglingTipDrag()
     draggingDanglingArrow = nullptr;
     dragState             = DragState::Idle;
 
-    if (danglingSnapRoot != nullptr) {
-        connectDanglingToRoot(arrow->startNode);
+    if (danglingSnapTarget != nullptr) {
+        connectDanglingToTarget(arrow->startNode);
         NodeFactory::destroyDanglingArrow(arrow->arrowTree, applicationContext.undoManager);
     }
     else {
@@ -226,11 +226,11 @@ void NodeController::finishFlagConnection()
 
 void NodeController::finishDanglingArrowCreation()
 {
-    if (danglingSnapRoot != nullptr) {
+    if (danglingSnapTarget != nullptr) {
         Node* const startNode = canvas.arrowManager.previewStartNode();
 
         canvas.arrowManager.cancelPreview();
-        connectDanglingToRoot(startNode);
+        connectDanglingToTarget(startNode);
     }
     else {
         applicationContext.undoManager->beginNewTransaction();
@@ -243,7 +243,7 @@ void NodeController::finishDanglingArrowCreation()
     canvas.hideGrid();
 }
 
-Node* NodeController::findDanglingSnapRoot(const Node* startNode, juce::Point<int> tip) const
+Node* NodeController::findDanglingSnapTarget(const Node* startNode, juce::Point<int> tip) const
 {
     if (startNode == nullptr) {
         return nullptr;
@@ -251,40 +251,45 @@ Node* NodeController::findDanglingSnapRoot(const Node* startNode, juce::Point<in
 
     const int startNodeId = startNode->getComponentID().getIntValue();
 
-    Node* const nearestRoot = canvas.hitTester.rootNear(tip.toFloat(), rootSnapThreshold, startNodeId);
-    if (nearestRoot == nullptr) {
+    Node* snapTarget = canvas.hitTester.rootNear(tip.toFloat(), rootSnapThreshold, startNodeId);
+
+    if (snapTarget == nullptr) {
+        snapTarget = canvas.hitTester.nodeContaining(tip.toFloat(), startNodeId);
+    }
+
+    if (snapTarget == nullptr) {
         return nullptr;
     }
 
-    if (startNode->nodeArrows.count(nearestRoot->getComponentID().getIntValue()) > 0) {
+    if (startNode->nodeArrows.count(snapTarget->getComponentID().getIntValue()) > 0) {
         return nullptr;
     }
 
-    return nearestRoot;
+    return snapTarget;
 }
 
 juce::Point<int> NodeController::danglingTipFor(const Node* startNode, juce::Point<int> cursor)
 {
-    danglingSnapRoot = findDanglingSnapRoot(startNode, cursor);
+    danglingSnapTarget = findDanglingSnapTarget(startNode, cursor);
 
-    if (danglingSnapRoot != nullptr) {
-        return danglingSnapRoot->getNodeCentre();
+    if (danglingSnapTarget != nullptr) {
+        return danglingSnapTarget->getNodeCentre();
     }
 
     return canvas.snapPointToGrid(cursor);
 }
 
-void NodeController::connectDanglingToRoot(const Node* startNode)
+void NodeController::connectDanglingToTarget(const Node* startNode)
 {
-    Node* const targetRoot = danglingSnapRoot;
-    danglingSnapRoot = nullptr;
+    Node* const targetNode = danglingSnapTarget;
+    danglingSnapTarget = nullptr;
 
-    if (startNode == nullptr || targetRoot == nullptr) {
+    if (startNode == nullptr || targetNode == nullptr) {
         return;
     }
 
     connectWithSnapAnimation(startNode->getComponentID().getIntValue(),
-                             targetRoot->getComponentID().getIntValue());
+                             targetNode->getComponentID().getIntValue());
 }
 
 void NodeController::connectDraggedNodeToRoot()
@@ -560,7 +565,7 @@ bool NodeController::toggleEncapsulationExpansion(Node& node)
     const int nodeId = node.getComponentID().getIntValue();
 
     if (node.nodeType == NodeType::Encapsulator) {
-        canvas.nodeManager.expandEncapsulation(nodeId);
+        canvas.encapsulationView.expand(nodeId);
         return true;
     }
 
@@ -579,7 +584,7 @@ bool NodeController::toggleEncapsulationExpansion(Node& node)
         return false;
     }
 
-    canvas.nodeManager.collapseEncapsulation(owningEncapsulatorId);
+    canvas.encapsulationView.collapse(owningEncapsulatorId);
     return true;
 }
 
@@ -595,7 +600,7 @@ void NodeController::selectSpanNode(Node& node)
         canvas.spanAnchorNodeId = -1;
 
         undoManager->beginNewTransaction();
-        graphState.removeEncapsulator(nodeId, undoManager);
+        graphState.dissolveEncapsulator(nodeId, undoManager);
         return;
     }
 
@@ -628,14 +633,15 @@ void NodeController::selectSpanNode(Node& node)
     canvas.nodeManager.clearOutlines();
 
     undoManager->beginNewTransaction();
-    graphState.addEncapsulator(spanNodeIds, undoManager);
+    NodeFactory::createEncapsulator(graphState, spanNodeIds,
+                                    GraphState::defaultSubLoopCountLimit, undoManager);
 }
 
 void NodeController::mouseDown(const juce::MouseEvent& e)
 {
     dragState             = DragState::Idle;
     draggingArrowHeadNode = nullptr;
-    danglingSnapRoot      = nullptr;
+    danglingSnapTarget      = nullptr;
 
     if (canvas.paintMode) {
         if (e.mods.isLeftButtonDown() || e.mods.isRightButtonDown()) {
@@ -663,7 +669,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree)
 {
     const int draggedNodeId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
-    const juce::Point<int> collapseShift = canvas.nodeManager.collapsedSpanShift(draggedNodeId);
+    const juce::Point<int> collapseShift = canvas.encapsulationView.collapsedSpanShift(draggedNodeId);
 
     juce::Point<int> snapped = canvas.snapPointToGrid({ newPosition.xPosition - collapseShift.x,
                                                         newPosition.yPosition - collapseShift.y });

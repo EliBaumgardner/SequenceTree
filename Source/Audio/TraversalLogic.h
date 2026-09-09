@@ -44,18 +44,20 @@ public:
 
         void activate(int rootId, int hostId)
         {
-            gate.activeRootId = rootId;
-            gate.hostId       = hostId;
-            gate.repeatCount  = 0;
-            walker.target     = rootId;
-            walker.last       = -1;
+            gate.activeRootId  = rootId;
+            gate.hostId        = hostId;
+            gate.repeatCount   = 0;
+            walker.target      = rootId;
+            walker.last        = -1;
+            walker.subRootNode = -1;
         }
 
         void deactivate()
         {
-            gate          = {};
-            walker.target = -1;
-            walker.last   = -1;
+            gate               = {};
+            walker.target      = -1;
+            walker.last        = -1;
+            walker.subRootNode = -1;
         }
 
         bool tickRepeat(int repeatLimit)
@@ -105,8 +107,8 @@ public:
     LoopState      loop;
     ModulatorWalk  mod;
 
-    int            instanceId = 0;
-    int            rootId     = 0;
+    int            runId  = 0;
+    int            rootId = 0;
 
     TraversalState state = TraversalState::Start;
 
@@ -155,8 +157,8 @@ private:
     StepResult stepActive(const NodeMap& nodes);
     void       handleLoopReset(const NodeMap& nodes, StepResult& result);
     void       handleTreeJump(const NodeMap& nodes, StepResult& result);
-    void       advanceSubRoot(const NodeMap& nodes, StepResult& result);
-    void       armSubLoop(const RTNode& enteredNode);
+    bool       advanceSubRoot(const NodeMap& nodes, Walker& walker);
+    void       armSubLoop(Walker& walker, const RTNode& enteredNode);
     int        encapsulationLoopTarget(const NodeMap& nodes, int leavingNodeId, int chosenNodeId);
     void       fillEndedResult(StepResult& result) const;
 

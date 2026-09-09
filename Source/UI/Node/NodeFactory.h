@@ -57,6 +57,21 @@ public:
         return modulatorRootValueTree;
     }
 
+    static juce::ValueTree createEncapsulator(GraphState& state, const std::vector<int>& memberNodeIds,
+                                              int subLoopCountLimit, juce::UndoManager* undoManager)
+    {
+        const int encapsulatorLabel = state.unusedEncapsulatorLabel();
+
+        juce::ValueTree encapsulatorValueTree = state.addEncapsulator(memberNodeIds, undoManager);
+
+        encapsulatorValueTree.setProperty(ValueTreeIdentifiers::EncapsulatorLabel, encapsulatorLabel, undoManager);
+        encapsulatorValueTree.setProperty(ValueTreeIdentifiers::SubLoopCountLimit, subLoopCountLimit, undoManager);
+
+        GraphState::setNodePosition(encapsulatorValueTree, state.getNodePosition(memberNodeIds.front()), undoManager);
+
+        return encapsulatorValueTree;
+    }
+
     static void createDanglingArrow(GraphState& state, juce::ValueTree nodeTree,
                                     const juce::Point<int>& tipOffset,
                                     const ArrowInfo& arrowInfo, juce::UndoManager* undoManager)

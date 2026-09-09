@@ -11,7 +11,8 @@
 
 Encapsulator::Encapsulator(ApplicationContext& context) : Node(context)
 {
-    nodeType = NodeType::Encapsulator;
+    nodeType    = NodeType::Encapsulator;
+    hasInnerRim = true;
 
     countEditor.setVisible(false);
     switchCountEditor.setVisible(false);
@@ -20,51 +21,28 @@ Encapsulator::Encapsulator(ApplicationContext& context) : Node(context)
 
 void Encapsulator::paint(juce::Graphics& g)
 {
-    CustomLookAndFeel::get(*this).drawEncapsulatorNode(g, getNodeVisual());
+    CustomLookAndFeel::get(*this).drawNode(g, getNodeVisual());
 }
 
-void Encapsulator::setDisplayMode(NodeDisplayMode newMode)
+void Encapsulator::bindValueEditorForMode()
 {
-    mode = newMode;
-
     nodeValueEditor.setFormat(std::make_unique<GreekLetterFormat>());
     nodeValueEditor.setEditable(false);
     nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::EncapsulatorLabel);
-
-    nodeValueEditor.repaint();
-    repaint();
 }
 
-void Encapsulator::bindToEncapsulatedNodes()
+void Encapsulator::bindToTree()
 {
     memberNodeIds.clear();
-
-    const juce::ValueTree encapsulatedIds =
-        nodeValueTree.getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
-
-    for (int i = 0; i < encapsulatedIds.getNumChildren(); ++i) {
-        memberNodeIds.push_back(encapsulatedIds.getChild(i).getProperty(ValueTreeIdentifiers::Id));
-    }
-
     firstMemberValueTree = {};
+
+    if (applicationContext.graphState != nullptr) {
+        memberNodeIds = applicationContext.graphState->encapsulatedNodeIds(
+            nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
+    }
 
     if (! memberNodeIds.empty() && applicationContext.graphState != nullptr) {
         firstMemberValueTree = applicationContext.graphState->getNode(memberNodeIds.front());
-    }
-
-    if (isExpanded) {
-        for (const int memberNodeId : memberNodeIds) {
-            Node* const member = applicationContext.canvas->nodeManager.find(memberNodeId);
-
-            if (member == nullptr) {
-                continue;
-            }
-
-            member->isEncapsulationRinged   = true;
-            member->isEncapsulationEntry    = memberNodeId == memberNodeIds.front();
-            member->encapsulationRingColour = nodeColour;
-            member->repaint();
-        }
     }
 
     subLoopLimitEditor.setVisible(true);
@@ -103,16 +81,16 @@ void Encapsulator::syncHighlightsFromMembers()
         }
     }
 
-    std::vector<int> endedTraversalIds;
+    std::vector<int> endedRunIds;
 
     for (const auto& highlight : activeHighlights) {
         if (memberHighlights.count(highlight.first) == 0) {
-            endedTraversalIds.push_back(highlight.first);
+            endedRunIds.push_back(highlight.first);
         }
     }
 
-    for (const int endedTraversalId : endedTraversalIds) {
-        setHighlightVisual(endedTraversalId, false, juce::Colours::white);
+    for (const int endedRunId : endedRunIds) {
+        setHighlightVisual(endedRunId, false, juce::Colours::white);
     }
 
     for (const auto& highlight : memberHighlights) {

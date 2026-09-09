@@ -2,6 +2,7 @@
 
 #include "../Util/NodeInfo.h"
 #include "../Util/ArrowInfo.h"
+#include "RTData.h"
 
 #include <juce_data_structures/juce_data_structures.h>
 
@@ -23,6 +24,10 @@ public:
     juce::ValueTree addModulator        (int parentNodeId, juce::UndoManager* undoManager);
 
     juce::ValueTree addTraversalData(int traversalId, juce::UndoManager* undoManager);
+
+    void collectTraversalKeys(std::vector<TraversalKey>& keys) const;
+
+    static juce::ValueTree findTraversalReference(const juce::ValueTree& references, const TraversalKey& key);
 
     void addMidiNote(int nodeId, NodeNote note, juce::UndoManager* undoManager);
 
@@ -47,11 +52,14 @@ public:
     std::vector<int> nodeIdsBetween(int startNodeId, int endNodeId) const;
 
     juce::ValueTree addEncapsulator     (const std::vector<int>& memberNodeIds, juce::UndoManager* undoManager);
-    void            removeEncapsulator  (int encapsulatorId, juce::UndoManager* undoManager);
-    void            removeEncapsulatedNodes(int encapsulatorId, juce::UndoManager* undoManager);
+    void            dissolveEncapsulator(int encapsulatorId, juce::UndoManager* undoManager);
+    void            removeEncapsulationGroup(int encapsulatorId, juce::UndoManager* undoManager);
     void            encapsulateNodeAfter(int nodeId, int siblingNodeId, juce::UndoManager* undoManager);
     void            moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY,
                                                     juce::UndoManager* undoManager);
+
+    std::vector<int> encapsulatedNodeIds(int encapsulatorId) const;
+    int              unusedEncapsulatorLabel() const;
 
     juce::ValueTree getNode      (int nodeId) const;
     juce::ValueTree getNodeParent(int nodeId) const;

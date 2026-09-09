@@ -253,13 +253,7 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
         arrowManager.rebuildDanglingForNode(nodeId);
     }
 
-    for (int i = 0; i < stateTree.getNumChildren(); i++) {
-        const juce::ValueTree nodeValueTree = stateTree.getChild(i);
-
-        if (nodeValueTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-            nodeManager.collapseEncapsulation(nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
-        }
-    }
+    encapsulationView.collapseAll();
 
     if (!gridOriginSet && !rootNodeMap.empty()) {
         auto it = rootNodeMap.begin();

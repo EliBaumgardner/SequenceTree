@@ -19,7 +19,7 @@ public:
     struct ActiveNote
     {
         MidiEvent        event;
-        int              instanceId       = 0;
+        int              runId       = 0;
         double           remainingSamples = 0.0;
         int              nodeId           = 0;
         RTNode::NodeType nodeType         = RTNode::NodeType::Node;
@@ -41,7 +41,7 @@ public:
 
     NoteScheduler();
 
-    void scheduleNote(const RTNode& node, int instanceId, double sample,
+    void scheduleNote(const RTNode& node, int runId, double sample,
                       juce::MidiBuffer& midiMessages,
                       double sampleRate, double tempoMultiplier,
                       int duration, bool isConnectionTrigger,

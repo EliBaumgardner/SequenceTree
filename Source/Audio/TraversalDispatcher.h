@@ -14,14 +14,14 @@ public:
 
     TraversalDispatcher(NoteScheduler& scheduler, AudioUIBridge& bridge);
 
-    void pushNote(const RTNode& node, int instanceId, const DispatchContext& context,
+    void pushNote(const RTNode& node, int runId, const DispatchContext& context,
                   double sample, bool isPrimaryRepeat = false);
 
     void handleExpiredNote(const NoteScheduler::ActiveNote& expiredNote,
                            double expiryTime,
                            const DispatchContext& context);
 
-    TraversalPool::Instance* prepareTraversal(int instanceId, int rootId, int startNodeId,
+    TraversalPool::Instance* prepareTraversal(int runId, int rootId, int startNodeId,
                                               const RTtraversal& traversal, const DispatchContext& context);
 
     FlagScheduler flagScheduler;
@@ -29,7 +29,7 @@ public:
 private:
 
     void applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes,
-                         int instanceId, int traversalId);
+                         int runId, int typeId);
 
     void applyTreeJump(const TraversalLogic::StepResult& step, TraversalLogic& traversal,
                        TraversalRuntime& runtime, const DispatchContext& context);
@@ -48,12 +48,12 @@ private:
                         TraversalLogic& traversalLogic, int transpose);
 
     void dispatchPrimaryArrow(const RTNode& node, const RTNode* nextTarget, int danglingIndex,
-                              int instanceId, int wallClockMs, int colourTraversalId);
+                              int runId, int wallClockMs, int colourTypeId);
 
     void dispatchModulatorArrow(const RTNode* modulatorNode, const RTNode* nextModulatorTarget,
-                                int instanceId, int wallClockMs, int colourTraversalId);
+                                int runId, int wallClockMs, int colourTypeId);
 
-    void dispatchCrossTree(const RTNode& node, int sourceInstanceId, double sample,
+    void dispatchCrossTree(const RTNode& node, int sourceRunId, double sample,
                            double tempoMultiplier, const DispatchContext& context,
                            TraversalLogic& traversal);
 

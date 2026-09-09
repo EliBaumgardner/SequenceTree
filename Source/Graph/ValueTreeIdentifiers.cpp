@@ -59,6 +59,7 @@ const juce::Identifier ValueTreeIdentifiers::ModAmount            {"ModAmount"};
 
 const juce::Identifier ValueTreeIdentifiers::TraversalData        {"TraversalData"};
 const juce::Identifier ValueTreeIdentifiers::TraversalId          {"TraversalId"};
+const juce::Identifier ValueTreeIdentifiers::TraversalInstance    {"TraversalInstance"};
 const juce::Identifier ValueTreeIdentifiers::TraversalFlagValue   {"TraversalFlagValue"};
 const juce::Identifier ValueTreeIdentifiers::TempoMultiplier      {"TempoMultiplier"};
 const juce::Identifier ValueTreeIdentifiers::TraversalColour      {"TraversalColour"};

@@ -9,7 +9,7 @@ FlagScheduler::FlagScheduler(TraversalDispatcher& owner, AudioUIBridge& bridgeRe
 {
 }
 
-void FlagScheduler::dispatchFlags(const RTNode& node, int hostInstanceId, int hostTypeId,
+void FlagScheduler::dispatchFlags(const RTNode& node, int hostRunId, const TraversalKey& hostKey,
                                   int parentCount, double sample, double tempoMultiplier,
                                   const DispatchContext& context)
 {
@@ -30,28 +30,28 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostInstanceId, int ho
             continue;
         }
 
-        const std::vector<int>& disabled = connection.disabledTraversals;
-        if (std::find(disabled.begin(), disabled.end(), hostTypeId) != disabled.end()) {
+        const std::vector<TraversalKey>& disabled = connection.disabledTraversals;
+        if (std::find(disabled.begin(), disabled.end(), hostKey) != disabled.end()) {
             continue;
         }
 
         if (flagNode.flagRemovesTraversal) {
-            queueRemoval(flagNode, hostInstanceId, hostTypeId, context.traversalMap);
+            queueRemoval(flagNode, hostRunId, hostKey, context.traversalMap);
             continue;
         }
 
         const int delayMs = connection.duration;
 
         if (delayMs <= 0) {
-            startFlagTraversal(flagNode, hostTypeId, sample, context);
+            startFlagTraversal(flagNode, hostKey, sample, context);
             continue;
         }
 
-        queueStart(flagNode, hostTypeId, delayMs, sample, tempoMultiplier, context);
+        queueStart(flagNode, hostKey, delayMs, sample, tempoMultiplier, context);
     }
 }
 
-void FlagScheduler::queueStart(const RTNode& flagNode, int hostTypeId,
+void FlagScheduler::queueStart(const RTNode& flagNode, const TraversalKey& hostKey,
                                int delayMs, double sample, double tempoMultiplier,
                                const DispatchContext& context)
 {
@@ -68,12 +68,12 @@ void FlagScheduler::queueStart(const RTNode& flagNode, int hostTypeId,
 
     if (slot == nullptr) {
         jassertfalse;
-        startFlagTraversal(flagNode, hostTypeId, sample, context);
+        startFlagTraversal(flagNode, hostKey, sample, context);
         return;
     }
 
     slot->flagNodeId       = flagNode.nodeID;
-    slot->hostTypeId       = hostTypeId;
+    slot->hostKey          = hostKey;
     slot->remainingSamples = delaySamples + sample;
     slot->active           = true;
 }
@@ -111,7 +111,7 @@ bool FlagScheduler::startNextDue(double before, const DispatchContext& context)
         return true;
     }
 
-    startFlagTraversal(flagNode, due.hostTypeId, juce::jmax(0.0, due.remainingSamples), context);
+    startFlagTraversal(flagNode, due.hostKey, juce::jmax(0.0, due.remainingSamples), context);
 
     return true;
 }
@@ -132,20 +132,20 @@ void FlagScheduler::clear()
     }
 }
 
-void FlagScheduler::queueRemoval(const RTNode& flagNode, int hostInstanceId, int hostTypeId,
+void FlagScheduler::queueRemoval(const RTNode& flagNode, int hostRunId, const TraversalKey& hostKey,
                                  TraversalPool& traversalMap)
 {
-    const int targetTypeId = flagNode.flagTraversal.traversalId;
+    const TraversalKey targetKey = flagNode.flagTraversal.key;
 
-    if (targetTypeId <= 0) {
+    if (targetKey.typeId <= 0) {
         return;
     }
 
-    if (hostTypeId != targetTypeId) {
+    if (!(hostKey == targetKey)) {
         return;
     }
 
-    TraversalPool::Instance* const hostInstance = traversalMap.find(hostInstanceId);
+    TraversalPool::Instance* const hostInstance = traversalMap.find(hostRunId);
     if (hostInstance == nullptr) {
         return;
     }
@@ -153,16 +153,16 @@ void FlagScheduler::queueRemoval(const RTNode& flagNode, int hostInstanceId, int
     hostInstance->runtime.pendingRemoval = true;
 }
 
-void FlagScheduler::startFlagTraversal(const RTNode& flagNode, int hostTypeId, double sample,
+void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKey& hostKey, double sample,
                                        const DispatchContext& context)
 {
-    const int spawnTypeId = flagNode.flagTraversal.traversalId;
+    const TraversalKey spawnKey = flagNode.flagTraversal.key;
 
-    if (spawnTypeId <= 0) {
+    if (spawnKey.typeId <= 0) {
         return;
     }
 
-    if (hostTypeId == spawnTypeId) {
+    if (hostKey == spawnKey) {
         return;
     }
 
@@ -174,20 +174,20 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, int hostTypeId, d
     const RTNode& startNode = *startIt->second;
     const int rootId = startNode.graphID;
 
-    int instanceId = context.traversalMap.findInstanceFor(rootId, spawnTypeId);
+    int runId = context.traversalMap.findRunFor(rootId, spawnKey);
 
-    if (instanceId == -1) {
-        instanceId = context.traversalMap.nextInstanceId();
+    if (runId == -1) {
+        runId = context.traversalMap.nextRunId();
     }
     else {
-        const TraversalPool::Instance* const existingInstance = context.traversalMap.find(instanceId);
+        const TraversalPool::Instance* const existingInstance = context.traversalMap.find(runId);
 
         if (existingInstance != nullptr && existingInstance->logic.shouldTraverse()) {
             return;
         }
     }
 
-    TraversalPool::Instance* instance = dispatcher.prepareTraversal(instanceId, rootId, startNode.nodeID,
+    TraversalPool::Instance* instance = dispatcher.prepareTraversal(runId, rootId, startNode.nodeID,
                                                                     flagNode.flagTraversal, context);
 
     if (instance == nullptr) {
@@ -197,6 +197,6 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, int hostTypeId, d
     instance->runtime.asFlag       = true;
     instance->runtime.sourceNodeId = flagNode.nodeID;
 
-    bridge.highlightNode(startNode, true, instance->logic.traversal.traversalId);
-    dispatcher.pushNote(startNode, instanceId, context, sample);
+    bridge.highlightNode(startNode, true, runId, instance->logic.traversal.key.typeId);
+    dispatcher.pushNote(startNode, runId, context, sample);
 }

@@ -11,15 +11,15 @@ Modulator::Modulator(ApplicationContext& context) : Node(context)
     nodeType = NodeType::Modulator;
 }
 
-void Modulator::setDisplayMode(NodeDisplayMode mode) {
+void Modulator::bindValueEditorForMode() {
 
     if (mode != NodeDisplayMode::Pitch) {
         nodeValueEditor.disableSignedValue();
-        Node::setDisplayMode(mode);
+        Node::bindValueEditorForMode();
         return;
     }
 
-    Node::setDisplayMode(mode);
+    Node::bindValueEditorForMode();
 
     if (! nodeValueTree.isValid()) {
         return;
@@ -28,7 +28,6 @@ void Modulator::setDisplayMode(NodeDisplayMode mode) {
     nodeValueEditor.setPitchMode(false);
     nodeValueEditor.enableSignedValue(minimumPitchOffset, maximumPitchOffset);
     nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::ModAmount);
-    nodeValueEditor.repaint();
 }
 
 juce::Rectangle<float> Modulator::getSquareBounds() const {

@@ -69,11 +69,8 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
     node->setComponentID(std::to_string(nodeId));
     node->nodeValueTree = nodeValueTree;
     node->midiNoteData  = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+    node->bindToTree();
     node->setDisplayMode(displayMode);
-
-    if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node.get())) {
-        encapsulator->bindToEncapsulatedNodes();
-    }
 
     node->onSelected = [this](Node* n, bool sel) {
         for (auto& listener : nodeSelectedListeners) {
@@ -146,17 +143,17 @@ void NodeManager::add(int nodeId)
     connectOutgoingArrows(nodeChildTree, childNode);
 
     if (nodeChildTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-        collapseEncapsulation(nodeId);
+        canvas.encapsulationView.collapse(nodeId);
     }
 
     const int owningEncapsulatorId = nodeChildTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
     if (auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(find(owningEncapsulatorId))) {
         if (owningEncapsulator->isExpanded) {
-            owningEncapsulator->bindToEncapsulatedNodes();
+            canvas.encapsulationView.refreshMembership(owningEncapsulatorId);
         }
         else {
-            collapseEncapsulation(owningEncapsulatorId);
+            canvas.encapsulationView.collapse(owningEncapsulatorId);
         }
     }
 
@@ -178,7 +175,7 @@ void NodeManager::remove(int nodeId)
     }
 
     if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node)) {
-        showEncapsulatedNodes(encapsulator->memberNodeIds);
+        canvas.encapsulationView.showMembers(encapsulator->memberNodeIds);
     }
 
     const int encapsulatorId = node->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
@@ -188,9 +185,7 @@ void NodeManager::remove(int nodeId)
     delete node;
     nodes.erase(nodeId);
 
-    if (auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(find(encapsulatorId))) {
-        owningEncapsulator->bindToEncapsulatedNodes();
-    }
+    canvas.encapsulationView.refreshMembership(encapsulatorId);
 }
 
 void NodeManager::clear()
@@ -200,82 +195,6 @@ void NodeManager::clear()
         delete node;
     }
     nodes.clear();
-}
-
-juce::Point<int> NodeManager::collapsedSpanShift(int nodeId) const
-{
-    const GraphState& graphState = *applicationContext.graphState;
-
-    const juce::ValueTree node = graphState.getNode(nodeId);
-
-    int walkStartId       = nodeId;
-    int ownEncapsulatorId = node.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-
-    if (node.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-        const juce::ValueTree encapsulatedIds = node.getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
-
-        if (encapsulatedIds.getNumChildren() == 0) {
-            return {};
-        }
-
-        walkStartId       = encapsulatedIds.getChild(0).getProperty(ValueTreeIdentifiers::Id);
-        ownEncapsulatorId = nodeId;
-    }
-
-    juce::Point<int> shift;
-
-    std::unordered_set<int> visited { walkStartId };
-    std::unordered_set<int> shiftedEncapsulatorIds;
-    std::vector<int>        frontier { walkStartId };
-
-    while (! frontier.empty()) {
-        std::vector<int> nextFrontier;
-
-        for (const int currentId : frontier) {
-            const auto parents = graphState.parentIdsOf.find(currentId);
-
-            if (parents == graphState.parentIdsOf.end()) {
-                continue;
-            }
-
-            for (const int parentId : parents->second) {
-                if (! visited.insert(parentId).second) {
-                    continue;
-                }
-
-                nextFrontier.push_back(parentId);
-
-                const int encapsulatorId = graphState.getNode(parentId)
-                                                     .getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-
-                if (encapsulatorId < 0 || encapsulatorId == ownEncapsulatorId) {
-                    continue;
-                }
-
-                const juce::ValueTree encapsulator = graphState.getNode(encapsulatorId);
-
-                if (! encapsulator.isValid() || ! shiftedEncapsulatorIds.insert(encapsulatorId).second) {
-                    continue;
-                }
-
-                auto* const encapsulatorNode = dynamic_cast<Encapsulator*>(find(encapsulatorId));
-
-                if (encapsulatorNode != nullptr && encapsulatorNode->isExpanded) {
-                    continue;
-                }
-
-                const NodePosition exitPosition         = graphState.getNodePosition(parentId);
-                const NodePosition encapsulatorPosition = graphState.getNodePosition(encapsulatorId);
-
-                shift.x -= exitPosition.xPosition - encapsulatorPosition.xPosition;
-                shift.y -= exitPosition.yPosition - encapsulatorPosition.yPosition;
-            }
-        }
-
-        frontier = std::move(nextFrontier);
-    }
-
-    return shift;
 }
 
 void NodeManager::setPosition(int nodeId) const
@@ -311,7 +230,7 @@ void NodeManager::setPosition(int nodeId) const
         yPosition = encapsulator.getProperty(ValueTreeIdentifiers::YPosition);
     }
 
-    const juce::Point<int> collapseShift = collapsedSpanShift(nodeId);
+    const juce::Point<int> collapseShift = canvas.encapsulationView.collapsedSpanShift(nodeId);
 
     xPosition += collapseShift.x;
     yPosition += collapseShift.y;
@@ -409,87 +328,6 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
     }
 }
 
-void NodeManager::collapseEncapsulation(int encapsulatorId) const
-{
-    auto* const encapsulator = dynamic_cast<Encapsulator*>(find(encapsulatorId));
-
-    if (encapsulator == nullptr) {
-        return;
-    }
-
-    encapsulator->isExpanded = false;
-
-    encapsulator->bindToEncapsulatedNodes();
-
-    encapsulator->setVisible(true);
-    encapsulator->setInterceptsMouseClicks(!canvas.paintMode, !canvas.paintMode && !canvas.spanMode);
-
-    for (const int memberNodeId : encapsulator->memberNodeIds) {
-        Node* const member = find(memberNodeId);
-
-        if (member == nullptr) {
-            continue;
-        }
-
-        member->isEncapsulated         = true;
-        member->isOutlined             = false;
-        member->isEncapsulationRinged  = false;
-        member->isEncapsulationEntry   = false;
-        member->setVisible(false);
-        member->setInterceptsMouseClicks(false, false);
-    }
-
-    for (const auto& [positionedNodeId, positionedNode] : nodes) {
-        setPosition(positionedNodeId);
-    }
-
-    encapsulator->syncHighlightsFromMembers();
-
-    encapsulator->toFront(false);
-
-    canvas.arrowManager.refreshEncapsulatedArrows();
-}
-
-void NodeManager::expandEncapsulation(int encapsulatorId) const
-{
-    auto* const encapsulator = dynamic_cast<Encapsulator*>(find(encapsulatorId));
-
-    if (encapsulator == nullptr || encapsulator->memberNodeIds.empty()) {
-        return;
-    }
-
-    encapsulator->isExpanded = true;
-    encapsulator->setVisible(false);
-    encapsulator->setInterceptsMouseClicks(false, false);
-
-    showEncapsulatedNodes(encapsulator->memberNodeIds);
-
-    encapsulator->bindToEncapsulatedNodes();
-}
-
-void NodeManager::showEncapsulatedNodes(const std::vector<int>& memberNodeIds) const
-{
-    for (const int memberNodeId : memberNodeIds) {
-        Node* const member = find(memberNodeId);
-
-        if (member == nullptr) {
-            continue;
-        }
-
-        member->isEncapsulated        = false;
-        member->isEncapsulationRinged = false;
-        member->isEncapsulationEntry  = false;
-        member->setVisible(true);
-        member->setInterceptsMouseClicks(!canvas.paintMode, !canvas.paintMode && !canvas.spanMode);
-    }
-
-    for (const auto& [positionedNodeId, positionedNode] : nodes) {
-        setPosition(positionedNodeId);
-    }
-
-    canvas.arrowManager.refreshEncapsulatedArrows();
-}
-
 void NodeManager::setDisplayMode(NodeDisplayMode mode)
 {
     displayMode = mode;
@@ -504,15 +342,6 @@ void NodeManager::clearHighlights() const
     for (auto& [nodeId, node] : nodes) {
         if (node != nullptr) {
             node->setHighlightVisual(-1, false, juce::Colours::white);
-        }
-    }
-}
-
-void NodeManager::syncEncapsulationHighlights() const
-{
-    for (auto& [nodeId, node] : nodes) {
-        if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node)) {
-            encapsulator->syncHighlightsFromMembers();
         }
     }
 }

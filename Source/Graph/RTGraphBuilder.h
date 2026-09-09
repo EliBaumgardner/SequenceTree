@@ -47,7 +47,7 @@ private:
 
     void fillEncapsulation(const juce::ValueTree& nodeValueTree, RTNode& rtNode);
 
-    static void collectDisabledTraversals(const juce::ValueTree& owner, std::vector<int>& disabledIds);
+    static void collectDisabledTraversals(const juce::ValueTree& owner, std::vector<TraversalKey>& disabledKeys);
 
     static RTConnection& connectionFor(RTNode& node, int childId);
 
@@ -57,7 +57,7 @@ private:
 
     static NodeMap freezeNodes(NodeBuildMap& source);
 
-    RTtraversal buildRTtraversal(int traversalId);
+    RTtraversal buildRTtraversal(TraversalKey key);
 
     void rebuildGraphsForTraversal(int traversalId);
 

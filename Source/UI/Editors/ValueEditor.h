@@ -51,13 +51,13 @@ public:
     void setCaretColour(juce::Colour colour);
     void enableSignedValue(int min, int max);
     void disableSignedValue();
-    void enablePlusRequiredValue();
+    void enableTraversalFlagValue();
     void setMinimumValue(int min);
     double clampToRange(double value) const;
     void valueChanged(juce::Value&) override;
     void commitValue();
 
-    void acceptMultipleValues();
+    void acceptTraversalReferences();
 
     std::unique_ptr<juce::TextEditor> textEditor;
     juce::Value boundValue;

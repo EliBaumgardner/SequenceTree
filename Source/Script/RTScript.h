@@ -48,6 +48,7 @@ enum class ScriptField
 
     TraversalId,
     TraversalRandom,
+    TraversalInstance,
 
     ChildId,
     ChildIsEligible,

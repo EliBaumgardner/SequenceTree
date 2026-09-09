@@ -68,6 +68,7 @@ public:
     static const juce::Identifier TraversalMap;
 
     static const juce::Identifier TraversalId;
+    static const juce::Identifier TraversalInstance;
     static const juce::Identifier TraversalChildrenIds;
     static const juce::Identifier DisabledTraversalIds;
     static const juce::Identifier TraversalFlagValue;
