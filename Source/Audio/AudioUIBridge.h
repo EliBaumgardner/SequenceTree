@@ -57,7 +57,8 @@ public:
     {
         int  nodeId          = 0;
         bool shouldHighlight = false;
-        int  traversalId     = -1;
+        int  runId           = -1;
+        int  typeId          = -1;
     };
 
     struct ProgressCommand
@@ -66,7 +67,7 @@ public:
         int  childNodeId  = 0;
         int  durationMs   = 0;
         int  trailId      = -1;
-        int  traversalId  = -1;
+        int  typeId       = -1;
         bool isConnection = false;
     };
 
@@ -93,8 +94,8 @@ public:
     static constexpr int allNodes  = -1;
     static constexpr int allTrails = -1;
 
-    static int primaryTrail  (int instanceId) { return instanceId * 2; }
-    static int modulatorTrail(int instanceId) { return instanceId * 2 + 1; }
+    static int primaryTrail  (int runId) { return runId * 2; }
+    static int modulatorTrail(int runId) { return runId * 2 + 1; }
 
     static int danglingArrowKey(int danglingIndex) { return -(danglingIndex + 1); }
 
@@ -111,9 +112,9 @@ private:
     CommandFifo<ResetCommand>     arrowResets;
     CommandFifo<CountCommand>     counts;
 
-    void highlightNode(int nodeId, bool shouldHighlight, int traversalId = -1)
+    void highlightNode(int nodeId, bool shouldHighlight, int runId = -1, int typeId = -1)
     {
-        highlights.push({ nodeId, shouldHighlight, traversalId });
+        highlights.push({ nodeId, shouldHighlight, runId, typeId });
     }
 
     void clearAllHighlights()
@@ -121,14 +122,14 @@ private:
         highlightNode(allNodes, false);
     }
 
-    void highlightNode(const RTNode& node, bool shouldHighlight, int traversalId = -1)
+    void highlightNode(const RTNode& node, bool shouldHighlight, int runId = -1, int typeId = -1)
     {
-        highlightNode(node.nodeID, shouldHighlight, traversalId);
+        highlightNode(node.nodeID, shouldHighlight, runId, typeId);
     }
 
-    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int trailId, int traversalId, bool isConnection = false)
+    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int trailId, int typeId, bool isConnection = false)
     {
-        progress.push({ parentNodeId, childNodeId, durationMs, trailId, traversalId, isConnection });
+        progress.push({ parentNodeId, childNodeId, durationMs, trailId, typeId, isConnection });
     }
 
     void pushArrowReset(int trailId)

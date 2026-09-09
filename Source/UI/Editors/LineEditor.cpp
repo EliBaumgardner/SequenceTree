@@ -82,6 +82,8 @@ void LineEditor::textEditorReturnKeyPressed(juce::TextEditor&)
 
 void LineEditor::textEditorTextChanged(juce::TextEditor&)
 {
+    boundValue.setValue(textEditor->getText());
+
     if (onWrapChanged) {
         onWrapChanged();
     }

@@ -353,14 +353,14 @@ void ValueEditor::disableSignedValue()
     setFormat(std::make_unique<IntFormat>());
 }
 
-void ValueEditor::enablePlusRequiredValue()
+void ValueEditor::enableTraversalFlagValue()
 {
-    setFormat(std::make_unique<PlusRequiredFormat>());
+    setFormat(std::make_unique<TraversalFlagFormat>());
 }
 
-void ValueEditor::acceptMultipleValues()
+void ValueEditor::acceptTraversalReferences()
 {
-    setFormat(std::make_unique<IntListFormat>());
+    setFormat(std::make_unique<TraversalRefListFormat>());
 }
 
 void ValueEditor::textEditorReturnKeyPressed(juce::TextEditor&)

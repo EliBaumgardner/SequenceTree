@@ -22,6 +22,7 @@
 #include "NodeManager.h"
 #include "ArrowManager.h"
 #include "CanvasHitTester.h"
+#include "EncapsulationView.h"
 #include "../../Util/ArrowInfo.h"
 
 class Node;
@@ -92,6 +93,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         ArrowManager        arrowManager       { *this, applicationContext };
         AudioCommandDrainer drainer            { *this, applicationContext };
         CanvasHitTester     hitTester          { *this };
+        EncapsulationView   encapsulationView  { *this, applicationContext };
 
         ApplicationContext& getApplicationContext() { return applicationContext; }
 };

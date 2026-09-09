@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "../../Util/ApplicationContext.h"
+#include "../../Graph/RTData.h"
 
 class AllowedTraversalsMenu : public juce::Component {
 
@@ -38,11 +39,11 @@ private:
         std::function<void(bool)> onToggle;
     };
 
-    bool isTraversalEnabled(int traversalId) const;
-    void setTraversalEnabled(int traversalId, bool enabled);
+    bool isTraversalEnabled(const TraversalKey& key) const;
+    void setTraversalEnabled(const TraversalKey& key, bool enabled);
 
     struct TraversalRow {
-        int traversalId = 0;
+        TraversalKey key;
         std::unique_ptr<juce::Label>  label;
         std::unique_ptr<ToggleButton> toggle;
     };

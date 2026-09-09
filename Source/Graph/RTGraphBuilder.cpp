@@ -23,7 +23,7 @@ RTGraphBuilder::RTGraphBuilder(SequenceTreeAudioProcessor& processorRef, GraphSt
 {
 }
 
-void RTGraphBuilder::collectDisabledTraversals(const juce::ValueTree& owner, std::vector<int>& disabledIds)
+void RTGraphBuilder::collectDisabledTraversals(const juce::ValueTree& owner, std::vector<TraversalKey>& disabledKeys)
 {
     juce::ValueTree disabledTraversals = owner.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
 
@@ -32,7 +32,10 @@ void RTGraphBuilder::collectDisabledTraversals(const juce::ValueTree& owner, std
     }
 
     for (int i = 0; i < disabledTraversals.getNumChildren(); i++) {
-        disabledIds.push_back((int) disabledTraversals.getChild(i).getProperty(ValueTreeIdentifiers::TraversalId));
+        const juce::ValueTree entry = disabledTraversals.getChild(i);
+
+        disabledKeys.push_back({ (int) entry.getProperty(ValueTreeIdentifiers::TraversalId),
+                                 (int) entry.getProperty(ValueTreeIdentifiers::TraversalInstance, 0) });
     }
 }
 
@@ -165,13 +168,13 @@ void RTGraphBuilder::fillEncapsulation(const juce::ValueTree& nodeValueTree, RTN
         return;
     }
 
-    const juce::ValueTree encapsulatedIds = encapsulator.getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+    const std::vector<int> memberNodeIds = graphState.encapsulatedNodeIds(encapsulatorId);
 
-    if (encapsulatedIds.getNumChildren() == 0) {
+    if (memberNodeIds.empty()) {
         return;
     }
 
-    rtNode.encapsulationEntryId = encapsulatedIds.getChild(0).getProperty(ValueTreeIdentifiers::Id);
+    rtNode.encapsulationEntryId = memberNodeIds.front();
 
     if (rtNode.encapsulationEntryId != rtNode.nodeID) {
         return;
@@ -180,10 +183,10 @@ void RTGraphBuilder::fillEncapsulation(const juce::ValueTree& nodeValueTree, RTN
     const int encapsulationSubLoopLimit = encapsulator.getProperty(ValueTreeIdentifiers::SubLoopCountLimit,
                                                                    GraphState::defaultSubLoopCountLimit);
 
-    const bool encapsulationSubLoopsForever  = (encapsulationSubLoopLimit == 0);
-    const bool encapsulationSubLoopsFinitely = (encapsulationSubLoopLimit > 1);
+    const bool encapsulationOverridesEntrySubLoop =
+        (encapsulationSubLoopLimit != GraphState::defaultSubLoopCountLimit);
 
-    if (encapsulationSubLoopsForever || encapsulationSubLoopsFinitely) {
+    if (encapsulationOverridesEntrySubLoop) {
         rtNode.subLoopCountLimit = encapsulationSubLoopLimit;
     }
 }
@@ -312,9 +315,11 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
 
             for (int i = 0; i < nodeValueTreeTraversals.getNumChildren(); i++) {
                 juce::ValueTree traversalIdTree = nodeValueTreeTraversals.getChild(i);
-                int traversalId = traversalIdTree.getProperty(ValueTreeIdentifiers::TraversalId);
 
-                rtNode.traversals.push_back(buildRTtraversal(traversalId));
+                const TraversalKey key { (int) traversalIdTree.getProperty(ValueTreeIdentifiers::TraversalId),
+                                         (int) traversalIdTree.getProperty(ValueTreeIdentifiers::TraversalInstance, 0) };
+
+                rtNode.traversals.push_back(buildRTtraversal(key));
             }
 
             if (nodeParentValueTree.isValid()) {
@@ -357,7 +362,9 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
                         traversalNumber = -flagValue;
                     }
 
-                    rtNode.flagTraversal        = buildRTtraversal(traversalNumber);
+                    const int flagInstance = currentValueTree.getProperty(ValueTreeIdentifiers::TraversalInstance, 0);
+
+                    rtNode.flagTraversal        = buildRTtraversal({ traversalNumber, flagInstance });
                     rtNode.flagRemovesTraversal = (flagValue < 0);
 
                     if (nodeValueTreeChildren.getNumChildren() > 0) {
@@ -451,12 +458,12 @@ void RTGraphBuilder::createRTNodeConnections(NodeBuildMap& builtNodes, std::unor
     }
 }
 
-RTtraversal RTGraphBuilder::buildRTtraversal(int traversalId)
+RTtraversal RTGraphBuilder::buildRTtraversal(TraversalKey key)
 {
     RTtraversal rtTraversal;
-    rtTraversal.traversalId = traversalId;
+    rtTraversal.key = key;
 
-    juce::ValueTree traversalData = graphState.traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+    juce::ValueTree traversalData = graphState.traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, key.typeId);
     if (traversalData.isValid()) {
         const double storedTempoMultiplier = traversalData.getProperty(ValueTreeIdentifiers::TempoMultiplier);
 

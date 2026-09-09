@@ -22,12 +22,25 @@ struct RTNote {
     int midiChannel = 1;
 };
 
+struct TraversalKey {
+
+    static constexpr int maxInstances = 26;
+
+    int typeId   = 0;
+    int instance = 0;
+
+    bool operator==(const TraversalKey& other) const
+    {
+        return typeId == other.typeId && instance == other.instance;
+    }
+};
+
 struct RTtraversal {
 
     static constexpr double minimumTempoMultiplier = 0.01;
     static constexpr double maximumTempoMultiplier = 100.0;
 
-    int traversalId = 0;
+    TraversalKey key;
     double tempoMultiplier = 1;
     int channel = 1;
     int transpose = 0;
@@ -40,7 +53,7 @@ struct RTConnection {
     int  duration   = -1;
     bool isTreeJump = false;
 
-    std::vector<int> disabledTraversals;
+    std::vector<TraversalKey> disabledTraversals;
 };
 
 struct RTNode {
@@ -76,7 +89,7 @@ struct RTNode {
     {
         int duration   = 0;
         int countLimit = 1;
-        std::vector<int> disabledTraversals;
+        std::vector<TraversalKey> disabledTraversals;
     };
 
     enum class NodeType {RootNode, Node, Alternative, Modulator, ModulatorRoot, TraversalFlagData};

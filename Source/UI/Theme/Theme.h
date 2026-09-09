@@ -23,7 +23,7 @@ struct NodeVisual {
     bool isSelected = false;
     bool isOutlined = false;
     bool isEncapsulationRinged = false;
-    bool isEncapsulationEntry  = false;
+    bool hasInnerRim  = false;
     juce::Colour encapsulationRingColour;
 };
 

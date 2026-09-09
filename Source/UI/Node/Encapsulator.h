@@ -17,9 +17,8 @@ public:
 
     void paint(juce::Graphics& g) override;
 
-    void setDisplayMode(NodeDisplayMode mode) override;
-
-    void bindToEncapsulatedNodes();
+    void bindToTree() override;
+    void bindValueEditorForMode() override;
 
     void syncHighlightsFromMembers();
 

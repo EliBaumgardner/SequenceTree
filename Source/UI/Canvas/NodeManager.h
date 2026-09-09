@@ -36,14 +36,8 @@ public:
     void setPosition(int nodeId) const;
     void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY) const;
 
-    juce::Point<int> collapsedSpanShift(int nodeId) const;
-
-    void collapseEncapsulation(int encapsulatorId) const;
-    void expandEncapsulation  (int encapsulatorId) const;
-
     void setDisplayMode(NodeDisplayMode mode);
     void clearHighlights() const;
-    void syncEncapsulationHighlights() const;
     void clearOutlines  () const;
     void equipRootTraversals() const;
     void setInterceptsClicks(bool shouldIntercept, bool shouldChildrenIntercept) const;
@@ -56,8 +50,6 @@ private:
 
     void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY,
                          std::unordered_set<int>& visited, int draggedNodeId) const;
-
-    void showEncapsulatedNodes(const std::vector<int>& memberNodeIds) const;
 
     void connectIncomingArrows(int nodeId, Node* node) const;
     void connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node) const;

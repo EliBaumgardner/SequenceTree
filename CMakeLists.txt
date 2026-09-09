@@ -81,6 +81,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Canvas/NodeManager.cpp
         Source/UI/Canvas/ArrowManager.cpp
         Source/UI/Canvas/CanvasHitTester.cpp
+        Source/UI/Canvas/EncapsulationView.cpp
         Source/Input/NodeCreationDispatcher.cpp
         Source/Input/ConnectionOps.cpp
         Source/Input/SelectionOps.cpp

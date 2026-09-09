@@ -17,7 +17,7 @@ class Modulator : public Node {
     explicit Modulator(ApplicationContext& context);
     void  paint(juce::Graphics& g) override;
     bool  hitTest(int x, int y) override;
-    void  setDisplayMode(NodeDisplayMode mode) override;
+    void  bindValueEditorForMode() override;
 
     juce::Rectangle<float> getSquareBounds() const;
 

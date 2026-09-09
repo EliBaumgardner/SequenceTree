@@ -47,7 +47,7 @@ private:
     void startTraversal(const RTNode& rootNode, const RTtraversal& traversal,
                         const DispatchContext& context);
 
-    void stopTraversalNotes(int instanceId, juce::MidiBuffer& midiMessages);
+    void stopTraversalNotes(int runId, juce::MidiBuffer& midiMessages);
 
     int findFirstUnlinkedRootId(const NodeMap& nodes);
 

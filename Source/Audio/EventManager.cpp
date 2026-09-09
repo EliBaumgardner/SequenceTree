@@ -14,14 +14,14 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
 
         scheduler.sendNoteOff(activeNote, context.midiMessages, 0);
 
-        int orphanedInstanceId = activeNote.instanceId;
+        int orphanedRunId = activeNote.runId;
         scheduler.removeNote(i);
 
-        if (orphanedInstanceId == -1) {
+        if (orphanedRunId == -1) {
             continue;
         }
 
-        TraversalPool::Instance* const orphanedInstance = context.traversalMap.find(orphanedInstanceId);
+        TraversalPool::Instance* const orphanedInstance = context.traversalMap.find(orphanedRunId);
 
         if (orphanedInstance == nullptr) {
             continue;
@@ -37,8 +37,8 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
         traversal.primary.target = traversal.rootId;
         traversal.state          = TraversalLogic::TraversalState::Active;
         traversal.advanceAlternative(context.nodes, traversal.rootId);
-        bridge.highlightNode(*rootIt->second, true, traversal.traversal.traversalId);
-        dispatcher.pushNote(*rootIt->second, orphanedInstanceId, context, 0);
+        bridge.highlightNode(*rootIt->second, true, orphanedRunId, traversal.traversal.key.typeId);
+        dispatcher.pushNote(*rootIt->second, orphanedRunId, context, 0);
     }
 }
 
@@ -76,7 +76,7 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
 
         scheduler.sendNoteOff(expiringNote, context.midiMessages, expirySample);
 
-        if (expiringNote.instanceId == -1) {
+        if (expiringNote.runId == -1) {
             if (NoteScheduler::isNodeAudible(expiringNote.nodeType)) {
                 bridge.highlightNode(expiringNote.nodeId, false);
             }

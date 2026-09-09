@@ -219,21 +219,7 @@ void ColourSelector::setNode(Node* node) {
 void ColourSelector::applyColourToDescendants(const Node* n, juce::Colour c)
 {
     if (const auto* const encapsulator = dynamic_cast<const Encapsulator*>(n)) {
-        for (const int memberNodeId : encapsulator->memberNodeIds) {
-            Node* const member = applicationContext.canvas->nodeManager.find(memberNodeId);
-
-            if (member == nullptr) {
-                continue;
-            }
-
-            member->encapsulationRingColour = c;
-
-            if (memberNodeId == encapsulator->memberNodeIds.front()) {
-                member->nodeColour = c;
-            }
-
-            member->repaint();
-        }
+        applicationContext.canvas->encapsulationView.recolourGroup(*encapsulator, c);
         return;
     }
 

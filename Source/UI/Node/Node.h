@@ -38,7 +38,7 @@ public:
 
     NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const {
         return { bounds, nodeColour, activeHighlights, isHovered, isSelected, isOutlined,
-                 isEncapsulationRinged, isEncapsulationEntry, encapsulationRingColour };
+                 isEncapsulationRinged, hasInnerRim, encapsulationRingColour };
     }
 
     NodeVisual getNodeVisual() const { return getNodeVisual(getLocalBounds().toFloat()); }
@@ -46,7 +46,7 @@ public:
     void setHoverVisual    (bool isHovered);
     void setSelectVisual   (bool isSelected);
     void setSelectVisual   ();
-    void setHighlightVisual(int traversalId, bool isHighlighted, juce::Colour colour);
+    void setHighlightVisual(int runId, bool isHighlighted, juce::Colour colour);
 
     std::function<void(Node*, bool)> onSelected;
     void timerCallback() override;
@@ -55,7 +55,10 @@ public:
 
     virtual float getVisualRadius() const { return getHeight() * 0.5f; }
 
-    virtual void setDisplayMode(NodeDisplayMode mode);
+    virtual void bindToTree();
+    virtual void bindValueEditorForMode();
+
+    void setDisplayMode(NodeDisplayMode mode);
     void incrementNodeValue(int incrementValue);
     void refreshValueDisplay();
 
@@ -86,7 +89,7 @@ public:
     bool isOutlined          = false;
     bool isEncapsulated      = false;
     bool isEncapsulationRinged = false;
-    bool isEncapsulationEntry  = false;
+    bool hasInnerRim  = false;
     bool isHighlighted       = false;
     std::map<int, juce::Colour> activeHighlights;
     std::set<int>               pendingHighlightOffIds;

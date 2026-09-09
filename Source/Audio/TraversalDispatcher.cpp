@@ -28,7 +28,7 @@ bool TraversalDispatcher::markChordVisited(int nodeId)
 }
 
 void TraversalDispatcher::applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes,
-                                         int instanceId, int traversalId)
+                                         int runId, int typeId)
 {
     auto highlight = [&](int nodeId, bool on) {
         auto it = nodes.find(nodeId);
@@ -36,7 +36,7 @@ void TraversalDispatcher::applyStepResult(const TraversalLogic::StepResult& step
         jassert(it != nodes.end());
 
         if (it != nodes.end()) {
-            bridge.highlightNode(*it->second, on, traversalId);
+            bridge.highlightNode(*it->second, on, runId, typeId);
         }
     };
 
@@ -58,7 +58,7 @@ void TraversalDispatcher::applyStepResult(const TraversalLogic::StepResult& step
     }
 
     if (step.clearTrail) {
-        bridge.pushArrowReset(AudioUIBridge::primaryTrail(instanceId));
+        bridge.pushArrowReset(AudioUIBridge::primaryTrail(runId));
     }
 
     if (step.pushCounts && step.countSourceNodeId != -1) {
@@ -176,13 +176,13 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
     return duration;
 }
 
-void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
+void TraversalDispatcher::pushNote(const RTNode& node, int runId,
                                    const DispatchContext& context, double sample,
                                    bool isPrimaryRepeat)
 {
     const NodeMap& nodes = context.nodes;
 
-    TraversalPool::Instance* const traversalInstance = context.traversalMap.find(instanceId);
+    TraversalPool::Instance* const traversalInstance = context.traversalMap.find(runId);
 
     if (traversalInstance == nullptr) {
         jassertfalse;
@@ -211,7 +211,7 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
     auto rootIt = nodes.find(traversalLogic.rootId);
     if (rootIt != nodes.end()) {
         for (const RTtraversal& t : rootIt->second->traversals) {
-            if (t.traversalId == traversalLogic.traversal.traversalId) {
+            if (t.key == traversalLogic.traversal.key) {
                 traversalMultiplier = t.tempoMultiplier;
                 break;
             }
@@ -244,12 +244,13 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
         }
     }
 
-    const int activeTraversalId = traversalLogic.traversal.traversalId;
+    const TraversalKey activeKey = traversalLogic.traversal.key;
+    const int          activeTypeId = activeKey.typeId;
 
     auto danglingArrowFor = [&](const RTNode& target) {
         const int count = traversalLogic.nodeState.get(NodeStateSlot::Count, target.nodeID) + 1;
 
-        return traversalLogic.rule->selectDanglingArrow(target, count, activeTraversalId);
+        return traversalLogic.rule->selectDanglingArrow(target, count, activeKey);
     };
 
     const int nodeCount     = traversalLogic.nodeState.get(NodeStateSlot::Count, node.nodeID) + 1;
@@ -284,7 +285,7 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
         velocityOverride
     };
 
-    scheduler.scheduleNote(node, instanceId, sample, context.midiMessages,
+    scheduler.scheduleNote(node, runId, sample, context.midiMessages,
                            sampleRate, tempoMultiplier, duration, false, voicing);
 
     pushChordNotes(node, sample, duration, tempoMultiplier, context, nodeCount, traversalLogic, transpose);
@@ -299,21 +300,21 @@ void TraversalDispatcher::pushNote(const RTNode& node, int instanceId,
         if (alternativeNodeParentIterator != nodes.end()) {
             const RTNode* alternativeNodeParent = alternativeNodeParentIterator->second.get();
             dispatchPrimaryArrow(*alternativeNode, alternativeNodeParent, danglingArrowFor(*alternativeNode),
-                                 instanceId, wallClockMs, activeTraversalId);
+                                 runId, wallClockMs, activeTypeId);
         }
     }
 
-    dispatchPrimaryArrow(node, nextTarget, danglingIndex, instanceId, wallClockMs, activeTraversalId);
-    dispatchModulatorArrow(modulatorNode, nextModulatorTarget, instanceId, wallClockMs, activeTraversalId);
-    dispatchCrossTree(node, instanceId, sample, tempoMultiplier, context, traversalLogic);
-    flagScheduler.dispatchFlags(node, instanceId, activeTraversalId, nodeCount,
+    dispatchPrimaryArrow(node, nextTarget, danglingIndex, runId, wallClockMs, activeTypeId);
+    dispatchModulatorArrow(modulatorNode, nextModulatorTarget, runId, wallClockMs, activeTypeId);
+    dispatchCrossTree(node, runId, sample, tempoMultiplier, context, traversalLogic);
+    flagScheduler.dispatchFlags(node, runId, activeKey, nodeCount,
                                 sample, tempoMultiplier, context);
 
     --dispatchDepth;
 }
 
 void TraversalDispatcher::dispatchPrimaryArrow(const RTNode& node, const RTNode* nextTarget, int danglingIndex,
-                                                int instanceId, int wallClockMs, int colourTraversalId)
+                                                int runId, int wallClockMs, int colourTypeId)
 {
     if (nextTarget == nullptr && danglingIndex < 0) {
         return;
@@ -323,27 +324,27 @@ void TraversalDispatcher::dispatchPrimaryArrow(const RTNode& node, const RTNode*
                                                  : AudioUIBridge::danglingArrowKey(danglingIndex);
 
     bridge.pushProgress(node.nodeID, targetId, wallClockMs,
-                        AudioUIBridge::primaryTrail(instanceId), colourTraversalId);
+                        AudioUIBridge::primaryTrail(runId), colourTypeId);
 }
 
 void TraversalDispatcher::dispatchModulatorArrow(const RTNode* modulatorNode,
                                                   const RTNode* nextModulatorTarget,
-                                                  int instanceId, int wallClockMs, int colourTraversalId)
+                                                  int runId, int wallClockMs, int colourTypeId)
 {
     if (modulatorNode == nullptr) {
         return;
     }
 
     if (nextModulatorTarget == nullptr) {
-        bridge.pushArrowReset(AudioUIBridge::modulatorTrail(instanceId));
+        bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
         return;
     }
 
     bridge.pushProgress(modulatorNode->nodeID, nextModulatorTarget->nodeID, wallClockMs,
-                        AudioUIBridge::modulatorTrail(instanceId), colourTraversalId);
+                        AudioUIBridge::modulatorTrail(runId), colourTypeId);
 }
 
-void TraversalDispatcher::dispatchCrossTree(const RTNode& node, int sourceInstanceId, double sample,
+void TraversalDispatcher::dispatchCrossTree(const RTNode& node, int sourceRunId, double sample,
                                              double tempoMultiplier, const DispatchContext& context,
                                              TraversalLogic& traversal)
 {
@@ -364,11 +365,11 @@ void TraversalDispatcher::dispatchCrossTree(const RTNode& node, int sourceInstan
 
         const RTNode& crossTreeRoot = *crossTreeIt->second;
 
-        if (context.traversalMap.hasActiveTraversalOnTree(crossTreeRoot.nodeID)) {
+        if (context.traversalMap.hasAllRegisteredRunsOnTree(crossTreeRoot)) {
             continue;
         }
 
-        bridge.highlightNode(crossTreeRoot, true, traversal.traversal.traversalId);
+        bridge.highlightNode(crossTreeRoot, true, sourceRunId, traversal.traversal.key.typeId);
 
         int connectionDuration = 1000;
         int progressSourceId = node.nodeID;
@@ -396,15 +397,15 @@ void TraversalDispatcher::dispatchCrossTree(const RTNode& node, int sourceInstan
             traversal.traversal.velocityMultiplier
         };
 
-        scheduler.scheduleNote(crossTreeRoot, sourceInstanceId, sample, context.midiMessages,
+        scheduler.scheduleNote(crossTreeRoot, sourceRunId, sample, context.midiMessages,
                                context.sampleRate, tempoMultiplier, connectionDuration, true,
                                crossTreeVoicing);
 
         const int wallClockMs = static_cast<int>(juce::jlimit(0.0, ArrowInfo::maximumDurationMs,
                                                               connectionDuration / tempoMultiplier));
         bridge.pushProgress(progressSourceId, crossTreeRootId, wallClockMs,
-                            AudioUIBridge::primaryTrail(sourceInstanceId),
-                            traversal.traversal.traversalId, true);
+                            AudioUIBridge::primaryTrail(sourceRunId),
+                            traversal.traversal.key.typeId, true);
     }
 }
 
@@ -453,7 +454,7 @@ void TraversalDispatcher::pushChordNotes(const RTNode& node, double sample, int 
         scheduler.scheduleNote(chordNode, -1, sample, context.midiMessages,
                                context.sampleRate, tempoMultiplier, duration, false, chordVoicing);
 
-        bridge.highlightNode(chordNode, true, traversalLogic.traversal.traversalId);
+        bridge.highlightNode(chordNode, true, traversalLogic.runId, traversalLogic.traversal.key.typeId);
 
         int chordPlayCount = traversalLogic.nodeState.increment(NodeStateSlot::Chord, chordNode.nodeID);
         chordFrontier.push_back({ chordNode.nodeID, chordPlayCount });
@@ -490,7 +491,7 @@ void TraversalDispatcher::dispatchModulator(const RTNode& node, const DispatchCo
 {
     const NodeMap& nodes    = context.nodes;
     auto&          mod      = traversalLogic.mod;
-    const int      colourId = traversalLogic.traversal.traversalId;
+    const int      colourId = traversalLogic.traversal.key.typeId;
 
     int triggeredRootId = traversalLogic.findActiveModulatorRoot(nodes, node.nodeID);
 
@@ -532,7 +533,7 @@ void TraversalDispatcher::dispatchModulator(const RTNode& node, const DispatchCo
                 const int modulatorRootToReset = traversalLogic.advanceModulator(nodes);
 
                 if (modulatorRootToReset != -1) {
-                    bridge.pushArrowReset(AudioUIBridge::modulatorTrail(traversalLogic.instanceId));
+                    bridge.pushArrowReset(AudioUIBridge::modulatorTrail(traversalLogic.runId));
                 }
             }
         }
@@ -568,12 +569,12 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
 {
     const NodeMap& nodes = context.nodes;
 
-    int instanceId = expiredNote.instanceId;
+    int runId = expiredNote.runId;
 
-    TraversalPool::Instance* const traversalInstance = context.traversalMap.find(instanceId);
+    TraversalPool::Instance* const traversalInstance = context.traversalMap.find(runId);
 
     if (traversalInstance == nullptr) {
-        bridge.highlightNode(expiredNote.nodeId, false);
+        bridge.highlightNode(expiredNote.nodeId, false, runId);
         return;
     }
 
@@ -581,10 +582,10 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
     TraversalRuntime& runtime   = traversalInstance->runtime;
 
     if (runtime.pendingRemoval) {
-        bridge.highlightNode(expiredNote.nodeId, false, traversal.traversal.traversalId);
-        bridge.pushArrowReset(AudioUIBridge::primaryTrail(instanceId));
-        bridge.pushArrowReset(AudioUIBridge::modulatorTrail(instanceId));
-        context.traversalMap.erase(instanceId);
+        bridge.highlightNode(expiredNote.nodeId, false, runId, traversal.traversal.key.typeId);
+        bridge.pushArrowReset(AudioUIBridge::primaryTrail(runId));
+        bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
+        context.traversalMap.erase(runId);
         return;
     }
 
@@ -593,7 +594,7 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
     jassert(nodes.find(traversal.primary.target) != nodes.end());
 
     if (type == RTNode::NodeType::RootNode && expiredNote.isConnectionTrigger) {
-        bridge.highlightNode(expiredNote.nodeId, false, traversal.traversal.traversalId);
+        bridge.highlightNode(expiredNote.nodeId, false, traversal.traversal.key.typeId);
 
         if (traversal.shouldTraverse()) {
             pushRootNodeConnection(expiredNote.nodeId, context, expiryTime);
@@ -623,17 +624,17 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
         runtime.repeatCount++;
 
         if (runtime.repeatCount < repeatValue) {
-            pushNote(traversal.getTargetNode(nodes), instanceId, context, expiryTime, true);
+            pushNote(traversal.getTargetNode(nodes), runId, context, expiryTime, true);
         } else {
             runtime.repeatCount = 0;
 
             const TraversalLogic::StepResult step = traversal.handleNodeEvent(nodes);
 
-            applyStepResult(step, nodes, instanceId, traversal.traversal.traversalId);
+                applyStepResult(step, nodes, runId, traversal.traversal.key.typeId);
             applyTreeJump(step, traversal, runtime, context);
 
             if (traversal.shouldTraverse() && nodes.find(traversal.primary.target) != nodes.end()) {
-                pushNote(traversal.getTargetNode(nodes), instanceId, context, expiryTime);
+                pushNote(traversal.getTargetNode(nodes), runId, context, expiryTime);
             }
         }
     }
@@ -648,7 +649,7 @@ void TraversalDispatcher::pushRootNodeConnection(int rootNodeId, const DispatchC
 
     const RTNode& targetRootNode = *rootIt->second;
 
-    if (context.traversalMap.hasActiveTraversalOnTree(targetRootNode.nodeID)) {
+    if (context.traversalMap.hasAllRegisteredRunsOnTree(targetRootNode)) {
         return;
     }
 
@@ -660,16 +661,22 @@ void TraversalDispatcher::pushRootNodeConnection(int rootNodeId, const DispatchC
 void TraversalDispatcher::startCrossTreeTraversal(const RTNode& targetRootNode, const RTtraversal& traversal,
                                                   double sample, const DispatchContext& context)
 {
-    const int rootId      = targetRootNode.nodeID;
-    const int traversalId = traversal.traversalId;
+    const int rootId = targetRootNode.nodeID;
 
-    int instanceId = context.traversalMap.findInstanceFor(rootId, traversalId);
+    int runId = context.traversalMap.findRunFor(rootId, traversal.key);
 
-    if (instanceId == -1) {
-        instanceId = context.traversalMap.nextInstanceId();
+    if (runId == -1) {
+        runId = context.traversalMap.nextRunId();
+    }
+    else {
+        const TraversalPool::Instance* const existingInstance = context.traversalMap.find(runId);
+
+        if (existingInstance != nullptr && existingInstance->logic.shouldTraverse()) {
+            return;
+        }
     }
 
-    TraversalPool::Instance* instance = prepareTraversal(instanceId, rootId, rootId, traversal, context);
+    TraversalPool::Instance* instance = prepareTraversal(runId, rootId, rootId, traversal, context);
 
     if (instance == nullptr) {
         return;
@@ -677,8 +684,8 @@ void TraversalDispatcher::startCrossTreeTraversal(const RTNode& targetRootNode, 
 
     instance->runtime.asCrossTree = true;
 
-    bridge.highlightNode(targetRootNode, true, traversalId);
-    pushNote(targetRootNode, instanceId, context, sample);
+    bridge.highlightNode(targetRootNode, true, runId, traversal.key.typeId);
+    pushNote(targetRootNode, runId, context, sample);
 }
 
 void TraversalDispatcher::applyGraphLoopLimit(TraversalLogic& traversalLogic, int rootId,
@@ -691,13 +698,13 @@ void TraversalDispatcher::applyGraphLoopLimit(TraversalLogic& traversalLogic, in
     }
 }
 
-TraversalPool::Instance* TraversalDispatcher::prepareTraversal(int instanceId, int rootId, int startNodeId,
+TraversalPool::Instance* TraversalDispatcher::prepareTraversal(int runId, int rootId, int startNodeId,
                                                              const RTtraversal& traversal, const DispatchContext& context)
 {
-    TraversalPool::Instance* instance = context.traversalMap.find(instanceId);
+    TraversalPool::Instance* instance = context.traversalMap.find(runId);
 
     if (instance == nullptr) {
-        instance = context.traversalMap.acquire(instanceId, rootId, traversal);
+        instance = context.traversalMap.acquire(runId, rootId, traversal);
     }
 
     if (instance == nullptr) {
@@ -706,7 +713,7 @@ TraversalPool::Instance* TraversalDispatcher::prepareTraversal(int instanceId, i
 
     TraversalLogic& logic = instance->logic;
 
-    logic.instanceId     = instanceId;
+    logic.runId     = runId;
     logic.primary.target = startNodeId;
     logic.state          = TraversalLogic::TraversalState::Active;
     logic.loop.active    = true;

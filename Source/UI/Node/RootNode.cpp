@@ -9,6 +9,8 @@
 #include "../../Graph/RTGraphBuilder.h"
 #include "../../Util/ApplicationContext.h"
 
+#include <algorithm>
+
 RootNode::RootNode(ApplicationContext& context) : Node(context)
 {
     nodeType = NodeType::Root;
@@ -25,9 +27,9 @@ RootNode::RootNode(ApplicationContext& context) : Node(context)
     };
 }
 
-void RootNode::setDisplayMode(NodeDisplayMode mode)
+void RootNode::bindToTree()
 {
-    Node::setDisplayMode(mode);
+    Node::bindToTree();
 
     if (! nodeValueTree.isValid()) {
         return;
@@ -35,13 +37,18 @@ void RootNode::setDisplayMode(NodeDisplayMode mode)
 
     const juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
 
-    juce::StringArray equippedIds;
+    juce::StringArray equippedReferences;
 
     for (int i = 0; i < traversalChildrenIds.getNumChildren(); i++) {
-        equippedIds.add(traversalChildrenIds.getChild(i).getProperty(ValueTreeIdentifiers::TraversalId).toString());
+        const juce::ValueTree reference = traversalChildrenIds.getChild(i);
+
+        const TraversalKey key { (int) reference.getProperty(ValueTreeIdentifiers::TraversalId),
+                                 (int) reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0) };
+
+        equippedReferences.add(TraversalRefListFormat::describe(key));
     }
 
-    rootRectangle->traversalEditor.setText(equippedIds.joinIntoString(" "));
+    rootRectangle->traversalEditor.setText(equippedReferences.joinIntoString(" "));
 }
 
 RootNode::~RootNode() = default;
@@ -52,38 +59,34 @@ void RootNode::equipTraversals()
         return;
     }
 
-    const std::vector<int> words = IntListFormat::parse(rootRectangle->traversalEditor.getText());
-
-    auto contains = [&words](int id) {
-        for (int w : words) {
-            if (w == id) {
-                return true;
-            }
-        }
-        return false;
-    };
+    const std::vector<TraversalKey> keys = TraversalRefListFormat::parse(rootRectangle->traversalEditor.getText());
 
     juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
 
     for (int i = traversalChildrenIds.getNumChildren() - 1; i >= 0; i--) {
 
-        const int existingId = traversalChildrenIds.getChild(i).getProperty(ValueTreeIdentifiers::TraversalId);
+        const juce::ValueTree reference = traversalChildrenIds.getChild(i);
 
-        if (!contains(existingId)) {
+        const TraversalKey existingKey { (int) reference.getProperty(ValueTreeIdentifiers::TraversalId),
+                                         (int) reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0) };
+
+        if (std::find(keys.begin(), keys.end(), existingKey) == keys.end()) {
             traversalChildrenIds.removeChild(i, nullptr);
         }
     }
 
-    for (const int traversalId : words) {
+    for (const TraversalKey& key : keys) {
 
-        applicationContext.graphState->addTraversalData(traversalId, nullptr);
+        applicationContext.graphState->addTraversalData(key.typeId, nullptr);
 
-        if (!traversalChildrenIds.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
-
-            juce::ValueTree traversalIdTree {ValueTreeIdentifiers::TraversalId};
-            traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalId, traversalId, nullptr);
-            traversalChildrenIds.addChild(traversalIdTree, -1, nullptr);
+        if (GraphState::findTraversalReference(traversalChildrenIds, key).isValid()) {
+            continue;
         }
+
+        juce::ValueTree traversalIdTree {ValueTreeIdentifiers::TraversalId};
+        traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalId,       key.typeId,   nullptr);
+        traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalInstance, key.instance, nullptr);
+        traversalChildrenIds.addChild(traversalIdTree, -1, nullptr);
     }
 
     applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);

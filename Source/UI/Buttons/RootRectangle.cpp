@@ -12,7 +12,7 @@ RootRectangle::RootRectangle(ApplicationContext& context) : traversalEditor(cont
     traversalEditor.setMinimumValue(0);
     traversalEditor.setInterceptsMouseClicks(true, false);
     traversalEditor.setTooltip("Starting Traversal");
-    traversalEditor.acceptMultipleValues();
+    traversalEditor.acceptTraversalReferences();
     addAndMakeVisible(traversalEditor);
 }
 

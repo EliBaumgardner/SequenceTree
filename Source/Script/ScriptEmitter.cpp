@@ -41,8 +41,9 @@ const FieldEntry childrenFieldTable[] = {
 };
 
 const FieldEntry traversalFieldTable[] = {
-    { "id",     ScriptField::TraversalId },
-    { "random", ScriptField::TraversalRandom }
+    { "id",       ScriptField::TraversalId },
+    { "random",   ScriptField::TraversalRandom },
+    { "instance", ScriptField::TraversalInstance }
 };
 
 template <std::size_t count>

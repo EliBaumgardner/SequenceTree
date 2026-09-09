@@ -8,6 +8,8 @@
 #include <limits>
 #include <vector>
 
+#include "../../Graph/RTData.h"
+
 struct InputRestrictions {
     int          maxLength = 4;
     juce::String allowedCharacters { "0123456789" };
@@ -152,12 +154,13 @@ public:
     void              commit(const juce::String& text, ValueBinding binding) const override;
 };
 
-class PlusRequiredFormat : public ValueFormat {
+class TraversalFlagFormat : public ValueFormat {
 public:
 
-    InputRestrictions restrictions() const override;
-    juce::String      displayText(const ValueBinding& binding) const override;
-    void              commit(const juce::String& text, ValueBinding binding) const override;
+    InputRestrictions             restrictions() const override;
+    juce::String                  displayText(const ValueBinding& binding) const override;
+    void                          commit(const juce::String& text, ValueBinding binding) const override;
+    std::vector<juce::Identifier> extraProperties() const override;
 };
 
 
@@ -178,10 +181,12 @@ private:
 };
 
 
-class IntListFormat : public ValueFormat {
+class TraversalRefListFormat : public ValueFormat {
 public:
 
-    static std::vector<int> parse(const juce::String& text);
+    static std::vector<TraversalKey> parse(const juce::String& text);
+
+    static juce::String describe(const TraversalKey& key);
 
     InputRestrictions restrictions() const override;
     juce::String      displayText(const ValueBinding& binding) const override;

@@ -121,9 +121,9 @@ private:
     void finishDanglingArrowCreation ();
     void connectDraggedNodeToRoot    ();
 
-    Node* findDanglingSnapRoot   (const Node* startNode, juce::Point<int> tip) const;
+    Node* findDanglingSnapTarget   (const Node* startNode, juce::Point<int> tip) const;
     juce::Point<int> danglingTipFor (const Node* startNode, juce::Point<int> cursor);
-    void  connectDanglingToRoot  (const Node* startNode);
+    void  connectDanglingToTarget  (const Node* startNode);
 
     void connectWithSnapAnimation (int parentNodeId, int childNodeId);
     void setDraggedNodeVisible    (bool shouldBeVisible);
@@ -150,7 +150,7 @@ private:
 
     Arrow* draggingDanglingArrow = nullptr;
 
-    Node* danglingSnapRoot = nullptr;
+    Node* danglingSnapTarget = nullptr;
 
     PopupWindowLauncher allowedTraversalsLauncher { "Allowed Traversals" };
 

@@ -61,7 +61,7 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const NodeVisual& visual)
     g.setColour(visual.colour);
     g.fillEllipse(circleFill);
 
-    if (visual.isEncapsulationEntry) {
+    if (visual.hasInnerRim) {
         g.setColour(visual.colour.brighter(0.35f));
         g.drawEllipse(circleFill.reduced(encapsulatorRimInset), encapsulatorRimWidth);
     }
@@ -80,42 +80,6 @@ void CustomLookAndFeel::drawNode(juce::Graphics& g, const NodeVisual& visual)
 
     if (visual.isHovered) {
         g.drawEllipse(circleHover, hoverRingWidth);
-    }
-
-    if (visual.isSelected) {
-        g.setColour(selectionRingColour);
-        g.drawEllipse(circleSelect, selectionRingWidth);
-    }
-
-    if (visual.isOutlined) {
-        g.setColour(spanOutlineColour);
-        g.drawEllipse(circleBounds.expanded(spanOutlineGap + spanOutlineWidth * 0.5f), spanOutlineWidth);
-    }
-}
-
-void CustomLookAndFeel::drawEncapsulatorNode(juce::Graphics& g, const NodeVisual& visual)
-{
-    auto circleBounds = getNodeCircleBounds(visual.bounds);
-    auto circleFill   = circleBounds.reduced(0.5f);
-    auto circleSelect = circleBounds.expanded(selectionRingGap + selectionRingWidth * 0.5f);
-
-    paintNodeShadow(g, circleBounds);
-
-    g.setColour(visual.colour);
-    g.fillEllipse(circleFill);
-
-    g.setColour(visual.colour.brighter(0.35f));
-    g.drawEllipse(circleFill.reduced(encapsulatorRimInset), encapsulatorRimWidth);
-
-    int ringIndex = 0;
-    for (const auto& highlight : visual.highlights) {
-        g.setColour(highlight.second);
-        g.drawEllipse(circleFill.reduced(highlightRingInset(ringIndex)), highlightRingWidth);
-        ++ringIndex;
-    }
-
-    if (visual.isHovered) {
-        g.drawEllipse(circleFill, hoverRingWidth);
     }
 
     if (visual.isSelected) {

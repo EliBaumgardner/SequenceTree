@@ -5,6 +5,7 @@
 #include "../../Graph/ValueTreeIdentifiers.h"
 
 #include <iterator>
+#include <limits>
 #include <utility>
 
 namespace
@@ -95,6 +96,22 @@ Node* CanvasHitTester::nodeNear(juce::Point<float> point, float radius, int excl
         },
         [point] (Node* node) { return point.getDistanceFrom(node->getNodeCentre().toFloat()); },
         radius);
+}
+
+Node* CanvasHitTester::nodeContaining(juce::Point<float> point, int excludeId) const
+{
+    return nearest(canvas.nodeManager.all(), nodeOf,
+        [point, excludeId] (Node* node) {
+            const bool isConnectableType = node->nodeValueTree.getType() == ValueTreeIdentifiers::NodeData
+                                        || node->nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData;
+
+            return node->getComponentID().getIntValue() != excludeId
+                && node->isVisible()
+                && isConnectableType
+                && point.getDistanceFrom(node->getNodeCentre().toFloat()) <= node->getVisualRadius();
+        },
+        [point] (Node* node) { return point.getDistanceFrom(node->getNodeCentre().toFloat()); },
+        std::numeric_limits<float>::max());
 }
 
 Node* CanvasHitTester::rootNear(juce::Point<float> point, float radius, int excludeId) const

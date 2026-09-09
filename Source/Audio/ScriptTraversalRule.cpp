@@ -22,7 +22,10 @@ int readScriptField(const RuleContext& context, ScriptField field,
             return context.nodeState.get(NodeStateSlot::LastNode, context.parent.nodeID);
 
         case ScriptField::TraversalId:
-            return context.traversalId;
+            return context.traversalKey.typeId;
+
+        case ScriptField::TraversalInstance:
+            return context.traversalKey.instance;
 
         case ScriptField::TraversalRandom:
             return context.randomValue;

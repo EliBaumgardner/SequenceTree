@@ -78,12 +78,7 @@ std::vector<int> SelectionOps::selectionWithEncapsulatedMembers() const
             ids.push_back(nodeId);
         }
 
-        const juce::ValueTree encapsulatedIds =
-            state.getNode(nodeId).getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
-
-        for (int i = 0; i < encapsulatedIds.getNumChildren(); ++i) {
-            const int memberNodeId = encapsulatedIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
-
+        for (const int memberNodeId : state.encapsulatedNodeIds(nodeId)) {
             if (gathered.insert(memberNodeId).second) {
                 ids.push_back(memberNodeId);
             }
@@ -115,21 +110,18 @@ std::vector<juce::ValueTree> SelectionOps::encapsulatorsCovering(const std::vect
             continue;
         }
 
-        const juce::ValueTree encapsulator = state.getNode(encapsulatorId);
+        const std::vector<int> memberNodeIds = state.encapsulatedNodeIds(encapsulatorId);
 
-        const juce::ValueTree encapsulatedIds =
-            encapsulator.getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+        bool coversAllMembers = ! memberNodeIds.empty();
 
-        bool coversAllMembers = encapsulatedIds.getNumChildren() > 0;
-
-        for (int i = 0; i < encapsulatedIds.getNumChildren(); ++i) {
-            if (covered.count((int) encapsulatedIds.getChild(i).getProperty(ValueTreeIdentifiers::Id)) == 0) {
+        for (const int memberNodeId : memberNodeIds) {
+            if (covered.count(memberNodeId) == 0) {
                 coversAllMembers = false;
             }
         }
 
         if (coversAllMembers) {
-            encapsulators.push_back(encapsulator);
+            encapsulators.push_back(state.getNode(encapsulatorId));
         }
     }
 
@@ -675,12 +667,11 @@ std::vector<int> SelectionOps::createPastedEncapsulators(const PasteLayout& layo
             continue;
         }
 
-        juce::ValueTree encapsulator = state.addEncapsulator(pastedMemberIds, undoManager);
+        const int subLoopCountLimit = source.getProperty(ValueTreeIdentifiers::SubLoopCountLimit,
+                                                         GraphState::defaultSubLoopCountLimit);
 
-        encapsulator.setProperty(ValueTreeIdentifiers::SubLoopCountLimit,
-                                 source.getProperty(ValueTreeIdentifiers::SubLoopCountLimit,
-                                                    GraphState::defaultSubLoopCountLimit),
-                                 undoManager);
+        const juce::ValueTree encapsulator =
+            NodeFactory::createEncapsulator(state, pastedMemberIds, subLoopCountLimit, undoManager);
 
         encapsulatorIds.push_back(encapsulator.getProperty(ValueTreeIdentifiers::Id));
     }
