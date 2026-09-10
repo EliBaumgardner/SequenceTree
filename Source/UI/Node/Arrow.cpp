@@ -18,6 +18,8 @@ Arrow::Arrow(Node* startNode, Node* endNode, ApplicationContext& context)
     : startNode(startNode), endNode(endNode)
 {
     setLookAndFeel(context.lookAndFeel);
+
+    createDurationEditor(context);
 }
 
 Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, ApplicationContext& context)
@@ -30,6 +32,23 @@ Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, ApplicationContext& co
     valueEditor->setInterceptsMouseClicks(true, false);
     valueEditor->setTooltip("Count Limit");
     addAndMakeVisible(*valueEditor);
+
+    createDurationEditor(context);
+}
+
+void Arrow::createDurationEditor(ApplicationContext& context)
+{
+    durationEditor = std::make_unique<ValueEditor>(context);
+    durationEditor->setInterceptsMouseClicks(true, false);
+    durationEditor->setTooltip("Arrow Duration");
+
+    durationEditor->onEditFinished = [this] {
+        editingDuration = false;
+        durationEditor->setVisible(false);
+        repaint();
+    };
+
+    addChildComponent(*durationEditor);
 }
 
 void Arrow::paint(juce::Graphics &g) {
@@ -63,13 +82,13 @@ bool Arrow::isDashed() const
         return true;
     }
 
-    if (isTraversalArrow()) {
+    if (endNode == nullptr || endNode->nodeType != NodeType::Root || startNode->isAlternativeNode) {
         return false;
     }
 
-    return endNode != nullptr
-        && endNode->nodeType == NodeType::Root
-        && ! startNode->isAlternativeNode;
+    const ArrowType arrowType = ArrowBindingOps::getArrowInfo(arrowTree).type;
+
+    return arrowType != ArrowType::Traversal && arrowType != ArrowType::StepIntoTree;
 }
 
 bool Arrow::isTraversalArrow() const
@@ -78,7 +97,12 @@ bool Arrow::isTraversalArrow() const
         return false;
     }
 
-    return GraphState::getArrowInfo(arrowTree).type == ArrowType::Traversal;
+    return ArrowBindingOps::getArrowInfo(arrowTree).type == ArrowType::Traversal;
+}
+
+bool Arrow::isSyncArrow() const
+{
+    return ArrowBindingOps::getArrowInfo(arrowTree).isSynced;
 }
 
 bool Arrow::connectsTraversalFlag() const
@@ -95,7 +119,18 @@ int Arrow::getDuration() const
 
     const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
 
-    return ArrowInfo::durationFromDelta(GraphState::getArrowInfo(arrowTree), delta.x, delta.y);
+    return ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(arrowTree), delta.x, delta.y);
+}
+
+bool Arrow::showsDurationLabel() const
+{
+    const ArrowInfo arrowInfo = ArrowBindingOps::getArrowInfo(arrowTree);
+
+    if (ArrowInfo::bindsTo(arrowInfo, ArrowBinding::DurationBind)) {
+        return true;
+    }
+
+    return ! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind);
 }
 
 juce::String Arrow::getDurationLabel() const
@@ -104,12 +139,13 @@ juce::String Arrow::getDurationLabel() const
         return "0";
     }
 
-    const ArrowInfo arrowInfo = GraphState::getArrowInfo(arrowTree);
+    if (! showsDurationLabel()) {
 
-    if (! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::DurationBind)
-        && ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind)) {
+        const Node* pitchedNode = endNode;
 
-        const Node* const pitchedNode = (isDangling() || startNode->isAlternativeNode) ? startNode : endNode;
+        if (isDangling() || startNode->isAlternativeNode) {
+            pitchedNode = startNode;
+        }
 
         if (pitchedNode != nullptr) {
             return juce::String((int) pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch,
@@ -120,7 +156,7 @@ juce::String Arrow::getDurationLabel() const
     const int duration = getDuration();
 
     if (startNode->nodeType == NodeType::Modulator) {
-        return juce::String(duration / 10) + "%";
+        return juce::String(duration / ArrowDurationFormat::millisecondsPerPercent) + "%";
     }
 
     return juce::String(duration);
@@ -225,6 +261,51 @@ ArrowGeometry Arrow::getGeometry(float animationT) const
     return geometry;
 }
 
+ArrowLabel Arrow::getLabel(const ArrowGeometry& geometry, float headLength) const
+{
+    ArrowLabel label;
+
+    if (startNode == nullptr) {
+        return label;
+    }
+
+    const juce::Point<float> delta = geometry.tip - geometry.centre;
+
+    juce::Point<float> shaftStart = geometry.centre;
+    juce::Point<float> shaftEnd   = geometry.tip;
+
+    const float length = delta.getDistanceFromOrigin();
+
+    if (length > 0.0f) {
+        const juce::Point<float> unit = delta / length;
+
+        shaftStart += unit * startNode->getVisualRadius();
+        shaftEnd   -= unit * headLength;
+    }
+
+    label.centre = (shaftStart + shaftEnd) * 0.5f;
+
+    float angle = std::atan2(delta.y, delta.x);
+
+    const float halfPi = juce::MathConstants<float>::halfPi;
+
+    while (angle > halfPi) {
+        angle -= juce::MathConstants<float>::pi;
+    }
+
+    while (angle <= -halfPi) {
+        angle += juce::MathConstants<float>::pi;
+    }
+
+    if (std::abs(delta.x) < std::abs(delta.y) * verticalLabelThreshold) {
+        angle = 0.0f;
+    }
+
+    label.angle = angle;
+
+    return label;
+}
+
 juce::Path Arrow::buildShaftPath(const ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const
 {
     juce::Path path;
@@ -287,12 +368,49 @@ void Arrow::setArrowBounds()
 
 void Arrow::resized()
 {
+    const ArrowGeometry geometry = getGeometry(1.0f);
+
+    if (geometry.valid) {
+        const ArrowLabel label = getLabel(geometry, arrowHeadLength);
+
+        const juce::Point<int> editorCentre = (label.centre - getPosition().toFloat()).roundToInt()
+                                            - juce::Point<int>(0, valueEditorHeight / 2);
+
+        durationEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight)
+                                      .withCentre(editorCentre));
+    }
+
     if (valueEditor == nullptr) {
         return;
     }
 
     valueEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight)
                                .withCentre(getTip() - getPosition()));
+}
+
+void Arrow::beginDurationEdit()
+{
+    if (startNode == nullptr || ! arrowTree.isValid() || ! showsDurationLabel()) {
+        return;
+    }
+
+    durationEditor->setFormat(std::make_unique<ArrowDurationFormat>(startNode->nodeType == NodeType::Modulator));
+
+    const int durationOverride = arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration,
+                                                       ArrowInfo::noDurationOverride);
+
+    if (durationOverride == ArrowInfo::noDurationOverride) {
+        arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration, getDuration(), nullptr);
+    }
+
+    durationEditor->bindEditor(arrowTree, ValueTreeIdentifiers::ArrowDuration);
+
+    editingDuration = true;
+
+    durationEditor->setVisible(true);
+    durationEditor->beginEditing();
+
+    repaint();
 }
 
 void Arrow::setTipOffset(juce::Point<int> offset)

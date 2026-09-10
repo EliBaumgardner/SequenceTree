@@ -51,9 +51,10 @@ private:
 
     static RTConnection& connectionFor(RTNode& node, int childId);
 
-    static bool isTreeJumpConnection(const juce::ValueTree& parentValueTree,
-                                     const juce::ValueTree& childIdTree,
-                                     const juce::ValueTree& childValueTree);
+    static void classifyRootConnection(const juce::ValueTree& parentValueTree,
+                                       const juce::ValueTree& childIdTree,
+                                       const juce::ValueTree& childValueTree,
+                                       RTConnection& connection);
 
     static NodeMap freezeNodes(NodeBuildMap& source);
 

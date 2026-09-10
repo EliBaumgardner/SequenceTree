@@ -288,10 +288,35 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
     std::unordered_set<int> visited = collectAncestorIds(*applicationContext.graphState, rootId);
     visited.insert(rootId);
 
-    applicationContext.graphState->moveEncapsulatorWithEntryMember(rootId, rootId, deltaX, deltaY,
-                                                                   applicationContext.undoManager);
+    moveEncapsulatorWithEntryMember(rootId, rootId, deltaX, deltaY);
 
     moveDescendants(nodeValueTree, deltaX, deltaY, visited, rootId);
+}
+
+void NodeManager::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY) const
+{
+    GraphState& graphState = *applicationContext.graphState;
+
+    const int encapsulatorId = graphState.getNode(nodeId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    const juce::ValueTree encapsulator = graphState.getNode(encapsulatorId);
+
+    const std::vector<int> memberNodeIds = graphState.encapsulation.memberIds(encapsulatorId);
+
+    if (memberNodeIds.empty() || encapsulatorId == draggedNodeId) {
+        return;
+    }
+
+    if (memberNodeIds.front() != nodeId) {
+        return;
+    }
+
+    NodePosition encapsulatorPosition = graphState.getNodePosition(encapsulatorId);
+
+    encapsulatorPosition.xPosition += deltaX;
+    encapsulatorPosition.yPosition += deltaY;
+
+    GraphState::setNodePosition(encapsulator, encapsulatorPosition, applicationContext.undoManager);
 }
 
 void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY,
@@ -321,8 +346,7 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
 
         GraphState::setNodePosition(childNodeTree, childPosition, applicationContext.undoManager);
 
-        applicationContext.graphState->moveEncapsulatorWithEntryMember(childId, draggedNodeId, deltaX, deltaY,
-                                                                       applicationContext.undoManager);
+        moveEncapsulatorWithEntryMember(childId, draggedNodeId, deltaX, deltaY);
 
         moveDescendants(childNodeTree, deltaX, deltaY, visited, draggedNodeId);
     }

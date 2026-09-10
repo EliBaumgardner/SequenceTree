@@ -53,24 +53,30 @@ RTConnection& RTGraphBuilder::connectionFor(RTNode& node, int childId)
     return node.connections.back();
 }
 
-bool RTGraphBuilder::isTreeJumpConnection(const juce::ValueTree& parentValueTree,
-                                          const juce::ValueTree& childIdTree,
-                                          const juce::ValueTree& childValueTree)
+void RTGraphBuilder::classifyRootConnection(const juce::ValueTree& parentValueTree,
+                                            const juce::ValueTree& childIdTree,
+                                            const juce::ValueTree& childValueTree,
+                                            RTConnection& connection)
 {
-    const int arrowType = childIdTree.getProperty(ValueTreeIdentifiers::ArrowType,
-                                                  static_cast<int>(ArrowType::Node));
-
-    if (arrowType != static_cast<int>(ArrowType::Traversal)) {
-        return false;
-    }
+    connection.isTreeJump  = false;
+    connection.isCrossRoot = false;
 
     if (childValueTree.getType() != ValueTreeIdentifiers::RootNodeData) {
-        return false;
+        return;
     }
 
     const int childId = childValueTree.getProperty(ValueTreeIdentifiers::Id);
 
-    return (int) parentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId) != childId;
+    if ((int) parentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId) == childId) {
+        return;
+    }
+
+    const int arrowType = childIdTree.getProperty(ValueTreeIdentifiers::ArrowType,
+                                                  static_cast<int>(ArrowType::Node));
+
+    connection.isTreeJump  = arrowType == static_cast<int>(ArrowType::Traversal);
+    connection.isCrossRoot = arrowType == static_cast<int>(ArrowType::CrossRootTree)
+                          || arrowType == static_cast<int>(ArrowType::Node);
 }
 
 NodeMap RTGraphBuilder::freezeNodes(NodeBuildMap& source)
@@ -103,7 +109,7 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
         const int deltaX = (int) other.getProperty(ValueTreeIdentifiers::XPosition) - centreX;
         const int deltaY = (int) other.getProperty(ValueTreeIdentifiers::YPosition) - centreY;
 
-        return ArrowInfo::durationFromDelta(GraphState::getArrowInfo(connection), deltaX, deltaY);
+        return ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(connection), deltaX, deltaY);
     };
 
     if (isAlternative) {
@@ -148,7 +154,7 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
 
         RTNode::DanglingArrow dangling;
 
-        dangling.duration   = ArrowInfo::durationFromDelta(GraphState::getArrowInfo(arrowTree), tipX, tipY);
+        dangling.duration   = ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(arrowTree), tipX, tipY);
         dangling.countLimit = arrowTree.getProperty(ValueTreeIdentifiers::CountLimit,
                                                     GraphState::defaultNodeCountLimit);
 
@@ -168,7 +174,7 @@ void RTGraphBuilder::fillEncapsulation(const juce::ValueTree& nodeValueTree, RTN
         return;
     }
 
-    const std::vector<int> memberNodeIds = graphState.encapsulatedNodeIds(encapsulatorId);
+    const std::vector<int> memberNodeIds = graphState.encapsulation.memberIds(encapsulatorId);
 
     if (memberNodeIds.empty()) {
         return;
@@ -287,6 +293,11 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
         int triggerLimit     = currentValueTree.getProperty(ValueTreeIdentifiers::TriggerLimit, GraphState::defaultTriggerLimit);
         int switchCountLimit = currentValueTree.getProperty(ValueTreeIdentifiers::SwitchCountLimit);
         int subLoopLimit     = currentValueTree.getProperty(ValueTreeIdentifiers::SubLoopCountLimit);
+        int loopLimit        = currentValueTree.getProperty(ValueTreeIdentifiers::LoopLimit, GraphState::defaultRootLoopLimit);
+
+        if (nodeType == ValueTreeIdentifiers::RootNodeData) {
+            subLoopLimit = loopLimit;
+        }
 
         int repeatValue = currentValueTree.getProperty(ValueTreeIdentifiers::RepeatValue, GraphState::defaultRepeatValue);
         int probability = currentValueTree.getProperty(ValueTreeIdentifiers::Probability, GraphState::defaultProbability);
@@ -348,7 +359,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
             rtNode.nodeType = rtNodeTypeFor(nodeType);
 
             if (rtNode.nodeType == RTNode::NodeType::RootNode) {
-                rtNode.graphLoopLimit = currentValueTree.getProperty(ValueTreeIdentifiers::LoopLimit, 0);
+                rtNode.graphLoopLimit = loopLimit;
             }
             if (rtNode.nodeType == RTNode::NodeType::ModulatorRoot || rtNode.nodeType == RTNode::NodeType::Modulator) {
                 rtNode.pitchOffset = modAmount;
@@ -451,7 +462,9 @@ void RTGraphBuilder::createRTNodeConnections(NodeBuildMap& builtNodes, std::unor
 
             RTConnection& connection = connectionFor(builtNodes[id], childId);
 
-            connection.isTreeJump = isTreeJumpConnection(nodeValueTree, childIdTree, childDataTree);
+            classifyRootConnection(nodeValueTree, childIdTree, childDataTree, connection);
+
+            connection.isSynced = ArrowBindingOps::getArrowInfo(childIdTree).isSynced;
 
             collectDisabledTraversals(childIdTree, connection.disabledTraversals);
         }
@@ -463,7 +476,7 @@ RTtraversal RTGraphBuilder::buildRTtraversal(TraversalKey key)
     RTtraversal rtTraversal;
     rtTraversal.key = key;
 
-    juce::ValueTree traversalData = graphState.traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, key.typeId);
+    juce::ValueTree traversalData = graphState.traversals.map.getChildWithProperty(ValueTreeIdentifiers::TraversalId, key.typeId);
     if (traversalData.isValid()) {
         const double storedTempoMultiplier = traversalData.getProperty(ValueTreeIdentifiers::TempoMultiplier);
 

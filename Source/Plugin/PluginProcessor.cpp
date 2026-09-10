@@ -156,7 +156,7 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
     else {
         state = juce::ValueTree(ValueTreeIdentifiers::PluginState);
         state.addChild(graphState.nodeMap.createCopy(),          -1, nullptr);
-        state.addChild(graphState.traversalMap.createCopy(),     -1, nullptr);
+        state.addChild(graphState.traversals.map.createCopy(),     -1, nullptr);
         state.addChild(traversalRuleState.rules.createCopy(),    -1, nullptr);
     }
 

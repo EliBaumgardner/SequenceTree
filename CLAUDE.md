@@ -59,6 +59,10 @@ Three things about the model are easy to miss:
 
 **`Source/Graph/`** — Data model
 - `GraphState` creates and mutates the graph's `ValueTree`: adds and removes all node types, connects and disconnects them, and writes node properties from argument structs (`setNodePosition`, `addMidiNote`). It is a `ValueTree::Listener` on its own `nodeMap`, and that listener is the only thing that maintains `nodeIndex` (id → node) and the public `parentIdsOf` (child id → parent ids). Because the index is fed by tree callbacks rather than by the mutators, undo, redo and paste keep it correct for free, and `getNode` / `getNodeParent` are constant time instead of scans. `getNodeParent` walks up *through* `TraversalFlagData` parents, so a node hanging off a flag chain still reports the note node the chain belongs to.
+- `GraphState` composes three parts, reached through it rather than forwarded by it — callers write `graphState.encapsulation.dissolve(...)`, and `GraphState` grows no wrapper for them:
+  - `EncapsulationOps` creates, dissolves and removes encapsulation groups and answers `memberIds`. `GraphState::removeNode` dispatches into it for `EncapsulatorData` nodes and it calls `removeNode` back for each member, so the two are mutually recursive by design.
+  - `ArrowBindingOps` is the pitch half of "arrow geometry is data": the `ArrowInfo` ↔ `ValueTree` marshalling (`setArrowInfo` / `getArrowInfo`, both `static`) plus `syncPitchBindings` and `clearArrowDurations`.
+  - `TraversalState` owns the `traversalMap` document as `map`, creates `TraversalData`, and answers which traversal keys are equipped anywhere in the graph. It has no `replaceState`: restore interleaves both documents and `TraversalMenu`'s listener stays attached to `map` throughout, so `GraphState::replaceState` still drives the whole sequence.
 - `TraversalRuleState` owns the traversal rule scripts and which one is active — a separate document from the graph, sharing only the save file.
 - `RTData.h` defines `RTNote` / `RTtraversal` / `RTNode` / `RTGraph` plus the `NodeMap` and `RTGraphs` aliases — plain structs safe to hand to the audio thread.
 - `RTGraphBuilder` builds `RTGraph`s from the `ValueTree`: `makeRTGraph` rebuilds one tree, `rebuildAllGraphs` rebuilds all of them, `updateDurationMaps` recomputes arrow durations for given node ids without a rebuild. Finished graphs are held in `rtGraphs`, keyed by graph id, and published from there.
@@ -104,6 +108,7 @@ Three things about the model are easy to miss:
 - Closely observe the structure of the API the code affects
 - Understand the data flow of the relevant API section
 - Verify that the relevant code follows all rules in the Key Design Rules section
+- Verify that the relevant code does not change behavior unexpectantly, or introduce new bugs
 - Analyze the broader API the smaller section of the API affects
 - Closely observe the general design of the API and verify the relevant code follows it fully
 - Reapply the same principles from the second step to the broader API and repeat 

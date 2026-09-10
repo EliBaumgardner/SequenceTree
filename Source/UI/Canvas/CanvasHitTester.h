@@ -15,6 +15,7 @@ public:
     Arrow* arrowNear        (juce::Point<float> point, float radius) const;
     Arrow* arrowHeadNear    (juce::Point<float> point, float radius) const;
     Arrow* danglingHeadNear (juce::Point<float> point, float radius) const;
+    Arrow* arrowLabelNear   (juce::Point<float> point, float radius) const;
 
     Node*  nodeNear (juce::Point<float> point, float radius, int excludeId) const;
     Node*  rootNear (juce::Point<float> point, float radius, int excludeId) const;

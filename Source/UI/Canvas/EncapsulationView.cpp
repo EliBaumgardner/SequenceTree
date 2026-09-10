@@ -42,6 +42,7 @@ bool EncapsulationView::applyCollapsedState(int encapsulatorId) const
         }
 
         member->isEncapsulated        = true;
+        member->isEncapsulationExit   = memberNodeId == encapsulator->memberNodeIds.back();
         member->isOutlined            = false;
         member->isEncapsulationRinged = false;
         member->hasInnerRim           = false;
@@ -110,6 +111,7 @@ void EncapsulationView::showMembers(const std::vector<int>& memberNodeIds) const
         }
 
         member->isEncapsulated        = false;
+        member->isEncapsulationExit   = false;
         member->isEncapsulationRinged = false;
         member->hasInnerRim           = false;
         member->setVisible(true);
@@ -194,7 +196,7 @@ juce::Point<int> EncapsulationView::collapsedSpanShift(int nodeId) const
     int ownEncapsulatorId = node.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
     if (node.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-        const std::vector<int> memberNodeIds = graphState.encapsulatedNodeIds(nodeId);
+        const std::vector<int> memberNodeIds = graphState.encapsulation.memberIds(nodeId);
 
         if (memberNodeIds.empty()) {
             return {};

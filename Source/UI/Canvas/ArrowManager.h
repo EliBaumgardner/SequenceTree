@@ -51,7 +51,7 @@ public:
 
     void handleArrowAdded      (int parentNodeId, int childNodeId);
     void handleArrowRemoved    (int parentNodeId, int childNodeId);
-    void handleArrowTypeChanged(int parentNodeId, int childNodeId);
+    void handleArrowInfoChanged(int parentNodeId, int childNodeId);
 
     void setSelected(Arrow* arrow) const;
     void clearSelection() const;

@@ -44,6 +44,7 @@ context="${context}Design-rule check on files changed vs HEAD:"$'\n\n'"${check}"
 
 if [ "$deep" -eq 1 ]; then
     context="${context}Deep mode requested. Before answering, state which of the Key Design Rules apply to the code in question and how you verified each, and work through the General Principles pass in full. Run .claude/design-rules.sh --all to check the whole tree."$'\n'
+    context="${context}Then audit every function you edited for unintended behavior change. For each class of input the old code handled, state what it did before, what it does now, and whether the request asked for that difference. Revert every difference the request did not ask for, even one you believe is an improvement, and report it separately as a pre-existing bug for the user to decide on. Keep an unrequested change only when the requested fix does not work without it, and say why."$'\n'
 else
     context="${context}Light mode: answer directly. No rule recitation, no multi-pass audit, no broader-API sweep unless the task needs it. The Key Design Rules still bind any code you write. The user requests the full verification protocol by putting -deep in their prompt."$'\n'
 fi

@@ -51,7 +51,7 @@ private:
                               int runId, int wallClockMs, int colourTypeId);
 
     void dispatchModulatorArrow(const RTNode* modulatorNode, const RTNode* nextModulatorTarget,
-                                int runId, int wallClockMs, int colourTypeId);
+                                int danglingIndex, int runId, int wallClockMs, int colourTypeId);
 
     void dispatchCrossTree(const RTNode& node, int sourceRunId, double sample,
                            double tempoMultiplier, const DispatchContext& context,

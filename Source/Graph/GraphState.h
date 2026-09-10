@@ -2,7 +2,10 @@
 
 #include "../Util/NodeInfo.h"
 #include "../Util/ArrowInfo.h"
+#include "ArrowBindingOps.h"
+#include "EncapsulationOps.h"
 #include "RTData.h"
+#include "TraversalState.h"
 
 #include <juce_data_structures/juce_data_structures.h>
 
@@ -23,12 +26,6 @@ public:
     juce::ValueTree addModulatorRoot    (int parentNodeId, juce::UndoManager* undoManager);
     juce::ValueTree addModulator        (int parentNodeId, juce::UndoManager* undoManager);
 
-    juce::ValueTree addTraversalData(int traversalId, juce::UndoManager* undoManager);
-
-    void collectTraversalKeys(std::vector<TraversalKey>& keys) const;
-
-    static juce::ValueTree findTraversalReference(const juce::ValueTree& references, const TraversalKey& key);
-
     void addMidiNote(int nodeId, NodeNote note, juce::UndoManager* undoManager);
 
     void replaceState(const juce::ValueTree& restoredNodeMap,
@@ -36,12 +33,6 @@ public:
 
     void connectNodes   (int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
     void disconnectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
-
-    static void      setArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo,
-                                  juce::UndoManager* undoManager);
-    static ArrowInfo getArrowInfo(const juce::ValueTree& arrowTree);
-
-    std::vector<int> syncPitchBindings(int nodeId, juce::UndoManager* undoManager);
 
     void removeNode(int nodeId, juce::UndoManager* undoManager);
 
@@ -51,29 +42,20 @@ public:
 
     std::vector<int> nodeIdsBetween(int startNodeId, int endNodeId) const;
 
-    juce::ValueTree addEncapsulator     (const std::vector<int>& memberNodeIds, juce::UndoManager* undoManager);
-    void            dissolveEncapsulator(int encapsulatorId, juce::UndoManager* undoManager);
-    void            removeEncapsulationGroup(int encapsulatorId, juce::UndoManager* undoManager);
-    void            encapsulateNodeAfter(int nodeId, int siblingNodeId, juce::UndoManager* undoManager);
-    void            moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY,
-                                                    juce::UndoManager* undoManager);
-
-    std::vector<int> encapsulatedNodeIds(int encapsulatorId) const;
-    int              unusedEncapsulatorLabel() const;
-
     juce::ValueTree getNode      (int nodeId) const;
     juce::ValueTree getNodeParent(int nodeId) const;
     juce::ValueTree getMidiNotes (int nodeId) const;
     juce::ValueTree getConnection(int parentNodeId, int childNodeId) const;
 
     juce::ValueTree nodeMap;
-    juce::ValueTree traversalMap;
+
+    EncapsulationOps encapsulation {*this};
+    ArrowBindingOps  arrows        {*this};
+    TraversalState   traversals    {*this};
 
     std::unordered_map<int, std::vector<int>> parentIdsOf;
 
     int nodeIdIncrement = 0;
-
-    static constexpr int defaultTraversalId       {1};
 
     static constexpr int defaultSwitchCountLimit  {1};
     static constexpr int defaultNodeCountLimit    {1};
@@ -84,7 +66,6 @@ public:
     static constexpr int defaultProbability       {100};
     static constexpr int defaultModAmount         {0};
     static constexpr int defaultMidiChannel       {1};
-    static constexpr int defaultTempoMult         {1};
 
 private:
 
@@ -101,9 +82,6 @@ private:
 
     juce::ValueTree addModulatorNode(juce::ValueTree parentNode, const juce::Identifier& nodeType,
                                      int newNodeId, juce::UndoManager* undoManager);
-
-    bool applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId,
-                               int deltaX, int deltaY, juce::UndoManager* undoManager);
 
     std::unordered_map<int, juce::ValueTree> nodeIndex;
 };

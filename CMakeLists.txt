@@ -70,6 +70,9 @@ target_sources(SequenceTree PRIVATE
         Source/Audio/NodeStateTable.cpp
         Source/Graph/RTGraphBuilder.cpp
         Source/Graph/GraphState.cpp
+        Source/Graph/ArrowBindingOps.cpp
+        Source/Graph/EncapsulationOps.cpp
+        Source/Graph/TraversalState.cpp
         Source/Graph/TraversalRuleState.cpp
         Source/Graph/ValueTreeIdentifiers.cpp
         Source/Input/NodeController.cpp

@@ -87,7 +87,8 @@ private:
 
     enum ArrowMenuItem {
         editAllowedTraversals = 1,
-        traversalArrow
+        traversalArrow,
+        syncModulator
     };
 
     void handleCanvasMouseDown (const juce::MouseEvent& e);
@@ -125,7 +126,8 @@ private:
     juce::Point<int> danglingTipFor (const Node* startNode, juce::Point<int> cursor);
     void  connectDanglingToTarget  (const Node* startNode);
 
-    void connectWithSnapAnimation (int parentNodeId, int childNodeId);
+    void connectWithSnapAnimation (int parentNodeId, int childNodeId,
+                                   ArrowType rootConnectionType);
     void setDraggedNodeVisible    (bool shouldBeVisible);
 
     void endDrag  ();
@@ -135,6 +137,7 @@ private:
     static constexpr float arrowHoverRadius        = 8.0f;
     static constexpr float flagProximityRadius     = 28.0f;
     static constexpr float arrowHeadGrabRadius     = 16.0f;
+    static constexpr float arrowLabelGrabRadius    = 10.0f;
     static constexpr int   dragThreshold           = 5;
     static constexpr int   defaultNodeRadius       = 20;
 
@@ -151,6 +154,8 @@ private:
     Arrow* draggingDanglingArrow = nullptr;
 
     Node* danglingSnapTarget = nullptr;
+
+    Node* danglingSourceNode = nullptr;
 
     PopupWindowLauncher allowedTraversalsLauncher { "Allowed Traversals" };
 

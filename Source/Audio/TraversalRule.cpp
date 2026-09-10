@@ -12,6 +12,10 @@ const RTNode* RuleContext::eligibleChild(int childId) const
         return nullptr;
     }
 
+    if (connection != nullptr && connection->isCrossRoot) {
+        return nullptr;
+    }
+
     const auto childIt = nodes.find(childId);
     if (childIt == nodes.end()) {
         return nullptr;

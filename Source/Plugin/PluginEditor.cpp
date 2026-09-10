@@ -80,13 +80,13 @@ SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
 void SequenceTreeAudioProcessorEditor::attachStateListeners()
 {
     applicationContext.graphState->nodeMap.addListener(&canvas->treeListener);
-    applicationContext.graphState->traversalMap.addListener(&canvas->treeListener);
+    applicationContext.graphState->traversals.map.addListener(&canvas->treeListener);
 }
 
 void SequenceTreeAudioProcessorEditor::detachStateListeners()
 {
     applicationContext.graphState->nodeMap.removeListener(&canvas->treeListener);
-    applicationContext.graphState->traversalMap.removeListener(&canvas->treeListener);
+    applicationContext.graphState->traversals.map.removeListener(&canvas->treeListener);
 }
 
 

@@ -40,7 +40,7 @@ TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context
         }
 
         if (typeId > 0) {
-            applicationContext.graphState->addTraversalData(typeId, nullptr);
+            applicationContext.graphState->traversals.addTraversalData(typeId, nullptr);
         }
 
         rebuildOwnGraph();

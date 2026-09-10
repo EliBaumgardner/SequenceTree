@@ -88,6 +88,7 @@ public:
     bool isSelected          = false;
     bool isOutlined          = false;
     bool isEncapsulated      = false;
+    bool isEncapsulationExit = false;
     bool isEncapsulationRinged = false;
     bool hasInnerRim  = false;
     bool isHighlighted       = false;
