@@ -78,7 +78,7 @@ std::vector<int> SelectionOps::selectionWithEncapsulatedMembers() const
             ids.push_back(nodeId);
         }
 
-        for (const int memberNodeId : state.encapsulatedNodeIds(nodeId)) {
+        for (const int memberNodeId : state.encapsulation.memberIds(nodeId)) {
             if (gathered.insert(memberNodeId).second) {
                 ids.push_back(memberNodeId);
             }
@@ -110,7 +110,7 @@ std::vector<juce::ValueTree> SelectionOps::encapsulatorsCovering(const std::vect
             continue;
         }
 
-        const std::vector<int> memberNodeIds = state.encapsulatedNodeIds(encapsulatorId);
+        const std::vector<int> memberNodeIds = state.encapsulation.memberIds(encapsulatorId);
 
         bool coversAllMembers = ! memberNodeIds.empty();
 
@@ -246,7 +246,7 @@ bool SelectionOps::wasChordMember(const juce::ValueTree& source) const
         applicationContext.graphState->getConnection((int) parent.getProperty(ValueTreeIdentifiers::Id),
                                                          (int) source.getProperty(ValueTreeIdentifiers::Id));
 
-    return ArrowInfo::durationFromDelta(GraphState::getArrowInfo(connection), deltaX, deltaY) == 0;
+    return ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(connection), deltaX, deltaY) == 0;
 }
 
 std::set<int> SelectionOps::findDiscardedOrphans(const std::map<int,int>& parentOf) const
@@ -552,10 +552,10 @@ void SelectionOps::addRootTraversals(juce::ValueTree node, int originalRootId) c
         return;
     }
 
-    state.addTraversalData(GraphState::defaultTraversalId, applicationContext.undoManager);
+    state.traversals.addTraversalData(TraversalState::defaultTraversalId, applicationContext.undoManager);
 
     juce::ValueTree traversalId { ValueTreeIdentifiers::TraversalId };
-    traversalId.setProperty(ValueTreeIdentifiers::TraversalId, GraphState::defaultTraversalId, nullptr);
+    traversalId.setProperty(ValueTreeIdentifiers::TraversalId, TraversalState::defaultTraversalId, nullptr);
 
     traversals.addChild(traversalId, -1, nullptr);
 }
@@ -608,8 +608,8 @@ void SelectionOps::connectClipboardNodes(const PasteLayout& layout) const
             if (copiedChild != layout.idMap.end()) {
                 state.connectNodes(parentId, copiedChild->second, undoManager);
 
-                state.setArrowInfo(state.getConnection(parentId, copiedChild->second),
-                                   GraphState::getArrowInfo(childId), undoManager);
+                ArrowBindingOps::setArrowInfo(state.getConnection(parentId, copiedChild->second),
+                                   ArrowBindingOps::getArrowInfo(childId), undoManager);
             }
         }
     }

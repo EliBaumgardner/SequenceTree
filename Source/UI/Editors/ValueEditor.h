@@ -22,6 +22,7 @@ public:
     ~ValueEditor() override;
 
     std::function<void()> onValueChange;
+    std::function<void()> onEditFinished;
 
     void paint  (juce::Graphics& g) override;
     void resized() override;

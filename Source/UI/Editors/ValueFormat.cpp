@@ -4,6 +4,7 @@
 
 #include "ValueFormat.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
+#include "../../Util/ArrowInfo.h"
 
 namespace {
 
@@ -195,6 +196,54 @@ juce::String PercentFormat::editText(const ValueBinding& binding) const
 void PercentFormat::commit(const juce::String& text, ValueBinding binding) const
 {
     binding.primary.setValue((int) clamp((double) text.getIntValue()));
+}
+
+ArrowDurationFormat::ArrowDurationFormat(bool showsPercent) : percent(showsPercent)
+{
+    minimum = 0.0;
+    maximum = ArrowInfo::maximumDurationMs;
+
+    if (percent) {
+        maximum = 100.0;
+    }
+}
+
+InputRestrictions ArrowDurationFormat::restrictions() const
+{
+    if (percent) {
+        return { 3, "0123456789" };
+    }
+
+    return { 7, "0123456789" };
+}
+
+juce::String ArrowDurationFormat::displayText(const ValueBinding& binding) const
+{
+    if (percent) {
+        return juce::String((int) binding.primary.getValue() / millisecondsPerPercent) + "%";
+    }
+
+    return juce::String((int) binding.primary.getValue());
+}
+
+juce::String ArrowDurationFormat::editText(const ValueBinding& binding) const
+{
+    if (percent) {
+        return juce::String((int) binding.primary.getValue() / millisecondsPerPercent);
+    }
+
+    return juce::String((int) binding.primary.getValue());
+}
+
+void ArrowDurationFormat::commit(const juce::String& text, ValueBinding binding) const
+{
+    int value = (int) clamp((double) text.getIntValue());
+
+    if (percent) {
+        value *= millisecondsPerPercent;
+    }
+
+    binding.primary.setValue(value);
 }
 
 const int GreekLetterFormat::letterCount = (int) (sizeof(greekLetters) / sizeof(greekLetters[0]));

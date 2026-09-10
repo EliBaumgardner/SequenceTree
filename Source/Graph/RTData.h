@@ -49,9 +49,11 @@ struct RTtraversal {
 
 struct RTConnection {
 
-    int  childId    = 0;
-    int  duration   = -1;
-    bool isTreeJump = false;
+    int  childId     = 0;
+    int  duration    = -1;
+    bool isTreeJump  = false;
+    bool isCrossRoot = false;
+    bool isSynced    = true;
 
     std::vector<TraversalKey> disabledTraversals;
 };

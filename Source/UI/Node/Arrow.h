@@ -34,6 +34,12 @@ struct ArrowGeometry
     bool  valid    = false;
 };
 
+struct ArrowLabel
+{
+    juce::Point<float> centre;
+    float angle = 0.0f;
+};
+
 class Arrow : public juce::Component, juce::Timer
 {
 public:
@@ -45,20 +51,25 @@ public:
   bool isDangling() const { return endNode == nullptr; }
   bool isDashed() const;
   bool isTraversalArrow() const;
+  bool isSyncArrow() const;
   bool connectsTraversalFlag() const;
 
   juce::Point<int>   getTip() const;
   juce::Point<float> getHeadAnchor() const;
   int                getDuration() const;
+  bool               showsDurationLabel() const;
   juce::String       getDurationLabel() const;
 
   ArrowGeometry getGeometry(float animationT) const;
+  ArrowLabel    getLabel(const ArrowGeometry& geometry, float headLength) const;
   juce::Path    buildShaftPath(const ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const;
 
   void paint (juce::Graphics& g) override;
   void resized() override;
   void setArrowBounds();
   void setTipOffset(juce::Point<int> offset);
+
+  void beginDurationEdit();
 
   void triggerSnapAnimation();
   void setHoverFade(bool shouldBeVisible);
@@ -76,6 +87,7 @@ public:
   int danglingIndex = -1;
 
   std::unique_ptr<ValueEditor> valueEditor;
+  std::unique_ptr<ValueEditor> durationEditor;
 
   juce::ValueTree arrowTree;
 
@@ -84,6 +96,9 @@ public:
   static inline const float headVisibleThreshold  {0.3f};
   static inline const float labelVisibleThreshold {0.8f};
   static inline const float headAnchorInset       {8.0f};
+  static inline const float arrowHeadLength       {9.0f};
+  static inline const float arrowHeadLengthHover  {11.0f};
+  static inline const float verticalLabelThreshold{0.2f};
   static inline const int   arrowBoundsPadding    {40};
   static inline const int   valueEditorWidth      {30};
   static inline const int   valueEditorHeight     {12};
@@ -93,8 +108,14 @@ public:
   bool sourceHovered    = false;
   bool proximityHovered = false;
 
+  bool editingDuration = false;
+
   bool isGhost  = false;
   bool dashed   = false;
   bool hovered  = false;
   bool selected = false;
+
+private:
+
+  void createDurationEditor(ApplicationContext& context);
 };

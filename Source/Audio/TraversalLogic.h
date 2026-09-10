@@ -40,6 +40,9 @@ public:
         Walker        walker;
         ModulatorGate gate;
 
+        int  decidedTarget  = -1;
+        bool decidedRestart = false;
+
         bool isActive() const { return gate.activeRootId != -1; }
 
         void activate(int rootId, int hostId)
@@ -50,6 +53,8 @@ public:
             walker.target      = rootId;
             walker.last        = -1;
             walker.subRootNode = -1;
+            decidedTarget      = -1;
+            decidedRestart     = false;
         }
 
         void deactivate()
@@ -58,6 +63,8 @@ public:
             walker.target      = -1;
             walker.last        = -1;
             walker.subRootNode = -1;
+            decidedTarget      = -1;
+            decidedRestart     = false;
         }
 
         bool tickRepeat(int repeatLimit)
@@ -70,8 +77,8 @@ public:
             return false;
         }
 
-        bool          advance(const NodeMap& nodes, TraversalLogic& owner);
-        const RTNode* peek   (const NodeMap& nodes, TraversalLogic& owner) const;
+        void decide(const NodeMap& nodes, TraversalLogic& owner);
+        bool step  ();
     };
 
     enum class TraversalState { Start, Active, End, Reset, Jump };
@@ -126,14 +133,12 @@ public:
 
     void advance(const NodeMap& nodes);
 
-    int advanceModulator(const NodeMap& nodes);
-
     const RTNode* peekNextTarget(const NodeMap& nodes);
 
     static constexpr int maxCrossTreeTargets = NodeStateTable::maxNodeIds;
 
     void peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& traverserIds);
-    const RTNode* peekModulators(const NodeMap& nodes);
+    const RTNode* decideNextModulator(const NodeMap& nodes);
 
     const RTNode& getTargetNode(const NodeMap& nodes) const;
     const RTNode& getRootNode  (const NodeMap& nodes) const;
@@ -157,7 +162,7 @@ private:
     StepResult stepActive(const NodeMap& nodes);
     void       handleLoopReset(const NodeMap& nodes, StepResult& result);
     void       handleTreeJump(const NodeMap& nodes, StepResult& result);
-    bool       advanceSubRoot(const NodeMap& nodes, Walker& walker);
+    int        advanceSubRoot(const NodeMap& nodes, Walker& walker);
     void       armSubLoop(Walker& walker, const RTNode& enteredNode);
     int        encapsulationLoopTarget(const NodeMap& nodes, int leavingNodeId, int chosenNodeId);
     void       fillEndedResult(StepResult& result) const;

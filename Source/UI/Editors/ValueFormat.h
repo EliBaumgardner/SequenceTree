@@ -123,6 +123,24 @@ public:
 };
 
 
+class ArrowDurationFormat : public ValueFormat {
+public:
+
+    static constexpr int millisecondsPerPercent = 10;
+
+    explicit ArrowDurationFormat(bool showsPercent);
+
+    InputRestrictions restrictions() const override;
+    juce::String      displayText(const ValueBinding& binding) const override;
+    juce::String      editText   (const ValueBinding& binding) const override;
+    void              commit(const juce::String& text, ValueBinding binding) const override;
+
+private:
+
+    bool percent;
+};
+
+
 class GreekLetterFormat : public ValueFormat {
 public:
 

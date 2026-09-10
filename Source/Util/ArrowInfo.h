@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
-enum class ArrowType    { Node   = 0, Polyphonic = 1, Traversal    = 2 };
+enum class ArrowType    { Node   = 0, Polyphonic = 1, Traversal    = 2, CrossRootTree = 3, StepIntoTree = 4 };
 enum class ArrowBinding { NoBind = 0, PitchBind  = 1, DurationBind = 2 };
 
 struct ArrowInfo {
@@ -17,6 +17,11 @@ struct ArrowInfo {
     ArrowBinding yBinding    = ArrowBinding::PitchBind;
     double       xMultiplier = 1.0;
     double       yMultiplier = 1.0;
+    bool         isSynced    = true;
+
+    static constexpr int noDurationOverride = -1;
+
+    int durationOverride = noDurationOverride;
 
     static constexpr float  pixelsPerGridSpace       = 50.0f;
     static constexpr double millisecondsPerGridSpace = 250.0;
@@ -31,6 +36,10 @@ struct ArrowInfo {
 
     static int durationFromDelta(const ArrowInfo& info, int deltaX, int deltaY)
     {
+        if (info.durationOverride != noDurationOverride) {
+            return info.durationOverride;
+        }
+
         double gridSpaces = 0.0;
 
         if (info.xBinding == ArrowBinding::DurationBind) {

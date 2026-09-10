@@ -37,7 +37,7 @@ void Encapsulator::bindToTree()
     firstMemberValueTree = {};
 
     if (applicationContext.graphState != nullptr) {
-        memberNodeIds = applicationContext.graphState->encapsulatedNodeIds(
+        memberNodeIds = applicationContext.graphState->encapsulation.memberIds(
             nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
     }
 

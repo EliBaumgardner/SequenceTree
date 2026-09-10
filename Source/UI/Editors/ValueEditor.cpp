@@ -402,6 +402,10 @@ void ValueEditor::commitValue()
     }
 
     repaint();
+
+    if (onEditFinished) {
+        onEditFinished();
+    }
 }
 
 void ValueEditor::valueChanged(juce::Value&)

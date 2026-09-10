@@ -83,8 +83,24 @@ Arrow* CanvasHitTester::arrowHeadNear(juce::Point<float> point, float radius) co
 Arrow* CanvasHitTester::danglingHeadNear(juce::Point<float> point, float radius) const
 {
     return nearest(canvas.arrowManager.all(), identity,
-        [] (Arrow* arrow) { return arrow->isDangling() && arrow->startNode != nullptr; },
+        [] (Arrow* arrow) {
+            return arrow->isDangling() && arrow->startNode != nullptr && arrow->isVisible();
+        },
         [point] (Arrow* arrow) { return point.getDistanceFrom(arrow->getTip().toFloat()); },
+        radius);
+}
+
+Arrow* CanvasHitTester::arrowLabelNear(juce::Point<float> point, float radius) const
+{
+    return nearest(canvas.arrowManager.all(), identity,
+        [] (Arrow* arrow) {
+            return arrow->startNode != nullptr && arrow->isVisible() && arrow->showsDurationLabel();
+        },
+        [point] (Arrow* arrow) {
+            const ArrowLabel label = arrow->getLabel(arrow->getGeometry(1.0f), Arrow::arrowHeadLength);
+
+            return point.getDistanceFrom(label.centre);
+        },
         radius);
 }
 

@@ -41,7 +41,7 @@ void AudioCommandDrainer::drainAll() const
 
 juce::Colour AudioCommandDrainer::getTraversalColour(int typeId) const
 {
-    const juce::ValueTree traversalData = applicationContext.graphState->traversalMap
+    const juce::ValueTree traversalData = applicationContext.graphState->traversals.map
         .getChildWithProperty(ValueTreeIdentifiers::TraversalId, typeId);
 
     if (!traversalData.isValid()) {

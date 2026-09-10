@@ -88,6 +88,7 @@ void NodeCanvas::handleAsyncUpdate() {
 
     std::vector<int> pitchSyncNodeIds;
     std::vector<int> durationRefreshNodeIds;
+    std::vector<int> movedNodeIds;
 
     for (auto& asyncUpdate  : pendingUpdates) {
         int nodeId = asyncUpdate.nodeId;
@@ -113,6 +114,7 @@ void NodeCanvas::handleAsyncUpdate() {
             nodeManager.setPosition(nodeId);
             rememberOnce(pitchSyncNodeIds, nodeId);
             rememberOnce(durationRefreshNodeIds, nodeId);
+            rememberOnce(movedNodeIds, nodeId);
         }
         else if (updateType == AsyncUpdateType::ValueChanged) {
             if (Node* const changedNode = nodeManager.find(nodeId)) {
@@ -133,8 +135,15 @@ void NodeCanvas::handleAsyncUpdate() {
         else if (updateType == AsyncUpdateType::ArrowRemoved) {
             arrowManager.handleArrowRemoved(nodeId, asyncUpdate.rootNodeId);
         }
-        else if (updateType == AsyncUpdateType::ArrowTypeChanged) {
-            arrowManager.handleArrowTypeChanged(nodeId, asyncUpdate.rootNodeId);
+        else if (updateType == AsyncUpdateType::ArrowInfoChanged) {
+            arrowManager.handleArrowInfoChanged(nodeId, asyncUpdate.rootNodeId);
+        }
+        else if (updateType == AsyncUpdateType::ArrowDurationChanged) {
+            if (Node* const owningNode = nodeManager.find(nodeId)) {
+                arrowManager.refreshFor(owningNode);
+            }
+
+            rememberOnce(durationRefreshNodeIds, nodeId);
         }
     }
 
@@ -143,7 +152,7 @@ void NodeCanvas::handleAsyncUpdate() {
     std::vector<int> repitchedRootIds;
 
     for (int nodeId : pitchSyncNodeIds) {
-        for (int repitchedNodeId : state.syncPitchBindings(nodeId, applicationContext.undoManager)) {
+        for (int repitchedNodeId : state.arrows.syncPitchBindings(nodeId, applicationContext.undoManager)) {
             rememberOnce(repitchedRootIds,
                          (int) state.getNode(repitchedNodeId).getProperty(ValueTreeIdentifiers::RootNodeId));
         }
@@ -151,6 +160,10 @@ void NodeCanvas::handleAsyncUpdate() {
 
     for (int rootNodeId : repitchedRootIds) {
         applicationContext.rtGraphBuilder->makeRTGraph(state.getNode(rootNodeId));
+    }
+
+    for (int nodeId : movedNodeIds) {
+        state.arrows.clearArrowDurations(nodeId, applicationContext.undoManager);
     }
 
     applicationContext.rtGraphBuilder->updateDurationMaps(durationRefreshNodeIds);

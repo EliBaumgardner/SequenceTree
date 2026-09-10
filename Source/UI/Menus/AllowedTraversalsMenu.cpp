@@ -57,8 +57,8 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(ApplicationContext& context, juce::
 
     std::vector<TraversalKey> keys;
 
-    for (int i = 0; i < applicationContext.graphState->traversalMap.getNumChildren(); ++i) {
-        const juce::ValueTree traversalData = applicationContext.graphState->traversalMap.getChild(i);
+    for (int i = 0; i < applicationContext.graphState->traversals.map.getNumChildren(); ++i) {
+        const juce::ValueTree traversalData = applicationContext.graphState->traversals.map.getChild(i);
 
         if (traversalData.getType() != ValueTreeIdentifiers::TraversalData) {
             continue;
@@ -67,7 +67,7 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(ApplicationContext& context, juce::
         keys.push_back({ (int) traversalData.getProperty(ValueTreeIdentifiers::TraversalId), 0 });
     }
 
-    applicationContext.graphState->collectTraversalKeys(keys);
+    applicationContext.graphState->traversals.collectKeys(keys);
 
     std::sort(keys.begin(), keys.end(), [](const TraversalKey& first, const TraversalKey& second) {
         if (first.typeId != second.typeId) {
@@ -111,7 +111,7 @@ bool AllowedTraversalsMenu::isTraversalEnabled(const TraversalKey& key) const {
         return true;
     }
 
-    return !GraphState::findTraversalReference(disabled, key).isValid();
+    return !TraversalState::findReference(disabled, key).isValid();
 }
 
 void AllowedTraversalsMenu::setTraversalEnabled(const TraversalKey& key, bool enabled) {
@@ -129,7 +129,7 @@ void AllowedTraversalsMenu::setTraversalEnabled(const TraversalKey& key, bool en
             return;
         }
 
-        const juce::ValueTree entry = GraphState::findTraversalReference(disabled, key);
+        const juce::ValueTree entry = TraversalState::findReference(disabled, key);
         if (entry.isValid()) {
             disabled.removeChild(entry, undoManager);
         }
@@ -140,7 +140,7 @@ void AllowedTraversalsMenu::setTraversalEnabled(const TraversalKey& key, bool en
             connection.addChild(disabled, -1, undoManager);
         }
 
-        if (!GraphState::findTraversalReference(disabled, key).isValid()) {
+        if (!TraversalState::findReference(disabled, key).isValid()) {
             juce::ValueTree entry {ValueTreeIdentifiers::TraversalId};
             entry.setProperty(ValueTreeIdentifiers::TraversalId,       key.typeId,   undoManager);
             entry.setProperty(ValueTreeIdentifiers::TraversalInstance, key.instance, undoManager);

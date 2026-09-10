@@ -67,12 +67,12 @@ TraversalMenu::TraversalMenu(ApplicationContext& context)
     };
 
     menuListener = std::make_unique<TraversalMenuListener>(*this);
-    applicationContext.graphState->traversalMap.addListener(menuListener.get());
+    applicationContext.graphState->traversals.map.addListener(menuListener.get());
 
     int firstTraversalId = -1;
 
-    for (int i = 0; i < applicationContext.graphState->traversalMap.getNumChildren(); ++i) {
-        const juce::ValueTree traversalData = applicationContext.graphState->traversalMap.getChild(i);
+    for (int i = 0; i < applicationContext.graphState->traversals.map.getNumChildren(); ++i) {
+        const juce::ValueTree traversalData = applicationContext.graphState->traversals.map.getChild(i);
         if (traversalData.getType() == ValueTreeIdentifiers::TraversalData) {
             const int traversalId = traversalData.getProperty(ValueTreeIdentifiers::TraversalId);
             addTraversalToMenu(traversalId);
@@ -92,7 +92,7 @@ void TraversalMenu::addTraversalToMenu(int traversalId) {
 }
 
 void TraversalMenu::selectTraversal(int traversalId) {
-    juce::ValueTree traversalData = applicationContext.graphState->traversalMap.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+    juce::ValueTree traversalData = applicationContext.graphState->traversals.map.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
 
     if (!traversalData.isValid()) {
         return;
@@ -127,7 +127,7 @@ void TraversalMenu::selectTraversal(int traversalId) {
 }
 
 TraversalMenu::~TraversalMenu() {
-    applicationContext.graphState->traversalMap.removeListener(menuListener.get());
+    applicationContext.graphState->traversals.map.removeListener(menuListener.get());
     setLookAndFeel(nullptr);
 }
 

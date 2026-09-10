@@ -60,9 +60,9 @@ public:
     static juce::ValueTree createEncapsulator(GraphState& state, const std::vector<int>& memberNodeIds,
                                               int subLoopCountLimit, juce::UndoManager* undoManager)
     {
-        const int encapsulatorLabel = state.unusedEncapsulatorLabel();
+        const int encapsulatorLabel = state.encapsulation.unusedLabel();
 
-        juce::ValueTree encapsulatorValueTree = state.addEncapsulator(memberNodeIds, undoManager);
+        juce::ValueTree encapsulatorValueTree = state.encapsulation.create(memberNodeIds, undoManager);
 
         encapsulatorValueTree.setProperty(ValueTreeIdentifiers::EncapsulatorLabel, encapsulatorLabel, undoManager);
         encapsulatorValueTree.setProperty(ValueTreeIdentifiers::SubLoopCountLimit, subLoopCountLimit, undoManager);
@@ -92,7 +92,7 @@ public:
         arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
         arrowTree.setProperty(ValueTreeIdentifiers::CountLimit, GraphState::defaultNodeCountLimit, undoManager);
 
-        GraphState::setArrowInfo(arrowTree, arrowInfo, undoManager);
+        ArrowBindingOps::setArrowInfo(arrowTree, arrowInfo, undoManager);
 
         arrowList.addChild(arrowTree, -1, undoManager);
     }
@@ -115,6 +115,7 @@ public:
 
         arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
         arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
+        arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride, undoManager);
     }
 
 private:
@@ -123,10 +124,13 @@ private:
     {
         const juce::ValueTree rootNodeValueTree = state.getNode(nodeId);
 
-        state.addTraversalData(GraphState::defaultTraversalId, undoManager);
+        const int traversalInstance = state.traversals.unusedInstance(TraversalState::defaultTraversalId);
+
+        state.traversals.addTraversalData(TraversalState::defaultTraversalId, undoManager);
 
         juce::ValueTree traversalId = juce::ValueTree{ValueTreeIdentifiers::TraversalId};
-        traversalId.setProperty(ValueTreeIdentifiers::TraversalId, GraphState::defaultTraversalId, undoManager);
+        traversalId.setProperty(ValueTreeIdentifiers::TraversalId,       TraversalState::defaultTraversalId, undoManager);
+        traversalId.setProperty(ValueTreeIdentifiers::TraversalInstance, traversalInstance,              undoManager);
 
         juce::ValueTree traversalChildrenIds = rootNodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
         traversalChildrenIds.addChild(traversalId, -1, undoManager);

@@ -77,9 +77,9 @@ void RootNode::equipTraversals()
 
     for (const TraversalKey& key : keys) {
 
-        applicationContext.graphState->addTraversalData(key.typeId, nullptr);
+        applicationContext.graphState->traversals.addTraversalData(key.typeId, nullptr);
 
-        if (GraphState::findTraversalReference(traversalChildrenIds, key).isValid()) {
+        if (TraversalState::findReference(traversalChildrenIds, key).isValid()) {
             continue;
         }
 

@@ -13,11 +13,12 @@ bool isAlternativeChild(RTNode::NodeType t) {
 }
 
 bool isAdvanceableChild(RTNode::NodeType t) {
-    return t == RTNode::NodeType::Node || t == RTNode::NodeType::Modulator;
+    return t == RTNode::NodeType::Node || t == RTNode::NodeType::Modulator
+        || t == RTNode::NodeType::RootNode;
 }
 
 bool isAudibleChild(RTNode::NodeType t) {
-    return t == RTNode::NodeType::Node;
+    return t == RTNode::NodeType::Node || t == RTNode::NodeType::RootNode;
 }
 
 bool isTreeJumpChild(RTNode::NodeType t) {
@@ -125,18 +126,21 @@ void TraversalLogic::registerTrigger(const NodeMap& nodes, int nodeId)
     nodeState.increment(NodeStateSlot::Trigger, nodeId);
 }
 
-bool TraversalLogic::ModulatorWalk::advance(const NodeMap& nodes, TraversalLogic& owner)
+void TraversalLogic::ModulatorWalk::decide(const NodeMap& nodes, TraversalLogic& owner)
 {
+    if (decidedTarget != -1) {
+        return;
+    }
+
+    decidedRestart = false;
+
     if (gate.activeRootId == -1 || walker.target == -1) {
-        return false;
+        return;
     }
 
-    const auto targetIt = nodes.find(walker.target);
-    if (targetIt == nodes.end()) {
-        return false;
+    if (nodes.find(walker.target) == nodes.end()) {
+        return;
     }
-
-    walker.last = walker.target;
 
     int chosen = -1;
 
@@ -149,55 +153,46 @@ bool TraversalLogic::ModulatorWalk::advance(const NodeMap& nodes, TraversalLogic
     }
 
     if (chosen == -1) {
-        bool hasModulatorChild = false;
-        for (const RTConnection& connection : targetIt->second->connections) {
-            const int childId = connection.childId;
+        decidedRestart = true;
+        decidedTarget  = gate.activeRootId;
 
-            const std::vector<TraversalKey>& disabled = connection.disabledTraversals;
-            const bool disabledForTraversal = std::find(disabled.begin(), disabled.end(),
-                                                        owner.traversal.key) != disabled.end();
+        if (walker.subRootNode != -1) {
+            const int subRootTarget = owner.advanceSubRoot(nodes, walker);
 
-            const auto childIt = nodes.find(childId);
-            if (childIt != nodes.end()
-                && isModulatorChild(childIt->second->nodeType)
-                && childIt->second->countLimit > 0
-                && !disabledForTraversal) {
-                hasModulatorChild = true;
-                break;
+            if (subRootTarget != -1) {
+                decidedTarget = subRootTarget;
             }
         }
 
-        if (hasModulatorChild) {
-            walker.target = walker.last;
-            return false;
-        }
-
-        if (walker.subRootNode != -1 && owner.advanceSubRoot(nodes, walker)) {
-            return true;
-        }
-
-        walker.target = gate.activeRootId;
-        return true;
+        return;
     }
 
     owner.nodeState.set(NodeStateSlot::LastNode, chosen, chosen);
 
-    walker.target = chosen;
+    decidedTarget = chosen;
 
     const auto chosenIt = nodes.find(chosen);
 
     if (chosenIt != nodes.end()) {
         owner.armSubLoop(walker, *chosenIt->second);
     }
-
-    return false;
 }
 
-int TraversalLogic::advanceModulator(const NodeMap& nodes)
+bool TraversalLogic::ModulatorWalk::step()
 {
-    const int activeRootId = mod.gate.activeRootId;
+    if (decidedTarget == -1) {
+        return false;
+    }
 
-    return mod.advance(nodes, *this) ? activeRootId : -1;
+    walker.last   = walker.target;
+    walker.target = decidedTarget;
+
+    const bool restarted = decidedRestart;
+
+    decidedTarget  = -1;
+    decidedRestart = false;
+
+    return restarted;
 }
 
 void TraversalLogic::advanceAlternative(const NodeMap& nodes,int parentId) {
@@ -396,7 +391,7 @@ void TraversalLogic::peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& t
                 return;
             }
 
-            if (connection.isTreeJump) {
+            if (!connection.isCrossRoot) {
                 continue;
             }
 
@@ -456,26 +451,21 @@ void TraversalLogic::peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& t
     }
 }
 
-const RTNode* TraversalLogic::ModulatorWalk::peek(const NodeMap& nodes, TraversalLogic& owner) const
+const RTNode* TraversalLogic::decideNextModulator(const NodeMap& nodes)
 {
-    if (walker.target == -1) {
+    mod.decide(nodes, *this);
+
+    if (mod.decidedRestart) {
         return nullptr;
     }
 
-    const int count = owner.nodeState.get(NodeStateSlot::ModulatorCount, walker.target) + 1;
+    const auto decidedIt = nodes.find(mod.decidedTarget);
 
-    const int peekId = owner.selectNextChild(nodes, walker.target, count, &isModulatorChild);
-    if (peekId == -1) {
+    if (decidedIt == nodes.end()) {
         return nullptr;
     }
 
-    const auto peekIt = nodes.find(peekId);
-    return (peekIt != nodes.end()) ? peekIt->second.get() : nullptr;
-}
-
-const RTNode* TraversalLogic::peekModulators(const NodeMap& nodes)
-{
-    return mod.peek(nodes, *this);
+    return decidedIt->second.get();
 }
 
 const RTNode& TraversalLogic::getTargetNode(const NodeMap& nodes) const { return *nodes.at(primary.target); }
@@ -568,7 +558,7 @@ int TraversalLogic::encapsulationLoopTarget(const NodeMap& nodes, int leavingNod
     return entryId;
 }
 
-bool TraversalLogic::advanceSubRoot(const NodeMap& nodes, Walker& walker)
+int TraversalLogic::advanceSubRoot(const NodeMap& nodes, Walker& walker)
 {
     const auto subRootIt = nodes.find(walker.subRootNode);
 
@@ -584,11 +574,10 @@ bool TraversalLogic::advanceSubRoot(const NodeMap& nodes, Walker& walker)
     if (!subRootLoopsForever && subRootCount >= subRootLimit) {
         nodeState.set(NodeStateSlot::SubRootCount, walker.subRootNode, 0);
         walker.subRootNode = -1;
-        return false;
+        return -1;
     }
 
-    walker.target = walker.subRootNode;
-    return true;
+    return walker.subRootNode;
 }
 
 void TraversalLogic::handleLoopReset(const NodeMap& nodes, StepResult& result)
@@ -616,8 +605,13 @@ void TraversalLogic::handleLoopReset(const NodeMap& nodes, StepResult& result)
 
     result.clearTrail = true;
 
-    if (primary.subRootNode != -1 && advanceSubRoot(nodes, primary)) {
-        result.enteredId = primary.target;
+    if (primary.subRootNode != -1) {
+        const int subRootTarget = advanceSubRoot(nodes, primary);
+
+        if (subRootTarget != -1) {
+            primary.target   = subRootTarget;
+            result.enteredId = primary.target;
+        }
     }
 
     const auto enteredIt = nodes.find(primary.target);
@@ -789,7 +783,9 @@ bool TraversalLogic::isDescendantOf(const NodeMap& nodes, int nodeId, int ancest
 
 int TraversalLogic::findActiveModulatorRoot(const NodeMap& nodes, int regularNodeId) const
 {
-    if (nodes.find(regularNodeId) == nodes.end()) {
+    const auto hostIt = nodes.find(regularNodeId);
+
+    if (hostIt == nodes.end()) {
         return -1;
     }
 
@@ -802,9 +798,18 @@ int TraversalLogic::findActiveModulatorRoot(const NodeMap& nodes, int regularNod
 
     const int hostCount = nodeState.get(NodeStateSlot::Count, regularNodeId) + 1;
 
-    if (hostCount % modRoot->countLimit == 0) {
-        return modRoot->nodeID;
+    if (hostCount % modRoot->countLimit != 0) {
+        return -1;
     }
 
-    return -1;
+    const RTConnection* const modRootConnection = hostIt->second->findConnection(modRoot->nodeID);
+
+    const bool alreadyWalking = mod.gate.activeRootId == modRoot->nodeID
+                             && mod.gate.hostId == regularNodeId;
+
+    if (modRootConnection != nullptr && ! modRootConnection->isSynced && alreadyWalking) {
+        return -1;
+    }
+
+    return modRoot->nodeID;
 }

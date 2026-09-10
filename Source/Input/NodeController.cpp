@@ -108,6 +108,10 @@ void NodeController::showArrowContextMenu(Arrow* arrow)
     menu.addItem(ArrowMenuItem::traversalArrow, "traversal arrow",
                  connectionOps.canBeTraversalArrow(arrow), arrow->isTraversalArrow());
 
+    if (connectionOps.connectsToModulatorRoot(arrow)) {
+        menu.addItem(ArrowMenuItem::syncModulator, "sync", true, arrow->isSyncArrow());
+    }
+
     juce::Component::SafePointer<Arrow> safeArrow(arrow);
 
     menu.showMenuAsync(juce::PopupMenu::Options(), [this, safeArrow] (int result)
@@ -137,6 +141,11 @@ void NodeController::showArrowContextMenu(Arrow* arrow)
             {
                 connectionOps.setArrowType(safeArrow, safeArrow->isTraversalArrow() ? ArrowType::Node
                                                                                     : ArrowType::Traversal);
+                break;
+            }
+            case ArrowMenuItem::syncModulator:
+            {
+                connectionOps.setArrowSync(safeArrow, ! safeArrow->isSyncArrow());
                 break;
             }
             default: break;
@@ -237,8 +246,9 @@ void NodeController::finishDanglingArrowCreation()
         canvas.arrowManager.commitPreview();
     }
 
-    dragState   = DragState::Idle;
-    isDragStart = true;
+    dragState          = DragState::Idle;
+    isDragStart        = true;
+    danglingSourceNode = nullptr;
 
     canvas.hideGrid();
 }
@@ -289,7 +299,8 @@ void NodeController::connectDanglingToTarget(const Node* startNode)
     }
 
     connectWithSnapAnimation(startNode->getComponentID().getIntValue(),
-                             targetNode->getComponentID().getIntValue());
+                             targetNode->getComponentID().getIntValue(),
+                             ArrowType::StepIntoTree);
 }
 
 void NodeController::connectDraggedNodeToRoot()
@@ -309,10 +320,12 @@ void NodeController::connectDraggedNodeToRoot()
 
     canvas.cancelPendingUpdatesFor(draggedNodeId);
 
-    connectWithSnapAnimation(parentNodeId, rootNodeId);
+    connectWithSnapAnimation(parentNodeId, rootNodeId,
+                             ArrowType::CrossRootTree);
 }
 
-void NodeController::connectWithSnapAnimation(int parentNodeId, int childNodeId)
+void NodeController::connectWithSnapAnimation(int parentNodeId, int childNodeId,
+                                              ArrowType rootConnectionType)
 {
     Node* parentNode = canvas.nodeManager.find(parentNodeId);
     Node* childNode  = canvas.nodeManager.find(childNodeId);
@@ -321,7 +334,7 @@ void NodeController::connectWithSnapAnimation(int parentNodeId, int childNodeId)
         return;
     }
 
-    connectionOps.connect(parentNodeId, childNodeId);
+    connectionOps.connect(parentNodeId, childNodeId, rootConnectionType);
 
     canvas.arrowManager.connect(parentNode, childNode);
     canvas.arrowManager.refreshFor(parentNode);
@@ -420,6 +433,12 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
     }
 
     if (!e.mods.isShiftDown() && e.mods.isLeftButtonDown()) {
+        if (Arrow* labelArrow = canvas.hitTester.arrowLabelNear(clickPoint, arrowLabelGrabRadius)) {
+            labelArrow->beginDurationEdit();
+            dragState = DragState::EditingValue;
+            return;
+        }
+
         if (Arrow* headArrow = canvas.hitTester.arrowHeadNear(clickPoint, arrowHeadGrabRadius)) {
             canvas.arrowManager.setSelected(headArrow);
             draggingArrowHeadNode = headArrow->endNode;
@@ -530,7 +549,18 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
     const bool isShiftLeftDrag = e.mods.isLeftButtonDown() && e.mods.isShiftDown();
 
     if (isShiftLeftDrag && isArrowMode()) {
-        dragState = DragState::CreatingDanglingArrow;
+        dragState          = DragState::CreatingDanglingArrow;
+        danglingSourceNode = &node;
+
+        auto* const collapsedEncapsulator = dynamic_cast<Encapsulator*>(&node);
+
+        if (collapsedEncapsulator != nullptr && ! collapsedEncapsulator->memberNodeIds.empty()) {
+            Node* const exitMember = canvas.nodeManager.find(collapsedEncapsulator->memberNodeIds.back());
+
+            if (exitMember != nullptr) {
+                danglingSourceNode = exitMember;
+            }
+        }
     }
     else if (isShiftLeftDrag && node.nodeType == NodeType::TraversalFlag) {
         dragState = DragState::ConnectingFlag;
@@ -600,7 +630,7 @@ void NodeController::selectSpanNode(Node& node)
         canvas.spanAnchorNodeId = -1;
 
         undoManager->beginNewTransaction();
-        graphState.dissolveEncapsulator(nodeId, undoManager);
+        graphState.encapsulation.dissolve(nodeId, undoManager);
         return;
     }
 
@@ -642,6 +672,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     dragState             = DragState::Idle;
     draggingArrowHeadNode = nullptr;
     danglingSnapTarget      = nullptr;
+    danglingSourceNode      = nullptr;
 
     if (canvas.paintMode) {
         if (e.mods.isLeftButtonDown() || e.mods.isRightButtonDown()) {
@@ -744,7 +775,7 @@ void NodeController::handleCanvasMouseDrag(const juce::MouseEvent& e)
         return;
     }
 
-    if (dragState == DragState::ArrowSelected) {
+    if (dragState == DragState::ArrowSelected || dragState == DragState::EditingValue) {
         return;
     }
 
@@ -770,7 +801,7 @@ void NodeController::handleNodeMouseDrag(const juce::MouseEvent& e, Node& node)
     }
 
     if (dragState == DragState::CreatingDanglingArrow && isArrowMode()) {
-        updateConnectionPreview(&node, newPosition, false);
+        updateConnectionPreview(danglingSourceNode, newPosition, false);
         return;
     }
 
@@ -871,7 +902,8 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
         return;
     }
 
-    connectionOps.applySelectedArrowInfo(parentNodeId, draggedNodeTree.getProperty(ValueTreeIdentifiers::Id));
+    connectionOps.applySelectedArrowInfo(parentNodeId, draggedNodeTree.getProperty(ValueTreeIdentifiers::Id),
+                                         ArrowType::StepIntoTree);
 
     const int owningEncapsulatorId = parentNode->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
@@ -886,7 +918,7 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
         return;
     }
 
-    graphState.encapsulateNodeAfter(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id),
+    graphState.encapsulation.insertNodeAfter(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id),
                                     parentNodeId, undoManager);
 }
 
@@ -912,7 +944,8 @@ void NodeController::commitFlagConnection(int sourceNodeId, Node* target)
         return;
     }
 
-    connectWithSnapAnimation(sourceNodeId, targetNodeId);
+    connectWithSnapAnimation(sourceNodeId, targetNodeId,
+                             ArrowType::StepIntoTree);
 }
 
 void NodeController::handleNodeDrag(juce::UndoManager *undoManager, int nodeId, NodePosition newPosition)

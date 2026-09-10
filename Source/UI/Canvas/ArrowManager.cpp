@@ -69,7 +69,7 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
     }
 
     attach(*arrow);
-    arrow->setInterceptsMouseClicks(false, false);
+    arrow->setInterceptsMouseClicks(false, true);
 
     Arrow* const raw = arrow.release();
     adopt(raw);
@@ -258,6 +258,7 @@ void ArrowManager::rebuildDanglingForNode(int nodeId)
         arrow->danglingIndex = i;
         arrow->valueEditor->bindEditor(arrowTree, ValueTreeIdentifiers::CountLimit);
         attach(*arrow);
+        arrow->setVisible(! node->isEncapsulated || node->isEncapsulationExit);
         arrow->setArrowBounds();
         adopt(arrow.release());
     }
@@ -289,13 +290,13 @@ void ArrowManager::refreshEncapsulatedArrows() const
             continue;
         }
 
-        bool endEncapsulated = arrow->startNode->isEncapsulated;
-
-        if (arrow->endNode != nullptr) {
-            endEncapsulated = arrow->endNode->isEncapsulated;
+        if (arrow->isDangling()) {
+            arrow->setVisible(! arrow->startNode->isEncapsulated
+                              || arrow->startNode->isEncapsulationExit);
+            continue;
         }
 
-        arrow->setVisible(! (arrow->startNode->isEncapsulated && endEncapsulated));
+        arrow->setVisible(! (arrow->startNode->isEncapsulated && arrow->endNode->isEncapsulated));
     }
 }
 
@@ -315,7 +316,7 @@ void ArrowManager::handleArrowAdded(int parentNodeId, int childNodeId)
     applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(parentNodeId));
 }
 
-void ArrowManager::handleArrowTypeChanged(int parentNodeId, int childNodeId)
+void ArrowManager::handleArrowInfoChanged(int parentNodeId, int childNodeId)
 {
     Arrow* const arrow = find(parentNodeId, childNodeId);
 

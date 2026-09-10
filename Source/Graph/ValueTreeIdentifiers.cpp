@@ -31,6 +31,8 @@ const juce::Identifier ValueTreeIdentifiers::ArrowYBinding        {"ArrowYBindin
 const juce::Identifier ValueTreeIdentifiers::ArrowXMultiplier     {"ArrowXMultiplier"};
 const juce::Identifier ValueTreeIdentifiers::ArrowYMultiplier     {"ArrowYMultiplier"};
 const juce::Identifier ValueTreeIdentifiers::ArrowPitchOffset     {"ArrowPitchOffset"};
+const juce::Identifier ValueTreeIdentifiers::ArrowDuration         {"ArrowDuration"};
+const juce::Identifier ValueTreeIdentifiers::ArrowSync             {"ArrowSync"};
 
 const juce::Identifier ValueTreeIdentifiers::Id                   {"Id"};
 const juce::Identifier ValueTreeIdentifiers::RootNodeId           {"RootNodeId"};

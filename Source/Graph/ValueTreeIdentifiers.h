@@ -38,6 +38,8 @@ public:
     static const juce::Identifier ArrowXMultiplier;
     static const juce::Identifier ArrowYMultiplier;
     static const juce::Identifier ArrowPitchOffset;
+    static const juce::Identifier ArrowDuration;
+    static const juce::Identifier ArrowSync;
 
     static const juce::Identifier Id;
 

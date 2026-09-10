@@ -295,46 +295,18 @@ namespace {
     {
         const juce::String labelText = arrow.getDurationLabel();
 
-        if (labelText.isEmpty() || arrow.animation.snapT <= Arrow::labelVisibleThreshold) {
+        if (labelText.isEmpty() || arrow.editingDuration
+            || arrow.animation.snapT <= Arrow::labelVisibleThreshold) {
             return;
         }
 
-        const juce::Point<float> centre = geometry.centre - origin;
-        const juce::Point<float> tip    = geometry.tip    - origin;
-        const juce::Point<float> delta  = tip - centre;
+        const ArrowLabel label = arrow.getLabel(geometry, headLength);
 
-        juce::Point<float> shaftStart = centre;
-        juce::Point<float> shaftEnd   = tip;
-
-        const float length = delta.getDistanceFromOrigin();
-        if (length > 0.0f) {
-            const juce::Point<float> unit = delta / length;
-            shaftStart += unit * arrow.startNode->getVisualRadius();
-            shaftEnd   -= unit * headLength;
-        }
-
-        const juce::Point<float> mid = (shaftStart + shaftEnd) * 0.5f;
-
-        float angle = std::atan2(delta.y, delta.x);
-
-        const float halfPi = juce::MathConstants<float>::halfPi;
-
-        while (angle > halfPi) {
-            angle -= juce::MathConstants<float>::pi;
-        }
-
-        while (angle <= -halfPi) {
-            angle += juce::MathConstants<float>::pi;
-        }
-
-        static constexpr float verticalArrowTextThreshold = 0.2f;
-        if (std::abs(delta.x) < std::abs(delta.y) * verticalArrowTextThreshold) {
-            angle = 0.0f;
-        }
+        const juce::Point<float> mid = label.centre - origin;
 
         const juce::Graphics::ScopedSaveState savedState(g);
 
-        g.addTransform(juce::AffineTransform::rotation(angle).translated(mid.x, mid.y));
+        g.addTransform(juce::AffineTransform::rotation(label.angle).translated(mid.x, mid.y));
 
         g.setFont(juce::Font(8.5f));
         g.setColour(juce::Colours::darkgrey);
@@ -356,12 +328,12 @@ void CustomLookAndFeel::drawArrow(juce::Graphics& g, const Arrow& arrow)
     }
 
     const bool  emphasised = arrow.hovered || arrow.selected;
-    float headLength = 9.0f;
+    float headLength = Arrow::arrowHeadLength;
     float headWidth  = 4.25f;
     float alpha      = 1.0f;
 
     if (emphasised) {
-        headLength = 11.0f;
+        headLength = Arrow::arrowHeadLengthHover;
         headWidth  = 5.25f;
     }
 
