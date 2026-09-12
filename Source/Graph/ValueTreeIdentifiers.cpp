@@ -10,6 +10,7 @@ const juce::Identifier ValueTreeIdentifiers::NodeData             {"NodeData"};
 const juce::Identifier ValueTreeIdentifiers::AlternativeNodeData  {"AlternativeNodeData"};
 const juce::Identifier ValueTreeIdentifiers::TraversalFlagData    {"TraversalFlagData"};
 const juce::Identifier ValueTreeIdentifiers::ModulatorData        {"ModulatorData"};
+const juce::Identifier ValueTreeIdentifiers::AlternativeModulatorData {"AlternativeModulatorData"};
 
 const juce::Identifier ValueTreeIdentifiers::NodeChildrenIds      {"NodeChildrenIds"};
 const juce::Identifier ValueTreeIdentifiers::EncapsulatedIds      {"EncapsulatedIds"};

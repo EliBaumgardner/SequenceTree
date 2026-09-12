@@ -16,6 +16,7 @@ public:
     static const juce::Identifier TraversalFlagData;
     static const juce::Identifier ModulatorData;
     static const juce::Identifier ModulatorRootData;
+    static const juce::Identifier AlternativeModulatorData;
     static const juce::Identifier EncapsulatorData;
 
     static const juce::Identifier NodeChildrenIds;

@@ -251,7 +251,8 @@ juce::ValueTree GraphState::addModulator(int parentNodeId, juce::UndoManager* un
 
     jassert(parentNode.isValid());
     jassert(parentNode.getType() == ValueTreeIdentifiers::ModulatorData
-         || parentNode.getType() == ValueTreeIdentifiers::ModulatorRootData);
+         || parentNode.getType() == ValueTreeIdentifiers::ModulatorRootData
+         || parentNode.getType() == ValueTreeIdentifiers::AlternativeModulatorData);
 
     nodeIdIncrement = nodeIdIncrement + 1;
 
@@ -263,6 +264,26 @@ juce::ValueTree GraphState::addModulator(int parentNodeId, juce::UndoManager* un
     return modulatorNode;
 }
 
+juce::ValueTree GraphState::addAlternativeModulator(int parentNodeId, juce::UndoManager* undoManager)
+{
+    juce::ValueTree parentNode = getNode(parentNodeId);
+
+    jassert(parentNode.isValid());
+    jassert(parentNode.getType() == ValueTreeIdentifiers::ModulatorData
+         || parentNode.getType() == ValueTreeIdentifiers::ModulatorRootData
+         || parentNode.getType() == ValueTreeIdentifiers::AlternativeModulatorData);
+
+    nodeIdIncrement = nodeIdIncrement + 1;
+
+    juce::ValueTree alternativeModulatorNode = addModulatorNode(parentNode,
+                                                                ValueTreeIdentifiers::AlternativeModulatorData,
+                                                                nodeIdIncrement, undoManager);
+
+    nodeMap.addChild(alternativeModulatorNode, -1, undoManager);
+
+    return alternativeModulatorNode;
+}
+
 void GraphState::connectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager)
 {
     juce::ValueTree parentNode = getNode(parentNodeId);
@@ -272,7 +293,8 @@ void GraphState::connectNodes(int parentNodeId, int childNodeId, juce::UndoManag
 
     ArrowInfo arrowInfo;
 
-    if (parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
+    if (parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData
+        || parentNode.getType() == ValueTreeIdentifiers::AlternativeModulatorData) {
         arrowInfo.xBinding = ArrowBinding::NoBind;
         arrowInfo.yBinding = ArrowBinding::DurationBind;
     }

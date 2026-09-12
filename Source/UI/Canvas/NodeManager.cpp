@@ -58,6 +58,10 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
           || treeType == ValueTreeIdentifiers::ModulatorRootData) {
         node = std::make_unique<Modulator>(applicationContext);
     }
+    else if (treeType == ValueTreeIdentifiers::AlternativeModulatorData) {
+        node = std::make_unique<Modulator>(applicationContext);
+        node.get()->isAlternativeNode = true;
+    }
     else if (treeType == ValueTreeIdentifiers::EncapsulatorData) {
         node = std::make_unique<Encapsulator>(applicationContext);
     }

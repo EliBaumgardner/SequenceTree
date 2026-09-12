@@ -97,7 +97,7 @@ bool FlagScheduler::startNextDue(double before, const DispatchContext& context)
     }
 
     const PendingStart due = *earliest;
-    earliest->active = false;
+    earliest->active       = false;
 
     auto flagIt = context.nodes.find(due.flagNodeId);
 
@@ -172,7 +172,7 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKe
     }
 
     const RTNode& startNode = *startIt->second;
-    const int rootId = startNode.graphID;
+    const int     rootId    = startNode.graphID;
 
     int runId = context.traversalMap.findRunFor(rootId, spawnKey);
 

@@ -51,6 +51,14 @@ public:
         return modulatorValueTree;
     }
 
+    static juce::ValueTree createAlternativeModulator(GraphState& state, const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager) {
+
+        const juce::ValueTree alternativeModulatorValueTree = state.addAlternativeModulator(parentNodeId, undoManager);
+        GraphState::setNodePosition(alternativeModulatorValueTree, nodePosition, undoManager);
+
+        return alternativeModulatorValueTree;
+    }
+
     static juce::ValueTree createModulatorRoot(GraphState& state, const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager) {
         const juce::ValueTree modulatorRootValueTree = state.addModulatorRoot(parentNodeId, undoManager);
         GraphState::setNodePosition(modulatorRootValueTree, nodePosition, undoManager);

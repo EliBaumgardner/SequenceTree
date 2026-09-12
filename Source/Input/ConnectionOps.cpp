@@ -151,8 +151,11 @@ void ConnectionOps::applySelectedArrowInfo(int parentNodeId, int childNodeId,
         arrowInfo.type = rootConnectionType;
     }
 
-    ArrowBindingOps::setArrowInfo(state.getConnection(parentNodeId, childNodeId), arrowInfo,
-                       applicationContext.undoManager);
+    const juce::ValueTree connection = state.getConnection(parentNodeId, childNodeId);
+
+    state.arrows.applyNodeBinding(arrowInfo, parentNodeId, connection);
+
+    ArrowBindingOps::setArrowInfo(connection, arrowInfo, applicationContext.undoManager);
 
     for (const int repitchedNodeId : applicationContext.graphState->arrows.syncPitchBindings(childNodeId,
                                                                                          applicationContext.undoManager)) {

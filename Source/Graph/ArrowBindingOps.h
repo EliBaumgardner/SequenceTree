@@ -21,6 +21,9 @@ public:
     std::vector<int> syncPitchBindings  (int nodeId, juce::UndoManager* undoManager);
     void             clearArrowDurations(int nodeId, juce::UndoManager* undoManager);
 
+    void applyNodeBinding(ArrowInfo& arrowInfo, int nodeId,
+                          const juce::ValueTree& newArrow = {}) const;
+
 private:
 
     bool applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId,

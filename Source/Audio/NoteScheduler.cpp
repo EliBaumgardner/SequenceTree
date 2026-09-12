@@ -24,7 +24,7 @@ void NoteScheduler::scheduleNote(const RTNode& node, int runId, double sample,
     const double lengthInSamples = juce::jmax(1.0, (duration / 1000.0) * sampleRate / tempoMultiplier);
 
     ActiveNote newNote;
-    newNote.runId          = runId;
+    newNote.runId               = runId;
     newNote.event.pitch         = 63;
     newNote.event.velocity      = 63;
     newNote.event.duration      = duration;

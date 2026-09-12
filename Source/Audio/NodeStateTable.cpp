@@ -22,11 +22,11 @@ int NodeStateTable::indexOf(NodeStateSlot slot, int nodeId)
 
 void NodeStateTable::prepare()
 {
-    if (values.size() == static_cast<std::size_t>(slotCount) * maxNodeIds) {
+    if (values.size() == valueCount) {
         return;
     }
 
-    values.assign(static_cast<std::size_t>(slotCount) * maxNodeIds, 0);
+    values.resize(valueCount);
 
     clear();
 }
@@ -50,9 +50,11 @@ bool NodeStateTable::isAddressable(int nodeId) const
         return false;
     }
 
-    assert(inRange(nodeId) && "node id exceeded NodeStateTable::maxNodeIds");
+    const bool inRange = nodeId >= 0 && nodeId < maxNodeIds;
 
-    return inRange(nodeId);
+    assert(inRange && "node id exceeded NodeStateTable::maxNodeIds");
+
+    return inRange;
 }
 
 int NodeStateTable::get(NodeStateSlot slot, int nodeId) const

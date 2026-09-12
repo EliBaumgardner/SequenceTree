@@ -12,6 +12,7 @@ void NodeCanvasTreeListener::valueTreeChildAdded(juce::ValueTree& parent, juce::
             || child.getType() == ValueTreeIdentifiers::RootNodeData
             || child.getType() == ValueTreeIdentifiers::ModulatorRootData
             || child.getType() == ValueTreeIdentifiers::ModulatorData
+            || child.getType() == ValueTreeIdentifiers::AlternativeModulatorData
             || child.getType() == ValueTreeIdentifiers::TraversalFlagData
             || child.getType() == ValueTreeIdentifiers::EncapsulatorData);
 
@@ -85,6 +86,7 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
             || nodeType == ValueTreeIdentifiers::RootNodeData
             || nodeType == ValueTreeIdentifiers::ModulatorRootData
             || nodeType == ValueTreeIdentifiers::ModulatorData
+            || nodeType == ValueTreeIdentifiers::AlternativeModulatorData
             || nodeType == ValueTreeIdentifiers::TraversalFlagData
             || nodeType == ValueTreeIdentifiers::EncapsulatorData);
 
