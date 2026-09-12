@@ -47,24 +47,28 @@ public:
 
         void activate(int rootId, int hostId)
         {
-            gate.activeRootId  = rootId;
-            gate.hostId        = hostId;
-            gate.repeatCount   = 0;
-            walker.target      = rootId;
-            walker.last        = -1;
-            walker.subRootNode = -1;
-            decidedTarget      = -1;
-            decidedRestart     = false;
+            gate.activeRootId        = rootId;
+            gate.hostId              = hostId;
+            gate.repeatCount         = 0;
+            walker.target            = rootId;
+            walker.last              = -1;
+            walker.subRootNode       = -1;
+            walker.alternativeTarget = -1;
+            walker.alternativeLast   = -1;
+            decidedTarget            = -1;
+            decidedRestart           = false;
         }
 
         void deactivate()
         {
-            gate               = {};
-            walker.target      = -1;
-            walker.last        = -1;
-            walker.subRootNode = -1;
-            decidedTarget      = -1;
-            decidedRestart     = false;
+            gate                     = {};
+            walker.target            = -1;
+            walker.last              = -1;
+            walker.subRootNode       = -1;
+            walker.alternativeTarget = -1;
+            walker.alternativeLast   = -1;
+            decidedTarget            = -1;
+            decidedRestart           = false;
         }
 
         bool tickRepeat(int repeatLimit)
@@ -96,8 +100,8 @@ public:
 
         int  jumpedFromRootId = -1;
 
-        int leftAlternativeId    = -1;
-        int enteredAlternativeId = -1;
+        int leftAlternativeId         = -1;
+        int enteredAlternativeId      = -1;
         int referenceOffAlternativeId = -1;
 
         bool pushCounts        = false;
@@ -156,7 +160,8 @@ private:
     void selectSwitchNode(const NodeMap& nodes, int targetId, int& chosenNodeId);
     void registerTrigger(const NodeMap& nodes, int nodeId);
 
-    const RTNode* getModulatorNode(const NodeMap& nodes, int nodeId) const;
+    const RTNode* eligibleModulatorRoot(const NodeMap& nodes, const RTConnection& connection,
+                                        int hostCount) const;
 
     StepResult enterRoot(const NodeMap& nodes);
     StepResult stepActive(const NodeMap& nodes);

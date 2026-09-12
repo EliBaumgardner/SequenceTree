@@ -81,7 +81,8 @@ Arrow* ArrowManager::connectParentToChild(Node* parentNode, Node* childNode)
     Node* startNode = parentNode;
     Node* endNode   = childNode;
 
-    if (childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
+    if (childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData
+        || childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeModulatorData) {
         startNode = childNode;
         endNode   = parentNode;
     }
@@ -213,8 +214,14 @@ void ArrowManager::commitPreview()
         return;
     }
 
+    ArrowInfo arrowInfo = currentArrowInfo;
+
+    const int nodeId = node->nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+
+    applicationContext.graphState->arrows.applyNodeBinding(arrowInfo, nodeId);
+
     NodeFactory::createDanglingArrow(*applicationContext.graphState, node->nodeValueTree, tipOffset,
-                                     currentArrowInfo, applicationContext.undoManager);
+                                     arrowInfo, applicationContext.undoManager);
 }
 
 void ArrowManager::cancelPreview()

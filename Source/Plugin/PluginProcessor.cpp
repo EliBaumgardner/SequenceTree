@@ -155,9 +155,9 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
     }
     else {
         state = juce::ValueTree(ValueTreeIdentifiers::PluginState);
-        state.addChild(graphState.nodeMap.createCopy(),          -1, nullptr);
-        state.addChild(graphState.traversals.map.createCopy(),     -1, nullptr);
-        state.addChild(traversalRuleState.rules.createCopy(),    -1, nullptr);
+        state.addChild(graphState.nodeMap.createCopy(),       -1, nullptr);
+        state.addChild(graphState.traversals.map.createCopy(),-1, nullptr);
+        state.addChild(traversalRuleState.rules.createCopy(), -1, nullptr);
     }
 
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
@@ -214,7 +214,7 @@ void SequenceTreeAudioProcessor::setStateInformation (const void* data, int size
     else {
         std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
 
-        if (xmlState == nullptr) { DBG("INVALID STATE DATA"); return; }
+        if (xmlState == nullptr)     { DBG("INVALID STATE DATA"); return; }
 
         juce::ValueTree restoredTree = juce::ValueTree::fromXml (*xmlState);
 

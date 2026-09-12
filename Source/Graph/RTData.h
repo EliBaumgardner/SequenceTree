@@ -94,7 +94,7 @@ struct RTNode {
         std::vector<TraversalKey> disabledTraversals;
     };
 
-    enum class NodeType {RootNode, Node, Alternative, Modulator, ModulatorRoot, TraversalFlagData};
+    enum class NodeType {RootNode, Node, Alternative, Modulator, ModulatorRoot, AlternativeModulator, TraversalFlagData};
 
     NodeType nodeType = NodeType::Node;
 

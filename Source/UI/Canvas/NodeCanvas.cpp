@@ -248,7 +248,8 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
         Node* startNode = parentNode;
         Node* endNode   = childNode;
 
-        if (childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData) {
+        if (childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData
+            || childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeModulatorData) {
             startNode = childNode;
             endNode   = parentNode;
         }

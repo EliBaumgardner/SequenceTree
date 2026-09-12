@@ -27,7 +27,13 @@ juce::ValueTree NodeCreationDispatcher::create(NodeCreationMode         mode,
         case NodeCreationMode::Modulator:
         {
             if (parentType == ValueTreeIdentifiers::ModulatorRootData
-                || parentType == ValueTreeIdentifiers::ModulatorData) {
+                || parentType == ValueTreeIdentifiers::ModulatorData
+                || parentType == ValueTreeIdentifiers::AlternativeModulatorData) {
+
+                if (makeAlternative) {
+                    return NodeFactory::createAlternativeModulator(state, parentNodeId, position, undoManager);
+                }
+
                 return NodeFactory::createModulator(state, parentNodeId, position, undoManager);
             }
 

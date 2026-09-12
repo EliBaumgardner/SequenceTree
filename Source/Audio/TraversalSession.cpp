@@ -159,11 +159,11 @@ void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
 void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiBuffer& midiMessages)
 {
     for (auto it = traversals.begin(); it != traversals.end(); ) {
-        const TraversalPool::Instance& instance = it->second;
+        const TraversalPool::Instance& instance  = it->second;
         const TraversalLogic&          traverser = instance.logic;
 
         bool stillAssigned = false;
-        auto rootIt = nodes.find(homeRootId(instance));
+        auto rootIt        = nodes.find(homeRootId(instance));
 
         if (rootIt != nodes.end()) {
             if (instance.runtime.asFlag) {

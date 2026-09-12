@@ -25,6 +25,7 @@ public:
     juce::ValueTree addTraversalFlagNode(int parentNodeId, juce::UndoManager* undoManager);
     juce::ValueTree addModulatorRoot    (int parentNodeId, juce::UndoManager* undoManager);
     juce::ValueTree addModulator        (int parentNodeId, juce::UndoManager* undoManager);
+    juce::ValueTree addAlternativeModulator(int parentNodeId, juce::UndoManager* undoManager);
 
     void addMidiNote(int nodeId, NodeNote note, juce::UndoManager* undoManager);
 

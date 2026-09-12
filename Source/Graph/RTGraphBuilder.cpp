@@ -100,7 +100,8 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
     rtNode.alternativeArrowDuration = -1;
     rtNode.danglingArrows.clear();
 
-    const bool isAlternative = (nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData);
+    const bool isAlternative = (nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData
+                             || nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeModulatorData);
 
     const int centreX = nodeValueTree.getProperty(ValueTreeIdentifiers::XPosition);
     const int centreY = nodeValueTree.getProperty(ValueTreeIdentifiers::YPosition);
@@ -138,7 +139,8 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
 
             RTConnection& connection = connectionFor(rtNode, childId);
 
-            if (childTree.getType() != ValueTreeIdentifiers::AlternativeNodeData) {
+            if (childTree.getType() != ValueTreeIdentifiers::AlternativeNodeData
+                && childTree.getType() != ValueTreeIdentifiers::AlternativeModulatorData) {
                 connection.duration = durationTo(childIdTree, childTree);
             }
         }
@@ -303,7 +305,8 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
         int probability = currentValueTree.getProperty(ValueTreeIdentifiers::Probability, GraphState::defaultProbability);
         int modAmount   = currentValueTree.getProperty(ValueTreeIdentifiers::ModAmount, GraphState::defaultModAmount);
 
-        bool isAlternativeNode = (nodeType == ValueTreeIdentifiers::AlternativeNodeData);
+        bool isAlternativeNode = (nodeType == ValueTreeIdentifiers::AlternativeNodeData
+                              || nodeType == ValueTreeIdentifiers::AlternativeModulatorData);
 
         if(tempNodeMap.count(nodeId) == false) {
 
@@ -342,7 +345,8 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
                     parentNode = &parentIt->second;
 
                     if (isAlternativeNode) {
-                        if (parentNode->nodeType != RTNode::NodeType::Alternative) {
+                        if (parentNode->nodeType != RTNode::NodeType::Alternative
+                            && parentNode->nodeType != RTNode::NodeType::AlternativeModulator) {
                             parentNode->alternativeRootId = nodeId;
                             rtNode.alternativeRootId      = nodeId;
                         }
@@ -361,7 +365,8 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
             if (rtNode.nodeType == RTNode::NodeType::RootNode) {
                 rtNode.graphLoopLimit = loopLimit;
             }
-            if (rtNode.nodeType == RTNode::NodeType::ModulatorRoot || rtNode.nodeType == RTNode::NodeType::Modulator) {
+            if (rtNode.nodeType == RTNode::NodeType::ModulatorRoot || rtNode.nodeType == RTNode::NodeType::Modulator
+                || rtNode.nodeType == RTNode::NodeType::AlternativeModulator) {
                 rtNode.pitchOffset = modAmount;
             }
             if (rtNode.nodeType == RTNode::NodeType::TraversalFlagData) {
@@ -433,6 +438,9 @@ RTNode::NodeType RTGraphBuilder::rtNodeTypeFor(const juce::Identifier& valueTree
     }
     if (valueTreeType == ValueTreeIdentifiers::ModulatorData) {
         return RTNode::NodeType::Modulator;
+    }
+    if (valueTreeType == ValueTreeIdentifiers::AlternativeModulatorData) {
+        return RTNode::NodeType::AlternativeModulator;
     }
     if (valueTreeType == ValueTreeIdentifiers::TraversalFlagData) {
         return RTNode::NodeType::TraversalFlagData;
