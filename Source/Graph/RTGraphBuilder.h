@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "../Util/PluginModules.h"
+#include <juce_data_structures/juce_data_structures.h>
 #include "RTData.h"
 
 #include <memory>

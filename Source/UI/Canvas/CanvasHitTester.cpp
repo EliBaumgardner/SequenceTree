@@ -6,6 +6,7 @@
 
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <utility>
 
 namespace
@@ -38,7 +39,7 @@ auto nearest(const Range& range, Project project, Keep keep, Dist dist, float ra
 
 Arrow* identity(Arrow* arrow) { return arrow; }
 
-Node* nodeOf(const std::pair<const int, Node*>& entry) { return entry.second; }
+Node* nodeOf(const std::pair<const int, std::unique_ptr<Node>>& entry) { return entry.second.get(); }
 
 }
 
@@ -108,7 +109,7 @@ Node* CanvasHitTester::nodeNear(juce::Point<float> point, float radius, int excl
 {
     return nearest(canvas.nodeManager.all(), nodeOf,
         [excludeId] (Node* node) {
-            return node->getComponentID().getIntValue() != excludeId && node->isVisible();
+            return node->nodeId != excludeId && node->isVisible();
         },
         [point] (Node* node) { return point.getDistanceFrom(node->getNodeCentre().toFloat()); },
         radius);
@@ -121,7 +122,7 @@ Node* CanvasHitTester::nodeContaining(juce::Point<float> point, int excludeId) c
             const bool isConnectableType = node->nodeValueTree.getType() == ValueTreeIdentifiers::NodeData
                                         || node->nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData;
 
-            return node->getComponentID().getIntValue() != excludeId
+            return node->nodeId != excludeId
                 && node->isVisible()
                 && isConnectableType
                 && point.getDistanceFrom(node->getNodeCentre().toFloat()) <= node->getVisualRadius();
@@ -134,7 +135,7 @@ Node* CanvasHitTester::rootNear(juce::Point<float> point, float radius, int excl
 {
     return nearest(canvas.nodeManager.all(), nodeOf,
         [excludeId] (Node* node) {
-            return node->getComponentID().getIntValue() != excludeId
+            return node->nodeId != excludeId
                 && node->isVisible()
                 && node->nodeType != NodeType::Encapsulator
                 && node->nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData;

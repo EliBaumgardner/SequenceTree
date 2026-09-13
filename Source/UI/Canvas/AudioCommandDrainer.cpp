@@ -17,7 +17,7 @@ AudioCommandDrainer::AudioCommandDrainer(NodeCanvas& canvasRef, ApplicationConte
 {
 }
 
-void AudioCommandDrainer::drainAll() const
+void AudioCommandDrainer::drainAll()
 {
     AudioUIBridge& bridge = applicationContext.processor->eventManager.bridge;
 
@@ -57,7 +57,7 @@ juce::Colour AudioCommandDrainer::getTraversalColour(int typeId) const
     return juce::Colour::fromString(colourString);
 }
 
-void AudioCommandDrainer::drainHighlights() const
+void AudioCommandDrainer::drainHighlights()
 {
     applicationContext.processor->eventManager.bridge.highlights.drain(
         [this](const AudioUIBridge::HighlightCommand& command)
@@ -84,7 +84,7 @@ void AudioCommandDrainer::drainHighlights() const
     canvas.encapsulationView.syncHighlights();
 }
 
-void AudioCommandDrainer::drainProgress() const
+void AudioCommandDrainer::drainProgress()
 {
     applicationContext.processor->eventManager.bridge.progress.drain(
         [this](const AudioUIBridge::ProgressCommand& command)
@@ -109,7 +109,7 @@ void AudioCommandDrainer::drainProgress() const
     });
 }
 
-void AudioCommandDrainer::drainArrowResets() const
+void AudioCommandDrainer::drainArrowResets()
 {
     applicationContext.processor->eventManager.bridge.arrowResets.drain(
         [this](const AudioUIBridge::ResetCommand& command)
@@ -123,7 +123,7 @@ void AudioCommandDrainer::drainArrowResets() const
     });
 }
 
-void AudioCommandDrainer::drainCounts() const
+void AudioCommandDrainer::drainCounts()
 {
     applicationContext.processor->eventManager.bridge.counts.drain(
         [this](const AudioUIBridge::CountCommand& command)

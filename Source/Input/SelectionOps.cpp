@@ -60,7 +60,7 @@ void SelectionOps::clearAll() const
 void SelectionOps::deselectAllExcept(const Node& keptNode) const
 {
     for (auto& [nodeId, node] : applicationContext.canvas->nodeManager.all()) {
-        if (node != &keptNode && node->isSelected) {
+        if (node.get() != &keptNode && node->isSelected) {
             node->setSelectVisual(false);
         }
     }

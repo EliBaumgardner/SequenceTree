@@ -143,18 +143,6 @@ void CustomLookAndFeel::drawPlayIcon(juce::Graphics &g, juce::Rectangle<float> b
     g.fillRect(area.withWidth(barWidth).withX(area.getX() + barWidth * 3.0f));
 }
 
-void CustomLookAndFeel::drawSyncIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
-{
-    auto area = bounds.reduced(outerButtonBoundsReduction);
-    if (state.isHovered) {
-        g.setColour(buttonColour.brighter());
-    }
-    else {
-        g.setColour(buttonColour);
-    }
-    g.drawEllipse(area, 1.0f);
-}
-
 void CustomLookAndFeel::drawNodeModeIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, const ButtonState& state)
 {
     auto bounds = boundsIn.reduced(outerButtonBoundsReduction);

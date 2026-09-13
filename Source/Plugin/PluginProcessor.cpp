@@ -271,6 +271,10 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         if (juce::AudioPlayHead* playHead = getPlayHead()) {
             if (const juce::Optional<juce::AudioPlayHead::PositionInfo> position = playHead->getPosition()) {
                 hostPlaying = position->getIsPlaying();
+
+                if (const juce::Optional<double> hostBpm = position->getBpm()) {
+                    tempoInfo.hostBpm = *hostBpm;
+                }
             }
         }
 
@@ -316,12 +320,18 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         return;
     }
 
+    double hostTempoScale = 1.0;
+
+    if (tempoInfo.hostBpm > 0.0) {
+        hostTempoScale = tempoInfo.hostBpm / TempoInfo::referenceBpm;
+    }
+
     const DispatchContext context {
         *snap->globalNodes,
         traversalSession.getTraversals(),
         midiMessages,
         tempoInfo.currentSampleRate,
-        tempoMultiplier.load()
+        tempoMultiplier.load() * hostTempoScale
     };
 
     if (resetHit) {

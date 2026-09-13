@@ -11,7 +11,6 @@
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
-#include "../../Graph/RTGraphBuilder.h"
 #include "Arrow.h"
 
 #include "Node.h"
@@ -286,8 +285,4 @@ void Node::incrementNodeValue(int incrementValue) {
 void Node::refreshValueDisplay() {
     nodeValueEditor.repaint();
     repaint();
-
-    if (nodeValueTree.isValid() && applicationContext.rtGraphBuilder != nullptr) {
-        applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);
-    }
 }

@@ -30,7 +30,7 @@ Node* NodeManager::find(int nodeId) const
         return nullptr;
     }
 
-    return nodePair->second;
+    return nodePair->second.get();
 }
 
 Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
@@ -68,9 +68,13 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
 
     jassert(node);
 
+    if (node == nullptr) {
+        return nullptr;
+    }
+
     const juce::ValueTree midiNotes = nodeValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
 
-    node->setComponentID(std::to_string(nodeId));
+    node->nodeId        = nodeId;
     node->nodeValueTree = nodeValueTree;
     node->midiNoteData  = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
     node->bindToTree();
@@ -86,15 +90,15 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
     node->setInterceptsMouseClicks(!canvas.paintMode, !canvas.paintMode && !canvas.spanMode);
     node->setMouseCursor(juce::MouseCursor::ParentCursor);
 
-    Node* const raw = node.release();
-    nodes[nodeId] = raw;
+    Node* const raw = node.get();
+    nodes[nodeId] = std::move(node);
 
     setPosition(nodeId);
 
     return raw;
 }
 
-void NodeManager::connectIncomingArrows(int nodeId, Node* node) const
+void NodeManager::connectIncomingArrows(int nodeId, Node* node)
 {
     const juce::ValueTree nodeMapTree = applicationContext.graphState->nodeMap;
 
@@ -118,7 +122,7 @@ void NodeManager::connectIncomingArrows(int nodeId, Node* node) const
     }
 }
 
-void NodeManager::connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node) const
+void NodeManager::connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node)
 {
     const int nodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
     const juce::ValueTree nodeChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
@@ -142,6 +146,10 @@ void NodeManager::add(int nodeId)
     jassert(nodeChildTree.isValid());
 
     Node* const childNode = instantiateFromTree(nodeChildTree);
+
+    if (childNode == nullptr) {
+        return;
+    }
 
     connectIncomingArrows(nodeId, childNode);
     connectOutgoingArrows(nodeChildTree, childNode);
@@ -186,7 +194,6 @@ void NodeManager::remove(int nodeId)
 
     canvas.arrowManager.removeForNode(node);
     canvas.removeChildComponent(node);
-    delete node;
     nodes.erase(nodeId);
 
     canvas.encapsulationView.refreshMembership(encapsulatorId);
@@ -195,13 +202,12 @@ void NodeManager::remove(int nodeId)
 void NodeManager::clear()
 {
     for (auto& [nodeId, node] : nodes) {
-        canvas.removeChildComponent(node);
-        delete node;
+        canvas.removeChildComponent(node.get());
     }
     nodes.clear();
 }
 
-void NodeManager::setPosition(int nodeId) const
+void NodeManager::setPosition(int nodeId)
 {
     Node* const node = find(nodeId);
     if (node == nullptr) {
@@ -285,7 +291,7 @@ static std::unordered_set<int> collectAncestorIds(const GraphState& graphState, 
     return ancestors;
 }
 
-void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY) const
+void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY)
 {
     const int rootId = (int) nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
@@ -297,7 +303,7 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
     moveDescendants(nodeValueTree, deltaX, deltaY, visited, rootId);
 }
 
-void NodeManager::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY) const
+void NodeManager::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY)
 {
     GraphState& graphState = *applicationContext.graphState;
 
@@ -324,7 +330,7 @@ void NodeManager::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId,
 }
 
 void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY,
-                                  std::unordered_set<int>& visited, int draggedNodeId) const
+                                  std::unordered_set<int>& visited, int draggedNodeId)
 {
     juce::Identifier childIdListType = ValueTreeIdentifiers::NodeChildrenIds;
 
@@ -365,7 +371,7 @@ void NodeManager::setDisplayMode(NodeDisplayMode mode)
     }
 }
 
-void NodeManager::clearHighlights() const
+void NodeManager::clearHighlights()
 {
     for (auto& [nodeId, node] : nodes) {
         if (node != nullptr) {
@@ -374,7 +380,7 @@ void NodeManager::clearHighlights() const
     }
 }
 
-void NodeManager::clearOutlines() const
+void NodeManager::clearOutlines()
 {
     for (auto& [nodeId, node] : nodes) {
         if (node != nullptr) {
@@ -384,16 +390,16 @@ void NodeManager::clearOutlines() const
     }
 }
 
-void NodeManager::equipRootTraversals() const
+void NodeManager::equipRootTraversals()
 {
     for (auto& [nodeId, node] : nodes) {
-        if (auto* rootNode = dynamic_cast<RootNode*>(node)) {
+        if (auto* rootNode = dynamic_cast<RootNode*>(node.get())) {
             rootNode->equipTraversals();
         }
     }
 }
 
-void NodeManager::setInterceptsClicks(bool shouldIntercept, bool shouldChildrenIntercept) const
+void NodeManager::setInterceptsClicks(bool shouldIntercept, bool shouldChildrenIntercept)
 {
     for (auto& [nodeId, node] : nodes) {
         if (node != nullptr) {

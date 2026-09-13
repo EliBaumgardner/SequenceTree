@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Util/PluginModules.h"
+#include <juce_data_structures/juce_data_structures.h>
 #include "../Util/NodeInfo.h"
 
 class GraphState;

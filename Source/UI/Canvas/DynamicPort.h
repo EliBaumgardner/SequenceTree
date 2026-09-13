@@ -1,5 +1,5 @@
 #pragma once
-#include "../../Util/PluginModules.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 
 class DynamicPort : public juce::Component
 {

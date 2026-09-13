@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Util/PluginModules.h"
+#include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
 #include <atomic>
 #include <vector>
@@ -74,7 +74,10 @@ public:
 
     struct TempoInfo
     {
+        static constexpr double referenceBpm = 120.0;
+
         double currentSampleRate = 44100.0;
+        double hostBpm           = 0.0;
     };
 
     TempoInfo tempoInfo;

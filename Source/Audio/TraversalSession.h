@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Util/PluginModules.h"
+#include <juce_audio_basics/juce_audio_basics.h>
 #include "TraversalPool.h"
 #include "ScriptTraversalRule.h"
 #include "TraversalDispatcher.h"

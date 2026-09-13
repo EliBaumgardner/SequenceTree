@@ -5,7 +5,6 @@
 #include "TraversalFlagNode.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../../Graph/RTGraphBuilder.h"
 #include "../../Util/ApplicationContext.h"
 #include "../Theme/CustomLookAndFeel.h"
 
@@ -42,8 +41,6 @@ TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context
         if (typeId > 0) {
             applicationContext.graphState->traversals.addTraversalData(typeId, nullptr);
         }
-
-        rebuildOwnGraph();
     };
 
     nodeValueEditor.setVisible(false);
@@ -55,13 +52,6 @@ void TraversalFlagNode::bindToTree()
 
     if (nodeValueTree.isValid() && traversalNumEditor != nullptr) {
         traversalNumEditor->bindEditor(nodeValueTree, ValueTreeIdentifiers::TraversalFlagValue);
-    }
-}
-
-void TraversalFlagNode::rebuildOwnGraph()
-{
-    if (nodeValueTree.isValid() && applicationContext.rtGraphBuilder != nullptr) {
-        applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);
     }
 }
 

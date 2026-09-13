@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <functional>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -25,7 +26,7 @@ public:
     ~NodeManager();
 
     Node* find(int nodeId) const;
-    const std::unordered_map<int, Node*>& all() const { return nodes; }
+    const std::unordered_map<int, std::unique_ptr<Node>>& all() const { return nodes; }
 
     Node* instantiateFromTree(const juce::ValueTree& nodeValueTree);
 
@@ -33,14 +34,14 @@ public:
     void remove(int nodeId);
     void clear();
 
-    void setPosition(int nodeId) const;
-    void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY) const;
+    void setPosition(int nodeId);
+    void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY);
 
     void setDisplayMode(NodeDisplayMode mode);
-    void clearHighlights() const;
-    void clearOutlines  () const;
-    void equipRootTraversals() const;
-    void setInterceptsClicks(bool shouldIntercept, bool shouldChildrenIntercept) const;
+    void clearHighlights();
+    void clearOutlines  ();
+    void equipRootTraversals();
+    void setInterceptsClicks(bool shouldIntercept, bool shouldChildrenIntercept);
 
     NodeDisplayMode displayMode = NodeDisplayMode::Pitch;
 
@@ -49,17 +50,17 @@ public:
 private:
 
     void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY,
-                         std::unordered_set<int>& visited, int draggedNodeId) const;
+                         std::unordered_set<int>& visited, int draggedNodeId);
 
-    void moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY) const;
+    void moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY);
 
-    void connectIncomingArrows(int nodeId, Node* node) const;
-    void connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node) const;
+    void connectIncomingArrows(int nodeId, Node* node);
+    void connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node);
 
     NodeCanvas& canvas;
     ApplicationContext& applicationContext;
 
-    std::unordered_map<int, Node*> nodes;
+    std::unordered_map<int, std::unique_ptr<Node>> nodes;
 };
 
 #endif //SEQUENCETREE_NODEMANAGER_H
