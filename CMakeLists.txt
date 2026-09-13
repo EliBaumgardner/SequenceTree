@@ -2,43 +2,23 @@ cmake_minimum_required(VERSION 3.22)
 
 project(SequenceTree VERSION 0.0.1)
 
-
 # Add JUCEIO
 add_subdirectory(JUCE)
-
-set(SEQUENCETREE_VST2_SDK_PATH "$ENV{HOME}/Downloads/VST_SDK/VST2_SDK"
-        CACHE PATH "VST2 SDK headers; leave empty to build without the VST2 format")
-
-set(SEQUENCETREE_FORMATS AU VST3 Standalone)
-
-if(SEQUENCETREE_VST2_SDK_PATH AND IS_DIRECTORY "${SEQUENCETREE_VST2_SDK_PATH}")
-    juce_set_vst2_sdk_path("${SEQUENCETREE_VST2_SDK_PATH}")
-    list(APPEND SEQUENCETREE_FORMATS VST)
-else()
-    message(STATUS "VST2 SDK not found at '${SEQUENCETREE_VST2_SDK_PATH}' - building without the VST2 format")
-endif()
-
-set(JUCE_COPY_PLUGIN_AFTER_BUILD ON)
 
 # Add your plugin
 juce_add_plugin(SequenceTree
         PRODUCT_NAME "SequenceTree"
         COMPANY_NAME "ArsNova"
-        IS_SYNTH FALSE
-        NEEDS_MIDI_INPUT FALSE
+        COPY_PLUGIN_AFTER_BUILD TRUE
+        IS_SYNTH TRUE
+        NEEDS_MIDI_INPUT TRUE
         NEEDS_MIDI_OUTPUT TRUE
-        FORMATS ${SEQUENCETREE_FORMATS}
+        FORMATS AU VST3 Standalone
         PLUGIN_MANUFACTURER_CODE ANON
         PLUGIN_CODE ST01
 )
 
-juce_add_binary_data(MyBinaryData SOURCES  assets/Node.png assets/Counter.png assets/Traverser.png )
-
 target_compile_features(SequenceTree PRIVATE cxx_std_20)
-
-target_include_directories(SequenceTree PRIVATE
-        ${CMAKE_CURRENT_BINARY_DIR}/juce_binarydata_MyBinaryData
-)
 
 if(MSVC)
     target_compile_options(SequenceTree PRIVATE /W4)
@@ -101,7 +81,6 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Theme/CustomLookAndFeel_Nodes.cpp
         Source/UI/Theme/CustomLookAndFeel_Buttons.cpp
         Source/UI/Theme/CustomLookAndFeel_Menus.cpp
-        Source/UI/Theme/CustomTextEditor.cpp
         Source/UI/Theme/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp
         Source/UI/Menus/ArrowWindow.cpp
@@ -136,5 +115,4 @@ target_link_libraries(SequenceTree PRIVATE
         juce::juce_audio_processors
         juce::juce_audio_devices
         juce::juce_audio_utils
-        MyBinaryData
 )

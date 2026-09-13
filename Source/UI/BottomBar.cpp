@@ -3,7 +3,7 @@
 #include "Canvas/NodeCanvas.h"
 
 BottomBar::BottomBar(ApplicationContext& context)
-    : Bar(context, { Orientation::horizontal, Background::litFromBottom })
+    : Bar(context, { Orientation::horizontal })
 {
     paintSettingsLauncher.createIfNeeded();
 

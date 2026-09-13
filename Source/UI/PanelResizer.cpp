@@ -63,13 +63,13 @@ void PanelResizer::paint(juce::Graphics& g)
     const Theme& theme = CustomLookAndFeel::get(*this);
     auto bounds = getLocalBounds();
 
-    juce::Colour fill = theme.baseDarkColour1;
+    juce::Colour fill = theme.barColour.brighter(restingBrightness);
 
     if (isDragging) {
         fill = theme.baseLightColour2;
     }
     else if (isHovered) {
-        fill = theme.baseDarkColour1.brighter(0.25f);
+        fill = theme.barColour.brighter(hoveredBrightness);
     }
 
     g.setColour(fill);

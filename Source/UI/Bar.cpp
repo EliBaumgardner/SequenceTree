@@ -14,12 +14,16 @@ Bar::~Bar()
 
 juce::Rectangle<int> Bar::getContentBounds() const
 {
-    return getLocalBounds().reduced(style.contentInset);
+    if (style.orientation == Orientation::horizontal) {
+        return getLocalBounds().reduced(juce::roundToInt(getHeight() * style.contentInsetRatio));
+    }
+
+    return getLocalBounds().reduced(juce::roundToInt(getWidth() * style.contentInsetRatio));
 }
 
 void Bar::drawSeparator(juce::Graphics& g, int position)
 {
-    g.setColour(CustomLookAndFeel::get(*this).getTextColour().withAlpha(0.12f));
+    g.setColour(CustomLookAndFeel::get(*this).textColour.withAlpha(0.12f));
 
     if (style.orientation == Orientation::horizontal) {
         const float inset = getHeight() * separatorInsetRatio;
@@ -31,23 +35,10 @@ void Bar::drawSeparator(juce::Graphics& g, int position)
     g.drawHorizontalLine(position, inset, getWidth() - inset);
 }
 
-void Bar::paintBackground(juce::Graphics& g)
-{
-    CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
-    const auto bounds = getLocalBounds().toFloat();
-
-    if (style.background == Background::flat) {
-        g.setColour(lookAndFeel.buttonBarColour);
-        g.fillRect(bounds);
-        return;
-    }
-
-    lookAndFeel.drawBar(g, bounds, style.background == Background::litFromTop);
-}
-
 void Bar::paint(juce::Graphics& g)
 {
-    paintBackground(g);
+    g.setColour(CustomLookAndFeel::get(*this).barColour);
+    g.fillRect(getLocalBounds());
 
     paintOverBar(g);
 }

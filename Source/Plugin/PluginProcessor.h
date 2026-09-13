@@ -57,6 +57,7 @@ public:
 
     std::atomic<bool>   isPlaying       = false;
     std::atomic<bool>   resetRequested  = false;
+    std::atomic<bool>   playbackStateChanged { false };
     bool                wasPlaying      = false;
     std::atomic<double> tempoMultiplier { 1.0 };
 

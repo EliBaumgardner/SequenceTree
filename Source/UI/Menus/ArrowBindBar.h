@@ -16,8 +16,9 @@ public:
 
     explicit ArrowBindBar(ApplicationContext& context);
 
-    static constexpr int preferredHeight = 34;
-    static constexpr int minimumHeight   = 26;
+    static constexpr int   preferredHeight   = 34;
+    static constexpr int   minimumHeight     = 26;
+    static constexpr float contentInsetRatio = 0.154f;
 
 private:
 

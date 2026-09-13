@@ -267,7 +267,7 @@ void TraversalRulesWindow::setPanelWidth(int newWidth) {
 }
 
 TraversalRulesWindow::RulesTitlebar::RulesTitlebar(ApplicationContext& context)
-    : Bar(context, { Orientation::horizontal, Background::litFromTop }),
+    : Bar(context, { Orientation::horizontal, contentInsetRatio }),
       undoRedoPane(context)
 {
     playButton = std::make_unique<IconButton>(
@@ -386,7 +386,7 @@ void TraversalRulesWindow::RulesPanel::resized() {
 }
 
 TraversalRulesWindow::RulesPanel::PanelTitlebar::PanelTitlebar(ApplicationContext& context)
-    : Bar(context, { Orientation::horizontal, Background::litFromTop })
+    : Bar(context, { Orientation::horizontal, RulesTitlebar::contentInsetRatio })
 {
     addButton = std::make_unique<IconButton>(
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {

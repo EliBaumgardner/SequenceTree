@@ -29,6 +29,9 @@ public:
 
     std::function<void(int)> onWidthDragged;
 
+    static constexpr float restingBrightness = 0.06f;
+    static constexpr float hoveredBrightness = 0.30f;
+
 private:
 
     const Edge edge;

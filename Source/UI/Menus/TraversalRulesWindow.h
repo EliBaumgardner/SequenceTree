@@ -28,7 +28,8 @@ public:
 
         std::function<void()> onPlayClicked;
 
-        static constexpr int preferredHeight = 28;
+        static constexpr int   preferredHeight   = 28;
+        static constexpr float contentInsetRatio = 0.143f;
 
     private:
 

@@ -11,7 +11,7 @@
 TraversalMenu::TraversalMenu(ApplicationContext& context)
     : displayMenu(context), multiplierEditor(context), channelEditor(context), transposeEditor(context), velocityEditor(context), colourSelector(context),
       applicationContext(context),
-      topBar(context, { Bar::Orientation::horizontal, Bar::Background::litFromTop }) {
+      topBar(context, { Bar::Orientation::horizontal }) {
     setLookAndFeel(context.lookAndFeel);
 
     addAndMakeVisible(topBar);

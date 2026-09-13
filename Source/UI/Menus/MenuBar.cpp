@@ -5,7 +5,7 @@
 #include "MenuBar.h"
 
 MenuBar::MenuBar(ApplicationContext& context)
-    : Bar(context, { Orientation::vertical, Background::flat, iconInset })
+    : Bar(context, { Orientation::vertical, iconInsetRatio })
 {
     treeIcon = std::make_unique<IconButton>(
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {

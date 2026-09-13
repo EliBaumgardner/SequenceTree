@@ -5,13 +5,11 @@
 #include "ItemSelector.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/ApplicationContext.h"
-#include "../Buttons/ButtonConstants.h"
 
 #include <algorithm>
 
 ItemSelector::ItemSelector(ApplicationContext& context)
-    : applicationContext(context),
-      display(context)
+    : applicationContext(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
 
@@ -23,8 +21,14 @@ ItemSelector::ItemSelector(ApplicationContext& context)
     button->setTooltip("Display Options");
     button->onClick = [this]() { showMenu(); };
 
-    addAndMakeVisible(display);
+    labelEditor = std::make_unique<ValueEditor>(context);
+    labelEditor->enableTextValue();
+    labelEditor->enableAutoFitText();
+    labelEditor->setEditable(false);
+    labelEditor->setInterceptsMouseClicks(false, false);
+
     addAndMakeVisible(button.get());
+    addAndMakeVisible(labelEditor.get());
 }
 
 void ItemSelector::addItem(int itemId, juce::String label, Action onChosen)
@@ -133,12 +137,11 @@ void ItemSelector::paint(juce::Graphics& g)
 
 void ItemSelector::resized()
 {
-    auto contentBounds = getLocalBounds().reduced(buttonContentBounds);
-    const auto displayWidth = contentBounds.getWidth() * 2/3;
+    auto contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * contentInsetRatio));
+    const auto displayWidth = juce::roundToInt(contentBounds.getWidth() * labelWidthRatio);
 
-    display.setBounds(contentBounds.removeFromLeft(displayWidth));
-    display.setText(selectedLabel);
-    display.refit();
+    labelEditor->setBounds(contentBounds.removeFromLeft(displayWidth));
+    labelEditor->setText(selectedLabel);
 
     button->setBounds(contentBounds);
 }

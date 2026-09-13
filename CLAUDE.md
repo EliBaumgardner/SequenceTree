@@ -15,7 +15,7 @@ cmake --build build --config Debug
 cmake --build build --config Release
 ```
 
-CMake is configured with `JUCE_COPY_PLUGIN_AFTER_BUILD ON`, so successful builds automatically install the plugin to system AU/VST3/VST/Standalone locations. The JUCE submodule must be initialized (`git submodule update --init`) before building.
+`juce_add_plugin` is called with `COPY_PLUGIN_AFTER_BUILD TRUE`, so successful builds automatically install the plugin to system AU/VST3/Standalone locations. It must stay a keyword argument to `juce_add_plugin`: JUCE declares the property `INHERITED` and defaults the global to `FALSE`, so a plain `set(JUCE_COPY_PLUGIN_AFTER_BUILD ON)` is silently ignored and builds stop installing. The JUCE submodule must be initialized (`git submodule update --init`) before building.
 
 Every `.cpp` must be listed explicitly in `CMakeLists.txt` — there is no glob. Adding a source file without registering it fails at link time, or silently does nothing.
 
@@ -25,11 +25,12 @@ There are no automated tests, and none should be added. Verify changes by buildi
 
 SequenceTree is a JUCE plugin that generates MIDI by traversing a user-designed directed graph. Users create nodes, assign MIDI note data and a "count limit" to each, then the plugin walks the graph during playback — when a node's counter reaches its limit, traversal advances to matching children.
 
-Three things about the model are easy to miss:
+Four things about the model are easy to miss:
 
 - **Arrow geometry is data.** A connection's note duration is derived from the vector between the two node centres (`RTGraphBuilder::fillDurationMap` → `arrowDurationFromDelta`). Dragging a node retimes the sequence, which is why `NodeMoved` triggers `updateDurationMap`.
 - **Duration is derived, pitch is owned.** Duration is recomputed from geometry on every read; pitch is not. A pitch-bound arrow only ever *shifts* the pitch of the node it points at, and the semitone amount it has already contributed is stored on the arrow as `ArrowPitchOffset`. `GraphState::syncPitchBindings` applies the difference between that stored amount and the current geometry, so moving a node transposes it around whatever pitch the user last typed, and no arrow ever recomputes a node's pitch from its parent.
 - **Transport is internal.** Playback runs off the plugin's own play button (`Titlebar` → `NodeCanvas::setProcessorPlayblack` → `SequenceTreeAudioProcessor::isPlaying`), not the host transport.
+- **The plugin is an instrument that emits only MIDI.** `IS_SYNTH TRUE` makes it an AU `aumu` and a VST3 `Instrument|Synth`, so it has a stereo output bus and no audio input — the `#if ! JucePlugin_IsSynth` guards in `PluginProcessor`'s constructor and in `isBusesLayoutSupported` compile the input bus and its matching layout check away. Nothing ever writes audio, so `processBlock` clears `buffer` and `midiMessages` once at the top, before the pending note-off flush and every other MIDI writer, making the block's MIDI output entirely freshly generated.
 
 ### Directory Responsibilities
 
@@ -103,14 +104,14 @@ Three things about the model are easy to miss:
 **Audio → GUI:** `TraversalDispatcher` / `EventManager` push commands into the `AudioUIBridge` FIFOs; `processBlock` calls `notifyUi`, which triggers `NodeCanvas::handleAsyncUpdate()` to drain them on the message thread.
 
 ### General Principles for Answering Questions
-- Verify that you have fully applied each principle
+- Verify that you have fully applied of these principles after applying them
 - Carefully analyze the entire API the code affects
 - Closely observe the structure of the API the code affects
 - Understand the data flow of the relevant API section
 - Verify that the relevant code follows all rules in the Key Design Rules section
 - Verify that the relevant code does not change behavior unexpectantly, or introduce new bugs
-- Analyze the broader API the smaller section of the API affects
-- Closely observe the general design of the API and verify the relevant code follows it fully
+- Analyze the broader API the smaller section of the API affects (a class is composed in another class, both should be understood)
+- Closely observe the general design of the broader API and verify the relevant code follows it fully
 - Reapply the same principles from the second step to the broader API and repeat 
 
 ### Key Design Rules

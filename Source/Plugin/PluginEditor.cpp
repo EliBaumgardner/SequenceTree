@@ -48,6 +48,8 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     canvas->rebuildFromNodeMap(applicationContext.graphState->nodeMap);
 
+    titleBar->applyPlaybackState(audioProcessor.isPlaying.load());
+
     canvas->addMouseListener(nodeController.get(),true);
 
     attachStateListeners();

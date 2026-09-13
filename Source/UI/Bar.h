@@ -8,12 +8,10 @@ class Bar : public juce::Component
 public:
 
     enum class Orientation { horizontal, vertical };
-    enum class Background  { litFromTop, litFromBottom, flat };
 
     struct Style {
-        Orientation orientation  = Orientation::horizontal;
-        Background  background   = Background::litFromTop;
-        int         contentInset = 4;
+        Orientation orientation       = Orientation::horizontal;
+        float       contentInsetRatio = 0.10f;
     };
 
     Bar(ApplicationContext& context, Style style);
@@ -34,8 +32,6 @@ protected:
     ApplicationContext& applicationContext;
 
 private:
-
-    void paintBackground(juce::Graphics& g);
 
     Style style;
 };
