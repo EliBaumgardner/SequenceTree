@@ -343,8 +343,7 @@ void TraversalSession::startTraversal(const RTNode& rootNode, const RTtraversal&
     traversalLogic.primary.target = rootId;
     traversalLogic.state          = TraversalLogic::TraversalState::Active;
     traversalLogic.loop.active    = true;
-
-    traversalLogic.loop.limit = rootNode.graphLoopLimit;
+    traversalLogic.loop.limit     = rootNode.graphLoopLimit;
 
     traversalLogic.advanceAlternative(context.nodes, rootId);
 

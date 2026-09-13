@@ -89,6 +89,8 @@ void NodeCanvas::handleAsyncUpdate() {
     std::vector<int> pitchSyncNodeIds;
     std::vector<int> durationRefreshNodeIds;
     std::vector<int> movedNodeIds;
+    std::vector<int> rebuildNodeIds;
+    std::vector<int> rebuildTraversalIds;
 
     for (auto& asyncUpdate  : pendingUpdates) {
         int nodeId = asyncUpdate.nodeId;
@@ -145,21 +147,37 @@ void NodeCanvas::handleAsyncUpdate() {
 
             rememberOnce(durationRefreshNodeIds, nodeId);
         }
+        else if (updateType == AsyncUpdateType::GraphRebuild) {
+            rememberOnce(rebuildNodeIds, nodeId);
+        }
+        else if (updateType == AsyncUpdateType::TraversalDataChanged) {
+            rememberOnce(rebuildTraversalIds, nodeId);
+        }
     }
 
     GraphState& state = *applicationContext.graphState;
 
-    std::vector<int> repitchedRootIds;
+    std::vector<int> rebuildRootIds;
+
+    for (int nodeId : rebuildNodeIds) {
+        rememberOnce(rebuildRootIds,
+                     (int) state.getNode(nodeId).getProperty(ValueTreeIdentifiers::RootNodeId));
+    }
 
     for (int nodeId : pitchSyncNodeIds) {
         for (int repitchedNodeId : state.arrows.syncPitchBindings(nodeId, applicationContext.undoManager)) {
-            rememberOnce(repitchedRootIds,
+            rememberOnce(rebuildRootIds,
                          (int) state.getNode(repitchedNodeId).getProperty(ValueTreeIdentifiers::RootNodeId));
         }
     }
 
-    for (int rootNodeId : repitchedRootIds) {
+    for (int rootNodeId : rebuildRootIds) {
         applicationContext.rtGraphBuilder->makeRTGraph(state.getNode(rootNodeId));
+    }
+
+    for (int traversalId : rebuildTraversalIds) {
+        applicationContext.rtGraphBuilder->makeRTGraph(
+            state.traversals.map.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId));
     }
 
     for (int nodeId : movedNodeIds) {
@@ -254,7 +272,7 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
             endNode   = parentNode;
         }
 
-        if (startNode->nodeArrows.count(endNode->getComponentID().getIntValue()) > 0) {
+        if (startNode->nodeArrows.count(endNode->nodeId) > 0) {
             continue;
         }
 

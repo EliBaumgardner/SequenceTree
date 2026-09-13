@@ -16,5 +16,7 @@ public:
 private:
     void enqueueDanglingArrowsChanged(const juce::ValueTree& nodeTree) const;
 
+    void enqueueGraphRebuild(juce::ValueTree tree) const;
+
     NodeCanvas& canvas;
 };

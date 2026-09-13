@@ -30,7 +30,7 @@ public:
     Arrow* connect(Node* startNode, Node* endNode);
     Arrow* connectParentToChild(Node* parentNode, Node* childNode);
     void   adopt(Arrow* arrow);
-    void   attach(Arrow& arrow) const;
+    void   attach(Arrow& arrow);
 
     void remove(Arrow* arrow);
     void removeForNode(const Node* node);
@@ -45,25 +45,24 @@ public:
 
     void rebuildDanglingForNode(int nodeId);
 
-    void refreshFor(const Node* movedNode) const;
+    void refreshFor(const Node* movedNode);
 
-    void refreshEncapsulatedArrows() const;
+    void refreshEncapsulatedArrows();
 
     void handleArrowAdded      (int parentNodeId, int childNodeId);
     void handleArrowRemoved    (int parentNodeId, int childNodeId);
     void handleArrowInfoChanged(int parentNodeId, int childNodeId);
 
-    void setSelected(Arrow* arrow) const;
-    void clearSelection() const;
+    void setSelected(Arrow* arrow);
+    void clearSelection();
 
-    void resetAllProgress() const;
-    void resetTrail(int trailId) const;
+    void resetAllProgress();
+    void resetTrail(int trailId);
 
-    void triggerSnapForNode(int nodeId) const;
+    void triggerSnapForNode(int nodeId);
 
     void   showSnapGhost(Node* from, Node* to);
     void   hideSnapGhost();
-    Arrow* snapGhost() const { return snapGhostArrow; }
 
     ArrowInfo currentArrowInfo;
 
@@ -73,14 +72,14 @@ private:
 
     juce::ValueTree connectionTreeFor(int startNodeId, int endNodeId) const;
 
-    void detach(Arrow* arrow) const;
+    void detach(Arrow* arrow);
 
     NodeCanvas& canvas;
     ApplicationContext& applicationContext;
 
     juce::OwnedArray<Arrow> arrows;
     std::unique_ptr<Arrow>  preview;
-    Arrow* snapGhostArrow = nullptr;
+    std::unique_ptr<Arrow>  snapGhostArrow;
 };
 
 #endif //SEQUENCETREE_ARROWMANAGER_H

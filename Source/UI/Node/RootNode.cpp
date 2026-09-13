@@ -6,7 +6,6 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../../Graph/RTGraphBuilder.h"
 #include "../../Util/ApplicationContext.h"
 
 #include <algorithm>
@@ -88,8 +87,6 @@ void RootNode::equipTraversals()
         traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalInstance, key.instance, nullptr);
         traversalChildrenIds.addChild(traversalIdTree, -1, nullptr);
     }
-
-    applicationContext.rtGraphBuilder->makeRTGraph(nodeValueTree);
 }
 
 void RootNode::paint(juce::Graphics& g)

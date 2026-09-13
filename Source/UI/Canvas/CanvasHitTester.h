@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Util/PluginModules.h"
+#include <juce_graphics/juce_graphics.h>
 
 class NodeCanvas;
 class Arrow;

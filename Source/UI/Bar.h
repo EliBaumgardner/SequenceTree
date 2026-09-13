@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Util/PluginModules.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 #include "../Util/ApplicationContext.h"
 
 class Bar : public juce::Component

@@ -4,12 +4,11 @@
 #include "../UI/Node/Node.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "../Graph/GraphState.h"
-#include "../Graph/RTGraphBuilder.h"
 
 ConnectionOps::ArrowOwnership ConnectionOps::resolveOwnership(const Arrow* arrow) const
 {
-    const int startId = arrow->startNode->getComponentID().getIntValue();
-    const int endId   = arrow->endNode->getComponentID().getIntValue();
+    const int startId = arrow->startNode->nodeId;
+    const int endId   = arrow->endNode->nodeId;
 
     juce::ValueTree startTree     = applicationContext.graphState->getNode(startId);
     juce::ValueTree startChildren = startTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
@@ -157,10 +156,7 @@ void ConnectionOps::applySelectedArrowInfo(int parentNodeId, int childNodeId,
 
     ArrowBindingOps::setArrowInfo(connection, arrowInfo, applicationContext.undoManager);
 
-    for (const int repitchedNodeId : applicationContext.graphState->arrows.syncPitchBindings(childNodeId,
-                                                                                         applicationContext.undoManager)) {
-        applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(repitchedNodeId));
-    }
+    applicationContext.graphState->arrows.syncPitchBindings(childNodeId, applicationContext.undoManager);
 }
 
 void ConnectionOps::connect(int parentNodeId, int childNodeId, ArrowType rootConnectionType)
@@ -170,6 +166,4 @@ void ConnectionOps::connect(int parentNodeId, int childNodeId, ArrowType rootCon
     undoManager->beginNewTransaction();
     applicationContext.graphState->connectNodes(parentNodeId, childNodeId, undoManager);
     applySelectedArrowInfo(parentNodeId, childNodeId, rootConnectionType);
-
-    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(parentNodeId));
 }

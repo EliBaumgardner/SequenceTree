@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Util/PluginModules.h"
+#include <juce_core/juce_core.h>
 #include "../Graph/RTData.h"
 #include <array>
 #include <atomic>

@@ -79,7 +79,7 @@ public:
     juce::ValueTree nodeValueTree;
     juce::ValueTree midiNoteData;
 
-    NodeDisplayMode mode;
+    NodeDisplayMode mode = NodeDisplayMode::Pitch;
     ValueEditor nodeValueEditor;
 
     std::unique_ptr<IconButton> upButton;
@@ -92,7 +92,7 @@ public:
     juce::Colour nodeColour = juce::Colour::fromRGB(195,174,132).darker().darker().darker();
     juce::Colour encapsulationRingColour = juce::Colour::fromRGB(195,174,132).darker().darker().darker();
 
-    int nodeId;
+    int nodeId = -1;
     NodeType nodeType    = NodeType::Node;
     float incomingAngle  = 0.0f;
 

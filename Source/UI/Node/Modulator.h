@@ -5,7 +5,7 @@
 #ifndef SEQUENCETREE_MODULATOR_H
 #define SEQUENCETREE_MODULATOR_H
 
-#include "../../Util/PluginModules.h"
+#include <juce_graphics/juce_graphics.h>
 #include "Node.h"
 
 class NodeCanvas;

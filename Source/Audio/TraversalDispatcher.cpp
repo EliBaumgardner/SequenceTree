@@ -725,7 +725,7 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
 
             const TraversalLogic::StepResult step = traversal.handleNodeEvent(nodes);
 
-                applyStepResult(step, nodes, runId, traversal.traversal.key.typeId);
+            applyStepResult(step, nodes, runId, traversal.traversal.key.typeId);
             applyTreeJump(step, traversal, runtime, context);
 
             if (traversal.shouldTraverse() && nodes.find(traversal.primary.target) != nodes.end()) {

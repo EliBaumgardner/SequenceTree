@@ -20,7 +20,6 @@ class TraversalFlagNode : public Node {
     private:
     juce::Path buildTrianglePath() const;
     float      getBladeLength() const;
-    void rebuildOwnGraph();
     juce::Colour outlineColour = juce::Colours::black;
 
     std::unique_ptr<ValueEditor> traversalNumEditor = nullptr;

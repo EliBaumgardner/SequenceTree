@@ -36,12 +36,12 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
     public:
 
-        enum class AsyncUpdateType {NodeAdded,NodeRemoved,NodeMoved,DurationOnly,ValueChanged,DanglingArrowsChanged,ArrowAdded,ArrowRemoved,ArrowInfoChanged,ArrowDurationChanged};
+        enum class AsyncUpdateType {None,NodeAdded,NodeRemoved,NodeMoved,DurationOnly,ValueChanged,DanglingArrowsChanged,ArrowAdded,ArrowRemoved,ArrowInfoChanged,ArrowDurationChanged,GraphRebuild,TraversalDataChanged};
 
         struct AsyncUpdate {
-            AsyncUpdateType type;
-            int nodeId;
-            int rootNodeId;
+            AsyncUpdateType type       = AsyncUpdateType::None;
+            int             nodeId     = -1;
+            int             rootNodeId = -1;
         };
 
         NodeCanvas(ApplicationContext& context);

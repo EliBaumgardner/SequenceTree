@@ -12,7 +12,7 @@
 
 
 #include <unordered_set>
-#include "../../Util/PluginModules.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 #include "../../Util/ApplicationContext.h"
 #include "../Node/Node.h"
 #include "../PopupWindow.h"

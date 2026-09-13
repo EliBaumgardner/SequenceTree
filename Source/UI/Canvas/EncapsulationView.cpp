@@ -173,7 +173,7 @@ void EncapsulationView::recolourGroup(const Encapsulator& encapsulator, juce::Co
 void EncapsulationView::syncHighlights() const
 {
     for (auto& [nodeId, node] : canvas.nodeManager.all()) {
-        if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node)) {
+        if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node.get())) {
             encapsulator->syncHighlightsFromMembers();
         }
     }

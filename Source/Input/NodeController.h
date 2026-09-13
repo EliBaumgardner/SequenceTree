@@ -9,7 +9,8 @@
 */
 
 #pragma once
-#include "../Util/PluginModules.h"
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_data_structures/juce_data_structures.h>
 #include "../Util/ApplicationContext.h"
 #include "../Util/NodeInfo.h"
 #include "../UI/PopupWindow.h"
@@ -178,4 +179,6 @@ private:
     juce::ValueTree draggedNodeTree;
 
     int snapSourceNodeId = -1;
+
+    JUCE_DECLARE_WEAK_REFERENCEABLE (NodeController)
 };

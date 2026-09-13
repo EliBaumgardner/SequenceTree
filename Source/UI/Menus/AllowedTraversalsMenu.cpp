@@ -5,7 +5,6 @@
 #include "AllowedTraversalsMenu.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../../Graph/RTGraphBuilder.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Editors/ValueFormat.h"
 
@@ -148,12 +147,6 @@ void AllowedTraversalsMenu::setTraversalEnabled(const TraversalKey& key, bool en
         }
     }
 
-    if (applicationContext.rtGraphBuilder != nullptr) {
-        const juce::ValueTree ownerNode = connection.getParent().getParent();
-        if (ownerNode.isValid()) {
-            applicationContext.rtGraphBuilder->makeRTGraph(ownerNode);
-        }
-    }
 }
 
 void AllowedTraversalsMenu::paint(juce::Graphics& g) {

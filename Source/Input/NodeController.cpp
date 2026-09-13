@@ -17,7 +17,6 @@
 #include "../UI/Node/NodeFactory.h"
 #include "../UI/Canvas/DynamicPort.h"
 #include "../Graph/ValueTreeIdentifiers.h"
-#include "../Graph/RTGraphBuilder.h"
 #include "../Graph/GraphState.h"
 #include "../UI/Menus/AllowedTraversalsMenu.h"
 #include "../UI/Theme/CustomLookAndFeel.h"
@@ -113,10 +112,11 @@ void NodeController::showArrowContextMenu(Arrow* arrow)
     }
 
     juce::Component::SafePointer<Arrow> safeArrow(arrow);
+    juce::WeakReference<NodeController> safeController(this);
 
-    menu.showMenuAsync(juce::PopupMenu::Options(), [this, safeArrow] (int result)
+    menu.showMenuAsync(juce::PopupMenu::Options(), [this, safeController, safeArrow] (int result)
     {
-        if (safeArrow == nullptr) {
+        if (safeController == nullptr || safeArrow == nullptr) {
             return;
         }
 
@@ -164,8 +164,14 @@ void NodeController::showSelectionMenu(juce::Point<int> canvasPoint)
     menu.addItem(SelectionMenuItem::paste,  "paste",  selectionOps.hasClipboard());
     menu.addItem(SelectionMenuItem::remove, "delete", hasSelection);
 
-    menu.showMenuAsync(juce::PopupMenu::Options(), [this, canvasPoint] (int result)
+    juce::WeakReference<NodeController> safeController(this);
+
+    menu.showMenuAsync(juce::PopupMenu::Options(), [this, safeController, canvasPoint] (int result)
     {
+        if (safeController == nullptr) {
+            return;
+        }
+
         switch (result)
         {
             case SelectionMenuItem::copy:   selectionOps.copySelection();   break;
@@ -189,7 +195,7 @@ void NodeController::endDrag()
 
 void NodeController::finishArrowHeadDrag()
 {
-    const int nodeId = draggingArrowHeadNode->getComponentID().getIntValue();
+    const int nodeId = draggingArrowHeadNode->nodeId;
 
     draggingArrowHeadNode = nullptr;
     dragState             = DragState::Idle;
@@ -259,7 +265,7 @@ Node* NodeController::findDanglingSnapTarget(const Node* startNode, juce::Point<
         return nullptr;
     }
 
-    const int startNodeId = startNode->getComponentID().getIntValue();
+    const int startNodeId = startNode->nodeId;
 
     Node* snapTarget = canvas.hitTester.rootNear(tip.toFloat(), rootSnapThreshold, startNodeId);
 
@@ -271,7 +277,7 @@ Node* NodeController::findDanglingSnapTarget(const Node* startNode, juce::Point<
         return nullptr;
     }
 
-    if (startNode->nodeArrows.count(snapTarget->getComponentID().getIntValue()) > 0) {
+    if (startNode->nodeArrows.count(snapTarget->nodeId) > 0) {
         return nullptr;
     }
 
@@ -298,8 +304,8 @@ void NodeController::connectDanglingToTarget(const Node* startNode)
         return;
     }
 
-    connectWithSnapAnimation(startNode->getComponentID().getIntValue(),
-                             targetNode->getComponentID().getIntValue(),
+    connectWithSnapAnimation(startNode->nodeId,
+                             targetNode->nodeId,
                              ArrowType::StepIntoTree);
 }
 
@@ -307,7 +313,7 @@ void NodeController::connectDraggedNodeToRoot()
 {
     canvas.arrowManager.hideSnapGhost();
 
-    const int rootNodeId   = snapTargetRoot->getComponentID().getIntValue();
+    const int rootNodeId   = snapTargetRoot->nodeId;
     const int parentNodeId = snapSourceNodeId;
 
     snapTargetRoot   = nullptr;
@@ -566,7 +572,7 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
         dragState = DragState::ConnectingFlag;
     }
 
-    const int nodeId = node.getComponentID().getIntValue();
+    const int nodeId = node.nodeId;
 
     flagConnectionSourceId = -1;
 
@@ -592,7 +598,7 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
 
 bool NodeController::toggleEncapsulationExpansion(Node& node)
 {
-    const int nodeId = node.getComponentID().getIntValue();
+    const int nodeId = node.nodeId;
 
     if (node.nodeType == NodeType::Encapsulator) {
         canvas.encapsulationView.expand(nodeId);
@@ -623,7 +629,7 @@ void NodeController::selectSpanNode(Node& node)
     GraphState& graphState = *applicationContext.graphState;
     juce::UndoManager* const undoManager = applicationContext.undoManager;
 
-    const int nodeId = node.getComponentID().getIntValue();
+    const int nodeId = node.nodeId;
 
     if (node.nodeType == NodeType::Encapsulator) {
         canvas.nodeManager.clearOutlines();
@@ -758,7 +764,7 @@ void NodeController::handleCanvasMouseDrag(const juce::MouseEvent& e)
             return;
         }
 
-        const int nodeId = draggingArrowHeadNode->getComponentID().getIntValue();
+        const int nodeId = draggingArrowHeadNode->nodeId;
         const auto position = e.getEventRelativeTo(&canvas).getPosition();
 
         NodePosition newPosition;
@@ -788,7 +794,7 @@ void NodeController::handleNodeMouseDrag(const juce::MouseEvent& e, Node& node)
 {
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
-    const int  nodeId   = node.getComponentID().getIntValue();
+    const int  nodeId   = node.nodeId;
     const auto position = e.getEventRelativeTo(node.getParentComponent());
 
     NodePosition newPosition;
@@ -938,7 +944,7 @@ void NodeController::commitFlagConnection(int sourceNodeId, Node* target)
         return;
     }
 
-    int targetNodeId = target->getComponentID().getIntValue();
+    int targetNodeId = target->nodeId;
 
     if (sourceNode->nodeArrows.count(targetNodeId) > 0) {
         return;

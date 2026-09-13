@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <juce_graphics/juce_graphics.h>
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/GraphState.h"
 #include "../../Util/ArrowInfo.h"

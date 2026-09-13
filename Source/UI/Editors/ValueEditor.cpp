@@ -5,7 +5,6 @@
 #include "ValueEditor.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
-#include "../../Graph/RTGraphBuilder.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
 #include <cmath>
@@ -388,10 +387,6 @@ void ValueEditor::commitValue()
     }
 
     format->commit(textEditor->getText(), makeBinding());
-
-    if (boundTree.isValid() && applicationContext.rtGraphBuilder != nullptr) {
-        applicationContext.rtGraphBuilder->makeRTGraph(boundTree);
-    }
 
     isEditing = false;
 
