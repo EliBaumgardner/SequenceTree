@@ -11,7 +11,7 @@
 
 MenuArea::MenuArea(ApplicationContext& context)
     : resizer(context, PanelResizer::Edge::Right),
-      topBar(context, { Bar::Orientation::horizontal, Bar::Background::litFromTop })
+      topBar(context, { Bar::Orientation::horizontal })
 {
     setLookAndFeel(context.lookAndFeel);
 

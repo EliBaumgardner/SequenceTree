@@ -26,12 +26,15 @@ public:
 
     std::function<void(NodeDisplayMode)> onDisplayModeChanged;
 
+    void applyPlaybackState(bool shouldPlay);
+
 private:
 
     void paintOverBar(juce::Graphics& g) override;
     void resized() override;
 
     void configureDisplaySelector();
+    void configureTempoDisplay();
     void configureModePane();
     void configureTransportPane();
     void configureUndoRedoPane();

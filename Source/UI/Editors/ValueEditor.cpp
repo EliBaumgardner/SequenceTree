@@ -111,7 +111,8 @@ juce::Font ValueEditor::displayFont() const
         return font;
     }
 
-    const auto bounds     = getLocalBounds().toFloat().reduced(autoFitInset);
+    const float inset      = (float) getHeight() * autoFitInsetRatio;
+    const auto  bounds     = getLocalBounds().toFloat().reduced(inset);
     const float textWidth  = font.getStringWidthFloat(getDisplayText());
     const float textHeight = font.getHeight();
 
@@ -119,14 +120,11 @@ juce::Font ValueEditor::displayFont() const
         return font;
     }
 
-    const float heightRatio = bounds.getHeight() / textHeight;
-    float ratio        = heightRatio;
+    float fittedHeight = bounds.getHeight();
 
     if (textWidth > 0.0f) {
-        ratio = std::min(bounds.getWidth() / textWidth, heightRatio);
+        fittedHeight = std::min(textHeight * (bounds.getWidth() / textWidth), fittedHeight);
     }
-
-    const float fittedHeight = textHeight * ratio;
 
     if (fittedHeight <= 0.0f || ! std::isfinite(fittedHeight)) {
         return font;
@@ -233,10 +231,10 @@ void ValueEditor::disablePercentValue()
     setFormat(std::make_unique<IntFormat>());
 }
 
-void ValueEditor::enableAutoFitText(float inset)
+void ValueEditor::enableAutoFitText(float insetRatio)
 {
-    autoFitText  = true;
-    autoFitInset = inset;
+    autoFitText       = true;
+    autoFitInsetRatio = insetRatio;
 }
 
 void ValueEditor::setFontHeight(float newFontHeight)

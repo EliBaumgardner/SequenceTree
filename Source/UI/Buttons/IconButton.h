@@ -8,6 +8,14 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Theme/Theme.h"
 
+struct ButtonState {
+    bool isHovered  = false;
+    bool isDown     = false;
+    bool isSelected = false;
+
+    juce::String text;
+};
+
 class IconButton : public juce::Component, public juce::SettableTooltipClient {
 
 public:
@@ -82,7 +90,7 @@ public:
     void lookAndFeelChanged() override
     {
         if (const auto* theme = dynamic_cast<const Theme*>(&getLookAndFeel())) {
-            caption.setColour(juce::Label::textColourId, theme->getTextColour());
+            caption.setColour(juce::Label::textColourId, theme->textColour);
             caption.setFont(juce::Font(juce::FontOptions(Theme::labelFontHeight)));
         }
     }

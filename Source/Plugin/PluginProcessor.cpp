@@ -265,6 +265,21 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     pendingNoteOffs.clear();
 
+    if (wrapperType != wrapperType_Standalone) {
+        bool hostPlaying = false;
+
+        if (juce::AudioPlayHead* playHead = getPlayHead()) {
+            if (const juce::Optional<juce::AudioPlayHead::PositionInfo> position = playHead->getPosition()) {
+                hostPlaying = position->getIsPlaying();
+            }
+        }
+
+        if (hostPlaying != isPlaying.exchange(hostPlaying)) {
+            playbackStateChanged.store(true);
+            triggerAsyncUpdate();
+        }
+    }
+
     const bool resetHit = resetRequested.exchange(false);
 
     if (resetHit) {
@@ -344,9 +359,17 @@ void SequenceTreeAudioProcessor::handleAsyncUpdate()
 {
     auto* editor = dynamic_cast<SequenceTreeAudioProcessorEditor*>(getActiveEditor());
 
-    if (editor != nullptr) {
-        editor->canvas->handleAsyncUpdate();
+    const bool transportMoved = playbackStateChanged.exchange(false);
+
+    if (editor == nullptr) {
+        return;
     }
+
+    if (transportMoved) {
+        editor->titleBar->applyPlaybackState(isPlaying.load());
+    }
+
+    editor->canvas->handleAsyncUpdate();
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::createParameterLayout()

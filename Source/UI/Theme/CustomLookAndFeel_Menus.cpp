@@ -54,7 +54,11 @@ void CustomLookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectang
 
     const auto itemBounds = area.toFloat().reduced(popupMenuItemInset, 1.0f);
 
-    juce::Colour itemTextColour = textColourToUse == nullptr ? popupMenuTextColour : *textColourToUse;
+    juce::Colour itemTextColour = popupMenuTextColour;
+
+    if (textColourToUse != nullptr) {
+        itemTextColour = *textColourToUse;
+    }
 
     if (isHighlighted && isActive) {
         g.setColour(popupMenuHighlightColour);
@@ -63,7 +67,13 @@ void CustomLookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectang
         itemTextColour = popupMenuHighlightTextColour;
     }
 
-    g.setColour(itemTextColour.withMultipliedAlpha(isActive ? 1.0f : 0.4f));
+    float textAlpha = 0.4f;
+
+    if (isActive) {
+        textAlpha = 1.0f;
+    }
+
+    g.setColour(itemTextColour.withMultipliedAlpha(textAlpha));
     g.setFont(getPopupMenuFont());
 
     auto textBounds = itemBounds.reduced(popupMenuTextInset, 0.0f);
@@ -103,13 +113,19 @@ void CustomLookAndFeel::getIdealPopupMenuItemSize(const juce::String& text, bool
                                                   int standardMenuItemHeight,
                                                   int& idealWidth, int& idealHeight)
 {
+    int itemHeight = popupMenuItemHeight;
+
+    if (standardMenuItemHeight > 0) {
+        itemHeight = standardMenuItemHeight;
+    }
+
     if (isSeparator) {
         idealWidth  = 50;
-        idealHeight = standardMenuItemHeight > 0 ? standardMenuItemHeight / 2 : popupMenuItemHeight / 2;
+        idealHeight = itemHeight / 2;
         return;
     }
 
-    idealHeight = standardMenuItemHeight > 0 ? standardMenuItemHeight : popupMenuItemHeight;
+    idealHeight = itemHeight;
     idealWidth  = juce::GlyphArrangement::getStringWidthInt(getPopupMenuFont(), text)
                     + idealHeight
                     + (int) (popupMenuTextInset * 4.0f);

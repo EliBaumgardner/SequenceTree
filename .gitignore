@@ -14,3 +14,6 @@ Builds/
 
 # macOS system files
 .DS_Store
+# Agent tooling (local only, not part of the project)
+.claude/
+.opencode/

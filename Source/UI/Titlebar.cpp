@@ -17,7 +17,7 @@
 
 
 Titlebar::Titlebar(ApplicationContext& context)
-    : Bar(context, { Orientation::horizontal, Background::litFromTop }),
+    : Bar(context, { Orientation::horizontal }),
       transportPane(context),
       buttonPane(context),
       displaySelector(context),
@@ -35,20 +35,16 @@ Titlebar::Titlebar(ApplicationContext& context)
     configureUndoRedoPane();
 
     configureDisplaySelector();
+    configureTempoDisplay();
+}
 
-    auto applyMultiplier = [this]() {
-        double value = tempoDisplay.editor.getText().getDoubleValue();
-        if (value > 0.0) {
-            value = juce::jlimit(RTtraversal::minimumTempoMultiplier,
-                                 RTtraversal::maximumTempoMultiplier, value);
-            applicationContext.processor->tempoMultiplier.store(value);
-        }
+void Titlebar::configureTempoDisplay()
+{
+    tempoDisplay.editor.boundValue.setValue(applicationContext.processor->tempoMultiplier.load());
 
-        tempoDisplay.editor.setText(juce::String(applicationContext.processor->tempoMultiplier.load()), false);
+    tempoDisplay.editor.onValueChange = [this]() {
+        applicationContext.processor->tempoMultiplier.store((double) tempoDisplay.editor.boundValue.getValue());
     };
-
-    tempoDisplay.editor.onReturnKey = applyMultiplier;
-    tempoDisplay.editor.onFocusLost = applyMultiplier;
 }
 
 void Titlebar::configureDisplaySelector()
@@ -82,7 +78,12 @@ void Titlebar::configureTransportPane()
         "Play / Pause",
         [this]() { togglePlayback(); });
 
-    playButton->setSelected(true);
+    if (applicationContext.processor->wrapperType != juce::AudioProcessor::wrapperType_Standalone) {
+        playButton->onClick = nullptr;
+        playButton->setTooltip("Follows host transport");
+    }
+
+    playButton->setSelected(! applicationContext.processor->isPlaying.load());
 
     transportPane.addButton(
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
@@ -92,15 +93,16 @@ void Titlebar::configureTransportPane()
         [this]() { resetTraversals(); });
 }
 
+void Titlebar::applyPlaybackState(bool shouldPlay)
+{
+    playButton->setSelected(! shouldPlay);
+
+    applicationContext.canvas->setProcessorPlayblack(shouldPlay);
+}
+
 void Titlebar::togglePlayback()
 {
-    NodeCanvas& canvas = *applicationContext.canvas;
-    jassert(&canvas);
-
-    playButton->setSelected(!playButton->isSelected());
-
-    canvas.start = !canvas.start;
-    canvas.setProcessorPlayblack(canvas.start);
+    applyPlaybackState(! applicationContext.canvas->start);
 }
 
 void Titlebar::resetTraversals()

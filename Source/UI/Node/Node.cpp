@@ -40,7 +40,7 @@ Node::Node(ApplicationContext& context)
     downButton->setInterceptsMouseClicks(true,false);
 
     nodeValueEditor.setInterceptsMouseClicks(false, false);
-    nodeValueEditor.enableAutoFitText(nodeValueTextInset);
+    nodeValueEditor.enableAutoFitText(nodeValueTextInsetRatio);
     nodeValueEditor.setPitchMode(true);
     nodeValueEditor.setEditable(false);
     nodeValueEditor.setMinimumValue(0);

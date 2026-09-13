@@ -25,6 +25,18 @@ class Arrow;
 
 class NodeCanvas;
 
+struct NodeVisual {
+    juce::Rectangle<float> bounds;
+    juce::Colour colour;
+    const std::map<int, juce::Colour>& highlights;
+    bool isHovered  = false;
+    bool isSelected = false;
+    bool isOutlined = false;
+    bool isEncapsulationRinged = false;
+    bool hasInnerRim  = false;
+    juce::Colour encapsulationRingColour;
+};
+
 class Node : public juce::Component, public juce::Timer {
 
 public:
@@ -106,7 +118,7 @@ public:
 
     const int   editorAreaBoundsReduction   = 3;
     const float incrementButtonHeightFactor = 0.25f;
-    const float nodeValueTextInset          = 2.0f;
+    const float nodeValueTextInsetRatio     = 0.167f;
 
 protected:
     const ApplicationContext& applicationContext;

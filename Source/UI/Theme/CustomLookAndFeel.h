@@ -11,27 +11,18 @@
 class NodeCanvas;
 
 class Arrow;
-struct ArrowGeometry;
-
-class CustomTextEditor;
 
 class PaintToolSettings;
 
 class FileLabel;
 
+struct ButtonState;
+struct NodeVisual;
+
 class CustomLookAndFeel : public juce::LookAndFeel_V4, public Theme
 {
 
 public:
-
-    struct TextCords {
-        int parentNodeX;
-        int parentNodeY;
-        int childNodeX;
-        int childNodeY;
-        int newX;
-        int newY;
-    };
 
     CustomLookAndFeel();
 
@@ -58,11 +49,9 @@ public:
                         bool isScrollbarVertical, int thumbStartPosition, int thumbSize,
                         bool isMouseOver, bool isMouseDown) override;
 
-    void drawEditor         (juce::Graphics& g, CustomTextEditor& editor);
     juce::CaretComponent* createCaretComponent(juce::Component* keyFocusOwner) override;
 
     void drawCanvas         (juce::Graphics& g, const NodeCanvas& canvas);
-    void drawBar            (juce::Graphics& g, juce::Rectangle<float> bounds, bool isLitFromTop);
 
 
     void drawNodeIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
@@ -72,7 +61,6 @@ public:
 
 
     juce::Colour pressableButtonColour(const ButtonState& state) const;
-    juce::Colour selectableButtonColour(const ButtonState& state) const;
 
     static juce::Rectangle<float> getNodeCircleBounds(juce::Rectangle<float> componentBounds);
 

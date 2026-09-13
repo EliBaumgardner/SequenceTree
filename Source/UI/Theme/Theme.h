@@ -5,34 +5,9 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <map>
-
-struct ButtonState {
-    bool isHovered  = false;
-    bool isDown     = false;
-    bool isSelected = false;
-
-    juce::String text;
-};
-
-struct NodeVisual {
-    juce::Rectangle<float> bounds;
-    juce::Colour colour;
-    const std::map<int, juce::Colour>& highlights;
-    bool isHovered  = false;
-    bool isSelected = false;
-    bool isOutlined = false;
-    bool isEncapsulationRinged = false;
-    bool hasInnerRim  = false;
-    juce::Colour encapsulationRingColour;
-};
 
 struct Theme
 {
-    juce::Colour getButtonColour() const { return buttonColour; }
-    juce::Colour getTextColour()   const { return textColour; }
-    juce::Colour getBarColour()    const { return barColour; }
-
     juce::Colour dropShadowColour     = juce::Colours::black;
     juce::Colour baseDarkColour1      = juce::Colour::fromRGB(40,40,38);
     juce::Colour baseDarkColour2      = juce::Colour::fromRGB(30,30,30);
@@ -41,10 +16,11 @@ struct Theme
     juce::Colour baseLightColour3     = juce::Colour::fromRGB(217,217,217);
     juce::Colour darkBrownColour      = juce::Colour::fromRGB(48, 32, 22);
 
+
     juce::Colour canvasColour = baseLightColour1.darker();
 
     juce::Colour gridColour          = juce::Colour::fromRGB(15, 15, 15);
-    juce::Colour barColour           = baseDarkColour2;
+    juce::Colour barColour           = baseDarkColour2.darker();
     juce::Colour buttonColour        = baseLightColour2;
     juce::Colour buttonBarColour     = baseDarkColour1;
     juce::Colour editorColour        = baseDarkColour1;
@@ -57,6 +33,7 @@ struct Theme
 
     juce::Colour selectionBoxColour  = baseDarkColour2;
     juce::Colour selectionRingColour = juce::Colours::black;
+    juce::Colour hoverRingColour     = baseLightColour3;
     juce::Colour spanOutlineColour   = baseLightColour3;
 
     juce::Colour popupMenuColour              = baseDarkColour1.withAlpha(0.97f);
@@ -79,10 +56,18 @@ struct Theme
     static constexpr float selectionRingWidth = 1.25f;
     static constexpr float selectionRimWidth  = 3.0f;
 
+    static constexpr float highlightRingWidth   = 1.25f;
+    static constexpr float highlightRingSpacing = 2.0f;
+    static constexpr float hoverRingWidth       = 2.0f;
+
     static constexpr float spanOutlineGap   = 2.5f;
     static constexpr float spanOutlineWidth = 1.5f;
 
     static constexpr float nodeCirclePad = 4.0f;
+
+    static constexpr float nodeShadowOffsetX = 2.0f;
+    static constexpr float nodeShadowOffsetY = 2.0f;
+    static constexpr float nodeShadowBlur    = 4.0f;
 
     static constexpr float encapsulatorRimInset = 2.5f;
     static constexpr float encapsulatorRimWidth = 1.0f;

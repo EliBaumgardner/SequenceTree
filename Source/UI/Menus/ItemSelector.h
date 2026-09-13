@@ -8,7 +8,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>
 
-#include "../Theme/CustomTextEditor.h"
+#include "../Editors/ValueEditor.h"
 #include "../Buttons/IconButton.h"
 
 struct ApplicationContext;
@@ -33,6 +33,9 @@ public:
 
     std::function<void(int)> onItemSelected;
 
+    static constexpr float contentInsetRatio = 0.14f;
+    static constexpr float labelWidthRatio   = 2.0f / 3.0f;
+
     void paint(juce::Graphics& g) override;
     void resized() override;
 
@@ -52,7 +55,7 @@ private:
     ApplicationContext& applicationContext;
 
     std::unique_ptr<IconButton> button;
-    CustomTextEditor display;
+    std::unique_ptr<ValueEditor> labelEditor;
 
     std::vector<Item> items;
 
