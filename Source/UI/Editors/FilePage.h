@@ -65,15 +65,14 @@ private:
     void performMerge(const FileLine* line);
 
 
-    constexpr static int   initialLineCount = 1;
-    constexpr static int   textAreaInset   = 2;
-    constexpr static float baseFontHeight  = 12.0f;
+    constexpr static int   initialLineCount     = 1;
+    constexpr static int   textAreaInset        = 2;
+    constexpr static int   editorRightEdgeSpace = 2;
+    constexpr static float baseFontHeight       = 12.0f;
 
     float zoom = 1.0f;
 
     bool suppressTextChanged = false;
-
-    juce::TextEditor textMeasurer;
 
     std::vector<std::unique_ptr<FileLine>> fileLines;
 

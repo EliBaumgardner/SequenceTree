@@ -2,6 +2,8 @@
 
 #include <juce_data_structures/juce_data_structures.h>
 
+#include <vector>
+
 class TraversalRuleState {
 
 public:
@@ -10,6 +12,8 @@ public:
 
     juce::ValueTree addRule   (juce::UndoManager* undoManager);
     void            removeRule(int ruleId, juce::UndoManager* undoManager);
+
+    void reorderRules(const std::vector<int>& ruleIds, juce::UndoManager* undoManager);
 
     void setRuleSource(int ruleId, const juce::String& source, juce::UndoManager* undoManager);
 

@@ -2,10 +2,6 @@
 
 #include <cctype>
 
-namespace script {
-
-namespace {
-
 struct KeywordEntry
 {
     const char* name;
@@ -22,10 +18,9 @@ const KeywordEntry keywordTable[] = {
     { "break",    TokenKind::KeywordBreak },
     { "continue", TokenKind::KeywordContinue },
     { "return",   TokenKind::KeywordReturn },
-    { "none",     TokenKind::KeywordNone },
-    { "and",      TokenKind::AmpAmp },
-    { "or",       TokenKind::PipePipe },
-    { "not",      TokenKind::Bang }
+    { "and",      TokenKind::And },
+    { "or",       TokenKind::Or },
+    { "not",      TokenKind::Not }
 };
 
 TokenKind keywordKind(const std::string& word)
@@ -37,8 +32,6 @@ TokenKind keywordKind(const std::string& word)
     }
 
     return TokenKind::Identifier;
-}
-
 }
 
 std::vector<Token> Lexer::run()
@@ -80,7 +73,7 @@ std::vector<Token> Lexer::run()
 
         const Token punctuation = readPunctuation();
 
-        if (punctuation.kind == TokenKind::End) {
+        if (punctuation.kind == TokenKind::Invalid) {
             return {};
         }
 
@@ -183,11 +176,11 @@ Token Lexer::readPunctuation()
     const char next    = peek(1);
 
     if (current == '=' && next == '=') { return readFixed(TokenKind::EqualEqual, 2); }
-    if (current == '!' && next == '=') { return readFixed(TokenKind::BangEqual, 2); }
+    if (current == '!' && next == '=') { return readFixed(TokenKind::NotEqual, 2); }
     if (current == '<' && next == '=') { return readFixed(TokenKind::LessOrEqual, 2); }
     if (current == '>' && next == '=') { return readFixed(TokenKind::GreaterOrEqual, 2); }
-    if (current == '&' && next == '&') { return readFixed(TokenKind::AmpAmp, 2); }
-    if (current == '|' && next == '|') { return readFixed(TokenKind::PipePipe, 2); }
+    if (current == '&' && next == '&') { return readFixed(TokenKind::And, 2); }
+    if (current == '|' && next == '|') { return readFixed(TokenKind::Or, 2); }
     if (current == '+' && next == '=') { return readFixed(TokenKind::PlusAssign, 2); }
     if (current == '-' && next == '=') { return readFixed(TokenKind::MinusAssign, 2); }
 
@@ -206,11 +199,11 @@ Token Lexer::readPunctuation()
         case '%': return readFixed(TokenKind::Percent, 1);
         case '<': return readFixed(TokenKind::Less, 1);
         case '>': return readFixed(TokenKind::Greater, 1);
-        case '!': return readFixed(TokenKind::Bang, 1);
+        case '!': return readFixed(TokenKind::Not, 1);
         default:  break;
     }
 
-    Token unexpected = makeToken(TokenKind::End, 1);
+    Token unexpected = makeToken(TokenKind::Invalid, 1);
     unexpected.text.push_back(current);
 
     report(std::string("unexpected character '") + current + "'", unexpected);
@@ -233,6 +226,4 @@ Token Lexer::readFixed(TokenKind kind, int length)
 void Lexer::report(const std::string& message, const Token& token)
 {
     diagnostics.push_back({ message, token.line, token.column, token.length });
-}
-
 }

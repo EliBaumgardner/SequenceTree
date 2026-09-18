@@ -12,30 +12,26 @@
 
 FilePage::FilePage(ApplicationContext &context) : context(context) {
 
-    textMeasurer.setMultiLine(true, true);
-    textMeasurer.setReturnKeyStartsNewLine(false);
-    textMeasurer.setScrollbarsShown(false);
-    textMeasurer.setBorder(juce::BorderSize<int>(0));
-    textMeasurer.setIndents(0, 0);
-
     createNewFile();
 }
 
 int FilePage::rowCountFor(const juce::String& text, int editorWidth) {
 
-    const juce::Font font { juce::FontOptions(fontHeight()) };
-
-    const float textRowHeight = font.getHeight();
-
-    if (editorWidth <= 0 || text.isEmpty() || textRowHeight <= 0.0f) {
+    if (editorWidth <= 0 || text.isEmpty()) {
         return 1;
     }
 
-    textMeasurer.setFont(font);
-    textMeasurer.setSize(editorWidth, 1);
-    textMeasurer.setText(text, juce::dontSendNotification);
+    const int wrapWidth = juce::jmax(1, editorWidth - editorRightEdgeSpace);
 
-    return juce::jmax(1, juce::roundToInt((float) textMeasurer.getTextHeight() / textRowHeight));
+    const auto shapingOptions = juce::detail::ShapedTextOptions{}
+                                    .withFont(juce::Font(juce::FontOptions(fontHeight())))
+                                    .withTrailingWhitespacesShouldFit(true)
+                                    .withWordWrapWidth((float) wrapWidth)
+                                    .withAllowBreakingInsideWord();
+
+    const juce::detail::ShapedText shapedLine { text, shapingOptions };
+
+    return juce::jmax(1, (int) shapedLine.getLineTextRanges().size());
 }
 
 void FilePage::paint(juce::Graphics &g) {

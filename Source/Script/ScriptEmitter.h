@@ -6,8 +6,6 @@
 
 #include "ScriptParser.h"
 
-namespace script {
-
 struct LoopFrame
 {
     std::vector<int> breakJumps;
@@ -73,7 +71,7 @@ private:
     void emitUnary(const Expression& expression);
     void emitBinary(const Expression& expression);
 
-    static ScriptOpcode binaryOpcode(TokenKind kind);
+    ScriptOpcode binaryOpcode(const Expression& expression);
 
     RTScript&                      script;
     std::vector<ScriptDiagnostic>& diagnostics;
@@ -92,5 +90,3 @@ private:
     int stackDepth     = 0;
     int highWaterStack = 0;
 };
-
-}

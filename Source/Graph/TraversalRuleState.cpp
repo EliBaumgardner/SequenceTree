@@ -73,6 +73,23 @@ void TraversalRuleState::removeRule(int ruleId, juce::UndoManager* undoManager)
     rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, replacementId, undoManager);
 }
 
+void TraversalRuleState::reorderRules(const std::vector<int>& ruleIds, juce::UndoManager* undoManager)
+{
+    for (int index = 0; index < (int) ruleIds.size(); ++index) {
+        const juce::ValueTree rule = rules.getChildWithProperty(ValueTreeIdentifiers::Id, ruleIds[(size_t) index]);
+
+        if (! rule.isValid()) {
+            continue;
+        }
+
+        const int currentIndex = rules.indexOf(rule);
+
+        if (currentIndex != index) {
+            rules.moveChild(currentIndex, index, undoManager);
+        }
+    }
+}
+
 void TraversalRuleState::setRuleSource(int ruleId, const juce::String& source,
                                        juce::UndoManager* undoManager)
 {
