@@ -45,7 +45,9 @@ void LabelPanel::mouseDrag(const juce::MouseEvent &e) {
     }
 
     std::swap(labels[(size_t) draggedIndex], labels[(size_t) targetIndex]);
+
     draggedIndex = targetIndex;
+    orderChanged = true;
 
     resized();
 }
@@ -65,6 +67,40 @@ void LabelPanel::mouseUp(const juce::MouseEvent &) {
     }
 
     draggedIndex = -1;
+
+    if (! orderChanged) {
+        return;
+    }
+
+    orderChanged = false;
+
+    if (onLabelsReordered != nullptr) {
+        std::vector<int> fileIds;
+        fileIds.reserve(labels.size());
+
+        for (const auto& label : labels) {
+            fileIds.push_back(label->fileId);
+        }
+
+        onLabelsReordered(std::move(fileIds));
+    }
+}
+
+void LabelPanel::applyOrder(const std::vector<int>& fileIds)
+{
+    size_t position = 0;
+
+    for (int fileId : fileIds) {
+        for (size_t candidate = position; candidate < labels.size(); ++candidate) {
+            if (labels[candidate]->fileId == fileId) {
+                std::swap(labels[position], labels[candidate]);
+                ++position;
+                break;
+            }
+        }
+    }
+
+    resized();
 }
 
 void LabelPanel::addFileLabel(juce::String fileName)
@@ -79,8 +115,8 @@ void LabelPanel::addFileLabel(juce::String fileName)
 
     fileLabel->onRemove = [panel, addedLabel] {
         juce::MessageManager::callAsync([panel, addedLabel] {
-            if (panel != nullptr) {
-                panel->removeFileLabel(addedLabel);
+            if (panel != nullptr && addedLabel != nullptr && panel->onLabelRemoved != nullptr) {
+                panel->onLabelRemoved(addedLabel->fileId);
             }
         });
     };
@@ -117,10 +153,6 @@ void LabelPanel::removeFileLabel(const FileLabel* label)
 
     if (match == labels.end()) {
         return;
-    }
-
-    if (onLabelRemoved != nullptr) {
-        onLabelRemoved((*match)->fileId);
     }
 
     labels.erase(match);

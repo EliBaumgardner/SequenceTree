@@ -24,11 +24,13 @@ public:
     void addFileLabel(juce::String fileName);
     void removeFileLabel(const FileLabel* label);
     void setSelectedLabel(const FileLabel* label);
+    void applyOrder(const std::vector<int>& fileIds);
 
     std::vector<std::unique_ptr<FileLabel>> labels;
 
-    std::function<void(FileLabel*)> onLabelClicked;
-    std::function<void(int)>        onLabelRemoved;
+    std::function<void(FileLabel*)>        onLabelClicked;
+    std::function<void(int)>               onLabelRemoved;
+    std::function<void(std::vector<int>)>  onLabelsReordered;
     static constexpr float labelAspectRatio = 0.3f;
     static constexpr float labelGapRatio    = 0.12f;
 
@@ -36,9 +38,10 @@ private:
 
     int labelIndexAt(int y) const;
 
-    int labelHeight  = 0;
-    int labelGap     = 0;
-    int draggedIndex = -1;
+    int  labelHeight  = 0;
+    int  labelGap     = 0;
+    int  draggedIndex = -1;
+    bool orderChanged = false;
 
     ApplicationContext& context;
 };

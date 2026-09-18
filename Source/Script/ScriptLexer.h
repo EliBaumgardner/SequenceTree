@@ -6,10 +6,10 @@
 
 #include "ScriptCompiler.h"
 
-namespace script {
-
 enum class TokenKind
 {
+    Null,
+    Invalid,
     End,
     Terminator,
     Identifier,
@@ -24,7 +24,6 @@ enum class TokenKind
     KeywordBreak,
     KeywordContinue,
     KeywordReturn,
-    KeywordNone,
 
     LeftBrace,
     RightBrace,
@@ -43,20 +42,20 @@ enum class TokenKind
     Percent,
 
     EqualEqual,
-    BangEqual,
+    NotEqual,
     Less,
     LessOrEqual,
     Greater,
     GreaterOrEqual,
 
-    AmpAmp,
-    PipePipe,
-    Bang
+    And,
+    Or,
+    Not
 };
 
 struct Token
 {
-    TokenKind   kind   = TokenKind::End;
+    TokenKind   kind   = TokenKind::Null;
     std::string text;
     int         value  = 0;
     int         line   = 1;
@@ -98,5 +97,3 @@ private:
     int         line     = 1;
     int         column   = 1;
 };
-
-}

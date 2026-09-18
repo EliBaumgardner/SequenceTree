@@ -16,7 +16,9 @@
 #include "../Editors/FilePage.h"
 
 class TraversalRulesWindow : public juce::Component,
-                             private juce::Timer {
+                             private juce::Timer,
+                             private juce::ValueTree::Listener,
+                             private juce::AsyncUpdater {
 
 public:
 
@@ -67,11 +69,13 @@ private:
         explicit RulesPanel(ApplicationContext& context);
         ~RulesPanel() override;
 
-        std::function<void(int)> propagateLabelClicked;
-        std::function<void(int)> propagateLabelRemoved;
-        std::function<void()>    propagateAddClicked;
+        std::function<void(int)>              propagateLabelClicked;
+        std::function<void(int)>              propagateLabelRemoved;
+        std::function<void()>                 propagateAddClicked;
+        std::function<void(std::vector<int>)> propagateLabelsReordered;
 
         void addLabel   (int fileId, const juce::String& name);
+        void removeLabel(int fileId);
         void selectLabel(int fileId);
 
         void paint(juce::Graphics& g) override;
@@ -81,7 +85,8 @@ private:
         static constexpr int minPanelWidth     = 60;
         static constexpr int defaultPanelWidth = 120;
 
-        PanelResizer resizer;
+        PanelResizer                resizer;
+        std::unique_ptr<LabelPanel> labelPanel = nullptr;
 
     private:
 
@@ -99,14 +104,19 @@ private:
             std::unique_ptr<IconButton> addButton;
         };
 
-        PanelTitlebar               panelTitlebar;
-        std::unique_ptr<LabelPanel> labelPanel = nullptr;
+        PanelTitlebar panelTitlebar;
 
     };
 
     void timerCallback() override;
 
-    void loadRules();
+    void valueTreeChildAdded     (juce::ValueTree& parent, juce::ValueTree& child) override;
+    void valueTreeChildRemoved   (juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
+    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
+
+    void handleAsyncUpdate() override;
+
+    void syncWithRuleState();
     void addRule();
     void removeRule(int ruleId);
     void createPage(int ruleId, const juce::String& source);

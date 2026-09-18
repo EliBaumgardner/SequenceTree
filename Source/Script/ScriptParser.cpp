@@ -1,12 +1,6 @@
 #include "ScriptParser.h"
 
-namespace script {
-
-namespace {
-
 struct ParseFailure {};
-
-}
 
 std::vector<StatementPtr> Parser::run()
 {
@@ -19,6 +13,10 @@ std::vector<StatementPtr> Parser::run()
             program.push_back(parseStatement());
         } catch (const ParseFailure&) {
             recover();
+
+            if (current().kind == TokenKind::RightBrace) {
+                ++position;
+            }
         }
 
         skipTerminators();
@@ -71,11 +69,15 @@ void Parser::recover()
 
         if (current().kind == TokenKind::RightBrace) {
             if (depth == 0) {
-                ++position;
                 return;
             }
 
             --depth;
+
+            if (depth == 0) {
+                ++position;
+                return;
+            }
         }
 
         if (current().kind == TokenKind::Terminator && depth == 0) {
@@ -86,6 +88,8 @@ void Parser::recover()
         ++position;
     }
 }
+
+
 
 void Parser::fail(const std::string& message)
 {
@@ -253,7 +257,11 @@ std::vector<StatementPtr> Parser::parseBlock()
             fail("expected '}'");
         }
 
-        body.push_back(parseStatement());
+        try {
+            body.push_back(parseStatement());
+        } catch (const ParseFailure&) {
+            recover();
+        }
 
         skipTerminators();
     }
@@ -278,10 +286,10 @@ ExpressionPtr Parser::makeExpression(ExpressionKind kind, const Token& token)
 int Parser::precedenceOf(TokenKind kind)
 {
     switch (kind) {
-        case TokenKind::PipePipe:       return 1;
-        case TokenKind::AmpAmp:         return 2;
+        case TokenKind::Or:             return 1;
+        case TokenKind::And:            return 2;
         case TokenKind::EqualEqual:
-        case TokenKind::BangEqual:      return 3;
+        case TokenKind::NotEqual:       return 3;
         case TokenKind::Less:
         case TokenKind::LessOrEqual:
         case TokenKind::Greater:
@@ -327,7 +335,7 @@ ExpressionPtr Parser::parseBinary(int minimumPrecedence)
 
 ExpressionPtr Parser::parseUnary()
 {
-    if (current().kind == TokenKind::Bang || current().kind == TokenKind::Minus) {
+    if (current().kind == TokenKind::Not || current().kind == TokenKind::Minus) {
         const Token& operatorToken = current();
         ++position;
 
@@ -357,13 +365,6 @@ ExpressionPtr Parser::parsePrimary()
     if (token.kind == TokenKind::Number) {
         ExpressionPtr expression = makeExpression(ExpressionKind::Literal, token);
         expression->value = token.value;
-        ++position;
-        return expression;
-    }
-
-    if (token.kind == TokenKind::KeywordNone) {
-        ExpressionPtr expression = makeExpression(ExpressionKind::Literal, token);
-        expression->value = -1;
         ++position;
         return expression;
     }
@@ -402,6 +403,4 @@ ExpressionPtr Parser::parsePrimary()
     }
 
     fail("expected a value");
-}
-
 }

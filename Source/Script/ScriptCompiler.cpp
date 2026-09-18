@@ -8,23 +8,23 @@ ScriptCompileResult compileTraversalScript(const std::string& source)
 {
     ScriptCompileResult result;
 
-    script::Lexer lexer(source, result.diagnostics);
+    Lexer lexer(source, result.diagnostics);
 
-    const std::vector<script::Token> tokens = lexer.run();
-
-    if (!result.diagnostics.empty()) {
-        return result;
-    }
-
-    script::Parser parser(tokens, result.diagnostics);
-
-    const std::vector<script::StatementPtr> program = parser.run();
+    const std::vector<Token> tokens = lexer.run();
 
     if (!result.diagnostics.empty()) {
         return result;
     }
 
-    script::Emitter emitter(result.script, result.diagnostics);
+    Parser parser(tokens, result.diagnostics);
+
+    const std::vector<StatementPtr> program = parser.run();
+
+    if (!result.diagnostics.empty()) {
+        return result;
+    }
+
+    Emitter emitter(result.script, result.diagnostics);
 
     emitter.run(program);
 
@@ -41,7 +41,7 @@ const char* defaultTraversalScriptSource()
     return
         "// This script picks the child the traversal\n"
         "// moves to after a node plays. It runs once\n"
-        "// per step, and returns a child id, or none\n"
+        "// per step, and returns a child id, or -1\n"
         "// to let the traversal stop at this node.\n"
         "//\n"
         "// The graph is read through fixed names.\n"
@@ -87,8 +87,8 @@ const char* defaultTraversalScriptSource()
         "//                     per step\n"
         "//\n"
         "// The language has let, if, else, for in,\n"
-        "// while, break, continue, return and none,\n"
-        "// with and, or, not for logic. Statements\n"
+        "// while, break, continue and return, with\n"
+        "// and, or, not for logic. Statements\n"
         "// end with a semicolon, and a line beginning\n"
         "// with two slashes is a note like this one.\n"
         "//\n"
@@ -130,7 +130,7 @@ const char* defaultTraversalScriptSource()
         "\n"
         "// Nothing is due, so the traversal stops.\n"
         "\n"
-        "if totalWeight <= 0 { return none; }\n"
+        "if totalWeight <= 0 { return -1; }\n"
         "\n"
         "// The span never drops below 100, so weights\n"
         "// summing under 100 leave a share of the\n"
@@ -146,7 +146,7 @@ const char* defaultTraversalScriptSource()
         "\n"
         "let pick = traversal.random % selectionSpan;\n"
         "let runningWeight = 0;\n"
-        "let chosen = none;\n"
+        "let chosen = -1;\n"
         "\n"
         "for child in children {\n"
         "    if !child.eligible { continue; }\n"

@@ -5,14 +5,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build Commands
 
 ```bash
-# Configure
-cmake -B build
-
 # Build (debug)
-cmake --build build --config Debug
+cmake --build cmake-build-debug
 
 # Build (release)
-cmake --build build --config Release
+cmake --build cmake-build-release
+```
+
+`cmake-build-debug` and `cmake-build-release` are CLion's build directories, and they are the only ones. Terminal builds, CLion's run buttons and `scripts/run-in-live.sh` all share them on purpose: `COPY_PLUGIN_AFTER_BUILD` installs over the system plugin, so a second build tree means the installed AU and VST3 silently come from different builds. Never configure a new one (`cmake -B build`) — build into these.
+
+They use Ninja, so the config is fixed when the directory is configured and `--config` on the build line does nothing. CLion creates them; only a fresh clone needs them configured by hand, and Ninja is not on `PATH`, so the bundled one must be named:
+
+```bash
+cmake -B cmake-build-debug -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_MAKE_PROGRAM=/Applications/CLion.app/Contents/bin/ninja/mac/aarch64/ninja
 ```
 
 `juce_add_plugin` is called with `COPY_PLUGIN_AFTER_BUILD TRUE`, so successful builds automatically install the plugin to system AU/VST3/Standalone locations. It must stay a keyword argument to `juce_add_plugin`: JUCE declares the property `INHERITED` and defaults the global to `FALSE`, so a plain `set(JUCE_COPY_PLUGIN_AFTER_BUILD ON)` is silently ignored and builds stop installing. The JUCE submodule must be initialized (`git submodule update --init`) before building.
@@ -54,7 +60,7 @@ Four things about the model are easy to miss:
 - `RTScript` is the bytecode a traversal rule runs, and the compiler's only output: a stack VM with `maxLocals` 32, `maxStack` 64, and a `stepBudget` of 8192 — the budget is what stops a user-authored loop from hanging the audio thread. It lives here rather than in `Audio/` because everything that *produces* it is here; `Audio/` only executes it, through `ScriptTraversalRule`.
 - The pipeline is one strictly linear pass — `Lexer` (source → tokens) → `Parser` (tokens → AST) → `Emitter` (AST → bytecode) — split across `ScriptLexer`, `ScriptParser` and `ScriptEmitter`, all inside `namespace script`. It never runs on the audio thread; only the compiled bytecode crosses over.
 - `ScriptCompiler.{h,cpp}` is the public face: `ScriptDiagnostic`, `ScriptCompileResult`, and a `compileTraversalScript` that constructs each phase locally and destroys it after one `run()`. The phases are deliberately *not* members — a phase never outlives a compile, so stale per-run state stays impossible rather than becoming a reset you have to remember. `ScriptCompiler.h` names none of them, so the AST and the emitter's internals stay out of `PluginProcessor.h`.
-- The language has `let`, `if` / `else`, `for … in`, `while`, `break`, `continue`, `return`, `none`, and `and` / `or` / `not`. Statements are terminated by `;`, and a `}` ends a block statement on its own — newlines are whitespace, so an expression may span as many lines as it likes. Comments run from `//` to either a closing `//` or the end of the line. Scripts read the graph through fixed field tables — `parent.{id,count,childCount,lastChild}`, `child.{id,eligible,limit,triggerLimit,triggerCount,visits,repeat,pitch,switchLimit,subLoopLimit}`, `children.count`, `traversal.id` — and return a child ID or `none`.
+- The language has `let`, `if` / `else`, `for … in`, `while`, `break`, `continue`, `return`, and `and` / `or` / `not`. Statements are terminated by `;`, and a `}` ends a block statement on its own — newlines are whitespace, so an expression may span as many lines as it likes. Comments run from `//` to either a closing `//` or the end of the line. Scripts read the graph through fixed field tables — `parent.{id,count,childCount,lastChild}`, `child.{id,eligible,limit,triggerLimit,triggerCount,visits,repeat,pitch,switchLimit,subLoopLimit}`, `children.count`, `traversal.id` — and return a child ID or `-1`.
 - Failures come back as `ScriptDiagnostic { message, line, column, length }`, so the editor can mark the offending line.
 - `defaultTraversalScriptSource()` is the language-level equivalent of `NativeTraversalRule`.
 
@@ -103,7 +109,9 @@ Four things about the model are easy to miss:
 
 **Audio → GUI:** `TraversalDispatcher` / `EventManager` push commands into the `AudioUIBridge` FIFOs; `processBlock` calls `notifyUi`, which triggers `NodeCanvas::handleAsyncUpdate()` to drain them on the message thread.
 
-### General Principles for Answering Questions
+### How to Systematically Solve Problems 
+**These are negotiable principles for solving problems in the project but generally should always be adhered to**
+
 - Verify that you have fully applied of these principles after applying them
 - Carefully analyze the entire API the code affects
 - Closely observe the structure of the API the code affects

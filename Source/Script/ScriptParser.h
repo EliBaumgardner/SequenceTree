@@ -7,8 +7,6 @@
 
 #include "ScriptLexer.h"
 
-namespace script {
-
 enum class ExpressionKind
 {
     Literal,
@@ -30,7 +28,7 @@ struct Expression
     std::string name;
     std::string member;
 
-    TokenKind op = TokenKind::End;
+    TokenKind op = TokenKind::Null;
 
     ExpressionPtr left;
     ExpressionPtr right;
@@ -124,5 +122,3 @@ private:
 
     std::size_t position = 0;
 };
-
-}

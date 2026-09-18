@@ -2,10 +2,6 @@
 
 #include <cstddef>
 
-namespace script {
-
-namespace {
-
 struct FieldEntry
 {
     const char* name;
@@ -60,8 +56,6 @@ bool lookupField(const FieldEntry (&table)[count], const std::string& name, Scri
 }
 
 struct EmitFailure {};
-
-}
 
 void Emitter::run(const std::vector<StatementPtr>& program)
 {
@@ -498,26 +492,27 @@ void Emitter::emitBinary(const Expression& expression)
     emitExpression(*expression.left);
     emitExpression(*expression.right);
 
-    emit(binaryOpcode(expression.op));
+    emit(binaryOpcode(expression));
 }
 
-ScriptOpcode Emitter::binaryOpcode(TokenKind kind)
+ScriptOpcode Emitter::binaryOpcode(const Expression& expression)
 {
-    switch (kind) {
+    switch (expression.op) {
         case TokenKind::Plus:           return ScriptOpcode::Add;
         case TokenKind::Minus:          return ScriptOpcode::Subtract;
         case TokenKind::Star:           return ScriptOpcode::Multiply;
         case TokenKind::Slash:          return ScriptOpcode::Divide;
         case TokenKind::Percent:        return ScriptOpcode::Modulo;
         case TokenKind::EqualEqual:     return ScriptOpcode::Equal;
-        case TokenKind::BangEqual:      return ScriptOpcode::NotEqual;
+        case TokenKind::NotEqual:       return ScriptOpcode::NotEqual;
         case TokenKind::Less:           return ScriptOpcode::Less;
         case TokenKind::LessOrEqual:    return ScriptOpcode::LessOrEqual;
         case TokenKind::Greater:        return ScriptOpcode::Greater;
         case TokenKind::GreaterOrEqual: return ScriptOpcode::GreaterOrEqual;
-        case TokenKind::AmpAmp:         return ScriptOpcode::LogicalAnd;
-        default:                        return ScriptOpcode::LogicalOr;
+        case TokenKind::And:            return ScriptOpcode::LogicalAnd;
+        case TokenKind::Or:             return ScriptOpcode::LogicalOr;
+        default:                        break;
     }
-}
 
+    fail("this operator cannot be used between two values", expression);
 }
