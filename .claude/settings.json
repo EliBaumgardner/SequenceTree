@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/claude-md-hook.sh\"",
+            "timeout": 20,
+            "statusMessage": "Re-reading CLAUDE.md rules"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/design-rules.sh\" --hook post-tool",
+            "timeout": 15,
+            "statusMessage": "Checking design rules"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/design-rules.sh\" --hook stop",
+            "timeout": 20,
+            "statusMessage": "Design-rule gate"
+          }
+        ]
+      }
+    ]
+  }
+}
