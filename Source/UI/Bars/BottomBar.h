@@ -1,0 +1,35 @@
+#pragma once
+
+#include "Bar.h"
+#include "../Buttons/IconButton.h"
+#include "../Buttons/PaintToolSettings.h"
+#include "../Menus/ArrowWindow.h"
+#include "../PopupWindow.h"
+
+class BottomBar : public Bar
+{
+public:
+    explicit BottomBar(ApplicationContext& context);
+
+    void applyDisplayMode(NodeDisplayMode mode);
+
+private:
+
+    void resized() override;
+
+    static constexpr int cellGap = 10;
+
+    PopupWindowLauncher arrowWindowLauncher {
+        "Arrows",
+        [this]() {
+            auto content = std::make_unique<ArrowWindow>(applicationContext);
+            content->setSize(ArrowWindow::defaultWidth, ArrowWindow::defaultHeight);
+
+            return content;
+        }
+    };
+
+    std::unique_ptr<PaintToolSettings> paintPanel;
+    std::unique_ptr<IconButton> arrowButton;
+    std::unique_ptr<IconButton> spanTool;
+};

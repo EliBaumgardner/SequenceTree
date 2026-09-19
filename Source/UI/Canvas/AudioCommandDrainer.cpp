@@ -22,20 +22,25 @@ void AudioCommandDrainer::drainAll()
     AudioUIBridge& bridge = applicationContext.processor->eventManager.bridge;
 
     const bool droppedHighlights = bridge.highlights.overflowed.exchange(false);
-    const bool droppedProgress   = bridge.progress.overflowed.exchange(false);
-    const bool droppedResets     = bridge.arrowResets.overflowed.exchange(false);
+    const bool droppedArrows     = bridge.arrows.overflowed.exchange(false);
 
-    if (droppedHighlights) {
+    const bool streamBroken = needsResync || droppedHighlights || droppedArrows;
+
+    if (streamBroken) {
+        bridge.highlights.drain([](const AudioUIBridge::HighlightCommand&) {});
+        bridge.arrows    .drain([](const AudioUIBridge::ArrowCommand&)     {});
+
         canvas.nodeManager.clearHighlights();
-    }
-
-    if (droppedProgress || droppedResets) {
         canvas.arrowManager.resetAllProgress();
+        canvas.encapsulationView.syncHighlights();
+
+        needsResync = false;
+    }
+    else {
+        drainHighlights();
+        drainArrows();
     }
 
-    drainHighlights();
-    drainArrowResets();
-    drainProgress();
     drainCounts();
 }
 
@@ -84,11 +89,21 @@ void AudioCommandDrainer::drainHighlights()
     canvas.encapsulationView.syncHighlights();
 }
 
-void AudioCommandDrainer::drainProgress()
+void AudioCommandDrainer::drainArrows()
 {
-    applicationContext.processor->eventManager.bridge.progress.drain(
-        [this](const AudioUIBridge::ProgressCommand& command)
+    applicationContext.processor->eventManager.bridge.arrows.drain(
+        [this](const AudioUIBridge::ArrowCommand& command)
     {
+        if (command.isReset) {
+            if (command.trailId == AudioUIBridge::allTrails) {
+                canvas.arrowManager.resetAllProgress();
+                return;
+            }
+
+            canvas.arrowManager.resetTrail(command.trailId);
+            return;
+        }
+
         Node* const parentNode = canvas.nodeManager.find(command.parentNodeId);
         if (parentNode == nullptr) {
             return;
@@ -106,20 +121,6 @@ void AudioCommandDrainer::drainProgress()
             entry->second->startProgress(command.trailId, command.durationMs,
                                          progressColour, command.isConnection);
         }
-    });
-}
-
-void AudioCommandDrainer::drainArrowResets()
-{
-    applicationContext.processor->eventManager.bridge.arrowResets.drain(
-        [this](const AudioUIBridge::ResetCommand& command)
-    {
-        if (command.trailId == AudioUIBridge::allTrails) {
-            canvas.arrowManager.resetAllProgress();
-            return;
-        }
-
-        canvas.arrowManager.resetTrail(command.trailId);
     });
 }
 

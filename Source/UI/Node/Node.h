@@ -67,6 +67,8 @@ public:
 
     virtual float getVisualRadius() const { return getHeight() * 0.5f; }
 
+    virtual float getBodyExtent(juce::Point<float> approachDirection) const;
+
     virtual void bindToTree();
     virtual void bindValueEditorForMode();
 

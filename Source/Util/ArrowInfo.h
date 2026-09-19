@@ -55,20 +55,22 @@ struct ArrowInfo {
 
     static int pitchOffsetFromDelta(const ArrowInfo& info, int deltaX, int deltaY)
     {
-        double gridSpaces = 0.0;
+        double semitones = 0.0;
 
         if (info.xBinding == ArrowBinding::PitchBind) {
-            gridSpaces += static_cast<double>(deltaX) * info.xMultiplier / pixelsPerGridSpace;
+            const double wholeGridSpaces = std::round(static_cast<double>(deltaX) / pixelsPerGridSpace);
+
+            semitones += wholeGridSpaces * semitonesPerGridSpace * info.xMultiplier;
         }
 
         if (info.yBinding == ArrowBinding::PitchBind) {
-            gridSpaces -= static_cast<double>(deltaY) * info.yMultiplier / pixelsPerGridSpace;
+            const double wholeGridSpaces = std::round(static_cast<double>(deltaY) / pixelsPerGridSpace);
+
+            semitones -= wholeGridSpaces * semitonesPerGridSpace * info.yMultiplier;
         }
 
-        const double semitones = std::clamp(gridSpaces * semitonesPerGridSpace,
-                                            -maximumSemitoneOffset, maximumSemitoneOffset);
-
-        return static_cast<int>(std::round(semitones));
+        return static_cast<int>(std::round(std::clamp(semitones,
+                                                     -maximumSemitoneOffset, maximumSemitoneOffset)));
     }
 };
 

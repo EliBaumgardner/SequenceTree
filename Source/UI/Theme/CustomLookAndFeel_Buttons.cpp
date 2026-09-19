@@ -422,15 +422,10 @@ void CustomLookAndFeel::drawTraversalArrowIcon(juce::Graphics &g, juce::Rectangl
 
 void CustomLookAndFeel::drawPaintToolSettings(juce::Graphics &g, const PaintToolSettings &paintToolSettings) {
 
-    auto bounds = paintToolSettings.getLocalBounds().toFloat();
+    const auto bounds = paintToolSettings.getLocalBounds().toFloat().reduced(outerButtonBoundsReduction);
 
-    juce::ColourGradient gradient(barColour.brighter(0.06f), 0, bounds.getY(),
-                                  barColour.darker(0.04f),   0, bounds.getBottom(), false);
-    g.setGradientFill(gradient);
-    g.fillRect(bounds);
-
-    g.setColour(barColour.brighter(0.12f));
-    g.drawRect(bounds, 1.0f);
+    g.setColour(buttonBarColour);
+    g.fillRoundedRectangle(bounds, paneCornerRadius);
 }
 
 void CustomLookAndFeel::drawNodeIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState&) {

@@ -133,7 +133,7 @@ private:
 
     void endDrag  ();
 
-    static constexpr float rootSnapThreshold       = 60.0f;
+    static constexpr float rootSnapThreshold       = 20.0f;
     static constexpr float danglingArrowGrabRadius = 14.0f;
     static constexpr float arrowHoverRadius        = 8.0f;
     static constexpr float flagProximityRadius     = 28.0f;

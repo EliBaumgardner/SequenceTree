@@ -61,7 +61,7 @@ public:
         int  typeId          = -1;
     };
 
-    struct ProgressCommand
+    struct ArrowCommand
     {
         int  parentNodeId = 0;
         int  childNodeId  = 0;
@@ -69,6 +69,7 @@ public:
         int  trailId      = -1;
         int  typeId       = -1;
         bool isConnection = false;
+        bool isReset      = false;
     };
 
     struct CountCommand
@@ -78,16 +79,10 @@ public:
         int countLimit   = 1;
     };
 
-    struct ResetCommand
-    {
-        int trailId = -1;
-    };
-
     bool hasPendingCommands() const
     {
         return highlights.hasPending()
-            || progress.hasPending()
-            || arrowResets.hasPending()
+            || arrows.hasPending()
             || counts.hasPending();
     }
 
@@ -107,10 +102,11 @@ private:
     friend class TraversalSession;
     friend class AudioCommandDrainer;
 
-    CommandFifo<HighlightCommand> highlights;
-    CommandFifo<ProgressCommand>  progress;
-    CommandFifo<ResetCommand>     arrowResets;
-    CommandFifo<CountCommand>     counts;
+    static constexpr int arrowCommandCapacity = 1024;
+
+    CommandFifo<HighlightCommand>                     highlights;
+    CommandFifo<ArrowCommand, arrowCommandCapacity>   arrows;
+    CommandFifo<CountCommand>                         counts;
 
     void highlightNode(int nodeId, bool shouldHighlight, int runId = -1, int typeId = -1)
     {
@@ -129,12 +125,14 @@ private:
 
     void pushProgress(int parentNodeId, int childNodeId, int durationMs, int trailId, int typeId, bool isConnection = false)
     {
-        progress.push({ parentNodeId, childNodeId, durationMs, trailId, typeId, isConnection });
+        arrows.push({ .parentNodeId = parentNodeId, .childNodeId = childNodeId,
+                      .durationMs   = durationMs,   .trailId     = trailId,
+                      .typeId       = typeId,       .isConnection = isConnection });
     }
 
     void pushArrowReset(int trailId)
     {
-        arrowResets.push({ trailId });
+        arrows.push({ .trailId = trailId, .isReset = true });
     }
 
     void pushCount(int nodeId, int currentCount, int countLimit)

@@ -202,7 +202,6 @@ void NodeController::finishArrowHeadDrag()
     isDragStart           = true;
 
     canvas.arrowManager.triggerSnapForNode(nodeId);
-    canvas.hideGrid();
 }
 
 void NodeController::finishDanglingTipDrag()
@@ -235,8 +234,6 @@ void NodeController::finishFlagConnection()
 
     flagConnectionTarget   = nullptr;
     flagConnectionSourceId = -1;
-
-    canvas.hideGrid();
 }
 
 void NodeController::finishDanglingArrowCreation()
@@ -267,11 +264,7 @@ Node* NodeController::findDanglingSnapTarget(const Node* startNode, juce::Point<
 
     const int startNodeId = startNode->nodeId;
 
-    Node* snapTarget = canvas.hitTester.rootNear(tip.toFloat(), rootSnapThreshold, startNodeId);
-
-    if (snapTarget == nullptr) {
-        snapTarget = canvas.hitTester.nodeContaining(tip.toFloat(), startNodeId);
-    }
+    Node* const snapTarget = canvas.hitTester.nodeContaining(tip.toFloat(), startNodeId);
 
     if (snapTarget == nullptr) {
         return nullptr;
@@ -742,8 +735,6 @@ void NodeController::dragDanglingTip(const juce::MouseEvent& e)
 
 void NodeController::dragFlagConnection(const juce::MouseEvent& e, Node& node, const NodePosition& newPosition)
 {
-    canvas.showGrid();
-
     const juce::Point<int> cursor { newPosition.xPosition, newPosition.yPosition };
     flagConnectionTarget = canvas.hitTester.nodeNear(cursor.toFloat(), rootSnapThreshold, flagConnectionSourceId);
 

@@ -15,6 +15,9 @@
 
 #include "Node.h"
 
+#include <algorithm>
+#include <cmath>
+
 
 
 
@@ -81,6 +84,24 @@ void Node::paint(juce::Graphics& g)
 void Node::resized()
 {
     layoutInterior(getLocalBounds());
+}
+
+float Node::getBodyExtent(juce::Point<float> approachDirection) const
+{
+    const juce::Rectangle<float> circle = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
+
+    const float radius = std::max(0.0f, circle.getWidth() * 0.5f);
+
+    const juce::Point<float> toCircle = circle.getCentre() - (getNodeCentre() - getPosition()).toFloat();
+
+    const float along     = approachDirection.getDotProduct(toCircle);
+    const float clearance = along * along - toCircle.getDistanceSquaredFromOrigin() + radius * radius;
+
+    if (clearance <= 0.0f) {
+        return radius;
+    }
+
+    return std::max(0.0f, std::sqrt(clearance) - along);
 }
 
 void Node::layoutInterior(juce::Rectangle<int> nodeSquare)

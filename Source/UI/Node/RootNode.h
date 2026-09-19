@@ -30,6 +30,8 @@ class RootNode : public Node {
                  getBounds().getCentreY() };
     }
 
+    float getBodyExtent(juce::Point<float> approachDirection) const override;
+
     std::unique_ptr<RootRectangle> rootRectangle = nullptr;
 
 };

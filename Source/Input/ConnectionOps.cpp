@@ -29,9 +29,17 @@ void ConnectionOps::disconnect(const Arrow* arrow)
 
     const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
 
+    GraphState& state = *applicationContext.graphState;
+
     juce::UndoManager* undoManager = applicationContext.undoManager;
     undoManager->beginNewTransaction();
-    applicationContext.graphState->disconnectNodes(ownerNodeId, childNodeId, undoManager);
+
+    if (state.getNode(childNodeId).getType() == ValueTreeIdentifiers::TraversalFlagData) {
+        state.removeNode(childNodeId, undoManager);
+        return;
+    }
+
+    state.disconnectNodes(ownerNodeId, childNodeId, undoManager);
 }
 
 juce::ValueTree ConnectionOps::connectionTreeFor(const Arrow* arrow) const

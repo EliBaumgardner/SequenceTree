@@ -11,6 +11,10 @@ PopupWindow::PopupWindow(const juce::String& title, std::unique_ptr<juce::Compon
     setContentOwned(content.release(), true);
     setResizable(true, true);
 
+    if (! juce::JUCEApplicationBase::isStandaloneApp()) {
+        setAlwaysOnTop(true);
+    }
+
     setResizeLimits(juce::roundToInt(getWidth()  * minimumSizeRatio),
                     juce::roundToInt(getHeight() * minimumSizeRatio),
                     juce::roundToInt(getWidth()  * maximumSizeRatio),

@@ -6,6 +6,10 @@
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Theme/CustomLookAndFeel.h"
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
 Modulator::Modulator(ApplicationContext& context) : Node(context)
 {
     nodeType = NodeType::Modulator;
@@ -35,6 +39,29 @@ juce::Rectangle<float> Modulator::getSquareBounds() const {
     const float side         = circleBounds.getWidth() * equalAreaSideFactor;
 
     return circleBounds.withSizeKeepingCentre(side, side);
+}
+
+float Modulator::getBodyExtent(juce::Point<float> approachDirection) const
+{
+    static constexpr float rayAxisEpsilon = 1.0e-4f;
+
+    const juce::Rectangle<float> square = getSquareBounds();
+    const juce::Point<float>     centre = (getNodeCentre() - getPosition()).toFloat();
+    const juce::Point<float>     ray    = -approachDirection;
+
+    float exit = std::numeric_limits<float>::max();
+
+    if (std::abs(ray.x) > rayAxisEpsilon) {
+        exit = std::min(exit, std::max((square.getX()     - centre.x) / ray.x,
+                                       (square.getRight() - centre.x) / ray.x));
+    }
+
+    if (std::abs(ray.y) > rayAxisEpsilon) {
+        exit = std::min(exit, std::max((square.getY()      - centre.y) / ray.y,
+                                       (square.getBottom() - centre.y) / ray.y));
+    }
+
+    return std::max(0.0f, exit);
 }
 
 bool Modulator::hitTest(int x, int y) {

@@ -25,7 +25,7 @@ cmake -B cmake-build-debug -G Ninja -DCMAKE_BUILD_TYPE=Debug \
 
 Every `.cpp` must be listed explicitly in `CMakeLists.txt` — there is no glob. Adding a source file without registering it fails at link time, or silently does nothing.
 
-There are no automated tests, and none should be added. Verify changes by building (`SequenceTree_Standalone` is the fastest full-link target) and by exercising the plugin manually in a host.
+There are no automated tests, and none should be added. Verify changes by building (`SequenceTree_Standalone` is the fastest full-link target) and by exercising the plugin manually in a host. Prioritise exercising it manually for audio engine work.
 
 ## Architecture Overview
 
@@ -109,7 +109,7 @@ Four things about the model are easy to miss:
 
 **Audio → GUI:** `TraversalDispatcher` / `EventManager` push commands into the `AudioUIBridge` FIFOs; `processBlock` calls `notifyUi`, which triggers `NodeCanvas::handleAsyncUpdate()` to drain them on the message thread.
 
-### How to Systematically Solve Problems 
+### How to Systematically Coding Solve Problems 
 **These are negotiable principles for solving problems in the project but generally should always be adhered to**
 
 - Verify that you have fully applied of these principles after applying them
@@ -132,13 +132,15 @@ Four things about the model are easy to miss:
 - Per-block scratch state lives in reserved member vectors (see `TraversalSession`), not in locals, for the same reason.
 - `ApplicationContext` pointers are valid only after `PluginEditor` construction; do not touch them at static init time.
 - This project uses **no code comments**. Express intent through naming.
-- Never write functions that are 1-2 lines **do not write wrapper functions** The only exception is if the function clearly states some larger process, and by doing so makes the code more readible, even if it is just a few lines.
+- Never write functions that are 1-2 lines **do not write wrapper functions**. A function whose body is a single forwarding call is a wrapper however many callers it has - caller count is a floor, not a warrant, and avoiding duplication is not by itself a reason to extract. If you think a short function is justified because it names a larger process, **ask before writing it**; do not grant yourself that exception.
+- Never let a virtual be a shell. When a caller reaches a class polymorphically, that virtual is the one function the hierarchy is allowed - the work goes inside each override, not one hop further down.
 - Never use ternary operators
 - Always use {} for blocks
 - Always avoid encapsulation on very small segments of code which repeat
 - Make sure code fits the class's intended purpose, and generally sticks to a single area of concern
 - Never use functions with the keyword `inline`
-- Avoid using getter and setter functions, prefer public variable access when possible
+- Avoid using getter and setter functions, prefer public variable access. `private` and `protected` are fine for anything you can guarantee stays inside the class, and choosing them for organisation is legitimate. But the moment a member needs an accessor to be reached, it is not internal: move the member to public scope and delete the accessor.
 - Avoid using namespaces
 - Never use functions that perform a single operation (single if statement or boolean operation, etc.)
-- It is better to declare an unused variable if it still represents some part of the class's immediate functionality 
+- It is better to declare an unused variable if it still represents some part of the class's immediate functionality
+- If you are about to flag a rule deviation in your report, **stop and ask instead**. A disclosed violation is still a violation; reporting it is not permission, and the design-rule hook only machine-checks some of these rules - its silence on the rest is coverage, not a verdict. 

@@ -5,7 +5,7 @@
 #include "MenuArea.h"
 #include "../../Util/ApplicationContext.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "MenuBar.h"
+#include "../Bars/MenuBar.h"
 #include "TraversalMenu.h"
 #include "NodeMenu.h"
 

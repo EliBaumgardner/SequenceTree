@@ -84,7 +84,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Theme/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp
         Source/UI/Menus/ArrowWindow.cpp
-        Source/UI/Menus/ArrowBindBar.cpp
+        Source/UI/Bars/ArrowBindBar.cpp
         Source/UI/Menus/ItemSelector.cpp
         Source/UI/Menus/TraversalMenu.cpp
         Source/UI/Menus/MenuArea.cpp
@@ -94,10 +94,10 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Menus/TraversalRulesWindow.cpp
         Source/UI/PopupWindow.cpp
         Source/UI/Menus/ColourSelector.cpp
-        Source/UI/Bar.cpp
-        Source/UI/Titlebar.cpp
-        Source/UI/BottomBar.cpp
-        Source/UI/Menus/MenuBar.cpp
+        Source/UI/Bars/Bar.cpp
+        Source/UI/Bars/Titlebar.cpp
+        Source/UI/Bars/BottomBar.cpp
+        Source/UI/Bars/MenuBar.cpp
         Source/UI/LabelPanel.cpp
         Source/UI/Editors/FileLabel.cpp
         Source/UI/Editors/FileLine.cpp

@@ -72,6 +72,208 @@ if [ -z "$files" ]; then
     exit 0
 fi
 
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+addedmap="$work/added"
+: > "$addedmap"
+
+git diff -U0 -M HEAD -- 'Source/*.cpp' 'Source/*.h' 2>/dev/null | awk '
+    /^\+\+\+ b\// { F = substr($0, 7); next }
+    /^@@/ {
+        if (F != "" && match($0, /\+[0-9]+(,[0-9]+)?/)) {
+            spec = substr($0, RSTART + 1, RLENGTH - 1)
+            n = split(spec, a, ",")
+            start = a[1] + 0
+            count = 1
+            if (n > 1) { count = a[2] + 0 }
+            for (i = 0; i < count; i++) { print F ":" (start + i) }
+        }
+    }
+' >> "$addedmap"
+
+for f in $files; do
+    if ! git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
+        awk -v F="$f" '{ print F ":" FNR }' "$f" >> "$addedmap"
+    fi
+done
+
+scope_added=1
+if [ "$mode" = "all" ]; then
+    scope_added=0
+fi
+
+only_added() {
+    if [ "$scope_added" -eq 0 ]; then
+        cat
+        return
+    fi
+    awk -F: -v MAP="$addedmap" '
+        BEGIN { while ((getline l < MAP) > 0) { keep[l] = 1 } }
+        NF >= 2 { key = $1 ":" $2; if (key in keep) { print } }
+    '
+}
+
+funcs="$work/funcs"
+echo "$files" | tr ' ' '\n' | grep -v '^$' | xargs awk '
+    function strip(s) {
+        gsub(/\\./, "", s)
+        gsub(/"[^"]*"/, "\"\"", s)
+        gsub(/'"'"'[^'"'"']*'"'"'/, "@", s)
+        sub(/\/\/.*$/, "", s)
+        return s
+    }
+    function nameOf(sig,   s) {
+        s = sig
+        sub(/\(.*$/, "", s)
+        gsub(/[[:space:]]+$/, "", s)
+        if (match(s, /[A-Za-z_~][A-Za-z0-9_]*$/)) { return substr(s, RSTART, RLENGTH) }
+        return "?"
+    }
+    function classOf(sig,   s) {
+        s = sig
+        sub(/\(.*$/, "", s)
+        if (match(s, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*::[[:space:]]*[A-Za-z_~][A-Za-z0-9_]*[[:space:]]*$/)) {
+            s = substr(s, RSTART, RLENGTH)
+            sub(/[[:space:]]*::.*$/, "", s)
+            return s
+        }
+        return ""
+    }
+    function isFunction(sig,   before) {
+        if (sig !~ /\(/ || sig !~ /\)/) { return 0 }
+        if (sig ~ /^[[:space:]]*(if|for|while|switch|catch|else|return|do|case)[^A-Za-z0-9_]/) { return 0 }
+        if (sig ~ /(^|[^A-Za-z0-9_])(class|struct|enum|namespace|union)[^A-Za-z0-9_]/) { return 0 }
+        if (sig ~ /\[[^]]*\][[:space:]]*\(/) { return 0 }
+        if (sig ~ /=[[:space:]]*$/) { return 0 }
+        if (sig ~ /^[[:space:]]*#/) { return 0 }
+        before = sig
+        sub(/\{.*$/, "", before)
+        if (before !~ /\)/) { return 0 }
+        return 1
+    }
+
+    FNR == 1 { infunc = 0; incomment = 0; cand = ""; candline = 0; curclass = "" }
+
+    {
+        line = strip($0)
+
+        if (infunc == 0 && line ~ /^[[:space:]]*(class|struct)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/) {
+            c = line
+            sub(/^[[:space:]]*(class|struct)[[:space:]]+/, "", c)
+            if (match(c, /^[A-Za-z_][A-Za-z0-9_]*/)) { curclass = substr(c, RSTART, RLENGTH) }
+        }
+
+        if (incomment) {
+            if (line ~ /\*\//) { sub(/^.*\*\//, "", line); incomment = 0 }
+            else { next }
+        }
+        while (match(line, /\/\*/)) {
+            pre = substr(line, 1, RSTART - 1)
+            rest = substr(line, RSTART + 2)
+            if (match(rest, /\*\//)) { line = pre substr(rest, RSTART + 2) }
+            else { line = pre; incomment = 1; break }
+        }
+
+        if (infunc == 0) {
+            if (line ~ /^[[:space:]]*$/) { next }
+            if (line ~ /^[[:space:]]*#/) { cand = ""; candline = 0; next }
+
+            if (candline == 0) { candline = FNR }
+            cand = cand " " line
+
+            if (cand ~ /;/ && cand !~ /\{/) { cand = ""; candline = 0; next }
+
+            if (line ~ /\{/) {
+                if (isFunction(cand)) {
+                    infunc = 1
+                    fstart = candline
+                    fname = nameOf(cand)
+                    fclass = classOf(cand)
+                    fctor = 0
+                    if (fname ~ /^~/ || (fclass != "" && fclass == fname)) { fctor = 1 }
+                    fdepth = 0
+                    stmts = 0
+                    nested = 0
+                    btext = ""
+                    body = substr(line, index(line, "{"))
+                    line = body
+                }
+                else { cand = ""; candline = 0; next }
+            }
+            else { next }
+        }
+
+        btext = btext " " line
+
+        for (i = 1; i <= length(line); i++) {
+            c = substr(line, i, 1)
+            if (c == "{") {
+                fdepth++
+                if (fdepth > 1) { nested++ }
+            }
+            else if (c == "}") {
+                fdepth--
+                if (fdepth <= 0) {
+                    kind = "function"
+                    if (fctor == 1) { kind = "ctor" }
+                    owner = fclass
+                    if (owner == "") { owner = curclass }
+                    ret = ""
+                    if (stmts == 1 && nested == 0 && match(btext, /return[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*;/)) {
+                        ret = substr(btext, RSTART, RLENGTH)
+                        sub(/return[[:space:]]+/, "", ret)
+                        sub(/[[:space:]]*;/, "", ret)
+                        if (ret == "true" || ret == "false" || ret == "nullptr" || ret == "this") { ret = "" }
+                    }
+                    print "F\t" FILENAME "\t" fstart "\t" FNR "\t" stmts "\t" nested "\t" kind "\t" fname "\t" owner "\t" ret
+                    infunc = 0
+                    cand = ""
+                    candline = 0
+                    break
+                }
+            }
+            else if (c == ";" && fdepth == 1) { stmts++ }
+        }
+    }
+' 2>/dev/null > "$funcs"
+
+members="$work/members"
+echo "$files" | tr ' ' '\n' | grep -E '\.h$' | xargs awk '
+    FNR == 1 { access = ""; curclass = ""; depth = 0 }
+    {
+        line = $0
+        sub(/\/\/.*$/, "", line)
+
+        if (line ~ /^[[:space:]]*(class|struct)[[:space:]]+[A-Za-z_]/ && line !~ /;[[:space:]]*$/) {
+            c = line
+            sub(/^[[:space:]]*(class|struct)[[:space:]]+/, "", c)
+            if (match(c, /^[A-Za-z_][A-Za-z0-9_]*/)) { curclass = substr(c, RSTART, RLENGTH) }
+            access = "private"
+            if (line ~ /^[[:space:]]*struct/) { access = "public" }
+            next
+        }
+        if (line ~ /^[[:space:]]*public[[:space:]]*:/)    { access = "public";    next }
+        if (line ~ /^[[:space:]]*protected[[:space:]]*:/) { access = "protected"; next }
+        if (line ~ /^[[:space:]]*private[[:space:]]*:/)   { access = "private";   next }
+
+        if (curclass == "" || access == "" || access == "public") { next }
+        if (line !~ /;[[:space:]]*$/ || line ~ /\(/) { next }
+        if (line ~ /^[[:space:]]*(using|typedef|friend|template|#|\})/) { next }
+
+        n = line
+        sub(/[[:space:]]*=.*$/, "", n)
+        sub(/;[[:space:]]*$/, "", n)
+        sub(/\[[^]]*\][[:space:]]*$/, "", n)
+        if (n !~ /[[:space:]]/) { next }
+        if (match(n, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*$/)) {
+            nm = substr(n, RSTART, RLENGTH)
+            gsub(/[[:space:]]/, "", nm)
+            print "M\t" curclass "\t" nm "\t" FILENAME "\t" FNR "\t" access
+        }
+    }
+' 2>/dev/null > "$members"
+
 violations=0
 report=""
 
@@ -85,7 +287,7 @@ emit() {
 }
 
 inline_hits=$(echo "$files" | xargs grep -HnE '(^|[[:space:]])inline[[:space:]]' 2>/dev/null \
-    | grep -F '(' | grep -v 'constexpr')
+    | grep -F '(' | grep -v 'constexpr' | only_added)
 
 ternary_hits=$(echo "$files" | xargs awk '
     { line = $0
@@ -93,7 +295,7 @@ ternary_hits=$(echo "$files" | xargs awk '
       gsub(/"[^"]*"/, "@@", line)
       gsub(/\/\/.*$/, "", line)
       if (line ~ /\?[^:]*:/) printf "%s:%d:%s\n", FILENAME, FNR, $0 }
-' 2>/dev/null)
+' 2>/dev/null | only_added)
 
 comment_hits=$(echo "$files" | xargs awk '
     FNR == 1 { banner = 1 }
@@ -105,7 +307,7 @@ comment_hits=$(echo "$files" | xargs awk '
     /\/\/[[:space:]]*Created by/ { next }
     /\/\/=+/ { next }
     /(^|[^:"\/])\/\/|\/\*/ { printf "%s:%d:%s\n", FILENAME, FNR, $0 }
-' 2>/dev/null)
+' 2>/dev/null | only_added)
 
 brace_hits=$(echo "$files" | xargs awk '
     function balanced(s,   i, c, depth) {
@@ -126,12 +328,90 @@ brace_hits=$(echo "$files" | xargs awk '
     }
     /^[[:space:]]*else[[:space:]]*$/ { prev = $0; prevline = FNR; next }
     { prev = "" }
-' 2>/dev/null)
+' 2>/dev/null | only_added)
 
-emit "Never use inline functions"            "$inline_hits"
-emit "Never use ternary operators"           "$ternary_hits"
-emit "This project uses no code comments"    "$comment_hits"
-emit "Always use {} for blocks"              "$brace_hits"
+tiny_hits=$(awk -F'\t' '
+    $1 == "F" && $7 == "function" && $6 == 0 && $5 <= 2 && $5 > 0 {
+        printf "%s:%d:%s() body is %d statement(s)\n", $2, $3, $8, $5
+    }
+' "$funcs" | only_added)
+
+accessor_hits=$(awk -F'\t' '
+    FILENAME == ARGV[1] && $1 == "M" { owner[$2 "\t" $3] = $4 ":" $5; vis[$2 "\t" $3] = $6; next }
+    $1 == "F" && $10 != "" && $9 != "" {
+        key = $9 "\t" $10
+        if (key in owner) {
+            printf "%s:%d:%s() only hands out %s member %s (declared %s) - move the member to public scope\n",
+                   $2, $3, $8, vis[key], $10, owner[key]
+        }
+    }
+' "$members" "$funcs" | only_added)
+
+audiofiles=$(echo "$files" | tr ' ' '\n' | grep -E '^Source/Audio/' || true)
+
+alloc_hits=""
+uimutate_hits=""
+boundary_hits=""
+
+if [ -n "$audiofiles" ]; then
+    alloc_hits=$(echo "$audiofiles" | xargs awk -F'\t' '
+        FNR == NR { if ($1 == "F") { for (l = $3; l <= $4; l++) { fn[$2 ":" l] = $8 } } ; next }
+        {
+            here = fn[FILENAME ":" FNR]
+            if (here == "") { next }
+            if (here ~ /^(prepare|prepareToPlay|reserve|setup|releaseResources)/) { next }
+            line = $0
+            sub(/\/\/.*$/, "", line)
+            if (line ~ /(^|[^A-Za-z0-9_])(new|delete)[[:space:]]/ \
+             || line ~ /make_unique|make_shared|malloc\(|calloc\(|realloc\(|free\(/ \
+             || line ~ /(^|[^A-Za-z0-9_:])(std::)?(string|vector|map|set)[[:space:]]*<[^>]*>[[:space:]]+[A-Za-z_]/ \
+             || line ~ /juce::String[[:space:]]+[A-Za-z_]/) {
+                printf "%s:%d:%s\n", FILENAME, FNR, $0
+            }
+        }
+    ' "$funcs" 2>/dev/null | only_added)
+
+    uimutate_hits=$(echo "$audiofiles" | xargs awk '
+        { line = $0
+          sub(/\/\/.*$/, "", line)
+          if (line ~ /juce::Component|NodeCanvas|->repaint\(|\.repaint\(|setBounds\(|setVisible\(|LookAndFeel/) {
+              printf "%s:%d:%s\n", FILENAME, FNR, $0
+          } }
+    ' 2>/dev/null | only_added)
+
+    boundary_hits=$(echo "$audiofiles" | xargs awk '
+        { line = $0
+          sub(/\/\/.*$/, "", line)
+          if (line ~ /juce::ValueTree|GraphState|ValueTreeIdentifiers/) {
+              printf "%s:%d:%s\n", FILENAME, FNR, $0
+          } }
+    ' 2>/dev/null | only_added)
+fi
+
+staticctx_hits=$(echo "$files" | xargs grep -HnE '^[[:space:]]*(static|extern)?[[:space:]]*[A-Za-z_][A-Za-z0-9_:<>]*[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[^=]*ApplicationContext' 2>/dev/null | only_added)
+
+emit "Never use inline functions"                                        "$inline_hits"
+emit "Never use ternary operators"                                       "$ternary_hits"
+emit "This project uses no code comments"                                "$comment_hits"
+emit "Always use {} for blocks"                                          "$brace_hits"
+emit "Never write 1-2 line functions, wrappers, or single-operation functions" "$tiny_hits"
+emit "Anything that needs a getter belongs in public scope"              "$accessor_hits"
+emit "Never allocate or free on the audio thread"                        "$alloc_hits"
+emit "Never touch UI components from the audio thread"                   "$uimutate_hits"
+emit "Only RTData structs and RTScript cross the audio boundary"         "$boundary_hits"
+emit "ApplicationContext is not valid at static init time"               "$staticctx_hits"
+
+checked="inline, ternaries, comments, braces, tiny/wrapper functions, non-public members with accessors, audio-thread allocation, audio-thread UI access, audio boundary types, static-init ApplicationContext"
+unchecked="Code fits the class's intended purpose / single area of concern
+Avoid encapsulation on very small segments of code which repeat
+Whether a push_back stays inside its reserved capacity (the allocation check cannot see capacity)
+Per-block scratch state lives in reserved member vectors, not locals
+Prefer declaring an unused variable over deleting one that represents the class's functionality
+Whether a short function qualifies for the \"states a larger process\" exception - ASK, do not self-certify"
+
+coverage="design-rules: machine-checked - ${checked}"$'\n'
+coverage="${coverage}design-rules: NOT machine-checked - judge these yourself, a pass here is not a pass on them:"$'\n'
+coverage="${coverage}$(printf '%s\n' "$unchecked" | sed 's/^/  /')"
 
 case "$mode" in
     post-tool)
@@ -141,7 +421,7 @@ case "$mode" in
         context="Design-rule violations in ${target} (CLAUDE.md Key Design Rules)."$'\n'
         context="${context}Fix the ones this edit introduced now, in this turn, before moving on."$'\n'
         context="${context}If a hit is pre-existing code you only touched, leave it and say so."$'\n'
-        context="${context}${report}"
+        context="${context}${report}"$'\n'"${coverage}"
         jq -n --arg ctx "$context" \
           '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $ctx}}'
         exit 0
@@ -153,7 +433,7 @@ case "$mode" in
         reason="Design-rule violations remain in files changed vs HEAD (CLAUDE.md Key Design Rules)."$'\n'
         reason="${reason}Fix the ones you introduced this session."$'\n'
         reason="${reason}For any hit that is pre-existing code you only touched, leave it and report it to the user."$'\n'
-        reason="${reason}${report}"
+        reason="${reason}${report}"$'\n'"${coverage}"
         jq -n --arg r "$reason" '{decision: "block", reason: $r}'
         exit 0
         ;;
@@ -161,13 +441,16 @@ case "$mode" in
         echo "design-rules: checking $scope"
         echo "$files" | sed 's/^/  /'
         printf '%s' "$report"
+        echo
         if [ "$violations" -eq 0 ]; then
-            echo
-            echo "design-rules: clean"
+            echo "design-rules: no violations of the machine-checked rules"
+        else
+            echo "design-rules: $violations rule(s) violated"
+        fi
+        echo "$coverage"
+        if [ "$violations" -eq 0 ]; then
             exit 0
         fi
-        echo
-        echo "design-rules: $violations rule(s) violated"
         exit 1
         ;;
 esac

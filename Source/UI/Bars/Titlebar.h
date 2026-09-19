@@ -12,11 +12,11 @@
 
 
 #include "Bar.h"
-#include "Buttons/IconButton.h"
-#include "Buttons/ButtonPane.h"
-#include "Menus/ItemSelector.h"
-#include "Buttons/TempoDisplay.h"
-#include "../Input/NodeController.h"
+#include "../Buttons/IconButton.h"
+#include "../Buttons/ButtonPane.h"
+#include "../Menus/ItemSelector.h"
+#include "../Buttons/TempoDisplay.h"
+#include "../../Input/NodeController.h"
 
 class Titlebar : public Bar {
 

@@ -9,9 +9,9 @@
 */
 
 
-#include "Canvas/NodeCanvas.h"
-#include "Theme/CustomLookAndFeel.h"
-#include "../Plugin/PluginProcessor.h"
+#include "../Canvas/NodeCanvas.h"
+#include "../Theme/CustomLookAndFeel.h"
+#include "../../Plugin/PluginProcessor.h"
 
 #include "Titlebar.h"
 
