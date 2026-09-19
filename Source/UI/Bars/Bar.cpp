@@ -1,5 +1,5 @@
 #include "Bar.h"
-#include "Theme/CustomLookAndFeel.h"
+#include "../Theme/CustomLookAndFeel.h"
 
 Bar::Bar(ApplicationContext& context, Style style)
     : applicationContext(context), style(style)

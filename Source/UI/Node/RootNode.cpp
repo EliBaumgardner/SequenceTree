@@ -9,6 +9,8 @@
 #include "../../Util/ApplicationContext.h"
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 
 RootNode::RootNode(ApplicationContext& context) : Node(context)
 {
@@ -87,6 +89,65 @@ void RootNode::equipTraversals()
         traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalInstance, key.instance, nullptr);
         traversalChildrenIds.addChild(traversalIdTree, -1, nullptr);
     }
+}
+
+float RootNode::getBodyExtent(juce::Point<float> approachDirection) const
+{
+    static constexpr float rayAxisEpsilon = 1.0e-4f;
+
+    const juce::Rectangle<float> circle = CustomLookAndFeel::getNodeCircleBounds(
+        getLocalBounds().toFloat().withTrimmedLeft((float) loopLimitRectangleWidth));
+
+    const juce::Point<float> centre   = (getNodeCentre() - getPosition()).toFloat();
+    const juce::Point<float> toCircle = circle.getCentre() - centre;
+
+    const float radius    = std::max(0.0f, circle.getWidth() * 0.5f);
+    const float along     = approachDirection.getDotProduct(toCircle);
+    const float clearance = along * along - toCircle.getDistanceSquaredFromOrigin() + radius * radius;
+
+    float circleExtent = radius;
+
+    if (clearance > 0.0f) {
+        circleExtent = std::max(0.0f, std::sqrt(clearance) - along);
+    }
+
+    const juce::Rectangle<float> rectangle = rootRectangle->getBounds().toFloat();
+    const juce::Point<float>     ray       = -approachDirection;
+
+    float entry = 0.0f;
+    float exit  = std::numeric_limits<float>::max();
+
+    if (std::abs(ray.x) < rayAxisEpsilon) {
+        if (centre.x < rectangle.getX() || centre.x > rectangle.getRight()) {
+            return circleExtent;
+        }
+    }
+    else {
+        const float toLeft  = (rectangle.getX()     - centre.x) / ray.x;
+        const float toRight = (rectangle.getRight() - centre.x) / ray.x;
+
+        entry = std::max(entry, std::min(toLeft, toRight));
+        exit  = std::min(exit,  std::max(toLeft, toRight));
+    }
+
+    if (std::abs(ray.y) < rayAxisEpsilon) {
+        if (centre.y < rectangle.getY() || centre.y > rectangle.getBottom()) {
+            return circleExtent;
+        }
+    }
+    else {
+        const float toTop    = (rectangle.getY()      - centre.y) / ray.y;
+        const float toBottom = (rectangle.getBottom() - centre.y) / ray.y;
+
+        entry = std::max(entry, std::min(toTop, toBottom));
+        exit  = std::min(exit,  std::max(toTop, toBottom));
+    }
+
+    if (exit < entry) {
+        return circleExtent;
+    }
+
+    return std::max(circleExtent, exit);
 }
 
 void RootNode::paint(juce::Graphics& g)

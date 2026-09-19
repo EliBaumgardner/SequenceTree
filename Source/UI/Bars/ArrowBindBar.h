@@ -6,9 +6,9 @@
 #define SEQUENCETREE_ARROWBINDBAR_H
 
 #include "../../Util/ArrowInfo.h"
-#include "../Bar.h"
+#include "Bar.h"
 #include "../Editors/ValueEditor.h"
-#include "ItemSelector.h"
+#include "../Menus/ItemSelector.h"
 
 class ArrowBindBar : public Bar {
 

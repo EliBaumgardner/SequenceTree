@@ -8,10 +8,10 @@
 #include <juce_graphics/juce_graphics.h>
 #include "../../Util/ApplicationContext.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "../Menus/ItemSelector.h"
 #include "../Menus/ColourSelector.h"
+#include "../Editors/ValueEditor.h"
 #include "../Canvas/NodeCanvas.h"
-#include "ValueSlider.h"
+#include "IconButton.h"
 
 
 class PaintToolSettings : public juce::Component {
@@ -21,12 +21,15 @@ public:
     static constexpr float minBrushFlow = 0.002f;
     static constexpr float maxBrushFlow = 0.25f;
 
-    static constexpr int defaultWidth  = 100;
-    static constexpr int defaultHeight = 200;
+    static constexpr float minBrushRadius = 1.0f;
+    static constexpr float maxBrushRadius = 200.0f;
+
+    static constexpr float widthToHeightRatio = 9.0f;
+    static constexpr float panelInsetRatio    = 0.1f;
+    static constexpr float cellGapRatio       = 0.2f;
+    static constexpr float labelWidthRatio    = 1.6f;
 
     enum class PaintSetting {Pitch, Duration, Velocity};
-
-    static int itemIdFor(PaintSetting setting) { return (int) setting + 1; }
 
     struct ColourVariablePair {
         juce::Colour colour;
@@ -50,43 +53,42 @@ public:
 
     ApplicationContext& context;
 
-    juce::TooltipWindow tooltipWindow { this, 800 };
+    std::unique_ptr<IconButton>     paintTool;
+    std::unique_ptr<ColourSelector> colourSelector;
+    std::unique_ptr<ValueEditor>    sizeEditor;
+    std::unique_ptr<ValueEditor>    flowEditor;
 
-    std::unique_ptr<ItemSelector>         displayMenu;
-    std::unique_ptr<ColourSelector>       colourSelector;
-    std::unique_ptr<ValueSlider>          valueSlider;
-    std::unique_ptr<ValueSlider>          flowSlider;
-
-    juce::Label colourLabel;
-    juce::Label valueLabel;
+    juce::Label sizeLabel;
     juce::Label flowLabel;
 
 
     explicit PaintToolSettings(ApplicationContext& context) : context(context) {
         setLookAndFeel(context.lookAndFeel);
 
-        displayMenu = std::make_unique<ItemSelector>(context);
+        paintTool = std::make_unique<IconButton>(
+            [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+                CustomLookAndFeel::get(*this).drawPaintToolIcon(g, bounds, state);
+            }, context.lookAndFeel);
+
         colourSelector = std::make_unique<ColourSelector>(context);
         colourSelector->requiresNode = false;
-        valueSlider = std::make_unique<ValueSlider>();
-        flowSlider  = std::make_unique<ValueSlider>();
+        sizeEditor = std::make_unique<ValueEditor>(context);
+        flowEditor = std::make_unique<ValueEditor>(context);
 
         pitchPair.setting    = PaintSetting::Pitch;
         velocityPair.setting = PaintSetting::Velocity;
         durationPair.setting = PaintSetting::Duration;
 
-        const auto addPaintSetting = [this](PaintSetting setting, juce::String label) {
-            displayMenu->addItem(itemIdFor(setting), std::move(label), [this, setting]() {
-                setPaintMode(setting);
-                resized();
-            });
+        paintTool->onClick = [this]() {
+            paintTool->toggleSelected();
+
+            const bool paintMode = paintTool->isSelected();
+            this->context.canvas->setPaintMode(paintMode);
+
+            if (paintMode) {
+                setPaintMode(paintSetting);
+            }
         };
-
-        addPaintSetting(PaintSetting::Pitch,    "Pitch");
-        addPaintSetting(PaintSetting::Velocity, "Velocity");
-        addPaintSetting(PaintSetting::Duration, "Duration");
-
-        displayMenu->setSelectedItem(itemIdFor(paintSetting));
 
         colourSelector->onColourPicked = [this](juce::Colour c) {
             currentPair().colour = c;
@@ -95,26 +97,30 @@ public:
             this->context.canvas->valueField.refresh();
         };
 
-        valueSlider->valueChanged = [this] {
-            const float value  = (float)valueSlider->boundValue.getValue();
-            const float radius = juce::jmap(value, 0.0f, 1.0f, 1.0f, 200.0f);
+        sizeEditor->enableDecimalValue(0.0, 1.0);
+
+        sizeEditor->onValueChange = [this] {
+            const float value  = (float)sizeEditor->boundValue.getValue();
+            const float radius = juce::jmap(value, 0.0f, 1.0f, minBrushRadius, maxBrushRadius);
             this->context.canvas->valueField.setBrushRadius(radius);
         };
 
-        valueSlider->boundValue = juce::jmap(context.canvas->valueField.brushRadius, 1.0f, 200.0f, 0.0f, 1.0f);
+        sizeEditor->boundValue = juce::jmap(context.canvas->valueField.brushRadius,
+                                            minBrushRadius, maxBrushRadius, 0.0f, 1.0f);
 
-        flowSlider->valueChanged = [this] {
-            const float value = (float)flowSlider->boundValue.getValue();
+        flowEditor->enableDecimalValue(0.0, 1.0);
+
+        flowEditor->onValueChange = [this] {
+            const float value = (float)flowEditor->boundValue.getValue();
             this->context.canvas->valueField.brushFlow = juce::jmap(value, 0.0f, 1.0f, minBrushFlow, maxBrushFlow);
         };
 
         const float flow = juce::jlimit(minBrushFlow, maxBrushFlow, context.canvas->valueField.brushFlow);
-        flowSlider->boundValue = juce::jmap(flow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);
+        flowEditor->boundValue = juce::jmap(flow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);
 
-        displayMenu->setTooltip("Paint mode");
         colourSelector->setTooltip("Brush colour");
-        valueSlider->setTooltip("Brush size");
-        flowSlider->setTooltip("Brush rate");
+        sizeEditor->setTooltip("Brush size");
+        flowEditor->setTooltip("Brush rate");
 
         const auto setUpLabel = [this](juce::Label& label, juce::String text) {
             label.setText(std::move(text), juce::dontSendNotification);
@@ -124,14 +130,13 @@ public:
             addAndMakeVisible(label);
         };
 
-        setUpLabel(colourLabel, "Colour");
-        setUpLabel(valueLabel,  "Size");
-        setUpLabel(flowLabel,   "Rate");
+        setUpLabel(sizeLabel, "Size");
+        setUpLabel(flowLabel, "Rate");
 
-        addAndMakeVisible(displayMenu.get());
+        addAndMakeVisible(paintTool.get());
         addAndMakeVisible(colourSelector.get());
-        addAndMakeVisible(valueSlider.get());
-        addAndMakeVisible(flowSlider.get());
+        addAndMakeVisible(sizeEditor.get());
+        addAndMakeVisible(flowEditor.get());
 
     };
 
@@ -142,27 +147,32 @@ public:
     void resized() override {
 
         const int height = getLocalBounds().getHeight();
-        const int displayMenuHeight = height * 0.2f;
 
-        auto bounds = getLocalBounds();
+        auto bounds = getLocalBounds().reduced(juce::roundToInt(height * panelInsetRatio));
 
-        displayMenu->setBounds(bounds.removeFromTop(displayMenuHeight));
+        const int cellHeight = bounds.getHeight();
+        const int cellGap    = juce::roundToInt(cellHeight * cellGapRatio);
+        const int labelWidth = juce::roundToInt(cellHeight * labelWidthRatio);
 
-        const auto layoutRow = [&bounds, displayMenuHeight](juce::Label& label, juce::Component& control) {
-            auto rowArea = bounds.removeFromTop(displayMenuHeight);
-            label.setBounds(rowArea.removeFromLeft(rowArea.getWidth() / 3));
-            control.setBounds(rowArea);
-        };
+        paintTool->setBounds(bounds.removeFromLeft(cellHeight));
+        bounds.removeFromLeft(cellGap);
 
-        layoutRow(colourLabel, *colourSelector);
-        layoutRow(valueLabel,  *valueSlider);
-        layoutRow(flowLabel,   *flowSlider);
+        colourSelector->setBounds(bounds.removeFromLeft(cellHeight));
+        bounds.removeFromLeft(cellGap);
+
+        const int editorWidth = (bounds.getWidth() - labelWidth * 2 - cellGap) / 2;
+
+        sizeLabel.setBounds(bounds.removeFromLeft(labelWidth));
+        sizeEditor->setBounds(bounds.removeFromLeft(editorWidth));
+        bounds.removeFromLeft(cellGap);
+
+        flowLabel.setBounds(bounds.removeFromLeft(labelWidth));
+        flowEditor->setBounds(bounds.removeFromLeft(editorWidth));
     };
 
     void setPaintMode(PaintSetting setting) {
 
         paintSetting = setting;
-        displayMenu->setSelectedItem(itemIdFor(setting));
 
         const juce::Colour saved = currentPair().colour;
 

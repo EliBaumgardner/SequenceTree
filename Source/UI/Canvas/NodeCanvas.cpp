@@ -367,7 +367,7 @@ juce::Point<int> NodeCanvas::snapPointToGrid(juce::Point<int> point) const
 
     const float originX = gridOrigin.x;
     const float originY = gridOrigin.y;
-    const float snapThreshold = 12.0f;
+    const float snapThreshold = 5.0f;
 
     const float snappedX = originX + std::round((float(point.x) - originX) / gridSpacing) * gridSpacing;
     const float snappedY = originY + std::round((float(point.y) - originY) / gridSpacing) * gridSpacing;

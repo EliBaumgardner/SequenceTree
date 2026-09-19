@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../Bar.h"
+#include "../Bars/Bar.h"
 #include "../PanelResizer.h"
 
 class MenuBar;

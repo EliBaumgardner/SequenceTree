@@ -173,8 +173,8 @@ juce::Point<float> Arrow::getHeadAnchor() const
         return getTip().toFloat();
     }
 
-    const float endRadius = endNode->getVisualRadius();
-    return endNode->getNodeCentre().toFloat() - geometry.chord * (endRadius + headAnchorInset);
+    const float endExtent = endNode->getBodyExtent(geometry.chord);
+    return endNode->getNodeCentre().toFloat() - geometry.chord * (endExtent + headAnchorInset);
 }
 
 ArrowGeometry Arrow::getGeometry(float animationT) const
@@ -211,7 +211,7 @@ ArrowGeometry Arrow::getGeometry(float animationT) const
         tip += direction * baseHalfHeight;
     }
     else {
-        tip -= direction * endNode->getVisualRadius();
+        tip -= direction * endNode->getBodyExtent(direction);
     }
 
     const juce::Point<float> shaft = tip - start;

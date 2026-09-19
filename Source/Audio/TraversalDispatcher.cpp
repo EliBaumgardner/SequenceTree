@@ -677,7 +677,26 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
     TraversalRuntime& runtime   = traversalInstance->runtime;
 
     if (runtime.pendingRemoval) {
-        bridge.highlightNode(expiredNote.nodeId, false, runId, traversal.traversal.key.typeId);
+        const int removedTypeId = traversal.traversal.key.typeId;
+
+        bridge.highlightNode(expiredNote.nodeId, false, runId, removedTypeId);
+
+        if (traversal.primary.alternativeTarget != -1) {
+            bridge.highlightNode(traversal.primary.alternativeTarget, false, runId, removedTypeId);
+        }
+
+        if (traversal.mod.isActive()) {
+            int displayedModulatorId = traversal.mod.walker.target;
+
+            if (traversal.mod.walker.alternativeTarget != -1) {
+                displayedModulatorId = traversal.mod.walker.alternativeTarget;
+            }
+
+            if (displayedModulatorId != -1) {
+                bridge.highlightNode(displayedModulatorId, false, runId, removedTypeId);
+            }
+        }
+
         bridge.pushArrowReset(AudioUIBridge::primaryTrail(runId));
         bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
         context.traversalMap.erase(runId);
@@ -728,7 +747,23 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
             applyStepResult(step, nodes, runId, traversal.traversal.key.typeId);
             applyTreeJump(step, traversal, runtime, context);
 
-            if (traversal.shouldTraverse() && nodes.find(traversal.primary.target) != nodes.end()) {
+            if (!traversal.shouldTraverse()) {
+                if (traversal.mod.isActive()) {
+                    int displayedModulatorId = traversal.mod.walker.target;
+
+                    if (traversal.mod.walker.alternativeTarget != -1) {
+                        displayedModulatorId = traversal.mod.walker.alternativeTarget;
+                    }
+
+                    if (displayedModulatorId != -1) {
+                        bridge.highlightNode(displayedModulatorId, false, runId,
+                                             traversal.traversal.key.typeId);
+                    }
+
+                    bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
+                }
+            }
+            else if (nodes.find(traversal.primary.target) != nodes.end()) {
                 pushNote(traversal.getTargetNode(nodes), runId, context, expiryTime);
             }
         }

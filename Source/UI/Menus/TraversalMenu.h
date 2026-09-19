@@ -14,7 +14,7 @@
 #include "../Buttons/IconButton.h"
 #include "TraversalRulesWindow.h"
 #include "../PopupWindow.h"
-#include "../Bar.h"
+#include "../Bars/Bar.h"
 
 class TraversalMenuListener;
 

@@ -5,7 +5,7 @@
 #ifndef SEQUENCETREE_MENUBAR_H
 #define SEQUENCETREE_MENUBAR_H
 
-#include "../Bar.h"
+#include "Bar.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Buttons/IconButton.h"
 

@@ -21,6 +21,8 @@ class Modulator : public Node {
 
     juce::Rectangle<float> getSquareBounds() const;
 
+    float getBodyExtent(juce::Point<float> approachDirection) const override;
+
     static constexpr int minimumPitchOffset = -48;
     static constexpr int maximumPitchOffset =  48;
 

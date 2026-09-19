@@ -13,7 +13,7 @@
 
 #include "../../Util/ApplicationContext.h"
 #include "../Buttons/ButtonPane.h"
-#include "ArrowBindBar.h"
+#include "../Bars/ArrowBindBar.h"
 
 class ArrowWindow : public juce::Component {
 

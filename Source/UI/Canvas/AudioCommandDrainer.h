@@ -21,12 +21,13 @@ public:
 private:
 
     void drainHighlights();
-    void drainProgress();
-    void drainArrowResets();
+    void drainArrows();
     void drainCounts();
 
     juce::Colour getTraversalColour(int typeId) const;
 
     NodeCanvas&         canvas;
     ApplicationContext& applicationContext;
+
+    bool needsResync = true;
 };
