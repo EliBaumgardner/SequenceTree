@@ -534,8 +534,10 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
         auto localPosition = e.getEventRelativeTo(&node.nodeValueEditor).getPosition();
 
         if (node.nodeValueEditor.getLocalBounds().contains(localPosition)) {
+            undoManager->beginNewTransaction();
+
             dragState         = DragState::EditingValue;
-            dragStartValue    = node.nodeValueEditor.boundValue.toString().getDoubleValue();
+            dragStartValue    = (double) node.nodeValueEditor.boundValue.getValue();
             draggingValueNode = &node;
             return;
         }
@@ -711,11 +713,10 @@ void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &ne
 
 void NodeController::dragValue(const juce::MouseEvent& e)
 {
-    const int    yOffset  = e.getOffsetFromDragStart().y;
-    const int    delta    = -yOffset / 3;
-    const double newValue = draggingValueNode->nodeValueEditor.clampToRange(dragStartValue + delta);
+    const int yOffset = e.getOffsetFromDragStart().y;
+    const int delta   = -yOffset / 3;
 
-    draggingValueNode->nodeValueEditor.boundValue.setValue(newValue);
+    draggingValueNode->nodeValueEditor.setNumericValue(dragStartValue + delta);
     draggingValueNode->refreshValueDisplay();
 }
 

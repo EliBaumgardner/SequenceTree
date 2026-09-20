@@ -7,6 +7,9 @@
 #include "../../Util/ApplicationContext.h"
 #include "../../Graph/GraphState.h"
 #include "../Theme/CustomLookAndFeel.h"
+#include "../../Util/NodeInfo.h"
+
+#include <limits>
 
 TraversalMenu::TraversalMenu(ApplicationContext& context)
     : displayMenu(context), multiplierEditor(context), channelEditor(context), transposeEditor(context), velocityEditor(context), colourSelector(context),
@@ -26,19 +29,24 @@ TraversalMenu::TraversalMenu(ApplicationContext& context)
     };
 
     setUpLabel(multiplierLabel, "Multiplier");
-    multiplierEditor.enableDecimalValue(0.1);
+    multiplierEditor.setFormat(std::make_unique<NumberFormat>(minimumTraversalMultiplier,
+                                                              RTtraversal::maximumTempoMultiplier,
+                                                              traversalMultiplierDecimals));
     addAndMakeVisible(multiplierEditor);
 
     setUpLabel(channelLabel, "Channel");
-    channelEditor.setMinimumValue(1);
+    channelEditor.setFormat(std::make_unique<NumberFormat>(minimumMidiChannel, maximumMidiChannel));
     addAndMakeVisible(channelEditor);
 
     setUpLabel(transposeLabel, "Transpose");
-    transposeEditor.enableSignedValue(-24, 24);
+    auto transposeFormat = std::make_unique<NumberFormat>(minimumTraversalTranspose, maximumTraversalTranspose);
+    transposeFormat->showsPositiveSign = true;
+
+    transposeEditor.setFormat(std::move(transposeFormat));
     addAndMakeVisible(transposeEditor);
 
     setUpLabel(velocityLabel, "Velocity");
-    velocityEditor.enableDecimalValue(0.0, 1.0);
+    velocityEditor.setFormat(std::make_unique<NumberFormat>(0.0, 1.0, traversalMultiplierDecimals));
     addAndMakeVisible(velocityEditor);
 
     setUpLabel(colourLabel, "Colour");

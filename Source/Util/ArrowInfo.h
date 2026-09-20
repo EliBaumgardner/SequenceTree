@@ -27,6 +27,8 @@ struct ArrowInfo {
     static constexpr double millisecondsPerGridSpace = 250.0;
     static constexpr double semitonesPerGridSpace    = 1.0;
     static constexpr double maximumDurationMs        = 3600000.0;
+    static constexpr int    millisecondsPerDurationPercent = 10;
+    static constexpr int    maximumDurationPercent         = 100;
     static constexpr double maximumSemitoneOffset    = 127.0;
 
     static bool bindsTo(const ArrowInfo& info, ArrowBinding binding)

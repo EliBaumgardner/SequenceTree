@@ -17,21 +17,18 @@ Modulator::Modulator(ApplicationContext& context) : Node(context)
 
 void Modulator::bindValueEditorForMode() {
 
-    if (mode != NodeDisplayMode::Pitch) {
-        nodeValueEditor.disableSignedValue();
-        Node::bindValueEditorForMode();
-        return;
-    }
-
     Node::bindValueEditorForMode();
 
-    if (! nodeValueTree.isValid()) {
+    if (mode != NodeDisplayMode::Pitch || ! nodeValueTree.isValid()) {
         return;
     }
 
-    nodeValueEditor.setPitchMode(false);
-    nodeValueEditor.enableSignedValue(minimumPitchOffset, maximumPitchOffset);
+    auto offsetFormat = std::make_unique<NumberFormat>(minimumPitchOffset, maximumPitchOffset);
+    offsetFormat->showsPositiveSign = true;
+
+    nodeValueEditor.setFormat(std::move(offsetFormat));
     nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::ModAmount);
+    nodeValueEditor.editable = true;
 }
 
 juce::Rectangle<float> Modulator::getSquareBounds() const {

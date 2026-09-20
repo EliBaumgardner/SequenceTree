@@ -22,8 +22,7 @@ TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context
     downButton->setVisible(false);
 
     traversalNumEditor = std::make_unique<ValueEditor>(context);
-    traversalNumEditor->enableTraversalFlagValue();
-    traversalNumEditor->setMinimumValue(1);
+    traversalNumEditor->setFormat(std::make_unique<TraversalFlagFormat>());
     traversalNumEditor->setInterceptsMouseClicks(true, false);
     traversalNumEditor->setTooltip("Type +N to spawn traversal N, -N to remove it; +Na targets instance a");
     addAndMakeVisible(traversalNumEditor.get());

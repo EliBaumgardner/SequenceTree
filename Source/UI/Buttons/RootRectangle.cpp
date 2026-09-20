@@ -9,10 +9,9 @@ RootRectangle::RootRectangle(ApplicationContext& context) : traversalEditor(cont
 {
     setLookAndFeel(context.lookAndFeel);
 
-    traversalEditor.setMinimumValue(0);
     traversalEditor.setInterceptsMouseClicks(true, false);
     traversalEditor.setTooltip("Starting Traversal");
-    traversalEditor.acceptTraversalReferences();
+    traversalEditor.setFormat(std::make_unique<TraversalRefListFormat>());
     addAndMakeVisible(traversalEditor);
 }
 

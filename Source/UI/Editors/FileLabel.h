@@ -21,7 +21,6 @@ public:
     void mouseDown(const juce::MouseEvent& event) override;
 
     void setFileName(const juce::String fileName);
-    juce::String getFileName() const;
 
     void setGrabbed(bool shouldBeGrabbed);
     bool isGrabbed() const { return grabbed; }

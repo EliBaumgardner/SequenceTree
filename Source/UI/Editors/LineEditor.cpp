@@ -6,9 +6,12 @@
 
 LineEditor::LineEditor(ApplicationContext& context) : ValueEditor(context)
 {
-    setFormat(std::make_unique<FreeTextFormat>());
+    auto scriptFormat = std::make_unique<TextFormat>(0, juce::String());
+    scriptFormat->trimsWhitespace = false;
+
+    setFormat(std::move(scriptFormat));
     setJustification(juce::Justification::topLeft);
-    setCaretColour(juce::Colours::white);
+    textEditor->setColour(juce::CaretComponent::caretColourId, juce::Colours::white);
 
     textEditor->setMultiLine(true, true);
     textEditor->setReturnKeyStartsNewLine(false);
@@ -82,7 +85,9 @@ void LineEditor::textEditorReturnKeyPressed(juce::TextEditor&)
 
 void LineEditor::textEditorTextChanged(juce::TextEditor&)
 {
-    boundValue.setValue(textEditor->getText());
+    const ParsedValue parsed = format->parse(textEditor->getText());
+
+    boundValue.setValue(parsed.primary);
 
     if (onWrapChanged) {
         onWrapChanged();

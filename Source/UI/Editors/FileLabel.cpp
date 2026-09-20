@@ -9,10 +9,11 @@ FileLabel::FileLabel(ApplicationContext& context) : context(context) {
 
     setLookAndFeel(context.lookAndFeel);
     fileText = std::make_unique<ValueEditor>(context);
-    fileText->enableTextValue();
-    fileText->enableAutoFitText();
-    fileText->setCaretColour(juce::Colours::lightgrey);
-    fileText->setEditable(false);
+    fileText->setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength,
+                                                     TextFormat::labelCharacters));
+    fileText->autoFitText = true;
+    fileText->textEditor->setColour(juce::CaretComponent::caretColourId, juce::Colours::lightgrey);
+    fileText->editable = false;
 
     fileText->setInterceptsMouseClicks(false,false);
 
@@ -62,12 +63,7 @@ void FileLabel::mouseDown(const juce::MouseEvent &event)
 
 void FileLabel::setFileName(const juce::String fileName)
 {
-    fileText->setText(fileName);
-}
-
-juce::String FileLabel::getFileName() const
-{
-    return fileText->getText();
+    fileText->commitText(fileName);
 }
 
 void FileLabel::setSelected(bool shouldBeSelected)

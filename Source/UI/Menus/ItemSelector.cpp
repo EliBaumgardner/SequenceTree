@@ -22,9 +22,10 @@ ItemSelector::ItemSelector(ApplicationContext& context)
     button->onClick = [this]() { showMenu(); };
 
     labelEditor = std::make_unique<ValueEditor>(context);
-    labelEditor->enableTextValue();
-    labelEditor->enableAutoFitText();
-    labelEditor->setEditable(false);
+    labelEditor->setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength,
+                                                        TextFormat::labelCharacters));
+    labelEditor->autoFitText = true;
+    labelEditor->editable = false;
     labelEditor->setInterceptsMouseClicks(false, false);
 
     addAndMakeVisible(button.get());
@@ -141,7 +142,7 @@ void ItemSelector::resized()
     const auto displayWidth = juce::roundToInt(contentBounds.getWidth() * labelWidthRatio);
 
     labelEditor->setBounds(contentBounds.removeFromLeft(displayWidth));
-    labelEditor->setText(selectedLabel);
+    labelEditor->commitText(selectedLabel);
 
     button->setBounds(contentBounds);
 }

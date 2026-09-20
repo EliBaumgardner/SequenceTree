@@ -13,14 +13,18 @@ NodeMenu::NodeMenu(ApplicationContext& context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
 
-    countLimitEditor       .setMinimumValue(1);
-    repeatEditor            .setMinimumValue(1);
-    switchCountLimitEditor  .setMinimumValue(1);
-    subLoopCountLimitEditor .setMinimumValue(1);
-    probabilityEditor       .setFormat(std::make_unique<PercentFormat>());
-    velocityEditor          .setMinimumValue(0);
-    pitchEditor              .setMinimumValue(0);
-    channelEditor            .setMinimumValue(1);
+    auto repeatFormat = std::make_unique<NumberFormat>(minimumRepeatValue, maximumRepeatValue);
+    repeatFormat->prefix = "x";
+    auto probabilityFormat = std::make_unique<NumberFormat>(minimumProbability, maximumProbability);
+    probabilityFormat->suffix = "%";
+    countLimitEditor        .setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
+    repeatEditor            .setFormat(std::move(repeatFormat));
+    switchCountLimitEditor  .setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
+    subLoopCountLimitEditor .setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
+    probabilityEditor       .setFormat(std::move(probabilityFormat));
+    velocityEditor          .setFormat(std::make_unique<NumberFormat>(minimumMidiVelocity, maximumMidiVelocity));
+    pitchEditor             .setFormat(std::make_unique<NumberFormat>(minimumMidiPitch, maximumMidiPitch));
+    channelEditor           .setFormat(std::make_unique<NumberFormat>(minimumMidiChannel, maximumMidiChannel));
 
     countLimitEditor       .setTooltip("Count Limit");
     repeatEditor            .setTooltip("Repeat Value");

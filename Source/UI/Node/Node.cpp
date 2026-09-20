@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 
 
@@ -42,21 +43,23 @@ Node::Node(ApplicationContext& context)
     downButton->setInterceptsMouseClicks(true,false);
 
     nodeValueEditor.setInterceptsMouseClicks(false, false);
-    nodeValueEditor.enableAutoFitText(nodeValueTextInsetRatio);
-    nodeValueEditor.setPitchMode(true);
-    nodeValueEditor.setEditable(false);
-    nodeValueEditor.setMinimumValue(0);
+    nodeValueEditor.autoFitText       = true;
+    nodeValueEditor.autoFitInsetRatio = nodeValueTextInsetRatio;
+    nodeValueEditor.setFormat(std::make_unique<PitchFormat>());
+    nodeValueEditor.editable = false;
     nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
     nodeValueEditor.toBack();
 
     countEditor.setInterceptsMouseClicks(true, false);
     countEditor.setTooltip("Count Limit");
-    countEditor.enableDualValue(ValueTreeIdentifiers::TriggerLimit);
+    countEditor.setFormat(std::make_unique<DualIntFormat>(minimumCountLimit, maximumCountLimit,
+                                                          ValueTreeIdentifiers::TriggerLimit));
 
-    subLoopLimitEditor.setMinimumValue(0);
+    subLoopLimitEditor.setFormat(std::make_unique<NumberFormat>(minimumSubLoopLimit, maximumSubLoopLimit));
     subLoopLimitEditor.setTooltip("Sub Loop Count Limit");
 
     switchCountEditor.setInterceptsMouseClicks(true, false);
+    switchCountEditor.setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
     switchCountEditor.setTooltip("Switch Count Limit");
 
     upButton->onClick = [this]() {
@@ -239,67 +242,65 @@ void Node::setDisplayMode(NodeDisplayMode newMode)
 
 void Node::bindValueEditorForMode()
 {
-    if (mode == NodeDisplayMode::CountLimit) {
-        nodeValueEditor.enableDualValue(ValueTreeIdentifiers::TriggerLimit);
-    }
-    else {
-        nodeValueEditor.disableDualValue();
-    }
-
-    if (mode == NodeDisplayMode::Probability) {
-        nodeValueEditor.setFormat(std::make_unique<PercentFormat>());
-    }
-    else {
-        nodeValueEditor.disablePercentValue();
-    }
+    nodeValueEditor.editable = true;
 
     switch (mode) {
 
         case NodeDisplayMode::Pitch:
+            nodeValueEditor.setFormat(std::make_unique<PitchFormat>());
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
+            nodeValueEditor.editable = false;
             break;
 
         case NodeDisplayMode::Velocity:
+            nodeValueEditor.setFormat(std::make_unique<NumberFormat>(minimumMidiVelocity, maximumMidiVelocity));
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiVelocity);
             break;
 
         case NodeDisplayMode::CountLimit:
+            nodeValueEditor.setFormat(std::make_unique<DualIntFormat>(minimumCountLimit, maximumCountLimit,
+                                                                      ValueTreeIdentifiers::TriggerLimit));
             nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
             break;
 
         case NodeDisplayMode::Channel:
+            nodeValueEditor.setFormat(std::make_unique<NumberFormat>(minimumMidiChannel, maximumMidiChannel));
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiChannel);
             break;
 
-        case NodeDisplayMode::RepeatValue:
+        case NodeDisplayMode::RepeatValue: {
+            auto repeatFormat = std::make_unique<NumberFormat>(minimumRepeatValue, maximumRepeatValue);
+            repeatFormat->prefix = "x";
+
+            nodeValueEditor.setFormat(std::move(repeatFormat));
             nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::RepeatValue);
             break;
+        }
 
-        case NodeDisplayMode::Probability:
+        case NodeDisplayMode::Probability: {
+            auto probabilityFormat = std::make_unique<NumberFormat>(minimumProbability, maximumProbability);
+            probabilityFormat->suffix = "%";
+
+            nodeValueEditor.setFormat(std::move(probabilityFormat));
             nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::Probability);
             break;
+        }
 
-        default:
+        case NodeDisplayMode::Duration:
+            nodeValueEditor.setFormat(std::make_unique<NumberFormat>(0.0, ArrowInfo::maximumDurationMs));
+            nodeValueEditor.editable = false;
             break;
     }
-
-    const bool pitchMode = (mode == NodeDisplayMode::Pitch);
-    nodeValueEditor.setPitchMode(pitchMode);
-    nodeValueEditor.setEditable(! pitchMode);
-    int minimumValue = 0;
-
-    if (mode == NodeDisplayMode::Channel || mode == NodeDisplayMode::RepeatValue) {
-        minimumValue = 1;
-    }
-
-    nodeValueEditor.setMinimumValue(minimumValue);
 }
 
 void Node::incrementNodeValue(int incrementValue) {
-    double editorValue = nodeValueEditor.boundValue.toString().getDoubleValue();
-    editorValue = nodeValueEditor.clampToRange(editorValue + incrementValue);
+    const double currentValue = (double) nodeValueEditor.boundValue.getValue();
 
-    nodeValueEditor.boundValue.setValue(editorValue);
+    if (applicationContext.undoManager != nullptr) {
+        applicationContext.undoManager->beginNewTransaction();
+    }
+
+    nodeValueEditor.setNumericValue(currentValue + incrementValue);
     refreshValueDisplay();
 }
 

@@ -18,6 +18,7 @@ class PaintToolSettings : public juce::Component {
 
 public:
 
+    static constexpr int   brushDecimalPlaces = 3;
     static constexpr float minBrushFlow = 0.002f;
     static constexpr float maxBrushFlow = 0.25f;
 
@@ -97,7 +98,7 @@ public:
             this->context.canvas->valueField.refresh();
         };
 
-        sizeEditor->enableDecimalValue(0.0, 1.0);
+        sizeEditor->setFormat(std::make_unique<NumberFormat>(0.0, 1.0, brushDecimalPlaces));
 
         sizeEditor->onValueChange = [this] {
             const float value  = (float)sizeEditor->boundValue.getValue();
@@ -108,7 +109,7 @@ public:
         sizeEditor->boundValue = juce::jmap(context.canvas->valueField.brushRadius,
                                             minBrushRadius, maxBrushRadius, 0.0f, 1.0f);
 
-        flowEditor->enableDecimalValue(0.0, 1.0);
+        flowEditor->setFormat(std::make_unique<NumberFormat>(0.0, 1.0, brushDecimalPlaces));
 
         flowEditor->onValueChange = [this] {
             const float value = (float)flowEditor->boundValue.getValue();

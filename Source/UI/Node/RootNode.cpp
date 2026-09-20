@@ -49,7 +49,7 @@ void RootNode::bindToTree()
         equippedReferences.add(TraversalRefListFormat::describe(key));
     }
 
-    rootRectangle->traversalEditor.setText(equippedReferences.joinIntoString(" "));
+    rootRectangle->traversalEditor.commitText(equippedReferences.joinIntoString(" "));
 }
 
 RootNode::~RootNode() = default;
@@ -60,7 +60,10 @@ void RootNode::equipTraversals()
         return;
     }
 
-    const std::vector<TraversalKey> keys = TraversalRefListFormat::parse(rootRectangle->traversalEditor.getText());
+    ValueEditor& traversalEditor = rootRectangle->traversalEditor;
+
+    const std::vector<TraversalKey> keys =
+        TraversalRefListFormat::parseKeys(traversalEditor.boundValue.getValue().toString());
 
     juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
 
