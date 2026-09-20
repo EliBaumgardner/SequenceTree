@@ -156,7 +156,7 @@ juce::String Arrow::getDurationLabel() const
     const int duration = getDuration();
 
     if (startNode->nodeType == NodeType::Modulator) {
-        return juce::String(duration / ArrowDurationFormat::millisecondsPerPercent) + "%";
+        return juce::String(duration / ArrowInfo::millisecondsPerDurationPercent) + "%";
     }
 
     return juce::String(duration);
@@ -394,7 +394,19 @@ void Arrow::beginDurationEdit()
         return;
     }
 
-    durationEditor->setFormat(std::make_unique<ArrowDurationFormat>(startNode->nodeType == NodeType::Modulator));
+    const bool percentDuration = (startNode->nodeType == NodeType::Modulator);
+
+    auto durationFormat = std::make_unique<NumberFormat>(0.0, ArrowInfo::maximumDurationMs);
+
+    if (percentDuration) {
+        durationFormat = std::make_unique<NumberFormat>(
+            0.0, (double) (ArrowInfo::maximumDurationPercent * ArrowInfo::millisecondsPerDurationPercent));
+
+        durationFormat->displayDivisor = ArrowInfo::millisecondsPerDurationPercent;
+        durationFormat->suffix         = "%";
+    }
+
+    durationEditor->setFormat(std::move(durationFormat));
 
     const int durationOverride = arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration,
                                                        ArrowInfo::noDurationOverride);

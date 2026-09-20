@@ -14,7 +14,8 @@ class TempoDisplay : public juce::Component, public juce::SettableTooltipClient 
 
     public:
 
-    static constexpr int contentInset = 2;
+    static constexpr int contentInset            = 2;
+    static constexpr int multiplierDecimalPlaces = 3;
 
     ValueEditor editor;
 
@@ -24,9 +25,13 @@ class TempoDisplay : public juce::Component, public juce::SettableTooltipClient 
         setLookAndFeel(context.lookAndFeel);
         setTooltip("Tempo Multiplier");
 
-        editor.enableDecimalMultiplierValue(RTtraversal::minimumTempoMultiplier,
-                                            RTtraversal::maximumTempoMultiplier);
-        editor.enableAutoFitText();
+        auto tempoFormat = std::make_unique<NumberFormat>(RTtraversal::minimumTempoMultiplier,
+                                                          RTtraversal::maximumTempoMultiplier,
+                                                          multiplierDecimalPlaces);
+        tempoFormat->suffix = "x";
+
+        editor.setFormat(std::move(tempoFormat));
+        editor.autoFitText = true;
 
         addAndMakeVisible(editor);
     }

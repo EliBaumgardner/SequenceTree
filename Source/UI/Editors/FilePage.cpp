@@ -183,7 +183,7 @@ void FilePage::setText(const juce::String& text) {
 
     for (const juce::String& line : lines) {
         auto fileLine = std::make_unique<FileLine>(context);
-        fileLine->lineEditor->setText(line);
+        fileLine->lineEditor->commitText(line);
 
         newFileLines.push_back(std::move(fileLine));
     }
@@ -275,7 +275,7 @@ void FilePage::performMerge(const FileLine* line) {
     const juce::String previousText = previousEditor.getLineText();
     const int          joinPosition = previousText.length();
 
-    previousEditor.setText(previousText + fileLines[index]->getText());
+    previousEditor.commitText(previousText + fileLines[index]->getText());
 
     fileLines.erase(fileLines.begin() + index);
 
@@ -305,9 +305,9 @@ void FilePage::insertLineAfter(const FileLine* line) {
     const int          caret = juce::jlimit(0, text.length(), editor.getCaretPosition());
 
     auto newLine = std::make_unique<FileLine>(context);
-    newLine->lineEditor->setText(text.substring(caret));
+    newLine->lineEditor->commitText(text.substring(caret));
 
-    editor.setText(text.substring(0, caret));
+    editor.commitText(text.substring(0, caret));
 
     fileLines.insert(fileLines.begin() + index + 1, std::move(newLine));
 

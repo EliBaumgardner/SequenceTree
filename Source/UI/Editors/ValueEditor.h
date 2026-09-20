@@ -5,7 +5,6 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <limits>
 #include "ValueFormat.h"
 #include "../../Util/ApplicationContext.h"
 
@@ -16,84 +15,66 @@ class ValueEditor : public juce::Component,
                     public juce::Value::Listener{
 public:
 
-    static constexpr float defaultAutoFitInsetRatio = 0.25f;
-
     explicit ValueEditor(ApplicationContext& context);
     ~ValueEditor() override;
 
-    std::function<void()> onValueChange;
-    std::function<void()> onEditFinished;
+    void setFormat(std::unique_ptr<ValueFormat> newFormat);
 
     void paint  (juce::Graphics& g) override;
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
 
-    void beginEditing(bool selectAllText = true);
     void setPersistentEditor(bool shouldStayVisible);
+    void beginEditing(bool selectAllText = true);
 
     void bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID);
 
-    void setFormat(std::unique_ptr<ValueFormat> newFormat);
-
-    void enableDualValue(const juce::Identifier& secondaryPropertyID);
-    void disableDualValue();
-    void disablePercentValue();
-    void enableDecimalValue(double min, double max = std::numeric_limits<double>::max());
-    void enableDecimalMultiplierValue(double min, double max = std::numeric_limits<double>::max());
-    void enableMultiplierValue(int defaultValue = 1);
-    void enableTextValue();
-    void setText(const juce::String& text);
-    juce::String getText() const;
-    void enableAutoFitText(float insetRatio = defaultAutoFitInsetRatio);
     void setFontHeight(float newFontHeight);
-    void setPitchMode(bool shouldShowPitchNames);
-    void setEditable(bool shouldBeEditable);
     void setJustification(juce::Justification newJustification);
-    void setCaretColour(juce::Colour colour);
-    void enableSignedValue(int min, int max);
-    void disableSignedValue();
-    void enableTraversalFlagValue();
-    void setMinimumValue(int min);
-    double clampToRange(double value) const;
-    void valueChanged(juce::Value&) override;
-    void commitValue();
 
-    void acceptTraversalReferences();
+    void commitText(const juce::String& enteredText);
+    void commitValue();
+    void setNumericValue(double newValue);
+
+    void valueChanged(juce::Value&) override;
+
+    static constexpr float defaultAutoFitInsetRatio = 0.25f;
+    static constexpr float baseFontHeight           = 9.0f;
+
+    std::function<void()> onValueChange;
+    std::function<void()> onEditFinished;
 
     std::unique_ptr<juce::TextEditor> textEditor;
+    std::unique_ptr<ValueFormat>      format;
+
     juce::Value boundValue;
+
+    juce::Justification justification { juce::Justification::centred };
+
+    float fontHeight        = baseFontHeight;
+    float autoFitInsetRatio = defaultAutoFitInsetRatio;
+
+    bool autoFitText = false;
+    bool editable    = true;
 
 protected:
     void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
     void textEditorFocusLost      (juce::TextEditor& editor) override;
 
-    juce::Font displayFont() const;
+    juce::Font displayFont(const juce::String& text) const;
 
 private:
-    ValueBinding makeBinding() const;
-    void         bindSecondaryProperties();
-
-    juce::String getDisplayText() const;
+    void bindSecondaryProperties();
 
     const ApplicationContext& applicationContext;
-
-    std::unique_ptr<ValueFormat> format;
 
     juce::ValueTree  boundTree;
     juce::Identifier boundIdentifier;
 
-    std::vector<juce::Value>      secondaryValues;
-    std::vector<juce::Identifier> secondaryIdentifiers;
+    std::vector<juce::Value> secondaryValues;
 
-    juce::Justification justification { juce::Justification::centred };
-
-    static constexpr float baseFontHeight = 9.0f;
-
-    float fontHeight  = baseFontHeight;
-    float autoFitInsetRatio = defaultAutoFitInsetRatio;
+    ValueBinding binding { boundValue, secondaryValues };
 
     bool isEditing        = false;
     bool persistentEditor = false;
-    bool autoFitText = false;
-    bool editable    = true;
 };

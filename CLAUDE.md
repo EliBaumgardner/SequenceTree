@@ -109,7 +109,7 @@ Four things about the model are easy to miss:
 
 **Audio → GUI:** `TraversalDispatcher` / `EventManager` push commands into the `AudioUIBridge` FIFOs; `processBlock` calls `notifyUi`, which triggers `NodeCanvas::handleAsyncUpdate()` to drain them on the message thread.
 
-### How to Systematically Coding Solve Problems 
+### How to Systematically Solve Problems 
 **These are negotiable principles for solving problems in the project but generally should always be adhered to**
 
 - Verify that you have fully applied of these principles after applying them

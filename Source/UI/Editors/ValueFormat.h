@@ -16,14 +16,16 @@ struct InputRestrictions {
 };
 
 struct ValueBinding {
-    juce::ValueTree               tree;
-    juce::Value                   primary;
-    juce::Identifier              primaryId;
-    std::vector<juce::Value>      secondaries;
-    std::vector<juce::Identifier> secondaryIds;
-
-    bool hasSecondary() const { return ! secondaries.empty(); }
+    const juce::Value&              primary;
+    const std::vector<juce::Value>& secondaries;
 };
+
+struct ParsedValue {
+    juce::var              primary;
+    std::vector<juce::var> secondaries;
+};
+
+enum class TextPurpose { Display, Editing };
 
 
 class ValueFormat {
@@ -32,181 +34,97 @@ public:
     virtual ~ValueFormat() = default;
 
     virtual InputRestrictions restrictions() const = 0;
+    virtual juce::String      text (const ValueBinding& binding, TextPurpose purpose) const = 0;
+    virtual ParsedValue       parse(const juce::String& enteredText) const = 0;
 
-    virtual juce::String displayText(const ValueBinding& binding) const = 0;
-    virtual juce::String editText   (const ValueBinding& binding) const { return displayText(binding); }
+    std::vector<juce::Identifier> extraProperties;
 
-    virtual void commit(const juce::String& text, ValueBinding binding) const = 0;
-
-    virtual std::vector<juce::Identifier> extraProperties() const { return {}; }
-
-    double clamp(double value) const { return juce::jlimit(minimum, maximum, value); }
-
-    void setMinimum(double newMinimum) { minimum = newMinimum; }
-    void setMaximum(double newMaximum) { maximum = newMaximum; }
-
-protected:
-
-    double minimum = 1.0;
-    double maximum = (double) std::numeric_limits<int>::max();
+    double minimum       = 0.0;
+    double maximum       = (double) std::numeric_limits<int>::max();
+    int    decimalPlaces = 0;
 };
 
 
-class IntFormat : public ValueFormat {
+class NumberFormat : public ValueFormat {
 public:
 
-    explicit IntFormat(bool shouldShowSign = false) : showSign(shouldShowSign) {}
-
-    bool showsSign() const { return showSign; }
+    NumberFormat(double lowest, double highest, int places = 0);
 
     InputRestrictions restrictions() const override;
-    juce::String      displayText(const ValueBinding& binding) const override;
-    juce::String      editText   (const ValueBinding& binding) const override;
-    void              commit(const juce::String& text, ValueBinding binding) const override;
+    juce::String      text (const ValueBinding& binding, TextPurpose purpose) const override;
+    ParsedValue       parse(const juce::String& enteredText) const override;
 
-private:
+    juce::String prefix;
+    juce::String suffix;
 
-    bool showSign;
+    double displayDivisor    = 1.0;
+    bool   showsPositiveSign = false;
 };
 
 
-class DecimalFormat : public ValueFormat {
+class PitchFormat : public NumberFormat {
 public:
 
-    DecimalFormat();
+    PitchFormat();
 
-    InputRestrictions restrictions() const override;
-    juce::String      displayText(const ValueBinding& binding) const override;
-    void              commit(const juce::String& text, ValueBinding binding) const override;
+    juce::String text(const ValueBinding& binding, TextPurpose purpose) const override;
 };
 
 
-class DecimalMultiplierFormat : public DecimalFormat {
+class GreekLetterFormat : public NumberFormat {
 public:
-
-    juce::String displayText(const ValueBinding& binding) const override;
-    juce::String editText   (const ValueBinding& binding) const override;
-};
-
-
-class PitchFormat : public ValueFormat {
-public:
-
-    InputRestrictions restrictions() const override;
-    juce::String      displayText(const ValueBinding& binding) const override;
-    juce::String      editText   (const ValueBinding& binding) const override;
-    void              commit(const juce::String& text, ValueBinding binding) const override;
-};
-
-
-class MultiplierFormat : public ValueFormat {
-public:
-
-    MultiplierFormat();
-
-    InputRestrictions restrictions() const override;
-    juce::String      displayText(const ValueBinding& binding) const override;
-    juce::String      editText   (const ValueBinding& binding) const override;
-    void              commit(const juce::String& text, ValueBinding binding) const override;
-};
-
-
-class PercentFormat : public ValueFormat {
-public:
-
-    PercentFormat();
-
-    InputRestrictions restrictions() const override;
-    juce::String      displayText(const ValueBinding& binding) const override;
-    juce::String      editText   (const ValueBinding& binding) const override;
-    void              commit(const juce::String& text, ValueBinding binding) const override;
-};
-
-
-class ArrowDurationFormat : public ValueFormat {
-public:
-
-    static constexpr int millisecondsPerPercent = 10;
-
-    explicit ArrowDurationFormat(bool showsPercent);
-
-    InputRestrictions restrictions() const override;
-    juce::String      displayText(const ValueBinding& binding) const override;
-    juce::String      editText   (const ValueBinding& binding) const override;
-    void              commit(const juce::String& text, ValueBinding binding) const override;
-
-private:
-
-    bool percent;
-};
-
-
-class GreekLetterFormat : public ValueFormat {
-public:
-
-    static const int letterCount;
 
     GreekLetterFormat();
 
+    juce::String text(const ValueBinding& binding, TextPurpose purpose) const override;
+};
+
+
+class DualIntFormat : public NumberFormat {
+public:
+
+    DualIntFormat(double lowest, double highest, const juce::Identifier& secondaryPropertyID);
+
     InputRestrictions restrictions() const override;
-    juce::String      displayText(const ValueBinding& binding) const override;
-    juce::String      editText   (const ValueBinding& binding) const override;
-    void              commit(const juce::String& text, ValueBinding binding) const override;
+    juce::String      text (const ValueBinding& binding, TextPurpose purpose) const override;
+    ParsedValue       parse(const juce::String& enteredText) const override;
+};
+
+
+class TraversalFlagFormat : public NumberFormat {
+public:
+
+    TraversalFlagFormat();
+
+    InputRestrictions restrictions() const override;
+    juce::String      text (const ValueBinding& binding, TextPurpose purpose) const override;
+    ParsedValue       parse(const juce::String& enteredText) const override;
 };
 
 
 class TextFormat : public ValueFormat {
 public:
 
-    InputRestrictions restrictions() const override;
-    juce::String      displayText(const ValueBinding& binding) const override;
-    void              commit(const juce::String& text, ValueBinding binding) const override;
-};
-
-
-class FreeTextFormat : public ValueFormat {
-public:
+    TextFormat(int longestText, const juce::String& characters);
 
     InputRestrictions restrictions() const override;
-    juce::String      displayText(const ValueBinding& binding) const override;
-    void              commit(const juce::String& text, ValueBinding binding) const override;
-};
+    juce::String      text (const ValueBinding& binding, TextPurpose purpose) const override;
+    ParsedValue       parse(const juce::String& enteredText) const override;
 
-class TraversalFlagFormat : public ValueFormat {
-public:
+    static constexpr int      labelTextLength = 64;
+    static const juce::String labelCharacters;
 
-    InputRestrictions             restrictions() const override;
-    juce::String                  displayText(const ValueBinding& binding) const override;
-    void                          commit(const juce::String& text, ValueBinding binding) const override;
-    std::vector<juce::Identifier> extraProperties() const override;
-};
-
-
-class DualIntFormat : public ValueFormat {
-public:
-
-    explicit DualIntFormat(const juce::Identifier& secondaryPropertyID)
-        : secondaryId(secondaryPropertyID) {}
-
-    InputRestrictions             restrictions() const override;
-    juce::String                  displayText(const ValueBinding& binding) const override;
-    void                          commit(const juce::String& text, ValueBinding binding) const override;
-    std::vector<juce::Identifier> extraProperties() const override { return { secondaryId }; }
-
-private:
-
-    juce::Identifier secondaryId;
+    int          maxLength;
+    juce::String allowedCharacters;
+    bool         trimsWhitespace = true;
 };
 
 
-class TraversalRefListFormat : public ValueFormat {
+class TraversalRefListFormat : public TextFormat {
 public:
 
-    static std::vector<TraversalKey> parse(const juce::String& text);
+    TraversalRefListFormat();
 
-    static juce::String describe(const TraversalKey& key);
-
-    InputRestrictions restrictions() const override;
-    juce::String      displayText(const ValueBinding& binding) const override;
-    void              commit(const juce::String& text, ValueBinding binding) const override;
+    static std::vector<TraversalKey> parseKeys(const juce::String& text);
+    static juce::String              describe (const TraversalKey& key);
 };

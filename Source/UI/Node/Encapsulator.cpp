@@ -27,7 +27,7 @@ void Encapsulator::paint(juce::Graphics& g)
 void Encapsulator::bindValueEditorForMode()
 {
     nodeValueEditor.setFormat(std::make_unique<GreekLetterFormat>());
-    nodeValueEditor.setEditable(false);
+    nodeValueEditor.editable = false;
     nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::EncapsulatorLabel);
 }
 

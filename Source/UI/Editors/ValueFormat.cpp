@@ -4,11 +4,9 @@
 
 #include "ValueFormat.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../../Util/ArrowInfo.h"
+#include "../../Util/NodeInfo.h"
 
-namespace {
-
-const juce::String pitchNames[] = {
+static const juce::String pitchNames[] = {
     juce::String(L"C"),
     juce::String(L"C♯"),
     juce::String(L"D"),
@@ -23,7 +21,7 @@ const juce::String pitchNames[] = {
     juce::String(L"B")
 };
 
-const juce::String greekLetters[] = {
+static const juce::String greekLetters[] = {
     juce::String(L"α"),
     juce::String(L"β"),
     juce::String(L"γ"),
@@ -50,334 +48,129 @@ const juce::String greekLetters[] = {
     juce::String(L"ω")
 };
 
-const juce::String instanceLetters { "abcdefghijklmnopqrstuvwxyz" };
+static const int greekLetterCount = (int) (sizeof(greekLetters) / sizeof(greekLetters[0]));
 
-juce::String instanceLetter(int instance)
+static const juce::String instanceLetters { "abcdefghijklmnopqrstuvwxyz" };
+
+static const int semitonesPerOctave = 12;
+
+const juce::String TextFormat::labelCharacters {
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _-."
+};
+
+NumberFormat::NumberFormat(double lowest, double highest, int places)
 {
-    const int index = juce::jlimit(0, TraversalKey::maxInstances - 1, instance);
-
-    return instanceLetters.substring(index, index + 1);
+    minimum       = lowest;
+    maximum       = highest;
+    decimalPlaces = places;
 }
 
-}
-
-InputRestrictions IntFormat::restrictions() const
+InputRestrictions NumberFormat::restrictions() const
 {
-    return { 4, showSign ? "-0123456789" : "0123456789" };
-}
+    InputRestrictions limits;
 
-juce::String IntFormat::displayText(const ValueBinding& binding) const
-{
-    const int value = (int) binding.primary.getValue();
+    limits.allowedCharacters = "0123456789";
+    limits.maxLength         = juce::String((juce::int64) (maximum / displayDivisor)).length();
 
-    if (showSign && value > 0) {
-        return "+" + juce::String(value);
+    if (minimum < 0.0) {
+        limits.allowedCharacters = "-" + limits.allowedCharacters;
+        limits.maxLength         = juce::jmax(limits.maxLength,
+                                              juce::String((juce::int64) (minimum / displayDivisor)).length());
     }
 
-    return juce::String(value);
-}
-
-juce::String IntFormat::editText(const ValueBinding& binding) const
-{
-    return juce::String((int) binding.primary.getValue());
-}
-
-void IntFormat::commit(const juce::String& text, ValueBinding binding) const
-{
-    binding.primary.setValue((int) clamp((double) text.getIntValue()));
-}
-
-DecimalFormat::DecimalFormat()
-{
-    minimum = 0.1;
-    maximum = std::numeric_limits<double>::max();
-}
-
-InputRestrictions DecimalFormat::restrictions() const
-{
-    return { 6, "0123456789." };
-}
-
-juce::String DecimalFormat::displayText(const ValueBinding& binding) const
-{
-    juce::String text((double) binding.primary.getValue(), 3);
-    text = text.trimCharactersAtEnd("0").trimCharactersAtEnd(".");
-
-    if (text.isEmpty()) {
-        return "0";
+    if (showsPositiveSign) {
+        limits.allowedCharacters = "+" + limits.allowedCharacters;
     }
 
-    return text;
-}
-
-void DecimalFormat::commit(const juce::String& text, ValueBinding binding) const
-{
-    binding.primary.setValue(clamp(text.getDoubleValue()));
-}
-
-juce::String DecimalMultiplierFormat::displayText(const ValueBinding& binding) const
-{
-    return DecimalFormat::displayText(binding) + "x";
-}
-
-juce::String DecimalMultiplierFormat::editText(const ValueBinding& binding) const
-{
-    return DecimalFormat::displayText(binding);
-}
-
-InputRestrictions PitchFormat::restrictions() const
-{
-    return { 4, "0123456789" };
-}
-
-juce::String PitchFormat::displayText(const ValueBinding& binding) const
-{
-    const int midiNote = juce::jlimit(0, 127, (int) binding.primary.getValue());
-
-    return pitchNames[midiNote % 12] + juce::String((midiNote / 12) - 1);
-}
-
-juce::String PitchFormat::editText(const ValueBinding& binding) const
-{
-    return juce::String((int) binding.primary.getValue());
-}
-
-void PitchFormat::commit(const juce::String& text, ValueBinding binding) const
-{
-    binding.primary.setValue((int) clamp((double) text.getIntValue()));
-}
-
-MultiplierFormat::MultiplierFormat()
-{
-    minimum = 1.0;
-}
-
-InputRestrictions MultiplierFormat::restrictions() const
-{
-    return { 4, "0123456789" };
-}
-
-juce::String MultiplierFormat::displayText(const ValueBinding& binding) const
-{
-    return "x" + juce::String((int) binding.primary.getValue());
-}
-
-juce::String MultiplierFormat::editText(const ValueBinding& binding) const
-{
-    return juce::String((int) binding.primary.getValue());
-}
-
-void MultiplierFormat::commit(const juce::String& text, ValueBinding binding) const
-{
-    binding.primary.setValue((int) clamp((double) text.getIntValue()));
-}
-
-PercentFormat::PercentFormat()
-{
-    minimum = 0.0;
-    maximum = 100.0;
-}
-
-InputRestrictions PercentFormat::restrictions() const
-{
-    return { 3, "0123456789" };
-}
-
-juce::String PercentFormat::displayText(const ValueBinding& binding) const
-{
-    return juce::String((int) binding.primary.getValue()) + "%";
-}
-
-juce::String PercentFormat::editText(const ValueBinding& binding) const
-{
-    return juce::String((int) binding.primary.getValue());
-}
-
-void PercentFormat::commit(const juce::String& text, ValueBinding binding) const
-{
-    binding.primary.setValue((int) clamp((double) text.getIntValue()));
-}
-
-ArrowDurationFormat::ArrowDurationFormat(bool showsPercent) : percent(showsPercent)
-{
-    minimum = 0.0;
-    maximum = ArrowInfo::maximumDurationMs;
-
-    if (percent) {
-        maximum = 100.0;
-    }
-}
-
-InputRestrictions ArrowDurationFormat::restrictions() const
-{
-    if (percent) {
-        return { 3, "0123456789" };
+    if (decimalPlaces > 0) {
+        limits.allowedCharacters += ".";
+        limits.maxLength         += decimalPlaces + 1;
     }
 
-    return { 7, "0123456789" };
+    return limits;
 }
 
-juce::String ArrowDurationFormat::displayText(const ValueBinding& binding) const
+juce::String NumberFormat::text(const ValueBinding& binding, TextPurpose purpose) const
 {
-    if (percent) {
-        return juce::String((int) binding.primary.getValue() / millisecondsPerPercent) + "%";
+    const double scaled = (double) binding.primary.getValue() / displayDivisor;
+
+    juce::String number { (int) scaled };
+
+    if (decimalPlaces > 0) {
+        number = juce::String(scaled, decimalPlaces).trimCharactersAtEnd("0").trimCharactersAtEnd(".");
     }
 
-    return juce::String((int) binding.primary.getValue());
-}
-
-juce::String ArrowDurationFormat::editText(const ValueBinding& binding) const
-{
-    if (percent) {
-        return juce::String((int) binding.primary.getValue() / millisecondsPerPercent);
+    if (purpose == TextPurpose::Editing) {
+        return number;
     }
 
-    return juce::String((int) binding.primary.getValue());
-}
-
-void ArrowDurationFormat::commit(const juce::String& text, ValueBinding binding) const
-{
-    int value = (int) clamp((double) text.getIntValue());
-
-    if (percent) {
-        value *= millisecondsPerPercent;
+    if (showsPositiveSign && scaled > 0.0) {
+        number = "+" + number;
     }
 
-    binding.primary.setValue(value);
+    return prefix + number + suffix;
 }
 
-const int GreekLetterFormat::letterCount = (int) (sizeof(greekLetters) / sizeof(greekLetters[0]));
-
-GreekLetterFormat::GreekLetterFormat()
+ParsedValue NumberFormat::parse(const juce::String& enteredText) const
 {
-    minimum = 0.0;
-    maximum = (double) (letterCount - 1);
-}
+    const double entered = enteredText.getDoubleValue() * displayDivisor;
+    const double clamped = juce::jlimit(minimum, maximum, entered);
 
-InputRestrictions GreekLetterFormat::restrictions() const
-{
-    return { 2, "0123456789" };
-}
-
-juce::String GreekLetterFormat::displayText(const ValueBinding& binding) const
-{
-    return greekLetters[juce::jlimit(0, letterCount - 1, (int) binding.primary.getValue())];
-}
-
-juce::String GreekLetterFormat::editText(const ValueBinding& binding) const
-{
-    return juce::String((int) binding.primary.getValue());
-}
-
-void GreekLetterFormat::commit(const juce::String& text, ValueBinding binding) const
-{
-    binding.primary.setValue((int) clamp((double) text.getIntValue()));
-}
-
-InputRestrictions TextFormat::restrictions() const
-{
-    return { 64, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _-." };
-}
-
-juce::String TextFormat::displayText(const ValueBinding& binding) const
-{
-    return binding.primary.getValue().toString();
-}
-
-void TextFormat::commit(const juce::String& text, ValueBinding binding) const
-{
-    binding.primary.setValue(text.trim());
-}
-
-InputRestrictions FreeTextFormat::restrictions() const
-{
-    return { 0, "" };
-}
-
-juce::String FreeTextFormat::displayText(const ValueBinding& binding) const
-{
-    return binding.primary.getValue().toString();
-}
-
-void FreeTextFormat::commit(const juce::String& text, ValueBinding binding) const
-{
-    binding.primary.setValue(text);
-}
-
-InputRestrictions TraversalFlagFormat::restrictions() const
-{
-    return { 6, "+-0123456789" + instanceLetters };
-}
-
-std::vector<juce::Identifier> TraversalFlagFormat::extraProperties() const
-{
-    return { ValueTreeIdentifiers::TraversalInstance };
-}
-
-juce::String TraversalFlagFormat::displayText(const ValueBinding& binding) const
-{
-    const int value = (int) binding.primary.getValue();
-
-    if (value == 0) {
-        return juce::String();
+    if (decimalPlaces > 0) {
+        return { clamped, {} };
     }
 
-    int instance = 0;
-
-    if (binding.hasSecondary()) {
-        instance = (int) binding.secondaries.front().getValue();
-    }
-
-    if (value > 0) {
-        return "+" + juce::String(value) + instanceLetter(instance);
-    }
-
-    return "-" + juce::String(-value) + instanceLetter(instance);
+    return { (int) clamped, {} };
 }
 
-void TraversalFlagFormat::commit(const juce::String& text, ValueBinding binding) const
+PitchFormat::PitchFormat() : NumberFormat(minimumMidiPitch, maximumMidiPitch) {}
+
+juce::String PitchFormat::text(const ValueBinding& binding, TextPurpose purpose) const
 {
-    const juce::String trimmed = text.trim();
-
-    const bool spawns  = trimmed.startsWithChar('+');
-    const bool removes = trimmed.startsWithChar('-');
-
-    if (! spawns && ! removes) {
-        binding.primary.setValue(0);
-        return;
+    if (purpose == TextPurpose::Editing) {
+        return NumberFormat::text(binding, purpose);
     }
 
-    const std::vector<TraversalKey> parsed = TraversalRefListFormat::parse(trimmed.substring(1));
+    const int midiNote = juce::jlimit(minimumMidiPitch, maximumMidiPitch, (int) binding.primary.getValue());
+    const int octave   = (midiNote / semitonesPerOctave) - 1;
 
-    if (parsed.empty()) {
-        binding.primary.setValue(0);
-        return;
+    return pitchNames[midiNote % semitonesPerOctave] + juce::String(octave);
+}
+
+GreekLetterFormat::GreekLetterFormat() : NumberFormat(0, greekLetterCount - 1) {}
+
+juce::String GreekLetterFormat::text(const ValueBinding& binding, TextPurpose purpose) const
+{
+    if (purpose == TextPurpose::Editing) {
+        return NumberFormat::text(binding, purpose);
     }
 
-    const int typeId = (int) clamp((double) parsed.front().typeId);
+    const int letter = juce::jlimit(0, greekLetterCount - 1, (int) binding.primary.getValue());
 
-    if (removes) {
-        binding.primary.setValue(-typeId);
-    }
-    else {
-        binding.primary.setValue(typeId);
-    }
+    return greekLetters[letter];
+}
 
-    if (binding.hasSecondary()) {
-        binding.secondaries.front().setValue(parsed.front().instance);
-    }
+DualIntFormat::DualIntFormat(double lowest, double highest, const juce::Identifier& secondaryPropertyID)
+    : NumberFormat(lowest, highest)
+{
+    extraProperties = { secondaryPropertyID };
 }
 
 InputRestrictions DualIntFormat::restrictions() const
 {
-    return { 9, "0123456789:" };
+    InputRestrictions limits = NumberFormat::restrictions();
+
+    limits.allowedCharacters += ":";
+    limits.maxLength          = limits.maxLength * 2 + 1;
+
+    return limits;
 }
 
-juce::String DualIntFormat::displayText(const ValueBinding& binding) const
+juce::String DualIntFormat::text(const ValueBinding& binding, TextPurpose purpose) const
 {
     const int primaryValue = (int) binding.primary.getValue();
 
-    if (! binding.hasSecondary()) {
+    if (binding.secondaries.empty()) {
         return juce::String(primaryValue);
     }
 
@@ -390,40 +183,136 @@ juce::String DualIntFormat::displayText(const ValueBinding& binding) const
     return juce::String(primaryValue) + ":" + juce::String(secondaryValue);
 }
 
-void DualIntFormat::commit(const juce::String& text, ValueBinding binding) const
+ParsedValue DualIntFormat::parse(const juce::String& enteredText) const
 {
-    const int separatorIndex = text.indexOfChar(':');
+    const int separatorIndex = enteredText.indexOfChar(':');
 
-    juce::String primaryText = text;
+    juce::String primaryText = enteredText;
     juce::String secondaryText;
 
     if (separatorIndex >= 0) {
-        primaryText   = text.substring(0, separatorIndex);
-        secondaryText = text.substring(separatorIndex + 1);
+        primaryText   = enteredText.substring(0, separatorIndex);
+        secondaryText = enteredText.substring(separatorIndex + 1);
     }
 
-    int primaryValue = primaryText.getIntValue();
+    const int primaryValue   = (int) juce::jlimit(minimum, maximum, (double) primaryText.getIntValue());
+    const int secondaryValue = (int) juce::jlimit(0.0,     maximum, (double) secondaryText.getIntValue());
 
-    if (primaryValue < (int) minimum) {
-        primaryValue = (int) minimum;
-    }
-
-    binding.primary.setValue(primaryValue);
-
-    if (! binding.hasSecondary()) {
-        return;
-    }
-
-    int secondaryValue = 0;
-
-    if (secondaryText.isNotEmpty()) {
-        secondaryValue = juce::jmax(0, secondaryText.getIntValue());
-    }
-
-    binding.secondaries.front().setValue(secondaryValue);
+    return { primaryValue, { secondaryValue } };
 }
 
-std::vector<TraversalKey> TraversalRefListFormat::parse(const juce::String& text)
+static constexpr int maximumTraversalTypeId = 9999;
+
+TraversalFlagFormat::TraversalFlagFormat()
+    : NumberFormat(-maximumTraversalTypeId, maximumTraversalTypeId)
+{
+    extraProperties = { ValueTreeIdentifiers::TraversalInstance };
+}
+
+InputRestrictions TraversalFlagFormat::restrictions() const
+{
+    InputRestrictions limits = NumberFormat::restrictions();
+
+    limits.allowedCharacters = "+" + limits.allowedCharacters + instanceLetters;
+    limits.maxLength        += 1;
+
+    return limits;
+}
+
+juce::String TraversalFlagFormat::text(const ValueBinding& binding, TextPurpose purpose) const
+{
+    const int value = (int) binding.primary.getValue();
+
+    if (value == 0) {
+        return {};
+    }
+
+    int instance = 0;
+
+    if (! binding.secondaries.empty()) {
+        instance = (int) binding.secondaries.front().getValue();
+    }
+
+    const int          letter       = juce::jlimit(0, TraversalKey::maxInstances - 1, instance);
+    const juce::String instanceText = instanceLetters.substring(letter, letter + 1);
+
+    if (value > 0) {
+        return "+" + juce::String(value) + instanceText;
+    }
+
+    return "-" + juce::String(-value) + instanceText;
+}
+
+ParsedValue TraversalFlagFormat::parse(const juce::String& enteredText) const
+{
+    const juce::String trimmed = enteredText.trim();
+
+    const bool spawns  = trimmed.startsWithChar('+');
+    const bool removes = trimmed.startsWithChar('-');
+
+    ParsedValue cleared { 0, { 0 } };
+
+    if (! spawns && ! removes) {
+        return cleared;
+    }
+
+    const std::vector<TraversalKey> keys = TraversalRefListFormat::parseKeys(trimmed.substring(1));
+
+    if (keys.empty()) {
+        return cleared;
+    }
+
+    const int typeId = (int) juce::jlimit(1.0, maximum, (double) keys.front().typeId);
+
+    if (removes) {
+        return { -typeId, { keys.front().instance } };
+    }
+
+    return { typeId, { keys.front().instance } };
+}
+
+TextFormat::TextFormat(int longestText, const juce::String& characters)
+    : maxLength(longestText), allowedCharacters(characters) {}
+
+InputRestrictions TextFormat::restrictions() const
+{
+    InputRestrictions limits;
+
+    limits.maxLength         = maxLength;
+    limits.allowedCharacters = allowedCharacters;
+
+    return limits;
+}
+
+juce::String TextFormat::text(const ValueBinding& binding, TextPurpose purpose) const
+{
+    const juce::var stored = binding.primary.getValue();
+
+    if (! stored.isString()) {
+        return {};
+    }
+
+    return stored.toString();
+}
+
+ParsedValue TextFormat::parse(const juce::String& enteredText) const
+{
+    if (trimsWhitespace) {
+        return { enteredText.trim(), {} };
+    }
+
+    return { enteredText, {} };
+}
+
+static constexpr int traversalRefListLength = 24;
+
+TraversalRefListFormat::TraversalRefListFormat()
+    : TextFormat(traversalRefListLength, "0123456789 ," + instanceLetters)
+{
+    trimsWhitespace = false;
+}
+
+std::vector<TraversalKey> TraversalRefListFormat::parseKeys(const juce::String& text)
 {
     std::vector<TraversalKey> parsed;
     juce::String digits;
@@ -461,20 +350,8 @@ std::vector<TraversalKey> TraversalRefListFormat::parse(const juce::String& text
 
 juce::String TraversalRefListFormat::describe(const TraversalKey& key)
 {
-    return juce::String(key.typeId) + instanceLetter(key.instance);
-}
+    const int          letter       = juce::jlimit(0, TraversalKey::maxInstances - 1, key.instance);
+    const juce::String instanceText = instanceLetters.substring(letter, letter + 1);
 
-InputRestrictions TraversalRefListFormat::restrictions() const
-{
-    return { 24, "0123456789 ," + instanceLetters };
-}
-
-juce::String TraversalRefListFormat::displayText(const ValueBinding& binding) const
-{
-    return binding.primary.getValue().toString();
-}
-
-void TraversalRefListFormat::commit(const juce::String& text, ValueBinding binding) const
-{
-    binding.primary.setValue(text);
+    return juce::String(key.typeId) + instanceText;
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 cd "$root" 2>/dev/null || exit 0
 
@@ -115,128 +116,9 @@ only_added() {
 }
 
 funcs="$work/funcs"
-echo "$files" | tr ' ' '\n' | grep -v '^$' | xargs awk '
-    function strip(s) {
-        gsub(/\\./, "", s)
-        gsub(/"[^"]*"/, "\"\"", s)
-        gsub(/'"'"'[^'"'"']*'"'"'/, "@", s)
-        sub(/\/\/.*$/, "", s)
-        return s
-    }
-    function nameOf(sig,   s) {
-        s = sig
-        sub(/\(.*$/, "", s)
-        gsub(/[[:space:]]+$/, "", s)
-        if (match(s, /[A-Za-z_~][A-Za-z0-9_]*$/)) { return substr(s, RSTART, RLENGTH) }
-        return "?"
-    }
-    function classOf(sig,   s) {
-        s = sig
-        sub(/\(.*$/, "", s)
-        if (match(s, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*::[[:space:]]*[A-Za-z_~][A-Za-z0-9_]*[[:space:]]*$/)) {
-            s = substr(s, RSTART, RLENGTH)
-            sub(/[[:space:]]*::.*$/, "", s)
-            return s
-        }
-        return ""
-    }
-    function isFunction(sig,   before) {
-        if (sig !~ /\(/ || sig !~ /\)/) { return 0 }
-        if (sig ~ /^[[:space:]]*(if|for|while|switch|catch|else|return|do|case)[^A-Za-z0-9_]/) { return 0 }
-        if (sig ~ /(^|[^A-Za-z0-9_])(class|struct|enum|namespace|union)[^A-Za-z0-9_]/) { return 0 }
-        if (sig ~ /\[[^]]*\][[:space:]]*\(/) { return 0 }
-        if (sig ~ /=[[:space:]]*$/) { return 0 }
-        if (sig ~ /^[[:space:]]*#/) { return 0 }
-        before = sig
-        sub(/\{.*$/, "", before)
-        if (before !~ /\)/) { return 0 }
-        return 1
-    }
-
-    FNR == 1 { infunc = 0; incomment = 0; cand = ""; candline = 0; curclass = "" }
-
-    {
-        line = strip($0)
-
-        if (infunc == 0 && line ~ /^[[:space:]]*(class|struct)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/) {
-            c = line
-            sub(/^[[:space:]]*(class|struct)[[:space:]]+/, "", c)
-            if (match(c, /^[A-Za-z_][A-Za-z0-9_]*/)) { curclass = substr(c, RSTART, RLENGTH) }
-        }
-
-        if (incomment) {
-            if (line ~ /\*\//) { sub(/^.*\*\//, "", line); incomment = 0 }
-            else { next }
-        }
-        while (match(line, /\/\*/)) {
-            pre = substr(line, 1, RSTART - 1)
-            rest = substr(line, RSTART + 2)
-            if (match(rest, /\*\//)) { line = pre substr(rest, RSTART + 2) }
-            else { line = pre; incomment = 1; break }
-        }
-
-        if (infunc == 0) {
-            if (line ~ /^[[:space:]]*$/) { next }
-            if (line ~ /^[[:space:]]*#/) { cand = ""; candline = 0; next }
-
-            if (candline == 0) { candline = FNR }
-            cand = cand " " line
-
-            if (cand ~ /;/ && cand !~ /\{/) { cand = ""; candline = 0; next }
-
-            if (line ~ /\{/) {
-                if (isFunction(cand)) {
-                    infunc = 1
-                    fstart = candline
-                    fname = nameOf(cand)
-                    fclass = classOf(cand)
-                    fctor = 0
-                    if (fname ~ /^~/ || (fclass != "" && fclass == fname)) { fctor = 1 }
-                    fdepth = 0
-                    stmts = 0
-                    nested = 0
-                    btext = ""
-                    body = substr(line, index(line, "{"))
-                    line = body
-                }
-                else { cand = ""; candline = 0; next }
-            }
-            else { next }
-        }
-
-        btext = btext " " line
-
-        for (i = 1; i <= length(line); i++) {
-            c = substr(line, i, 1)
-            if (c == "{") {
-                fdepth++
-                if (fdepth > 1) { nested++ }
-            }
-            else if (c == "}") {
-                fdepth--
-                if (fdepth <= 0) {
-                    kind = "function"
-                    if (fctor == 1) { kind = "ctor" }
-                    owner = fclass
-                    if (owner == "") { owner = curclass }
-                    ret = ""
-                    if (stmts == 1 && nested == 0 && match(btext, /return[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*;/)) {
-                        ret = substr(btext, RSTART, RLENGTH)
-                        sub(/return[[:space:]]+/, "", ret)
-                        sub(/[[:space:]]*;/, "", ret)
-                        if (ret == "true" || ret == "false" || ret == "nullptr" || ret == "this") { ret = "" }
-                    }
-                    print "F\t" FILENAME "\t" fstart "\t" FNR "\t" stmts "\t" nested "\t" kind "\t" fname "\t" owner "\t" ret
-                    infunc = 0
-                    cand = ""
-                    candline = 0
-                    break
-                }
-            }
-            else if (c == ";" && fdepth == 1) { stmts++ }
-        }
-    }
-' 2>/dev/null > "$funcs"
+echo "$files" | tr ' ' '\n' | grep -v '^$' \
+    | xargs awk -v MINBLOCK=999999 -f "$here/cxx-scan.awk" 2>/dev/null \
+    | grep '^F' > "$funcs"
 
 members="$work/members"
 echo "$files" | tr ' ' '\n' | grep -E '\.h$' | xargs awk '

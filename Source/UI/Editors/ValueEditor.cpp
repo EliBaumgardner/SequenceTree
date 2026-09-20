@@ -6,6 +6,7 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
+#include "../../Util/NodeInfo.h"
 
 #include <cmath>
 
@@ -37,7 +38,7 @@ ValueEditor::ValueEditor(ApplicationContext& context) : applicationContext(conte
 
     boundValue.addListener(this);
 
-    setFormat(std::make_unique<IntFormat>());
+    setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
 }
 
 ValueEditor::~ValueEditor()
@@ -69,16 +70,15 @@ void ValueEditor::bindSecondaryProperties()
     }
 
     secondaryValues.clear();
-    secondaryIdentifiers = format->extraProperties();
 
     if (! boundTree.isValid()) {
         return;
     }
 
-    secondaryValues.reserve(secondaryIdentifiers.size());
+    secondaryValues.reserve(format->extraProperties.size());
 
-    for (const auto& identifier : secondaryIdentifiers) {
-        secondaryValues.push_back(boundTree.getPropertyAsValue(identifier, nullptr));
+    for (const auto& identifier : format->extraProperties) {
+        secondaryValues.push_back(boundTree.getPropertyAsValue(identifier, applicationContext.undoManager));
     }
 
     for (auto& value : secondaryValues) {
@@ -86,23 +86,19 @@ void ValueEditor::bindSecondaryProperties()
     }
 }
 
-ValueBinding ValueEditor::makeBinding() const
-{
-    return { boundTree, boundValue, boundIdentifier, secondaryValues, secondaryIdentifiers };
-}
-
 void ValueEditor::paint(juce::Graphics& g)
 {
     if (! isEditing && ! persistentEditor) {
-        g.setFont(displayFont());
+        const juce::String displayed = format->text(binding, TextPurpose::Display);
+
+        g.setFont(displayFont(displayed));
         g.setColour(juce::Colours::lightgrey.withAlpha(0.85f));
 
-        g.drawText(getDisplayText(),
-                   getLocalBounds(), justification, false);
+        g.drawText(displayed, getLocalBounds(), justification, false);
     }
 }
 
-juce::Font ValueEditor::displayFont() const
+juce::Font ValueEditor::displayFont(const juce::String& text) const
 {
     juce::Font font { juce::FontOptions(fontHeight) };
 
@@ -112,7 +108,7 @@ juce::Font ValueEditor::displayFont() const
 
     const float inset      = (float) getHeight() * autoFitInsetRatio;
     const auto  bounds     = getLocalBounds().toFloat().reduced(inset);
-    const float textWidth  = font.getStringWidthFloat(getDisplayText());
+    const float textWidth  = font.getStringWidthFloat(text);
     const float textHeight = font.getHeight();
 
     if (bounds.getWidth() <= 0.0f || bounds.getHeight() <= 0.0f || textHeight <= 0.0f) {
@@ -133,11 +129,6 @@ juce::Font ValueEditor::displayFont() const
     return font;
 }
 
-juce::String ValueEditor::getDisplayText() const
-{
-    return format->displayText(makeBinding());
-}
-
 void ValueEditor::resized()
 {
     textEditor->setBounds(getLocalBounds());
@@ -156,11 +147,12 @@ void ValueEditor::setPersistentEditor(bool shouldStayVisible)
         return;
     }
 
-    const juce::Font font = displayFont();
+    const juce::String displayed = format->text(binding, TextPurpose::Display);
+    const juce::Font   font      = displayFont(displayed);
 
     textEditor->setFont(font);
     textEditor->applyFontToAllText(font);
-    textEditor->setText(format->displayText(makeBinding()), juce::dontSendNotification);
+    textEditor->setText(displayed, juce::dontSendNotification);
     textEditor->setVisible(true);
 
     repaint();
@@ -174,12 +166,13 @@ void ValueEditor::beginEditing(bool selectAllText)
 
     isEditing = true;
 
-    juce::Font font = displayFont();
+    const juce::Font font = displayFont(format->text(binding, TextPurpose::Display));
+
     textEditor->setFont(font);
     textEditor->applyFontToAllText(font);
 
     textEditor->setVisible(true);
-    textEditor->setText(format->editText(makeBinding()), juce::dontSendNotification);
+    textEditor->setText(format->text(binding, TextPurpose::Editing), juce::dontSendNotification);
     textEditor->grabKeyboardFocus();
 
     if (selectAllText) {
@@ -196,44 +189,15 @@ void ValueEditor::bindEditor(juce::ValueTree tree, const juce::Identifier& prope
 {
     boundValue.removeListener(this);
 
-    boundTree  = tree;
-    boundValue.referTo(tree.getPropertyAsValue(propertyID, nullptr));
+    boundTree       = tree;
     boundIdentifier = propertyID;
+    boundValue.referTo(tree.getPropertyAsValue(propertyID, applicationContext.undoManager));
 
     boundValue.addListener(this);
 
     bindSecondaryProperties();
 
     repaint();
-}
-
-void ValueEditor::enableDualValue(const juce::Identifier& secondaryPropertyID)
-{
-    setFormat(std::make_unique<DualIntFormat>(secondaryPropertyID));
-}
-
-void ValueEditor::disableDualValue()
-{
-    if (dynamic_cast<DualIntFormat*>(format.get()) == nullptr) {
-        return;
-    }
-
-    setFormat(std::make_unique<IntFormat>());
-}
-
-void ValueEditor::disablePercentValue()
-{
-    if (dynamic_cast<PercentFormat*>(format.get()) == nullptr) {
-        return;
-    }
-
-    setFormat(std::make_unique<IntFormat>());
-}
-
-void ValueEditor::enableAutoFitText(float insetRatio)
-{
-    autoFitText       = true;
-    autoFitInsetRatio = insetRatio;
 }
 
 void ValueEditor::setFontHeight(float newFontHeight)
@@ -244,33 +208,12 @@ void ValueEditor::setFontHeight(float newFontHeight)
 
     fontHeight = newFontHeight;
 
-    const juce::Font font = displayFont();
+    const juce::Font font = displayFont(format->text(binding, TextPurpose::Display));
 
     textEditor->setFont(font);
     textEditor->applyFontToAllText(font);
 
     repaint();
-}
-
-void ValueEditor::setPitchMode(bool shouldShowPitchNames)
-{
-    const bool isPitchFormat = dynamic_cast<PitchFormat*>(format.get()) != nullptr;
-
-    if (isPitchFormat == shouldShowPitchNames) {
-        return;
-    }
-
-    if (shouldShowPitchNames) {
-        setFormat(std::make_unique<PitchFormat>());
-    }
-    else {
-        setFormat(std::make_unique<IntFormat>());
-    }
-}
-
-void ValueEditor::setEditable(bool shouldBeEditable)
-{
-    editable = shouldBeEditable;
 }
 
 void ValueEditor::setJustification(juce::Justification newJustification)
@@ -281,83 +224,25 @@ void ValueEditor::setJustification(juce::Justification newJustification)
     repaint();
 }
 
-void ValueEditor::setCaretColour(juce::Colour colour)
+void ValueEditor::commitText(const juce::String& enteredText)
 {
-    textEditor->setColour(juce::CaretComponent::caretColourId, colour);
-}
+    const ParsedValue parsed = format->parse(enteredText);
 
-void ValueEditor::enableDecimalValue(double min, double max)
-{
-    setFormat(std::make_unique<DecimalFormat>());
+    if (boundTree.isValid() && applicationContext.undoManager != nullptr) {
+        applicationContext.undoManager->beginNewTransaction();
+    }
 
-    format->setMinimum(min);
-    format->setMaximum(max);
-}
+    boundValue.setValue(parsed.primary);
 
-void ValueEditor::enableDecimalMultiplierValue(double min, double max)
-{
-    setFormat(std::make_unique<DecimalMultiplierFormat>());
-
-    format->setMinimum(min);
-    format->setMaximum(max);
-}
-
-void ValueEditor::enableMultiplierValue(int defaultValue)
-{
-    setFormat(std::make_unique<MultiplierFormat>());
-
-    boundValue.setValue(defaultValue);
-    repaint();
-}
-
-void ValueEditor::enableTextValue()
-{
-    setFormat(std::make_unique<TextFormat>());
-}
-
-void ValueEditor::setText(const juce::String& text)
-{
-    boundValue.setValue(text);
+    for (size_t i = 0; i < secondaryValues.size() && i < parsed.secondaries.size(); i++) {
+        secondaryValues[i].setValue(parsed.secondaries[i]);
+    }
 
     if (persistentEditor) {
-        textEditor->setText(format->displayText(makeBinding()), juce::dontSendNotification);
+        textEditor->setText(format->text(binding, TextPurpose::Display), juce::dontSendNotification);
     }
 
     repaint();
-}
-
-juce::String ValueEditor::getText() const
-{
-    return boundValue.getValue().toString();
-}
-
-void ValueEditor::enableSignedValue(int min, int max)
-{
-    setFormat(std::make_unique<IntFormat>(true));
-
-    format->setMinimum(min);
-    format->setMaximum(max);
-}
-
-void ValueEditor::disableSignedValue()
-{
-    auto* intFormat = dynamic_cast<IntFormat*>(format.get());
-
-    if (intFormat == nullptr || ! intFormat->showsSign()) {
-        return;
-    }
-
-    setFormat(std::make_unique<IntFormat>());
-}
-
-void ValueEditor::enableTraversalFlagValue()
-{
-    setFormat(std::make_unique<TraversalFlagFormat>());
-}
-
-void ValueEditor::acceptTraversalReferences()
-{
-    setFormat(std::make_unique<TraversalRefListFormat>());
 }
 
 void ValueEditor::textEditorReturnKeyPressed(juce::TextEditor&)
@@ -370,23 +255,13 @@ void ValueEditor::textEditorFocusLost(juce::TextEditor&)
     commitValue();
 }
 
-void ValueEditor::setMinimumValue(int min)
-{
-    format->setMinimum((double) min);
-}
-
-double ValueEditor::clampToRange(double value) const
-{
-    return format->clamp(value);
-}
-
 void ValueEditor::commitValue()
 {
     if (! isEditing) {
         return;
     }
 
-    format->commit(textEditor->getText(), makeBinding());
+    const juce::String entered = textEditor->getText();
 
     isEditing = false;
 
@@ -394,11 +269,37 @@ void ValueEditor::commitValue()
         textEditor->setVisible(false);
     }
 
+    if (entered != format->text(binding, TextPurpose::Editing)) {
+        const ParsedValue parsed = format->parse(entered);
+
+        if (boundTree.isValid() && applicationContext.undoManager != nullptr) {
+            applicationContext.undoManager->beginNewTransaction();
+        }
+
+        boundValue.setValue(parsed.primary);
+
+        for (size_t i = 0; i < secondaryValues.size() && i < parsed.secondaries.size(); i++) {
+            secondaryValues[i].setValue(parsed.secondaries[i]);
+        }
+    }
+
     repaint();
 
     if (onEditFinished) {
         onEditFinished();
     }
+}
+
+void ValueEditor::setNumericValue(double newValue)
+{
+    const double clamped = juce::jlimit(format->minimum, format->maximum, newValue);
+
+    if (format->decimalPlaces > 0) {
+        boundValue.setValue(clamped);
+        return;
+    }
+
+    boundValue.setValue(juce::roundToInt(clamped));
 }
 
 void ValueEditor::valueChanged(juce::Value&)
