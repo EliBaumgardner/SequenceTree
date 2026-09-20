@@ -6,7 +6,7 @@
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "../Editors/ValueFormat.h"
+#include "../Editors/Formats/ValueFormat.h"
 
 #include <algorithm>
 
@@ -82,7 +82,7 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(ApplicationContext& context, juce::
         row.key = key;
 
         row.label = std::make_unique<juce::Label>();
-        row.label->setText("Traversal " + TraversalRefListFormat::describe(key), juce::dontSendNotification);
+        row.label->setText("Traversal " + TraversalFlagFormat::describe(key), juce::dontSendNotification);
         row.label->setColour(juce::Label::textColourId, juce::Colours::lightgrey);
         row.label->setFont(juce::Font(juce::FontOptions(9.0f)));
         row.label->setJustificationType(juce::Justification::centredLeft);

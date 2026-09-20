@@ -58,12 +58,24 @@ void TraversalLogic::reset(int root, const RTtraversal& newTraversal)
                        ^ static_cast<unsigned int>(newTraversal.key.instance) * 2246822519u
                        ^ 2463534242u) | 1u;
 
-    runId               = 0;
     rootId              = root;
     referenceTargetId   = 0;
     pendingJumpTargetId = -1;
 
-    state = TraversalState::Start;
+    state = TraversalState::End;
+}
+
+void TraversalLogic::begin(const NodeMap& nodes, int startNodeId, int graphLoopLimit)
+{
+    primary.target = startNodeId;
+
+    state = TraversalState::Active;
+
+    loop.active = true;
+    loop.count  = 0;
+    loop.limit  = graphLoopLimit;
+
+    advanceAlternative(nodes, startNodeId);
 }
 
 int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int parentCount,
@@ -504,25 +516,6 @@ void TraversalLogic::fillEndedResult(StepResult& result) const
     result.clearTrail        = true;
 }
 
-TraversalLogic::StepResult TraversalLogic::enterRoot(const NodeMap& nodes)
-{
-    state          = TraversalState::Active;
-    primary.target = rootId;
-    advanceAlternative(nodes, rootId);
-
-    const auto rootIt = nodes.find(rootId);
-
-    if (rootIt != nodes.end() && rootIt->second->encapsulationEntryId == rootId) {
-        armSubLoop(primary, *rootIt->second);
-    }
-
-    StepResult result;
-    result.kind                 = StepResult::Kind::EnteredRoot;
-    result.enteredId            = primary.target;
-    result.enteredAlternativeId = primary.alternativeTarget;
-    return result;
-}
-
 void TraversalLogic::armSubLoop(Walker& walker, const RTNode& enteredNode)
 {
     if (walker.subRootNode != -1) {
@@ -725,9 +718,6 @@ TraversalLogic::StepResult TraversalLogic::stepActive(const NodeMap& nodes)
 
 TraversalLogic::StepResult TraversalLogic::handleNodeEvent(const NodeMap& nodes) {
     switch (state) {
-        case TraversalState::Start:
-            return enterRoot(nodes);
-
         case TraversalState::Active:
             return stepActive(nodes);
 

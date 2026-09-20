@@ -28,7 +28,6 @@ struct TraversalRuntime
 class TraversalPool
 {
 public:
-
     struct Instance
     {
         TraversalLogic   logic;
@@ -37,15 +36,11 @@ public:
 
     using Entry = std::pair<int, Instance>;
 
-private:
-
     struct Slot
     {
         Entry entry;
         bool  active = false;
     };
-
-public:
 
     void prepare(int capacity, const TraversalRule& rule)
     {
@@ -78,31 +73,7 @@ public:
 
         Iterator() = default;
 
-        Iterator(PoolPointer owner, int startIndex) : pool(owner), index(startIndex)
-        {
-            skipInactive();
-        }
-
-        reference operator* () const { return  slot().entry; }
-        pointer   operator->() const { return &slot().entry; }
-
-        Iterator& operator++()
-        {
-            ++index;
-            skipInactive();
-            return *this;
-        }
-
-        bool operator==(const Iterator& other) const { return pool == other.pool && index == other.index; }
-        bool operator!=(const Iterator& other) const { return pool != other.pool || index != other.index; }
-
-        int slotIndex() const { return index; }
-
-    private:
-
-        SlotReference slot() const { return pool->slots[static_cast<std::size_t>(index)]; }
-
-        void skipInactive()
+        Iterator(PoolPointer owner, int startIndex) : index(startIndex), pool(owner)
         {
             const int slotCount = static_cast<int>(pool->slots.size());
 
@@ -111,8 +82,32 @@ public:
             }
         }
 
-        PoolPointer pool  = nullptr;
-        int         index = 0;
+        reference operator* () const { return  slot().entry; }
+        pointer   operator->() const { return &slot().entry; }
+
+        Iterator& operator++()
+        {
+            ++index;
+
+            const int slotCount = static_cast<int>(pool->slots.size());
+
+            while (index < slotCount && !slot().active) {
+                ++index;
+            }
+
+            return *this;
+        }
+
+        bool operator==(const Iterator& other) const { return pool == other.pool && index == other.index; }
+        bool operator!=(const Iterator& other) const { return pool != other.pool || index != other.index; }
+
+        int index = 0;
+
+    private:
+
+        SlotReference slot() const { return pool->slots[static_cast<std::size_t>(index)]; }
+
+        PoolPointer pool = nullptr;
     };
 
     using iterator       = Iterator<false>;
@@ -169,7 +164,7 @@ public:
 
     iterator erase(iterator it)
     {
-        const int index = it.slotIndex();
+        const int index = it.index;
 
         slots[static_cast<std::size_t>(index)].active = false;
         --activeCount;
@@ -202,7 +197,6 @@ public:
     }
 
     bool empty() const { return activeCount == 0; }
-    int  size () const { return activeCount; }
 
     int findRunFor(int rootId, const TraversalKey& key) const
     {
@@ -234,9 +228,9 @@ public:
         return true;
     }
 
-    std::uint64_t membershipEpoch() const { return epoch; }
-
     int nextRunId() { return ++runIdCounter; }
+
+    std::uint64_t epoch = 0;
 
 private:
 
@@ -258,8 +252,6 @@ private:
     int activeCount = 0;
 
     int runIdCounter = 0;
-
-    std::uint64_t epoch = 0;
 };
 
 struct DispatchContext

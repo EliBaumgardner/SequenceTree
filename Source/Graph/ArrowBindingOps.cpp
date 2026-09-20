@@ -34,13 +34,13 @@ ArrowInfo ArrowBindingOps::getArrowInfo(const juce::ValueTree& arrowTree)
 
     arrowInfo.xBinding = static_cast<ArrowBinding>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowXBinding,
                                                                               static_cast<int>(arrowInfo.xBinding)));
+
     arrowInfo.yBinding = static_cast<ArrowBinding>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowYBinding,
-                                                                              static_cast<int>(arrowInfo.yBinding)));
+    static_cast<int>(arrowInfo.yBinding)));
 
     arrowInfo.xMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowXMultiplier, arrowInfo.xMultiplier);
     arrowInfo.yMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowYMultiplier, arrowInfo.yMultiplier);
     arrowInfo.isSynced    = arrowTree.getProperty(ValueTreeIdentifiers::ArrowSync,        arrowInfo.isSynced);
-
     arrowInfo.durationOverride = arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration,
                                                        arrowInfo.durationOverride);
 

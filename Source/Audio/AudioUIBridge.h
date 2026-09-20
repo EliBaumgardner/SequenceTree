@@ -45,31 +45,34 @@ public:
 
 private:
 
-    juce::AbstractFifo             fifo { Capacity };
-    std::array<Command, Capacity>  buffer {};
+    juce::AbstractFifo            fifo { Capacity };
+    std::array<Command, Capacity> buffer {};
 };
 
 class AudioUIBridge
 {
 public:
 
+    enum class HighlightKind { Show, Hide, ClearEveryNode };
+
+    enum class ArrowKind { Progress, Connection, TrailReset };
+
     struct HighlightCommand
     {
-        int  nodeId          = 0;
-        bool shouldHighlight = false;
-        int  runId           = -1;
-        int  typeId          = -1;
+        HighlightKind kind        = HighlightKind::Hide;
+        int           nodeId      = 0;
+        int           runId       = -1;
+        int           traversalId = -1;
     };
 
     struct ArrowCommand
     {
-        int  parentNodeId = 0;
-        int  childNodeId  = 0;
-        int  durationMs   = 0;
-        int  trailId      = -1;
-        int  typeId       = -1;
-        bool isConnection = false;
-        bool isReset      = false;
+        ArrowKind kind         = ArrowKind::Progress;
+        int       parentNodeId = 0;
+        int       childNodeId  = 0;
+        int       durationMs   = 0;
+        int       trailId      = -1;
+        int       traversalId  = -1;
     };
 
     struct CountCommand
@@ -79,20 +82,17 @@ public:
         int countLimit   = 1;
     };
 
+    static constexpr int allTrails = -1;
+
+    static int primaryTrail  (int runId) { return runId * 2; }
+    static int modulatorTrail(int runId) { return runId * 2 + 1; }
+
     bool hasPendingCommands() const
     {
         return highlights.hasPending()
             || arrows.hasPending()
             || counts.hasPending();
     }
-
-    static constexpr int allNodes  = -1;
-    static constexpr int allTrails = -1;
-
-    static int primaryTrail  (int runId) { return runId * 2; }
-    static int modulatorTrail(int runId) { return runId * 2 + 1; }
-
-    static int danglingArrowKey(int danglingIndex) { return -(danglingIndex + 1); }
 
 private:
 
@@ -104,35 +104,34 @@ private:
 
     static constexpr int arrowCommandCapacity = 1024;
 
-    CommandFifo<HighlightCommand>                     highlights;
-    CommandFifo<ArrowCommand, arrowCommandCapacity>   arrows;
-    CommandFifo<CountCommand>                         counts;
+    CommandFifo<HighlightCommand>                   highlights;
+    CommandFifo<ArrowCommand, arrowCommandCapacity> arrows;
+    CommandFifo<CountCommand>                       counts;
 
-    void highlightNode(int nodeId, bool shouldHighlight, int runId = -1, int typeId = -1)
+    void highlightNode(int nodeId, HighlightKind kind, int runId = -1, int traversalId = -1)
     {
-        highlights.push({ nodeId, shouldHighlight, runId, typeId });
+        highlights.push({ kind, nodeId, runId, traversalId });
+    }
+
+    void highlightNode(const RTNode& node, HighlightKind kind, int runId = -1, int traversalId = -1)
+    {
+        highlightNode(node.nodeID, kind, runId, traversalId);
     }
 
     void clearAllHighlights()
     {
-        highlightNode(allNodes, false);
+        highlights.push({ HighlightKind::ClearEveryNode });
     }
 
-    void highlightNode(const RTNode& node, bool shouldHighlight, int runId = -1, int typeId = -1)
+    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int trailId, int traversalId,
+                      ArrowKind kind = ArrowKind::Progress)
     {
-        highlightNode(node.nodeID, shouldHighlight, runId, typeId);
-    }
-
-    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int trailId, int typeId, bool isConnection = false)
-    {
-        arrows.push({ .parentNodeId = parentNodeId, .childNodeId = childNodeId,
-                      .durationMs   = durationMs,   .trailId     = trailId,
-                      .typeId       = typeId,       .isConnection = isConnection });
+        arrows.push({ kind, parentNodeId, childNodeId, durationMs, trailId, traversalId });
     }
 
     void pushArrowReset(int trailId)
     {
-        arrows.push({ .trailId = trailId, .isReset = true });
+        arrows.push({ ArrowKind::TrailReset, 0, 0, 0, trailId, -1 });
     }
 
     void pushCount(int nodeId, int currentCount, int countLimit)

@@ -37,9 +37,9 @@ public:
 
 private:
 
-    bool snapSettled() const;
 
     bool advanceSnap();
+    bool snapSettled();
     bool advanceTrails();
     bool advanceHover();
 };

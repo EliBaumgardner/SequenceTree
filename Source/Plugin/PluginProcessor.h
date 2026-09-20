@@ -87,8 +87,6 @@ public:
 
     std::vector<juce::MidiMessage> pendingNoteOffs;
 
-    bool hasPendingUiCommands() const;
-
     void handleAsyncUpdate() override;
 
     JUCE_DECLARE_WEAK_REFERENCEABLE (SequenceTreeAudioProcessor)

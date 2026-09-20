@@ -248,11 +248,23 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     struct BlockScope
     {
-        AudioSnapshotPublisher& publisher;
-        ~BlockScope() { publisher.blockCompleted(); }
+        AudioSnapshotPublisher&     publisher;
+        SequenceTreeAudioProcessor& processor;
+
+        ~BlockScope()
+        {
+            publisher.blockCompleted();
+
+            const bool uiWorkPending = processor.eventManager.bridge.hasPendingCommands()
+                                    || processor.playbackStateChanged.load();
+
+            if (uiWorkPending) {
+                processor.triggerAsyncUpdate();
+            }
+        }
     };
 
-    const BlockScope blockScope { snapshots };
+    const BlockScope blockScope { snapshots, *this };
 
     const int numSamples = buffer.getNumSamples();
 
@@ -280,7 +292,6 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
         if (hostPlaying != isPlaying.exchange(hostPlaying)) {
             playbackStateChanged.store(true);
-            triggerAsyncUpdate();
         }
     }
 
@@ -314,9 +325,6 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
             traversalSession.clearTraversals();
         }
 
-        if (resetHit || suspended) {
-            triggerAsyncUpdate();
-        }
         return;
     }
 
@@ -328,7 +336,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     const DispatchContext context {
         *snap->globalNodes,
-        traversalSession.getTraversals(),
+        traversalSession.traversals,
         midiMessages,
         tempoInfo.currentSampleRate,
         tempoMultiplier.load() * hostTempoScale
@@ -336,8 +344,6 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     if (resetHit) {
         traversalSession.restartActiveTraversals(context);
-
-        triggerAsyncUpdate();
     }
 
     traversalSession.syncWithGraph(context, snap->generation);
@@ -346,23 +352,12 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         && !traversalSession.startTraversalsFromFirstRoot(context)) {
         if (!eventManager.scheduler.activeNotes.empty()) {
             traversalSession.silenceAllNotes(midiMessages);
-
-            triggerAsyncUpdate();
         }
 
         return;
     }
 
     eventManager.processEvents(numSamples, context);
-
-    if (hasPendingUiCommands()) {
-        triggerAsyncUpdate();
-    }
-}
-
-bool SequenceTreeAudioProcessor::hasPendingUiCommands() const
-{
-    return eventManager.bridge.hasPendingCommands();
 }
 
 void SequenceTreeAudioProcessor::handleAsyncUpdate()

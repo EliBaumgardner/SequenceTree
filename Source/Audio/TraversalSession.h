@@ -28,12 +28,11 @@ public:
 
     bool startTraversalsFromFirstRoot(const DispatchContext& context);
 
-    TraversalPool&       getTraversals()       { return traversals; }
-    const TraversalPool& getTraversals() const { return traversals; }
-
     bool isIdle() const { return traversals.empty(); }
 
     void setSelectChildScript(const RTScript* script);
+
+    TraversalPool traversals;
 
 private:
 
@@ -53,7 +52,6 @@ private:
 
 
     EventManager& eventManager;
-    TraversalPool traversals;
 
     RTScript            nativeFallbackScript;
     ScriptTraversalRule scriptRule;

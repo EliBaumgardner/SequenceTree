@@ -23,8 +23,9 @@ void AudioCommandDrainer::drainAll()
 
     const bool droppedHighlights = bridge.highlights.overflowed.exchange(false);
     const bool droppedArrows     = bridge.arrows.overflowed.exchange(false);
+    const bool droppedCounts     = bridge.counts.overflowed.exchange(false);
 
-    const bool streamBroken = needsResync || droppedHighlights || droppedArrows;
+    const bool streamBroken = awaitingFirstDrain || droppedHighlights || droppedArrows;
 
     if (streamBroken) {
         bridge.highlights.drain([](const AudioUIBridge::HighlightCommand&) {});
@@ -34,32 +35,19 @@ void AudioCommandDrainer::drainAll()
         canvas.arrowManager.resetAllProgress();
         canvas.encapsulationView.syncHighlights();
 
-        needsResync = false;
+        awaitingFirstDrain = false;
     }
     else {
         drainHighlights();
         drainArrows();
     }
 
-    drainCounts();
-}
-
-juce::Colour AudioCommandDrainer::getTraversalColour(int typeId) const
-{
-    const juce::ValueTree traversalData = applicationContext.graphState->traversals.map
-        .getChildWithProperty(ValueTreeIdentifiers::TraversalId, typeId);
-
-    if (!traversalData.isValid()) {
-        return juce::Colours::white;
+    if (droppedCounts) {
+        bridge.counts.drain([](const AudioUIBridge::CountCommand&) {});
     }
-
-    const juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
-
-    if (colourString.isEmpty()) {
-        return juce::Colours::white;
+    else {
+        drainCounts();
     }
-
-    return juce::Colour::fromString(colourString);
 }
 
 void AudioCommandDrainer::drainHighlights()
@@ -67,7 +55,7 @@ void AudioCommandDrainer::drainHighlights()
     applicationContext.processor->eventManager.bridge.highlights.drain(
         [this](const AudioUIBridge::HighlightCommand& command)
     {
-        if (command.nodeId == AudioUIBridge::allNodes) {
+        if (command.kind == AudioUIBridge::HighlightKind::ClearEveryNode) {
             canvas.nodeManager.clearHighlights();
             return;
         }
@@ -77,13 +65,15 @@ void AudioCommandDrainer::drainHighlights()
             return;
         }
 
+        const bool shouldHighlight = command.kind == AudioUIBridge::HighlightKind::Show;
+
         juce::Colour highlightColour = juce::Colours::white;
 
-        if (command.shouldHighlight) {
-            highlightColour = getTraversalColour(command.typeId);
+        if (shouldHighlight) {
+            highlightColour = getTraversalColour(command.traversalId);
         }
 
-        node->setHighlightVisual(command.runId, command.shouldHighlight, highlightColour);
+        node->setHighlightVisual(command.runId, shouldHighlight, highlightColour);
     });
 
     canvas.encapsulationView.syncHighlights();
@@ -94,7 +84,7 @@ void AudioCommandDrainer::drainArrows()
     applicationContext.processor->eventManager.bridge.arrows.drain(
         [this](const AudioUIBridge::ArrowCommand& command)
     {
-        if (command.isReset) {
+        if (command.kind == AudioUIBridge::ArrowKind::TrailReset) {
             if (command.trailId == AudioUIBridge::allTrails) {
                 canvas.arrowManager.resetAllProgress();
                 return;
@@ -109,7 +99,9 @@ void AudioCommandDrainer::drainArrows()
             return;
         }
 
-        const juce::Colour progressColour = getTraversalColour(command.typeId);
+        const juce::Colour progressColour = getTraversalColour(command.traversalId);
+
+        const bool isConnection = command.kind == AudioUIBridge::ArrowKind::Connection;
 
         const auto range = parentNode->nodeArrows.equal_range(command.childNodeId);
 
@@ -119,7 +111,7 @@ void AudioCommandDrainer::drainArrows()
             }
 
             entry->second->startProgress(command.trailId, command.durationMs,
-                                         progressColour, command.isConnection);
+                                         progressColour, isConnection);
         }
     });
 }
@@ -138,4 +130,22 @@ void AudioCommandDrainer::drainCounts()
         node->displayCountLimit   = juce::jmax(1, command.countLimit);
         node->repaint();
     });
+}
+
+juce::Colour AudioCommandDrainer::getTraversalColour(int traversalId) const
+{
+    const juce::ValueTree traversalData = applicationContext.graphState->traversals.map
+        .getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+
+    if (!traversalData.isValid()) {
+        return juce::Colours::white;
+    }
+
+    const juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
+
+    if (colourString.isEmpty()) {
+        return juce::Colours::white;
+    }
+
+    return juce::Colour::fromString(colourString);
 }

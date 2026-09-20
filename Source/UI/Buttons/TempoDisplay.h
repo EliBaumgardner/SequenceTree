@@ -9,6 +9,7 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/ApplicationContext.h"
 #include "../Editors/ValueEditor.h"
+#include "../../Graph/RTData.h"
 
 class TempoDisplay : public juce::Component, public juce::SettableTooltipClient {
 
