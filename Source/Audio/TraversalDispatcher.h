@@ -39,11 +39,11 @@ private:
     int resolveDuration(const RTNode& node, const RTNode* nextTarget,
                         int lastTargetId, const NodeMap& nodes, int danglingIndex);
 
-    void dispatchModulator(const RTNode& node, const DispatchContext& context,
+    void dispatchModulator(const RTNode& node, int runId, const DispatchContext& context,
                            TraversalLogic& traversalLogic, const RTNode*& modulatorNode,
                            bool isPrimaryRepeat);
 
-    void pushChordNotes(const RTNode& node, double sample, int duration,
+    void pushChordNotes(const RTNode& node, int runId, double sample, int duration,
                         double tempoMultiplier, const DispatchContext& context, int parentCount,
                         TraversalLogic& traversalLogic, int transpose);
 
@@ -56,8 +56,6 @@ private:
     void dispatchCrossTree(const RTNode& node, int sourceRunId, double sample,
                            double tempoMultiplier, const DispatchContext& context,
                            TraversalLogic& traversal);
-
-    void applyGraphLoopLimit(TraversalLogic& traversalLogic, int rootId, const DispatchContext& context);
 
     void startCrossTreeTraversal(const RTNode& targetRootNode, const RTtraversal& traversal,
                                  double sample, const DispatchContext& context);

@@ -14,10 +14,12 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
 
         scheduler.sendNoteOff(activeNote, context.midiMessages, 0);
 
-        int orphanedRunId = activeNote.runId;
+        const int                     orphanedRunId = activeNote.runId;
+        const NoteScheduler::NoteRole orphanedRole  = activeNote.role;
+
         scheduler.removeNote(i);
 
-        if (orphanedRunId == -1) {
+        if (orphanedRole == NoteScheduler::NoteRole::ChordVoice) {
             continue;
         }
 
@@ -37,7 +39,8 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
         traversal.primary.target = traversal.rootId;
         traversal.state          = TraversalLogic::TraversalState::Active;
         traversal.advanceAlternative(context.nodes, traversal.rootId);
-        bridge.highlightNode(*rootIt->second, true, orphanedRunId, traversal.traversal.key.typeId);
+        bridge.highlightNode(*rootIt->second, AudioUIBridge::HighlightKind::Show, orphanedRunId,
+                             traversal.traversal.key.typeId);
         dispatcher.pushNote(*rootIt->second, orphanedRunId, context, 0);
     }
 }
@@ -76,9 +79,9 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
 
         scheduler.sendNoteOff(expiringNote, context.midiMessages, expirySample);
 
-        if (expiringNote.runId == -1) {
+        if (expiringNote.role == NoteScheduler::NoteRole::ChordVoice) {
             if (NoteScheduler::isNodeAudible(expiringNote.nodeType)) {
-                bridge.highlightNode(expiringNote.nodeId, false);
+                bridge.highlightNode(expiringNote.nodeId, AudioUIBridge::HighlightKind::Hide, expiringNote.runId);
             }
             scheduler.removeNote(expiringIndex);
             continue;

@@ -4,14 +4,21 @@
 
 #include "RootRectangle.h"
 #include "../Theme/CustomLookAndFeel.h"
+#include "../Editors/Formats/ValueFormat.h"
+
+static constexpr int traversalRefListLength = 24;
 
 RootRectangle::RootRectangle(ApplicationContext& context) : traversalEditor(context)
 {
     setLookAndFeel(context.lookAndFeel);
 
+    auto traversalFormat = std::make_unique<TextFormat>(traversalRefListLength,
+                                                        "0123456789 ," + TraversalFlagFormat::instanceLetters);
+    traversalFormat->trimsWhitespace = false;
+
     traversalEditor.setInterceptsMouseClicks(true, false);
     traversalEditor.setTooltip("Starting Traversal");
-    traversalEditor.setFormat(std::make_unique<TraversalRefListFormat>());
+    traversalEditor.setFormat(std::move(traversalFormat));
     addAndMakeVisible(traversalEditor);
 }
 

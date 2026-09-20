@@ -59,6 +59,7 @@ context="${context}Readability gate (runs on the code you add this turn, not on 
 context="${context}  no function over 80 lines - when one is, lift out a block of 30+ lines as its own function"$'\n'
 context="${context}  one class per .cpp - do not implement a second class there unless its header declares it"$'\n'
 context="${context}  define members in the order the header declares them, and group member variables apart from member functions"$'\n'
+context="${context}  one public: and one private: section per class - never reopen an access section you already closed"$'\n'
 context="${context}Run .claude/readability.sh --file <path> on any file you are asked to analyse, and report what it finds alongside your own read of the naming."$'\n\n'
 
 if [ "$deep" -eq 1 ]; then

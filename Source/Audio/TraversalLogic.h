@@ -85,11 +85,11 @@ public:
         bool step  ();
     };
 
-    enum class TraversalState { Start, Active, End, Reset, Jump };
+    enum class TraversalState { Active, End, Reset, Jump };
 
     struct StepResult
     {
-        enum class Kind { None, EnteredRoot, Advanced, LoopedToRoot, JumpedToTree, Ended };
+        enum class Kind { None, Advanced, LoopedToRoot, JumpedToTree, Ended };
 
         Kind kind = Kind::None;
 
@@ -118,10 +118,9 @@ public:
     LoopState      loop;
     ModulatorWalk  mod;
 
-    int            runId  = 0;
     int            rootId = 0;
 
-    TraversalState state = TraversalState::Start;
+    TraversalState state = TraversalState::End;
 
     unsigned int selectionRandom = 1;
 
@@ -130,6 +129,8 @@ public:
     TraversalLogic() = default;
 
     void reset(int root, const RTtraversal& newTraversal);
+
+    void begin(const NodeMap& nodes, int startNodeId, int graphLoopLimit);
 
     StepResult handleNodeEvent(const NodeMap& nodes);
 
@@ -163,7 +164,6 @@ private:
     const RTNode* eligibleModulatorRoot(const NodeMap& nodes, const RTConnection& connection,
                                         int hostCount) const;
 
-    StepResult enterRoot(const NodeMap& nodes);
     StepResult stepActive(const NodeMap& nodes);
     void       handleLoopReset(const NodeMap& nodes, StepResult& result);
     void       handleTreeJump(const NodeMap& nodes, StepResult& result);

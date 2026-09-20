@@ -24,10 +24,10 @@ private:
     void drainArrows();
     void drainCounts();
 
-    juce::Colour getTraversalColour(int typeId) const;
+    juce::Colour getTraversalColour(int traversalId) const;
 
     NodeCanvas&         canvas;
     ApplicationContext& applicationContext;
 
-    bool needsResync = true;
+    bool awaitingFirstDrain = true;
 };

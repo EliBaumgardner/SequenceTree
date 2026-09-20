@@ -27,6 +27,24 @@ Every `.cpp` must be listed explicitly in `CMakeLists.txt` — there is no glob.
 
 There are no automated tests, and none should be added. Verify changes by building (`SequenceTree_Standalone` is the fastest full-link target) and by exercising the plugin manually in a host. Prioritise exercising it manually for audio engine work.
 
+## Refactoring Commands
+
+Lifting a selection into its own function, and decapsulating a function into its call sites, are performed by `.claude/refactor.py`, not by hand:
+
+```bash
+.claude/refactor.py encapsulate Source/Audio/Foo.cpp:112-147 <name>
+.claude/refactor.py encapsulate Source/Audio/Foo.cpp:112:9-113:55 <name>
+.claude/refactor.py decapsulate Foo::bar
+```
+
+A selection is either whole lines or a character span written `<line>:<column>-<line>:<column>`, both ends inclusive and columns 1-based. `encapsulate` reads the shape of what is selected rather than being told: a balanced selection ending on a `;` or a `}` is lifted as statements and rounded out to whole lines, and anything else is lifted as an expression - the new function returns the expression's value and the call replaces the selected text where it stands, inside whatever `if`, argument list or initialiser it sat in. Either way it derives the parameters and the return value from the data flow, inherits the enclosing function's `const`/`noexcept`, and places the declaration in the access section the enclosing function was declared in. An expression's type is inferred - `bool` for a top-level comparison or logical operator, the declared type of a bare local - and `--type <T>` names it when inference cannot. `decapsulate` rewrites every call site, substitutes arguments for parameters, and prefixes the receiver onto member access when the call site is in another class. Both build `SequenceTree_Standalone` afterwards and restore every file they touched if the build fails. `--dry-run` reports without writing, `--no-build` skips the verification.
+
+Both refuse rather than guess: a `return` crossing the extraction boundary, more than one value live after the range, a type it cannot name because it is `auto` or because the expression's is not inferable, an expression selection carrying `return`, `break` or `continue`, a selection that does not close the brackets it opens, a virtual function, a name defined in more than one class, an address taken, an argument that would be evaluated more than once, or a body that would reach a non-public member from another class. A refusal names the blocker, including which member would have to become public - that is a decision to make, then re-run.
+
+From the editor, `/encapsulate <name>` and `/decapsulate` in `.claude/commands/` take the current CLion selection instead of a typed range: `/encapsulate` turns the selection into `<file>:<line>:<column>-<line>:<column>` and passes it as it stands, widening it only when a statement selection stops short of the braces it opens, and `/decapsulate` resolves the selected symbol to `Class::function`. Both print what they resolved before running, and both stop on a refusal rather than editing by hand.
+
+`design-rules.sh` and `readability.sh` print the exact invocation beneath each finding. A `PreToolUse` hook, `refactor-gate.sh`, denies an `Edit` or `Write` that moves an existing body into a new function or deletes a definition while call sites remain. It sees only those two tools, so an edit made through a shell command bypasses it - use the script rather than routing around the gate.
+
 ## Architecture Overview
 
 SequenceTree is a JUCE plugin that generates MIDI by traversing a user-designed directed graph. Users create nodes, assign MIDI note data and a "count limit" to each, then the plugin walks the graph during playback — when a node's counter reaches its limit, traversal advances to matching children.
@@ -53,7 +71,7 @@ Four things about the model are easy to miss:
 - `TraversalRule` is the child-selection strategy. `RuleContext::eligibleChild` does all the filtering (count limits, trigger limits, zero-duration arrows, per-traversal disables); the rule only picks among survivors. `NativeTraversalRule` is the built-in policy; `ScriptTraversalRule` executes a user script instead.
 - `TraversalDispatcher` turns traversal steps into MIDI events and UI commands (chords, modulators, cross-tree jumps, traversal flags).
 - `NoteScheduler` writes note-ons into the `MidiBuffer` and keeps each sounding note in `activeNotes`, counting down its remaining samples before sending the note-off. A `NoteVoicing` per note applies transpose, velocity scaling, and pitch or velocity overrides.
-- `AudioUIBridge` is the only channel from audio to UI: four lock-free `juce::AbstractFifo`s (highlight, progress, count, arrow reset) carrying plain command structs.
+- `AudioUIBridge` is the only channel from audio to UI: three lock-free `juce::AbstractFifo`s (highlight, arrow, count) carrying plain command structs. Its push functions are the class's whole reason to exist, so they stay short by design and are declared in `core_purpose_api`. A trail reset is an `ArrowKind` on `ArrowCommand`, not a fourth queue, and `HighlightKind::ClearEveryNode` is how the audio thread blanks the canvas.
 - `EventManager` bundles bridge + scheduler + dispatcher and runs the per-block event loop.
 
 **`Source/Script/`** — The traversal scripting language
@@ -133,7 +151,10 @@ Four things about the model are easy to miss:
 - `ApplicationContext` pointers are valid only after `PluginEditor` construction; do not touch them at static init time.
 - This project uses **no code comments**. Express intent through naming.
 - Never write functions that are 1-2 lines **do not write wrapper functions**. A function whose body is a single forwarding call is a wrapper however many callers it has - caller count is a floor, not a warrant, and avoiding duplication is not by itself a reason to extract. If you think a short function is justified because it names a larger process, **ask before writing it**; do not grant yourself that exception.
+- A small function is permitted when it **is** the class's core purpose. When the thing a class exists to do is one small operation per kind of thing it handles - `AudioUIBridge::highlightNode`, `pushProgress`, `pushArrowReset`, `pushCount` - those functions are the class's functionality, not wrappers around it, and dissolving them into their call sites destroys the vocabulary the class exists to provide. The test is whether the function names something the class is *for*: a bridge pushes commands, so its push functions stay however short they are. A function that merely forwards to another class's API is still a wrapper. This exception is **declared, not self-certified** - add the entry to `core_purpose_api` in `.claude/design-rules.sh` so the gate exempts it and the list stays readable as the class's sanctioned API, and **ask before adding one**.
+- Never keep a class that is too small to name what it owns. A subclass whose body is a constructor - no overrides, no members of its own - is constructor arguments pretending to be a type; dissolve it into its call site. The same goes for a standalone class holding one function and nothing else. Plain data aggregates and abstract interfaces are not covered by this.
 - Never let a virtual be a shell. When a caller reaches a class polymorphically, that virtual is the one function the hierarchy is allowed - the work goes inside each override, not one hop further down.
+- Use an enum whenever a property has two or more named states, and whenever two or more terms name the kinds a type comes in. A boolean is for a plain yes/no fact and nothing else - the moment the second state has a name of its own, the states belong in an enum rather than in a bool, an int or a string. Enums describe and label; that is a different job from what a subclass does, which is to modify data, so an enum is never an argument against a subclass family and a type may well want both.
 - Never use ternary operators
 - Always use {} for blocks
 - Always avoid encapsulation on very small segments of code which repeat

@@ -116,7 +116,7 @@ void ArrowManager::adopt(Arrow* arrow)
 int ArrowManager::arrowKey(const Arrow& arrow)
 {
     if (arrow.isDangling()) {
-        return AudioUIBridge::danglingArrowKey(arrow.danglingIndex);
+        return (-((arrow.danglingIndex) + 1));
     }
 
     return arrow.endNode->nodeId;

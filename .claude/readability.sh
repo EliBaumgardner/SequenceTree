@@ -135,7 +135,8 @@ long_hits=$(awk -F'\t' -v MAX="$maxfunc" -v MIN="$minsplit" -v SCOPED="$scoped" 
         for (i = 1; i <= n; i++) {
             if (c[i] == "") { continue }
             split(c[i], d, ":")
-            printf "      extract lines %s-%s (%s-block, %s lines)\n", d[1], d[2], d[4], d[3]
+            printf "      .claude/refactor.py encapsulate %s:%s-%s <name>   (%s-block, %s lines)\n", \
+                   $2, d[1], d[2], d[4], d[3]
             shown++
             if (shown >= 3) { break }
         }
@@ -334,6 +335,62 @@ group_hits=$(printf '%s\n' "$files" | grep -E '\.h$' | xargs awk '
 ' 2>/dev/null)
 emit "member variables and member functions interleaved - group declarations by kind" "$group_hits"
 
+section_hits=$(printf '%s\n' "$files" | grep -E '\.h$' | xargs awk '
+    FNR == 1 {
+        depth = 0; sp = 0; bodydepth = -1; curclass = ""
+        delete seen; delete rep
+    }
+    {
+        line = $0
+        sub(/\/\/.*$/, "", line)
+
+        tmp = line; opens  = gsub(/\{/, "", tmp)
+        tmp = line; closes = gsub(/\}/, "", tmp)
+
+        if (line ~ /^[[:space:]]*(class|struct)[[:space:]]+[A-Za-z_]/ && line !~ /;[[:space:]]*$/) {
+            sp++
+            stkcls[sp] = curclass; stkdepth[sp] = depth; stkbody[sp] = bodydepth
+
+            c = line
+            sub(/^[[:space:]]*(class|struct)[[:space:]]+/, "", c)
+            if (match(c, /^[A-Za-z_][A-Za-z0-9_]*/)) { curclass = substr(c, RSTART, RLENGTH) }
+
+            delete seen[sp, "public"]
+            delete seen[sp, "protected"]
+            delete seen[sp, "private"]
+            rep[sp] = 0
+
+            bodydepth = depth + 1
+            depth += opens - closes
+            next
+        }
+
+        if (curclass != "" && depth == bodydepth && line ~ /^[[:space:]]*(public|protected|private)[[:space:]]*:/) {
+            section = line
+            sub(/^[[:space:]]*/, "", section)
+            sub(/[[:space:]]*:.*$/, "", section)
+
+            if ((sp SUBSEP section) in seen) {
+                if (rep[sp] == 0) {
+                    rep[sp] = 1
+                    printf "  %s:%d  %s reopens %s: - give the class one %s: section, not several\n", FILENAME, FNR, curclass, section, section
+                }
+            }
+            else {
+                seen[sp, section] = 1
+            }
+        }
+
+        depth += opens - closes
+
+        while (sp > 0 && depth <= stkdepth[sp]) {
+            curclass = stkcls[sp]; bodydepth = stkbody[sp]
+            sp--
+        }
+    }
+' 2>/dev/null)
+emit "a class opens the same access section more than once - keep one public and one private section" "$section_hits"
+
 if [ "$mode" = "stop" ] || [ "$mode" = "post-tool" ]; then
     if [ "$findings" -eq 0 ]; then
         exit 0
@@ -365,7 +422,7 @@ if [ "$findings" -eq 0 ]; then
 else
     printf '%s\n' "$report"
 fi
-echo "readability: machine-checked - function length (>${maxfunc} lines) with ${minsplit}+ line extraction candidates, multiple classes per .cpp, definition order vs header, variable/function declaration grouping"
+echo "readability: machine-checked - function length (>${maxfunc} lines) with ${minsplit}+ line extraction candidates, multiple classes per .cpp, definition order vs header, variable/function declaration grouping, repeated access sections"
 echo "readability: NOT machine-checked - judge these yourself:"
 echo "  Whether names carry the intent that comments are banned from carrying"
 echo "  Whether a long function is long because it is doing two jobs, or because one job is genuinely long"

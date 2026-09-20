@@ -197,6 +197,6 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKe
     instance->runtime.asFlag       = true;
     instance->runtime.sourceNodeId = flagNode.nodeID;
 
-    bridge.highlightNode(startNode, true, runId, instance->logic.traversal.key.typeId);
+    bridge.highlightNode(startNode, AudioUIBridge::HighlightKind::Show, runId, instance->logic.traversal.key.typeId);
     dispatcher.pushNote(startNode, runId, context, sample);
 }

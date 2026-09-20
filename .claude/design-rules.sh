@@ -60,7 +60,9 @@ case "$mode" in
     *)
         files=$( { git diff --name-only HEAD -- 'Source/*.cpp' 'Source/*.h' 2>/dev/null
                    git ls-files --others --exclude-standard -- 'Source/*.cpp' 'Source/*.h' 2>/dev/null; } \
-                 | sort -u )
+                 | sort -u | while read -r candidate; do
+                       if [ -f "$candidate" ]; then echo "$candidate"; fi
+                   done )
         scope="files changed vs HEAD"
         ;;
 esac
@@ -156,6 +158,93 @@ echo "$files" | tr ' ' '\n' | grep -E '\.h$' | xargs awk '
     }
 ' 2>/dev/null > "$members"
 
+classes="$work/classes"
+echo "$files" | tr ' ' '\n' | grep -E '\.h$' | xargs awk '
+    function squash(s,   g) {
+        g = s
+        while (sub(/<[^<>]*>/, "", g)) { }
+        return g
+    }
+    function classify(d,   g, nm) {
+        if (top < 1) { return }
+        if (d ~ /^[[:space:]]*$/) { return }
+        if (d ~ /(public|private|protected)[[:space:]]*:/) { return }
+        if (d ~ /(^|[^A-Za-z0-9_])(using|typedef|friend|template|enum|union)[^A-Za-z0-9_]/) { return }
+        if (d ~ /(^|[^A-Za-z0-9_])(class|struct)[[:space:]]+[A-Za-z_]/) { return }
+        if (d ~ /(^|[^A-Za-z0-9_])override([^A-Za-z0-9_]|$)/) { over[top]++ }
+        if (d ~ /(^|[^A-Za-z0-9_])virtual[^A-Za-z0-9_]/) { virt[top]++ }
+        g = squash(d)
+        if (g ~ /\(/) {
+            fn[top]++
+            nm = g
+            sub(/\(.*$/, "", nm)
+            if (match(nm, /[A-Za-z_~][A-Za-z0-9_]*[[:space:]]*$/)) {
+                nm = substr(nm, RSTART, RLENGTH)
+                gsub(/[[:space:]]/, "", nm)
+                if (nm == cname[top] || nm ~ /^~/) { ctor[top]++ }
+            }
+            return
+        }
+        if (d ~ /;/) { var[top]++ }
+    }
+    FNR == 1 { depth = 0; top = 0; pending = 0; head = ""; decl = "" }
+    {
+        line = $0
+        sub(/\/\/.*$/, "", line)
+        gsub(/"[^"]*"/, "\"\"", line)
+
+        if (pending == 0 && line ~ /(^|[^A-Za-z0-9_])(class|struct)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/ && line !~ /;[[:space:]]*$/) {
+            pending = 1
+            head = line
+            headline = FNR
+        }
+        else if (pending == 1) {
+            head = head " " line
+        }
+
+        for (i = 1; i <= length(line); i++) {
+            c = substr(line, i, 1)
+            if (c == "{") {
+                if (top > 0 && depth == bodyd[top] && pending == 0) { classify(decl); decl = "" }
+                depth++
+                if (pending == 1) {
+                    top++
+                    cname[top] = "?"
+                    if (match(head, /(^|[^A-Za-z0-9_])(class|struct)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/)) {
+                        nm = substr(head, RSTART, RLENGTH)
+                        sub(/^[^A-Za-z0-9_]*/, "", nm)
+                        sub(/^(class|struct)[[:space:]]+/, "", nm)
+                        cname[top] = nm
+                    }
+                    base[top] = 0
+                    if (head ~ /:[[:space:]]*(public|protected|private|virtual)/) { base[top] = 1 }
+                    bodyd[top] = depth
+                    cline[top] = headline
+                    cfile[top] = FILENAME
+                    fn[top] = 0; var[top] = 0; over[top] = 0; ctor[top] = 0; virt[top] = 0
+                    pending = 0
+                    head = ""
+                    decl = ""
+                }
+            }
+            else if (c == "}") {
+                if (top > 0 && depth == bodyd[top]) {
+                    print cfile[top] "\t" cline[top] "\t" cname[top] "\t" base[top] "\t" fn[top] "\t" var[top] "\t" over[top] "\t" ctor[top] "\t" virt[top]
+                    top--
+                }
+                depth--
+                decl = ""
+            }
+            else if (top > 0 && depth == bodyd[top] && pending == 0) {
+                decl = decl c
+                if (c == ";") { classify(decl); decl = "" }
+                else if (c == ":" && decl ~ /(public|protected|private)[[:space:]]*:$/) { decl = "" }
+            }
+        }
+        if (top > 0 && depth == bodyd[top] && pending == 0) { decl = decl " " }
+    }
+' 2>/dev/null > "$classes"
+
 violations=0
 report=""
 
@@ -212,11 +301,40 @@ brace_hits=$(echo "$files" | xargs awk '
     { prev = "" }
 ' 2>/dev/null | only_added)
 
-tiny_hits=$(awk -F'\t' '
-    $1 == "F" && $7 == "function" && $6 == 0 && $5 <= 2 && $5 > 0 {
-        printf "%s:%d:%s() body is %d statement(s)\n", $2, $3, $8, $5
+core_purpose_api="
+Source/Audio/AudioUIBridge.h:highlightNode
+Source/Audio/AudioUIBridge.h:clearAllHighlights
+Source/Audio/AudioUIBridge.h:pushProgress
+Source/Audio/AudioUIBridge.h:pushArrowReset
+Source/Audio/AudioUIBridge.h:pushCount
+Source/Audio/AudioUIBridge.h:hasPendingCommands
+Source/Audio/AudioUIBridge.h:primaryTrail
+Source/Audio/AudioUIBridge.h:modulatorTrail
+Source/Audio/AudioUIBridge.h:danglingArrowKey
+Source/Audio/AudioUIBridge.h:hasPending
+"
+
+tiny_scan=$(CORE_PURPOSE_API="$core_purpose_api" awk -F'\t' '
+    BEGIN {
+        n = split(ENVIRON["CORE_PURPOSE_API"], rows, "\n")
+        for (i = 1; i <= n; i++) {
+            if (rows[i] != "") { exempt[rows[i]] = 1 }
+        }
     }
-' "$funcs" | only_added)
+    $1 == "F" && $7 == "function" && $6 == 0 && $5 <= 2 && $5 > 0 {
+        if (($2 ":" $8) in exempt) {
+            printf "X\t%s:%d:%s()\n", $2, $3, $8
+            next
+        }
+        cmd = ""
+        if ($9 != "") { cmd = sprintf(" ||CMD|| .claude/refactor.py decapsulate %s::%s", $9, $8) }
+        printf "H\t%s:%d:%s() body is %d statement(s)%s\n", $2, $3, $8, $5, cmd
+    }
+' "$funcs")
+
+tiny_hits=$(printf '%s\n' "$tiny_scan" | grep '^H' | cut -f2- | only_added \
+            | awk '{ sub(/ \|\|CMD\|\| /, "\n      "); print }')
+tiny_exempt=$(printf '%s\n' "$tiny_scan" | grep '^X' | cut -f2- | only_added)
 
 accessor_hits=$(awk -F'\t' '
     FILENAME == ARGV[1] && $1 == "M" { owner[$2 "\t" $3] = $4 ":" $5; vis[$2 "\t" $3] = $6; next }
@@ -270,6 +388,35 @@ if [ -n "$audiofiles" ]; then
     ' 2>/dev/null | only_added)
 fi
 
+smallclass_hits=$(awk -F'\t' '
+    $4 == 1 && $7 == 0 && $9 == 0 && $6 == 0 && $5 > 0 && $5 == $8 {
+        printf "%s:%d:%s adds nothing to its base - a constructor, no overrides, no members; dissolve it into its call site\n", $1, $2, $3
+    }
+    $4 == 0 && $9 == 0 && $5 >= 1 && ($5 + $6) <= 2 {
+        printf "%s:%d:%s holds %d function(s) and %d member(s) - too small to be its own class; dissolve it unless you can say what it owns\n", $1, $2, $3, $5, $6
+    }
+' "$classes" | only_added)
+
+enum_hits=$(echo "$files" | xargs awk '
+    function trim(s) {
+        sub(/^[[:space:]]+/, "", s)
+        return s
+    }
+    {
+        line = $0
+        sub(/\/\/.*$/, "", line)
+
+        if (line ~ /^[[:space:]]*(mutable[[:space:]]+)?(std::atomic<bool>|bool)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*([Tt]ype|[Mm]ode|[Kk]ind|[Ss]tate|[Ss]tyle)[A-Za-z0-9_]*[[:space:]]*[=;]/) {
+            printf "%s:%d:%s - names a mode but holds it in a bool; give the states names in an enum\n", FILENAME, FNR, trim($0)
+            next
+        }
+        if (FILENAME ~ /\.h$/ \
+         && line ~ /^[[:space:]]*(int|juce::String)[[:space:]]+[A-Za-z_]*([Tt]ype|[Mm]ode|[Kk]ind|[Ss]tyle)[A-Za-z0-9_]*[[:space:]]*[=;]/) {
+            printf "%s:%d:%s - carries a kind in an untyped field; name the alternatives in an enum\n", FILENAME, FNR, trim($0)
+        }
+    }
+' 2>/dev/null | only_added)
+
 staticctx_hits=$(echo "$files" | xargs grep -HnE '^[[:space:]]*(static|extern)?[[:space:]]*[A-Za-z_][A-Za-z0-9_:<>]*[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[^=]*ApplicationContext' 2>/dev/null | only_added)
 
 emit "Never use inline functions"                                        "$inline_hits"
@@ -282,14 +429,24 @@ emit "Never allocate or free on the audio thread"                        "$alloc
 emit "Never touch UI components from the audio thread"                   "$uimutate_hits"
 emit "Only RTData structs and RTScript cross the audio boundary"         "$boundary_hits"
 emit "ApplicationContext is not valid at static init time"               "$staticctx_hits"
+emit "Very small classes should be dissolved, not kept"                  "$smallclass_hits"
+emit "Named states and kinds belong in an enum, not a bool or a bare int" "$enum_hits"
 
-checked="inline, ternaries, comments, braces, tiny/wrapper functions, non-public members with accessors, audio-thread allocation, audio-thread UI access, audio boundary types, static-init ApplicationContext"
+checked="inline, ternaries, comments, braces, tiny/wrapper functions, very small classes, non-public members with accessors, audio-thread allocation, audio-thread UI access, audio boundary types, static-init ApplicationContext, modes and kinds held outside an enum"
 unchecked="Code fits the class's intended purpose / single area of concern
 Avoid encapsulation on very small segments of code which repeat
 Whether a push_back stays inside its reserved capacity (the allocation check cannot see capacity)
 Per-block scratch state lives in reserved member vectors, not locals
 Prefer declaring an unused variable over deleting one that represents the class's functionality
-Whether a short function qualifies for the \"states a larger process\" exception - ASK, do not self-certify"
+Whether a short function qualifies for the \"states a larger process\" exception - ASK, do not self-certify
+Whether a small function is the class's core purpose - if so it belongs in core_purpose_api in design-rules.sh, and ASK before adding it
+Whether a class small enough to flag has a reason to exist anyway - ASK before keeping it
+Whether several bools in one class are really one enum state - the enum check only sees a field named like a mode, so a cluster such as brushStrokeActive/brushErase passes it
+Whether a state named in neither the type nor the field name still has two or more named alternatives and so owes an enum"
+
+if [ -n "$tiny_exempt" ]; then
+    report="${report}"$'\n'"[EXEMPT] Small functions declared as their class's core purpose (core_purpose_api in design-rules.sh)"$'\n'"$(printf '%s\n' "$tiny_exempt" | sed 's/^/  /')"$'\n'
+fi
 
 coverage="design-rules: machine-checked - ${checked}"$'\n'
 coverage="${coverage}design-rules: NOT machine-checked - judge these yourself, a pass here is not a pass on them:"$'\n'

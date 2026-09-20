@@ -30,7 +30,7 @@ void TraversalSession::prepare()
     syncedPoolEpoch       = 0;
 
     nativeFallbackScript = compileTraversalScript(defaultTraversalScriptSource()).script;
-    scriptRule.setScript(&nativeFallbackScript);
+    scriptRule.script = &nativeFallbackScript;
 
     if (useScriptedChildSelection) {
         traversals.prepare(maxConcurrentTraversals, scriptRule);
@@ -43,11 +43,11 @@ void TraversalSession::prepare()
 void TraversalSession::setSelectChildScript(const RTScript* script)
 {
     if (script != nullptr && !script->isEmpty()) {
-        scriptRule.setScript(script);
+        scriptRule.script = script;
         return;
     }
 
-    scriptRule.setScript(&nativeFallbackScript);
+    scriptRule.script = &nativeFallbackScript;
 }
 
 void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
@@ -115,7 +115,7 @@ void TraversalSession::restartActiveTraversals(const DispatchContext& context)
 void TraversalSession::syncWithGraph(const DispatchContext& context, std::uint64_t graphGeneration)
 {
     if (graphGeneration == syncedGraphGeneration
-        && traversals.membershipEpoch() == syncedPoolEpoch) {
+        && traversals.epoch == syncedPoolEpoch) {
         return;
     }
 
@@ -125,7 +125,7 @@ void TraversalSession::syncWithGraph(const DispatchContext& context, std::uint64
     syncTraversalLoopLimits(context);
 
     syncedGraphGeneration = graphGeneration;
-    syncedPoolEpoch       = traversals.membershipEpoch();
+    syncedPoolEpoch       = traversals.epoch;
 }
 
 void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
@@ -255,7 +255,8 @@ void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
                 traversal.state          = TraversalLogic::TraversalState::Active;
                 traversal.advanceAlternative(context.nodes, traversal.rootId);
 
-                eventManager.bridge.highlightNode(rootNode, true, runId, traversal.traversal.key.typeId);
+                eventManager.bridge.highlightNode(rootNode, AudioUIBridge::HighlightKind::Show, runId,
+                                                  traversal.traversal.key.typeId);
                 eventManager.dispatcher.pushNote(rootNode, runId, context, 0);
             }
         }
@@ -337,17 +338,9 @@ void TraversalSession::startTraversal(const RTNode& rootNode, const RTtraversal&
         return;
     }
 
-    TraversalLogic& traversalLogic = acquired->logic;
+    acquired->logic.begin(context.nodes, rootId, rootNode.graphLoopLimit);
 
-    traversalLogic.runId          = runId;
-    traversalLogic.primary.target = rootId;
-    traversalLogic.state          = TraversalLogic::TraversalState::Active;
-    traversalLogic.loop.active    = true;
-    traversalLogic.loop.limit     = rootNode.graphLoopLimit;
-
-    traversalLogic.advanceAlternative(context.nodes, rootId);
-
-    eventManager.bridge.highlightNode(rootNode, true, runId, traversal.key.typeId);
+    eventManager.bridge.highlightNode(rootNode, AudioUIBridge::HighlightKind::Show, runId, traversal.key.typeId);
     eventManager.dispatcher.pushNote(rootNode, runId, context, 0);
 }
 
@@ -358,13 +351,13 @@ void TraversalSession::stopTraversalNotes(int runId, juce::MidiBuffer& midiMessa
     for (int i = static_cast<int>(activeNotes.size()) - 1; i >= 0; --i) {
         auto& note = activeNotes[i];
 
-        if (note.runId != runId) {
+        if (note.runId != runId || note.role != NoteScheduler::NoteRole::Stepping) {
             continue;
         }
 
         eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
 
-        eventManager.bridge.highlightNode(note.nodeId, false, runId);
+        eventManager.bridge.highlightNode(note.nodeId, AudioUIBridge::HighlightKind::Hide, runId);
         eventManager.scheduler.removeNote(i);
     }
 

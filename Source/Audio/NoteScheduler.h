@@ -16,9 +16,12 @@ public:
         int midiChannel = 1;
     };
 
+    enum class NoteRole { Stepping, ChordVoice };
+
     struct ActiveNote
     {
         MidiEvent        event;
+        NoteRole         role        = NoteRole::Stepping;
         int              runId       = 0;
         double           remainingSamples = 0.0;
         int              nodeId           = 0;
@@ -41,7 +44,7 @@ public:
 
     NoteScheduler();
 
-    void scheduleNote(const RTNode& node, int runId, double sample,
+    void scheduleNote(const RTNode& node, NoteRole role, int runId, double sample,
                       juce::MidiBuffer& midiMessages,
                       double sampleRate, double tempoMultiplier,
                       int duration, bool isConnectionTrigger,

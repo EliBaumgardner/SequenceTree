@@ -18,6 +18,12 @@
         "hooks": [
           {
             "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.claude/refactor-gate.sh\"",
+            "timeout": 15,
+            "statusMessage": "Checking for hand-run extract/inline"
+          },
+          {
+            "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR/.claude/systematic-check.sh\" --hook pre-edit",
             "timeout": 15,
             "statusMessage": "Front-half pass gate"

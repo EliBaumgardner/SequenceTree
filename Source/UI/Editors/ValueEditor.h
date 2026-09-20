@@ -5,7 +5,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ValueFormat.h"
+#include "Formats/ValueFormat.h"
 #include "../../Util/ApplicationContext.h"
 
 

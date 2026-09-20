@@ -6,6 +6,7 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
+#include "../Editors/Formats/ValueFormat.h"
 #include "../../Util/ApplicationContext.h"
 
 #include <algorithm>
@@ -46,7 +47,7 @@ void RootNode::bindToTree()
         const TraversalKey key { (int) reference.getProperty(ValueTreeIdentifiers::TraversalId),
                                  (int) reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0) };
 
-        equippedReferences.add(TraversalRefListFormat::describe(key));
+        equippedReferences.add(TraversalFlagFormat::describe(key));
     }
 
     rootRectangle->traversalEditor.commitText(equippedReferences.joinIntoString(" "));
@@ -63,7 +64,7 @@ void RootNode::equipTraversals()
     ValueEditor& traversalEditor = rootRectangle->traversalEditor;
 
     const std::vector<TraversalKey> keys =
-        TraversalRefListFormat::parseKeys(traversalEditor.boundValue.getValue().toString());
+        TraversalFlagFormat::parseKeys(traversalEditor.boundValue.getValue().toString());
 
     juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
 

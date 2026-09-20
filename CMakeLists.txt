@@ -73,7 +73,12 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Node/Arrow.cpp
         Source/UI/Node/ArrowAnimation.cpp
         Source/UI/Editors/ValueEditor.cpp
-        Source/UI/Editors/ValueFormat.cpp
+        Source/UI/Editors/Formats/NumberFormat.cpp
+        Source/UI/Editors/Formats/PitchFormat.cpp
+        Source/UI/Editors/Formats/GreekLetterFormat.cpp
+        Source/UI/Editors/Formats/DualIntFormat.cpp
+        Source/UI/Editors/Formats/TraversalFlagFormat.cpp
+        Source/UI/Editors/Formats/TextFormat.cpp
         Source/UI/Node/Modulator.cpp
         Source/UI/Node/Encapsulator.cpp
         Source/UI/Node/TraversalFlagNode.cpp
