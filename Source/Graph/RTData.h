@@ -10,9 +10,8 @@
 
 #pragma once
 
-#include <memory>
+#include <algorithm>
 #include <vector>
-#include <unordered_map>
 
 struct RTNote {
 
@@ -121,4 +120,18 @@ struct RTNode {
     }
 };
 
-using NodeMap = std::unordered_map<int, std::shared_ptr<const RTNode>>;
+struct NodeMap {
+
+    std::vector<RTNode> sortedById;
+
+    const RTNode* find(int nodeId) const
+    {
+        const auto position = std::ranges::lower_bound(sortedById, nodeId, {}, &RTNode::nodeID);
+
+        if (position == sortedById.end() || position->nodeID != nodeId) {
+            return nullptr;
+        }
+
+        return &*position;
+    }
+};

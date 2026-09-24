@@ -43,7 +43,10 @@ public:
         int  decidedTarget  = -1;
         bool decidedRestart = false;
 
-        bool isActive() const { return gate.activeRootId != -1; }
+        constexpr bool isActive() const
+        {
+            return gate.activeRootId != -1;
+        }
 
         void activate(int rootId, int hostId)
         {
@@ -126,7 +129,7 @@ public:
 
     const TraversalRule* rule = &NativeTraversalRule::instance();
 
-    TraversalLogic() = default;
+    constexpr TraversalLogic() = default;
 
     void reset(int root, const RTtraversal& newTraversal);
 

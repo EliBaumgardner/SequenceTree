@@ -118,7 +118,6 @@ void NodeManager::connectIncomingArrows(int nodeId, Node* node)
         }
 
         canvas.arrowManager.connectParentToChild(parentNode, node);
-        applicationContext.rtGraphBuilder->makeRTGraph(parentTree);
     }
 }
 
@@ -175,8 +174,6 @@ void NodeManager::add(int nodeId)
         canvas.gridSpacing   = ArrowInfo::pixelsPerGridSpace;
         canvas.gridOriginSet = true;
     }
-
-    applicationContext.rtGraphBuilder->makeRTGraph(nodeChildTree);
 }
 
 void NodeManager::remove(int nodeId)

@@ -173,12 +173,6 @@ void SequenceTreeAudioProcessor::applyRestoredState()
 
     const juce::ValueTree restoredTree = pendingRestoreState;
 
-    auto* editor = dynamic_cast<SequenceTreeAudioProcessorEditor*>(getActiveEditor());
-
-    if (editor != nullptr) {
-        editor->detachStateListeners();
-    }
-
     juce::ValueTree restoredNodeMap = restoredTree;
     juce::ValueTree restoredTraversalMap;
     juce::ValueTree restoredRules;
@@ -196,13 +190,14 @@ void SequenceTreeAudioProcessor::applyRestoredState()
 
     rtGraphBuilder.rebuildAllGraphs();
 
+    undoManager.clearUndoHistory();
+
     snapshots.publishActiveTraversalRule();
 
     pendingRestoreState = juce::ValueTree();
 
-    if (editor != nullptr) {
+    if (auto* editor = dynamic_cast<SequenceTreeAudioProcessorEditor*>(getActiveEditor())) {
         editor->canvas->rebuildFromNodeMap(graphState.nodeMap);
-        editor->attachStateListeners();
     }
 }
 
@@ -348,8 +343,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     traversalSession.syncWithGraph(context, snap->generation);
 
-    if (traversalSession.isIdle()
-        && !traversalSession.startTraversalsFromFirstRoot(context)) {
+    if ((traversalSession.traversals.empty()) && !traversalSession.startTraversalsFromFirstRoot(context)) {
         if (!eventManager.scheduler.activeNotes.empty()) {
             traversalSession.silenceAllNotes(midiMessages);
         }

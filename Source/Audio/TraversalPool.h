@@ -196,7 +196,10 @@ public:
         ++epoch;
     }
 
-    bool empty() const { return activeCount == 0; }
+    constexpr bool empty() const
+    {
+        return activeCount == 0;
+    }
 
     int findRunFor(int rootId, const TraversalKey& key) const
     {
@@ -233,8 +236,10 @@ public:
     std::uint64_t epoch = 0;
 
 private:
-
-    int slotCount() const { return static_cast<int>(slots.size()); }
+    constexpr int slotCount() const
+    {
+        return static_cast<int>(slots.size());
+    }
 
     int findSlotIndex(int runId) const
     {

@@ -29,10 +29,6 @@ void NodeCanvasTreeListener::valueTreeChildAdded(juce::ValueTree& parent, juce::
         update.rootNodeId = child.getProperty(ValueTreeIdentifiers::Id);
         canvas.enqueueAsyncUpdate(update);
     }
-    else if (parent.getType() == ValueTreeIdentifiers::TraversalChildrenIds
-          || parent.getType() == ValueTreeIdentifiers::DisabledTraversalIds) {
-        enqueueGraphRebuild(parent);
-    }
     else if (child.getType() == ValueTreeIdentifiers::DanglingArrows) {
         enqueueDanglingArrowsChanged(parent);
     }
@@ -53,22 +49,6 @@ void NodeCanvasTreeListener::enqueueDanglingArrowsChanged(const juce::ValueTree&
     canvas.enqueueAsyncUpdate(update);
 }
 
-void NodeCanvasTreeListener::enqueueGraphRebuild(juce::ValueTree tree) const
-{
-    while (tree.isValid() && ! tree.hasProperty(ValueTreeIdentifiers::RootNodeId)) {
-        tree = tree.getParent();
-    }
-
-    if (! tree.isValid()) {
-        return;
-    }
-
-    NodeCanvas::AsyncUpdate update;
-    update.type   = NodeCanvas::AsyncUpdateType::GraphRebuild;
-    update.nodeId = tree.getProperty(ValueTreeIdentifiers::Id);
-    canvas.enqueueAsyncUpdate(update);
-}
-
 void NodeCanvasTreeListener::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex)
 {
     if (parent.getType() == ValueTreeIdentifiers::NodeMap) {
@@ -84,10 +64,6 @@ void NodeCanvasTreeListener::valueTreeChildRemoved(juce::ValueTree& parent, juce
         update.nodeId     = parent.getParent().getProperty(ValueTreeIdentifiers::Id);
         update.rootNodeId = child.getProperty(ValueTreeIdentifiers::Id);
         canvas.enqueueAsyncUpdate(update);
-    }
-    else if (parent.getType() == ValueTreeIdentifiers::TraversalChildrenIds
-          || parent.getType() == ValueTreeIdentifiers::DisabledTraversalIds) {
-        enqueueGraphRebuild(parent);
     }
     else if (child.getType() == ValueTreeIdentifiers::DanglingArrows) {
         enqueueDanglingArrowsChanged(parent);
@@ -119,15 +95,6 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
         update.nodeId = tree.getProperty(ValueTreeIdentifiers::Id);
         canvas.enqueueAsyncUpdate(update);
     }
-    else if (propertyIdentifier == ValueTreeIdentifiers::MidiDuration) {
-        juce::ValueTree noteNode = tree.getParent().getParent();
-        NodeCanvas::AsyncUpdate update;
-        update.type   = NodeCanvas::AsyncUpdateType::DurationOnly;
-        update.nodeId = noteNode.getProperty(ValueTreeIdentifiers::Id);
-        canvas.enqueueAsyncUpdate(update);
-
-        enqueueGraphRebuild(noteNode);
-    }
     else if (propertyIdentifier == ValueTreeIdentifiers::MidiPitch
         || propertyIdentifier == ValueTreeIdentifiers::MidiVelocity) {
 
@@ -135,35 +102,6 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
         NodeCanvas::AsyncUpdate update;
         update.type   = NodeCanvas::AsyncUpdateType::ValueChanged;
         update.nodeId = noteNode.getProperty(ValueTreeIdentifiers::Id);
-        canvas.enqueueAsyncUpdate(update);
-
-        enqueueGraphRebuild(noteNode);
-    }
-    else if (propertyIdentifier == ValueTreeIdentifiers::MidiChannel) {
-        enqueueGraphRebuild(tree);
-    }
-    else if (propertyIdentifier == ValueTreeIdentifiers::CountLimit
-        || propertyIdentifier == ValueTreeIdentifiers::TriggerLimit
-        || propertyIdentifier == ValueTreeIdentifiers::LoopLimit
-        || propertyIdentifier == ValueTreeIdentifiers::SwitchCountLimit
-        || propertyIdentifier == ValueTreeIdentifiers::SubLoopCountLimit
-        || propertyIdentifier == ValueTreeIdentifiers::RepeatValue
-        || propertyIdentifier == ValueTreeIdentifiers::Probability
-        || propertyIdentifier == ValueTreeIdentifiers::ModAmount
-        || propertyIdentifier == ValueTreeIdentifiers::TraversalFlagValue
-        || propertyIdentifier == ValueTreeIdentifiers::EncapsulatorId) {
-
-        enqueueGraphRebuild(tree);
-    }
-    else if (nodeType == ValueTreeIdentifiers::TraversalData
-        && (propertyIdentifier == ValueTreeIdentifiers::TempoMultiplier
-         || propertyIdentifier == ValueTreeIdentifiers::TraversalChannel
-         || propertyIdentifier == ValueTreeIdentifiers::TraversalTranspose
-         || propertyIdentifier == ValueTreeIdentifiers::TraversalVelocity)) {
-
-        NodeCanvas::AsyncUpdate update;
-        update.type   = NodeCanvas::AsyncUpdateType::TraversalDataChanged;
-        update.nodeId = tree.getProperty(ValueTreeIdentifiers::TraversalId);
         canvas.enqueueAsyncUpdate(update);
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::ArrowTipX

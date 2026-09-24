@@ -28,8 +28,6 @@ public:
 
     bool startTraversalsFromFirstRoot(const DispatchContext& context);
 
-    bool isIdle() const { return traversals.empty(); }
-
     void setSelectChildScript(const RTScript* script);
 
     TraversalPool traversals;

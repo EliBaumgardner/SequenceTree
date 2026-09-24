@@ -41,7 +41,10 @@ public:
         }
     }
 
-    bool hasPending() const { return fifo.getNumReady() > 0; }
+    constexpr bool hasPending() const
+    {
+        return fifo.getNumReady() > 0;
+    }
 
 private:
 
@@ -84,10 +87,16 @@ public:
 
     static constexpr int allTrails = -1;
 
-    static int primaryTrail  (int runId) { return runId * 2; }
-    static int modulatorTrail(int runId) { return runId * 2 + 1; }
+    static constexpr int primaryTrail(int runId)
+    {
+        return runId * 2;
+    }
+    static constexpr int modulatorTrail(int runId)
+    {
+        return runId * 2 + 1;
+    }
 
-    bool hasPendingCommands() const
+    constexpr bool hasPendingCommands() const
     {
         return highlights.hasPending()
         || arrows.hasPending()

@@ -16,12 +16,12 @@ const RTNode* RuleContext::eligibleChild(int childId) const
         return nullptr;
     }
 
-    const auto childIt = nodes.find(childId);
-    if (childIt == nodes.end()) {
+    const RTNode* const childNode = nodes.find(childId);
+    if (childNode == nullptr) {
         return nullptr;
     }
 
-    const RTNode& child = *childIt->second;
+    const RTNode& child = *childNode;
 
     if (!isEligible(child.nodeType)) {
         return nullptr;

@@ -2,6 +2,8 @@
 #include "../Graph/TraversalRuleState.h"
 
 #include <algorithm>
+#include <iterator>
+#include <ranges>
 
 AudioSnapshotPublisher::AudioSnapshotPublisher(TraversalRuleState& traversalRuleState)
     : traversalRuleState(traversalRuleState)
@@ -24,28 +26,23 @@ void AudioSnapshotPublisher::publishGraph(int graphId, NodeMap graphNodes)
 {
     auto edit = beginEdit();
 
-    if (edit->globalNodes != nullptr) {
-        edit->globalNodes = std::make_shared<NodeMap>(*edit->globalNodes);
+    auto merged = std::make_shared<NodeMap>();
+
+    if (edit->globalNodes == nullptr) {
+        merged->sortedById = std::move(graphNodes.sortedById);
     }
     else {
-        edit->globalNodes = std::make_shared<NodeMap>();
+        auto isOutsideGraph = [graphId](const RTNode& node) { return node.graphID != graphId; };
+
+        merged->sortedById.reserve(edit->globalNodes->sortedById.size() + graphNodes.sortedById.size());
+
+        std::ranges::set_union(graphNodes.sortedById,
+                               edit->globalNodes->sortedById | std::views::filter(isOutsideGraph),
+                               std::back_inserter(merged->sortedById),
+                               {}, &RTNode::nodeID, &RTNode::nodeID);
     }
 
-    for (const auto& [nodeId, node] : graphNodes) {
-        (*edit->globalNodes)[nodeId] = node;
-    }
-
-    std::vector<int> staleIds;
-
-    for (const auto& [nodeId, node] : *edit->globalNodes) {
-        if (node->graphID == graphId && !graphNodes.count(nodeId)) {
-            staleIds.push_back(nodeId);
-        }
-    }
-
-    for (int id : staleIds) {
-        edit->globalNodes->erase(id);
-    }
+    edit->globalNodes = std::move(merged);
 
     publish(std::move(edit));
 }

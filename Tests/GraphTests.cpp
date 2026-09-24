@@ -58,15 +58,15 @@ TEST_CASE("arrow length sets the connection duration, and moving a node retimes 
 
     const NodeMap& built = rebuildAndPublish(processor);
 
-    REQUIRE(built.at(rootId)->findConnection(childId) != nullptr);
-    CHECK(built.at(rootId)->findConnection(childId)->duration == 500);
+    REQUIRE(built.find(rootId)->findConnection(childId) != nullptr);
+    CHECK(built.find(rootId)->findConnection(childId)->duration == 500);
 
     GraphState::setNodePosition(graph.getNode(childId), NodePosition { 200, 0, 25 }, nullptr);
     processor.rtGraphBuilder.updateDurationMaps({ childId });
 
     const NodeMap& moved = *processor.snapshots.getPublished()->globalNodes;
 
-    CHECK(moved.at(rootId)->findConnection(childId)->duration == 1000);
+    CHECK(moved.find(rootId)->findConnection(childId)->duration == 1000);
 }
 
 TEST_CASE("a child directly below its parent is a chord link and is never stepped into", "[graph]")
@@ -79,7 +79,7 @@ TEST_CASE("a child directly below its parent is a chord link and is never steppe
 
     const NodeMap& nodes = rebuildAndPublish(processor);
 
-    CHECK(nodes.at(rootId)->findConnection(chordId)->duration == 0);
+    CHECK(nodes.find(rootId)->findConnection(chordId)->duration == 0);
 
     TraversalLogic logic;
 
@@ -108,8 +108,8 @@ TEST_CASE("a created child inherits its parent's limits", "[graph]")
 
     const NodeMap& nodes = rebuildAndPublish(processor);
 
-    CHECK(nodes.at(childId)->countLimit       == 3);
-    CHECK(nodes.at(childId)->switchCountLimit == 2);
+    CHECK(nodes.find(childId)->countLimit       == 3);
+    CHECK(nodes.find(childId)->switchCountLimit == 2);
 }
 
 TEST_CASE("a chain built through the graph walks in order and loops", "[graph][traversal]")
@@ -181,8 +181,8 @@ TEST_CASE("a modulator chain built through the graph walks like a node chain", "
                                       modulatorRootId, modulatorMiddleId, modulatorLeafId, modulatorRootId };
 
     CHECK(visited == expected);
-    CHECK(nodes.count(middleId) == 1);
-    CHECK(nodes.count(leafId)   == 1);
+    CHECK(nodes.find(middleId) != nullptr);
+    CHECK(nodes.find(leafId)   != nullptr);
 }
 
 TEST_CASE("moving a pitch-bound node transposes around the pitch last typed", "[graph][pitch]")
@@ -215,8 +215,8 @@ TEST_CASE("moving a pitch-bound node transposes around the pitch last typed", "[
 
     const NodeMap& nodes = rebuildAndPublish(processor);
 
-    REQUIRE_FALSE(nodes.at(childId)->notes.empty());
-    CHECK(nodes.at(childId)->notes.front().pitch == 68);
+    REQUIRE_FALSE(nodes.find(childId)->notes.empty());
+    CHECK(nodes.find(childId)->notes.front().pitch == 68);
 }
 
 TEST_CASE("undo and redo keep the node index, parent links and published graph in step", "[graph][undo]")
@@ -241,14 +241,14 @@ TEST_CASE("undo and redo keep the node index, parent links and published graph i
     CHECK_FALSE(graph.getNode(childId).isValid());
     CHECK_FALSE(graph.getConnection(rootId, childId).isValid());
     CHECK(graph.parentIdsOf.count(childId) == 0);
-    CHECK(rebuildAndPublish(processor).count(childId) == 0);
+    CHECK(rebuildAndPublish(processor).find(childId) == nullptr);
 
     undoManager.undo();
 
     REQUIRE(graph.getNode(childId).isValid());
     CHECK(graph.getConnection(rootId, childId).isValid());
     CHECK(graph.parentIdsOf[childId] == rootOnly);
-    CHECK(rebuildAndPublish(processor).count(childId) == 1);
+    CHECK(rebuildAndPublish(processor).find(childId) != nullptr);
 
     undoManager.undo();
 
@@ -293,8 +293,8 @@ TEST_CASE("removing an encapsulator removes its members and every link to them",
 
     const NodeMap& nodes = rebuildAndPublish(processor);
 
-    CHECK(nodes.count(firstId) == 0);
-    CHECK(nodes.count(lastId)  == 0);
+    CHECK(nodes.find(firstId) == nullptr);
+    CHECK(nodes.find(lastId)  == nullptr);
 }
 
 TEST_CASE("dissolving an encapsulator keeps its members and their arrows", "[graph][encapsulation]")
@@ -323,7 +323,7 @@ TEST_CASE("dissolving an encapsulator keeps its members and their arrows", "[gra
 
     const NodeMap& nodes = rebuildAndPublish(processor);
 
-    CHECK(nodes.at(firstId)->encapsulationEntryId == -1);
+    CHECK(nodes.find(firstId)->encapsulationEntryId == -1);
 }
 
 TEST_CASE("removing an encapsulator's last member dissolves it", "[graph][encapsulation]")

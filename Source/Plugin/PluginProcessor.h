@@ -63,6 +63,8 @@ public:
 
     juce::AudioProcessorValueTreeState valueTreeState;
 
+    juce::UndoManager undoManager;
+
     GraphState graphState;
 
     TraversalRuleState traversalRuleState;
