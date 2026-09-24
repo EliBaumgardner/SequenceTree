@@ -67,10 +67,6 @@ std::optional<ArrowType> ArrowWindow::arrowTypeFor(const IconButton* button) con
     return std::nullopt;
 }
 
-std::optional<ArrowType> ArrowWindow::getSelectedArrowType() const {
-    return arrowTypeFor(arrowTypePane.getSelectedButton());
-}
-
 void ArrowWindow::showSelectedArrowType() {
     if (applicationContext.canvas->arrowManager.currentArrowInfo.type == ArrowType::Node) {
         return;

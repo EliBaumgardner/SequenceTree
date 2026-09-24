@@ -2,6 +2,7 @@
 
 #include <cctype>
 
+
 struct KeywordEntry
 {
     const char* name;
@@ -22,6 +23,7 @@ const KeywordEntry keywordTable[] = {
     { "or",       TokenKind::Or },
     { "not",      TokenKind::Not }
 };
+
 
 TokenKind keywordKind(const std::string& word)
 {
@@ -66,7 +68,7 @@ std::vector<Token> Lexer::run()
             continue;
         }
 
-        if (isIdentifierStart(current)) {
+        if (std::isalpha(static_cast<unsigned char>(current)) != 0 || current == '_') {
             tokens.push_back(readIdentifier());
             continue;
         }
@@ -84,11 +86,6 @@ std::vector<Token> Lexer::run()
     tokens.push_back(end);
 
     return tokens;
-}
-
-bool Lexer::isIdentifierStart(char c)
-{
-    return std::isalpha(static_cast<unsigned char>(c)) != 0 || c == '_';
 }
 
 bool Lexer::isIdentifierPart(char c)

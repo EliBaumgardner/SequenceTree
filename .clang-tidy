@@ -1,0 +1,10 @@
+Checks: >
+  -*,
+  readability-braces-around-statements,
+  readability-misleading-indentation,
+  readability-function-size
+HeaderFilterRegex: '.*/Source/.*'
+FormatStyle: file
+CheckOptions:
+  readability-function-size.LineThreshold: 80
+  readability-braces-around-statements.ShortStatementLines: 0

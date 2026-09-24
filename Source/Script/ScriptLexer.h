@@ -73,8 +73,6 @@ public:
     std::vector<Token> run();
 
 private:
-
-    static bool isIdentifierStart(char c);
     static bool isIdentifierPart(char c);
 
     char peek(std::size_t offset) const;

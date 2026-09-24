@@ -90,8 +90,8 @@ public:
     bool hasPendingCommands() const
     {
         return highlights.hasPending()
-            || arrows.hasPending()
-            || counts.hasPending();
+        || arrows.hasPending()
+        || counts.hasPending();
     }
 
 private:
