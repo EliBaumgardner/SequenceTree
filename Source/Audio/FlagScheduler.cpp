@@ -16,12 +16,12 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostRunId, const Trave
     for (const RTConnection& connection : node.connections) {
         const int childId = connection.childId;
 
-        auto childIt = context.nodes.find(childId);
-        if (childIt == context.nodes.end()) {
+        const RTNode* childNode = context.nodes.find(childId);
+        if (childNode == nullptr) {
             continue;
         }
 
-        const RTNode& flagNode = *childIt->second;
+        const RTNode& flagNode = *childNode;
         if (flagNode.nodeType != RTNode::NodeType::TraversalFlagData) {
             continue;
         }
@@ -99,13 +99,13 @@ bool FlagScheduler::startNextDue(double before, const DispatchContext& context)
     const PendingStart due = *earliest;
     earliest->active       = false;
 
-    auto flagIt = context.nodes.find(due.flagNodeId);
+    const RTNode* flagEntry = context.nodes.find(due.flagNodeId);
 
-    if (flagIt == context.nodes.end()) {
+    if (flagEntry == nullptr) {
         return true;
     }
 
-    const RTNode& flagNode = *flagIt->second;
+    const RTNode& flagNode = *flagEntry;
 
     if (flagNode.nodeType != RTNode::NodeType::TraversalFlagData || flagNode.flagRemovesTraversal) {
         return true;
@@ -166,12 +166,12 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKe
         return;
     }
 
-    auto startIt = context.nodes.find(flagNode.flagTargetId);
-    if (startIt == context.nodes.end()) {
+    const RTNode* startEntry = context.nodes.find(flagNode.flagTargetId);
+    if (startEntry == nullptr) {
         return;
     }
 
-    const RTNode& startNode = *startIt->second;
+    const RTNode& startNode = *startEntry;
     const int     rootId    = startNode.graphID;
 
     int runId = context.traversalMap.findRunFor(rootId, spawnKey);

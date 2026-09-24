@@ -14,7 +14,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 : AudioProcessorEditor(p), audioProcessor(p)
 {
     applicationContext.processor          = &p;
-    applicationContext.undoManager        = &undoManager;
+    applicationContext.undoManager        = &p.undoManager;
     applicationContext.lookAndFeel        = &lookAndFeel;
     applicationContext.graphState         = &p.graphState;
     applicationContext.traversalRuleState = &p.traversalRuleState;
@@ -52,8 +52,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     canvas->addMouseListener(nodeController.get(),true);
 
-    attachStateListeners();
-
+    applicationContext.graphState->nodeMap.addListener(&canvas->treeListener);
 
     addAndMakeVisible(port.get());
     addAndMakeVisible(menuArea.get());
@@ -76,21 +75,8 @@ SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
         desktop.setKioskModeComponent(nullptr);
     }
 
-    detachStateListeners();
-}
-
-void SequenceTreeAudioProcessorEditor::attachStateListeners()
-{
-    applicationContext.graphState->nodeMap.addListener(&canvas->treeListener);
-    applicationContext.graphState->traversals.map.addListener(&canvas->treeListener);
-}
-
-void SequenceTreeAudioProcessorEditor::detachStateListeners()
-{
     applicationContext.graphState->nodeMap.removeListener(&canvas->treeListener);
-    applicationContext.graphState->traversals.map.removeListener(&canvas->treeListener);
 }
-
 
 void SequenceTreeAudioProcessorEditor::paint (juce::Graphics& g) { g.fillAll(juce::Colours::white); }
 

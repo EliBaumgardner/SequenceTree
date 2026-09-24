@@ -18,17 +18,6 @@
 #include <algorithm>
 #include <cmath>
 
-namespace {
-
-void rememberOnce(std::vector<int>& ids, int id)
-{
-    if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
-        ids.push_back(id);
-    }
-}
-
-}
-
 NodeCanvas::NodeCanvas(const ApplicationContext& context) : applicationContext(context)
 {
     setPaintingIsUnclipped(true);
@@ -86,12 +75,6 @@ void NodeCanvas::handleAsyncUpdate() {
     std::vector<AsyncUpdate> pendingUpdates;
     pendingUpdates.swap(asyncUpdates);
 
-    std::vector<int> pitchSyncNodeIds;
-    std::vector<int> durationRefreshNodeIds;
-    std::vector<int> movedNodeIds;
-    std::vector<int> rebuildNodeIds;
-    std::vector<int> rebuildTraversalIds;
-
     for (auto& asyncUpdate  : pendingUpdates) {
         int nodeId = asyncUpdate.nodeId;
 
@@ -102,34 +85,17 @@ void NodeCanvas::handleAsyncUpdate() {
         }
         else if (updateType == AsyncUpdateType::NodeRemoved) {
             nodeManager.remove(nodeId);
-
-            int rootNodeId = asyncUpdate.rootNodeId;
-            if (rootNodeId != nodeId) {
-
-                applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(rootNodeId));
-            } else {
-
-                applicationContext.rtGraphBuilder->discardGraph(rootNodeId);
-            }
         }
         else if (updateType == AsyncUpdateType::NodeMoved) {
             nodeManager.setPosition(nodeId);
-            rememberOnce(pitchSyncNodeIds, nodeId);
-            rememberOnce(durationRefreshNodeIds, nodeId);
-            rememberOnce(movedNodeIds, nodeId);
         }
         else if (updateType == AsyncUpdateType::ValueChanged) {
             if (Node* const changedNode = nodeManager.find(nodeId)) {
                 arrowManager.refreshFor(changedNode);
             }
         }
-        else if (updateType == AsyncUpdateType::DurationOnly) {
-            rememberOnce(durationRefreshNodeIds, nodeId);
-        }
         else if (updateType == AsyncUpdateType::DanglingArrowsChanged) {
             arrowManager.rebuildDanglingForNode(nodeId);
-            rememberOnce(pitchSyncNodeIds, nodeId);
-            rememberOnce(durationRefreshNodeIds, nodeId);
         }
         else if (updateType == AsyncUpdateType::ArrowAdded) {
             arrowManager.handleArrowAdded(nodeId, asyncUpdate.rootNodeId);
@@ -144,47 +110,8 @@ void NodeCanvas::handleAsyncUpdate() {
             if (Node* const owningNode = nodeManager.find(nodeId)) {
                 arrowManager.refreshFor(owningNode);
             }
-
-            rememberOnce(durationRefreshNodeIds, nodeId);
-        }
-        else if (updateType == AsyncUpdateType::GraphRebuild) {
-            rememberOnce(rebuildNodeIds, nodeId);
-        }
-        else if (updateType == AsyncUpdateType::TraversalDataChanged) {
-            rememberOnce(rebuildTraversalIds, nodeId);
         }
     }
-
-    GraphState& state = *applicationContext.graphState;
-
-    std::vector<int> rebuildRootIds;
-
-    for (int nodeId : rebuildNodeIds) {
-        rememberOnce(rebuildRootIds,
-                     (int) state.getNode(nodeId).getProperty(ValueTreeIdentifiers::RootNodeId));
-    }
-
-    for (int nodeId : pitchSyncNodeIds) {
-        for (int repitchedNodeId : state.arrows.syncPitchBindings(nodeId, applicationContext.undoManager)) {
-            rememberOnce(rebuildRootIds,
-                         (int) state.getNode(repitchedNodeId).getProperty(ValueTreeIdentifiers::RootNodeId));
-        }
-    }
-
-    for (int rootNodeId : rebuildRootIds) {
-        applicationContext.rtGraphBuilder->makeRTGraph(state.getNode(rootNodeId));
-    }
-
-    for (int traversalId : rebuildTraversalIds) {
-        applicationContext.rtGraphBuilder->makeRTGraph(
-            state.traversals.map.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId));
-    }
-
-    for (int nodeId : movedNodeIds) {
-        state.arrows.clearArrowDurations(nodeId, applicationContext.undoManager);
-    }
-
-    applicationContext.rtGraphBuilder->updateDurationMaps(durationRefreshNodeIds);
 
     const bool fieldNeedsRefresh = ! pendingUpdates.empty();
 
@@ -206,7 +133,7 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
         arrowManager.pauseAllProgress();
     }
 
-    applicationContext.rtGraphBuilder->rebuildAllGraphs();
+    applicationContext.rtGraphBuilder->handleUpdateNowIfNeeded();
 }
 
 void NodeCanvas::clearCanvas()
@@ -296,13 +223,6 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
         gridSpacing   = ArrowInfo::pixelsPerGridSpace;
         gridOriginSet = true;
     }
-
-    for (auto& [id, rootNodeValueTree] : rootNodeMap) {
-        if (rootNodeValueTree.isValid()) {
-            applicationContext.rtGraphBuilder->makeRTGraph(rootNodeValueTree);
-        }
-    }
-
 }
 
 void NodeCanvas::setPaintMode(bool enabled)

@@ -25,9 +25,7 @@ static int runScript(const std::string& source)
     child.parentId   = 1;
     child.countLimit = 1;
 
-    NodeMap nodes;
-    nodes[1] = std::make_shared<const RTNode>(parent);
-    nodes[2] = std::make_shared<const RTNode>(child);
+    const NodeMap nodes { { parent, child } };
 
     NodeStateTable nodeState;
     nodeState.prepare();

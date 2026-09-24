@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <unordered_set>
+#include <utility>
 
 #include "../Plugin/PluginProcessor.h"
 #include "GraphState.h"
@@ -21,6 +22,14 @@
 RTGraphBuilder::RTGraphBuilder(SequenceTreeAudioProcessor& processorRef, GraphState& valueTreeStateRef)
     : processor(processorRef), graphState(valueTreeStateRef)
 {
+    graphState.nodeMap.addListener(this);
+    graphState.traversals.map.addListener(this);
+}
+
+RTGraphBuilder::~RTGraphBuilder()
+{
+    graphState.nodeMap.removeListener(this);
+    graphState.traversals.map.removeListener(this);
 }
 
 void RTGraphBuilder::collectDisabledTraversals(const juce::ValueTree& owner, std::vector<TraversalKey>& disabledKeys)
@@ -82,11 +91,13 @@ void RTGraphBuilder::classifyRootConnection(const juce::ValueTree& parentValueTr
 NodeMap RTGraphBuilder::freezeNodes(NodeBuildMap& source)
 {
     NodeMap frozen;
-    frozen.reserve(source.size());
+    frozen.sortedById.reserve(source.size());
 
     for (auto& [nodeId, node] : source) {
-        frozen.emplace(nodeId, std::make_shared<const RTNode>(std::move(node)));
+        frozen.sortedById.push_back(std::move(node));
     }
+
+    std::ranges::sort(frozen.sortedById, {}, &RTNode::nodeID);
 
     return frozen;
 }
@@ -548,15 +559,14 @@ void RTGraphBuilder::updateDurationMaps(const std::vector<int>& nodeIds)
             continue;
         }
 
-        auto globalNodeIt = edit->globalNodes->find(targetId);
-        if (globalNodeIt == edit->globalNodes->end()) {
+        auto& globalNodes    = edit->globalNodes->sortedById;
+        const auto globalNode = std::ranges::lower_bound(globalNodes, targetId, {}, &RTNode::nodeID);
+
+        if (globalNode == globalNodes.end() || globalNode->nodeID != targetId) {
             continue;
         }
 
-        RTNode refreshed = *globalNodeIt->second;
-        fillDurationMap(targetTree, refreshed);
-
-        globalNodeIt->second = std::make_shared<const RTNode>(std::move(refreshed));
+        fillDurationMap(targetTree, *globalNode);
 
         refreshedAny = true;
     }
@@ -596,4 +606,188 @@ void RTGraphBuilder::rebuildAllGraphs()
             makeRTGraph(node);
         }
     }
+}
+
+void RTGraphBuilder::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
+{
+    if (parent.getType() == ValueTreeIdentifiers::NodeMap) {
+        pending.addedNodeIds.insert((int) child.getProperty(ValueTreeIdentifiers::Id));
+        triggerAsyncUpdate();
+        return;
+    }
+
+    rememberStructureChange(parent, child);
+}
+
+void RTGraphBuilder::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int)
+{
+    if (parent.getType() == ValueTreeIdentifiers::NodeMap) {
+        const int rootNodeId = child.getProperty(ValueTreeIdentifiers::RootNodeId);
+
+        if (rootNodeId != 0) {
+            pending.rebuildRootIds.insert(rootNodeId);
+            triggerAsyncUpdate();
+        }
+
+        return;
+    }
+
+    rememberStructureChange(parent, child);
+}
+
+void RTGraphBuilder::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& propertyIdentifier)
+{
+    juce::ValueTree graphOwner;
+    juce::ValueTree reshapedNode;
+
+    if (propertyIdentifier == ValueTreeIdentifiers::XPosition
+        || propertyIdentifier == ValueTreeIdentifiers::YPosition
+        || propertyIdentifier == ValueTreeIdentifiers::Radius) {
+        reshapedNode = tree;
+        pending.movedNodeIds.insert((int) tree.getProperty(ValueTreeIdentifiers::Id));
+    }
+    else if (propertyIdentifier == ValueTreeIdentifiers::MidiDuration) {
+        graphOwner = tree.getParent().getParent();
+        pending.durationRefreshNodeIds.push_back(graphOwner.getProperty(ValueTreeIdentifiers::Id));
+    }
+    else if (propertyIdentifier == ValueTreeIdentifiers::MidiPitch
+        || propertyIdentifier == ValueTreeIdentifiers::MidiVelocity) {
+        graphOwner = tree.getParent().getParent();
+    }
+    else if (propertyIdentifier == ValueTreeIdentifiers::MidiChannel
+        || propertyIdentifier == ValueTreeIdentifiers::CountLimit
+        || propertyIdentifier == ValueTreeIdentifiers::TriggerLimit
+        || propertyIdentifier == ValueTreeIdentifiers::LoopLimit
+        || propertyIdentifier == ValueTreeIdentifiers::SwitchCountLimit
+        || propertyIdentifier == ValueTreeIdentifiers::SubLoopCountLimit
+        || propertyIdentifier == ValueTreeIdentifiers::RepeatValue
+        || propertyIdentifier == ValueTreeIdentifiers::Probability
+        || propertyIdentifier == ValueTreeIdentifiers::ModAmount
+        || propertyIdentifier == ValueTreeIdentifiers::TraversalFlagValue
+        || propertyIdentifier == ValueTreeIdentifiers::EncapsulatorId) {
+        graphOwner = tree;
+    }
+    else if (tree.getType() == ValueTreeIdentifiers::TraversalData
+        && (propertyIdentifier == ValueTreeIdentifiers::TempoMultiplier
+         || propertyIdentifier == ValueTreeIdentifiers::TraversalChannel
+         || propertyIdentifier == ValueTreeIdentifiers::TraversalTranspose
+         || propertyIdentifier == ValueTreeIdentifiers::TraversalVelocity)) {
+        pending.traversalIds.insert((int) tree.getProperty(ValueTreeIdentifiers::TraversalId));
+    }
+    else if (propertyIdentifier == ValueTreeIdentifiers::ArrowTipX
+        || propertyIdentifier == ValueTreeIdentifiers::ArrowTipY) {
+        reshapedNode = tree.getParent().getParent();
+    }
+    else if (propertyIdentifier == ValueTreeIdentifiers::ArrowDuration) {
+        pending.durationRefreshNodeIds.push_back(tree.getParent().getParent().getProperty(ValueTreeIdentifiers::Id));
+    }
+    else if (propertyIdentifier == ValueTreeIdentifiers::ArrowType
+        || propertyIdentifier == ValueTreeIdentifiers::ArrowSync
+        || propertyIdentifier == ValueTreeIdentifiers::ArrowXBinding
+        || propertyIdentifier == ValueTreeIdentifiers::ArrowYBinding
+        || propertyIdentifier == ValueTreeIdentifiers::ArrowXMultiplier
+        || propertyIdentifier == ValueTreeIdentifiers::ArrowYMultiplier) {
+        graphOwner = tree.getParent().getParent();
+    }
+
+    rememberOwners(graphOwner, reshapedNode);
+}
+
+void RTGraphBuilder::handleAsyncUpdate()
+{
+    PendingChanges changes;
+    std::swap(changes, pending);
+
+    juce::UndoManager* const undoManager = &processor.undoManager;
+
+    for (int nodeId : changes.addedNodeIds) {
+        if (! graphState.getNode(nodeId).isValid()) {
+            continue;
+        }
+
+        changes.rebuildNodeIds.insert(nodeId);
+
+        auto parentsIt = graphState.parentIdsOf.find(nodeId);
+
+        if (parentsIt != graphState.parentIdsOf.end()) {
+            changes.rebuildNodeIds.insert(parentsIt->second.begin(), parentsIt->second.end());
+        }
+    }
+
+    for (int nodeId : changes.reshapedNodeIds) {
+        for (int repitchedNodeId : graphState.arrows.syncPitchBindings(nodeId, undoManager)) {
+            changes.rebuildNodeIds.insert(repitchedNodeId);
+        }
+    }
+
+    for (int nodeId : changes.rebuildNodeIds) {
+        const int rootNodeId = graphState.getNode(nodeId).getProperty(ValueTreeIdentifiers::RootNodeId);
+
+        if (rootNodeId != 0) {
+            changes.rebuildRootIds.insert(rootNodeId);
+        }
+    }
+
+    for (int rootNodeId : changes.rebuildRootIds) {
+        const juce::ValueTree rootNodeTree = graphState.getNode(rootNodeId);
+
+        if (rootNodeTree.isValid()) {
+            makeRTGraph(rootNodeTree);
+        }
+        else {
+            discardGraph(rootNodeId);
+        }
+    }
+
+    for (int traversalId : changes.traversalIds) {
+        makeRTGraph(graphState.traversals.map.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId));
+    }
+
+    for (int nodeId : changes.movedNodeIds) {
+        graphState.arrows.clearArrowDurations(nodeId, undoManager);
+    }
+
+    updateDurationMaps(changes.durationRefreshNodeIds);
+}
+
+void RTGraphBuilder::rememberStructureChange(const juce::ValueTree& parent, const juce::ValueTree& child)
+{
+    juce::ValueTree graphOwner;
+    juce::ValueTree reshapedNode;
+
+    if (parent.getType() == ValueTreeIdentifiers::NodeChildrenIds) {
+        graphOwner = parent.getParent();
+    }
+    else if (parent.getType() == ValueTreeIdentifiers::TraversalChildrenIds
+          || parent.getType() == ValueTreeIdentifiers::DisabledTraversalIds) {
+        graphOwner = parent;
+    }
+    else if (child.getType() == ValueTreeIdentifiers::DanglingArrows) {
+        reshapedNode = parent;
+    }
+    else if (child.getType() == ValueTreeIdentifiers::DanglingArrow) {
+        reshapedNode = parent.getParent();
+    }
+
+    rememberOwners(graphOwner, reshapedNode);
+}
+
+void RTGraphBuilder::rememberOwners(juce::ValueTree graphOwner, const juce::ValueTree& reshapedNode)
+{
+    while (graphOwner.isValid() && ! graphOwner.hasProperty(ValueTreeIdentifiers::RootNodeId)) {
+        graphOwner = graphOwner.getParent();
+    }
+
+    if (graphOwner.isValid()) {
+        pending.rebuildNodeIds.insert((int) graphOwner.getProperty(ValueTreeIdentifiers::Id));
+    }
+
+    if (reshapedNode.isValid()) {
+        const int reshapedNodeId = reshapedNode.getProperty(ValueTreeIdentifiers::Id);
+
+        pending.reshapedNodeIds.insert(reshapedNodeId);
+        pending.durationRefreshNodeIds.push_back(reshapedNodeId);
+    }
+
+    triggerAsyncUpdate();
 }

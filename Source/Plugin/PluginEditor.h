@@ -44,9 +44,6 @@ public:
     bool keyPressed (const juce::KeyPress& key, juce::Component* originatingComponent) override;
     void parentHierarchyChanged() override;
 
-    void attachStateListeners();
-    void detachStateListeners();
-
 private:
     void toggleFullScreen();
 
@@ -54,7 +51,6 @@ private:
 
 
     SequenceTreeAudioProcessor& audioProcessor;
-    juce::UndoManager undoManager;
     CustomLookAndFeel lookAndFeel;
     ApplicationContext applicationContext;
     juce::TooltipWindow tooltipWindow { this, 400 };

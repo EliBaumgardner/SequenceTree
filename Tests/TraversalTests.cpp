@@ -4,7 +4,7 @@
 #include "Audio/TraversalLogic.h"
 #include "Script/ScriptCompiler.h"
 
-#include <memory>
+#include <algorithm>
 #include <vector>
 
 static RTNode makeNode(int id, int parentId, RTNode::NodeType type, int countLimit, const std::vector<int>& childIds)
@@ -31,11 +31,9 @@ static RTNode makeNode(int id, int parentId, RTNode::NodeType type, int countLim
 
 static NodeMap makeMap(const std::vector<RTNode>& nodes)
 {
-    NodeMap map;
+    NodeMap map { nodes };
 
-    for (const RTNode& node : nodes) {
-        map[node.nodeID] = std::make_shared<const RTNode>(node);
-    }
+    std::ranges::sort(map.sortedById, {}, &RTNode::nodeID);
 
     return map;
 }
@@ -44,10 +42,10 @@ static NodeMap mirrorAsModulators(const NodeMap& tree)
 {
     NodeMap mirror;
 
-    for (const auto& [id, node] : tree) {
-        RTNode modulator = *node;
+    for (const RTNode& node : tree.sortedById) {
+        RTNode modulator = node;
 
-        switch (node->nodeType) {
+        switch (node.nodeType) {
             case RTNode::NodeType::RootNode:
                 modulator.nodeType = RTNode::NodeType::ModulatorRoot;
                 break;
@@ -64,7 +62,7 @@ static NodeMap mirrorAsModulators(const NodeMap& tree)
                 break;
         }
 
-        mirror[id] = std::make_shared<const RTNode>(modulator);
+        mirror.sortedById.push_back(modulator);
     }
 
     return mirror;
@@ -630,8 +628,8 @@ TEST_CASE("node ids past the state table size walk like small ones", "[traversal
 
     NodeMap shifted;
 
-    for (const auto& [id, node] : switchCountShape()) {
-        RTNode moved = *node;
+    for (const RTNode& node : switchCountShape().sortedById) {
+        RTNode moved = node;
 
         moved.nodeID = moved.nodeID + offset;
 
@@ -643,7 +641,7 @@ TEST_CASE("node ids past the state table size walk like small ones", "[traversal
             connection.childId = connection.childId + offset;
         }
 
-        shifted[moved.nodeID] = std::make_shared<const RTNode>(moved);
+        shifted.sortedById.push_back(moved);
     }
 
     std::vector<int> expected = walkPrimary(switchCountShape(), 1, steps, NativeTraversalRule::instance());

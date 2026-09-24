@@ -320,11 +320,7 @@ void ArrowManager::handleArrowAdded(int parentNodeId, int childNodeId)
         return;
     }
 
-    if (connectParentToChild(parentNode, childNode) == nullptr) {
-        return;
-    }
-
-    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(parentNodeId));
+    connectParentToChild(parentNode, childNode);
 }
 
 void ArrowManager::handleArrowInfoChanged(int parentNodeId, int childNodeId)
@@ -335,8 +331,6 @@ void ArrowManager::handleArrowInfoChanged(int parentNodeId, int childNodeId)
         arrow->arrowTree = connectionTreeFor(parentNodeId, childNodeId);
         arrow->repaint();
     }
-
-    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(parentNodeId));
 }
 
 void ArrowManager::handleArrowRemoved(int parentNodeId, int childNodeId)
@@ -348,8 +342,6 @@ void ArrowManager::handleArrowRemoved(int parentNodeId, int childNodeId)
     }
 
     remove(target);
-
-    applicationContext.rtGraphBuilder->makeRTGraph(applicationContext.graphState->getNode(parentNodeId));
 }
 
 void ArrowManager::setSelected(Arrow* arrow)

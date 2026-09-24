@@ -1,4 +1,6 @@
 #include "EventManager.h"
+#include <algorithm>
+#include <functional>
 
 void EventManager::handleOrphanNotes(const DispatchContext& context)
 {
@@ -8,7 +10,7 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
     {
         auto& activeNote = activeNotes[i];
 
-        if (context.nodes.find(activeNote.nodeId) != context.nodes.end()) {
+        if (context.nodes.find(activeNote.nodeId) != nullptr) {
             continue;
         }
 
@@ -30,18 +32,18 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
         }
 
         TraversalLogic& traversal = orphanedInstance->logic;
-        auto rootIt = context.nodes.find(traversal.rootId);
+        const RTNode*   rootNode  = context.nodes.find(traversal.rootId);
 
-        if (rootIt == context.nodes.end()) {
+        if (rootNode == nullptr) {
             continue;
         }
 
         traversal.primary.target = traversal.rootId;
         traversal.state          = TraversalLogic::TraversalState::Active;
         traversal.advanceAlternative(context.nodes, traversal.rootId);
-        bridge.highlightNode(*rootIt->second, AudioUIBridge::HighlightKind::Show, orphanedRunId,
+        bridge.highlightNode(*rootNode, AudioUIBridge::HighlightKind::Show, orphanedRunId,
                              traversal.traversal.key.typeId);
-        dispatcher.pushNote(*rootIt->second, orphanedRunId, context, 0);
+        dispatcher.pushNote(*rootNode, orphanedRunId, context, 0);
     }
 }
 
@@ -49,46 +51,48 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
 {
     handleOrphanNotes(context);
 
-    auto& activeNotes = scheduler.activeNotes;
+    auto&  activeNotes  = scheduler.activeNotes;
+    size_t orderedNotes = 0;
 
     for (int eventsProcessed = 0; eventsProcessed < maxEventsPerBlock; ++eventsProcessed)
     {
-        int    expiringIndex = -1;
-        double expiringTime  = static_cast<double>(numSamples);
+        while (orderedNotes < activeNotes.size()) {
+            ++orderedNotes;
+            std::ranges::push_heap(activeNotes.begin(), activeNotes.begin() + static_cast<std::ptrdiff_t>(orderedNotes),
+                                   std::ranges::greater {}, &NoteScheduler::ActiveNote::remainingSamples);
+        }
 
-        for (int i = 0; i < static_cast<int>(activeNotes.size()); ++i)
-        {
-            if (activeNotes[i].remainingSamples < expiringTime) {
-                expiringTime  = activeNotes[i].remainingSamples;
-                expiringIndex = i;
-            }
+        double expiringTime = static_cast<double>(numSamples);
+
+        if (!activeNotes.empty()) {
+            expiringTime = juce::jmin(expiringTime, activeNotes.front().remainingSamples);
         }
 
         if (dispatcher.flagScheduler.startNextDue(expiringTime, context)) {
             continue;
         }
 
-        if (expiringIndex == -1) {
+        if (expiringTime >= static_cast<double>(numSamples)) {
             break;
         }
 
         const double expiryTime   = juce::jmax(0.0, expiringTime);
         const int    expirySample = static_cast<int>(expiryTime);
 
-        auto& expiringNote = activeNotes[expiringIndex];
+        scheduler.sendNoteOff(activeNotes.front(), context.midiMessages, expirySample);
 
-        scheduler.sendNoteOff(expiringNote, context.midiMessages, expirySample);
+        std::ranges::pop_heap(activeNotes, std::ranges::greater {}, &NoteScheduler::ActiveNote::remainingSamples);
 
-        if (expiringNote.role == NoteScheduler::NoteRole::ChordVoice) {
-            if (NoteScheduler::isNodeAudible(expiringNote.nodeType)) {
-                bridge.highlightNode(expiringNote.nodeId, AudioUIBridge::HighlightKind::Hide, expiringNote.runId);
+        const NoteScheduler::ActiveNote expiredNote = activeNotes.back();
+        activeNotes.pop_back();
+        --orderedNotes;
+
+        if (expiredNote.role == NoteScheduler::NoteRole::ChordVoice) {
+            if (NoteScheduler::isNodeAudible(expiredNote.nodeType)) {
+                bridge.highlightNode(expiredNote.nodeId, AudioUIBridge::HighlightKind::Hide, expiredNote.runId);
             }
-            scheduler.removeNote(expiringIndex);
             continue;
         }
-
-        const NoteScheduler::ActiveNote expiredNote = expiringNote;
-        scheduler.removeNote(expiringIndex);
 
         dispatcher.handleExpiredNote(expiredNote, expiryTime, context);
     }

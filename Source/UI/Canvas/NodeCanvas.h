@@ -31,12 +31,9 @@ class Arrow;
 
 class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
-    private:
-        const ApplicationContext& applicationContext;
-
     public:
 
-        enum class AsyncUpdateType {None,NodeAdded,NodeRemoved,NodeMoved,DurationOnly,ValueChanged,DanglingArrowsChanged,ArrowAdded,ArrowRemoved,ArrowInfoChanged,ArrowDurationChanged,GraphRebuild,TraversalDataChanged};
+        enum class AsyncUpdateType {None,NodeAdded,NodeRemoved,NodeMoved,ValueChanged,DanglingArrowsChanged,ArrowAdded,ArrowRemoved,ArrowInfoChanged,ArrowDurationChanged};
 
         struct AsyncUpdate {
             AsyncUpdateType type       = AsyncUpdateType::None;
@@ -96,4 +93,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         EncapsulationView   encapsulationView  { *this, applicationContext };
 
         const ApplicationContext& getApplicationContext() { return applicationContext; }
+
+private:
+    const ApplicationContext& applicationContext;
 };

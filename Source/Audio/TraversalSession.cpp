@@ -98,13 +98,13 @@ void TraversalSession::restartActiveTraversals(const DispatchContext& context)
     traversals.clear();
 
     for (int rootId : restartRootScratch) {
-        auto rootIt = context.nodes.find(rootId);
-        if (rootIt == context.nodes.end()) {
+        const RTNode* rootNode = context.nodes.find(rootId);
+        if (rootNode == nullptr) {
             continue;
         }
 
-        for (const RTtraversal& assigned : rootIt->second->traversals) {
-            startTraversal(*rootIt->second, assigned, context);
+        for (const RTtraversal& assigned : rootNode->traversals) {
+            startTraversal(*rootNode, assigned, context);
         }
     }
 }
@@ -131,20 +131,19 @@ void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
         TraversalLogic& logic = instance.logic;
 
         if (instance.runtime.asFlag) {
-            auto flagIt = nodes.find(instance.runtime.sourceNodeId);
-            if (flagIt != nodes.end()
-                && flagIt->second->flagTraversal.key == logic.traversal.key) {
-                logic.traversal = flagIt->second->flagTraversal;
+            const RTNode* flagNode = nodes.find(instance.runtime.sourceNodeId);
+            if (flagNode != nullptr && flagNode->flagTraversal.key == logic.traversal.key) {
+                logic.traversal = flagNode->flagTraversal;
             }
             continue;
         }
 
-        auto rootIt = nodes.find(homeRootId(instance));
-        if (rootIt == nodes.end()) {
+        const RTNode* rootNode = nodes.find(homeRootId(instance));
+        if (rootNode == nullptr) {
             continue;
         }
 
-        for (const RTtraversal& assigned : rootIt->second->traversals) {
+        for (const RTtraversal& assigned : rootNode->traversals) {
             if (assigned.key == logic.traversal.key) {
                 logic.traversal = assigned;
                 break;
@@ -160,14 +159,14 @@ void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiB
         const TraversalLogic&          traverser = instance.logic;
 
         bool stillAssigned = false;
-        auto rootIt        = nodes.find(homeRootId(instance));
+        const RTNode* rootNode      = nodes.find(homeRootId(instance));
 
-        if (rootIt != nodes.end()) {
+        if (rootNode != nullptr) {
             if (instance.runtime.asFlag) {
                 stillAssigned = true;
             }
             else {
-                for (const RTtraversal& assigned : rootIt->second->traversals) {
+                for (const RTtraversal& assigned : rootNode->traversals) {
                     if (assigned.key == traverser.traversal.key) {
                         stillAssigned = true;
                         break;
@@ -211,17 +210,17 @@ void TraversalSession::startMissingTraversals(const DispatchContext& context)
     };
 
     for (int rootId : activeRootIdScratch) {
-        auto rootIt = context.nodes.find(rootId);
-        if (rootIt == context.nodes.end()) {
+        const RTNode* rootNode = context.nodes.find(rootId);
+        if (rootNode == nullptr) {
             continue;
         }
 
-        for (const RTtraversal& assigned : rootIt->second->traversals) {
+        for (const RTtraversal& assigned : rootNode->traversals) {
             if (isActive(rootId, assigned.key)) {
                 continue;
             }
 
-            startTraversal(*rootIt->second, assigned, context);
+            startTraversal(*rootNode, assigned, context);
         }
     }
 }
@@ -232,12 +231,12 @@ void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
     {
         TraversalLogic& traversal = instance.logic;
 
-        auto rootIt = context.nodes.find(traversal.rootId);
-        if (rootIt == context.nodes.end()) {
+        const RTNode* rootEntry = context.nodes.find(traversal.rootId);
+        if (rootEntry == nullptr) {
             continue;
         }
 
-        const RTNode& rootNode = *rootIt->second;
+        const RTNode& rootNode = *rootEntry;
 
         int newLoopLimit = rootNode.graphLoopLimit;
         if (newLoopLimit == traversal.loop.limit) {
@@ -273,13 +272,13 @@ int TraversalSession::findFirstUnlinkedRootId(const NodeMap& nodes)
 {
     linkedRootScratch.clear();
 
-    for (const auto& [nodeId, node] : nodes) {
-        for (const RTConnection& connection : node->connections) {
+    for (const RTNode& node : nodes.sortedById) {
+        for (const RTConnection& connection : node.connections) {
             const int childId = connection.childId;
 
-            const auto childIt = nodes.find(childId);
+            const RTNode* const childNode = nodes.find(childId);
 
-            if (childIt != nodes.end() && isRootNode(*childIt->second)) {
+            if (childNode != nullptr && isRootNode(*childNode)) {
                 linkedRootScratch.push_back(childId);
             }
         }
@@ -287,23 +286,13 @@ int TraversalSession::findFirstUnlinkedRootId(const NodeMap& nodes)
 
     std::sort(linkedRootScratch.begin(), linkedRootScratch.end());
 
-    int rootId = -1;
-
-    for (const auto& [nodeId, node] : nodes) {
-        if (!isRootNode(*node)) {
-            continue;
-        }
-
-        if (rootId != -1 && nodeId >= rootId) {
-            continue;
-        }
-
-        if (!std::binary_search(linkedRootScratch.begin(), linkedRootScratch.end(), nodeId)) {
-            rootId = nodeId;
+    for (const RTNode& node : nodes.sortedById) {
+        if (isRootNode(node) && !std::binary_search(linkedRootScratch.begin(), linkedRootScratch.end(), node.nodeID)) {
+            return node.nodeID;
         }
     }
 
-    return rootId;
+    return -1;
 }
 
 bool TraversalSession::startTraversalsFromFirstRoot(const DispatchContext& context)
@@ -314,7 +303,7 @@ bool TraversalSession::startTraversalsFromFirstRoot(const DispatchContext& conte
         return false;
     }
 
-    const RTNode& rootNode = *context.nodes.at(rootId);
+    const RTNode& rootNode = *context.nodes.find(rootId);
 
     for (const RTtraversal& traversal : rootNode.traversals) {
         startTraversal(rootNode, traversal, context);
