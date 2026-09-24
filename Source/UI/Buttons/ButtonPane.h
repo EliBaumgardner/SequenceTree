@@ -24,7 +24,7 @@ public:
 
     std::function<void(const IconButton*)> onSelectionChanged;
 
-    explicit ButtonPane(ApplicationContext& context) : applicationContext(context)
+    explicit ButtonPane(const ApplicationContext& context) : applicationContext(context)
     {
         setLookAndFeel(applicationContext.lookAndFeel);
     }
@@ -164,7 +164,7 @@ private:
         }
     }
 
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
     juce::OwnedArray<IconButton> buttons;
 

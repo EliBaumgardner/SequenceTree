@@ -49,7 +49,7 @@ void AllowedTraversalsMenu::ToggleButton::mouseDown(const juce::MouseEvent& e) {
     }
 }
 
-AllowedTraversalsMenu::AllowedTraversalsMenu(ApplicationContext& context, juce::ValueTree connection)
+AllowedTraversalsMenu::AllowedTraversalsMenu(const ApplicationContext& context, juce::ValueTree connection)
     : applicationContext(context), connection(connection)
 {
     setLookAndFeel(context.lookAndFeel);

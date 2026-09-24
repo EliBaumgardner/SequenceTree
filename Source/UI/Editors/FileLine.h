@@ -15,7 +15,7 @@ class LineEditor;
 class FileLine : public juce::Component{
 public:
 
-    FileLine(ApplicationContext& context);
+    FileLine(const ApplicationContext& context);
     ~FileLine() override;
 
     void paint(juce::Graphics& g) override;
@@ -39,7 +39,7 @@ public:
 
     std::unique_ptr<LineEditor> lineEditor = nullptr;
 
-    ApplicationContext& context;
+    const ApplicationContext& context;
 
 private:
 

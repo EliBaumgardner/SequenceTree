@@ -5,7 +5,7 @@
 #include "LabelPanel.h"
 #include "../UI/Theme/CustomLookAndFeel.h"
 
-LabelPanel::LabelPanel(ApplicationContext &context) : context(context) {
+LabelPanel::LabelPanel(const ApplicationContext&context) : context(context) {
 
     setLookAndFeel(context.lookAndFeel);
 }

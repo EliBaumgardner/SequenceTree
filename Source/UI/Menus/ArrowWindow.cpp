@@ -6,7 +6,7 @@
 #include "../Canvas/NodeCanvas.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-ArrowWindow::ArrowWindow(ApplicationContext& context)
+ArrowWindow::ArrowWindow(const ApplicationContext& context)
     : applicationContext(context), arrowTypePane(context), bindBar(context)
 {
     setLookAndFeel(context.lookAndFeel);

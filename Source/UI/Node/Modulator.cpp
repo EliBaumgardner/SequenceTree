@@ -10,7 +10,7 @@
 #include <cmath>
 #include <limits>
 
-Modulator::Modulator(ApplicationContext& context) : Node(context)
+Modulator::Modulator(const ApplicationContext& context) : Node(context)
 {
     nodeType = NodeType::Modulator;
 }

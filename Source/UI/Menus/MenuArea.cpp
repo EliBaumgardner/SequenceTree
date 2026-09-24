@@ -9,7 +9,7 @@
 #include "TraversalMenu.h"
 #include "NodeMenu.h"
 
-MenuArea::MenuArea(ApplicationContext& context)
+MenuArea::MenuArea(const ApplicationContext& context)
     : resizer(context, PanelResizer::Edge::Right),
       topBar(context, { Bar::Orientation::horizontal })
 {

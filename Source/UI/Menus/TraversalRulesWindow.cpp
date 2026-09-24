@@ -9,7 +9,7 @@
 #include "../../Plugin/PluginProcessor.h"
 #include "../../Script/ScriptCompiler.h"
 
-TraversalRulesWindow::TraversalRulesWindow(ApplicationContext& context) : context(context),
+TraversalRulesWindow::TraversalRulesWindow(const ApplicationContext& context) : context(context),
     titlebar(context), rulesPanel(context)
 {
     setLookAndFeel(context.lookAndFeel);
@@ -322,7 +322,7 @@ void TraversalRulesWindow::setPanelWidth(int newWidth) {
     resized();
 }
 
-TraversalRulesWindow::RulesTitlebar::RulesTitlebar(ApplicationContext& context)
+TraversalRulesWindow::RulesTitlebar::RulesTitlebar(const ApplicationContext& context)
     : Bar(context, { Orientation::horizontal, contentInsetRatio }),
       undoRedoPane(context)
 {
@@ -377,7 +377,7 @@ void TraversalRulesWindow::RulesTitlebar::resized() {
     undoRedoPane.setBounds(bounds.removeFromLeft(buttonSize * 3));
 }
 
-TraversalRulesWindow::RulesPanel::RulesPanel(ApplicationContext& context)
+TraversalRulesWindow::RulesPanel::RulesPanel(const ApplicationContext& context)
     : resizer(context, PanelResizer::Edge::Right),
       panelTitlebar(context)
 {
@@ -456,7 +456,7 @@ void TraversalRulesWindow::RulesPanel::resized() {
     labelPanel->setBounds(bounds);
 }
 
-TraversalRulesWindow::RulesPanel::PanelTitlebar::PanelTitlebar(ApplicationContext& context)
+TraversalRulesWindow::RulesPanel::PanelTitlebar::PanelTitlebar(const ApplicationContext& context)
     : Bar(context, { Orientation::horizontal, RulesTitlebar::contentInsetRatio })
 {
     addButton = std::make_unique<IconButton>(

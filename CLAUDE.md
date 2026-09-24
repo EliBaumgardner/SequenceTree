@@ -25,7 +25,21 @@ cmake -B cmake-build-debug -G Ninja -DCMAKE_BUILD_TYPE=Debug \
 
 Every `.cpp` must be listed explicitly in `CMakeLists.txt` — there is no glob. Adding a source file without registering it fails at link time, or silently does nothing.
 
-There are no automated tests, and none should be added. Verify changes by building (`SequenceTree_Standalone` is the fastest full-link target) and by exercising the plugin manually in a host. Prioritise exercising it manually for audio engine work.
+Verify changes by building (`SequenceTree_Standalone` is the fastest full-link target) and by exercising the plugin manually in a host. Prioritise exercising it manually for audio engine work.
+
+## Tests
+
+Catch2 v3 is a submodule at `Catch2/`, next to `JUCE/`, and `Tests/` holds two test targets that build into the same `cmake-build-debug` tree:
+
+```bash
+cmake --build cmake-build-debug --target SequenceTree_Tests SequenceTree_GraphTests
+(cd cmake-build-debug && ctest --output-on-failure)
+```
+
+- `SequenceTree_Tests` compiles the traversal core and the script compiler directly — `TraversalLogic`, `TraversalRule`, `ScriptTraversalRule`, `NodeStateTable` and `Source/Script/*` are JUCE-free — so it builds in seconds and never touches the installed plugin. Tests build `NodeMap`s by hand. `TraversalTests.cpp` holds the walk-parity check the model section asks for: `mirrorAsModulators` turns a node tree into the same shape of modulators, and the modulator walk must unfold the same sequence as the node traversal. A new traversal mechanic gets a shape there. `ScriptCompilerTests.cpp` covers diagnostics, the step budget, and the default script agreeing with `NativeTraversalRule`.
+- `SequenceTree_GraphTests` links the plugin's shared code and builds graphs the way the UI does, through `NodeFactory` and `GraphState`, then walks what `RTGraphBuilder` published. It is what covers geometry being data: arrow length → duration, a same-X child becoming a chord link, pitch bindings shifting around the typed pitch, and creation defaults. Its `main` holds the `ScopedJuceInitialiser_GUI`.
+
+Hand-built `RTNode`s must set `subLoopCountLimit` and `switchCountLimit` to 1, as `GraphState` does, and a `TraversalLogic` needs `nodeState.prepare()` before use — `RTNode`'s own zero defaults arm a sub-loop on every node, and an unprepared table drops every count into its sink. Test files follow the Key Design Rules like any other source, and every one is listed explicitly in `CMakeLists.txt`. The tests reach graph building and traversal walking only; MIDI timing, UI and plugin-format behaviour still need a host.
 
 ## Refactoring Commands
 
@@ -55,8 +69,9 @@ Two things about it decide whether the answer is any good:
 
 SequenceTree is a JUCE plugin that generates MIDI by traversing a user-designed directed graph. Users create nodes, assign MIDI note data and a "count limit" to each, then the plugin walks the graph during playback — when a node's counter reaches its limit, traversal advances to matching children.
 
-Four things about the model are easy to miss:
+Five things about the model are easy to miss:
 
+- **Every walk is the same traversal.** The primary walker, the modulator walk (`TraversalLogic::ModulatorWalk`), alternatives and a tree that is stepped into all unfold by one mechanic: a node's count advances each time it is left, children are chosen by their count limits, a child's switch count holds its parent on that child for that many visits, and sub-loop and trigger limits work the same way. What differs is only what drives the step — the primary walker steps when its own note ends, the modulator walk steps once per primary note played under its host (or on the host itself when the modulator arrow is unsynced), each keeping its counts in its own slot (`Count`, `ModulatorCount`). So a modulator's counts depend on how often the other modulator nodes have been played, exactly as a node's depend on the other nodes. Any behaviour that exists in one walk and not another — a node picking itself as its own switch target, a limit honoured in one walk and ignored in the other — is a bug, never a feature of that walk; fix it for every walk, and verify a traversal change by running the same graph shape as a node traversal and as a modulator walk and comparing the sequences.
 - **Arrow geometry is data.** A connection's note duration is derived from the vector between the two node centres (`RTGraphBuilder::fillDurationMap` → `arrowDurationFromDelta`). Dragging a node retimes the sequence, which is why `NodeMoved` triggers `updateDurationMap`.
 - **Duration is derived, pitch is owned.** Duration is recomputed from geometry on every read; pitch is not. A pitch-bound arrow only ever *shifts* the pitch of the node it points at, and the semitone amount it has already contributed is stored on the arrow as `ArrowPitchOffset`. `GraphState::syncPitchBindings` applies the difference between that stored amount and the current geometry, so moving a node transposes it around whatever pitch the user last typed, and no arrow ever recomputes a node's pitch from its parent.
 - **Transport is internal.** Playback runs off the plugin's own play button (`Titlebar` → `NodeCanvas::setProcessorPlayblack` → `SequenceTreeAudioProcessor::isPlaying`), not the host transport.
@@ -121,7 +136,7 @@ Four things about the model are easy to miss:
 - `LineEditor` extends it into one line of code (caret access, indent, and the key handling that splits, merges, and moves between lines).
 - `FileLine` is a gutter plus a `LineEditor`, and carries any compile error for that line. `FilePage` is the document — line list, zoom, focus movement, and the `onTextChanged` hook.
 
-**`Source/Util/`** — `ApplicationContext` is a struct of pointers (`processor`, `canvas`, `lookAndFeel`, `undoManager`, `graphState`, `traversalRuleState`, `nodeController`, `rtGraphBuilder`) passed by reference into components and populated in `PluginEditor`'s constructor. It carries the current `NodeDisplayMode` and the node-selection listener list.
+**`Source/Util/`** — `ApplicationContext` is a struct of pointers (`processor`, `canvas`, `lookAndFeel`, `undoManager`, `graphState`, `traversalRuleState`, `nodeController`, `rtGraphBuilder`) populated in `PluginEditor`'s constructor and passed into components as `const ApplicationContext&`. It is not a singleton — each editor owns one as a member. The pointers are non-owning: the processor owns `graphState`, `traversalRuleState` and `rtGraphBuilder`, the editor owns the rest. Only `PluginEditor` writes its fields; everything else receives it `const`, so the compiler rejects rebinding a pointer anywhere else, while the objects pointed at stay mutable. `canvas` and `nodeController` are filled in during construction, each right after its object is built, so `NodeCanvas`'s constructor must read neither and `NodeController`'s must not read `nodeController`.
 
 ### Data Flow
 

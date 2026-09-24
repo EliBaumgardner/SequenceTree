@@ -67,7 +67,7 @@ class ColourSelector : public juce::Component, public juce::SettableTooltipClien
 
     public:
 
-    explicit ColourSelector(ApplicationContext& context);
+    explicit ColourSelector(const ApplicationContext& context);
     void paint(juce::Graphics& g) override;
     void mouseDown(const juce::MouseEvent& event) override;
     void setNode(Node* node);
@@ -84,7 +84,7 @@ class ColourSelector : public juce::Component, public juce::SettableTooltipClien
     std::function<void(juce::Colour)> onColourPicked;
 
 private:
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
     PopupWindowLauncher pickerLauncher {
         "",

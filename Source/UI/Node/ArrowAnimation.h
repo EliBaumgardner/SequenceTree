@@ -18,14 +18,15 @@ public:
     };
 
     void startTrail(int trailId, int durationMs, juce::Colour colour, bool oneShot);
+    void resumeTrails();
 
-    bool advance();
+    bool advance(double frameSec);
 
-    static inline const int   tickRateHz          {60};
+    static inline const float snapSpringRateHz    {60.0f};
     static inline const float snapSpringStiffness {0.20f};
     static inline const float snapSpringDamping   {0.30f};
     static inline const float snapSettledEpsilon  {0.001f};
-    static inline const float hoverFadeStep       {0.08f};
+    static inline const float hoverFadePerSecond  {4.8f};
     static inline const float hoverFadeEpsilon    {0.001f};
 
     float snapT        = 1.0f;
@@ -33,13 +34,18 @@ public:
     float alpha        = 1.0f;
     float alphaTarget  = 1.0f;
 
+    double lastFrameSec = 0.0;
+
+    bool   trailsPaused = false;
+    double pausedAtMs   = 0.0;
+
     std::map<int, Trail> trails;
 
 private:
 
 
-    bool advanceSnap();
+    bool advanceSnap(float elapsedSec);
     bool snapSettled();
     bool advanceTrails();
-    bool advanceHover();
+    bool advanceHover(float elapsedSec);
 };

@@ -5,7 +5,7 @@
 #include "FileLabel.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-FileLabel::FileLabel(ApplicationContext& context) : context(context) {
+FileLabel::FileLabel(const ApplicationContext& context) : context(context) {
 
     setLookAndFeel(context.lookAndFeel);
     fileText = std::make_unique<ValueEditor>(context);

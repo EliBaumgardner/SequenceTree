@@ -16,7 +16,7 @@ class EncapsulationView {
 
 public:
 
-    EncapsulationView(NodeCanvas& canvas, ApplicationContext& context);
+    EncapsulationView(NodeCanvas& canvas, const ApplicationContext& context);
 
     void collapse   (int encapsulatorId) const;
     void expand     (int encapsulatorId) const;
@@ -36,7 +36,7 @@ private:
     void repositionAll() const;
 
     NodeCanvas&         canvas;
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 };
 
 #endif //SEQUENCETREE_ENCAPSULATIONVIEW_H

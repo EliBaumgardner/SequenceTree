@@ -15,7 +15,7 @@ class FilePage : public juce::Component,
                  public juce::AsyncUpdater {
 public:
 
-    FilePage(ApplicationContext& context);
+    FilePage(const ApplicationContext& context);
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -76,7 +76,7 @@ private:
 
     std::vector<std::unique_ptr<FileLine>> fileLines;
 
-    ApplicationContext& context;
+    const ApplicationContext& context;
 };
 
 

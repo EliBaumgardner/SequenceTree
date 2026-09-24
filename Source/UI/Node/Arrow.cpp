@@ -14,7 +14,7 @@
 #include "Node.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-Arrow::Arrow(Node* startNode, Node* endNode, ApplicationContext& context)
+Arrow::Arrow(Node* startNode, Node* endNode, const ApplicationContext& context)
     : startNode(startNode), endNode(endNode)
 {
     setLookAndFeel(context.lookAndFeel);
@@ -32,7 +32,7 @@ Arrow::Arrow(Node* startNode, Node* endNode, ApplicationContext& context)
     addChildComponent(*durationEditor);
 }
 
-Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, ApplicationContext& context)
+Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, const ApplicationContext& context)
     : startNode(startNode), tipOffset(tipOffset)
 {
     setLookAndFeel(context.lookAndFeel);
@@ -435,8 +435,8 @@ void Arrow::triggerSnapAnimation()
     animation.snapT        = 0.0f;
     animation.snapVelocity = 0.0f;
 
-    if (! isTimerRunning()) {
-        startTimerHz(ArrowAnimation::tickRateHz);
+    if (animationFrames.isEmpty()) {
+        animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
     }
 }
 
@@ -452,8 +452,8 @@ void Arrow::setHoverFade(bool shouldBeVisible)
         setVisible(true);
     }
 
-    if (! isTimerRunning()) {
-        startTimerHz(ArrowAnimation::tickRateHz);
+    if (animationFrames.isEmpty()) {
+        animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
     }
 }
 
@@ -475,8 +475,8 @@ void Arrow::startProgress(int trailId, int durationMs, juce::Colour colour, bool
 {
     animation.startTrail(trailId, durationMs, colour, oneShot);
 
-    if (! isTimerRunning()) {
-        startTimerHz(ArrowAnimation::tickRateHz);
+    if (animationFrames.isEmpty()) {
+        animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
     }
 
     repaint();
@@ -499,9 +499,18 @@ void Arrow::resetProgress(int trailId)
     }
 }
 
-void Arrow::timerCallback()
+void Arrow::resumeProgress()
 {
-    const bool stillAnimating = animation.advance();
+    animation.resumeTrails();
+
+    if (! animation.trails.empty() && animationFrames.isEmpty()) {
+        animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
+    }
+}
+
+void Arrow::advanceAnimation(double frameSec)
+{
+    const bool stillAnimating = animation.advance(frameSec);
 
     setAlpha(animation.alpha);
 
@@ -509,9 +518,9 @@ void Arrow::timerCallback()
         setVisible(false);
     }
 
-    if (! stillAnimating) {
-        stopTimer();
-    }
-
     repaint();
+
+    if (! stillAnimating) {
+        animationFrames = {};
+    }
 }

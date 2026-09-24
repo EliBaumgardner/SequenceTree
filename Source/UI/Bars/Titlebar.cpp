@@ -16,7 +16,7 @@
 #include "Titlebar.h"
 
 
-Titlebar::Titlebar(ApplicationContext& context)
+Titlebar::Titlebar(const ApplicationContext& context)
     : Bar(context, { Orientation::horizontal }),
       transportPane(context),
       buttonPane(context),

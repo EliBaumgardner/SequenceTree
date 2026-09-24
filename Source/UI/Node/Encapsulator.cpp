@@ -9,7 +9,7 @@
 #include "../Canvas/NodeCanvas.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-Encapsulator::Encapsulator(ApplicationContext& context) : Node(context)
+Encapsulator::Encapsulator(const ApplicationContext& context) : Node(context)
 {
     nodeType    = NodeType::Encapsulator;
     hasInnerRim = true;

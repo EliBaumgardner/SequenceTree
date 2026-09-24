@@ -92,7 +92,7 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
 
     const int chosen = rule->selectChild(context);
 
-    nodeState.set(NodeStateSlot::LastNode, parentId, chosen);
+    nodeState.set(NodeStateSlot::SwitchCandidate, parentId, chosen);
     return chosen;
 }
 
@@ -166,6 +166,8 @@ void TraversalLogic::ModulatorWalk::decide(const NodeMap& nodes, TraversalLogic&
         const int count = owner.nodeState.increment(NodeStateSlot::ModulatorCount, walker.target);
 
         chosen = owner.selectNextChild(nodes, walker.target, count, &isModulatorChild);
+
+        owner.nodeState.set(NodeStateSlot::LastNode, walker.target, chosen);
     }
 
     if (chosen == -1) {
@@ -182,8 +184,6 @@ void TraversalLogic::ModulatorWalk::decide(const NodeMap& nodes, TraversalLogic&
 
         return;
     }
-
-    owner.nodeState.set(NodeStateSlot::LastNode, chosen, chosen);
 
     decidedTarget = chosen;
 
@@ -275,6 +275,8 @@ void TraversalLogic::advanceAlternative(const NodeMap& nodes,int parentId) {
 
     const int chosen = selectNextChild(nodes,currentAltId, count, isAlternative);
 
+    nodeState.set(NodeStateSlot::LastNode, currentAltId, chosen);
+
     if (chosen == -1) {
         nodeState.set(NodeStateSlot::ActiveAlternative, parentId, parentId);
         walker->alternativeTarget  = -1;
@@ -285,11 +287,11 @@ void TraversalLogic::advanceAlternative(const NodeMap& nodes,int parentId) {
 }
 
 void TraversalLogic::selectSwitchNode(const NodeMap& nodes,int targetId, int& chosenNodeId) {
-    if (nodeState.get(NodeStateSlot::LastNode, targetId) != -1) {
+    if (nodeState.get(NodeStateSlot::SwitchCandidate, targetId) != -1) {
 
         const int switchCount = nodeState.increment(NodeStateSlot::SwitchCount, targetId);
 
-        const auto switchNodeIterator = nodes.find(nodeState.get(NodeStateSlot::LastNode, targetId));
+        const auto switchNodeIterator = nodes.find(nodeState.get(NodeStateSlot::SwitchCandidate, targetId));
 
         if (switchNodeIterator != nodes.end()) {
             const RTNode& switchNode       = *switchNodeIterator->second;
@@ -314,16 +316,22 @@ void TraversalLogic::advance(const NodeMap& nodes)
     primary.last            = targetId;
     primary.alternativeLast = primary.alternativeTarget;
 
+    TraversalState deadEndState = TraversalState::End;
+
+    if (loop.active) {
+        deadEndState = TraversalState::Reset;
+    }
+
     const auto targetIterator = nodes.find(targetId);
 
     if (targetIterator == nodes.end()) {
-        state = loop.active ? TraversalState::Reset : TraversalState::End;
+        state = deadEndState;
         return;
     }
 
     if (targetIterator->second->connections.empty()) {
         nodeState.increment(NodeStateSlot::Count, targetId);
-        state = loop.active ? TraversalState::Reset : TraversalState::End;
+        state = deadEndState;
         return;
     }
 
@@ -342,6 +350,8 @@ void TraversalLogic::advance(const NodeMap& nodes)
 
         chosenNodeId = selectNextChild(nodes,targetId, count, &isAdvanceableChild);
 
+        nodeState.set(NodeStateSlot::LastNode, targetId, chosenNodeId);
+
         if (chosenNodeId != -1) {
             const int encapsulationEntryId = encapsulationLoopTarget(nodes, targetId, chosenNodeId);
 
@@ -356,8 +366,6 @@ void TraversalLogic::advance(const NodeMap& nodes)
     if (chosenNodeId  != -1) {
         const auto nextTargetIt = nodes.find(chosenNodeId);
 
-        nodeState.set(NodeStateSlot::LastNode, chosenNodeId, chosenNodeId);
-
         if (nextTargetIt == nodes.end()) {
             primary.alternativeTarget = -1;
         }
@@ -370,7 +378,7 @@ void TraversalLogic::advance(const NodeMap& nodes)
     }
 
     if (primary.target == primary.last) {
-        state = loop.active ? TraversalState::Reset : TraversalState::End;
+        state = deadEndState;
     }
 }
 
@@ -384,6 +392,8 @@ const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes)
         const int jumpTargetId = selectTreeJumpChild(nodes, *targetIt->second, count);
 
         if (jumpTargetId != -1) {
+            nodeState.set(NodeStateSlot::SwitchCandidate, primary.target, -1);
+
             const auto jumpTargetIt = nodes.find(jumpTargetId);
 
             if (jumpTargetIt != nodes.end()) {

@@ -37,11 +37,11 @@ struct NodeVisual {
     juce::Colour encapsulationRingColour;
 };
 
-class Node : public juce::Component, public juce::Timer {
+class Node : public juce::Component {
 
 public:
 
-    explicit Node(ApplicationContext& context);
+    explicit Node(const ApplicationContext& context);
 
     void paint  (juce::Graphics& g) override;
     void resized() override;
@@ -59,9 +59,9 @@ public:
     void setSelectVisual   (bool isSelected);
     void setSelectVisual   ();
     void setHighlightVisual(int runId, bool isHighlighted, juce::Colour colour);
+    void advancePulse(double frameSec);
 
     std::function<void(Node*, bool)> onSelected;
-    void timerCallback() override;
 
     virtual juce::Point<int> getNodeCentre() const { return getBounds().getCentre(); }
 
@@ -111,9 +111,13 @@ public:
     bool isAlternativeNode   = false;
 
     float pulsePhase         = 1.0f;
+    double lastPulseFrameSec = 0.0;
+    juce::VBlankAttachment pulseFrames;
 
     int displayCurrentCount = 0;
     int displayCountLimit   = 1;
+
+    const float pulseRatePerSecond = 4.2f;
 
     const float nodeEditorWidthFactor = 0.45f;
     const float nodeEditorHeightFactor = 0.30f;

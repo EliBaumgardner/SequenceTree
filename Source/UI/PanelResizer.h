@@ -16,7 +16,7 @@ public:
 
     enum class Edge { Left, Right };
 
-    PanelResizer(ApplicationContext& context, Edge edge);
+    PanelResizer(const ApplicationContext& context, Edge edge);
     ~PanelResizer() override;
 
     void mouseDown (const juce::MouseEvent& e) override;

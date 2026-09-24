@@ -18,7 +18,7 @@ class MenuArea : public juce::Component {
 
 public:
 
-    explicit MenuArea(ApplicationContext& context);
+    explicit MenuArea(const ApplicationContext& context);
     ~MenuArea() override;
 
     void paint(juce::Graphics& g) override;

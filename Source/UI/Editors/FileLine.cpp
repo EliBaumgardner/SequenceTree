@@ -7,7 +7,7 @@
 #include "../Theme/CustomLookAndFeel.h"
 
 
-FileLine::FileLine(ApplicationContext& context) : context(context) {
+FileLine::FileLine(const ApplicationContext& context) : context(context) {
 
     lineEditor = std::make_unique<LineEditor>(context);
     addAndMakeVisible(lineEditor.get());

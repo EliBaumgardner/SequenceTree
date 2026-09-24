@@ -11,7 +11,7 @@ class TraversalFlagNode : public Node {
 
     public:
 
-    explicit TraversalFlagNode(ApplicationContext& context);
+    explicit TraversalFlagNode(const ApplicationContext& context);
     void paint(juce::Graphics& g) override;
     void resized() override;
     bool hitTest(int x, int y) override;

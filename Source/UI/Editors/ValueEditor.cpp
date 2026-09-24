@@ -10,7 +10,7 @@
 
 #include <cmath>
 
-ValueEditor::ValueEditor(ApplicationContext& context) : applicationContext(context)
+ValueEditor::ValueEditor(const ApplicationContext& context) : applicationContext(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
 

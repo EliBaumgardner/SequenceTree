@@ -20,7 +20,7 @@ class NodeMenu : public juce::Component {
 
 public:
 
-    explicit NodeMenu(ApplicationContext& context);
+    explicit NodeMenu(const ApplicationContext& context);
     ~NodeMenu() override;
 
     void paint(juce::Graphics& g) override;
@@ -31,7 +31,7 @@ private:
     void bindToNode(const Node* node);
     void clearBindings();
 
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
     ColourSelector colourSelector { applicationContext };
     juce::Label    colourLabel;

@@ -9,7 +9,7 @@ class ConnectionOps
 {
 public:
 
-    explicit ConnectionOps(ApplicationContext& context) : applicationContext(context) {}
+    explicit ConnectionOps(const ApplicationContext& context) : applicationContext(context) {}
 
     void            disconnect        (const Arrow* arrow);
     juce::ValueTree connectionTreeFor (const Arrow* arrow) const;
@@ -35,5 +35,5 @@ private:
 
     bool connectsToOtherTreeRoot(int parentNodeId, int childNodeId) const;
 
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 };

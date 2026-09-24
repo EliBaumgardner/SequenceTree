@@ -13,7 +13,7 @@
 #include <cmath>
 #include <limits>
 
-RootNode::RootNode(ApplicationContext& context) : Node(context)
+RootNode::RootNode(const ApplicationContext& context) : Node(context)
 {
     nodeType = NodeType::Root;
 

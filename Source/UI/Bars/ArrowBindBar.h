@@ -14,7 +14,7 @@ class ArrowBindBar : public Bar {
 
 public:
 
-    explicit ArrowBindBar(ApplicationContext& context);
+    explicit ArrowBindBar(const ApplicationContext& context);
 
     static constexpr int   preferredHeight   = 34;
     static constexpr int   minimumHeight     = 26;

@@ -20,7 +20,7 @@ class TempoDisplay : public juce::Component, public juce::SettableTooltipClient 
 
     ValueEditor editor;
 
-    explicit TempoDisplay(ApplicationContext& context)
+    explicit TempoDisplay(const ApplicationContext& context)
         : editor(context)
     {
         setLookAndFeel(context.lookAndFeel);

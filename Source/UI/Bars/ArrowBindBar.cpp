@@ -5,7 +5,7 @@
 #include "ArrowBindBar.h"
 #include "../Canvas/NodeCanvas.h"
 
-ArrowBindBar::ArrowBindBar(ApplicationContext& context)
+ArrowBindBar::ArrowBindBar(const ApplicationContext& context)
     : Bar(context, { Orientation::horizontal, contentInsetRatio }),
       fieldSelector(context)
 {

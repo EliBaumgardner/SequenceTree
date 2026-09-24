@@ -12,24 +12,55 @@ void ArrowAnimation::startTrail(int trailId, int durationMs, juce::Colour colour
     trail.oneShot    = oneShot;
 }
 
-bool ArrowAnimation::advance()
+void ArrowAnimation::resumeTrails()
 {
-    const bool snapRunning   = advanceSnap();
-    const bool trailsRunning = advanceTrails();
-    const bool hoverRunning  = advanceHover();
+    if (! trailsPaused) {
+        return;
+    }
 
-    return snapRunning || trailsRunning || hoverRunning;
+    const double pausedForMs = juce::Time::getMillisecondCounterHiRes() - pausedAtMs;
+
+    for (auto& [trailId, trail] : trails) {
+        trail.startMs += pausedForMs;
+    }
+
+    trailsPaused = false;
 }
 
-bool ArrowAnimation::advanceSnap()
+bool ArrowAnimation::advance(double frameSec)
+{
+    float elapsedSec = 0.0f;
+
+    if (lastFrameSec > 0.0) {
+        elapsedSec = static_cast<float>(frameSec - lastFrameSec);
+    }
+
+    lastFrameSec = frameSec;
+
+    const bool snapRunning   = advanceSnap(elapsedSec);
+    const bool trailsRunning = advanceTrails();
+    const bool hoverRunning  = advanceHover(elapsedSec);
+
+    const bool stillRunning = snapRunning || trailsRunning || hoverRunning;
+
+    if (! stillRunning) {
+        lastFrameSec = 0.0;
+    }
+
+    return stillRunning;
+}
+
+bool ArrowAnimation::advanceSnap(float elapsedSec)
 {
     if (snapSettled()) {
         return false;
     }
 
-    snapVelocity += (1.0f - snapT) * snapSpringStiffness;
-    snapVelocity *= snapSpringDamping;
-    snapT        += snapVelocity;
+    const float springTicks = elapsedSec * snapSpringRateHz;
+
+    snapVelocity += (1.0f - snapT) * snapSpringStiffness * springTicks;
+    snapVelocity *= std::pow(snapSpringDamping, springTicks);
+    snapT        += snapVelocity * springTicks;
 
     if (snapSettled()) {
         snapT        = 1.0f;
@@ -48,6 +79,10 @@ bool ArrowAnimation::snapSettled()
 
 bool ArrowAnimation::advanceTrails()
 {
+    if (trailsPaused) {
+        return false;
+    }
+
     bool anyActive = false;
 
     const double nowMs = juce::Time::getMillisecondCounterHiRes();
@@ -83,7 +118,7 @@ bool ArrowAnimation::advanceTrails()
     return anyActive;
 }
 
-bool ArrowAnimation::advanceHover()
+bool ArrowAnimation::advanceHover(float elapsedSec)
 {
     if (alphaTarget < alpha && ! snapSettled()) {
         return true;
@@ -94,10 +129,10 @@ bool ArrowAnimation::advanceHover()
         return false;
     }
 
-    float step = -hoverFadeStep;
+    float step = -hoverFadePerSecond * elapsedSec;
 
     if (alpha < alphaTarget) {
-        step = hoverFadeStep;
+        step = hoverFadePerSecond * elapsedSec;
     }
 
     alpha = juce::jlimit(0.0f, 1.0f, alpha + step);

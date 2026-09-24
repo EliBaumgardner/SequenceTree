@@ -20,7 +20,7 @@ class ArrowManager {
 
 public:
 
-    ArrowManager(NodeCanvas& canvas, ApplicationContext& context);
+    ArrowManager(NodeCanvas& canvas, const ApplicationContext& context);
     ~ArrowManager();
 
     const juce::OwnedArray<Arrow>& all() const { return arrows; }
@@ -57,6 +57,8 @@ public:
     void clearSelection();
 
     void resetAllProgress();
+    void pauseAllProgress();
+    void resumeAllProgress();
     void resetTrail(int trailId);
 
     void triggerSnapForNode(int nodeId);
@@ -75,7 +77,7 @@ private:
     void detach(Arrow* arrow);
 
     NodeCanvas& canvas;
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
     juce::OwnedArray<Arrow> arrows;
     std::unique_ptr<Arrow>  preview;

@@ -15,6 +15,7 @@ enum class NodeStateSlot
     CrossTreeSwitch,
     ActiveAlternative,
     LastNode,
+    SwitchCandidate,
     Total
 };
 

@@ -10,7 +10,7 @@
 
 #include <cmath>
 
-TraversalFlagNode::TraversalFlagNode(ApplicationContext& context) : Node(context)
+TraversalFlagNode::TraversalFlagNode(const ApplicationContext& context) : Node(context)
 {
     nodeType = NodeType::TraversalFlag;
 

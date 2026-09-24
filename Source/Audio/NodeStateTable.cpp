@@ -8,6 +8,7 @@ int NodeStateTable::defaultValue(NodeStateSlot slot)
     switch (slot) {
         case NodeStateSlot::ActiveAlternative:
         case NodeStateSlot::LastNode:
+        case NodeStateSlot::SwitchCandidate:
             return -1;
 
         default:

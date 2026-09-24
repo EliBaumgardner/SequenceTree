@@ -9,7 +9,7 @@
 class BottomBar : public Bar
 {
 public:
-    explicit BottomBar(ApplicationContext& context);
+    explicit BottomBar(const ApplicationContext& context);
 
     void applyDisplayMode(NodeDisplayMode mode);
 

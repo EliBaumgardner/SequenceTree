@@ -14,7 +14,7 @@ class AudioCommandDrainer {
 
 public:
 
-    AudioCommandDrainer(NodeCanvas& canvas, ApplicationContext& context);
+    AudioCommandDrainer(NodeCanvas& canvas, const ApplicationContext& context);
 
     void drainAll();
 
@@ -27,7 +27,7 @@ private:
     juce::Colour getTraversalColour(int traversalId) const;
 
     NodeCanvas&         canvas;
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
     bool awaitingFirstDrain = true;
 };
