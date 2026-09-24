@@ -7,24 +7,18 @@
 TraversalDispatcher::TraversalDispatcher(NoteScheduler& s, AudioUIBridge& b)
     : flagScheduler(*this, b), scheduler(s), bridge(b)
 {
-    chordVisitStamps.assign(NodeStateTable::maxNodeIds, 0);
+    chordVisits.prepare();
     chordFrontier.reserve(NodeStateTable::maxNodeIds + 1);
     crossTreeScratch.reserve(TraversalLogic::maxCrossTreeTargets);
 }
 
 bool TraversalDispatcher::markChordVisited(int nodeId)
 {
-    if (nodeId < 0 || nodeId >= NodeStateTable::maxNodeIds) {
+    if (chordVisits.find(nodeId) >= 0) {
         return false;
     }
 
-    if (chordVisitStamps[static_cast<std::size_t>(nodeId)] == chordVisitToken) {
-        return false;
-    }
-
-    chordVisitStamps[static_cast<std::size_t>(nodeId)] = chordVisitToken;
-
-    return true;
+    return chordVisits.claim(nodeId) >= 0;
 }
 
 void TraversalDispatcher::applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes,
@@ -449,11 +443,7 @@ void TraversalDispatcher::pushChordNotes(const RTNode& node, int runId, double s
 {
     const NodeMap& nodes = context.nodes;
 
-    if (++chordVisitToken == 0) {
-        std::fill(chordVisitStamps.begin(), chordVisitStamps.end(), 0);
-        chordVisitToken = 1;
-    }
-
+    chordVisits.clear();
     chordFrontier.clear();
 
     chordFrontier.push_back({ node.nodeID, parentCount });

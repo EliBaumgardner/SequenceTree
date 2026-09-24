@@ -2,6 +2,73 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
+
+void NodeRowMap::prepare()
+{
+    keys.assign(keyCapacity, emptyKey);
+    rowOfKey.assign(keyCapacity, 0);
+    keyOfRow.assign(maxRows, 0);
+
+    rowCount = 0;
+}
+
+void NodeRowMap::clear()
+{
+    for (int row = 0; row < rowCount; ++row) {
+        keys[static_cast<std::size_t>(keyOfRow[static_cast<std::size_t>(row)])] = emptyKey;
+    }
+
+    rowCount = 0;
+}
+
+int NodeRowMap::find(int nodeId) const
+{
+    if (nodeId < 0 || keys.empty()) {
+        return -1;
+    }
+
+    int key = static_cast<int>((static_cast<std::uint32_t>(nodeId) * 2654435761u) & (keyCapacity - 1));
+
+    while (keys[static_cast<std::size_t>(key)] != emptyKey) {
+        if (keys[static_cast<std::size_t>(key)] == nodeId) {
+            return rowOfKey[static_cast<std::size_t>(key)];
+        }
+
+        key = (key + 1) & (keyCapacity - 1);
+    }
+
+    return -1;
+}
+
+int NodeRowMap::claim(int nodeId)
+{
+    if (nodeId < 0 || keys.empty()) {
+        return -1;
+    }
+
+    int key = static_cast<int>((static_cast<std::uint32_t>(nodeId) * 2654435761u) & (keyCapacity - 1));
+
+    while (keys[static_cast<std::size_t>(key)] != emptyKey) {
+        if (keys[static_cast<std::size_t>(key)] == nodeId) {
+            return rowOfKey[static_cast<std::size_t>(key)];
+        }
+
+        key = (key + 1) & (keyCapacity - 1);
+    }
+
+    if (rowCount == maxRows) {
+        return -1;
+    }
+
+    keys    [static_cast<std::size_t>(key)]      = nodeId;
+    rowOfKey[static_cast<std::size_t>(key)]      = rowCount;
+    keyOfRow[static_cast<std::size_t>(rowCount)] = key;
+
+    rowCount = rowCount + 1;
+
+    return rowCount - 1;
+}
 
 int NodeStateTable::defaultValue(NodeStateSlot slot)
 {
@@ -16,9 +83,9 @@ int NodeStateTable::defaultValue(NodeStateSlot slot)
     }
 }
 
-int NodeStateTable::indexOf(NodeStateSlot slot, int nodeId)
+int NodeStateTable::indexOf(NodeStateSlot slot, int row)
 {
-    return static_cast<int>(slot) * maxNodeIds + nodeId;
+    return static_cast<int>(slot) * maxNodeIds + row;
 }
 
 void NodeStateTable::prepare()
@@ -28,6 +95,7 @@ void NodeStateTable::prepare()
     }
 
     values.resize(valueCount);
+    rows.prepare();
 
     clear();
 }
@@ -43,6 +111,8 @@ void NodeStateTable::clear()
 
         std::fill(begin, begin + maxNodeIds, defaultValue(static_cast<NodeStateSlot>(slot)));
     }
+
+    rows.clear();
 }
 
 bool NodeStateTable::isAddressable(int nodeId) const
@@ -51,9 +121,9 @@ bool NodeStateTable::isAddressable(int nodeId) const
         return false;
     }
 
-    const bool inRange = nodeId >= 0 && nodeId < maxNodeIds;
+    const bool inRange = nodeId >= 0;
 
-    assert(inRange && "node id exceeded NodeStateTable::maxNodeIds");
+    assert(inRange && "node id is negative");
 
     return inRange;
 }
@@ -64,7 +134,13 @@ int NodeStateTable::get(NodeStateSlot slot, int nodeId) const
         return defaultValue(slot);
     }
 
-    return values[static_cast<std::size_t>(indexOf(slot, nodeId))];
+    const int row = rows.find(nodeId);
+
+    if (row < 0) {
+        return defaultValue(slot);
+    }
+
+    return values[static_cast<std::size_t>(indexOf(slot, row))];
 }
 
 void NodeStateTable::set(NodeStateSlot slot, int nodeId, int value)
@@ -73,7 +149,15 @@ void NodeStateTable::set(NodeStateSlot slot, int nodeId, int value)
         return;
     }
 
-    values[static_cast<std::size_t>(indexOf(slot, nodeId))] = value;
+    const int row = rows.claim(nodeId);
+
+    assert(row >= 0 && "more than NodeStateTable::maxNodeIds distinct nodes in one traversal");
+
+    if (row < 0) {
+        return;
+    }
+
+    values[static_cast<std::size_t>(indexOf(slot, row))] = value;
 }
 
 int NodeStateTable::increment(NodeStateSlot slot, int nodeId)
@@ -82,7 +166,15 @@ int NodeStateTable::increment(NodeStateSlot slot, int nodeId)
         return defaultValue(slot);
     }
 
-    return ++values[static_cast<std::size_t>(indexOf(slot, nodeId))];
+    const int row = rows.claim(nodeId);
+
+    assert(row >= 0 && "more than NodeStateTable::maxNodeIds distinct nodes in one traversal");
+
+    if (row < 0) {
+        return defaultValue(slot);
+    }
+
+    return ++values[static_cast<std::size_t>(indexOf(slot, row))];
 }
 
 int& NodeStateTable::ref(NodeStateSlot slot, int nodeId)
@@ -92,5 +184,14 @@ int& NodeStateTable::ref(NodeStateSlot slot, int nodeId)
         return outOfRangeSink;
     }
 
-    return values[static_cast<std::size_t>(indexOf(slot, nodeId))];
+    const int row = rows.claim(nodeId);
+
+    assert(row >= 0 && "more than NodeStateTable::maxNodeIds distinct nodes in one traversal");
+
+    if (row < 0) {
+        outOfRangeSink = defaultValue(slot);
+        return outOfRangeSink;
+    }
+
+    return values[static_cast<std::size_t>(indexOf(slot, row))];
 }

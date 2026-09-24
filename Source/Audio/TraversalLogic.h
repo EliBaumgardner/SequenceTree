@@ -138,7 +138,7 @@ public:
 
     void advance(const NodeMap& nodes);
 
-    const RTNode* peekNextTarget(const NodeMap& nodes);
+    const RTNode* peekNextTarget(const NodeMap& nodes) const;
 
     static constexpr int maxCrossTreeTargets = NodeStateTable::maxNodeIds;
 
@@ -156,7 +156,7 @@ public:
 
 private:
 
-    int  selectNextChild(const NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible);
+    int  selectNextChild(const NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible) const;
     int  selectTreeJumpChild(const NodeMap& nodes, const RTNode& parent, int parentCount) const;
     void selectSwitchNode(const NodeMap& nodes, int targetId, int& chosenNodeId);
     void registerTrigger(const NodeMap& nodes, int nodeId);
@@ -169,7 +169,7 @@ private:
     void       handleTreeJump(const NodeMap& nodes, StepResult& result);
     int        advanceSubRoot(const NodeMap& nodes, Walker& walker);
     void       armSubLoop(Walker& walker, const RTNode& enteredNode);
-    int        encapsulationLoopTarget(const NodeMap& nodes, int leavingNodeId, int chosenNodeId);
+    int        encapsulationLoopTarget(const NodeMap& nodes, Walker& walker, int leavingNodeId, int chosenNodeId);
     void       fillEndedResult(StepResult& result) const;
 
     int referenceTargetId   = 0;

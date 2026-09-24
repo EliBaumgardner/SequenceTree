@@ -19,12 +19,33 @@ enum class NodeStateSlot
     Total
 };
 
+class NodeRowMap
+{
+public:
+
+    void prepare();
+    void clear();
+
+    int find (int nodeId) const;
+    int claim(int nodeId);
+
+    static constexpr int maxRows     = 1024;
+    static constexpr int keyCapacity = maxRows * 2;
+    static constexpr int emptyKey    = -1;
+
+    std::vector<int> keys;
+    std::vector<int> rowOfKey;
+    std::vector<int> keyOfRow;
+
+    int rowCount = 0;
+};
+
 class NodeStateTable
 {
 public:
 
     static constexpr int         slotCount  = static_cast<int>(NodeStateSlot::Total);
-    static constexpr int         maxNodeIds = 1024;
+    static constexpr int         maxNodeIds = NodeRowMap::maxRows;
     static constexpr std::size_t valueCount = static_cast<std::size_t>(slotCount) * maxNodeIds;
 
     void prepare();
@@ -39,11 +60,12 @@ public:
 
 private:
 
-    static int indexOf(NodeStateSlot slot, int nodeId);
+    static int indexOf(NodeStateSlot slot, int row);
 
     bool isAddressable(int nodeId) const;
 
     std::vector<int> values;
+    NodeRowMap       rows;
 
     int outOfRangeSink = 0;
 };
