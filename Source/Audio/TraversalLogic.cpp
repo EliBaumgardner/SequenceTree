@@ -79,7 +79,7 @@ void TraversalLogic::begin(const NodeMap& nodes, int startNodeId, int graphLoopL
 }
 
 int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int parentCount,
-                                    ChildPredicate isEligible)
+                                    ChildPredicate isEligible) const
 {
     const auto parentIt = nodes.find(parentId);
     if (parentIt == nodes.end()) {
@@ -90,10 +90,7 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
                                 traversal.key, isEligible, nodeState,
                                 static_cast<int>(selectionRandom >> 1) };
 
-    const int chosen = rule->selectChild(context);
-
-    nodeState.set(NodeStateSlot::SwitchCandidate, parentId, chosen);
-    return chosen;
+    return rule->selectChild(context);
 }
 
 int TraversalLogic::selectTreeJumpChild(const NodeMap& nodes, const RTNode& parent, int parentCount) const
@@ -167,7 +164,18 @@ void TraversalLogic::ModulatorWalk::decide(const NodeMap& nodes, TraversalLogic&
 
         chosen = owner.selectNextChild(nodes, walker.target, count, &isModulatorChild);
 
+        owner.nodeState.set(NodeStateSlot::SwitchCandidate, walker.target, chosen);
         owner.nodeState.set(NodeStateSlot::LastNode, walker.target, chosen);
+
+        if (chosen != -1) {
+            const int encapsulationEntryId = owner.encapsulationLoopTarget(nodes, walker, walker.target, chosen);
+
+            if (encapsulationEntryId != -1) {
+                chosen = encapsulationEntryId;
+            }
+
+            owner.registerTrigger(nodes, chosen);
+        }
     }
 
     if (chosen == -1) {
@@ -180,6 +188,12 @@ void TraversalLogic::ModulatorWalk::decide(const NodeMap& nodes, TraversalLogic&
             if (subRootTarget != -1) {
                 decidedTarget = subRootTarget;
             }
+        }
+
+        const auto restartIt = nodes.find(decidedTarget);
+
+        if (restartIt != nodes.end() && restartIt->second->encapsulationEntryId == decidedTarget) {
+            owner.armSubLoop(walker, *restartIt->second);
         }
 
         return;
@@ -275,6 +289,7 @@ void TraversalLogic::advanceAlternative(const NodeMap& nodes,int parentId) {
 
     const int chosen = selectNextChild(nodes,currentAltId, count, isAlternative);
 
+    nodeState.set(NodeStateSlot::SwitchCandidate, currentAltId, chosen);
     nodeState.set(NodeStateSlot::LastNode, currentAltId, chosen);
 
     if (chosen == -1) {
@@ -335,25 +350,30 @@ void TraversalLogic::advance(const NodeMap& nodes)
         return;
     }
 
+    const int jumpCount    = nodeState.get(NodeStateSlot::Count, targetId) + 1;
+    const int jumpTargetId = selectTreeJumpChild(nodes, *targetIterator->second, jumpCount);
+
+    if (jumpTargetId != -1) {
+        nodeState.increment(NodeStateSlot::Count, targetId);
+        nodeState.set(NodeStateSlot::SwitchCandidate, targetId, -1);
+
+        pendingJumpTargetId = jumpTargetId;
+        state               = TraversalState::Jump;
+        return;
+    }
+
     selectSwitchNode(nodes, targetId, chosenNodeId);
 
     if (chosenNodeId == -1) {
         const int count = nodeState.increment(NodeStateSlot::Count, targetId);
 
-        const int jumpTargetId = selectTreeJumpChild(nodes, *targetIterator->second, count);
-
-        if (jumpTargetId != -1) {
-            pendingJumpTargetId = jumpTargetId;
-            state               = TraversalState::Jump;
-            return;
-        }
-
         chosenNodeId = selectNextChild(nodes,targetId, count, &isAdvanceableChild);
 
+        nodeState.set(NodeStateSlot::SwitchCandidate, targetId, chosenNodeId);
         nodeState.set(NodeStateSlot::LastNode, targetId, chosenNodeId);
 
         if (chosenNodeId != -1) {
-            const int encapsulationEntryId = encapsulationLoopTarget(nodes, targetId, chosenNodeId);
+            const int encapsulationEntryId = encapsulationLoopTarget(nodes, primary, targetId, chosenNodeId);
 
             if (encapsulationEntryId != -1) {
                 chosenNodeId = encapsulationEntryId;
@@ -382,7 +402,7 @@ void TraversalLogic::advance(const NodeMap& nodes)
     }
 }
 
-const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes)
+const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes) const
 {
     const int count = nodeState.get(NodeStateSlot::Count, primary.target) + 1;
 
@@ -392,8 +412,6 @@ const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes)
         const int jumpTargetId = selectTreeJumpChild(nodes, *targetIt->second, count);
 
         if (jumpTargetId != -1) {
-            nodeState.set(NodeStateSlot::SwitchCandidate, primary.target, -1);
-
             const auto jumpTargetIt = nodes.find(jumpTargetId);
 
             if (jumpTargetIt != nodes.end()) {
@@ -542,7 +560,7 @@ void TraversalLogic::armSubLoop(Walker& walker, const RTNode& enteredNode)
     nodeState.set(NodeStateSlot::SubRootCount, walker.subRootNode, 0);
 }
 
-int TraversalLogic::encapsulationLoopTarget(const NodeMap& nodes, int leavingNodeId, int chosenNodeId)
+int TraversalLogic::encapsulationLoopTarget(const NodeMap& nodes, Walker& walker, int leavingNodeId, int chosenNodeId)
 {
     const auto leavingIt = nodes.find(leavingNodeId);
 
@@ -552,7 +570,7 @@ int TraversalLogic::encapsulationLoopTarget(const NodeMap& nodes, int leavingNod
 
     const int entryId = leavingIt->second->encapsulationEntryId;
 
-    if (entryId == -1 || primary.subRootNode != entryId) {
+    if (entryId == -1 || walker.subRootNode != entryId) {
         return -1;
     }
 
@@ -573,7 +591,7 @@ int TraversalLogic::encapsulationLoopTarget(const NodeMap& nodes, int leavingNod
 
     if (subLoopLimit > 0 && subLoopCount >= subLoopLimit) {
         nodeState.set(NodeStateSlot::SubRootCount, entryId, 0);
-        primary.subRootNode = -1;
+        walker.subRootNode = -1;
         return -1;
     }
 

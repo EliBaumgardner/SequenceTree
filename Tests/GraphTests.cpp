@@ -218,3 +218,189 @@ TEST_CASE("moving a pitch-bound node transposes around the pitch last typed", "[
     REQUIRE_FALSE(nodes.at(childId)->notes.empty());
     CHECK(nodes.at(childId)->notes.front().pitch == 68);
 }
+
+TEST_CASE("undo and redo keep the node index, parent links and published graph in step", "[graph][undo]")
+{
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+    juce::UndoManager undoManager;
+
+    const int rootId = createRoot(graph, 0, 0);
+
+    undoManager.beginNewTransaction();
+
+    const juce::ValueTree child = NodeFactory::createNode(graph, rootId, ValueTreeIdentifiers::NodeData,
+                                                          NodePosition { 100, 0, 25 }, &undoManager);
+    const int childId = child.getProperty(ValueTreeIdentifiers::Id);
+
+    const std::vector<int> rootOnly { rootId };
+
+    undoManager.beginNewTransaction();
+    graph.removeNode(childId, &undoManager);
+
+    CHECK_FALSE(graph.getNode(childId).isValid());
+    CHECK_FALSE(graph.getConnection(rootId, childId).isValid());
+    CHECK(graph.parentIdsOf.count(childId) == 0);
+    CHECK(rebuildAndPublish(processor).count(childId) == 0);
+
+    undoManager.undo();
+
+    REQUIRE(graph.getNode(childId).isValid());
+    CHECK(graph.getConnection(rootId, childId).isValid());
+    CHECK(graph.parentIdsOf[childId] == rootOnly);
+    CHECK(rebuildAndPublish(processor).count(childId) == 1);
+
+    undoManager.undo();
+
+    CHECK_FALSE(graph.getNode(childId).isValid());
+    CHECK(graph.parentIdsOf.count(childId) == 0);
+
+    undoManager.redo();
+
+    CHECK(graph.getNode(childId).isValid());
+    CHECK(graph.parentIdsOf[childId] == rootOnly);
+
+    undoManager.redo();
+
+    CHECK_FALSE(graph.getNode(childId).isValid());
+    CHECK(graph.parentIdsOf.count(childId) == 0);
+}
+
+TEST_CASE("removing an encapsulator removes its members and every link to them", "[graph][encapsulation]")
+{
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+
+    const int rootId  = createRoot(graph, 0, 0);
+    const int firstId = createChild(graph, rootId, 100, 0);
+    const int lastId  = createChild(graph, firstId, 200, 0);
+    const int afterId = createChild(graph, lastId, 300, 0);
+
+    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, { firstId, lastId }, 1, nullptr);
+    const int encapsulatorId = encapsulator.getProperty(ValueTreeIdentifiers::Id);
+
+    graph.removeNode(encapsulatorId, nullptr);
+
+    CHECK_FALSE(graph.getNode(encapsulatorId).isValid());
+    CHECK_FALSE(graph.getNode(firstId).isValid());
+    CHECK_FALSE(graph.getNode(lastId).isValid());
+    CHECK(graph.getNode(afterId).isValid());
+
+    CHECK_FALSE(graph.getConnection(rootId, firstId).isValid());
+    CHECK(graph.parentIdsOf.count(firstId) == 0);
+    CHECK(graph.parentIdsOf.count(lastId)  == 0);
+    CHECK(graph.parentIdsOf.count(afterId) == 0);
+
+    const NodeMap& nodes = rebuildAndPublish(processor);
+
+    CHECK(nodes.count(firstId) == 0);
+    CHECK(nodes.count(lastId)  == 0);
+}
+
+TEST_CASE("dissolving an encapsulator keeps its members and their arrows", "[graph][encapsulation]")
+{
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+
+    const int rootId  = createRoot(graph, 0, 0);
+    const int firstId = createChild(graph, rootId, 100, 0);
+    const int lastId  = createChild(graph, firstId, 200, 0);
+
+    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, { firstId, lastId }, 2, nullptr);
+    const int encapsulatorId = encapsulator.getProperty(ValueTreeIdentifiers::Id);
+
+    CHECK(graph.encapsulation.memberIds(encapsulatorId) == std::vector<int> { firstId, lastId });
+
+    graph.encapsulation.dissolve(encapsulatorId, nullptr);
+
+    CHECK_FALSE(graph.getNode(encapsulatorId).isValid());
+    REQUIRE(graph.getNode(firstId).isValid());
+    REQUIRE(graph.getNode(lastId).isValid());
+    CHECK_FALSE(graph.getNode(firstId).hasProperty(ValueTreeIdentifiers::EncapsulatorId));
+    CHECK_FALSE(graph.getNode(lastId).hasProperty(ValueTreeIdentifiers::EncapsulatorId));
+    CHECK(graph.getConnection(rootId, firstId).isValid());
+    CHECK(graph.getConnection(firstId, lastId).isValid());
+
+    const NodeMap& nodes = rebuildAndPublish(processor);
+
+    CHECK(nodes.at(firstId)->encapsulationEntryId == -1);
+}
+
+TEST_CASE("removing an encapsulator's last member dissolves it", "[graph][encapsulation]")
+{
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+
+    const int rootId   = createRoot(graph, 0, 0);
+    const int memberId = createChild(graph, rootId, 100, 0);
+
+    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, { memberId }, 1, nullptr);
+    const int encapsulatorId = encapsulator.getProperty(ValueTreeIdentifiers::Id);
+
+    graph.removeNode(memberId, nullptr);
+
+    CHECK_FALSE(graph.getNode(encapsulatorId).isValid());
+}
+
+TEST_CASE("a node's parent is found through a chain of traversal flags", "[graph]")
+{
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+
+    const int rootId = createRoot(graph, 0, 0);
+    const int noteId = createChild(graph, rootId, 100, 0);
+
+    const juce::ValueTree firstFlag = NodeFactory::createTraversalFlagNode(graph, noteId, NodePosition { 200, 0, 25 }, nullptr);
+    const int firstFlagId = firstFlag.getProperty(ValueTreeIdentifiers::Id);
+
+    const juce::ValueTree secondFlag = NodeFactory::createTraversalFlagNode(graph, firstFlagId, NodePosition { 300, 0, 25 }, nullptr);
+    const int secondFlagId = secondFlag.getProperty(ValueTreeIdentifiers::Id);
+
+    CHECK((int) graph.getNodeParent(secondFlagId).getProperty(ValueTreeIdentifiers::Id) == noteId);
+    CHECK((int) graph.getNodeParent(firstFlagId).getProperty(ValueTreeIdentifiers::Id)  == noteId);
+    CHECK((int) graph.getNodeParent(noteId).getProperty(ValueTreeIdentifiers::Id)       == rootId);
+    CHECK_FALSE(graph.getNodeParent(rootId).isValid());
+}
+
+TEST_CASE("a restored graph indexes, numbers and walks like the one it was saved from", "[graph][traversal]")
+{
+    SequenceTreeAudioProcessor original;
+    SequenceTreeAudioProcessor restored;
+
+    const int rootId   = createRoot(original.graphState, 0, 0);
+    const int everyId  = createChild(original.graphState, rootId, 100, 0);
+    const int secondId = createChild(original.graphState, rootId, 100, 100);
+
+    original.graphState.getNode(secondId).setProperty(ValueTreeIdentifiers::CountLimit, 2, nullptr);
+
+    restored.graphState.replaceState(original.graphState.nodeMap, original.graphState.traversals.map);
+
+    CHECK(restored.graphState.nodeIdIncrement == original.graphState.nodeIdIncrement);
+    CHECK(restored.graphState.parentIdsOf     == original.graphState.parentIdsOf);
+    CHECK(restored.graphState.getNode(everyId).isValid());
+
+    std::vector<std::vector<int>> walks;
+
+    for (SequenceTreeAudioProcessor* processor : { &original, &restored }) {
+        const NodeMap& nodes = rebuildAndPublish(*processor);
+
+        TraversalLogic logic;
+
+        logic.nodeState.prepare();
+        logic.reset(rootId, RTtraversal {});
+        logic.begin(nodes, rootId, 0);
+
+        std::vector<int> visited { logic.primary.target };
+
+        for (int step = 0; step < 8; ++step) {
+            visited.push_back(logic.handleNodeEvent(nodes).enteredId);
+        }
+
+        walks.push_back(visited);
+    }
+
+    const std::vector<int> expected { rootId, everyId, rootId, secondId, rootId, everyId, rootId, secondId, rootId };
+
+    CHECK(walks[0] == expected);
+    CHECK(walks[1] == expected);
+}

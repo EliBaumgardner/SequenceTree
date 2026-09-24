@@ -69,8 +69,7 @@ private:
 
     int                                dispatchDepth = 0;
 
-    std::vector<std::uint32_t>         chordVisitStamps;
-    std::uint32_t                      chordVisitToken = 0;
+    NodeRowMap                         chordVisits;
     std::vector<std::pair<int, int>>   chordFrontier;
     std::vector<int>                   crossTreeScratch;
 };
