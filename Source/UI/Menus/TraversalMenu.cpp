@@ -118,9 +118,9 @@ void TraversalMenu::selectTraversal(int traversalId) {
 
     multiplierEditor.bindEditor(traversalData, ValueTreeIdentifiers::TempoMultiplier);
 
-    bindWithDefault(channelEditor,   ValueTreeIdentifiers::TraversalChannel,   1);
-    bindWithDefault(transposeEditor, ValueTreeIdentifiers::TraversalTranspose, 0);
-    bindWithDefault(velocityEditor,  ValueTreeIdentifiers::TraversalVelocity,  1.0);
+    bindWithDefault(channelEditor,   ValueTreeIdentifiers::TraversalChannel,   TraversalState::defaultChannel);
+    bindWithDefault(transposeEditor, ValueTreeIdentifiers::TraversalTranspose, TraversalState::defaultTranspose);
+    bindWithDefault(velocityEditor,  ValueTreeIdentifiers::TraversalVelocity,  TraversalState::defaultVelocity);
 
     const juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
     if (colourString.isNotEmpty()) {

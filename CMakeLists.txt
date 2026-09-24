@@ -35,6 +35,7 @@ target_sources(SequenceTree PRIVATE
         Source/Plugin/PluginProcessor.cpp
         Source/Plugin/PluginEditor.cpp
         Source/Plugin/AudioSnapshotPublisher.cpp
+        Source/Plugin/TraversalParameters.cpp
         Source/Audio/EventManager.cpp
         Source/Audio/NoteScheduler.cpp
         Source/Audio/TraversalLogic.cpp
