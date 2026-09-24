@@ -29,7 +29,7 @@ void rememberOnce(std::vector<int>& ids, int id)
 
 }
 
-NodeCanvas::NodeCanvas(ApplicationContext& context) : applicationContext(context)
+NodeCanvas::NodeCanvas(const ApplicationContext& context) : applicationContext(context)
 {
     setPaintingIsUnclipped(true);
     setLookAndFeel(applicationContext.lookAndFeel);
@@ -200,13 +200,13 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
 
     if (isPlaying) {
         nodeManager.equipRootTraversals();
+        arrowManager.resumeAllProgress();
+    }
+    else {
+        arrowManager.pauseAllProgress();
     }
 
     applicationContext.rtGraphBuilder->rebuildAllGraphs();
-
-    if (! isPlaying) {
-        arrowManager.resetAllProgress();
-    }
 }
 
 void NodeCanvas::clearCanvas()

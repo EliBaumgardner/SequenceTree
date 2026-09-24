@@ -11,7 +11,7 @@
 
 #include <limits>
 
-TraversalMenu::TraversalMenu(ApplicationContext& context)
+TraversalMenu::TraversalMenu(const ApplicationContext& context)
     : displayMenu(context), multiplierEditor(context), channelEditor(context), transposeEditor(context), velocityEditor(context), colourSelector(context),
       applicationContext(context),
       topBar(context, { Bar::Orientation::horizontal }) {

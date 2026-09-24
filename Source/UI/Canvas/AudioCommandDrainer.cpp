@@ -12,7 +12,7 @@
 #include "../../Plugin/PluginProcessor.h"
 #include "../../Util/ApplicationContext.h"
 
-AudioCommandDrainer::AudioCommandDrainer(NodeCanvas& canvasRef, ApplicationContext& context)
+AudioCommandDrainer::AudioCommandDrainer(NodeCanvas& canvasRef, const ApplicationContext& context)
     : canvas(canvasRef), applicationContext(context)
 {
 }

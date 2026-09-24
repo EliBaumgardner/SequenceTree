@@ -15,7 +15,7 @@
 #include "../../Audio/AudioUIBridge.h"
 #include "../../Util/ApplicationContext.h"
 
-ArrowManager::ArrowManager(NodeCanvas& canvasRef, ApplicationContext& context)
+ArrowManager::ArrowManager(NodeCanvas& canvasRef, const ApplicationContext& context)
     : canvas(canvasRef), applicationContext(context)
 {
 }
@@ -377,6 +377,29 @@ void ArrowManager::resetAllProgress()
     for (Arrow* const arrow : arrows) {
         if (arrow != nullptr) {
             arrow->resetProgress();
+        }
+    }
+}
+
+void ArrowManager::pauseAllProgress()
+{
+    const double nowMs = juce::Time::getMillisecondCounterHiRes();
+
+    for (Arrow* const arrow : arrows) {
+        if (arrow == nullptr || arrow->animation.trailsPaused) {
+            continue;
+        }
+
+        arrow->animation.trailsPaused = true;
+        arrow->animation.pausedAtMs   = nowMs;
+    }
+}
+
+void ArrowManager::resumeAllProgress()
+{
+    for (Arrow* const arrow : arrows) {
+        if (arrow != nullptr) {
+            arrow->resumeProgress();
         }
     }
 }

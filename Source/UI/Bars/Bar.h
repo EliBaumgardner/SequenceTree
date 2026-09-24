@@ -14,7 +14,7 @@ public:
         float       contentInsetRatio = 0.10f;
     };
 
-    Bar(ApplicationContext& context, Style style);
+    Bar(const ApplicationContext& context, Style style);
     ~Bar() override;
 
     void paint(juce::Graphics& g) final;
@@ -29,7 +29,7 @@ protected:
     static constexpr int   contentSpacing      = 12;
     static constexpr float separatorInsetRatio = 0.22f;
 
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
 private:
 

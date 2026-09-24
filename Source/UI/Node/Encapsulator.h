@@ -13,7 +13,7 @@ class Encapsulator : public Node {
 
 public:
 
-    explicit Encapsulator(ApplicationContext& context);
+    explicit Encapsulator(const ApplicationContext& context);
 
     void paint(juce::Graphics& g) override;
 

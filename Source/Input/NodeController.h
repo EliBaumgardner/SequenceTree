@@ -42,7 +42,7 @@ public:
     using NodeControllerMode = NodeCreationMode;
     NodeControllerMode nodeControllerMode;
 
-    NodeController(ApplicationContext& context, NodeCanvas& canvas);
+    NodeController(const ApplicationContext& context, NodeCanvas& canvas);
     ~NodeController() override;
 
     void mouseEnter          (const juce::MouseEvent& e) override;
@@ -142,8 +142,8 @@ private:
     static constexpr int   dragThreshold           = 5;
     static constexpr int   defaultNodeRadius       = 20;
 
-    ApplicationContext& applicationContext;
-    NodeCanvas&         canvas;
+    const ApplicationContext& applicationContext;
+    NodeCanvas&               canvas;
 
     ConnectionOps connectionOps { applicationContext };
     SelectionOps  selectionOps  { applicationContext };

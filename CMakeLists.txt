@@ -121,3 +121,41 @@ target_link_libraries(SequenceTree PRIVATE
         juce::juce_audio_devices
         juce::juce_audio_utils
 )
+
+add_subdirectory(Catch2)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Catch2/extras)
+include(Catch)
+enable_testing()
+
+add_executable(SequenceTree_Tests
+        Tests/TraversalTests.cpp
+        Tests/ScriptCompilerTests.cpp
+        Source/Audio/TraversalLogic.cpp
+        Source/Audio/TraversalRule.cpp
+        Source/Audio/ScriptTraversalRule.cpp
+        Source/Audio/NodeStateTable.cpp
+        Source/Script/ScriptLexer.cpp
+        Source/Script/ScriptParser.cpp
+        Source/Script/ScriptEmitter.cpp
+        Source/Script/ScriptCompiler.cpp
+)
+
+target_compile_features(SequenceTree_Tests PRIVATE cxx_std_20)
+target_compile_options(SequenceTree_Tests PRIVATE -Wall -Wextra -Wno-unused-parameter)
+target_include_directories(SequenceTree_Tests PRIVATE Source)
+target_link_libraries(SequenceTree_Tests PRIVATE Catch2::Catch2WithMain)
+
+catch_discover_tests(SequenceTree_Tests)
+
+add_executable(SequenceTree_GraphTests
+        Tests/GraphTests.cpp
+)
+
+target_compile_features(SequenceTree_GraphTests PRIVATE cxx_std_20)
+target_compile_options(SequenceTree_GraphTests PRIVATE -Wall -Wextra -Wno-unused-parameter)
+
+target_include_directories(SequenceTree_GraphTests PRIVATE Source JUCE/modules)
+
+target_link_libraries(SequenceTree_GraphTests PRIVATE SequenceTree Catch2::Catch2)
+
+catch_discover_tests(SequenceTree_GraphTests DISCOVERY_MODE PRE_TEST)

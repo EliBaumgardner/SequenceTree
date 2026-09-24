@@ -4,7 +4,7 @@
 
 #include "MenuBar.h"
 
-MenuBar::MenuBar(ApplicationContext& context)
+MenuBar::MenuBar(const ApplicationContext& context)
     : Bar(context, { Orientation::vertical, iconInsetRatio })
 {
     treeIcon = std::make_unique<IconButton>(

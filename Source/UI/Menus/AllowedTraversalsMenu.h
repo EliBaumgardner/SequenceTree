@@ -16,7 +16,7 @@ class AllowedTraversalsMenu : public juce::Component {
 
 public:
 
-    AllowedTraversalsMenu(ApplicationContext& context, juce::ValueTree connection);
+    AllowedTraversalsMenu(const ApplicationContext& context, juce::ValueTree connection);
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -48,7 +48,7 @@ private:
         std::unique_ptr<ToggleButton> toggle;
     };
 
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
     juce::ValueTree connection;
 
     std::vector<TraversalRow> rows;

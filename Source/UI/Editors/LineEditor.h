@@ -11,7 +11,7 @@ class LineEditor : public ValueEditor,
                    public juce::KeyListener {
 public:
 
-    explicit LineEditor(ApplicationContext& context);
+    explicit LineEditor(const ApplicationContext& context);
     ~LineEditor() override;
 
     juce::String getLineText() const;

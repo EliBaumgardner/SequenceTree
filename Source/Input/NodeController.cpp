@@ -25,7 +25,7 @@
 
 
 
-NodeController::NodeController(ApplicationContext& context, NodeCanvas& canvasRef)
+NodeController::NodeController(const ApplicationContext& context, NodeCanvas& canvasRef)
     : applicationContext(context), canvas(canvasRef)
 {
 }

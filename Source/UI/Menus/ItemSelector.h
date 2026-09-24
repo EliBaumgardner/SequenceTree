@@ -19,7 +19,7 @@ public:
 
     using Action = std::function<void()>;
 
-    explicit ItemSelector(ApplicationContext& context);
+    explicit ItemSelector(const ApplicationContext& context);
 
     void addItem(int itemId, juce::String label, Action onChosen = nullptr);
     void removeItem(int itemId);
@@ -52,7 +52,7 @@ private:
 
     const Item* findItem(int itemId) const;
 
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
     std::unique_ptr<IconButton> button;
     std::unique_ptr<ValueEditor> labelEditor;

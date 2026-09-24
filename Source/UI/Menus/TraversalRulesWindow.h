@@ -26,7 +26,7 @@ public:
 
     public:
 
-        explicit RulesTitlebar(ApplicationContext& context);
+        explicit RulesTitlebar(const ApplicationContext& context);
 
         std::function<void()> onPlayClicked;
 
@@ -44,7 +44,7 @@ public:
         ButtonPane                  undoRedoPane;
     };
 
-    explicit TraversalRulesWindow(ApplicationContext& context);
+    explicit TraversalRulesWindow(const ApplicationContext& context);
     ~TraversalRulesWindow() override;
 
     void paint(juce::Graphics& g) override;
@@ -66,7 +66,7 @@ private:
 
     public:
 
-        explicit RulesPanel(ApplicationContext& context);
+        explicit RulesPanel(const ApplicationContext& context);
         ~RulesPanel() override;
 
         std::function<void(int)>              propagateLabelClicked;
@@ -94,7 +94,7 @@ private:
 
         public:
 
-            explicit PanelTitlebar(ApplicationContext& context);
+            explicit PanelTitlebar(const ApplicationContext& context);
 
             std::function<void()> onAddClicked;
         private:
@@ -135,7 +135,7 @@ private:
     RulesPanel     rulesPanel;
     juce::Viewport filePageViewport;
 
-    ApplicationContext& context;
+    const ApplicationContext& context;
 
     std::unordered_map<int, std::unique_ptr<FilePage>> filePages;
     FilePage* activePage   = nullptr;

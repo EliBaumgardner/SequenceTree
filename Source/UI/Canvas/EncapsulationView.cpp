@@ -15,7 +15,7 @@
 
 #include <unordered_set>
 
-EncapsulationView::EncapsulationView(NodeCanvas& canvasRef, ApplicationContext& context)
+EncapsulationView::EncapsulationView(NodeCanvas& canvasRef, const ApplicationContext& context)
     : canvas(canvasRef), applicationContext(context)
 {
 }

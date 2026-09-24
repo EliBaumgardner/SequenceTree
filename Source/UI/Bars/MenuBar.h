@@ -12,7 +12,7 @@
 class MenuBar : public Bar {
 public:
 
-    explicit MenuBar(ApplicationContext& context);
+    explicit MenuBar(const ApplicationContext& context);
 
     std::unique_ptr<IconButton> treeIcon = nullptr;
     std::unique_ptr<IconButton> nodeIcon = nullptr;

@@ -8,7 +8,7 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Node/Node.h"
 
-NodeMenu::NodeMenu(ApplicationContext& context)
+NodeMenu::NodeMenu(const ApplicationContext& context)
     : applicationContext(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);

@@ -12,7 +12,7 @@ class SelectionOps
 {
 public:
 
-    explicit SelectionOps(ApplicationContext& context) : applicationContext(context) {}
+    explicit SelectionOps(const ApplicationContext& context) : applicationContext(context) {}
 
     void copySelection   ();
     void deleteSelection ();
@@ -71,7 +71,7 @@ private:
 
     void selectPastedNodes (const PasteLayout& layout, const std::vector<int>& encapsulatorIds) const;
 
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
     juce::ValueTree clipboard;
 };

@@ -14,11 +14,8 @@ Builds/
 
 # macOS system files
 .DS_Store
-# Agent tooling: hooks and rule scripts are part of the project,
-# the permission allowlist is per-machine
-.claude/*
-!.claude/settings.json
-!.claude/*.sh
-!.claude/align.py
+# Agent tooling and local scripts
+.claude/
+scripts/
 .opencode/
-.aider*
+gemini complaints.md

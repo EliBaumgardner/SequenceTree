@@ -19,7 +19,7 @@ class ArrowWindow : public juce::Component {
 
 public:
 
-    explicit ArrowWindow(ApplicationContext& context);
+    explicit ArrowWindow(const ApplicationContext& context);
     ~ArrowWindow() override;
 
     std::function<void(std::optional<ArrowType>)> onArrowTypeChanged;
@@ -55,7 +55,7 @@ private:
     static constexpr int minimumCellSize = 24;
     static constexpr int minimumGridGap  = 2;
 
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
     ButtonPane   arrowTypePane;
     ArrowBindBar bindBar;

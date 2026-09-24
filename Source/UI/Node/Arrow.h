@@ -40,13 +40,12 @@ struct ArrowLabel
     float angle = 0.0f;
 };
 
-class Arrow : public juce::Component, juce::Timer
+class Arrow : public juce::Component
 {
 public:
 
-  Arrow(Node* startNode, Node* endNode, ApplicationContext& context);
-  Arrow(Node* startNode, juce::Point<int> tipOffset, ApplicationContext& context);
-  ~Arrow() override { stopTimer(); }
+  Arrow(Node* startNode, Node* endNode, const ApplicationContext& context);
+  Arrow(Node* startNode, juce::Point<int> tipOffset, const ApplicationContext& context);
 
   bool isDangling() const { return endNode == nullptr; }
   bool isDashed() const;
@@ -76,7 +75,8 @@ public:
   void startProgress(int trailId, int durationMs, juce::Colour colour, bool oneShot = false);
   void resetProgress();
   void resetProgress(int trailId);
-  void timerCallback() override;
+  void resumeProgress();
+  void advanceAnimation(double frameSec);
 
   Node* const startNode = nullptr;
   Node* const endNode   = nullptr;
@@ -103,6 +103,7 @@ public:
   static inline const int   valueEditorHeight     {12};
 
   ArrowAnimation animation;
+  juce::VBlankAttachment animationFrames;
 
   bool sourceHovered    = false;
   bool proximityHovered = false;

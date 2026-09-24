@@ -13,7 +13,7 @@
 class LabelPanel : public juce::Component {
 public:
 
-    LabelPanel(ApplicationContext& context);
+    LabelPanel(const ApplicationContext& context);
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -43,7 +43,7 @@ private:
     int  draggedIndex = -1;
     bool orderChanged = false;
 
-    ApplicationContext& context;
+    const ApplicationContext& context;
 };
 
 

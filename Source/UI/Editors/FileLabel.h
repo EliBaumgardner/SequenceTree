@@ -14,7 +14,7 @@
 class FileLabel : public juce::Component {
 public:
 
-    FileLabel(ApplicationContext& context);
+    FileLabel(const ApplicationContext& context);
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -40,7 +40,7 @@ public:
 
 private:
 
-    ApplicationContext& context;
+    const ApplicationContext& context;
     std::unique_ptr<ValueEditor> fileText     = nullptr;
     std::unique_ptr<IconButton>  removeButton = nullptr;
 

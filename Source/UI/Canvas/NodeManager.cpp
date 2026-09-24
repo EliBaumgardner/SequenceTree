@@ -16,7 +16,7 @@
 #include "../../Graph/RTGraphBuilder.h"
 #include "../../Util/ApplicationContext.h"
 
-NodeManager::NodeManager(NodeCanvas& canvasRef, ApplicationContext& context)
+NodeManager::NodeManager(NodeCanvas& canvasRef, const ApplicationContext& context)
     : canvas(canvasRef), applicationContext(context)
 {
 }

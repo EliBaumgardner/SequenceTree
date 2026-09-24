@@ -10,7 +10,7 @@
 #include <cmath>
 
 
-FilePage::FilePage(ApplicationContext &context) : context(context) {
+FilePage::FilePage(const ApplicationContext&context) : context(context) {
 
     createNewFile();
 }

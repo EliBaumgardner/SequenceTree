@@ -73,9 +73,6 @@ void TraversalSession::suspendActiveNotes(juce::MidiBuffer& midiMessages)
     for (const auto& note : eventManager.scheduler.activeNotes) {
         eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
     }
-
-    eventManager.bridge.clearAllHighlights();
-    eventManager.bridge.pushArrowReset(AudioUIBridge::allTrails);
 }
 
 void TraversalSession::restartActiveTraversals(const DispatchContext& context)

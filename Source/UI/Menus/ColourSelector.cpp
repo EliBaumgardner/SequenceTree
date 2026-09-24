@@ -151,7 +151,7 @@ void MainComponent::updateCursorPosition(juce::Colour selectedColour) {
 }
 
 
-ColourSelector::ColourSelector(ApplicationContext& context)
+ColourSelector::ColourSelector(const ApplicationContext& context)
     : applicationContext(context)
 {
 }

@@ -22,7 +22,7 @@
 
 
 
-Node::Node(ApplicationContext& context)
+Node::Node(const ApplicationContext& context)
     : applicationContext(context),
       nodeValueEditor(context), countEditor(context), switchCountEditor(context), subLoopLimitEditor(context)
 {
@@ -171,10 +171,13 @@ void Node::setHighlightVisual(int runId, bool shouldHighlight, juce::Colour colo
 
         activeHighlights[runId] = colour;
         pulsePhase = 0.0f;
-        startTimerHz(60);
+
+        if (pulseFrames.isEmpty()) {
+            pulseFrames = juce::VBlankAttachment(this, [this](double frameSec) { advancePulse(frameSec); });
+        }
     }
     else if (runId == -1) {
-        if (isTimerRunning()) {
+        if (! pulseFrames.isEmpty()) {
             for (const auto& entry : activeHighlights) {
                 pendingHighlightOffIds.insert(entry.first);
             }
@@ -183,7 +186,7 @@ void Node::setHighlightVisual(int runId, bool shouldHighlight, juce::Colour colo
             activeHighlights.clear();
         }
     }
-    else if (isTimerRunning()) {
+    else if (! pulseFrames.isEmpty()) {
         pendingHighlightOffIds.insert(runId);
     }
     else {
@@ -194,22 +197,31 @@ void Node::setHighlightVisual(int runId, bool shouldHighlight, juce::Colour colo
     repaint();
 }
 
-void Node::timerCallback()
+void Node::advancePulse(double frameSec)
 {
-    pulsePhase += 0.07f;
+    double elapsedSec = 0.0;
+
+    if (lastPulseFrameSec > 0.0) {
+        elapsedSec = frameSec - lastPulseFrameSec;
+    }
+
+    lastPulseFrameSec = frameSec;
+    pulsePhase += static_cast<float>(elapsedSec) * pulseRatePerSecond;
+
+    repaint();
 
     if (pulsePhase >= 1.0f) {
-        pulsePhase = 1.0f;
-        stopTimer();
+        pulsePhase        = 1.0f;
+        lastPulseFrameSec = 0.0;
 
         for (int id : pendingHighlightOffIds) {
             activeHighlights.erase(id);
         }
         pendingHighlightOffIds.clear();
         isHighlighted = ! activeHighlights.empty();
-    }
 
-    repaint();
+        pulseFrames = {};
+    }
 }
 
 void Node::bindToTree()

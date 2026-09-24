@@ -7,7 +7,7 @@
 #include "../Util/ApplicationContext.h"
 #include "Theme/CustomLookAndFeel.h"
 
-PanelResizer::PanelResizer(ApplicationContext& context, Edge edgeIn) : edge(edgeIn)
+PanelResizer::PanelResizer(const ApplicationContext& context, Edge edgeIn) : edge(edgeIn)
 {
     setLookAndFeel(context.lookAndFeel);
     setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);

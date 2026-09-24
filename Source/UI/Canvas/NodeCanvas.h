@@ -32,7 +32,7 @@ class Arrow;
 class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
     private:
-        ApplicationContext& applicationContext;
+        const ApplicationContext& applicationContext;
 
     public:
 
@@ -44,7 +44,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
             int             rootNodeId = -1;
         };
 
-        NodeCanvas(ApplicationContext& context);
+        NodeCanvas(const ApplicationContext& context);
         ~NodeCanvas();
 
         void enqueueAsyncUpdate(const AsyncUpdate& update);
@@ -95,5 +95,5 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         CanvasHitTester     hitTester          { *this };
         EncapsulationView   encapsulationView  { *this, applicationContext };
 
-        ApplicationContext& getApplicationContext() { return applicationContext; }
+        const ApplicationContext& getApplicationContext() { return applicationContext; }
 };

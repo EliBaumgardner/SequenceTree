@@ -15,7 +15,7 @@ class ValueEditor : public juce::Component,
                     public juce::Value::Listener{
 public:
 
-    explicit ValueEditor(ApplicationContext& context);
+    explicit ValueEditor(const ApplicationContext& context);
     ~ValueEditor() override;
 
     void setFormat(std::unique_ptr<ValueFormat> newFormat);

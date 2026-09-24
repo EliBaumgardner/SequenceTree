@@ -2,7 +2,7 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
 
-BottomBar::BottomBar(ApplicationContext& context)
+BottomBar::BottomBar(const ApplicationContext& context)
     : Bar(context, { Orientation::horizontal })
 {
     paintPanel = std::make_unique<PaintToolSettings>(applicationContext);

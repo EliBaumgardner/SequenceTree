@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-ItemSelector::ItemSelector(ApplicationContext& context)
+ItemSelector::ItemSelector(const ApplicationContext& context)
     : applicationContext(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);

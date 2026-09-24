@@ -8,7 +8,7 @@
 
 static constexpr int traversalRefListLength = 24;
 
-RootRectangle::RootRectangle(ApplicationContext& context) : traversalEditor(context)
+RootRectangle::RootRectangle(const ApplicationContext& context) : traversalEditor(context)
 {
     setLookAndFeel(context.lookAndFeel);
 

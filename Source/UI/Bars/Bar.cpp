@@ -1,7 +1,7 @@
 #include "Bar.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-Bar::Bar(ApplicationContext& context, Style style)
+Bar::Bar(const ApplicationContext& context, Style style)
     : applicationContext(context), style(style)
 {
     setLookAndFeel(applicationContext.lookAndFeel);

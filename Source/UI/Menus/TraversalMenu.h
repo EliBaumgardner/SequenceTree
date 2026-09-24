@@ -22,7 +22,7 @@ class TraversalMenu : public juce::Component {
 
 public:
 
-    explicit TraversalMenu(ApplicationContext& context);
+    explicit TraversalMenu(const ApplicationContext& context);
     ~TraversalMenu() override;
 
     void paint(juce::Graphics& g) override;
@@ -62,7 +62,7 @@ public:
 
 private:
 
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
     Bar topBar;
 

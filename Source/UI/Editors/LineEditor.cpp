@@ -4,7 +4,7 @@
 
 #include "LineEditor.h"
 
-LineEditor::LineEditor(ApplicationContext& context) : ValueEditor(context)
+LineEditor::LineEditor(const ApplicationContext& context) : ValueEditor(context)
 {
     auto scriptFormat = std::make_unique<TextFormat>(0, juce::String());
     scriptFormat->trimsWhitespace = false;

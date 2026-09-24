@@ -52,7 +52,7 @@ public:
         }
     }
 
-    ApplicationContext& context;
+    const ApplicationContext& context;
 
     std::unique_ptr<IconButton>     paintTool;
     std::unique_ptr<ColourSelector> colourSelector;
@@ -63,7 +63,7 @@ public:
     juce::Label flowLabel;
 
 
-    explicit PaintToolSettings(ApplicationContext& context) : context(context) {
+    explicit PaintToolSettings(const ApplicationContext& context) : context(context) {
         setLookAndFeel(context.lookAndFeel);
 
         paintTool = std::make_unique<IconButton>(

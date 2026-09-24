@@ -22,7 +22,7 @@ class NodeManager {
 
 public:
 
-    NodeManager(NodeCanvas& canvas, ApplicationContext& context);
+    NodeManager(NodeCanvas& canvas, const ApplicationContext& context);
     ~NodeManager();
 
     Node* find(int nodeId) const;
@@ -58,7 +58,7 @@ private:
     void connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node);
 
     NodeCanvas& canvas;
-    ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
     std::unordered_map<int, std::unique_ptr<Node>> nodes;
 };

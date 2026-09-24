@@ -22,7 +22,7 @@ class Titlebar : public Bar {
 
 public:
 
-    Titlebar(ApplicationContext& context);
+    Titlebar(const ApplicationContext& context);
 
     std::function<void(NodeDisplayMode)> onDisplayModeChanged;
 
