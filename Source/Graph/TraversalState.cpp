@@ -25,9 +25,9 @@ juce::ValueTree TraversalState::addTraversalData(int traversalId, juce::UndoMana
     traversalData.setProperty(ValueTreeIdentifiers::TraversalId,        traversalId,      undoManager);
     traversalData.setProperty(ValueTreeIdentifiers::TempoMultiplier,    defaultTempoMult, undoManager);
     traversalData.setProperty(ValueTreeIdentifiers::TraversalColour,    juce::Colours::white.toString(), undoManager);
-    traversalData.setProperty(ValueTreeIdentifiers::TraversalChannel,   1,                undoManager);
-    traversalData.setProperty(ValueTreeIdentifiers::TraversalTranspose, 0,                undoManager);
-    traversalData.setProperty(ValueTreeIdentifiers::TraversalVelocity,  1.0,              undoManager);
+    traversalData.setProperty(ValueTreeIdentifiers::TraversalChannel,   defaultChannel,   undoManager);
+    traversalData.setProperty(ValueTreeIdentifiers::TraversalTranspose, defaultTranspose, undoManager);
+    traversalData.setProperty(ValueTreeIdentifiers::TraversalVelocity,  defaultVelocity,  undoManager);
 
     map.addChild(traversalData, -1, undoManager);
 

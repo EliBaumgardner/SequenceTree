@@ -11,6 +11,7 @@
 #include "../Audio/EventManager.h"
 #include "../Audio/TraversalSession.h"
 #include "AudioSnapshotPublisher.h"
+#include "TraversalParameters.h"
 
 class SequenceTreeAudioProcessorEditor;
 
@@ -49,8 +50,6 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-
     juce::ValueTree                        pendingRestoreState;
 
     void applyRestoredState();
@@ -72,6 +71,8 @@ public:
     AudioSnapshotPublisher snapshots { traversalRuleState };
 
     RTGraphBuilder rtGraphBuilder { *this, graphState };
+
+    TraversalParameters traversalParameters { valueTreeState, graphState.traversals };
 
 
     struct TempoInfo

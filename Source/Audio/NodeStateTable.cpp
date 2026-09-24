@@ -1,6 +1,5 @@
 #include "NodeStateTable.h"
 
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 
@@ -85,7 +84,7 @@ int NodeStateTable::defaultValue(NodeStateSlot slot)
 
 int NodeStateTable::indexOf(NodeStateSlot slot, int row)
 {
-    return static_cast<int>(slot) * maxNodeIds + row;
+    return row * slotCount + static_cast<int>(slot);
 }
 
 void NodeStateTable::prepare()
@@ -97,7 +96,11 @@ void NodeStateTable::prepare()
     values.resize(valueCount);
     rows.prepare();
 
-    clear();
+    for (int row = 0; row < maxNodeIds; ++row) {
+        for (int slot = 0; slot < slotCount; ++slot) {
+            values[static_cast<std::size_t>(indexOf(static_cast<NodeStateSlot>(slot), row))] = defaultValue(static_cast<NodeStateSlot>(slot));
+        }
+    }
 }
 
 void NodeStateTable::clear()
@@ -106,10 +109,10 @@ void NodeStateTable::clear()
         return;
     }
 
-    for (int slot = 0; slot < slotCount; ++slot) {
-        const auto begin = values.begin() + static_cast<std::ptrdiff_t>(slot) * maxNodeIds;
-
-        std::fill(begin, begin + maxNodeIds, defaultValue(static_cast<NodeStateSlot>(slot)));
+    for (int row = 0; row < rows.rowCount; ++row) {
+        for (int slot = 0; slot < slotCount; ++slot) {
+            values[static_cast<std::size_t>(indexOf(static_cast<NodeStateSlot>(slot), row))] = defaultValue(static_cast<NodeStateSlot>(slot));
+        }
     }
 
     rows.clear();

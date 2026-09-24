@@ -16,7 +16,7 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
                      #endif
                        )
 #endif
-, valueTreeState(*this,nullptr,"STATE",createParameterLayout())
+, valueTreeState(*this,nullptr,"STATE",TraversalParameters::createParameterLayout())
 {
     traversalRuleState.ensureDefaultRule();
     snapshots.publishActiveTraversalRule();
@@ -369,18 +369,4 @@ void SequenceTreeAudioProcessor::handleAsyncUpdate()
     }
 
     editor->canvas->handleAsyncUpdate();
-}
-
-juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::createParameterLayout()
-{
-    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
-
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(
-        "gain",
-        "Gain",
-        juce::NormalisableRange<float>(0.0f, 1.0f),
-        0.5f
-    ));
-
-    return { params.begin(), params.end() };
 }

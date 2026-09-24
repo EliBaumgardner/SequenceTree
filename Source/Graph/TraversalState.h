@@ -25,7 +25,10 @@ public:
     juce::ValueTree map;
 
     static constexpr int defaultTraversalId {1};
-    static constexpr int defaultTempoMult   {1};
+    static constexpr int    defaultTempoMult {1};
+    static constexpr int    defaultChannel   {1};
+    static constexpr int    defaultTranspose {0};
+    static constexpr double defaultVelocity  {1.0};
 
 private:
 
