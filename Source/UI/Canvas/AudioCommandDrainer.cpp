@@ -106,7 +106,8 @@ void AudioCommandDrainer::drainArrows()
         const auto range = parentNode->nodeArrows.equal_range(command.childNodeId);
 
         for (auto entry = range.first; entry != range.second; ++entry) {
-            if (entry->second == nullptr || entry->second->connectsTraversalFlag()) {
+            if (entry->second == nullptr || ((entry->second->startNode != nullptr && entry->second->startNode->nodeType == NodeType::TraversalFlag)
+        || (entry->second->endNode   != nullptr && entry->second->endNode->nodeType   == NodeType::TraversalFlag))) {
                 continue;
             }
 

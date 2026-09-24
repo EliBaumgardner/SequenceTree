@@ -36,14 +36,13 @@ inline constexpr int maximumSubLoopLimit = 9999;
 inline constexpr int minimumRepeatValue = 1;
 inline constexpr int maximumRepeatValue = 9999;
 
-inline constexpr double minimumTraversalMultiplier = 0.1;
+inline constexpr double minimumTraversalMultiplier  = 0.1;
 inline constexpr int    traversalMultiplierDecimals = 3;
 
 inline constexpr int minimumTraversalTranspose = -24;
 inline constexpr int maximumTraversalTranspose =  24;
 
-enum class NodeType { Node, Root, Modulator, TraversalFlag, Encapsulator};
-
+enum class NodeType        { Node, Root, Modulator, TraversalFlag, Encapsulator};
 enum class NodeDisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue, Probability};
 
 #endif //SEQUENCETREE_NODEPOSITION_H

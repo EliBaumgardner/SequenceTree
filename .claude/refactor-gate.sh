@@ -58,7 +58,7 @@ if [ -n "$added_def" ] && [ -z "$removed_def" ]; then
         deny "This edit adds a function to ${target} whose body already exists in the file - that is an extraction, not new code (${moved} consecutive lines matched).
 
 Use the tool that performs it:
-  .claude/refactor.py encapsulate ${target}:<start>-<end> <name>
+  refactor.encap ${target}:<start>-<end> <name>
 
 It computes the parameters and return value from the data flow, inherits the enclosing function's const/noexcept, places the declaration in the matching access section, builds SequenceTree_Standalone, and restores every file if the build fails. It refuses rather than guessing when a return crosses the boundary, more than one value stays live, or a type is auto.
 
@@ -81,7 +81,7 @@ if [ -n "$removed_def" ]; then
             deny "This edit removes the definition of ${cls}::${name} from ${target} while call sites remain (${callers//$'\n'/, }) - that is a decapsulation in progress.
 
 Use the tool that performs it:
-  .claude/refactor.py decapsulate ${cls}::${name}
+  refactor.decap ${cls}::${name}
 
 It rewrites every call site, substitutes arguments for parameters, prefixes the receiver onto member access for cross-class sites, removes the declaration, builds SequenceTree_Standalone, and restores every file if the build fails. It refuses rather than guessing when the function is virtual, its address is taken, its name is ambiguous, an argument would be evaluated more than once, or the body would reach a non-public member from another class - that last one names the member you would have to make public.
 

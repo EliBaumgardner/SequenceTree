@@ -135,7 +135,7 @@ long_hits=$(awk -F'\t' -v MAX="$maxfunc" -v MIN="$minsplit" -v SCOPED="$scoped" 
         for (i = 1; i <= n; i++) {
             if (c[i] == "") { continue }
             split(c[i], d, ":")
-            printf "      .claude/refactor.py encapsulate %s:%s-%s <name>   (%s-block, %s lines)\n", \
+            printf "      refactor.encap %s:%s-%s <name>   (%s-block, %s lines)\n", \
                    $2, d[1], d[2], d[4], d[3]
             shown++
             if (shown >= 3) { break }

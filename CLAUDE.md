@@ -29,21 +29,27 @@ There are no automated tests, and none should be added. Verify changes by buildi
 
 ## Refactoring Commands
 
-Lifting a selection into its own function, and decapsulating a function into its call sites, are performed by `.claude/refactor.py`, not by hand:
+`refactor.encap`, `refactor.decap`, `refactor.replace`, `refactor.undo`, `refactor.smell`, `refactor.find` and `refactor.help` are the refactoring suite, on `PATH` and driven by `.claude/refactor/refactor.py`. `refactor.help` lists them and `refactor.help <command>` prints one command's arguments. Every one carries the `refactor.` prefix so that none shadows a command already on `PATH`. Lifting a selection into its own function, dissolving a function into its call sites, renaming a variable, and putting any of them back are performed by those commands, not by hand. A rename is never a search-and-replace: `refactor.replace` takes the selection written out again with the new names in it and asks clangd which symbol each name is, so the variable is renamed where it is that variable and nowhere else. `refactor.smell` and `refactor.find` only report: `refactor.smell` names the wrappers and accessors clang can see, and `refactor.find` lists the things of one kind that match a condition, as in `refactor.find function 'numlines > 10'` — quoted, or the shell reads the `>` as a redirect. See `.claude/refactor/REFACTORING.md` for what each command is and what it does.
+
+### Reaching for them
 
 ```bash
-.claude/refactor.py encapsulate Source/Audio/Foo.cpp:112-147 <name>
-.claude/refactor.py encapsulate Source/Audio/Foo.cpp:112:9-113:55 <name>
-.claude/refactor.py decapsulate Foo::bar
+refactor.smell Source/Audio                      # wrappers and accessors, AST-accurate
+refactor.find function 'numlines > 80' Source/Audio
+refactor.find repeating 'numlines > 3' Source/Audio          # identical tokens
+refactor.find repeating shape 'numlines > 3' Source/Audio    # identical structure, any names
+refactor.encap Source/Audio/Foo.cpp:112-147 <name>
+refactor.decap Foo::bar                          # also deletes a function with no call sites
+refactor.replace 'while (point < text.size()) {' # the selection retyped; renames the symbols, not the text
+refactor.undo
 ```
 
-A selection is either whole lines or a character span written `<line>:<column>-<line>:<column>`, both ends inclusive and columns 1-based. `encapsulate` reads the shape of what is selected rather than being told: a balanced selection ending on a `;` or a `}` is lifted as statements and rounded out to whole lines, and anything else is lifted as an expression - the new function returns the expression's value and the call replaces the selected text where it stands, inside whatever `if`, argument list or initialiser it sat in. Either way it derives the parameters and the return value from the data flow, inherits the enclosing function's `const`/`noexcept`, and places the declaration in the access section the enclosing function was declared in. An expression's type is inferred - `bool` for a top-level comparison or logical operator, the declared type of a bare local - and `--type <T>` names it when inference cannot. `decapsulate` rewrites every call site, substitutes arguments for parameters, and prefixes the receiver onto member access when the call site is in another class. Both build `SequenceTree_Standalone` afterwards and restore every file they touched if the build fails. `--dry-run` reports without writing, `--no-build` skips the verification.
+Duplication questions go to `refactor.find repeating`, both likenesses, before reading files by hand — it reads the whole scope in about half a second and beats grepping for a remembered line.
 
-Both refuse rather than guess: a `return` crossing the extraction boundary, more than one value live after the range, a type it cannot name because it is `auto` or because the expression's is not inferable, an expression selection carrying `return`, `break` or `continue`, a selection that does not close the brackets it opens, a virtual function, a name defined in more than one class, an address taken, an argument that would be evaluated more than once, or a body that would reach a non-public member from another class. A refusal names the blocker, including which member would have to become public - that is a decision to make, then re-run.
+Two things about it decide whether the answer is any good:
 
-From the editor, `/encapsulate <name>` and `/decapsulate` in `.claude/commands/` take the current CLion selection instead of a typed range: `/encapsulate` turns the selection into `<file>:<line>:<column>-<line>:<column>` and passes it as it stands, widening it only when a statement selection stops short of the braces it opens, and `/decapsulate` resolves the selected symbol to `Class::function`. Both print what they resolved before running, and both stop on a refusal rather than editing by hand.
-
-`design-rules.sh` and `readability.sh` print the exact invocation beneath each finding. A `PreToolUse` hook, `refactor-gate.sh`, denies an `Edit` or `Write` that moves an existing body into a new function or deletes a definition while call sites remain. It sees only those two tools, so an edit made through a shell command bypasses it - use the script rather than routing around the gate.
+- **Start the threshold low and read upward.** `numlines > 3` first; a high threshold silently hides the shorter half of a finding, and there is no indication that it did. `count >= 3` asks the other question — what has been written three times over.
+- **`shape` relaxes spelling, not structure.** `shape_of` in `find.py` spells every identifier as the one token `name`, so `spawnKey` is one token and `traversal.key` is three, and `obj.f(x)` and `f(x)` differ by a receiver. Both likenesses report *contiguous* runs, so two functions that do the same thing with different expressions plugged in come back as several short islands rather than one long finding. Read adjacent findings in the same pair of files as possibly one duplicate, and go read the sites before reporting a size.
 
 ## Architecture Overview
 

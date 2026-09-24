@@ -52,7 +52,6 @@ public:
   bool isDashed() const;
   bool isTraversalArrow() const;
   bool isSyncArrow() const;
-  bool connectsTraversalFlag() const;
 
   juce::Point<int>   getTip() const;
   juce::Point<float> getHeadAnchor() const;
@@ -116,6 +115,4 @@ public:
   bool selected = false;
 
 private:
-
-  void createDurationEditor(ApplicationContext& context);
 };

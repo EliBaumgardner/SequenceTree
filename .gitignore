@@ -21,3 +21,4 @@ Builds/
 !.claude/*.sh
 !.claude/align.py
 .opencode/
+.aider*

@@ -15,6 +15,7 @@ struct ArrowInfo {
     ArrowType    type        = ArrowType::Node;
     ArrowBinding xBinding    = ArrowBinding::DurationBind;
     ArrowBinding yBinding    = ArrowBinding::PitchBind;
+
     double       xMultiplier = 1.0;
     double       yMultiplier = 1.0;
     bool         isSynced    = true;
@@ -23,13 +24,13 @@ struct ArrowInfo {
 
     int durationOverride = noDurationOverride;
 
-    static constexpr float  pixelsPerGridSpace       = 50.0f;
-    static constexpr double millisecondsPerGridSpace = 250.0;
-    static constexpr double semitonesPerGridSpace    = 1.0;
-    static constexpr double maximumDurationMs        = 3600000.0;
+    static constexpr float  pixelsPerGridSpace             = 50.0f;
+    static constexpr double millisecondsPerGridSpace       = 250.0;
+    static constexpr double semitonesPerGridSpace          = 1.0;
+    static constexpr double maximumDurationMs              = 3600000.0;
     static constexpr int    millisecondsPerDurationPercent = 10;
     static constexpr int    maximumDurationPercent         = 100;
-    static constexpr double maximumSemitoneOffset    = 127.0;
+    static constexpr double maximumSemitoneOffset          = 127.0;
 
     static bool bindsTo(const ArrowInfo& info, ArrowBinding binding)
     {

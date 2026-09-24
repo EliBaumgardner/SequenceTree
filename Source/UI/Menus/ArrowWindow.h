@@ -24,8 +24,6 @@ public:
 
     std::function<void(std::optional<ArrowType>)> onArrowTypeChanged;
 
-    std::optional<ArrowType> getSelectedArrowType() const;
-
     void paint(juce::Graphics& g) override;
     void resized() override;
 

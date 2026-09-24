@@ -31,8 +31,7 @@ bool ArrowAnimation::advanceSnap()
     snapVelocity *= snapSpringDamping;
     snapT        += snapVelocity;
 
-    if ((std::abs(snapT - 1.0f) < snapSettledEpsilon
-        && std::abs(snapVelocity) < snapSettledEpsilon)) {
+    if (snapSettled()) {
         snapT        = 1.0f;
         snapVelocity = 0.0f;
         return false;
@@ -86,8 +85,7 @@ bool ArrowAnimation::advanceTrails()
 
 bool ArrowAnimation::advanceHover()
 {
-    if (alphaTarget < alpha && ! (std::abs(snapT - 1.0f) < snapSettledEpsilon
-        && std::abs(snapVelocity) < snapSettledEpsilon)) {
+    if (alphaTarget < alpha && ! snapSettled()) {
         return true;
     }
 

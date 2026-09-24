@@ -19,7 +19,17 @@ Arrow::Arrow(Node* startNode, Node* endNode, ApplicationContext& context)
 {
     setLookAndFeel(context.lookAndFeel);
 
-    createDurationEditor(context);
+    durationEditor = std::make_unique<ValueEditor>(context);
+    durationEditor->setInterceptsMouseClicks(true, false);
+    durationEditor->setTooltip("Arrow Duration");
+
+    durationEditor->onEditFinished = [this] {
+        editingDuration = false;
+        durationEditor->setVisible(false);
+        repaint();
+    };
+
+    addChildComponent(*durationEditor);
 }
 
 Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, ApplicationContext& context)
@@ -33,11 +43,6 @@ Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, ApplicationContext& co
     valueEditor->setTooltip("Count Limit");
     addAndMakeVisible(*valueEditor);
 
-    createDurationEditor(context);
-}
-
-void Arrow::createDurationEditor(ApplicationContext& context)
-{
     durationEditor = std::make_unique<ValueEditor>(context);
     durationEditor->setInterceptsMouseClicks(true, false);
     durationEditor->setTooltip("Arrow Duration");
@@ -103,12 +108,6 @@ bool Arrow::isTraversalArrow() const
 bool Arrow::isSyncArrow() const
 {
     return ArrowBindingOps::getArrowInfo(arrowTree).isSynced;
-}
-
-bool Arrow::connectsTraversalFlag() const
-{
-    return (startNode != nullptr && startNode->nodeType == NodeType::TraversalFlag)
-        || (endNode   != nullptr && endNode->nodeType   == NodeType::TraversalFlag);
 }
 
 int Arrow::getDuration() const

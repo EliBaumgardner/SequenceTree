@@ -301,6 +301,28 @@ brace_hits=$(echo "$files" | xargs awk '
     { prev = "" }
 ' 2>/dev/null | only_added)
 
+tidy_out=""
+tidy_skipped=""
+if [ "$mode" != "post-tool" ]; then
+    tidy_out=$("$here/refactor/refactor.py" tidy --porcelain $files 2>"$work/tidy.err")
+    if [ $? -gt 1 ]; then
+        tidy_skipped=$(sed 's/^refactor: refused - //' "$work/tidy.err")
+        tidy_out=""
+    fi
+fi
+
+tidy_hits() {
+    printf '%s\n' "$tidy_out" | awk -F'\t' -v RULE="$1" '
+        $1 == RULE && NF >= 3 {
+            split($2, at, ":")
+            printf "%s:%s:%s\n", at[1], at[2], $3
+        }
+    ' | only_added
+}
+
+brace_hits=$(printf '%s\n%s\n' "$brace_hits" "$(tidy_hits "Always use {} for blocks")" \
+    | grep -v '^$' | sort -u)
+
 core_purpose_api="
 Source/Audio/AudioUIBridge.h:highlightNode
 Source/Audio/AudioUIBridge.h:clearAllHighlights
@@ -314,38 +336,36 @@ Source/Audio/AudioUIBridge.h:danglingArrowKey
 Source/Audio/AudioUIBridge.h:hasPending
 "
 
-tiny_scan=$(CORE_PURPOSE_API="$core_purpose_api" awk -F'\t' '
-    BEGIN {
-        n = split(ENVIRON["CORE_PURPOSE_API"], rows, "\n")
-        for (i = 1; i <= n; i++) {
-            if (rows[i] != "") { exempt[rows[i]] = 1 }
-        }
-    }
-    $1 == "F" && $7 == "function" && $6 == 0 && $5 <= 2 && $5 > 0 {
-        if (($2 ":" $8) in exempt) {
-            printf "X\t%s:%d:%s()\n", $2, $3, $8
-            next
-        }
-        cmd = ""
-        if ($9 != "") { cmd = sprintf(" ||CMD|| .claude/refactor.py decapsulate %s::%s", $9, $8) }
-        printf "H\t%s:%d:%s() body is %d statement(s)%s\n", $2, $3, $8, $5, cmd
-    }
-' "$funcs")
+smell_out=$("$here/refactor/refactor.py" smell --porcelain $files 2>"$work/smell.err")
+smell_status=$?
+smell_skipped=""
+if [ "$smell_status" -gt 1 ]; then
+    smell_skipped=$(sed 's/^refactor: refused - //' "$work/smell.err")
+    smell_out=""
+fi
 
-tiny_hits=$(printf '%s\n' "$tiny_scan" | grep '^H' | cut -f2- | only_added \
+smell_rows() {
+    printf '%s\n' "$smell_out" | CORE="$core_purpose_api" awk -F'\t' -v RULE="$1" -v KIND="$2" '
+        BEGIN {
+            split(ENVIRON["CORE"], declared, "\n")
+            for (i in declared) { if (declared[i] != "") { core[declared[i]] = 1 } }
+        }
+        $1 != RULE { next }
+        {
+            key = $2
+            sub(/\(\).*$/, "", key)
+            sub(/:[0-9]+:/, ":", key)
+            kind = "H"
+            if (key in core) { kind = "X" }
+            if (kind == KIND) { print $2 }
+        }
+    '
+}
+
+tiny_hits=$(smell_rows wrappers H | only_added \
             | awk '{ sub(/ \|\|CMD\|\| /, "\n      "); print }')
-tiny_exempt=$(printf '%s\n' "$tiny_scan" | grep '^X' | cut -f2- | only_added)
-
-accessor_hits=$(awk -F'\t' '
-    FILENAME == ARGV[1] && $1 == "M" { owner[$2 "\t" $3] = $4 ":" $5; vis[$2 "\t" $3] = $6; next }
-    $1 == "F" && $10 != "" && $9 != "" {
-        key = $9 "\t" $10
-        if (key in owner) {
-            printf "%s:%d:%s() only hands out %s member %s (declared %s) - move the member to public scope\n",
-                   $2, $3, $8, vis[key], $10, owner[key]
-        }
-    }
-' "$members" "$funcs" | only_added)
+tiny_exempt=$(smell_rows wrappers X | only_added)
+accessor_hits=$(smell_rows accessors H | only_added)
 
 audiofiles=$(echo "$files" | tr ' ' '\n' | grep -E '^Source/Audio/' || true)
 
@@ -432,7 +452,7 @@ emit "ApplicationContext is not valid at static init time"               "$stati
 emit "Very small classes should be dissolved, not kept"                  "$smallclass_hits"
 emit "Named states and kinds belong in an enum, not a bool or a bare int" "$enum_hits"
 
-checked="inline, ternaries, comments, braces, tiny/wrapper functions, very small classes, non-public members with accessors, audio-thread allocation, audio-thread UI access, audio boundary types, static-init ApplicationContext, modes and kinds held outside an enum"
+checked="inline, ternaries, comments, braces (text plus clang-tidy AST), forwarding-call wrappers (clang AST), very small classes, accessors over non-public fields (clang AST), audio-thread allocation, audio-thread UI access, audio boundary types, static-init ApplicationContext, modes and kinds held outside an enum"
 unchecked="Code fits the class's intended purpose / single area of concern
 Avoid encapsulation on very small segments of code which repeat
 Whether a push_back stays inside its reserved capacity (the allocation check cannot see capacity)
@@ -443,6 +463,10 @@ Whether a small function is the class's core purpose - if so it belongs in core_
 Whether a class small enough to flag has a reason to exist anyway - ASK before keeping it
 Whether several bools in one class are really one enum state - the enum check only sees a field named like a mode, so a cluster such as brushStrokeActive/brushErase passes it
 Whether a state named in neither the type nor the field name still has two or more named alternatives and so owes an enum"
+
+if [ -n "$smell_skipped" ]; then
+    report="${report}"$'\n'"[SKIPPED] Wrappers and accessors were NOT checked - ${smell_skipped}"$'\n'
+fi
 
 if [ -n "$tiny_exempt" ]; then
     report="${report}"$'\n'"[EXEMPT] Small functions declared as their class's core purpose (core_purpose_api in design-rules.sh)"$'\n'"$(printf '%s\n' "$tiny_exempt" | sed 's/^/  /')"$'\n'
