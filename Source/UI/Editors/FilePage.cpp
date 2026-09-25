@@ -26,12 +26,12 @@ int FilePage::rowCountFor(const juce::String& text, int editorWidth) {
     const auto shapingOptions = juce::detail::ShapedTextOptions{}
                                     .withFont(juce::Font(juce::FontOptions(fontHeight())))
                                     .withTrailingWhitespacesShouldFit(true)
-                                    .withWordWrapWidth((float) wrapWidth)
+                                    .withWordWrapWidth(static_cast<float>(wrapWidth))
                                     .withAllowBreakingInsideWord();
 
     const juce::detail::ShapedText shapedLine { text, shapingOptions };
 
-    return juce::jmax(1, (int) shapedLine.getLineTextRanges().size());
+    return juce::jmax(1, static_cast<int>(shapedLine.getLineTextRanges().size()));
 }
 
 void FilePage::paint(juce::Graphics &g) {
@@ -49,7 +49,7 @@ int FilePage::lineHeight() const {
 
     const juce::Font font { juce::FontOptions(fontHeight()) };
 
-    return juce::jmax(1, (int) std::ceil(font.getHeight()));
+    return juce::jmax(1, static_cast<int>(std::ceil(font.getHeight())));
 }
 
 int FilePage::preferredHeightForWidth(int width) {
@@ -111,7 +111,7 @@ void FilePage::applyLineMetrics() {
     const juce::Font gutterFont { juce::FontOptions(textHeight) };
 
     const int gutterWidth = juce::roundToInt(FileLine::gutterTextInset * 2 * zoom)
-                          + (int) std::ceil(gutterFont.getStringWidthFloat(juce::String(fileLines.size())));
+                          + static_cast<int>(std::ceil(gutterFont.getStringWidthFloat(juce::String(fileLines.size()))));
 
     const int rowHeight = lineHeight();
 
@@ -146,7 +146,7 @@ void FilePage::setFile(std::vector<std::unique_ptr<FileLine>> newFileLines) {
 
 void FilePage::refreshLines() {
 
-    for (int i = 0; i < (int) fileLines.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(fileLines.size()); ++i) {
 
         FileLine& fileLine = *fileLines[i];
 
@@ -215,7 +215,7 @@ void FilePage::setLineError(int lineNumber, const juce::String& message) {
 
     const int index = lineNumber - 1;
 
-    if (index >= 0 && index < (int) fileLines.size()) {
+    if (index >= 0 && index < static_cast<int>(fileLines.size())) {
         fileLines[index]->setError(message);
     }
 }
@@ -229,7 +229,7 @@ void FilePage::notifyTextChanged() {
 
 int FilePage::indexOf(const FileLine* line) const {
 
-    for (int i = 0; i < (int) fileLines.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(fileLines.size()); ++i) {
         if (fileLines[i].get() == line) {
             return i;
         }
@@ -325,7 +325,7 @@ void FilePage::insertLineAfter(const FileLine* line) {
 
 void FilePage::focusLine(int index) {
 
-    if (index < 0 || index >= (int) fileLines.size()) {
+    if (index < 0 || index >= static_cast<int>(fileLines.size())) {
         return;
     }
 

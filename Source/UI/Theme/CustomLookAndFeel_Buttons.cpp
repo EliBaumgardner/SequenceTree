@@ -498,5 +498,5 @@ void CustomLookAndFeel::drawFileLabel(juce::Graphics& g, const FileLabel& fileLa
     }
 
     g.setColour(juce::Colours::black.withAlpha(0.35f));
-    g.drawHorizontalLine((int) bounds.getBottom() - 1, bounds.getX(), bounds.getRight());
+    g.drawHorizontalLine(static_cast<int>(bounds.getBottom()) - 1, bounds.getX(), bounds.getRight());
 }

@@ -103,7 +103,7 @@ void FileLine::paint(juce::Graphics &g) {
     }
 
     g.setColour(theme.textColour.withAlpha(0.12f));
-    g.drawVerticalLine(gutterWidth, 0.0f, (float) getHeight());
+    g.drawVerticalLine(gutterWidth, 0.0f, static_cast<float>(getHeight()));
 
     if (lineNumber <= 0) {
         return;

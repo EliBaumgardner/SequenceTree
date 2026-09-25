@@ -4,6 +4,7 @@
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "../Util/NodeInfo.h"
 #include <algorithm>
+#include <cmath>
 #include <unordered_set>
 
 SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
@@ -265,29 +266,22 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
     return new SequenceTreeAudioProcessor();
 }
 
-void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) noexcept [[clang::nonblocking]]
 {
     juce::ScopedNoDenormals noDenormals;
 
     struct BlockScope
     {
-        AudioSnapshotPublisher&     publisher;
-        SequenceTreeAudioProcessor& processor;
+        AudioSnapshotPublisher&                 publisher;
+        const AudioSnapshotPublisher::Snapshot* snapshot = publisher.beginBlock();
 
         ~BlockScope()
         {
-            publisher.blockCompleted();
-
-            const bool uiWorkPending = processor.eventManager.bridge.hasPendingCommands()
-                                    || processor.playbackStateChanged.load();
-
-            if (uiWorkPending) {
-                processor.triggerAsyncUpdate();
-            }
+            publisher.endBlock();
         }
     };
 
-    const BlockScope blockScope { snapshots, *this };
+    const BlockScope blockScope { snapshots };
 
     const int numSamples = buffer.getNumSamples();
 
@@ -300,23 +294,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     pendingNoteOffs.clear();
 
-    if (wrapperType != wrapperType_Standalone) {
-        bool hostPlaying = false;
-
-        if (juce::AudioPlayHead* playHead = getPlayHead()) {
-            if (const juce::Optional<juce::AudioPlayHead::PositionInfo> position = playHead->getPosition()) {
-                hostPlaying = position->getIsPlaying();
-
-                if (const juce::Optional<double> hostBpm = position->getBpm()) {
-                    tempoInfo.hostBpm = *hostBpm;
-                }
-            }
-        }
-
-        if (hostPlaying != isPlaying.exchange(hostPlaying)) {
-            playbackStateChanged.store(true);
-        }
-    }
+    followHostTransport(numSamples);
 
     const bool resetHit = resetRequested.exchange(false);
 
@@ -333,7 +311,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     wasPlaying = playing;
 
-    const AudioSnapshotPublisher::Snapshot* snap = snapshots.acquireForBlock();
+    const AudioSnapshotPublisher::Snapshot* snap = blockScope.snapshot;
 
     const RTScript* activeScript = nullptr;
 
@@ -343,7 +321,10 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     traversalSession.setSelectChildScript(activeScript);
 
-    if (!playing || !snap || !snap->globalNodes) {
+    const bool replayWanted = tempoInfo.pendingRelocationPpq.has_value()
+                           || traversalSession.playback == TraversalSession::Playback::Replaying;
+
+    if ((!playing && (resetHit || !replayWanted)) || !snap || !snap->globalNodes) {
         if (resetHit) {
             traversalSession.clearTraversals();
         }
@@ -367,6 +348,24 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         velocityParameter.load() / static_cast<double>(maximumMidiVelocity)
     };
 
+    eventManager.followTempo(context.tempoMultiplier);
+
+    if (tempoInfo.pendingRelocationPpq) {
+        const double targetSamples = std::round(*tempoInfo.pendingRelocationPpq * 60.0 / tempoInfo.hostBpm
+                                               * tempoInfo.currentSampleRate);
+
+        traversalSession.beginReplay(context, targetSamples);
+        tempoInfo.pendingRelocationPpq.reset();
+    }
+
+    if (traversalSession.continueReplay(context, snap->generation, numSamples, playing) == TraversalSession::Playback::Replaying) {
+        return;
+    }
+
+    if (!playing) {
+        return;
+    }
+
     if (resetHit) {
         traversalSession.restartActiveTraversals(context);
     }
@@ -384,19 +383,43 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     eventManager.processEvents(numSamples, context);
 }
 
-void SequenceTreeAudioProcessor::handleAsyncUpdate()
+void SequenceTreeAudioProcessor::followHostTransport(const int numSamples) noexcept
 {
-    auto* editor = dynamic_cast<SequenceTreeAudioProcessorEditor*>(getActiveEditor());
+    if (wrapperType != wrapperType_Standalone) {
+        bool hostPlaying = false;
 
-    const bool transportMoved = playbackStateChanged.exchange(false);
+        if (juce::AudioPlayHead* playHead = getPlayHead()) {
+            if (const juce::Optional<juce::AudioPlayHead::PositionInfo> position = playHead->getPosition()) {
+                hostPlaying = position->getIsPlaying();
 
-    if (editor == nullptr) {
-        return;
+                if (const juce::Optional<double> hostBpm = position->getBpm()) {
+                    tempoInfo.hostBpm = *hostBpm;
+                }
+
+                const juce::Optional<double> hostPpq = position->getPpqPosition();
+
+                if (hostPpq && tempoInfo.hostBpm > 0.0) {
+                    const bool resumed = hostPlaying && !wasPlaying;
+                    const bool jumped  = resumed || !tempoInfo.expectedPpq || std::abs(*hostPpq - *tempoInfo.expectedPpq) > TempoInfo::relocationToleranceBeats;
+
+                    if (jumped) {
+                        tempoInfo.pendingRelocationPpq = juce::jmax(0.0, *hostPpq);
+                    }
+
+                    tempoInfo.expectedPpq = *hostPpq;
+
+                    if (hostPlaying) {
+                        tempoInfo.expectedPpq = *hostPpq + numSamples / tempoInfo.currentSampleRate * tempoInfo.hostBpm / 60.0;
+                    }
+                }
+                else {
+                    tempoInfo.expectedPpq.reset();
+                }
+            }
+        }
+
+        if (hostPlaying != isPlaying.exchange(hostPlaying)) {
+            playbackStateChanged.store(true);
+        }
     }
-
-    if (transportMoved) {
-        editor->titleBar->applyPlaybackState(isPlaying.load());
-    }
-
-    editor->canvas->handleAsyncUpdate();
 }

@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
+#include <optional>
 #include <atomic>
 #include <vector>
 #include <functional>
@@ -14,8 +15,7 @@
 
 class SequenceTreeAudioProcessorEditor;
 
-class SequenceTreeAudioProcessor  : public juce::AudioProcessor,
-                                    private juce::AsyncUpdater
+class SequenceTreeAudioProcessor  : public juce::AudioProcessor
 {
 public:
     SequenceTreeAudioProcessor();
@@ -28,7 +28,8 @@ public:
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 #endif
 
-    void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) noexcept [[clang::nonblocking]] override;
+    void followHostTransport(const int numSamples) noexcept;
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
@@ -82,10 +83,14 @@ public:
 
     struct TempoInfo
     {
-        static constexpr double referenceBpm = 120.0;
+        static constexpr double referenceBpm             = 120.0;
+        static constexpr double relocationToleranceBeats = 1.0 / 64.0;
 
         double currentSampleRate = 44100.0;
         double hostBpm           = 0.0;
+
+        std::optional<double> expectedPpq;
+        std::optional<double> pendingRelocationPpq;
     };
 
     TempoInfo tempoInfo;
@@ -94,8 +99,6 @@ public:
     TraversalSession traversalSession { eventManager };
 
     std::vector<juce::MidiMessage> pendingNoteOffs;
-
-    void handleAsyncUpdate() override;
 
     JUCE_DECLARE_WEAK_REFERENCEABLE (SequenceTreeAudioProcessor)
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessor)

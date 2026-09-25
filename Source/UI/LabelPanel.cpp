@@ -33,7 +33,7 @@ int LabelPanel::labelIndexAt(int y) const {
         return -1;
     }
 
-    return juce::jlimit(0, (int) labels.size() - 1, y / (labelHeight + labelGap));
+    return juce::jlimit(0, static_cast<int>(labels.size()) - 1, y / (labelHeight + labelGap));
 }
 
 void LabelPanel::mouseDrag(const juce::MouseEvent &e) {
@@ -44,7 +44,7 @@ void LabelPanel::mouseDrag(const juce::MouseEvent &e) {
         return;
     }
 
-    std::swap(labels[(size_t) draggedIndex], labels[(size_t) targetIndex]);
+    std::swap(labels[static_cast<size_t>(draggedIndex)], labels[static_cast<size_t>(targetIndex)]);
 
     draggedIndex = targetIndex;
     orderChanged = true;
@@ -56,14 +56,14 @@ void LabelPanel::mouseDown(const juce::MouseEvent &e) {
     draggedIndex = labelIndexAt(e.getEventRelativeTo(this).getPosition().y);
 
     if (draggedIndex >= 0) {
-        labels[(size_t) draggedIndex]->setGrabbed(true);
+        labels[static_cast<size_t>(draggedIndex)]->setGrabbed(true);
     }
 }
 
 void LabelPanel::mouseUp(const juce::MouseEvent &) {
 
-    if (draggedIndex >= 0 && draggedIndex < (int) labels.size()) {
-        labels[(size_t) draggedIndex]->setGrabbed(false);
+    if (draggedIndex >= 0 && draggedIndex < static_cast<int>(labels.size())) {
+        labels[static_cast<size_t>(draggedIndex)]->setGrabbed(false);
     }
 
     draggedIndex = -1;

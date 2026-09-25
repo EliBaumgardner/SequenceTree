@@ -22,13 +22,13 @@ InputRestrictions DualIntFormat::restrictions() const
 
 juce::String DualIntFormat::text(const ValueBinding& binding, TextPurpose purpose) const
 {
-    const int primaryValue = (int) binding.primary.getValue();
+    const int primaryValue = static_cast<int>(binding.primary.getValue());
 
     if (binding.secondaries.empty()) {
         return juce::String(primaryValue);
     }
 
-    const int secondaryValue = (int) binding.secondaries.front().getValue();
+    const int secondaryValue = static_cast<int>(binding.secondaries.front().getValue());
 
     if (secondaryValue <= 0) {
         return juce::String(primaryValue);
@@ -49,8 +49,8 @@ ParsedValue DualIntFormat::parse(const juce::String& enteredText) const
         secondaryText = enteredText.substring(separatorIndex + 1);
     }
 
-    const int primaryValue   = (int) juce::jlimit(minimum, maximum, (double) primaryText.getIntValue());
-    const int secondaryValue = (int) juce::jlimit(0.0,     maximum, (double) secondaryText.getIntValue());
+    const int primaryValue   = static_cast<int>(juce::jlimit(minimum, maximum, static_cast<double>(primaryText.getIntValue())));
+    const int secondaryValue = static_cast<int>(juce::jlimit(0.0,     maximum, static_cast<double>(secondaryText.getIntValue())));
 
     return { primaryValue, { secondaryValue } };
 }

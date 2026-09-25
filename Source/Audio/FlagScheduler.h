@@ -23,8 +23,6 @@ public:
 
     void clear();
 
-private:
-
     struct PendingStart
     {
         int          flagNodeId       = -1;
@@ -32,6 +30,12 @@ private:
         double       remainingSamples = 0.0;
         bool         active           = false;
     };
+
+    static constexpr int maxPendingStarts = 64;
+
+    std::array<PendingStart, maxPendingStarts> pendingStarts {};
+
+private:
 
     void queueStart(const RTNode& flagNode, const TraversalKey& hostKey, int delayMs, double sample,
                     double tempoMultiplier, const DispatchContext& context);
@@ -42,10 +46,6 @@ private:
     void startFlagTraversal(const RTNode& flagNode, const TraversalKey& hostKey, double sample,
                             const DispatchContext& context);
 
-    static constexpr int maxPendingStarts = 64;
-
     TraversalDispatcher& dispatcher;
     AudioUIBridge&       bridge;
-
-    std::array<PendingStart, maxPendingStarts> pendingStarts {};
 };

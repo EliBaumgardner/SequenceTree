@@ -260,8 +260,8 @@ void ArrowManager::rebuildDanglingForNode(int nodeId)
         const juce::ValueTree arrowTree = arrowList.getChild(i);
 
         const juce::Point<int> tipOffset {
-            (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX),
-            (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)
+            static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
+            static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY))
         };
 
         auto arrow = std::make_unique<Arrow>(node, tipOffset, applicationContext);

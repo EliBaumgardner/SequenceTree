@@ -23,6 +23,7 @@ TraversalSession::TraversalSession(EventManager& eventManager) : eventManager(ev
     restartRootScratch.reserve(scratchCapacity);
     linkedRootScratch.reserve(scratchCapacity);
     removedRunIdScratch.reserve(maxConcurrentTraversals);
+    replayMidi.ensureSize(replayMidiCapacityBytes);
 }
 
 void TraversalSession::prepare()
@@ -49,6 +50,77 @@ void TraversalSession::setSelectChildScript(const RTScript* script)
     }
 
     scriptRule.script = &nativeFallbackScript;
+}
+
+void TraversalSession::beginReplay(const DispatchContext& context, double targetSamples)
+{
+    silenceAllNotes(context.midiMessages);
+    clearTraversals();
+
+    eventManager.bridge.beginRecording();
+
+    playback              = Playback::Replaying;
+    replayRemainingSamples = targetSamples;
+
+    const DispatchContext replayContext { context.nodes, context.traversalMap, replayMidi,
+                                          context.sampleRate, context.tempoMultiplier,
+                                          context.transpose, context.velocityScale };
+
+    replayMidi.clear();
+    startTraversalsFromFirstRoot(replayContext);
+}
+
+TraversalSession::Playback TraversalSession::continueReplay(const DispatchContext& context,
+                                                            std::uint64_t graphGeneration, int numSamples,
+                                                            bool playing)
+{
+    if (playback == Playback::Live) {
+        return Playback::Live;
+    }
+
+    const DispatchContext replayContext { context.nodes, context.traversalMap, replayMidi,
+                                          context.sampleRate, context.tempoMultiplier,
+                                          context.transpose, context.velocityScale };
+
+    syncWithGraph(replayContext, graphGeneration);
+
+    const double budgetMs  = 1000.0 * replayShareOfBlock * numSamples / context.sampleRate;
+    const double startedMs = juce::Time::getMillisecondCounterHiRes();
+
+    while (replayRemainingSamples >= 1.0
+           && juce::Time::getMillisecondCounterHiRes() - startedMs < budgetMs) {
+        const int chunkSamples = static_cast<int>(juce::jmin(replayRemainingSamples,
+                                                             static_cast<double>(replayChunkSamples)));
+        replayMidi.clear();
+        eventManager.processEvents(chunkSamples, replayContext);
+        replayRemainingSamples -= chunkSamples;
+
+        eventManager.bridge.recordClockMs += 1000.0 * chunkSamples / context.sampleRate;
+    }
+
+    if (replayRemainingSamples >= 1.0) {
+        if (playing) {
+            replayRemainingSamples += numSamples;
+        }
+
+        return Playback::Replaying;
+    }
+
+    eventManager.bridge.deliverRecording();
+
+    if (playing) {
+        for (const auto& note : eventManager.scheduler.activeNotes) {
+            if (!NoteScheduler::isNoteSounding(note)) {
+                continue;
+            }
+
+            context.midiMessages.addEvent(juce::MidiMessage::noteOn(note.event.midiChannel, note.event.pitch,
+                                          static_cast<juce::uint8>(note.event.velocity)), 0);
+        }
+    }
+
+    playback = Playback::Live;
+    return Playback::Live;
 }
 
 void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)

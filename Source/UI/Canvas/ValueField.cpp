@@ -120,10 +120,10 @@ void ValueField::render()
     const int fieldW = juce::jmax(1, w / kFieldScale);
     const int fieldH = juce::jmax(1, h / kFieldScale);
 
-    const float fieldRadius  = glowRadius / (float) kFieldScale;
+    const float fieldRadius  = glowRadius / static_cast<float>(kFieldScale);
     const float fieldRadius2 = fieldRadius * fieldRadius;
 
-    const size_t numCells = (size_t) fieldW * (size_t) fieldH;
+    const size_t numCells = static_cast<size_t>(fieldW) * static_cast<size_t>(fieldH);
     fieldWeightedSum.assign(numCells, 0.0f);
     fieldTotalWeight.assign(numCells, 0.0f);
     fieldCoverageProd.assign(numCells, 1.0f);
@@ -142,27 +142,27 @@ void ValueField::render()
             continue;
         }
 
-        const int   value  = (int) note.getProperty(valueId);
+        const int   value  = static_cast<int>(note.getProperty(valueId));
         const float factor = juce::jlimit(0.0f, 1.0f, value / 127.0f);
 
         const auto  centre = node->getBounds().getCentre().toFloat();
-        const float cx = centre.x / (float) kFieldScale;
-        const float cy = centre.y / (float) kFieldScale;
+        const float cx = centre.x / static_cast<float>(kFieldScale);
+        const float cy = centre.y / static_cast<float>(kFieldScale);
 
-        const int x0 = juce::jmax(0,          (int) std::floor(cx - fieldRadius));
-        const int x1 = juce::jmin(fieldW - 1, (int) std::ceil (cx + fieldRadius));
-        const int y0 = juce::jmax(0,          (int) std::floor(cy - fieldRadius));
-        const int y1 = juce::jmin(fieldH - 1, (int) std::ceil (cy + fieldRadius));
+        const int x0 = juce::jmax(0,          static_cast<int>(std::floor(cx - fieldRadius)));
+        const int x1 = juce::jmin(fieldW - 1, static_cast<int>(std::ceil (cx + fieldRadius)));
+        const int y0 = juce::jmax(0,          static_cast<int>(std::floor(cy - fieldRadius)));
+        const int y1 = juce::jmin(fieldH - 1, static_cast<int>(std::ceil (cy + fieldRadius)));
 
         for (int y = y0; y <= y1; ++y) {
-            const float dy  = (float) y - cy;
+            const float dy  = static_cast<float>(y) - cy;
             const float dy2 = dy * dy;
-            float* wsRow = weightedSum  + (size_t) y * fieldW;
-            float* twRow = totalWeight  + (size_t) y * fieldW;
-            float* cpRow = coverageProd + (size_t) y * fieldW;
+            float* wsRow = weightedSum  + static_cast<size_t>(y) * fieldW;
+            float* twRow = totalWeight  + static_cast<size_t>(y) * fieldW;
+            float* cpRow = coverageProd + static_cast<size_t>(y) * fieldW;
 
             for (int x = x0; x <= x1; ++x) {
-                const float dx = (float) x - cx;
+                const float dx = static_cast<float>(x) - cx;
                 const float d2 = dx * dx + dy2;
 
                 if (d2 >= fieldRadius2) {
@@ -187,9 +187,9 @@ void ValueField::render()
     const juce::Colour bg = CustomLookAndFeel::get(owner).canvasColour.brighter();
 
     for (int y = 0; y < fieldH; ++y) {
-        const float*  wsRow = weightedSum  + (size_t) y * fieldW;
-        const float*  twRow = totalWeight  + (size_t) y * fieldW;
-        const float*  cpRow = coverageProd + (size_t) y * fieldW;
+        const float*  wsRow = weightedSum  + static_cast<size_t>(y) * fieldW;
+        const float*  twRow = totalWeight  + static_cast<size_t>(y) * fieldW;
+        const float*  cpRow = coverageProd + static_cast<size_t>(y) * fieldW;
         juce::uint8*  line  = pixels.getLinePointer(y);
 
         for (int x = 0; x < fieldW; ++x) {
@@ -202,7 +202,7 @@ void ValueField::render()
                 out = bg.interpolatedWith(mapFieldColour(fieldFactor), coverage);
             }
 
-            auto* px = (juce::PixelARGB*) (line + x * pixels.pixelStride);
+            auto* px = reinterpret_cast<juce::PixelARGB*>(line + x * pixels.pixelStride);
             px->setARGB(out.getAlpha(), out.getRed(), out.getGreen(), out.getBlue());
         }
     }
@@ -214,7 +214,7 @@ void ValueField::updateBrushCursor()
         return;
     }
 
-    const int size    = juce::jmax(1, (int)(brushRadius * viewZoom * 2.0f));
+    const int size    = juce::jmax(1, static_cast<int>(brushRadius * viewZoom * 2.0f));
     const int hotspot = size / 2;
 
     juce::Image img(juce::Image::ARGB, size, size, true);
@@ -227,7 +227,7 @@ void ValueField::updateBrushCursor()
 
 void ValueField::ensurePaintBuffers()
 {
-    const size_t expected = (size_t) owner.getWidth() * (size_t) owner.getHeight();
+    const size_t expected = static_cast<size_t>(owner.getWidth()) * static_cast<size_t>(owner.getHeight());
 
     if (paintDensity[activePaintLayer].size() != expected) {
         paintDensity[activePaintLayer].assign(expected, 0.0f);
@@ -261,26 +261,26 @@ void ValueField::seedStrokeDensityFromNodes()
             continue;
         }
 
-        const int   value = (int) note.getProperty(valueId);
+        const int   value = static_cast<int>(note.getProperty(valueId));
         const float seed  = juce::jlimit(0.0f, 1.0f, value / 127.0f);
 
         const auto  centre = node->getNodeCentre().toFloat();
         const float nodeR  = node->getVisualRadius();
         const float nodeR2 = nodeR * nodeR;
 
-        const int x0 = juce::jmax(0,     (int) std::floor(centre.x - nodeR));
-        const int x1 = juce::jmin(w - 1, (int) std::ceil (centre.x + nodeR));
-        const int y0 = juce::jmax(0,     (int) std::floor(centre.y - nodeR));
-        const int y1 = juce::jmin(h - 1, (int) std::ceil (centre.y + nodeR));
+        const int x0 = juce::jmax(0,     static_cast<int>(std::floor(centre.x - nodeR)));
+        const int x1 = juce::jmin(w - 1, static_cast<int>(std::ceil (centre.x + nodeR)));
+        const int y0 = juce::jmax(0,     static_cast<int>(std::floor(centre.y - nodeR)));
+        const int y1 = juce::jmin(h - 1, static_cast<int>(std::ceil (centre.y + nodeR)));
 
         for (int y = y0; y <= y1; ++y) {
-            const float ddy = (float) y - centre.y;
+            const float ddy = static_cast<float>(y) - centre.y;
             for (int x = x0; x <= x1; ++x) {
-                const float ddx = (float) x - centre.x;
+                const float ddx = static_cast<float>(x) - centre.x;
                 if (ddx * ddx + ddy * ddy > nodeR2) {
                     continue;
                 }
-                density[(size_t) y * (size_t) w + (size_t) x] = seed;
+                density[static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x)] = seed;
             }
         }
     }
@@ -302,10 +302,10 @@ void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to
         return;
     }
 
-    const int x0 = juce::jmax(0,     (int) std::floor(juce::jmin(from.x, to.x) - r - 1.0f));
-    const int x1 = juce::jmin(w - 1, (int) std::ceil (juce::jmax(from.x, to.x) + r + 1.0f));
-    const int y0 = juce::jmax(0,     (int) std::floor(juce::jmin(from.y, to.y) - r - 1.0f));
-    const int y1 = juce::jmin(h - 1, (int) std::ceil (juce::jmax(from.y, to.y) + r + 1.0f));
+    const int x0 = juce::jmax(0,     static_cast<int>(std::floor(juce::jmin(from.x, to.x) - r - 1.0f)));
+    const int x1 = juce::jmin(w - 1, static_cast<int>(std::ceil (juce::jmax(from.x, to.x) + r + 1.0f)));
+    const int y0 = juce::jmax(0,     static_cast<int>(std::floor(juce::jmin(from.y, to.y) - r - 1.0f)));
+    const int y1 = juce::jmin(h - 1, static_cast<int>(std::ceil (juce::jmax(from.y, to.y) + r + 1.0f)));
 
     if (x1 < x0 || y1 < y0) {
         return;
@@ -319,8 +319,8 @@ void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to
 
     for (int y = y0; y <= y1; ++y) {
         for (int x = x0; x <= x1; ++x) {
-            const float px = (float) x - from.x;
-            const float py = (float) y - from.y;
+            const float px = static_cast<float>(x) - from.x;
+            const float py = static_cast<float>(y) - from.y;
 
             float t = 0.0f;
 
@@ -341,7 +341,7 @@ void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to
             const float falloff  = 1.0f - dist / r;
             const float coverage = falloff * falloff;
 
-            const size_t index = (size_t) y * (size_t) w + (size_t) x;
+            const size_t index = static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x);
 
             if (rearm) {
                 strokeMask[index] *= (1.0f - dwellRearm);
@@ -375,7 +375,7 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
     }
 
     const std::vector<float>& density = paintDensity[activePaintLayer];
-    if (density.size() != (size_t) w * (size_t) h) {
+    if (density.size() != static_cast<size_t>(w) * static_cast<size_t>(h)) {
         return;
     }
 
@@ -415,10 +415,10 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
 
         const float nodeR2 = nodeR * nodeR;
 
-        const int x0 = juce::jmax(0,     (int) std::floor(centre.x - nodeR));
-        const int x1 = juce::jmin(w - 1, (int) std::ceil (centre.x + nodeR));
-        const int y0 = juce::jmax(0,     (int) std::floor(centre.y - nodeR));
-        const int y1 = juce::jmin(h - 1, (int) std::ceil (centre.y + nodeR));
+        const int x0 = juce::jmax(0,     static_cast<int>(std::floor(centre.x - nodeR)));
+        const int x1 = juce::jmin(w - 1, static_cast<int>(std::ceil (centre.x + nodeR)));
+        const int y0 = juce::jmax(0,     static_cast<int>(std::floor(centre.y - nodeR)));
+        const int y1 = juce::jmin(h - 1, static_cast<int>(std::ceil (centre.y + nodeR)));
 
         float sample = 0.0f;
 
@@ -429,13 +429,13 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
         bool found = false;
 
         for (int y = y0; y <= y1; ++y) {
-            const float ddy = (float) y - centre.y;
+            const float ddy = static_cast<float>(y) - centre.y;
             for (int x = x0; x <= x1; ++x) {
-                const float ddx = (float) x - centre.x;
+                const float ddx = static_cast<float>(x) - centre.x;
                 if (ddx * ddx + ddy * ddy > nodeR2) {
                     continue;
                 }
-                const float dv = density[(size_t) y * (size_t) w + (size_t) x];
+                const float dv = density[static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x)];
                 if (brushErase) {
                     sample = juce::jmin(sample, dv);
                 } else {
@@ -450,7 +450,7 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
             continue;
         }
 
-        const int value = juce::jlimit(0, 127, (int) std::round(sample * 127.0f));
+        const int value = juce::jlimit(0, 127, static_cast<int>(std::round(sample * 127.0f)));
 
         juce::ValueTree note = firstMidiNote(id);
 
@@ -458,7 +458,7 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
             continue;
         }
 
-        if ((int) note.getProperty(valueId) != value) {
+        if (static_cast<int>(note.getProperty(valueId)) != value) {
             note.setProperty(valueId, value, nullptr);
         }
     }

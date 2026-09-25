@@ -30,7 +30,16 @@ public:
 
     void setSelectChildScript(const RTScript* script);
 
+    enum class Playback { Live, Replaying };
+
+    void     beginReplay   (const DispatchContext& context, double targetSamples);
+    Playback continueReplay(const DispatchContext& context, std::uint64_t graphGeneration, int numSamples,
+                            bool playing);
+
     TraversalPool traversals;
+
+    Playback playback               = Playback::Live;
+    double   replayRemainingSamples = 0.0;
 
 private:
 
@@ -63,6 +72,12 @@ private:
     std::vector<int> restartRootScratch;
     std::vector<int> linkedRootScratch;
     std::vector<int> removedRunIdScratch;
+
+    static constexpr int    replayChunkSamples      = 1024;
+    static constexpr int    replayMidiCapacityBytes = 65536;
+    static constexpr double replayShareOfBlock      = 0.25;
+
+    juce::MidiBuffer replayMidi;
 
     std::uint64_t syncedGraphGeneration = 0;
     std::uint64_t syncedPoolEpoch       = 0;

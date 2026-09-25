@@ -43,7 +43,7 @@ juce::String GreekLetterFormat::text(const ValueBinding& binding, TextPurpose pu
         return NumberFormat::text(binding, purpose);
     }
 
-    const int letter = juce::jlimit(0, greekLetterCount - 1, (int) binding.primary.getValue());
+    const int letter = juce::jlimit(0, greekLetterCount - 1, static_cast<int>(binding.primary.getValue()));
 
     return greekLetters[letter];
 }

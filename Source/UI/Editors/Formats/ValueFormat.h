@@ -40,7 +40,7 @@ public:
     std::vector<juce::Identifier> extraProperties;
 
     double minimum       = 0.0;
-    double maximum       = (double) std::numeric_limits<int>::max();
+    double maximum       = static_cast<double>(std::numeric_limits<int>::max());
     int    decimalPlaces = 0;
 };
 

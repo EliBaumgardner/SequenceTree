@@ -47,7 +47,7 @@ void Titlebar::configureTempoDisplay()
         [this](float tempoMultiplier) { tempoDisplay.editor.boundValue.setValue(tempoMultiplier); });
 
     tempoDisplay.editor.onValueChange = [this]() {
-        tempoAttachment->setValueAsCompleteGesture(static_cast<float>((double) tempoDisplay.editor.boundValue.getValue()));
+        tempoAttachment->setValueAsCompleteGesture(static_cast<float>(static_cast<double>(tempoDisplay.editor.boundValue.getValue())));
     };
 
     tempoAttachment->sendInitialUpdate();

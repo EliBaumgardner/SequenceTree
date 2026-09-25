@@ -17,7 +17,7 @@ public:
         bool         oneShot    = false;
     };
 
-    void startTrail(int trailId, int durationMs, juce::Colour colour, bool oneShot);
+    void startTrail(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot);
     void resumeTrails();
 
     bool advance(double frameSec);

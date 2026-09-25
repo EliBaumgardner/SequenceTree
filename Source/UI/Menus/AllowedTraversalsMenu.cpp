@@ -63,7 +63,7 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(const ApplicationContext& context, 
             continue;
         }
 
-        keys.push_back({ (int) traversalData.getProperty(ValueTreeIdentifiers::TraversalId), 0 });
+        keys.push_back({ static_cast<int>(traversalData.getProperty(ValueTreeIdentifiers::TraversalId)), 0 });
     }
 
     applicationContext.graphState->traversals.collectKeys(keys);
@@ -94,7 +94,7 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(const ApplicationContext& context, 
 }
 
 int AllowedTraversalsMenu::getIdealHeight() const {
-    return contentInset * 2 + rowHeight * juce::jmax(1, (int) rows.size());
+    return contentInset * 2 + rowHeight * juce::jmax(1, static_cast<int>(rows.size()));
 }
 
 bool AllowedTraversalsMenu::isTraversalEnabled(const TraversalKey& key) const {

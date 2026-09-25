@@ -31,7 +31,7 @@ TraversalFlagNode::TraversalFlagNode(const ApplicationContext& context) : Node(c
 
     traversalNumEditor->onValueChange = [this]() {
 
-        int typeId = (int) traversalNumEditor->boundValue.getValue();
+        int typeId = static_cast<int>(traversalNumEditor->boundValue.getValue());
 
         if (typeId < 0) {
             typeId = -typeId;
@@ -125,7 +125,7 @@ bool TraversalFlagNode::hitTest(int x, int y)
         return true;
     }
 
-    return buildTrianglePath().contains((float) x, (float) y);
+    return buildTrianglePath().contains(static_cast<float>(x), static_cast<float>(y));
 }
 
 void TraversalFlagNode::paint(juce::Graphics& g)

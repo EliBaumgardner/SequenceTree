@@ -12,6 +12,9 @@ public:
     NoteScheduler       scheduler;
     TraversalDispatcher dispatcher  { scheduler, bridge };
 
+    double lastTempoMultiplier = 0.0;
+
+    void followTempo(double tempoMultiplier);
     void processEvents(int numSamples, const DispatchContext& context);
 
 private:

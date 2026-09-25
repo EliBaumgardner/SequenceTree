@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 3.22)
 
 project(SequenceTree VERSION 0.0.1)
 
+option(SEQUENCETREE_REALTIME_SANITIZER "Build everything with -fsanitize=realtime and add SequenceTree_RealtimeTests; needs upstream clang 20 or later" OFF)
+
+set(SEQUENCETREE_COPY_PLUGIN TRUE)
+
+if(SEQUENCETREE_REALTIME_SANITIZER)
+    add_compile_options(-fsanitize=realtime -fdelayed-template-parsing -Wno-delayed-template-parsing-in-cxx20)
+    add_link_options(-fsanitize=realtime)
+    set(SEQUENCETREE_COPY_PLUGIN FALSE)
+endif()
+
 # Add JUCEIO
 add_subdirectory(JUCE)
 
@@ -9,7 +19,7 @@ add_subdirectory(JUCE)
 juce_add_plugin(SequenceTree
         PRODUCT_NAME "SequenceTree"
         COMPANY_NAME "ArsNova"
-        COPY_PLUGIN_AFTER_BUILD TRUE
+        COPY_PLUGIN_AFTER_BUILD ${SEQUENCETREE_COPY_PLUGIN}
         IS_SYNTH TRUE
         NEEDS_MIDI_INPUT TRUE
         NEEDS_MIDI_OUTPUT TRUE
@@ -159,3 +169,18 @@ target_include_directories(SequenceTree_GraphTests PRIVATE Source JUCE/modules)
 target_link_libraries(SequenceTree_GraphTests PRIVATE SequenceTree Catch2::Catch2)
 
 catch_discover_tests(SequenceTree_GraphTests DISCOVERY_MODE PRE_TEST)
+
+if(SEQUENCETREE_REALTIME_SANITIZER)
+    add_executable(SequenceTree_RealtimeTests
+            Tests/RealtimeTests.cpp
+    )
+
+    target_compile_features(SequenceTree_RealtimeTests PRIVATE cxx_std_20)
+    target_compile_options(SequenceTree_RealtimeTests PRIVATE -Wall -Wextra -Wno-unused-parameter)
+
+    target_include_directories(SequenceTree_RealtimeTests PRIVATE Source JUCE/modules)
+
+    target_link_libraries(SequenceTree_RealtimeTests PRIVATE SequenceTree Catch2::Catch2)
+
+    catch_discover_tests(SequenceTree_RealtimeTests DISCOVERY_MODE PRE_TEST)
+endif()

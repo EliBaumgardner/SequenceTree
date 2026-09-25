@@ -215,8 +215,8 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
         auto it = rootNodeMap.begin();
         int firstRootId = it->first;
         NodePosition pos = applicationContext.graphState->getNodePosition(firstRootId);
-        gridOrigin    = { (float)pos.xPosition,
-                          (float)pos.yPosition };
+        gridOrigin    = { static_cast<float>(pos.xPosition),
+                          static_cast<float>(pos.yPosition) };
         gridSpacing   = ArrowInfo::pixelsPerGridSpace;
         gridOriginSet = true;
     }
@@ -286,16 +286,16 @@ juce::Point<int> NodeCanvas::snapPointToGrid(juce::Point<int> point) const
     const float originY = gridOrigin.y;
     const float snapThreshold = 5.0f;
 
-    const float snappedX = originX + std::round((float(point.x) - originX) / gridSpacing) * gridSpacing;
-    const float snappedY = originY + std::round((float(point.y) - originY) / gridSpacing) * gridSpacing;
+    const float snappedX = originX + std::round((static_cast<float>(point.x) - originX) / gridSpacing) * gridSpacing;
+    const float snappedY = originY + std::round((static_cast<float>(point.y) - originY) / gridSpacing) * gridSpacing;
 
     juce::Point<int> result = point;
 
-    if (std::abs(float(point.x) - snappedX) < snapThreshold) {
-        result.x = int(snappedX);
+    if (std::abs(static_cast<float>(point.x) - snappedX) < snapThreshold) {
+        result.x = static_cast<int>(snappedX);
     }
-    if (std::abs(float(point.y) - snappedY) < snapThreshold) {
-        result.y = int(snappedY);
+    if (std::abs(static_cast<float>(point.y) - snappedY) < snapThreshold) {
+        result.y = static_cast<int>(snappedY);
     }
 
     return result;

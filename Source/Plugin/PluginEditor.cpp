@@ -61,6 +61,16 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     setResizable(true,false);
     setSize (700, 500);
+
+    audioCommandFrames = juce::VBlankAttachment(this, [this](double) {
+        if (audioProcessor.playbackStateChanged.exchange(false)) {
+            titleBar->applyPlaybackState(audioProcessor.isPlaying.load());
+        }
+
+        if (audioProcessor.eventManager.bridge.hasPendingCommands()) {
+            canvas->handleAsyncUpdate();
+        }
+    });
 }
 
 SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
