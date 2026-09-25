@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -76,7 +77,7 @@ class Parser
 {
 public:
 
-    Parser(const std::vector<Token>& tokenList, std::vector<ScriptDiagnostic>& diagnosticList)
+    Parser(std::span<const Token> tokenList, std::vector<ScriptDiagnostic>& diagnosticList)
         : tokens(tokenList), diagnostics(diagnosticList) {}
 
     std::vector<StatementPtr> run();
@@ -117,7 +118,7 @@ private:
     ExpressionPtr parseUnary();
     ExpressionPtr parsePrimary();
 
-    const std::vector<Token>&      tokens;
+    std::span<const Token>         tokens;
     std::vector<ScriptDiagnostic>& diagnostics;
 
     std::size_t position = 0;

@@ -62,11 +62,40 @@ TEST_CASE("arrow length sets the connection duration, and moving a node retimes 
     CHECK(built.find(rootId)->findConnection(childId)->duration == 500);
 
     GraphState::setNodePosition(graph.getNode(childId), NodePosition { 200, 0, 25 }, nullptr);
-    processor.rtGraphBuilder.updateDurationMaps({ childId });
+    const std::vector<int> movedIds { childId };
+    processor.rtGraphBuilder.updateDurationMaps(movedIds);
 
     const NodeMap& moved = *processor.snapshots.getPublished()->globalNodes;
 
     CHECK(moved.find(rootId)->findConnection(childId)->duration == 1000);
+}
+
+TEST_CASE("moving a node retimes the arrow from every one of its parents", "[graph]")
+{
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+
+    const int rootId         = createRoot(graph, 0, 0);
+    const int firstParentId  = createChild(graph, rootId, 100, 0);
+    const int secondParentId = createChild(graph, rootId, 100, 200);
+    const int sharedChildId  = createChild(graph, firstParentId, 200, 0);
+
+    graph.connectNodes(secondParentId, sharedChildId, nullptr);
+
+    const NodeMap& built = rebuildAndPublish(processor);
+
+    REQUIRE(built.find(secondParentId)->findConnection(sharedChildId) != nullptr);
+    CHECK(built.find(firstParentId) ->findConnection(sharedChildId)->duration == 500);
+    CHECK(built.find(secondParentId)->findConnection(sharedChildId)->duration == 500);
+
+    GraphState::setNodePosition(graph.getNode(sharedChildId), NodePosition { 300, 0, 25 }, nullptr);
+    const std::vector<int> movedIds { sharedChildId };
+    processor.rtGraphBuilder.updateDurationMaps(movedIds);
+
+    const NodeMap& moved = *processor.snapshots.getPublished()->globalNodes;
+
+    CHECK(moved.find(firstParentId) ->findConnection(sharedChildId)->duration == 1000);
+    CHECK(moved.find(secondParentId)->findConnection(sharedChildId)->duration == 1000);
 }
 
 TEST_CASE("a child directly below its parent is a chord link and is never stepped into", "[graph]")
@@ -276,7 +305,8 @@ TEST_CASE("removing an encapsulator removes its members and every link to them",
     const int lastId  = createChild(graph, firstId, 200, 0);
     const int afterId = createChild(graph, lastId, 300, 0);
 
-    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, { firstId, lastId }, 1, nullptr);
+    const std::vector<int> memberIds { firstId, lastId };
+    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, 1, nullptr);
     const int encapsulatorId = encapsulator.getProperty(ValueTreeIdentifiers::Id);
 
     graph.removeNode(encapsulatorId, nullptr);
@@ -306,7 +336,8 @@ TEST_CASE("dissolving an encapsulator keeps its members and their arrows", "[gra
     const int firstId = createChild(graph, rootId, 100, 0);
     const int lastId  = createChild(graph, firstId, 200, 0);
 
-    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, { firstId, lastId }, 2, nullptr);
+    const std::vector<int> memberIds { firstId, lastId };
+    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, 2, nullptr);
     const int encapsulatorId = encapsulator.getProperty(ValueTreeIdentifiers::Id);
 
     CHECK(graph.encapsulation.memberIds(encapsulatorId) == std::vector<int> { firstId, lastId });
@@ -334,7 +365,8 @@ TEST_CASE("removing an encapsulator's last member dissolves it", "[graph][encaps
     const int rootId   = createRoot(graph, 0, 0);
     const int memberId = createChild(graph, rootId, 100, 0);
 
-    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, { memberId }, 1, nullptr);
+    const std::vector<int> memberIds { memberId };
+    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, 1, nullptr);
     const int encapsulatorId = encapsulator.getProperty(ValueTreeIdentifiers::Id);
 
     graph.removeNode(memberId, nullptr);

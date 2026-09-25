@@ -62,6 +62,7 @@ private:
     std::vector<int> activeRootIdScratch;
     std::vector<int> restartRootScratch;
     std::vector<int> linkedRootScratch;
+    std::vector<int> removedRunIdScratch;
 
     std::uint64_t syncedGraphGeneration = 0;
     std::uint64_t syncedPoolEpoch       = 0;

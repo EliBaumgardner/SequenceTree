@@ -42,6 +42,9 @@ inline constexpr int    traversalMultiplierDecimals = 3;
 inline constexpr int minimumTraversalTranspose = -24;
 inline constexpr int maximumTraversalTranspose =  24;
 
+inline constexpr int minimumGlobalTranspose = -48;
+inline constexpr int maximumGlobalTranspose =  48;
+
 enum class NodeType        { Node, Root, Modulator, TraversalFlag, Encapsulator};
 enum class NodeDisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue, Probability};
 

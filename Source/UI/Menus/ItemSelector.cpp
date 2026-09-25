@@ -39,9 +39,7 @@ void ItemSelector::addItem(int itemId, juce::String label, Action onChosen)
 
 void ItemSelector::removeItem(int itemId)
 {
-    items.erase(std::remove_if(items.begin(), items.end(),
-                               [itemId](const Item& item) { return item.id == itemId; }),
-                items.end());
+    std::erase_if(items, [itemId](const Item& item) { return item.id == itemId; });
 
     if (selectedItemId == itemId) {
         selectedItemId = 0;

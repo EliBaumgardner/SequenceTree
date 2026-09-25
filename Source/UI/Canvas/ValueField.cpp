@@ -70,7 +70,7 @@ void ValueField::paintStroke(juce::Point<float> canvasPos, bool isStart, bool er
         brushStrokeActive = true;
         brushErase = erase;
         ensurePaintBuffers();
-        std::fill(strokeMask.begin(), strokeMask.end(), 0.0f);
+        std::ranges::fill(strokeMask, 0.0f);
         seedStrokeDensityFromNodes();
         strokePrevPoint = canvasPos;
         startTimerHz(dwellTimerHz);

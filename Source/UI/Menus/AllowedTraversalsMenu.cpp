@@ -68,13 +68,7 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(const ApplicationContext& context, 
 
     applicationContext.graphState->traversals.collectKeys(keys);
 
-    std::sort(keys.begin(), keys.end(), [](const TraversalKey& first, const TraversalKey& second) {
-        if (first.typeId != second.typeId) {
-            return first.typeId < second.typeId;
-        }
-
-        return first.instance < second.instance;
-    });
+    std::ranges::sort(keys);
 
     for (const TraversalKey& key : keys) {
 

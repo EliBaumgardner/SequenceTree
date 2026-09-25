@@ -4,6 +4,8 @@
 
 #include "ValueFormat.h"
 
+#include <iterator>
+
 static const juce::String greekLetters[] = {
     juce::String(L"α"),
     juce::String(L"β"),
@@ -31,7 +33,7 @@ static const juce::String greekLetters[] = {
     juce::String(L"ω")
 };
 
-static const int greekLetterCount = (int) (sizeof(greekLetters) / sizeof(greekLetters[0]));
+static constexpr int greekLetterCount = static_cast<int>(std::size(greekLetters));
 
 GreekLetterFormat::GreekLetterFormat() : NumberFormat(0, greekLetterCount - 1) {}
 

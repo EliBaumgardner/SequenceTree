@@ -455,7 +455,7 @@ void TraversalLogic::peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& t
             }
 
             const std::vector<TraversalKey>& disabled = connection.disabledTraversals;
-            if (std::find(disabled.begin(), disabled.end(), traversal.key) != disabled.end()) {
+            if (std::ranges::find(disabled, traversal.key) != disabled.end()) {
                 continue;
             }
 
@@ -775,7 +775,7 @@ const RTNode* TraversalLogic::eligibleModulatorRoot(const NodeMap& nodes, const 
 
     const std::vector<TraversalKey>& disabled = connection.disabledTraversals;
 
-    if (std::find(disabled.begin(), disabled.end(), traversal.key) != disabled.end()) {
+    if (std::ranges::find(disabled, traversal.key) != disabled.end()) {
         return nullptr;
     }
 

@@ -48,6 +48,15 @@ bool SelectionOps::hasSelection() const
     return !selectedNodeIds().empty();
 }
 
+void SelectionOps::selectAll() const
+{
+    for (auto& [nodeId, node] : applicationContext.canvas->nodeManager.all()) {
+        if (node->isVisible() && ! node->isSelected) {
+            node->setSelectVisual(true);
+        }
+    }
+}
+
 void SelectionOps::clearAll() const
 {
     for (auto& [nodeId, node] : applicationContext.canvas->nodeManager.all()) {
@@ -88,7 +97,7 @@ std::vector<int> SelectionOps::selectionWithEncapsulatedMembers() const
     return ids;
 }
 
-std::vector<juce::ValueTree> SelectionOps::encapsulatorsCovering(const std::vector<int>& nodeIds) const
+std::vector<juce::ValueTree> SelectionOps::encapsulatorsCovering(std::span<const int> nodeIds) const
 {
     GraphState& state = *applicationContext.graphState;
 
@@ -157,6 +166,30 @@ void SelectionOps::copySelection()
     }
 
     clipboard = copied;
+
+    copiedChordMemberIds.clear();
+    copiedIdsWithParentOutside.clear();
+    copiedRootTraversals.clear();
+
+    for (const juce::ValueTree& node : clipboardNodes()) {
+        const int nodeId     = node.getProperty(ValueTreeIdentifiers::Id);
+        const int rootNodeId = node.getProperty(ValueTreeIdentifiers::RootNodeId);
+
+        if (wasChordMember(node)) {
+            copiedChordMemberIds.insert(nodeId);
+        }
+
+        if (hasParentOutsideCopy(nodeId)) {
+            copiedIdsWithParentOutside.insert(nodeId);
+        }
+
+        const juce::ValueTree rootTraversals =
+            state.getNode(rootNodeId).getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
+
+        if (rootTraversals.isValid()) {
+            copiedRootTraversals[rootNodeId] = rootTraversals.createCopy();
+        }
+    }
 }
 
 void SelectionOps::deleteSelection()
@@ -268,7 +301,7 @@ std::set<int> SelectionOps::findDiscardedOrphans(const std::map<int,int>& parent
             const auto parent = parentOf.find(nodeId);
             const bool orphaned = parent == parentOf.end() || discarded.count(parent->second) > 0;
 
-            if (orphaned && (!canBecomeRoot(node) || wasChordMember(node))) {
+            if (orphaned && (!canBecomeRoot(node) || copiedChordMemberIds.count(nodeId) > 0)) {
                 discarded.insert(nodeId);
                 foundMore = true;
             }
@@ -320,7 +353,7 @@ int SelectionOps::chooseComponentHead(const PasteLayout& layout, const std::set<
             continue;
         }
 
-        if (hasParentOutsideCopy(nodeId)) {
+        if (copiedIdsWithParentOutside.count(nodeId) > 0) {
             return nodeId;
         }
 
@@ -366,7 +399,7 @@ std::set<int> SelectionOps::findRootlessHeads(const PasteLayout& layout) const
             }
         }
 
-        const bool alreadyRooted = std::any_of(component.begin(), component.end(),
+        const bool alreadyRooted = std::ranges::any_of(component,
             [this, &layout](int memberId) {
                 return layout.promotedToRoot.count(memberId) > 0
                     || isRootNodeType(clipboard.getChildWithProperty(ValueTreeIdentifiers::Id, memberId));
@@ -541,13 +574,11 @@ void SelectionOps::addRootTraversals(juce::ValueTree node, int originalRootId) c
         return;
     }
 
-    const juce::ValueTree originalRoot      = state.getNode(originalRootId);
-    const juce::ValueTree inheritedTraversals =
-        originalRoot.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
+    const auto inheritedTraversals = copiedRootTraversals.find(originalRootId);
 
-    if (inheritedTraversals.getNumChildren() > 0) {
-        for (int i = 0; i < inheritedTraversals.getNumChildren(); ++i) {
-            traversals.addChild(inheritedTraversals.getChild(i).createCopy(), -1, nullptr);
+    if (inheritedTraversals != copiedRootTraversals.end() && inheritedTraversals->second.getNumChildren() > 0) {
+        for (int i = 0; i < inheritedTraversals->second.getNumChildren(); ++i) {
+            traversals.addChild(inheritedTraversals->second.getChild(i).createCopy(), -1, nullptr);
         }
         return;
     }
@@ -679,9 +710,9 @@ std::vector<int> SelectionOps::createPastedEncapsulators(const PasteLayout& layo
     return encapsulatorIds;
 }
 
-void SelectionOps::selectPastedNodes(const PasteLayout& layout, const std::vector<int>& encapsulatorIds) const
+void SelectionOps::selectPastedNodes(const PasteLayout& layout, std::span<const int> encapsulatorIds) const
 {
-    std::vector<int> pastedIds = encapsulatorIds;
+    std::vector<int> pastedIds(encapsulatorIds.begin(), encapsulatorIds.end());
 
     for (const auto& [originalId, newId] : layout.idMap) {
         pastedIds.push_back(newId);

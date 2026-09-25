@@ -4,6 +4,7 @@
 
 #include <map>
 #include <set>
+#include <span>
 #include <vector>
 
 class Node;
@@ -18,6 +19,7 @@ public:
     void deleteSelection ();
     void pasteAt         (juce::Point<int> canvasPoint);
 
+    void selectAll          () const;
     void clearAll           () const;
     void deselectAllExcept  (const Node& keptNode) const;
 
@@ -38,7 +40,7 @@ private:
     std::vector<int> selectedNodeIds                 () const;
     std::vector<int> selectionWithEncapsulatedMembers () const;
 
-    std::vector<juce::ValueTree> encapsulatorsCovering (const std::vector<int>& nodeIds) const;
+    std::vector<juce::ValueTree> encapsulatorsCovering (std::span<const int> nodeIds) const;
 
     PasteLayout buildPasteLayout () const;
 
@@ -69,9 +71,13 @@ private:
 
     std::vector<int> createPastedEncapsulators (const PasteLayout& layout) const;
 
-    void selectPastedNodes (const PasteLayout& layout, const std::vector<int>& encapsulatorIds) const;
+    void selectPastedNodes (const PasteLayout& layout, std::span<const int> encapsulatorIds) const;
 
     const ApplicationContext& applicationContext;
 
     juce::ValueTree clipboard;
+
+    std::set<int>                  copiedChordMemberIds;
+    std::set<int>                  copiedIdsWithParentOutside;
+    std::map<int, juce::ValueTree> copiedRootTraversals;
 };

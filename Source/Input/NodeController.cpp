@@ -26,7 +26,7 @@
 
 
 NodeController::NodeController(const ApplicationContext& context, NodeCanvas& canvasRef)
-    : applicationContext(context), canvas(canvasRef)
+    : selectionOps(context), applicationContext(context), canvas(canvasRef)
 {
 }
 
@@ -103,12 +103,12 @@ void NodeController::showArrowContextMenu(Arrow* arrow)
 
     juce::PopupMenu menu;
     menu.setLookAndFeel(applicationContext.lookAndFeel);
-    menu.addItem(ArrowMenuItem::editAllowedTraversals, "edit allowed traversals");
-    menu.addItem(ArrowMenuItem::traversalArrow, "traversal arrow",
+    menu.addItem(static_cast<int>(ArrowMenuItem::EditAllowedTraversals), "edit allowed traversals");
+    menu.addItem(static_cast<int>(ArrowMenuItem::TraversalArrow), "traversal arrow",
                  connectionOps.canBeTraversalArrow(arrow), arrow->isTraversalArrow());
 
     if (connectionOps.connectsToModulatorRoot(arrow)) {
-        menu.addItem(ArrowMenuItem::syncModulator, "sync", true, arrow->isSyncArrow());
+        menu.addItem(static_cast<int>(ArrowMenuItem::SyncModulator), "sync", true, arrow->isSyncArrow());
     }
 
     juce::Component::SafePointer<Arrow> safeArrow(arrow);
@@ -120,9 +120,9 @@ void NodeController::showArrowContextMenu(Arrow* arrow)
             return;
         }
 
-        switch (result)
+        switch (static_cast<ArrowMenuItem>(result))
         {
-            case ArrowMenuItem::editAllowedTraversals:
+            case ArrowMenuItem::EditAllowedTraversals:
             {
                 juce::ValueTree connection = connectionOps.connectionTreeFor(safeArrow);
                 if (!connection.isValid()) {
@@ -137,13 +137,13 @@ void NodeController::showArrowContextMenu(Arrow* arrow)
                 });
                 break;
             }
-            case ArrowMenuItem::traversalArrow:
+            case ArrowMenuItem::TraversalArrow:
             {
                 connectionOps.setArrowType(safeArrow, safeArrow->isTraversalArrow() ? ArrowType::Node
                                                                                     : ArrowType::Traversal);
                 break;
             }
-            case ArrowMenuItem::syncModulator:
+            case ArrowMenuItem::SyncModulator:
             {
                 connectionOps.setArrowSync(safeArrow, ! safeArrow->isSyncArrow());
                 break;
@@ -160,9 +160,9 @@ void NodeController::showSelectionMenu(juce::Point<int> canvasPoint)
     juce::PopupMenu menu;
     menu.setLookAndFeel(applicationContext.lookAndFeel);
 
-    menu.addItem(SelectionMenuItem::copy,   "copy",   hasSelection);
-    menu.addItem(SelectionMenuItem::paste,  "paste",  selectionOps.hasClipboard());
-    menu.addItem(SelectionMenuItem::remove, "delete", hasSelection);
+    menu.addItem(static_cast<int>(SelectionMenuItem::Copy),   "copy",   hasSelection);
+    menu.addItem(static_cast<int>(SelectionMenuItem::Paste),  "paste",  selectionOps.hasClipboard());
+    menu.addItem(static_cast<int>(SelectionMenuItem::Remove), "delete", hasSelection);
 
     juce::WeakReference<NodeController> safeController(this);
 
@@ -172,11 +172,11 @@ void NodeController::showSelectionMenu(juce::Point<int> canvasPoint)
             return;
         }
 
-        switch (result)
+        switch (static_cast<SelectionMenuItem>(result))
         {
-            case SelectionMenuItem::copy:   selectionOps.copySelection();   break;
-            case SelectionMenuItem::paste:  selectionOps.pasteAt(canvasPoint); break;
-            case SelectionMenuItem::remove: selectionOps.deleteSelection(); break;
+            case SelectionMenuItem::Copy:   selectionOps.copySelection();   break;
+            case SelectionMenuItem::Paste:  selectionOps.pasteAt(canvasPoint); break;
+            case SelectionMenuItem::Remove: selectionOps.deleteSelection(); break;
             default: break;
         }
     });

@@ -8,6 +8,8 @@
 #include "../../Graph/GraphState.h"
 #include "../../Util/ArrowInfo.h"
 
+#include <span>
+
 class NodeFactory
 {
 public:
@@ -66,7 +68,7 @@ public:
         return modulatorRootValueTree;
     }
 
-    static juce::ValueTree createEncapsulator(GraphState& state, const std::vector<int>& memberNodeIds,
+    static juce::ValueTree createEncapsulator(GraphState& state, std::span<const int> memberNodeIds,
                                               int subLoopCountLimit, juce::UndoManager* undoManager)
     {
         const int encapsulatorLabel = state.encapsulation.unusedLabel();

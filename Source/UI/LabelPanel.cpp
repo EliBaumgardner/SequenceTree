@@ -86,7 +86,7 @@ void LabelPanel::mouseUp(const juce::MouseEvent &) {
     }
 }
 
-void LabelPanel::applyOrder(const std::vector<int>& fileIds)
+void LabelPanel::applyOrder(std::span<const int> fileIds)
 {
     size_t position = 0;
 
@@ -148,8 +148,8 @@ void LabelPanel::setSelectedLabel(const FileLabel* label)
 
 void LabelPanel::removeFileLabel(const FileLabel* label)
 {
-    const auto match = std::find_if(labels.begin(), labels.end(),
-                                    [label](const auto& candidate) { return candidate.get() == label; });
+    const auto match = std::ranges::find_if(labels,
+                                            [label](const auto& candidate) { return candidate.get() == label; });
 
     if (match == labels.end()) {
         return;

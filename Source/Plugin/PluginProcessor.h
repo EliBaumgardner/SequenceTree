@@ -11,7 +11,6 @@
 #include "../Audio/EventManager.h"
 #include "../Audio/TraversalSession.h"
 #include "AudioSnapshotPublisher.h"
-#include "TraversalParameters.h"
 
 class SequenceTreeAudioProcessorEditor;
 
@@ -58,9 +57,17 @@ public:
     std::atomic<bool>   resetRequested  = false;
     std::atomic<bool>   playbackStateChanged { false };
     bool                wasPlaying      = false;
-    std::atomic<double> tempoMultiplier { 1.0 };
+
+    static constexpr const char* tempoParameterId     = "tempoMultiplier";
+    static constexpr const char* velocityParameterId  = "velocity";
+    static constexpr const char* transposeParameterId = "transpose";
+    static constexpr int         parameterVersion     = 1;
 
     juce::AudioProcessorValueTreeState valueTreeState;
+
+    std::atomic<float>& tempoParameter     = *valueTreeState.getRawParameterValue(tempoParameterId);
+    std::atomic<float>& velocityParameter  = *valueTreeState.getRawParameterValue(velocityParameterId);
+    std::atomic<float>& transposeParameter = *valueTreeState.getRawParameterValue(transposeParameterId);
 
     juce::UndoManager undoManager;
 
@@ -71,8 +78,6 @@ public:
     AudioSnapshotPublisher snapshots { traversalRuleState };
 
     RTGraphBuilder rtGraphBuilder { *this, graphState };
-
-    TraversalParameters traversalParameters { valueTreeState, graphState.traversals };
 
 
     struct TempoInfo
@@ -94,4 +99,8 @@ public:
 
     JUCE_DECLARE_WEAK_REFERENCEABLE (SequenceTreeAudioProcessor)
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessor)
+
+private:
+
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 };

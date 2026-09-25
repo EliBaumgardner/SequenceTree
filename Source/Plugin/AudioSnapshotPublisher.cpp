@@ -100,10 +100,7 @@ void AudioSnapshotPublisher::collectRetiredSnapshots()
         return completed > entry.retiredAtBlock;
     };
 
-    retiredSnapshots.erase(std::remove_if(retiredSnapshots.begin(),
-                                          retiredSnapshots.end(),
-                                          isUnreachableByAudioThread),
-                           retiredSnapshots.end());
+    std::erase_if(retiredSnapshots, isUnreachableByAudioThread);
 }
 
 void AudioSnapshotPublisher::releaseRetiredSnapshots()

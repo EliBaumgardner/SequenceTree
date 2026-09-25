@@ -22,12 +22,12 @@ public:
 
     bool advance(double frameSec);
 
-    static inline const float snapSpringRateHz    {60.0f};
-    static inline const float snapSpringStiffness {0.20f};
-    static inline const float snapSpringDamping   {0.30f};
-    static inline const float snapSettledEpsilon  {0.001f};
-    static inline const float hoverFadePerSecond  {4.8f};
-    static inline const float hoverFadeEpsilon    {0.001f};
+    static constexpr float snapSpringRateHz    {60.0f};
+    static constexpr float snapSpringStiffness {0.20f};
+    static constexpr float snapSpringDamping   {0.30f};
+    static constexpr float snapSettledEpsilon  {0.001f};
+    static constexpr float hoverFadePerSecond  {4.8f};
+    static constexpr float hoverFadeEpsilon    {0.001f};
 
     float snapT        = 1.0f;
     float snapVelocity = 0.0f;

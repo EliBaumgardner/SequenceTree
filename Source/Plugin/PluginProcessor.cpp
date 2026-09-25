@@ -2,6 +2,7 @@
 #include "PluginEditor.h"
 #include "../UI/Node/Node.h"
 #include "../Graph/ValueTreeIdentifiers.h"
+#include "../Util/NodeInfo.h"
 #include <algorithm>
 #include <unordered_set>
 
@@ -16,10 +17,30 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
                      #endif
                        )
 #endif
-, valueTreeState(*this,nullptr,"STATE",TraversalParameters::createParameterLayout())
+, valueTreeState(*this,nullptr,"STATE",createParameterLayout())
 {
     traversalRuleState.ensureDefaultRule();
     snapshots.publishActiveTraversalRule();
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::createParameterLayout()
+{
+    juce::NormalisableRange<float> tempoRange { static_cast<float>(RTtraversal::minimumTempoMultiplier),
+                                                static_cast<float>(RTtraversal::maximumTempoMultiplier) };
+    tempoRange.setSkewForCentre(1.0f);
+
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { tempoParameterId, parameterVersion },
+                                                           "Tempo Multiplier", tempoRange, 1.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { velocityParameterId, parameterVersion },
+                                                         "Velocity", 0, maximumMidiVelocity, maximumMidiVelocity));
+
+    layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { transposeParameterId, parameterVersion },
+                                                         "Transpose", minimumGlobalTranspose, maximumGlobalTranspose, 0));
+
+    return layout;
 }
 
 //==============================================================================
@@ -158,6 +179,7 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
         state.addChild(graphState.nodeMap.createCopy(),       -1, nullptr);
         state.addChild(graphState.traversals.map.createCopy(),-1, nullptr);
         state.addChild(traversalRuleState.rules.createCopy(), -1, nullptr);
+        state.addChild(valueTreeState.copyState(),            -1, nullptr);
     }
 
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
@@ -181,6 +203,12 @@ void SequenceTreeAudioProcessor::applyRestoredState()
         restoredNodeMap      = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
         restoredTraversalMap = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalMap);
         restoredRules        = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalRules);
+
+        const juce::ValueTree restoredParameters = restoredTree.getChildWithName(valueTreeState.state.getType());
+
+        if (restoredParameters.isValid()) {
+            valueTreeState.replaceState(restoredParameters);
+        }
     }
 
     graphState.replaceState(restoredNodeMap, restoredTraversalMap);
@@ -334,7 +362,9 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         traversalSession.traversals,
         midiMessages,
         tempoInfo.currentSampleRate,
-        tempoMultiplier.load() * hostTempoScale
+        tempoParameter.load() * hostTempoScale,
+        juce::roundToInt(transposeParameter.load()),
+        velocityParameter.load() / static_cast<double>(maximumMidiVelocity)
     };
 
     if (resetHit) {

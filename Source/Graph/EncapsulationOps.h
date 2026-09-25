@@ -2,6 +2,7 @@
 
 #include <juce_data_structures/juce_data_structures.h>
 
+#include <span>
 #include <vector>
 
 class GraphState;
@@ -12,7 +13,7 @@ public:
 
     explicit EncapsulationOps(GraphState& graphState) : graphState(graphState) {}
 
-    juce::ValueTree create         (const std::vector<int>& memberNodeIds, juce::UndoManager* undoManager);
+    juce::ValueTree create         (std::span<const int> memberNodeIds, juce::UndoManager* undoManager);
     void            dissolve       (int encapsulatorId, juce::UndoManager* undoManager);
     void            removeGroup    (int encapsulatorId, juce::UndoManager* undoManager);
     void            insertNodeAfter(int nodeId, int siblingNodeId, juce::UndoManager* undoManager);

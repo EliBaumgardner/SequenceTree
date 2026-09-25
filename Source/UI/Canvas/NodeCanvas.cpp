@@ -21,6 +21,7 @@
 NodeCanvas::NodeCanvas(const ApplicationContext& context) : applicationContext(context)
 {
     setPaintingIsUnclipped(true);
+    setWantsKeyboardFocus(true);
     setLookAndFeel(applicationContext.lookAndFeel);
 }
 
@@ -59,14 +60,10 @@ void NodeCanvas::enqueueAsyncUpdate(const AsyncUpdate& update)
 
 void NodeCanvas::cancelPendingUpdatesFor(int nodeId)
 {
-    asyncUpdates.erase(
-        std::remove_if(asyncUpdates.begin(), asyncUpdates.end(),
-            [nodeId](const AsyncUpdate& update) {
-                return update.nodeId == nodeId
-                    && update.type != AsyncUpdateType::NodeRemoved;
-            }),
-        asyncUpdates.end()
-    );
+    std::erase_if(asyncUpdates, [nodeId](const AsyncUpdate& update) {
+        return update.nodeId == nodeId
+            && update.type != AsyncUpdateType::NodeRemoved;
+    });
 }
 
 void NodeCanvas::handleAsyncUpdate() {

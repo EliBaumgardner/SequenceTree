@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -25,7 +26,7 @@ public:
     Emitter(RTScript& target, std::vector<ScriptDiagnostic>& diagnosticList)
         : script(target), diagnostics(diagnosticList) {}
 
-    void run(const std::vector<StatementPtr>& program);
+    void run(std::span<const StatementPtr> program);
 
 private:
 
@@ -49,8 +50,8 @@ private:
     void openScope();
     void closeScope();
 
-    void emitSequence(const std::vector<StatementPtr>& statements);
-    void emitBlock(const std::vector<StatementPtr>& body);
+    void emitSequence(std::span<const StatementPtr> statements);
+    void emitBlock(std::span<const StatementPtr> body);
 
     void emitStatement(const Statement& statement);
     void emitLet(const Statement& statement);

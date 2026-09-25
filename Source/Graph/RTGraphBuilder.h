@@ -14,6 +14,7 @@
 #include "RTData.h"
 
 #include <memory>
+#include <span>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -32,7 +33,7 @@ public:
 
     void makeRTGraph(const juce::ValueTree& nodeValueTree);
     void rebuildAllGraphs();
-    void updateDurationMaps(const std::vector<int>& nodeIds);
+    void updateDurationMaps(std::span<const int> nodeIds);
     void discardGraph(int graphId);
 
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;

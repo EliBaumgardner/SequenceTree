@@ -6,8 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <iterator>
-#include <type_traits>
+#include <ranges>
 #include <utility>
 #include <vector>
 
@@ -57,67 +56,15 @@ public:
         }
     }
 
-    template <bool IsConst>
-    class Iterator
+    auto entries()
     {
-    public:
+        return slots | std::views::filter(&Slot::active) | std::views::transform(&Slot::entry);
+    }
 
-        using iterator_category = std::forward_iterator_tag;
-        using value_type        = Entry;
-        using difference_type   = std::ptrdiff_t;
-        using pointer           = std::conditional_t<IsConst, const Entry*, Entry*>;
-        using reference         = std::conditional_t<IsConst, const Entry&, Entry&>;
-
-        using PoolPointer       = std::conditional_t<IsConst, const TraversalPool*, TraversalPool*>;
-        using SlotReference     = std::conditional_t<IsConst, const Slot&, Slot&>;
-
-        Iterator() = default;
-
-        Iterator(PoolPointer owner, int startIndex) : index(startIndex), pool(owner)
-        {
-            const int slotCount = static_cast<int>(pool->slots.size());
-
-            while (index < slotCount && !slot().active) {
-                ++index;
-            }
-        }
-
-        reference operator* () const { return  slot().entry; }
-        pointer   operator->() const { return &slot().entry; }
-
-        Iterator& operator++()
-        {
-            ++index;
-
-            const int slotCount = static_cast<int>(pool->slots.size());
-
-            while (index < slotCount && !slot().active) {
-                ++index;
-            }
-
-            return *this;
-        }
-
-        bool operator==(const Iterator& other) const { return pool == other.pool && index == other.index; }
-        bool operator!=(const Iterator& other) const { return pool != other.pool || index != other.index; }
-
-        int index = 0;
-
-    private:
-
-        SlotReference slot() const { return pool->slots[static_cast<std::size_t>(index)]; }
-
-        PoolPointer pool = nullptr;
-    };
-
-    using iterator       = Iterator<false>;
-    using const_iterator = Iterator<true>;
-
-    iterator begin() { return iterator(this, 0); }
-    iterator end()   { return iterator(this, slotCount()); }
-
-    const_iterator begin() const { return const_iterator(this, 0); }
-    const_iterator end()   const { return const_iterator(this, slotCount()); }
+    auto entries() const
+    {
+        return slots | std::views::filter(&Slot::active) | std::views::transform(&Slot::entry);
+    }
 
     Instance* find(int runId)
     {
@@ -162,17 +109,6 @@ public:
         return nullptr;
     }
 
-    iterator erase(iterator it)
-    {
-        const int index = it.index;
-
-        slots[static_cast<std::size_t>(index)].active = false;
-        --activeCount;
-        ++epoch;
-
-        return iterator(this, index + 1);
-    }
-
     void erase(int runId)
     {
         const int index = findSlotIndex(runId);
@@ -203,7 +139,7 @@ public:
 
     int findRunFor(int rootId, const TraversalKey& key) const
     {
-        for (const auto& [runId, instance] : *this) {
+        for (const auto& [runId, instance] : entries()) {
             if (instance.logic.rootId == rootId && instance.logic.traversal.key == key) {
                 return runId;
             }
@@ -267,4 +203,6 @@ struct DispatchContext
 
     double sampleRate      = 44100.0;
     double tempoMultiplier = 1.0;
+    int    transpose       = 0;
+    double velocityScale   = 1.0;
 };
