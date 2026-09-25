@@ -86,8 +86,8 @@ void MainComponent::generateImage() {
     for (int y = 0; y < height; ++y)
         for (int x = 0; x < width; ++x)
         {
-            const float hue        = juce::jmap((float)x, 0.0f, (float)width,  0.0f, 1.0f);
-            const float saturation = juce::jmap((float)y, 0.0f, (float)height, 1.0f, 0.0f);
+            const float hue        = juce::jmap(static_cast<float>(x), 0.0f, static_cast<float>(width),  0.0f, 1.0f);
+            const float saturation = juce::jmap(static_cast<float>(y), 0.0f, static_cast<float>(height), 1.0f, 0.0f);
             image.setPixelAt(x, y, juce::Colour::fromHSV(hue, saturation, 1.0f, 1.0f));
         }
 }
@@ -124,11 +124,11 @@ void MainComponent::mouseDrag(const juce::MouseEvent& event) {
     cursor.setCentrePosition(event.getPosition());
 
     if (image.isValid()) {
-        const float imageX = juce::jmap<float>(event.x, 0.0f, (float)getWidth(),  0.0f, (float)image.getWidth());
-        const float imageY = juce::jmap<float>(event.y, 0.0f, (float)pickerH,     0.0f, (float)image.getHeight());
+        const float imageX = juce::jmap<float>(event.x, 0.0f, static_cast<float>(getWidth()),  0.0f, static_cast<float>(image.getWidth()));
+        const float imageY = juce::jmap<float>(event.y, 0.0f, static_cast<float>(pickerH),     0.0f, static_cast<float>(image.getHeight()));
 
-        const int ix = juce::jlimit(0, image.getWidth()  - 1, (int)imageX);
-        const int iy = juce::jlimit(0, image.getHeight() - 1, (int)imageY);
+        const int ix = juce::jlimit(0, image.getWidth()  - 1, static_cast<int>(imageX));
+        const int iy = juce::jlimit(0, image.getHeight() - 1, static_cast<int>(imageY));
 
         colour = image.getPixelAt(ix, iy);
         if (colourPicked) {
@@ -144,8 +144,8 @@ void MainComponent::updateCursorPosition(juce::Colour selectedColour) {
     colour.getHSB(h, s, v);
 
     const int pickerH = getHeight() - presetRowHeight;
-    const int x = (int)juce::jmap(h, 0.0f, 1.0f, 0.0f, (float)getWidth());
-    const int y = (int)juce::jmap(s, 1.0f, 0.0f, 0.0f, (float)pickerH);
+    const int x = static_cast<int>(juce::jmap(h, 0.0f, 1.0f, 0.0f, static_cast<float>(getWidth())));
+    const int y = static_cast<int>(juce::jmap(s, 1.0f, 0.0f, 0.0f, static_cast<float>(pickerH)));
 
     cursor.setBounds(x, y, 10, 10);
 }
@@ -225,7 +225,7 @@ void ColourSelector::applyColourToDescendants(const Node* n, juce::Colour c)
 
     const int encapsulatorId = n->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
-    std::unordered_set<int> visited { (int) n->nodeValueTree.getProperty(ValueTreeIdentifiers::Id) };
+    std::unordered_set<int> visited { static_cast<int>(n->nodeValueTree.getProperty(ValueTreeIdentifiers::Id)) };
     applyColourToDescendants(n, c, encapsulatorId, visited);
 }
 

@@ -56,7 +56,7 @@ void TraversalState::collectKeys(std::vector<TraversalKey>& keys) const
                 flagValue = -flagValue;
             }
 
-            appendKey({ flagValue, (int) node.getProperty(ValueTreeIdentifiers::TraversalInstance, 0) });
+            appendKey({ flagValue, static_cast<int>(node.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) });
             continue;
         }
 
@@ -65,8 +65,8 @@ void TraversalState::collectKeys(std::vector<TraversalKey>& keys) const
         for (int child = 0; child < equipped.getNumChildren(); ++child) {
             const juce::ValueTree reference = equipped.getChild(child);
 
-            appendKey({ (int) reference.getProperty(ValueTreeIdentifiers::TraversalId),
-                        (int) reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0) });
+            appendKey({ static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
+                        static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) });
         }
     }
 }
@@ -98,8 +98,8 @@ juce::ValueTree TraversalState::findReference(const juce::ValueTree& references,
     for (int i = 0; i < references.getNumChildren(); ++i) {
         const juce::ValueTree reference = references.getChild(i);
 
-        const TraversalKey referencedKey { (int) reference.getProperty(ValueTreeIdentifiers::TraversalId),
-                                           (int) reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0) };
+        const TraversalKey referencedKey { static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
+                                           static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) };
 
         if (referencedKey == key) {
             return reference;

@@ -27,7 +27,7 @@ InputRestrictions TraversalFlagFormat::restrictions() const
 
 juce::String TraversalFlagFormat::text(const ValueBinding& binding, TextPurpose purpose) const
 {
-    const int value = (int) binding.primary.getValue();
+    const int value = static_cast<int>(binding.primary.getValue());
 
     if (value == 0) {
         return {};
@@ -36,7 +36,7 @@ juce::String TraversalFlagFormat::text(const ValueBinding& binding, TextPurpose 
     int instance = 0;
 
     if (! binding.secondaries.empty()) {
-        instance = (int) binding.secondaries.front().getValue();
+        instance = static_cast<int>(binding.secondaries.front().getValue());
     }
 
     const int          letter       = juce::jlimit(0, TraversalKey::maxInstances - 1, instance);
@@ -68,7 +68,7 @@ ParsedValue TraversalFlagFormat::parse(const juce::String& enteredText) const
         return cleared;
     }
 
-    const int typeId = (int) juce::jlimit(1.0, maximum, (double) keys.front().typeId);
+    const int typeId = static_cast<int>(juce::jlimit(1.0, maximum, static_cast<double>(keys.front().typeId)));
 
     if (removes) {
         return { -typeId, { keys.front().instance } };

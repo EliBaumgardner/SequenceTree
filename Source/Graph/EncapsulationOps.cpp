@@ -47,7 +47,7 @@ int EncapsulationOps::unusedLabel() const
         const juce::ValueTree existing = graphState.nodeMap.getChild(i);
 
         if (existing.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-            usedLabels.insert((int) existing.getProperty(ValueTreeIdentifiers::EncapsulatorLabel));
+            usedLabels.insert(static_cast<int>(existing.getProperty(ValueTreeIdentifiers::EncapsulatorLabel)));
         }
     }
 

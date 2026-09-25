@@ -16,12 +16,12 @@ InputRestrictions NumberFormat::restrictions() const
     InputRestrictions limits;
 
     limits.allowedCharacters = "0123456789";
-    limits.maxLength         = juce::String((juce::int64) (maximum / displayDivisor)).length();
+    limits.maxLength         = juce::String(static_cast<juce::int64>(maximum / displayDivisor)).length();
 
     if (minimum < 0.0) {
         limits.allowedCharacters = "-" + limits.allowedCharacters;
         limits.maxLength         = juce::jmax(limits.maxLength,
-                                              juce::String((juce::int64) (minimum / displayDivisor)).length());
+                                              juce::String(static_cast<juce::int64>(minimum / displayDivisor)).length());
     }
 
     if (showsPositiveSign) {
@@ -38,9 +38,9 @@ InputRestrictions NumberFormat::restrictions() const
 
 juce::String NumberFormat::text(const ValueBinding& binding, TextPurpose purpose) const
 {
-    const double scaled = (double) binding.primary.getValue() / displayDivisor;
+    const double scaled = static_cast<double>(binding.primary.getValue()) / displayDivisor;
 
-    juce::String number { (int) scaled };
+    juce::String number { static_cast<int>(scaled) };
 
     if (decimalPlaces > 0) {
         number = juce::String(scaled, decimalPlaces).trimCharactersAtEnd("0").trimCharactersAtEnd(".");
@@ -66,5 +66,5 @@ ParsedValue NumberFormat::parse(const juce::String& enteredText) const
         return { clamped, {} };
     }
 
-    return { (int) clamped, {} };
+    return { static_cast<int>(clamped), {} };
 }

@@ -67,5 +67,7 @@ private:
 
     float menuAreaWidthRatio = 0.0f;
     float menuHeightRatio = 0.25f;
+
+    juce::VBlankAttachment audioCommandFrames;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessorEditor)
 };

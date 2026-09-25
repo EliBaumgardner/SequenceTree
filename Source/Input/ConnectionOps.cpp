@@ -70,7 +70,7 @@ bool ConnectionOps::connectsToOtherTreeRoot(int parentNodeId, int childNodeId) c
 
     const juce::ValueTree parentTree = applicationContext.graphState->getNode(parentNodeId);
 
-    return (int) parentTree.getProperty(ValueTreeIdentifiers::RootNodeId) != childNodeId;
+    return static_cast<int>(parentTree.getProperty(ValueTreeIdentifiers::RootNodeId)) != childNodeId;
 }
 
 bool ConnectionOps::canBeTraversalArrow(const Arrow* arrow) const

@@ -47,6 +47,23 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
     }
 }
 
+void EventManager::followTempo(double tempoMultiplier)
+{
+    if (lastTempoMultiplier > 0.0 && tempoMultiplier != lastTempoMultiplier) {
+        const double remainingScale = lastTempoMultiplier / tempoMultiplier;
+
+        for (auto& note : scheduler.activeNotes) {
+            note.remainingSamples *= remainingScale;
+        }
+
+        for (auto& pending : dispatcher.flagScheduler.pendingStarts) {
+            pending.remainingSamples *= remainingScale;
+        }
+    }
+
+    lastTempoMultiplier = tempoMultiplier;
+}
+
 void EventManager::processEvents(int numSamples, const DispatchContext& context)
 {
     handleOrphanNotes(context);

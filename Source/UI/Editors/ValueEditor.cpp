@@ -106,7 +106,7 @@ juce::Font ValueEditor::displayFont(const juce::String& text) const
         return font;
     }
 
-    const float inset      = (float) getHeight() * autoFitInsetRatio;
+    const float inset      = static_cast<float>(getHeight()) * autoFitInsetRatio;
     const auto  bounds     = getLocalBounds().toFloat().reduced(inset);
     const float textWidth  = font.getStringWidthFloat(text);
     const float textHeight = font.getHeight();

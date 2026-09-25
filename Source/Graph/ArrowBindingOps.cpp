@@ -29,14 +29,14 @@ ArrowInfo ArrowBindingOps::getArrowInfo(const juce::ValueTree& arrowTree)
         return arrowInfo;
     }
 
-    arrowInfo.type = static_cast<ArrowType>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowType,
-                                                                       static_cast<int>(arrowInfo.type)));
+    arrowInfo.type = static_cast<ArrowType>(static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowType,
+                                                                       static_cast<int>(arrowInfo.type))));
 
-    arrowInfo.xBinding = static_cast<ArrowBinding>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowXBinding,
-                                                                              static_cast<int>(arrowInfo.xBinding)));
+    arrowInfo.xBinding = static_cast<ArrowBinding>(static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowXBinding,
+                                                                              static_cast<int>(arrowInfo.xBinding))));
 
-    arrowInfo.yBinding = static_cast<ArrowBinding>((int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowYBinding,
-    static_cast<int>(arrowInfo.yBinding)));
+    arrowInfo.yBinding = static_cast<ArrowBinding>(static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowYBinding,
+    static_cast<int>(arrowInfo.yBinding))));
 
     arrowInfo.xMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowXMultiplier, arrowInfo.xMultiplier);
     arrowInfo.yMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowYMultiplier, arrowInfo.yMultiplier);
@@ -258,8 +258,8 @@ std::vector<int> ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManage
         juce::ValueTree arrowTree = danglingArrows.getChild(i);
 
         if (applyArrowPitchOffset(arrowTree, nodeId,
-                                  (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX),
-                                  (int) arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY),
+                                  static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
+                                  static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)),
                                   undoManager)) {
             rememberRepitched(nodeId);
         }

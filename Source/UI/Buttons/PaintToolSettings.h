@@ -101,7 +101,7 @@ public:
         sizeEditor->setFormat(std::make_unique<NumberFormat>(0.0, 1.0, brushDecimalPlaces));
 
         sizeEditor->onValueChange = [this] {
-            const float value  = (float)sizeEditor->boundValue.getValue();
+            const float value  = static_cast<float>(sizeEditor->boundValue.getValue());
             const float radius = juce::jmap(value, 0.0f, 1.0f, minBrushRadius, maxBrushRadius);
             this->context.canvas->valueField.setBrushRadius(radius);
         };
@@ -112,7 +112,7 @@ public:
         flowEditor->setFormat(std::make_unique<NumberFormat>(0.0, 1.0, brushDecimalPlaces));
 
         flowEditor->onValueChange = [this] {
-            const float value = (float)flowEditor->boundValue.getValue();
+            const float value = static_cast<float>(flowEditor->boundValue.getValue());
             this->context.canvas->valueField.brushFlow = juce::jmap(value, 0.0f, 1.0f, minBrushFlow, maxBrushFlow);
         };
 
@@ -181,7 +181,7 @@ public:
         colourSelector->repaint();
 
         context.canvas->valueField.setBrushColour(saved);
-        context.canvas->valueField.setActivePaintLayer((int)setting);
+        context.canvas->valueField.setActivePaintLayer(static_cast<int>(setting));
     }
 
 

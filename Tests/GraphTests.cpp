@@ -233,14 +233,14 @@ TEST_CASE("moving a pitch-bound node transposes around the pitch last typed", "[
     GraphState::setNodePosition(graph.getNode(childId), NodePosition { 100, -100, 25 }, nullptr);
     graph.arrows.syncPitchBindings(childId, nullptr);
 
-    CHECK((int) childNote.getProperty(ValueTreeIdentifiers::MidiPitch) == startPitch + 2);
+    CHECK(static_cast<int>(childNote.getProperty(ValueTreeIdentifiers::MidiPitch)) == startPitch + 2);
 
     childNote.setProperty(ValueTreeIdentifiers::MidiPitch, 70, nullptr);
 
     GraphState::setNodePosition(graph.getNode(childId), NodePosition { 100, 0, 25 }, nullptr);
     graph.arrows.syncPitchBindings(childId, nullptr);
 
-    CHECK((int) childNote.getProperty(ValueTreeIdentifiers::MidiPitch) == 68);
+    CHECK(static_cast<int>(childNote.getProperty(ValueTreeIdentifiers::MidiPitch)) == 68);
 
     const NodeMap& nodes = rebuildAndPublish(processor);
 
@@ -388,9 +388,9 @@ TEST_CASE("a node's parent is found through a chain of traversal flags", "[graph
     const juce::ValueTree secondFlag = NodeFactory::createTraversalFlagNode(graph, firstFlagId, NodePosition { 300, 0, 25 }, nullptr);
     const int secondFlagId = secondFlag.getProperty(ValueTreeIdentifiers::Id);
 
-    CHECK((int) graph.getNodeParent(secondFlagId).getProperty(ValueTreeIdentifiers::Id) == noteId);
-    CHECK((int) graph.getNodeParent(firstFlagId).getProperty(ValueTreeIdentifiers::Id)  == noteId);
-    CHECK((int) graph.getNodeParent(noteId).getProperty(ValueTreeIdentifiers::Id)       == rootId);
+    CHECK(static_cast<int>(graph.getNodeParent(secondFlagId).getProperty(ValueTreeIdentifiers::Id)) == noteId);
+    CHECK(static_cast<int>(graph.getNodeParent(firstFlagId).getProperty(ValueTreeIdentifiers::Id))  == noteId);
+    CHECK(static_cast<int>(graph.getNodeParent(noteId).getProperty(ValueTreeIdentifiers::Id))       == rootId);
     CHECK_FALSE(graph.getNodeParent(rootId).isValid());
 }
 

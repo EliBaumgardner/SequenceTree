@@ -55,7 +55,7 @@ void ArrowBindBar::configureAxis(AxisControl& axis, AxisControl& otherAxis, cons
     axis.editor->boundValue.setValue(defaultMultiplier);
 
     axis.editor->onValueChange = [this, editor = axis.editor.get(), other = &otherAxis]() {
-        if ((double) editor->boundValue.getValue() > deactivatedMultiplier) {
+        if (static_cast<double>(editor->boundValue.getValue()) > deactivatedMultiplier) {
             other->editor->boundValue.setValue(deactivatedMultiplier);
         }
 
@@ -103,8 +103,8 @@ void ArrowBindBar::resolveAxis(AxisMember axisMember, ArrowBinding& binding, dou
     const AxisControl& pitchAxis    = pitchField.*axisMember;
     const AxisControl& durationAxis = durationField.*axisMember;
 
-    const double pitchMultiplier    = (double) pitchAxis.editor->boundValue.getValue();
-    const double durationMultiplier = (double) durationAxis.editor->boundValue.getValue();
+    const double pitchMultiplier    = static_cast<double>(pitchAxis.editor->boundValue.getValue());
+    const double durationMultiplier = static_cast<double>(durationAxis.editor->boundValue.getValue());
 
     if (pitchMultiplier > deactivatedMultiplier) {
         binding    = ArrowBinding::PitchBind;

@@ -30,7 +30,7 @@ juce::String PitchFormat::text(const ValueBinding& binding, TextPurpose purpose)
         return NumberFormat::text(binding, purpose);
     }
 
-    const int midiNote = juce::jlimit(minimumMidiPitch, maximumMidiPitch, (int) binding.primary.getValue());
+    const int midiNote = juce::jlimit(minimumMidiPitch, maximumMidiPitch, static_cast<int>(binding.primary.getValue()));
     const int octave   = (midiNote / semitonesPerOctave) - 1;
 
     return pitchNames[midiNote % semitonesPerOctave] + juce::String(octave);

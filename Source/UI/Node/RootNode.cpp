@@ -44,8 +44,8 @@ void RootNode::bindToTree()
     for (int i = 0; i < traversalChildrenIds.getNumChildren(); i++) {
         const juce::ValueTree reference = traversalChildrenIds.getChild(i);
 
-        const TraversalKey key { (int) reference.getProperty(ValueTreeIdentifiers::TraversalId),
-                                 (int) reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0) };
+        const TraversalKey key { static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
+                                 static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) };
 
         equippedReferences.add(TraversalFlagFormat::describe(key));
     }
@@ -72,8 +72,8 @@ void RootNode::equipTraversals()
 
         const juce::ValueTree reference = traversalChildrenIds.getChild(i);
 
-        const TraversalKey existingKey { (int) reference.getProperty(ValueTreeIdentifiers::TraversalId),
-                                         (int) reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0) };
+        const TraversalKey existingKey { static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
+                                         static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) };
 
         if (std::ranges::find(keys, existingKey) == keys.end()) {
             traversalChildrenIds.removeChild(i, nullptr);
@@ -100,7 +100,7 @@ float RootNode::getBodyExtent(juce::Point<float> approachDirection) const
     static constexpr float rayAxisEpsilon = 1.0e-4f;
 
     const juce::Rectangle<float> circle = CustomLookAndFeel::getNodeCircleBounds(
-        getLocalBounds().toFloat().withTrimmedLeft((float) loopLimitRectangleWidth));
+        getLocalBounds().toFloat().withTrimmedLeft(static_cast<float>(loopLimitRectangleWidth)));
 
     const juce::Point<float> centre   = (getNodeCentre() - getPosition()).toFloat();
     const juce::Point<float> toCircle = circle.getCentre() - centre;
@@ -157,7 +157,7 @@ float RootNode::getBodyExtent(juce::Point<float> approachDirection) const
 void RootNode::paint(juce::Graphics& g)
 {
     const auto circleBounds = getLocalBounds().toFloat()
-                            .withTrimmedLeft((float) loopLimitRectangleWidth);
+                            .withTrimmedLeft(static_cast<float>(loopLimitRectangleWidth));
 
     CustomLookAndFeel::get(*this).drawNode(g, getNodeVisual(circleBounds));
 }

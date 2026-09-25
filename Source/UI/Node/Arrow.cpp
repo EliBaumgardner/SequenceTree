@@ -147,8 +147,8 @@ juce::String Arrow::getDurationLabel() const
         }
 
         if (pitchedNode != nullptr) {
-            return juce::String((int) pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch,
-                                                                            defaultMidiPitch));
+            return juce::String(static_cast<int>(pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch,
+                                                                            defaultMidiPitch)));
         }
     }
 
@@ -341,7 +341,7 @@ void Arrow::setArrowBounds()
 
     if (endNode != nullptr) {
         const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
-        endNode->incomingAngle = std::atan2((float)delta.y, (float)delta.x);
+        endNode->incomingAngle = std::atan2(static_cast<float>(delta.y), static_cast<float>(delta.x));
 
         if (endNode->nodeType == NodeType::TraversalFlag) {
             endNode->resized();
@@ -360,7 +360,7 @@ void Arrow::setArrowBounds()
 
     const juce::Path shaft = buildShaftPath(geometry, 0.0f, {});
 
-    setBounds(shaft.getBounds().expanded((float)arrowBoundsPadding).toNearestInt());
+    setBounds(shaft.getBounds().expanded(static_cast<float>(arrowBoundsPadding)).toNearestInt());
 
     repaint();
 }
@@ -399,7 +399,7 @@ void Arrow::beginDurationEdit()
 
     if (percentDuration) {
         durationFormat = std::make_unique<NumberFormat>(
-            0.0, (double) (ArrowInfo::maximumDurationPercent * ArrowInfo::millisecondsPerDurationPercent));
+            0.0, static_cast<double>(ArrowInfo::maximumDurationPercent * ArrowInfo::millisecondsPerDurationPercent));
 
         durationFormat->displayDivisor = ArrowInfo::millisecondsPerDurationPercent;
         durationFormat->suffix         = "%";
@@ -471,9 +471,9 @@ void Arrow::initHoverState(bool visibleNow)
     setVisible(visibleNow);
 }
 
-void Arrow::startProgress(int trailId, int durationMs, juce::Colour colour, bool oneShot)
+void Arrow::startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot)
 {
-    animation.startTrail(trailId, durationMs, colour, oneShot);
+    animation.startTrail(trailId, durationMs, elapsedMs, colour, oneShot);
 
     if (animationFrames.isEmpty()) {
         animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });

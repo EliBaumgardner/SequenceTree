@@ -119,8 +119,8 @@ void Node::layoutInterior(juce::Rectangle<int> nodeSquare)
 
     nodeValueEditor.setBounds(editorArea);
 
-    const int editorWidth  = (int)(nodeSquare.getWidth()  * nodeEditorWidthFactor);
-    const int editorHeight = (int)(nodeSquare.getHeight() * nodeEditorHeightFactor);
+    const int editorWidth  = static_cast<int>(nodeSquare.getWidth()  * nodeEditorWidthFactor);
+    const int editorHeight = static_cast<int>(nodeSquare.getHeight() * nodeEditorHeightFactor);
 
     countEditor.setBounds(nodeSquare.getRight() - editorWidth, nodeSquare.getY(), editorWidth, editorHeight);
     switchCountEditor.setBounds(nodeSquare.getRight() - editorWidth, nodeSquare.getBottom() - editorHeight,
@@ -306,7 +306,7 @@ void Node::bindValueEditorForMode()
 }
 
 void Node::incrementNodeValue(int incrementValue) {
-    const double currentValue = (double) nodeValueEditor.boundValue.getValue();
+    const double currentValue = static_cast<double>(nodeValueEditor.boundValue.getValue());
 
     if (applicationContext.undoManager != nullptr) {
         applicationContext.undoManager->beginNewTransaction();

@@ -210,7 +210,7 @@ static void drawArrowProgress(juce::Graphics& g, const Arrow& arrow, const juce:
             continue;
         }
 
-        const float offsetDistance = baseOffset + (float)drawnCount * trailSpacing;
+        const float offsetDistance = baseOffset + static_cast<float>(drawnCount) * trailSpacing;
 
         juce::Path offsetLine = shaft;
         offsetLine.applyTransform(juce::AffineTransform::translation(-chord.y * offsetDistance,
@@ -325,7 +325,7 @@ void CustomLookAndFeel::drawArrow(juce::Graphics& g, const Arrow& arrow)
     }
 
 
-    const juce::Point<float> origin { (float)arrow.getX(), (float)arrow.getY() };
+    const juce::Point<float> origin { static_cast<float>(arrow.getX()), static_cast<float>(arrow.getY()) };
 
     juce::Path shaft = arrow.buildShaftPath(geometry, headLength, origin);
 

@@ -24,14 +24,15 @@ public:
 
     explicit AudioSnapshotPublisher(TraversalRuleState& traversalRuleState);
 
-    const Snapshot* acquireForBlock() const
+    const Snapshot* beginBlock()
     {
-        return currentSnapshot.load(std::memory_order_acquire);
+        blockEpoch.fetch_add(1, std::memory_order_seq_cst);
+        return currentSnapshot.load(std::memory_order_seq_cst);
     }
 
-    void blockCompleted()
+    void endBlock()
     {
-        blocksCompleted.fetch_add(1, std::memory_order_release);
+        blockEpoch.fetch_add(1, std::memory_order_seq_cst);
     }
 
     const Snapshot* getPublished() const { return publishedSnapshot.get(); }
@@ -52,7 +53,7 @@ private:
     struct RetiredSnapshot
     {
         std::shared_ptr<Snapshot> snapshot;
-        std::uint64_t             retiredAtBlock = 0;
+        std::uint64_t             retiredAtEpoch = 0;
     };
 
     void collectRetiredSnapshots();
@@ -60,7 +61,7 @@ private:
     TraversalRuleState& traversalRuleState;
 
     std::atomic<Snapshot*>       currentSnapshot { nullptr };
-    std::atomic<std::uint64_t>   blocksCompleted { 0 };
+    std::atomic<std::uint64_t>   blockEpoch { 0 };
 
     std::shared_ptr<Snapshot>    publishedSnapshot;
     std::vector<RetiredSnapshot> retiredSnapshots;

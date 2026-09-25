@@ -118,7 +118,7 @@ void TraversalRulesWindow::syncWithRuleState() {
     state.ensureDefaultRule();
 
     std::vector<int> ruleOrder;
-    ruleOrder.reserve((size_t) state.rules.getNumChildren());
+    ruleOrder.reserve(static_cast<size_t>(state.rules.getNumChildren()));
 
     for (int i = 0; i < state.rules.getNumChildren(); ++i) {
         const juce::ValueTree rule = state.rules.getChild(i);
@@ -195,7 +195,7 @@ void TraversalRulesWindow::addRule() {
 void TraversalRulesWindow::removeRule(int ruleId) {
     TraversalRuleState& state = *context.traversalRuleState;
 
-    const bool wasLiveRule = (int) state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1) == ruleId;
+    const bool wasLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == ruleId;
 
     state.removeRule(ruleId, nullptr);
 
@@ -279,9 +279,9 @@ void TraversalRulesWindow::compileViewedPage() {
         return;
     }
 
-    const bool isLiveRule = (int) state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1) == viewedRuleId;
+    const bool isLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == viewedRuleId;
 
-    const juce::String instructionCount = juce::String((int) result.script.instructions.size());
+    const juce::String instructionCount = juce::String(static_cast<int>(result.script.instructions.size()));
 
     if (!isLiveRule) {
         setStatus(instructionCount + " instructions - press play to make this the live rule", false);

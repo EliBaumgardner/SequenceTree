@@ -27,7 +27,7 @@ int CustomLookAndFeel::getPopupMenuBorderSize()
 void CustomLookAndFeel::drawPopupMenuBackgroundWithOptions(juce::Graphics& g, int width, int height,
                                                            const juce::PopupMenu::Options&)
 {
-    const auto bounds = juce::Rectangle<float>(0.0f, 0.0f, (float) width, (float) height)
+    const auto bounds = juce::Rectangle<float>(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height))
                             .reduced(popupMenuBorderThickness * 0.5f);
 
     g.setColour(popupMenuColour);
@@ -128,5 +128,5 @@ void CustomLookAndFeel::getIdealPopupMenuItemSize(const juce::String& text, bool
     idealHeight = itemHeight;
     idealWidth  = juce::GlyphArrangement::getStringWidthInt(getPopupMenuFont(), text)
                     + idealHeight
-                    + (int) (popupMenuTextInset * 4.0f);
+                    + static_cast<int>(popupMenuTextInset * 4.0f);
 }

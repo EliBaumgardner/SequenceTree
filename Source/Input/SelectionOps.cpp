@@ -235,7 +235,7 @@ std::map<int,int> SelectionOps::mapClipboardParents() const
 
     std::set<int> clipboardIds;
     for (const juce::ValueTree& node : nodes) {
-        clipboardIds.insert((int) node.getProperty(ValueTreeIdentifiers::Id));
+        clipboardIds.insert(static_cast<int>(node.getProperty(ValueTreeIdentifiers::Id)));
     }
 
     std::map<int,int> parentOf;
@@ -270,14 +270,14 @@ bool SelectionOps::wasChordMember(const juce::ValueTree& source) const
         return false;
     }
 
-    const int deltaX = (int) source.getProperty(ValueTreeIdentifiers::XPosition)
-                     - (int) parent.getProperty(ValueTreeIdentifiers::XPosition);
-    const int deltaY = (int) source.getProperty(ValueTreeIdentifiers::YPosition)
-                     - (int) parent.getProperty(ValueTreeIdentifiers::YPosition);
+    const int deltaX = static_cast<int>(source.getProperty(ValueTreeIdentifiers::XPosition))
+                     - static_cast<int>(parent.getProperty(ValueTreeIdentifiers::XPosition));
+    const int deltaY = static_cast<int>(source.getProperty(ValueTreeIdentifiers::YPosition))
+                     - static_cast<int>(parent.getProperty(ValueTreeIdentifiers::YPosition));
 
     const juce::ValueTree connection =
-        applicationContext.graphState->getConnection((int) parent.getProperty(ValueTreeIdentifiers::Id),
-                                                         (int) source.getProperty(ValueTreeIdentifiers::Id));
+        applicationContext.graphState->getConnection(static_cast<int>(parent.getProperty(ValueTreeIdentifiers::Id)),
+                                                         static_cast<int>(source.getProperty(ValueTreeIdentifiers::Id)));
 
     return ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(connection), deltaX, deltaY) == 0;
 }
@@ -424,7 +424,7 @@ std::vector<juce::ValueTree> SelectionOps::pastedSources(const PasteLayout& layo
     std::vector<juce::ValueTree> sources;
 
     for (const juce::ValueTree& node : clipboardNodes()) {
-        if (layout.discarded.count((int) node.getProperty(ValueTreeIdentifiers::Id)) == 0) {
+        if (layout.discarded.count(static_cast<int>(node.getProperty(ValueTreeIdentifiers::Id))) == 0) {
             sources.push_back(node);
         }
     }
@@ -519,8 +519,8 @@ juce::Point<int> SelectionOps::pastedCentre(const PasteLayout& layout) const
 
     for (const juce::ValueTree& node : pastedSources(layout)) {
         juce::Rectangle<int> nodeExtent {
-            (int) node.getProperty(ValueTreeIdentifiers::XPosition),
-            (int) node.getProperty(ValueTreeIdentifiers::YPosition),
+            static_cast<int>(node.getProperty(ValueTreeIdentifiers::XPosition)),
+            static_cast<int>(node.getProperty(ValueTreeIdentifiers::YPosition)),
             1, 1
         };
 
@@ -606,9 +606,9 @@ void SelectionOps::insertClipboardNodes(const PasteLayout& layout, juce::Point<i
         node.setProperty(ValueTreeIdentifiers::RootNodeId, layout.rootIdOf.at(originalId), nullptr);
 
         node.setProperty(ValueTreeIdentifiers::XPosition,
-                         (int) node.getProperty(ValueTreeIdentifiers::XPosition) + offset.x, nullptr);
+                         static_cast<int>(node.getProperty(ValueTreeIdentifiers::XPosition)) + offset.x, nullptr);
         node.setProperty(ValueTreeIdentifiers::YPosition,
-                         (int) node.getProperty(ValueTreeIdentifiers::YPosition) + offset.y, nullptr);
+                         static_cast<int>(node.getProperty(ValueTreeIdentifiers::YPosition)) + offset.y, nullptr);
 
         node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).removeAllChildren(nullptr);
 
@@ -627,7 +627,7 @@ void SelectionOps::connectClipboardNodes(const PasteLayout& layout) const
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
     for (const juce::ValueTree& source : pastedSources(layout)) {
-        const int parentId = layout.idMap.at((int) source.getProperty(ValueTreeIdentifiers::Id));
+        const int parentId = layout.idMap.at(static_cast<int>(source.getProperty(ValueTreeIdentifiers::Id)));
 
         const juce::ValueTree childrenIds = source.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
@@ -657,7 +657,7 @@ void SelectionOps::restoreDanglingArrows(const PasteLayout& layout) const
             continue;
         }
 
-        juce::ValueTree node = state.getNode(layout.idMap.at((int) source.getProperty(ValueTreeIdentifiers::Id)));
+        juce::ValueTree node = state.getNode(layout.idMap.at(static_cast<int>(source.getProperty(ValueTreeIdentifiers::Id))));
         if (node.isValid()) {
             node.addChild(danglingArrows.createCopy(), -1, undoManager);
         }
@@ -692,7 +692,7 @@ std::vector<int> SelectionOps::createPastedEncapsulators(const PasteLayout& layo
         }
 
         const bool everyMemberPasted = ! pastedMemberIds.empty()
-                                    && (int) pastedMemberIds.size() == memberIds.getNumChildren();
+                                    && static_cast<int>(pastedMemberIds.size()) == memberIds.getNumChildren();
 
         if (! everyMemberPasted) {
             continue;

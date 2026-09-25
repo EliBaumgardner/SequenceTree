@@ -312,7 +312,7 @@ void NodeController::connectDraggedNodeToRoot()
     snapTargetRoot   = nullptr;
     snapSourceNodeId = -1;
 
-    const int draggedNodeId = (int) draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
+    const int draggedNodeId = static_cast<int>(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id));
 
     juce::UndoManager* undoManager = applicationContext.undoManager;
     undoManager->undo();
@@ -388,7 +388,7 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
         connectDraggedNodeToRoot();
     }
     else if (draggedNodeTree.isValid()) {
-        canvas.arrowManager.triggerSnapForNode((int) draggedNodeTree.getProperty(ValueTreeIdentifiers::Id));
+        canvas.arrowManager.triggerSnapForNode(static_cast<int>(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id)));
     }
 
     endDrag();
@@ -397,7 +397,7 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
 void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
 {
     juce::UndoManager* undoManager = applicationContext.undoManager;
-    const juce::Point<float> clickPoint { (float) e.x, (float) e.y };
+    const juce::Point<float> clickPoint { static_cast<float>(e.x), static_cast<float>(e.y) };
 
     if (e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
         if (Arrow* arrow = canvas.hitTester.arrowNear(clickPoint, danglingArrowGrabRadius)) {
@@ -537,7 +537,7 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
             undoManager->beginNewTransaction();
 
             dragState         = DragState::EditingValue;
-            dragStartValue    = (double) node.nodeValueEditor.boundValue.getValue();
+            dragStartValue    = static_cast<double>(node.nodeValueEditor.boundValue.getValue());
             draggingValueNode = &node;
             return;
         }

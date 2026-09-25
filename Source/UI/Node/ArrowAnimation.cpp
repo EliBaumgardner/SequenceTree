@@ -1,12 +1,18 @@
 #include "ArrowAnimation.h"
 
-void ArrowAnimation::startTrail(int trailId, int durationMs, juce::Colour colour, bool oneShot)
+void ArrowAnimation::startTrail(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot)
 {
     Trail& trail = trails[trailId];
 
-    trail.t          = 0.0f;
-    trail.startMs    = juce::Time::getMillisecondCounterHiRes();
+    double originMs = juce::Time::getMillisecondCounterHiRes();
+
+    if (trailsPaused) {
+        originMs = pausedAtMs;
+    }
+
     trail.durationMs = juce::jmax(1, durationMs);
+    trail.startMs    = originMs - elapsedMs;
+    trail.t          = static_cast<float>(juce::jlimit(0.0, 1.0, elapsedMs / static_cast<double>(trail.durationMs)));
     trail.colour     = colour;
     trail.active     = durationMs > 0;
     trail.oneShot    = oneShot;

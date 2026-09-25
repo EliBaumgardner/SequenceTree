@@ -170,7 +170,7 @@ void NodeManager::add(int nodeId)
 
     if (!canvas.gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
         const NodePosition pos = applicationContext.graphState->getNodePosition(nodeId);
-        canvas.gridOrigin    = { (float)pos.xPosition, (float)pos.yPosition };
+        canvas.gridOrigin    = { static_cast<float>(pos.xPosition), static_cast<float>(pos.yPosition) };
         canvas.gridSpacing   = ArrowInfo::pixelsPerGridSpace;
         canvas.gridOriginSet = true;
     }
@@ -290,7 +290,7 @@ static std::unordered_set<int> collectAncestorIds(const GraphState& graphState, 
 
 void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY)
 {
-    const int rootId = (int) nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+    const int rootId = static_cast<int>(nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
 
     std::unordered_set<int> visited = collectAncestorIds(*applicationContext.graphState, rootId);
     visited.insert(rootId);

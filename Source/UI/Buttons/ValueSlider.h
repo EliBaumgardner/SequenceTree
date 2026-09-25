@@ -60,8 +60,8 @@ class ValueSlider : public juce::Component, public juce::SettableTooltipClient {
         const auto bounds = getLocalBounds();
         const int handleWidth = bounds.getWidth() * 0.1f;
 
-        const float value = juce::jlimit(0.0f,1.0f, (float)boundValue.getValue());
-        const int handleX = (int)(handleWidth/2 + value * (bounds.getWidth() - handleWidth));
+        const float value = juce::jlimit(0.0f,1.0f, static_cast<float>(boundValue.getValue()));
+        const int handleX = static_cast<int>(handleWidth/2 + value * (bounds.getWidth() - handleWidth));
 
         handle->setBounds(handleX - handleWidth/2, bounds.getY(), handleWidth, bounds.getHeight());
         slider.setBounds(0,0,handleX,bounds.getHeight());
@@ -80,7 +80,7 @@ class ValueSlider : public juce::Component, public juce::SettableTooltipClient {
 
         if (intersectsHandle) {
             DBG("intersects handle");
-            const float width = (float)getWidth();
+            const float width = static_cast<float>(getWidth());
             const float handleWidth = width * 0.1f;
             const float value = juce::jlimit(0.0f, 1.0f,
                 (e.getPosition().getX() - handleWidth/2.0f) / (width - handleWidth));

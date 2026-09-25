@@ -204,7 +204,7 @@ juce::ValueTree GraphState::addTraversalFlagNode(int parentNodeId, juce::UndoMan
 juce::ValueTree GraphState::addModulatorNode(juce::ValueTree parentNode, const juce::Identifier& nodeType,
                                              int newNodeId, juce::UndoManager* undoManager)
 {
-    int rootId = (int) parentNode.getProperty(ValueTreeIdentifiers::RootNodeId);
+    int rootId = static_cast<int>(parentNode.getProperty(ValueTreeIdentifiers::RootNodeId));
 
     if (nodeType == ValueTreeIdentifiers::ModulatorRootData) {
         rootId = newNodeId;

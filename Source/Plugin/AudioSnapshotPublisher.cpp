@@ -80,13 +80,13 @@ void AudioSnapshotPublisher::publish(std::shared_ptr<Snapshot> snapshot)
     auto retired      = std::move(publishedSnapshot);
     publishedSnapshot = std::move(snapshot);
 
-    currentSnapshot.store(raw, std::memory_order_release);
+    currentSnapshot.store(raw, std::memory_order_seq_cst);
 
-    std::atomic_thread_fence(std::memory_order_seq_cst);
+    const std::uint64_t retiredAtEpoch         = blockEpoch.load(std::memory_order_seq_cst);
+    const bool          audioThreadInsideBlock = retiredAtEpoch % 2 != 0;
 
-    if (retired != nullptr) {
-        retiredSnapshots.push_back({ std::move(retired),
-                                     blocksCompleted.load(std::memory_order_acquire) });
+    if (retired != nullptr && audioThreadInsideBlock) {
+        retiredSnapshots.push_back({ std::move(retired), retiredAtEpoch });
     }
 
     collectRetiredSnapshots();
@@ -94,10 +94,10 @@ void AudioSnapshotPublisher::publish(std::shared_ptr<Snapshot> snapshot)
 
 void AudioSnapshotPublisher::collectRetiredSnapshots()
 {
-    const std::uint64_t completed = blocksCompleted.load(std::memory_order_acquire);
+    const std::uint64_t epoch = blockEpoch.load(std::memory_order_seq_cst);
 
-    auto isUnreachableByAudioThread = [completed](const RetiredSnapshot& entry) {
-        return completed > entry.retiredAtBlock;
+    auto isUnreachableByAudioThread = [epoch](const RetiredSnapshot& entry) {
+        return epoch > entry.retiredAtEpoch;
     };
 
     std::erase_if(retiredSnapshots, isUnreachableByAudioThread);
