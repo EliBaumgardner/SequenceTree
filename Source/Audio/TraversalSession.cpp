@@ -22,6 +22,7 @@ TraversalSession::TraversalSession(EventManager& eventManager) : eventManager(ev
     activeRootIdScratch.reserve(scratchCapacity);
     restartRootScratch.reserve(scratchCapacity);
     linkedRootScratch.reserve(scratchCapacity);
+    removedRunIdScratch.reserve(maxConcurrentTraversals);
 }
 
 void TraversalSession::prepare()
@@ -81,15 +82,14 @@ void TraversalSession::restartActiveTraversals(const DispatchContext& context)
 
     eventManager.dispatcher.flagScheduler.clear();
 
-    for (const auto& [runId, instance] : traversals) {
+    for (const auto& [runId, instance] : traversals.entries()) {
         if (instance.runtime.isSpawned()) {
             continue;
         }
 
         const int rootId = homeRootId(instance);
 
-        if (std::find(restartRootScratch.begin(), restartRootScratch.end(), rootId)
-            == restartRootScratch.end()) {
+        if (std::ranges::find(restartRootScratch, rootId) == restartRootScratch.end()) {
             restartRootScratch.push_back(rootId);
         }
     }
@@ -127,7 +127,7 @@ void TraversalSession::syncWithGraph(const DispatchContext& context, std::uint64
 
 void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
 {
-    for (auto& [runId, instance] : traversals) {
+    for (auto& [runId, instance] : traversals.entries()) {
         TraversalLogic& logic = instance.logic;
 
         if (instance.runtime.asFlag) {
@@ -154,9 +154,10 @@ void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
 
 void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiBuffer& midiMessages)
 {
-    for (auto it = traversals.begin(); it != traversals.end(); ) {
-        const TraversalPool::Instance& instance  = it->second;
-        const TraversalLogic&          traverser = instance.logic;
+    removedRunIdScratch.clear();
+
+    for (const auto& [runId, instance] : traversals.entries()) {
+        const TraversalLogic& traverser = instance.logic;
 
         bool stillAssigned = false;
         const RTNode* rootNode      = nodes.find(homeRootId(instance));
@@ -175,13 +176,14 @@ void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiB
             }
         }
 
-        if (stillAssigned) {
-            it = std::next(it);
-            continue;
+        if (!stillAssigned) {
+            removedRunIdScratch.push_back(runId);
         }
+    }
 
-        stopTraversalNotes(it->first, midiMessages);
-        it = traversals.erase(it);
+    for (int runId : removedRunIdScratch) {
+        stopTraversalNotes(runId, midiMessages);
+        traversals.erase(runId);
     }
 }
 
@@ -189,19 +191,18 @@ void TraversalSession::startMissingTraversals(const DispatchContext& context)
 {
     activeRootIdScratch.clear();
 
-    for (const auto& [runId, instance] : traversals) {
+    for (const auto& [runId, instance] : traversals.entries()) {
         if (instance.runtime.isSpawned()) {
             continue;
         }
 
-        if (std::find(activeRootIdScratch.begin(), activeRootIdScratch.end(), homeRootId(instance))
-            == activeRootIdScratch.end()) {
+        if (std::ranges::find(activeRootIdScratch, homeRootId(instance)) == activeRootIdScratch.end()) {
             activeRootIdScratch.push_back(homeRootId(instance));
         }
     }
 
     auto isActive = [this](int rootId, const TraversalKey& key) {
-        for (const auto& [runId, instance] : traversals) {
+        for (const auto& [runId, instance] : traversals.entries()) {
             if (homeRootId(instance) == rootId && instance.logic.traversal.key == key) {
                 return true;
             }
@@ -227,7 +228,7 @@ void TraversalSession::startMissingTraversals(const DispatchContext& context)
 
 void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
 {
-    for (auto& [runId, instance] : traversals)
+    for (auto& [runId, instance] : traversals.entries())
     {
         TraversalLogic& traversal = instance.logic;
 
@@ -284,10 +285,10 @@ int TraversalSession::findFirstUnlinkedRootId(const NodeMap& nodes)
         }
     }
 
-    std::sort(linkedRootScratch.begin(), linkedRootScratch.end());
+    std::ranges::sort(linkedRootScratch);
 
     for (const RTNode& node : nodes.sortedById) {
-        if (isRootNode(node) && !std::binary_search(linkedRootScratch.begin(), linkedRootScratch.end(), node.nodeID)) {
+        if (isRootNode(node) && !std::ranges::binary_search(linkedRootScratch, node.nodeID)) {
             return node.nodeID;
         }
     }

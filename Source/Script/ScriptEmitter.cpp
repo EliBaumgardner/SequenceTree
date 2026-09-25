@@ -57,7 +57,7 @@ bool lookupField(const FieldEntry (&table)[count], const std::string& name, Scri
 
 struct EmitFailure {};
 
-void Emitter::run(const std::vector<StatementPtr>& program)
+void Emitter::run(std::span<const StatementPtr> program)
 {
     emitSequence(program);
 
@@ -186,7 +186,7 @@ void Emitter::closeScope()
     slotMarks.pop_back();
 }
 
-void Emitter::emitSequence(const std::vector<StatementPtr>& statements)
+void Emitter::emitSequence(std::span<const StatementPtr> statements)
 {
     for (const StatementPtr& statement : statements) {
         try {
@@ -197,7 +197,7 @@ void Emitter::emitSequence(const std::vector<StatementPtr>& statements)
     }
 }
 
-void Emitter::emitBlock(const std::vector<StatementPtr>& body)
+void Emitter::emitBlock(std::span<const StatementPtr> body)
 {
     openScope();
 

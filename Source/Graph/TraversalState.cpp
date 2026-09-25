@@ -41,7 +41,7 @@ void TraversalState::collectKeys(std::vector<TraversalKey>& keys) const
             return;
         }
 
-        if (std::find(keys.begin(), keys.end(), key) == keys.end()) {
+        if (std::ranges::find(keys, key) == keys.end()) {
             keys.push_back(key);
         }
     };

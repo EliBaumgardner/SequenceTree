@@ -31,7 +31,7 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostRunId, const Trave
         }
 
         const std::vector<TraversalKey>& disabled = connection.disabledTraversals;
-        if (std::find(disabled.begin(), disabled.end(), hostKey) != disabled.end()) {
+        if (std::ranges::find(disabled, hostKey) != disabled.end()) {
             continue;
         }
 

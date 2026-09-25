@@ -6,7 +6,7 @@
 #define SEQUENCETREE_ENCAPSULATIONVIEW_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <vector>
+#include <span>
 
 class NodeCanvas;
 class Encapsulator;
@@ -23,7 +23,7 @@ public:
     void collapseAll() const;
 
     void refreshMembership(int encapsulatorId) const;
-    void showMembers(const std::vector<int>& memberNodeIds) const;
+    void showMembers(std::span<const int> memberNodeIds) const;
 
     juce::Point<int> collapsedSpanShift(int nodeId) const;
 

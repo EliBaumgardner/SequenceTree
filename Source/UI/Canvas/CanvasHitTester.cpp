@@ -7,16 +7,20 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <ranges>
 #include <utility>
 
 namespace
 {
 
-template <typename Range, typename Project, typename Keep, typename Dist>
+template <std::ranges::input_range Range,
+          std::indirectly_unary_invocable<std::ranges::iterator_t<const Range>> Project,
+          std::indirect_unary_predicate<std::projected<std::ranges::iterator_t<const Range>, Project>> Keep,
+          std::indirectly_unary_invocable<std::projected<std::ranges::iterator_t<const Range>, Project>> Dist>
 auto nearest(const Range& range, Project project, Keep keep, Dist dist, float radius)
-    -> decltype(project(*std::begin(range)))
+    -> std::indirect_result_t<Project&, std::ranges::iterator_t<const Range>>
 {
-    using Candidate = decltype(project(*std::begin(range)));
+    using Candidate = std::indirect_result_t<Project&, std::ranges::iterator_t<const Range>>;
 
     Candidate best    = nullptr;
     float      minDist = radius;

@@ -20,7 +20,7 @@ static const juce::String pitchNames[] = {
     juce::String(L"B")
 };
 
-static const int semitonesPerOctave = 12;
+static constexpr int semitonesPerOctave = 12;
 
 PitchFormat::PitchFormat() : NumberFormat(minimumMidiPitch, maximumMidiPitch) {}
 

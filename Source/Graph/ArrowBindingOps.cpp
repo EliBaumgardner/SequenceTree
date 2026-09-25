@@ -202,7 +202,7 @@ std::vector<int> ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManage
     }
 
     auto rememberRepitched = [&repitchedNodeIds](int repitchedId) {
-        if (std::find(repitchedNodeIds.begin(), repitchedNodeIds.end(), repitchedId) == repitchedNodeIds.end()) {
+        if (std::ranges::find(repitchedNodeIds, repitchedId) == repitchedNodeIds.end()) {
             repitchedNodeIds.push_back(repitchedId);
         }
     };

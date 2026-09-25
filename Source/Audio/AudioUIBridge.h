@@ -4,6 +4,7 @@
 #include "../Graph/RTData.h"
 #include <array>
 #include <atomic>
+#include <concepts>
 
 template <typename Command, int Capacity = 512>
 class CommandFifo
@@ -27,7 +28,7 @@ public:
         }
     }
 
-    template <typename ApplyCommand>
+    template <std::invocable<const Command&> ApplyCommand>
     void drain(ApplyCommand&& apply)
     {
         const auto scope = fifo.read(fifo.getNumReady());

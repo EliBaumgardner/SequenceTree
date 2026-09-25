@@ -43,7 +43,7 @@ const RTNode* RuleContext::eligibleChild(int childId) const
 
     if (connection != nullptr) {
         const std::vector<TraversalKey>& disabled = connection->disabledTraversals;
-        if (std::find(disabled.begin(), disabled.end(), traversalKey) != disabled.end()) {
+        if (std::ranges::find(disabled, traversalKey) != disabled.end()) {
             return nullptr;
         }
     }
@@ -64,7 +64,7 @@ int TraversalRule::selectDanglingArrow(const RTNode& node, int count, const Trav
         }
 
         const std::vector<TraversalKey>& disabled = dangling.disabledTraversals;
-        if (std::find(disabled.begin(), disabled.end(), traversalKey) != disabled.end()) {
+        if (std::ranges::find(disabled, traversalKey) != disabled.end()) {
             continue;
         }
 

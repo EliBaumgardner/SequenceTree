@@ -40,11 +40,17 @@ Titlebar::Titlebar(const ApplicationContext& context)
 
 void Titlebar::configureTempoDisplay()
 {
-    tempoDisplay.editor.boundValue.setValue(applicationContext.processor->tempoMultiplier.load());
+    SequenceTreeAudioProcessor& processor = *applicationContext.processor;
+
+    tempoAttachment = std::make_unique<juce::ParameterAttachment>(
+        *processor.valueTreeState.getParameter(SequenceTreeAudioProcessor::tempoParameterId),
+        [this](float tempoMultiplier) { tempoDisplay.editor.boundValue.setValue(tempoMultiplier); });
 
     tempoDisplay.editor.onValueChange = [this]() {
-        applicationContext.processor->tempoMultiplier.store((double) tempoDisplay.editor.boundValue.getValue());
+        tempoAttachment->setValueAsCompleteGesture(static_cast<float>((double) tempoDisplay.editor.boundValue.getValue()));
     };
+
+    tempoAttachment->sendInitialUpdate();
 }
 
 void Titlebar::configureDisplaySelector()

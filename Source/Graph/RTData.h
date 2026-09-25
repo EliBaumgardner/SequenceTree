@@ -11,6 +11,7 @@
 #pragma once
 
 #include <algorithm>
+#include <compare>
 #include <vector>
 
 struct RTNote {
@@ -28,10 +29,7 @@ struct TraversalKey {
     int typeId   = 0;
     int instance = 0;
 
-    bool operator==(const TraversalKey& other) const
-    {
-        return typeId == other.typeId && instance == other.instance;
-    }
+    auto operator<=>(const TraversalKey&) const = default;
 };
 
 struct RTtraversal {

@@ -90,17 +90,17 @@ public:
 
   juce::ValueTree arrowTree;
 
-  static inline const float curvePerpScale        {0.8f};
-  static inline const float curveOffsetFactor     {0.15f};
-  static inline const float headVisibleThreshold  {0.3f};
-  static inline const float labelVisibleThreshold {0.8f};
-  static inline const float headAnchorInset       {8.0f};
-  static inline const float arrowHeadLength       {9.0f};
-  static inline const float arrowHeadLengthHover  {11.0f};
-  static inline const float verticalLabelThreshold{0.2f};
-  static inline const int   arrowBoundsPadding    {40};
-  static inline const int   valueEditorWidth      {30};
-  static inline const int   valueEditorHeight     {12};
+  static constexpr float curvePerpScale        {0.8f};
+  static constexpr float curveOffsetFactor     {0.15f};
+  static constexpr float headVisibleThreshold  {0.3f};
+  static constexpr float labelVisibleThreshold {0.8f};
+  static constexpr float headAnchorInset       {8.0f};
+  static constexpr float arrowHeadLength       {9.0f};
+  static constexpr float arrowHeadLengthHover  {11.0f};
+  static constexpr float verticalLabelThreshold{0.2f};
+  static constexpr int     arrowBoundsPadding    {40};
+  static constexpr int     valueEditorWidth      {30};
+  static constexpr int     valueEditorHeight     {12};
 
   ArrowAnimation animation;
   juce::VBlankAttachment animationFrames;

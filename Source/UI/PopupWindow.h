@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <concepts>
 #include <functional>
 #include <memory>
 
@@ -48,7 +49,7 @@ public:
 
     juce::Component* getContent() const;
 
-    template <typename ContentType>
+    template <std::derived_from<juce::Component> ContentType>
     ContentType* getContentAs() const { return dynamic_cast<ContentType*>(getContent()); }
 
     std::unique_ptr<PopupWindow> window;

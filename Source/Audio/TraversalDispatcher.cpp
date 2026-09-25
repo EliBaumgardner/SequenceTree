@@ -285,8 +285,8 @@ void TraversalDispatcher::pushNote(const RTNode& node, int runId,
 
     const NoteScheduler::NoteVoicing voicing {
         traversalLogic.traversal.channel,
-        transpose,
-        traversalLogic.traversal.velocityMultiplier,
+        transpose + context.transpose,
+        traversalLogic.traversal.velocityMultiplier * context.velocityScale,
         pitchOverride,
         velocityOverride
     };
@@ -415,8 +415,8 @@ void TraversalDispatcher::dispatchCrossTree(const RTNode& node, int sourceRunId,
 
         const NoteScheduler::NoteVoicing crossTreeVoicing {
             traversal.traversal.channel,
-            traversal.traversal.transpose,
-            traversal.traversal.velocityMultiplier
+            traversal.traversal.transpose + context.transpose,
+            traversal.traversal.velocityMultiplier * context.velocityScale
         };
 
         scheduler.scheduleNote(crossTreeRoot, NoteScheduler::NoteRole::Stepping, sourceRunId, sample,
@@ -466,8 +466,8 @@ void TraversalDispatcher::pushChordNotes(const RTNode& node, int runId, double s
 
         const NoteScheduler::NoteVoicing chordVoicing {
             traversalLogic.traversal.channel,
-            transpose,
-            traversalLogic.traversal.velocityMultiplier
+            transpose + context.transpose,
+            traversalLogic.traversal.velocityMultiplier * context.velocityScale
         };
 
         scheduler.scheduleNote(chordNode, NoteScheduler::NoteRole::ChordVoice, runId, sample,

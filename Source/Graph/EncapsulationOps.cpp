@@ -4,7 +4,7 @@
 
 #include <unordered_set>
 
-juce::ValueTree EncapsulationOps::create(const std::vector<int>& memberNodeIds, juce::UndoManager* undoManager)
+juce::ValueTree EncapsulationOps::create(std::span<const int> memberNodeIds, juce::UndoManager* undoManager)
 {
     jassert(! memberNodeIds.empty());
 

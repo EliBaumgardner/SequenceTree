@@ -75,7 +75,7 @@ void RootNode::equipTraversals()
         const TraversalKey existingKey { (int) reference.getProperty(ValueTreeIdentifiers::TraversalId),
                                          (int) reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0) };
 
-        if (std::find(keys.begin(), keys.end(), existingKey) == keys.end()) {
+        if (std::ranges::find(keys, existingKey) == keys.end()) {
             traversalChildrenIds.removeChild(i, nullptr);
         }
     }

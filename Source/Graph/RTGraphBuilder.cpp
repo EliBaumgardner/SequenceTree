@@ -519,7 +519,7 @@ RTtraversal RTGraphBuilder::buildRTtraversal(TraversalKey key)
     return rtTraversal;
 }
 
-void RTGraphBuilder::updateDurationMaps(const std::vector<int>& nodeIds)
+void RTGraphBuilder::updateDurationMaps(std::span<const int> nodeIds)
 {
     if (nodeIds.empty()) {
         return;
@@ -536,16 +536,18 @@ void RTGraphBuilder::updateDurationMaps(const std::vector<int>& nodeIds)
     durationRefreshScratch.clear();
 
     for (int nodeId : nodeIds) {
-        if (std::find(durationRefreshScratch.begin(), durationRefreshScratch.end(), nodeId) == durationRefreshScratch.end()) {
+        if (std::ranges::find(durationRefreshScratch, nodeId) == durationRefreshScratch.end()) {
             durationRefreshScratch.push_back(nodeId);
         }
 
-        const juce::ValueTree parentValueTree = graphState.getNodeParent(nodeId);
+        const auto parents = graphState.parentIdsOf.find(nodeId);
 
-        if (parentValueTree.isValid()) {
-            const int parentId = parentValueTree.getProperty(ValueTreeIdentifiers::Id);
+        if (parents == graphState.parentIdsOf.end()) {
+            continue;
+        }
 
-            if (std::find(durationRefreshScratch.begin(), durationRefreshScratch.end(), parentId) == durationRefreshScratch.end()) {
+        for (const int parentId : parents->second) {
+            if (std::ranges::find(durationRefreshScratch, parentId) == durationRefreshScratch.end()) {
                 durationRefreshScratch.push_back(parentId);
             }
         }

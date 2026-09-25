@@ -41,6 +41,7 @@ public:
 
     using NodeControllerMode = NodeCreationMode;
     NodeControllerMode nodeControllerMode;
+    SelectionOps       selectionOps;
 
     NodeController(const ApplicationContext& context, NodeCanvas& canvas);
     ~NodeController() override;
@@ -80,16 +81,16 @@ private:
         BoxSelecting
     };
 
-    enum SelectionMenuItem {
-        copy = 1,
-        paste,
-        remove
+    enum class SelectionMenuItem {
+        Copy = 1,
+        Paste,
+        Remove
     };
 
-    enum ArrowMenuItem {
-        editAllowedTraversals = 1,
-        traversalArrow,
-        syncModulator
+    enum class ArrowMenuItem {
+        EditAllowedTraversals = 1,
+        TraversalArrow,
+        SyncModulator
     };
 
     void handleCanvasMouseDown (const juce::MouseEvent& e);
@@ -146,7 +147,6 @@ private:
     NodeCanvas&               canvas;
 
     ConnectionOps connectionOps { applicationContext };
-    SelectionOps  selectionOps  { applicationContext };
 
     DragState dragState = DragState::Idle;
 

@@ -118,21 +118,68 @@ void SequenceTreeAudioProcessorEditor::parentHierarchyChanged()
 
 bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, juce::Component*)
 {
-    if (audioProcessor.wrapperType != juce::AudioProcessor::wrapperType_Standalone) {
-        return false;
-    }
+    const bool isStandalone = audioProcessor.wrapperType == juce::AudioProcessor::wrapperType_Standalone;
 
-    if (key.getModifiers().isShiftDown()
+    if (isStandalone
+        && key.getModifiers().isShiftDown()
         && (key.getKeyCode() == '1' || key.getTextCharacter() == '!'))
     {
         toggleFullScreen();
         return true;
     }
 
-    if (key == juce::KeyPress::escapeKey
+    if (isStandalone
+        && key == juce::KeyPress::escapeKey
         && juce::Desktop::getInstance().getKioskModeComponent() != nullptr)
     {
         toggleFullScreen();
+        return true;
+    }
+
+    const juce::ModifierKeys command      = juce::ModifierKeys::commandModifier;
+    const juce::ModifierKeys commandShift = juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier;
+
+    SelectionOps&      selectionOps = nodeController->selectionOps;
+    juce::UndoManager& undoManager  = *applicationContext.undoManager;
+
+    if (key == juce::KeyPress::spaceKey) {
+        titleBar->togglePlayback();
+        return true;
+    }
+
+    if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey) {
+        selectionOps.deleteSelection();
+        return true;
+    }
+
+    if (key == juce::KeyPress('z', command, 0)) {
+        undoManager.undo();
+        return true;
+    }
+
+    if (key == juce::KeyPress('z', commandShift, 0) || key == juce::KeyPress('y', command, 0)) {
+        undoManager.redo();
+        return true;
+    }
+
+    if (key == juce::KeyPress('c', command, 0)) {
+        selectionOps.copySelection();
+        return true;
+    }
+
+    if (key == juce::KeyPress('v', command, 0)) {
+        juce::Point<int> pastePoint = canvas->getLocalPoint(port.get(), port->getLocalBounds().getCentre());
+
+        if (port->getLocalBounds().contains(port->getMouseXYRelative())) {
+            pastePoint = canvas->getMouseXYRelative();
+        }
+
+        selectionOps.pasteAt(pastePoint);
+        return true;
+    }
+
+    if (key == juce::KeyPress('a', command, 0)) {
+        selectionOps.selectAll();
         return true;
     }
 

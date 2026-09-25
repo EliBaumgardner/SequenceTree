@@ -70,7 +70,7 @@ void GraphState::linkParent(int parentNodeId, int childNodeId)
 {
     std::vector<int>& parents = parentIdsOf[childNodeId];
 
-    if (std::find(parents.begin(), parents.end(), parentNodeId) == parents.end()) {
+    if (std::ranges::find(parents, parentNodeId) == parents.end()) {
         parents.push_back(parentNodeId);
     }
 }
@@ -85,7 +85,7 @@ void GraphState::unlinkParent(int parentNodeId, int childNodeId)
 
     std::vector<int>& parents = entry->second;
 
-    parents.erase(std::remove(parents.begin(), parents.end(), parentNodeId), parents.end());
+    std::erase(parents, parentNodeId);
 
     if (parents.empty()) {
         parentIdsOf.erase(entry);
@@ -475,7 +475,7 @@ std::vector<int> GraphState::nodeIdsBetween(int startNodeId, int endNodeId) cons
 
     spanNodeIds.push_back(startNodeId);
 
-    std::reverse(spanNodeIds.begin(), spanNodeIds.end());
+    std::ranges::reverse(spanNodeIds);
 
     std::unordered_set<int> spannedIds(spanNodeIds.begin(), spanNodeIds.end());
 

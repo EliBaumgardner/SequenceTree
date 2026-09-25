@@ -24,9 +24,10 @@ public:
 
     Titlebar(const ApplicationContext& context);
 
-    std::function<void(NodeDisplayMode)> onDisplayModeChanged;
-
     void applyPlaybackState(bool shouldPlay);
+    void togglePlayback();
+
+    std::function<void(NodeDisplayMode)> onDisplayModeChanged;
 
 private:
 
@@ -41,7 +42,6 @@ private:
     void setControllerMode(NodeController::NodeControllerMode mode);
     void setDanglingArrowMode(bool shouldBeActive);
 
-    void togglePlayback();
     void resetTraversals();
 
     ButtonPane           transportPane;
@@ -51,4 +51,6 @@ private:
     ButtonPane           undoRedoPane;
 
     IconButton*          playButton = nullptr;
+
+    std::unique_ptr<juce::ParameterAttachment> tempoAttachment;
 };

@@ -9,6 +9,8 @@
 #include "../Util/ApplicationContext.h"
 #include "Editors/FileLabel.h"
 
+#include <span>
+
 
 class LabelPanel : public juce::Component {
 public:
@@ -24,7 +26,7 @@ public:
     void addFileLabel(juce::String fileName);
     void removeFileLabel(const FileLabel* label);
     void setSelectedLabel(const FileLabel* label);
-    void applyOrder(const std::vector<int>& fileIds);
+    void applyOrder(std::span<const int> fileIds);
 
     std::vector<std::unique_ptr<FileLabel>> labels;
 

@@ -101,7 +101,7 @@ void EncapsulationView::expand(int encapsulatorId) const
     refreshMembership(encapsulatorId);
 }
 
-void EncapsulationView::showMembers(const std::vector<int>& memberNodeIds) const
+void EncapsulationView::showMembers(std::span<const int> memberNodeIds) const
 {
     for (const int memberNodeId : memberNodeIds) {
         Node* const member = canvas.nodeManager.find(memberNodeId);
