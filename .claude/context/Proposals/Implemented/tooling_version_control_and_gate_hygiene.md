@@ -1,6 +1,7 @@
 # Tooling in Version Control, a Sharper Allocation Gate, and One Copy of Each Rule
 
-> Status: In progress
+> Status: Implemented
+> Implemented 2026-09-26 at refactor-tools 51d3533 (0.3.2), research-suite ecdd8e0 (0.6.1), SequenceTree 65b03e5 plus the commit that files this proposal.
 > Built from c215f8e; drift: none
 > Written 2026-09-26 at c215f8e (SequenceTree, dirty working tree), refactor-tools 977942a plus untracked `bin/ hooks/ lib/ rules/`, research-suite 06e35a7 plus staged changes. Sources: Reviewed/ProgramAudits/developer_tooling_layering_audit.md (What Survives: P2 gate engine not in version control, P2 allocation gate false negatives, P3 rules injected twice, P3 measurement guidance duplicated, P3 build config duplicated, P3 duplicated `commands/` and `skills/`, P3 hooks run the cache)
 
@@ -220,3 +221,16 @@ Steps 1–3 must run in order. Steps 4–7 are independent of each other.
 3. `Source/UI` stays out of the tooling commit; commit both `.claude/context/Analysis/` and `.claude/context/Proposals/`.
 4–8. Recommendations accepted: measurement guidance lives in research-tools.md with CLAUDE.md pointing to it; allocation gate stays on `Source/Audio/`; `std::function` stays in the pattern; build keys stay duplicated; `/implement` may edit refactor-tools from this session.
 Added by the owner: fix `run-pipeline.sh` so its git-status guards ignore the pipeline's own folders under `.claude/context/` (a new proposal tripped the propose guard on this proposal's own run; with `Analysis/` committed the analyze guard would trip on every report).
+
+## Implementation Notes
+
+- **Step 1** — refactor-tools committed whole (`abb9862`), version 0.3.1, plugin updated; `installed_plugins.json` recorded 0.3.1 / abb9862 and `diff -rq` repo vs cache was empty.
+- **Step 2** — research-suite committed whole (`8452b1c`). As the plan expected, `claude plugin update` at an unchanged 0.6.0 did not refresh the recorded SHA; the guard fix's bump to 0.6.1 did (`ecdd8e0`).
+- **Step 3** — SequenceTree tooling committed (`65b03e5`): research.toml, research-tools.md, `.analyst/`, `.claude/context/` (GeminiAnalysis → Analysis renames, both reports folders, this proposal), refactor.toml, CLAUDE.md, .gitignore, and the deletion of `.claude/state/refactor-history.json`. `Source/UI` and the locally modified `JUCE` submodule were left out.
+- **Step 4** — `.claude/refactor.toml:38` replaced with the planned pattern, verbatim. Before applying it, both patterns were checked on 20 probe lines with awk reading the pattern from `ENVIRON`, as `design-rules.sh:407-417` does; every row of the behaviour table held, and `a < b && c > d` comparisons and `static_cast<std::size_t>` do not match. `design-rules.sh --all` reports no allocation hit on the tree. In a scratch copy outside the repo, a probe under `Source/Audio/` gave exactly `std::vector<int>(4)`, `juce::Array<int>`, `std::unordered_map<int, int>`, and nothing for the `const&` line or a `prepare()` body.
+- **Step 5** — `bin/session-rules.sh` in refactor-tools, as planned. The installed 0.3.2 hook gives 0 copies of `Project Design Rules`; the plain `session-rules.sh` gives 1.
+- **Step 6** — `research-tools.md` *Measurement* now holds the full guidance; `.claude/CLAUDE.md` keeps the command block and one pointer sentence. `shape_of` appears only in research-tools.md.
+- **Step 7** — `git rm -r .claude/commands .claude/skills` in refactor-tools, after confirming they were byte-identical and unreferenced. **Differs from plan:** steps 5 and 7 share one version bump and commit (`51d3533`, 0.3.2) rather than bumping twice.
+- **Owner-added: pipeline guard fix** — research-suite `skills/research/run-pipeline.sh`: the four `git status` snapshots take a pathspec that excludes `.claude/context/Analysis` and `.claude/context/Proposals`; `outside_writes_since`, which only guards the analysis stage, now excludes only `Unreviewed/` (previously also `Reviewed/` and `Proposals/`). Before, git status watched those folders once they were tracked. Now the file check does, so the analysis agent is still held to `Unreviewed/`. Checked with probe files in all three folders: the git guard stayed unchanged, and the write check caught the `Reviewed/` and `Proposals/` probes. `skills/research/SKILL.md` updated to match. Version 0.6.1.
+- **Tests** — `SequenceTree_Tests` and `SequenceTree_GraphTests`: 55/55 passed (no source change).
+- **Manual checks owed** — restart Claude Code so 0.3.2 and 0.6.1 load, then confirm a new session's SessionStart context carries the Project Design Rules only once (from CLAUDE.md); the next `/research` run should finish without a guard failure.

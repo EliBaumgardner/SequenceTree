@@ -71,12 +71,7 @@ refactor.rewrite '($T) $X' 'static_cast<$T>($X)' all --dry-run   # structural, $
 refactor.undo
 ```
 
-Duplication questions go to `refactor.find repeating`, both likenesses, before reading files by hand — it reads the whole scope in about half a second and beats grepping for a remembered line.
-
-Two things about it decide whether the answer is any good:
-
-- **Start the threshold low and read upward.** `numlines > 3` first; a high threshold silently hides the shorter half of a finding, and there is no indication that it did. `count >= 3` asks the other question — what has been written three times over.
-- **`shape` relaxes spelling, not structure.** `shape_of` in the tools' `refactor/reporting/find.py` spells every identifier as the one token `name`, so `spawnKey` is one token and `traversal.key` is three, and `obj.f(x)` and `f(x)` differ by a receiver. Both likenesses report *contiguous* runs, so two functions that do the same thing with different expressions plugged in come back as several short islands rather than one long finding. Read adjacent findings in the same pair of files as possibly one duplicate, and go read the sites before reporting a size.
+Duplication questions go to `refactor.find repeating`, both likenesses, before reading files by hand; how to read its output — thresholds and what `shape` does and does not relax — is in the *Measurement* section of `.claude/research-tools.md`, read before answering one.
 
 ## Analysis, Reviews and Proposals
 

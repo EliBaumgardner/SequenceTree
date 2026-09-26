@@ -35,7 +35,7 @@ label = "audio-thread allocation"
 paths = "Source/Audio/"
 in_functions = true
 skip_functions = '^(prepare|prepareToPlay|reserve|setup|releaseResources)'
-pattern = '(^|[^A-Za-z0-9_])(new|delete)[[:space:]]|make_unique|make_shared|malloc\(|calloc\(|realloc\(|free\(|(^|[^A-Za-z0-9_:])(std::)?(string|vector|map|set)[[:space:]]*<[^>]*>[[:space:]]+[A-Za-z_]|juce::String[[:space:]]+[A-Za-z_]'
+pattern = '(^|[^A-Za-z0-9_])(new|delete)[[:space:]]|make_unique|make_shared|malloc\(|calloc\(|realloc\(|free\(|(^|[^A-Za-z0-9_:])(std::|juce::)?(string|vector|map|set|unordered_map|unordered_set|deque|list|function|Array|OwnedArray|HashMap|StringArray)[[:space:]]*<[^;=&*]*>[[:space:]]*([({]|[A-Za-z_][A-Za-z0-9_]*[[:space:]]*[;={(])|(juce::(String|StringArray|MemoryBlock)|std::string)[[:space:]]*([({]|[A-Za-z_][A-Za-z0-9_]*[[:space:]]*[;={(])'
 
 [[gates.checks]]
 rule = "Never touch UI components from the audio thread"
