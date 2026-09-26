@@ -1,0 +1,16 @@
+analyst_profile = ".analyst/profile.md"
+issues_file     = ".claude/notes/ongoing-issues.md"
+tools_file      = ".claude/research-tools.md"
+
+build_dir    = "cmake-build-debug"
+build_trees  = ["cmake-build-debug", "cmake-build-release"]
+build_target = "SequenceTree_Standalone"
+
+[test_targets]
+Tests = ["SequenceTree_Tests", "SequenceTree_GraphTests"]
+
+[pipeline]
+analyst       = "agy"
+analyst_model = ""
+review_model  = ""
+propose_model = ""

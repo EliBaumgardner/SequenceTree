@@ -80,23 +80,25 @@ Two things about it decide whether the answer is any good:
 
 ## Analysis, Reviews and Proposals
 
-Gemini is the project's research analyst: it audits the codebase and researches outside it, following the research-suite's analyst brief and `analysis` skill (`gemini/ANALYST.md` and `gemini/analysis/SKILL.md` in the plugin) plus this project's profile in `.gemini/GEMINI.md`, and writes reports but never code. The skill fixes the finding format `/review` checks against — location at a recorded commit, confidence level, mechanism, evidence, and what would settle an unverified claim. Claude is its advisor. Findings reach the code in four stages, and each stage reads only what the previous one produced:
+The analysis agent is the project's research analyst — whichever agent `[pipeline]` in `.claude/research.toml` names (Antigravity on Gemini by default). It audits the codebase and researches outside it, following the research-suite's analyst brief and `analysis` skill (`analyst/ANALYST.md` and `analyst/analysis/SKILL.md` in the plugin) plus this project's profile in `.analyst/profile.md`, and writes reports but never code. The skill fixes the finding format `/review` checks against — location at a recorded commit, confidence level, mechanism, evidence, and what would settle an unverified claim. Claude is its advisor. Findings reach the code in four stages, and each stage reads only what the previous one produced:
 
 ```
 .claude/context/
-├── GeminiAnalysis/
-│   ├── Unreviewed/{ProgramAudits,ResearchReports}/   Gemini writes here
+├── Analysis/
+│   ├── Unreviewed/{ProgramAudits,ResearchReports}/   the analysis agent writes here
 │   └── Reviewed/{ProgramAudits,ResearchReports}/     /review writes here
 └── Proposals/
     ├── Unimplemented/                                /propose writes here
     └── Implemented/                                  /implement files here
 ```
 
-- The skills, the gates, the analyst brief and every hook live in the `research-suite` plugin, its own repository at `~/Documents/GitHub/research-suite` — changes to them are made there, never in this project — enabled for this project in `.claude/settings.json`. Plugin skills are namespaced, so the stages run as `/research-suite:review`, `/research-suite:propose`, `/research-suite:implement` and `/research-suite:research`. Hooks run the plugin's cached copy, so after changing the repository bump `version` in its `plugin.json` and run `claude plugin update research-suite@research-suite --scope project`.
+- The skills and the analyst brief live in the `research-suite` plugin, its own repository at `~/Documents/GitHub/research-suite` — changes to them are made there, never in this project — enabled for this project in `.claude/settings.json`. It has no hooks and names no tool: its settings are in `.claude/research.toml` (build and test targets, analyst and models, profile and issues file), and the tools its stages use — the design rules, the `refactor.find` / `refactor.smell` measurements, the `design-rules.sh` / `readability.sh` checks and the `refactor.*` edits — are named in `.claude/research-tools.md`, which the stages read and the analysis agent gets in its prompt. Plugin skills are namespaced, so the stages run as `/research-suite:review`, `/research-suite:propose`, `/research-suite:implement` and `/research-suite:research`. Plugins run from a cached copy, so after changing the repository bump `version` in its `plugin.json` and run `claude plugin update research-suite@research-suite --scope project`.
+- The gates, the deep pass and every hook live in the `refactor-tools` plugin (see Refactoring Commands), turned on for this project by the `[gates]` table in `.claude/refactor.toml`. After changing its `bin/`, `lib/`, `rules/` or `hooks/`, bump `version` in its `plugin.json` and run `claude plugin update refactor-tools@refactor-tools`.
+- Both configs are committed; per-machine overrides go in `.claude/refactor.local.toml` and `.claude/research.local.toml`, which are gitignored and merge over them key by key. `refactor.init` and `research-init` write a new project's configs from its CMake trees. `refactor.undo`'s history lives in `~/.cache/refactor-tools/`, never in the repo.
 - **`ProgramAudits`** hold findings about this codebase; **`ResearchReports`** hold outside research mapped back onto it. The split is the same on both sides of review.
-- **`/review`** (the `review` skill) reads one report from `Unreviewed/` as an academic advisor would: it breaks the report into claims, verifies each against the code at `HEAD` under the systematic principles and the Key Design Rules, gives each a verdict (Confirmed, Corrected, Stale, Refuted, Unverified), critiques the method and reasoning, and writes the corrected report — advisor review first — to the matching folder in `Reviewed/`, then deletes the original. Its *What Survives* section is the only part of a report that later work builds on.
+- **`/review`** (the `review` skill) reads one report from `Unreviewed/` as an academic advisor would: it breaks the report into claims, verifies each against the code at `HEAD` under the design rules and the checks `.claude/research-tools.md` names, gives each a verdict (Confirmed, Corrected, Stale, Refuted, Unverified), critiques the method and reasoning, and writes the corrected report — advisor review first — to the matching folder in `Reviewed/`, then deletes the original. Its *What Survives* section is the only part of a report that later work builds on.
 - **`/propose`** (the `proposal` skill) turns surviving findings into `Proposals/Unimplemented/<topic>.md`: the mechanism with real call sites, the current API surface, structure and data flow, the approaches considered, and a numbered plan whose steps each carry their changes, behaviour delta, real-time safety argument, verification and rollback. Open choices go under *Decisions for the Owner*.
-- Nothing in `Unreviewed/` is trusted — Gemini's line numbers drift and some of its claims are wrong or already fixed. A proposal is never built on an unreviewed report.
+- Nothing in `Unreviewed/` is trusted — the analysis agent's line numbers drift and some of its claims are wrong or already fixed. A proposal is never built on an unreviewed report.
 - **`/implement`** (the `implement` skill) builds one proposal from `Unimplemented/`. Its job is implementation, not verification: `/review` and `/propose` already did that, so it only checks whether the files the plan touches have changed since the proposal was written, and asks if the code it depends on has changed shape. It then carries out the plan one step at a time, and when every step is done it moves the proposal to `Implemented/` with implementation notes. An implemented proposal is never implemented again.
 - `/review` and `/propose` never edit `Source/`; only `/implement` does, and only after the owner has approved the proposal and answered its Decisions for the Owner.
 - `.claude/notes/ongoing-issues.md` stays the record of confirmed and resolved problems; reviews cite it rather than rediscovering what it already holds.
@@ -186,7 +188,7 @@ Five things about the model are easy to miss:
 
 ### Rules
 
-The general rules - *How to Systematically Solve Problems* and the *Key Design Rules* - come from the research-suite plugin (`rules/systematic.md` and `rules/style.md` in its repository) and are injected at the start of every session. The rules below are this project's own and bind alongside them. This project's `core_purpose_api` entries, kept small classes and machine checks for these rules live under `[suite]` in `.claude/refactor.toml`.
+The general rules - *How to Systematically Solve Problems* and the *Key Design Rules* - come from the refactor-tools plugin (`rules/systematic.md` and `rules/style.md` in its repository) and are injected at the start of every session. The rules below are this project's own and bind alongside them. This project's `core_purpose_api` entries, kept small classes and machine checks for these rules live under `[gates]` in `.claude/refactor.toml`.
 
 ### Project Design Rules
 

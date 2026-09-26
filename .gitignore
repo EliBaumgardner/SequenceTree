@@ -18,7 +18,9 @@ Builds/
 
 scripts/
 .opencode/
-gemini complaints.md
+.claude/context/Analysis/Unreviewed/ProgramAudits/tracker.md
 GEMINI.md
 docs
 .gemini/
+.claude/refactor.local.toml
+.claude/research.local.toml
