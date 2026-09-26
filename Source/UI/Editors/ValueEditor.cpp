@@ -295,7 +295,9 @@ void ValueEditor::setNumericValue(double newValue)
     const double clamped = juce::jlimit(format->minimum, format->maximum, newValue);
 
     if (format->decimalPlaces > 0) {
-        boundValue.setValue(clamped);
+        const double placeScale = std::pow(10.0, format->decimalPlaces);
+        const double rounded    = std::round(newValue * placeScale) / placeScale;
+        boundValue.setValue(juce::jlimit(format->minimum, format->maximum, rounded));
         return;
     }
 

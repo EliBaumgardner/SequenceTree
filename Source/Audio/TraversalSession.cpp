@@ -91,8 +91,8 @@ TraversalSession::Playback TraversalSession::continueReplay(const DispatchContex
            && juce::Time::getMillisecondCounterHiRes() - startedMs < budgetMs) {
         const int chunkSamples = static_cast<int>(juce::jmin(replayRemainingSamples,
                                                              static_cast<double>(replayChunkSamples)));
-        replayMidi.clear();
         eventManager.processEvents(chunkSamples, replayContext);
+        replayMidi.clear();
         replayRemainingSamples -= chunkSamples;
 
         eventManager.bridge.recordClockMs += 1000.0 * chunkSamples / context.sampleRate;
@@ -109,15 +109,10 @@ TraversalSession::Playback TraversalSession::continueReplay(const DispatchContex
     eventManager.bridge.deliverRecording();
 
     if (playing) {
-        for (const auto& note : eventManager.scheduler.activeNotes) {
-            if (!NoteScheduler::isNoteSounding(note)) {
-                continue;
-            }
-
-            context.midiMessages.addEvent(juce::MidiMessage::noteOn(note.event.midiChannel, note.event.pitch,
-                                          static_cast<juce::uint8>(note.event.velocity)), 0);
-        }
+        context.midiMessages.addEvents(replayMidi, 0, -1, 0);
     }
+
+    replayMidi.clear();
 
     playback = Playback::Live;
     return Playback::Live;

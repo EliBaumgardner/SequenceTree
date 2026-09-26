@@ -36,8 +36,7 @@ inline constexpr int maximumSubLoopLimit = 9999;
 inline constexpr int minimumRepeatValue = 1;
 inline constexpr int maximumRepeatValue = 9999;
 
-inline constexpr double minimumTraversalMultiplier  = 0.1;
-inline constexpr int    traversalMultiplierDecimals = 3;
+inline constexpr double minimumTraversalMultiplier = 0.1;
 
 inline constexpr int minimumTraversalTranspose = -24;
 inline constexpr int maximumTraversalTranspose =  24;
