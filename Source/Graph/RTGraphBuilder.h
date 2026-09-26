@@ -47,8 +47,6 @@ private:
         std::unordered_set<int> addedNodeIds;
         std::unordered_set<int> rebuildNodeIds;
         std::unordered_set<int> rebuildRootIds;
-        std::unordered_set<int> reshapedNodeIds;
-        std::unordered_set<int> movedNodeIds;
         std::unordered_set<int> traversalIds;
         std::vector<int>        durationRefreshNodeIds;
     };

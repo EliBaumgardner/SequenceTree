@@ -19,7 +19,7 @@ public:
         juce::ValueTree rootNodeValueTree = state.addRootNode(undoManager);
         const int rootId = rootNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
-        GraphState::setNodePosition(rootNodeValueTree, nodePosition, undoManager);
+        state.setNodePosition(rootNodeValueTree, nodePosition, undoManager);
 
         setDefaultNodeNote(state, rootId, undoManager);
         setDefaultTraversal(state, rootId, undoManager);
@@ -31,7 +31,7 @@ public:
         const juce::ValueTree childNodeValueTree = state.addChildNode(parentNodeId, nodeType, undoManager);
         const int nodeId = childNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
-        GraphState::setNodePosition(childNodeValueTree, nodePosition, undoManager);
+        state.setNodePosition(childNodeValueTree, nodePosition, undoManager);
         inheritFromParent(state, parentNodeId, nodeId, childNodeValueTree, undoManager);
 
         return childNodeValueTree;
@@ -41,7 +41,7 @@ public:
     {
         const juce::ValueTree childNodeValueTree = state.addTraversalFlagNode(parentNodeId, undoManager);
 
-        GraphState::setNodePosition(childNodeValueTree, nodePosition, undoManager);
+        state.setNodePosition(childNodeValueTree, nodePosition, undoManager);
 
         return childNodeValueTree;
     }
@@ -49,7 +49,7 @@ public:
     static juce::ValueTree createModulator(GraphState& state, const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager) {
 
         const juce::ValueTree modulatorValueTree = state.addModulator(parentNodeId, undoManager);
-        GraphState::setNodePosition(modulatorValueTree, nodePosition, undoManager);
+        state.setNodePosition(modulatorValueTree, nodePosition, undoManager);
 
         return modulatorValueTree;
     }
@@ -57,14 +57,14 @@ public:
     static juce::ValueTree createAlternativeModulator(GraphState& state, const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager) {
 
         const juce::ValueTree alternativeModulatorValueTree = state.addAlternativeModulator(parentNodeId, undoManager);
-        GraphState::setNodePosition(alternativeModulatorValueTree, nodePosition, undoManager);
+        state.setNodePosition(alternativeModulatorValueTree, nodePosition, undoManager);
 
         return alternativeModulatorValueTree;
     }
 
     static juce::ValueTree createModulatorRoot(GraphState& state, const int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager) {
         const juce::ValueTree modulatorRootValueTree = state.addModulatorRoot(parentNodeId, undoManager);
-        GraphState::setNodePosition(modulatorRootValueTree, nodePosition, undoManager);
+        state.setNodePosition(modulatorRootValueTree, nodePosition, undoManager);
         return modulatorRootValueTree;
     }
 
@@ -78,7 +78,7 @@ public:
         encapsulatorValueTree.setProperty(ValueTreeIdentifiers::EncapsulatorLabel, encapsulatorLabel, undoManager);
         encapsulatorValueTree.setProperty(ValueTreeIdentifiers::SubLoopCountLimit, subLoopCountLimit, undoManager);
 
-        GraphState::setNodePosition(encapsulatorValueTree, state.getNodePosition(memberNodeIds.front()), undoManager);
+        state.setNodePosition(encapsulatorValueTree, state.getNodePosition(memberNodeIds.front()), undoManager);
 
         return encapsulatorValueTree;
     }
@@ -106,6 +106,8 @@ public:
         ArrowBindingOps::setArrowInfo(arrowTree, arrowInfo, undoManager);
 
         arrowList.addChild(arrowTree, -1, undoManager);
+
+        state.arrows.syncPitchBindings(nodeTree.getProperty(ValueTreeIdentifiers::Id), undoManager);
     }
 
     static void destroyDanglingArrow(juce::ValueTree arrowTree, juce::UndoManager* undoManager)
@@ -117,7 +119,7 @@ public:
         }
     }
 
-    static void setDanglingArrowTip(juce::ValueTree arrowTree, const juce::Point<int>& tipOffset,
+    static void setDanglingArrowTip(GraphState& state, juce::ValueTree arrowTree, const juce::Point<int>& tipOffset,
                                     juce::UndoManager* undoManager)
     {
         if (!arrowTree.isValid()) {
@@ -127,6 +129,8 @@ public:
         arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
         arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
         arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride, undoManager);
+
+        state.arrows.syncPitchBindings(arrowTree.getParent().getParent().getProperty(ValueTreeIdentifiers::Id), undoManager);
     }
 
 private:

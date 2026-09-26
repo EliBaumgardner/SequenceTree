@@ -217,7 +217,7 @@ void NodeController::finishDanglingTipDrag()
     }
     else {
         applicationContext.undoManager->beginNewTransaction();
-        NodeFactory::setDanglingArrowTip(arrow->arrowTree, arrow->tipOffset, applicationContext.undoManager);
+        NodeFactory::setDanglingArrowTip(*applicationContext.graphState, arrow->arrowTree, arrow->tipOffset, applicationContext.undoManager);
     }
 
     canvas.hideGrid();
@@ -708,7 +708,7 @@ void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &ne
     newPosition.xPosition = snapped.x;
     newPosition.yPosition = snapped.y;
 
-    GraphState::setNodePosition(draggedNodeTree, newPosition, undoManager);
+    applicationContext.graphState->setNodePosition(draggedNodeTree, newPosition, undoManager);
 }
 
 void NodeController::dragValue(const juce::MouseEvent& e)

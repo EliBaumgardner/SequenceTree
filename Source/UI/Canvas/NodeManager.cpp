@@ -323,7 +323,7 @@ void NodeManager::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId,
     encapsulatorPosition.xPosition += deltaX;
     encapsulatorPosition.yPosition += deltaY;
 
-    GraphState::setNodePosition(encapsulator, encapsulatorPosition, applicationContext.undoManager);
+    graphState.setNodePosition(encapsulator, encapsulatorPosition, applicationContext.undoManager);
 }
 
 void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY,
@@ -351,7 +351,7 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
         childPosition.xPosition += deltaX;
         childPosition.yPosition += deltaY;
 
-        GraphState::setNodePosition(childNodeTree, childPosition, applicationContext.undoManager);
+        applicationContext.graphState->setNodePosition(childNodeTree, childPosition, applicationContext.undoManager);
 
         moveEncapsulatorWithEntryMember(childId, draggedNodeId, deltaX, deltaY);
 

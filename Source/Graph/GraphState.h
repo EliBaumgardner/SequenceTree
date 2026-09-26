@@ -37,7 +37,7 @@ public:
 
     void removeNode(int nodeId, juce::UndoManager* undoManager);
 
-    static void  setNodePosition(juce::ValueTree node, NodePosition nodePosition,
+    void         setNodePosition(juce::ValueTree node, NodePosition nodePosition,
                                  juce::UndoManager* undoManager);
     NodePosition getNodePosition(int nodeId) const;
 

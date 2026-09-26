@@ -1,0 +1,56 @@
+sources      = "Source"
+edit_roots   = ["Source", "Tests"]
+build_dir    = "cmake-build-debug"
+build_trees  = ["cmake-build-debug", "cmake-build-release"]
+build_target = "SequenceTree_Standalone"
+history      = ".claude/state/refactor-history.json"
+
+[test_targets]
+Tests = ["SequenceTree_Tests", "SequenceTree_GraphTests"]
+
+[suite]
+core_purpose_api = [
+    "Source/Audio/AudioUIBridge.h:highlightNode",
+    "Source/Audio/AudioUIBridge.h:clearAllHighlights",
+    "Source/Audio/AudioUIBridge.h:pushProgress",
+    "Source/Audio/AudioUIBridge.h:pushArrowReset",
+    "Source/Audio/AudioUIBridge.h:pushCount",
+    "Source/Audio/AudioUIBridge.h:hasPendingCommands",
+    "Source/Audio/AudioUIBridge.h:primaryTrail",
+    "Source/Audio/AudioUIBridge.h:modulatorTrail",
+    "Source/Audio/AudioUIBridge.h:danglingArrowKey",
+    "Source/Audio/AudioUIBridge.h:hasPending",
+    "Source/Audio/TraversalPool.h:entries",
+    "Source/Plugin/AudioSnapshotPublisher.h:beginBlock",
+    "Source/Plugin/AudioSnapshotPublisher.h:endBlock",
+]
+kept_small_classes = ["Source/Graph/RTData.h:NodeMap"]
+unchecked = [
+    "Whether a push_back stays inside its reserved capacity (the allocation check cannot see capacity)",
+    "Per-block scratch state lives in reserved member vectors, not locals",
+]
+
+[[suite.checks]]
+rule = "Never allocate or free on the audio thread"
+label = "audio-thread allocation"
+paths = "Source/Audio/"
+in_functions = true
+skip_functions = '^(prepare|prepareToPlay|reserve|setup|releaseResources)'
+pattern = '(^|[^A-Za-z0-9_])(new|delete)[[:space:]]|make_unique|make_shared|malloc\(|calloc\(|realloc\(|free\(|(^|[^A-Za-z0-9_:])(std::)?(string|vector|map|set)[[:space:]]*<[^>]*>[[:space:]]+[A-Za-z_]|juce::String[[:space:]]+[A-Za-z_]'
+
+[[suite.checks]]
+rule = "Never touch UI components from the audio thread"
+label = "audio-thread UI access"
+paths = "Source/Audio/"
+pattern = 'juce::Component|NodeCanvas|->repaint\(|\.repaint\(|setBounds\(|setVisible\(|LookAndFeel'
+
+[[suite.checks]]
+rule = "Only RTData structs and RTScript cross the audio boundary"
+label = "audio boundary types"
+paths = "Source/Audio/"
+pattern = 'juce::ValueTree|GraphState|ValueTreeIdentifiers'
+
+[[suite.checks]]
+rule = "ApplicationContext is not valid at static init time"
+label = "static-init ApplicationContext"
+pattern = '^[[:space:]]*(static|extern)?[[:space:]]*[A-Za-z_][A-Za-z0-9_:<>]*[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[^=]*ApplicationContext'

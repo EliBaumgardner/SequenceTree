@@ -4,8 +4,6 @@
 
 #include <juce_data_structures/juce_data_structures.h>
 
-#include <vector>
-
 class GraphState;
 
 class ArrowBindingOps {
@@ -18,15 +16,15 @@ public:
                                   juce::UndoManager* undoManager);
     static ArrowInfo getArrowInfo(const juce::ValueTree& arrowTree);
 
-    std::vector<int> syncPitchBindings  (int nodeId, juce::UndoManager* undoManager);
-    void             clearArrowDurations(int nodeId, juce::UndoManager* undoManager);
+    void syncPitchBindings  (int nodeId, juce::UndoManager* undoManager);
+    void clearArrowDurations(int nodeId, juce::UndoManager* undoManager);
 
     void applyNodeBinding(ArrowInfo& arrowInfo, int nodeId,
                           const juce::ValueTree& newArrow = {}) const;
 
 private:
 
-    bool applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId,
+    void applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId,
                                int deltaX, int deltaY, juce::UndoManager* undoManager);
 
     GraphState& graphState;

@@ -78,7 +78,7 @@ TEST_CASE("processBlock stays realtime-safe while playing, editing, retiming, re
 
     playBlocks(200);
 
-    GraphState::setNodePosition(first, NodePosition { 300, 100, 25 }, nullptr);
+    graph.setNodePosition(first, NodePosition { 300, 100, 25 }, nullptr);
     processor.rtGraphBuilder.rebuildAllGraphs();
     playBlocks(100);
 

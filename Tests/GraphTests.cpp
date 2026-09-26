@@ -61,7 +61,7 @@ TEST_CASE("arrow length sets the connection duration, and moving a node retimes 
     REQUIRE(built.find(rootId)->findConnection(childId) != nullptr);
     CHECK(built.find(rootId)->findConnection(childId)->duration == 500);
 
-    GraphState::setNodePosition(graph.getNode(childId), NodePosition { 200, 0, 25 }, nullptr);
+    graph.setNodePosition(graph.getNode(childId), NodePosition { 200, 0, 25 }, nullptr);
     const std::vector<int> movedIds { childId };
     processor.rtGraphBuilder.updateDurationMaps(movedIds);
 
@@ -88,7 +88,7 @@ TEST_CASE("moving a node retimes the arrow from every one of its parents", "[gra
     CHECK(built.find(firstParentId) ->findConnection(sharedChildId)->duration == 500);
     CHECK(built.find(secondParentId)->findConnection(sharedChildId)->duration == 500);
 
-    GraphState::setNodePosition(graph.getNode(sharedChildId), NodePosition { 300, 0, 25 }, nullptr);
+    graph.setNodePosition(graph.getNode(sharedChildId), NodePosition { 300, 0, 25 }, nullptr);
     const std::vector<int> movedIds { sharedChildId };
     processor.rtGraphBuilder.updateDurationMaps(movedIds);
 
@@ -222,23 +222,19 @@ TEST_CASE("moving a pitch-bound node transposes around the pitch last typed", "[
     const int rootId  = createRoot(graph, 0, 0);
     const int childId = createChild(graph, rootId, 100, 0);
 
-    graph.arrows.syncPitchBindings(childId, nullptr);
-
     juce::ValueTree childNote = graph.getMidiNotes(childId).getChildWithName(ValueTreeIdentifiers::MidiNoteData);
 
     REQUIRE(childNote.isValid());
 
     const int startPitch = childNote.getProperty(ValueTreeIdentifiers::MidiPitch);
 
-    GraphState::setNodePosition(graph.getNode(childId), NodePosition { 100, -100, 25 }, nullptr);
-    graph.arrows.syncPitchBindings(childId, nullptr);
+    graph.setNodePosition(graph.getNode(childId), NodePosition { 100, -100, 25 }, nullptr);
 
     CHECK(static_cast<int>(childNote.getProperty(ValueTreeIdentifiers::MidiPitch)) == startPitch + 2);
 
     childNote.setProperty(ValueTreeIdentifiers::MidiPitch, 70, nullptr);
 
-    GraphState::setNodePosition(graph.getNode(childId), NodePosition { 100, 0, 25 }, nullptr);
-    graph.arrows.syncPitchBindings(childId, nullptr);
+    graph.setNodePosition(graph.getNode(childId), NodePosition { 100, 0, 25 }, nullptr);
 
     CHECK(static_cast<int>(childNote.getProperty(ValueTreeIdentifiers::MidiPitch)) == 68);
 
@@ -293,6 +289,42 @@ TEST_CASE("undo and redo keep the node index, parent links and published graph i
 
     CHECK_FALSE(graph.getNode(childId).isValid());
     CHECK(graph.parentIdsOf.count(childId) == 0);
+}
+
+TEST_CASE("undoing a move restores the arrow's duration and keeps the move redoable", "[graph][undo]")
+{
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+    juce::UndoManager& undoManager = processor.undoManager;
+
+    const int rootId  = createRoot(graph, 0, 0);
+    const int childId = createChild(graph, rootId, 100, 0);
+
+    juce::ValueTree connection = graph.getConnection(rootId, childId);
+
+    undoManager.beginNewTransaction();
+    connection.setProperty(ValueTreeIdentifiers::ArrowDuration, 700, &undoManager);
+
+    undoManager.beginNewTransaction();
+    graph.setNodePosition(graph.getNode(childId), NodePosition { 200, 0, 25 }, &undoManager);
+
+    CHECK(static_cast<int>(connection.getProperty(ValueTreeIdentifiers::ArrowDuration)) == ArrowInfo::noDurationOverride);
+
+    processor.rtGraphBuilder.handleUpdateNowIfNeeded();
+    undoManager.undo();
+    processor.rtGraphBuilder.handleUpdateNowIfNeeded();
+
+    CHECK(graph.getNodePosition(childId).xPosition == 100);
+    CHECK(static_cast<int>(connection.getProperty(ValueTreeIdentifiers::ArrowDuration)) == 700);
+    CHECK(processor.snapshots.getPublished()->globalNodes->find(rootId)->findConnection(childId)->duration == 700);
+    REQUIRE(undoManager.canRedo());
+
+    undoManager.redo();
+    processor.rtGraphBuilder.handleUpdateNowIfNeeded();
+
+    CHECK(graph.getNodePosition(childId).xPosition == 200);
+    CHECK(static_cast<int>(connection.getProperty(ValueTreeIdentifiers::ArrowDuration)) == ArrowInfo::noDurationOverride);
+    CHECK(processor.snapshots.getPublished()->globalNodes->find(rootId)->findConnection(childId)->duration == 1000);
 }
 
 TEST_CASE("removing an encapsulator removes its members and every link to them", "[graph][encapsulation]")

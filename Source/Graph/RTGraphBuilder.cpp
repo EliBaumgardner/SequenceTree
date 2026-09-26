@@ -646,7 +646,6 @@ void RTGraphBuilder::valueTreePropertyChanged(juce::ValueTree& tree, const juce:
         || propertyIdentifier == ValueTreeIdentifiers::YPosition
         || propertyIdentifier == ValueTreeIdentifiers::Radius) {
         reshapedNode = tree;
-        pending.movedNodeIds.insert(static_cast<int>(tree.getProperty(ValueTreeIdentifiers::Id)));
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::MidiDuration) {
         graphOwner = tree.getParent().getParent();
@@ -700,8 +699,6 @@ void RTGraphBuilder::handleAsyncUpdate()
     PendingChanges changes;
     std::swap(changes, pending);
 
-    juce::UndoManager* const undoManager = &processor.undoManager;
-
     for (int nodeId : changes.addedNodeIds) {
         if (! graphState.getNode(nodeId).isValid()) {
             continue;
@@ -713,12 +710,6 @@ void RTGraphBuilder::handleAsyncUpdate()
 
         if (parentsIt != graphState.parentIdsOf.end()) {
             changes.rebuildNodeIds.insert(parentsIt->second.begin(), parentsIt->second.end());
-        }
-    }
-
-    for (int nodeId : changes.reshapedNodeIds) {
-        for (int repitchedNodeId : graphState.arrows.syncPitchBindings(nodeId, undoManager)) {
-            changes.rebuildNodeIds.insert(repitchedNodeId);
         }
     }
 
@@ -743,10 +734,6 @@ void RTGraphBuilder::handleAsyncUpdate()
 
     for (int traversalId : changes.traversalIds) {
         makeRTGraph(graphState.traversals.map.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId));
-    }
-
-    for (int nodeId : changes.movedNodeIds) {
-        graphState.arrows.clearArrowDurations(nodeId, undoManager);
     }
 
     updateDurationMaps(changes.durationRefreshNodeIds);
@@ -785,10 +772,7 @@ void RTGraphBuilder::rememberOwners(juce::ValueTree graphOwner, const juce::Valu
     }
 
     if (reshapedNode.isValid()) {
-        const int reshapedNodeId = reshapedNode.getProperty(ValueTreeIdentifiers::Id);
-
-        pending.reshapedNodeIds.insert(reshapedNodeId);
-        pending.durationRefreshNodeIds.push_back(reshapedNodeId);
+        pending.durationRefreshNodeIds.push_back(reshapedNode.getProperty(ValueTreeIdentifiers::Id));
     }
 
     triggerAsyncUpdate();
