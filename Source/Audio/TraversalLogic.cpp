@@ -289,8 +289,9 @@ void TraversalLogic::advanceAlternative(const NodeMap& nodes,int parentId) {
 
     const int chosen = selectNextChild(nodes,currentAltId, count, isAlternative);
 
-    nodeState.set(NodeStateSlot::SwitchCandidate, currentAltId, chosen);
-    nodeState.set(NodeStateSlot::LastNode, currentAltId, chosen);
+    if (currentAltId != parentId) {
+        nodeState.set(NodeStateSlot::LastNode, currentAltId, chosen);
+    }
 
     if (chosen == -1) {
         nodeState.set(NodeStateSlot::ActiveAlternative, parentId, parentId);
@@ -417,6 +418,17 @@ const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes) const
             if (jumpTargetNode != nullptr) {
                 return jumpTargetNode;
             }
+        }
+    }
+
+    const RTNode* const switchCandidate = nodes.find(nodeState.get(NodeStateSlot::SwitchCandidate, primary.target));
+
+    if (switchCandidate != nullptr && switchCandidate->nodeID != primary.target) {
+        const int switchCountLimit = switchCandidate->switchCountLimit;
+        const int switchCount      = nodeState.get(NodeStateSlot::SwitchCount, primary.target) + 1;
+
+        if (switchCount < switchCountLimit && switchCountLimit > 1) {
+            return switchCandidate;
         }
     }
 

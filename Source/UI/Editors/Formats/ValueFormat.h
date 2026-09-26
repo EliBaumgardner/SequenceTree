@@ -37,6 +37,8 @@ public:
     virtual juce::String      text (const ValueBinding& binding, TextPurpose purpose) const = 0;
     virtual ParsedValue       parse(const juce::String& enteredText) const = 0;
 
+    static constexpr int editableDecimalPlaces = 2;
+
     std::vector<juce::Identifier> extraProperties;
 
     double minimum       = 0.0;

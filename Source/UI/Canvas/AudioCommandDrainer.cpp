@@ -15,6 +15,13 @@
 AudioCommandDrainer::AudioCommandDrainer(NodeCanvas& canvasRef, const ApplicationContext& context)
     : canvas(canvasRef), applicationContext(context)
 {
+    AudioUIBridge& bridge = applicationContext.processor->eventManager.bridge;
+
+    bridge.highlights.drain([](const AudioUIBridge::HighlightCommand&) {});
+    bridge.arrows    .drain([](const AudioUIBridge::ArrowCommand&)     {});
+
+    bridge.highlights.overflowed.store(false);
+    bridge.arrows    .overflowed.store(false);
 }
 
 void AudioCommandDrainer::drainAll()
@@ -25,7 +32,7 @@ void AudioCommandDrainer::drainAll()
     const bool droppedArrows     = bridge.arrows.overflowed.exchange(false);
     const bool droppedCounts     = bridge.counts.overflowed.exchange(false);
 
-    const bool streamBroken = awaitingFirstDrain || droppedHighlights || droppedArrows;
+    const bool streamBroken = droppedHighlights || droppedArrows;
 
     if (streamBroken) {
         bridge.highlights.drain([](const AudioUIBridge::HighlightCommand&) {});
@@ -34,8 +41,6 @@ void AudioCommandDrainer::drainAll()
         canvas.nodeManager.clearHighlights();
         canvas.arrowManager.resetAllProgress();
         canvas.encapsulationView.syncHighlights();
-
-        awaitingFirstDrain = false;
     }
     else {
         drainHighlights();

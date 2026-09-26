@@ -37,8 +37,6 @@ void ArrowBindBar::configureField(BindField& field, BindField& otherField)
     configureAxis(field.y, otherField.y, "Y:");
 }
 
-static constexpr int multiplierDecimalPlaces = 3;
-
 void ArrowBindBar::configureAxis(AxisControl& axis, AxisControl& otherAxis, const juce::String& text)
 {
     axis.label.setText(text, juce::dontSendNotification);
@@ -48,7 +46,7 @@ void ArrowBindBar::configureAxis(AxisControl& axis, AxisControl& otherAxis, cons
 
     axis.editor = std::make_unique<ValueEditor>(applicationContext);
     auto multiplierFormat = std::make_unique<NumberFormat>(deactivatedMultiplier, maximumMultiplier,
-                                                           multiplierDecimalPlaces);
+                                                           ValueFormat::editableDecimalPlaces);
     multiplierFormat->suffix = "x";
 
     axis.editor->setFormat(std::move(multiplierFormat));

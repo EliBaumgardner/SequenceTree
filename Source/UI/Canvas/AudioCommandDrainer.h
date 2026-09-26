@@ -28,6 +28,4 @@ private:
 
     NodeCanvas&         canvas;
     const ApplicationContext& applicationContext;
-
-    bool awaitingFirstDrain = true;
 };

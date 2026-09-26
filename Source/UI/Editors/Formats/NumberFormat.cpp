@@ -4,6 +4,8 @@
 
 #include "ValueFormat.h"
 
+#include <cmath>
+
 NumberFormat::NumberFormat(double lowest, double highest, int places)
 {
     minimum       = lowest;
@@ -63,7 +65,9 @@ ParsedValue NumberFormat::parse(const juce::String& enteredText) const
     const double clamped = juce::jlimit(minimum, maximum, entered);
 
     if (decimalPlaces > 0) {
-        return { clamped, {} };
+        const double placeScale = std::pow(10.0, decimalPlaces);
+        const double rounded    = std::round(entered * placeScale) / placeScale;
+        return { juce::jlimit(minimum, maximum, rounded), {} };
     }
 
     return { static_cast<int>(clamped), {} };

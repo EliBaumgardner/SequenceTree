@@ -31,7 +31,7 @@ TraversalMenu::TraversalMenu(const ApplicationContext& context)
     setUpLabel(multiplierLabel, "Multiplier");
     multiplierEditor.setFormat(std::make_unique<NumberFormat>(minimumTraversalMultiplier,
                                                               RTtraversal::maximumTempoMultiplier,
-                                                              traversalMultiplierDecimals));
+                                                              ValueFormat::editableDecimalPlaces));
     addAndMakeVisible(multiplierEditor);
 
     setUpLabel(channelLabel, "Channel");
@@ -46,7 +46,7 @@ TraversalMenu::TraversalMenu(const ApplicationContext& context)
     addAndMakeVisible(transposeEditor);
 
     setUpLabel(velocityLabel, "Velocity");
-    velocityEditor.setFormat(std::make_unique<NumberFormat>(0.0, 1.0, traversalMultiplierDecimals));
+    velocityEditor.setFormat(std::make_unique<NumberFormat>(0.0, 1.0, ValueFormat::editableDecimalPlaces));
     addAndMakeVisible(velocityEditor);
 
     setUpLabel(colourLabel, "Colour");

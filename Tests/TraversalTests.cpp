@@ -181,13 +181,14 @@ static NodeMap triggerLimitShape()
     });
 }
 
-static NodeMap alternativeShape()
+static NodeMap alternativeShape(int firstAlternativeSwitchLimit)
 {
     RTNode host = makeNode(2, 1, RTNode::NodeType::Node, 1, { 10 });
     host.alternativeRootId = 10;
 
     RTNode firstAlternative = makeNode(10, 2, RTNode::NodeType::Alternative, 1, { 11 });
     firstAlternative.alternativeRootId = 10;
+    firstAlternative.switchCountLimit  = firstAlternativeSwitchLimit;
 
     RTNode secondAlternative = makeNode(11, 10, RTNode::NodeType::Alternative, 1, {});
     secondAlternative.alternativeRootId = 10;
@@ -197,6 +198,26 @@ static NodeMap alternativeShape()
         host,
         firstAlternative,
         secondAlternative
+    });
+}
+
+static NodeMap hostHoldWithAlternativeShape()
+{
+    RTNode host = makeNode(2, 1, RTNode::NodeType::Node, 1, { 3, 4, 10 });
+    host.alternativeRootId = 10;
+
+    RTNode held = makeNode(3, 2, RTNode::NodeType::Node, 2, {});
+    held.switchCountLimit = 3;
+
+    RTNode alternative = makeNode(10, 2, RTNode::NodeType::Alternative, 1, {});
+    alternative.alternativeRootId = 10;
+
+    return makeMap({
+        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        host,
+        held,
+        makeNode(4, 2, RTNode::NodeType::Node,     1, {}),
+        alternative
     });
 }
 
@@ -263,6 +284,52 @@ TEST_CASE("a spent trigger limit makes the child ineligible", "[traversal]")
     const std::vector<int> expected { 1, 2, 1, 2, 1, 1, 1 };
 
     CHECK(walkPrimary(triggerLimitShape(), 1, 6, NativeTraversalRule::instance()) == expected);
+}
+
+TEST_CASE("the peeked target is the node the walk enters next", "[traversal]")
+{
+    RTNode heldOnSecondCount = makeNode(2, 1, RTNode::NodeType::Node, 2, {});
+    heldOnSecondCount.switchCountLimit = 3;
+
+    const NodeMap countGap = makeMap({
+        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2, 3 }),
+        heldOnSecondCount,
+        makeNode(3, 1, RTNode::NodeType::Node,     3, {})
+    });
+
+    const int steps = 64;
+
+    for (const NodeMap& nodes : { countGap, switchCountShape(), hostHoldWithAlternativeShape(), alternativeShape(3) }) {
+        TraversalLogic logic;
+
+        logic.nodeState.prepare();
+        logic.reset(1, RTtraversal {});
+        logic.begin(nodes, 1, 0);
+
+        std::vector<int> peekedTargets;
+        std::vector<int> enteredTargets;
+
+        for (int step = 0; step < steps; ++step) {
+            const RTNode* const peeked = logic.peekNextTarget(nodes);
+
+            const TraversalLogic::StepResult result = logic.handleNodeEvent(nodes);
+
+            if (result.kind != TraversalLogic::StepResult::Kind::Advanced) {
+                continue;
+            }
+
+            int peekedId = -1;
+
+            if (peeked != nullptr) {
+                peekedId = peeked->nodeID;
+            }
+
+            peekedTargets.push_back(peekedId);
+            enteredTargets.push_back(result.enteredId);
+        }
+
+        CHECK(peekedTargets == enteredTargets);
+    }
 }
 
 TEST_CASE("peeking at the next target leaves the walk unchanged", "[traversal]")
@@ -364,7 +431,21 @@ TEST_CASE("alternatives rotate from the host through each alternative and back",
 {
     const std::vector<int> expected { 1, 2, 1, 2, 10, 1, 2, 11, 1, 2, 1, 2, 10, 1, 2, 11, 1 };
 
-    CHECK(walkPrimary(alternativeShape(), 1, 12, NativeTraversalRule::instance()) == expected);
+    CHECK(walkPrimary(alternativeShape(1), 1, 12, NativeTraversalRule::instance()) == expected);
+}
+
+TEST_CASE("an alternative's switch count holds only that alternative", "[traversal]")
+{
+    const std::vector<int> expected { 1, 2, 1, 2, 10, 1, 2, 10, 1, 2, 10, 1, 2, 11, 1, 2, 1, 2, 10, 1 };
+
+    CHECK(walkPrimary(alternativeShape(3), 1, 14, NativeTraversalRule::instance()) == expected);
+}
+
+TEST_CASE("an alternative leaves its host's switch hold on its children intact", "[traversal]")
+{
+    const std::vector<int> expected { 1, 2, 4, 1, 2, 10, 3, 1, 2, 3, 1, 2, 10, 3, 1, 2, 4 };
+
+    CHECK(walkPrimary(hostHoldWithAlternativeShape(), 1, 14, NativeTraversalRule::instance()) == expected);
 }
 
 TEST_CASE("an encapsulated group replays from its entry before leaving through its exit", "[traversal]")
@@ -562,8 +643,18 @@ TEST_CASE("a modulator walk unfolds the same sequence as a node traversal", "[tr
     }
 
     SECTION("alternatives") {
-        CHECK(walkModulator(mirrorAsModulators(alternativeShape()), 1, steps)
-              == walkPrimary(alternativeShape(), 1, steps, NativeTraversalRule::instance()));
+        CHECK(walkModulator(mirrorAsModulators(alternativeShape(1)), 1, steps)
+              == walkPrimary(alternativeShape(1), 1, steps, NativeTraversalRule::instance()));
+    }
+
+    SECTION("held alternatives") {
+        CHECK(walkModulator(mirrorAsModulators(alternativeShape(3)), 1, steps)
+              == walkPrimary(alternativeShape(3), 1, steps, NativeTraversalRule::instance()));
+    }
+
+    SECTION("host hold beside an alternative") {
+        CHECK(walkModulator(mirrorAsModulators(hostHoldWithAlternativeShape()), 1, steps)
+              == walkPrimary(hostHoldWithAlternativeShape(), 1, steps, NativeTraversalRule::instance()));
     }
 
     SECTION("encapsulation") {
@@ -615,7 +706,8 @@ TEST_CASE("the default script picks the same children as the native rule", "[tra
     const int steps = 64;
 
     for (const NodeMap& nodes : { chainShape(), countLimitShape(), switchCountShape(), subLoopShape(),
-                                  triggerLimitShape(), weighted, alternativeShape(), encapsulationShape(),
+                                  triggerLimitShape(), weighted, alternativeShape(1), alternativeShape(3),
+                                  hostHoldWithAlternativeShape(), encapsulationShape(),
                                   stepIntoTreeShape(0), stepIntoTreeShape(2) }) {
         CHECK(walkPrimary(nodes, 1, steps, scriptRule) == walkPrimary(nodes, 1, steps, NativeTraversalRule::instance()));
     }
@@ -732,4 +824,39 @@ TEST_CASE("a script that declines every child sends the walker back to its root"
     const std::vector<int> expected { 1, 1, 1, 1 };
 
     CHECK(walkPrimary(chainShape(), 1, 3, scriptRule) == expected);
+}
+
+TEST_CASE("a host's last child is never one of its alternatives", "[traversal][script]")
+{
+    const ScriptCompileResult compiled = compileTraversalScript(
+        "for child in children {\n"
+        "    if child.eligible and child.id != parent.lastChild { return child.id; }\n"
+        "}\n"
+        "for child in children {\n"
+        "    if child.eligible { return child.id; }\n"
+        "}\n"
+        "return -1;\n");
+
+    REQUIRE(compiled.succeeded());
+
+    ScriptTraversalRule scriptRule;
+    scriptRule.script = &compiled.script;
+
+    RTNode host = makeNode(2, 1, RTNode::NodeType::Node, 1, { 3, 4, 10 });
+    host.alternativeRootId = 10;
+
+    RTNode alternative = makeNode(10, 2, RTNode::NodeType::Alternative, 1, {});
+    alternative.alternativeRootId = 10;
+
+    const NodeMap nodes = makeMap({
+        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        host,
+        makeNode(3, 2, RTNode::NodeType::Node,     1, {}),
+        makeNode(4, 2, RTNode::NodeType::Node,     1, {}),
+        alternative
+    });
+
+    const std::vector<int> expected { 1, 2, 3, 1, 2, 10, 4, 1, 2, 3, 1, 2, 10, 4, 1, 2, 3, 1, 2, 10 };
+
+    CHECK(walkPrimary(nodes, 1, 16, scriptRule) == expected);
 }
