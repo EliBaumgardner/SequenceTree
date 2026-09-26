@@ -15,11 +15,10 @@ Builds/
 # macOS system files
 .DS_Store
 # Agent tooling and local scripts
-.claude/
+
 scripts/
 .opencode/
 gemini complaints.md
-CLAUDE.md
 GEMINI.md
 docs
 .gemini/

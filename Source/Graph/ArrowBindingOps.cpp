@@ -110,33 +110,33 @@ void ArrowBindingOps::applyNodeBinding(ArrowInfo& arrowInfo, int nodeId,
     }
 }
 
-bool ArrowBindingOps::applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId,
+void ArrowBindingOps::applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId,
                                             int deltaX, int deltaY, juce::UndoManager* undoManager)
 {
     const ArrowInfo arrowInfo = getArrowInfo(arrowTree);
 
     if (! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind)) {
-        return false;
+        return;
     }
 
     const int offset = ArrowInfo::pitchOffsetFromDelta(arrowInfo, deltaX, deltaY);
 
     if (! arrowTree.hasProperty(ValueTreeIdentifiers::ArrowPitchOffset)) {
         arrowTree.setProperty(ValueTreeIdentifiers::ArrowPitchOffset, offset, undoManager);
-        return false;
+        return;
     }
 
     const int appliedPitchOffset = arrowTree.getProperty(ValueTreeIdentifiers::ArrowPitchOffset, 0);
 
     if (offset == appliedPitchOffset) {
-        return false;
+        return;
     }
 
     juce::ValueTree note = graphState.getMidiNotes(targetNodeId)
                                      .getChildWithName(ValueTreeIdentifiers::MidiNoteData);
 
     if (! note.isValid()) {
-        return false;
+        return;
     }
 
     const int currentPitch = note.getProperty(ValueTreeIdentifiers::MidiPitch, defaultMidiPitch);
@@ -145,13 +145,7 @@ bool ArrowBindingOps::applyArrowPitchOffset(juce::ValueTree arrowTree, int targe
 
     arrowTree.setProperty(ValueTreeIdentifiers::ArrowPitchOffset, offset - (wantedPitch - newPitch), undoManager);
 
-    if (newPitch == currentPitch) {
-        return false;
-    }
-
     note.setProperty(ValueTreeIdentifiers::MidiPitch, newPitch, undoManager);
-
-    return true;
 }
 
 void ArrowBindingOps::clearArrowDurations(int nodeId, juce::UndoManager* undoManager)
@@ -191,21 +185,13 @@ void ArrowBindingOps::clearArrowDurations(int nodeId, juce::UndoManager* undoMan
     }
 }
 
-std::vector<int> ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManager* undoManager)
+void ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManager* undoManager)
 {
-    std::vector<int> repitchedNodeIds;
-
     juce::ValueTree node = graphState.getNode(nodeId);
 
     if (! node.isValid()) {
-        return repitchedNodeIds;
+        return;
     }
-
-    auto rememberRepitched = [&repitchedNodeIds](int repitchedId) {
-        if (std::ranges::find(repitchedNodeIds, repitchedId) == repitchedNodeIds.end()) {
-            repitchedNodeIds.push_back(repitchedId);
-        }
-    };
 
     const int centreX = node.getProperty(ValueTreeIdentifiers::XPosition);
     const int centreY = node.getProperty(ValueTreeIdentifiers::YPosition);
@@ -223,10 +209,8 @@ std::vector<int> ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManage
             const int parentX = parent.getProperty(ValueTreeIdentifiers::XPosition);
             const int parentY = parent.getProperty(ValueTreeIdentifiers::YPosition);
 
-            if (applyArrowPitchOffset(graphState.getConnection(parentId, nodeId), nodeId,
-                                      centreX - parentX, centreY - parentY, undoManager)) {
-                rememberRepitched(nodeId);
-            }
+            applyArrowPitchOffset(graphState.getConnection(parentId, nodeId), nodeId,
+                                  centreX - parentX, centreY - parentY, undoManager);
         }
     }
 
@@ -246,10 +230,7 @@ std::vector<int> ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManage
         const int childX = child.getProperty(ValueTreeIdentifiers::XPosition);
         const int childY = child.getProperty(ValueTreeIdentifiers::YPosition);
 
-        if (applyArrowPitchOffset(arrowTree, childId,
-                                  childX - centreX, childY - centreY, undoManager)) {
-            rememberRepitched(childId);
-        }
+        applyArrowPitchOffset(arrowTree, childId, childX - centreX, childY - centreY, undoManager);
     }
 
     const juce::ValueTree danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
@@ -257,13 +238,9 @@ std::vector<int> ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManage
     for (int i = 0; i < danglingArrows.getNumChildren(); ++i) {
         juce::ValueTree arrowTree = danglingArrows.getChild(i);
 
-        if (applyArrowPitchOffset(arrowTree, nodeId,
-                                  static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
-                                  static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)),
-                                  undoManager)) {
-            rememberRepitched(nodeId);
-        }
+        applyArrowPitchOffset(arrowTree, nodeId,
+                              static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
+                              static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)),
+                              undoManager);
     }
-
-    return repitchedNodeIds;
 }

@@ -367,6 +367,11 @@ void GraphState::setNodePosition(juce::ValueTree node, NodePosition nodePosition
     node.setProperty(ValueTreeIdentifiers::XPosition, nodePosition.xPosition, undoManager);
     node.setProperty(ValueTreeIdentifiers::YPosition, nodePosition.yPosition, undoManager);
     node.setProperty(ValueTreeIdentifiers::Radius,    nodePosition.radius,    undoManager);
+
+    const int nodeId = node.getProperty(ValueTreeIdentifiers::Id);
+
+    arrows.clearArrowDurations(nodeId, undoManager);
+    arrows.syncPitchBindings(nodeId, undoManager);
 }
 
 void GraphState::addMidiNote(int nodeId, NodeNote note, juce::UndoManager* undoManager)

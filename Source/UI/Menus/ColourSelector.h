@@ -74,7 +74,7 @@ class ColourSelector : public juce::Component, public juce::SettableTooltipClien
 
 
     juce::Colour colour = juce::Colours::white;
-    Node* node = nullptr;
+    juce::Component::SafePointer<Node> node;
 
     static constexpr int pickerWidth  = 160;
     static constexpr int pickerHeight = 145;
