@@ -1,7 +1,9 @@
 # UI Accessors and `ItemSelector::addItem`
 
-> Status: Draft
+> Status: Implemented
+> Implemented 2026-09-27 at uncommitted.
 > Written 2026-09-25 at 7f59922. Sources: Reviewed/ProgramAudits/software_architecture.md (What Survives: "P3: 8 accessors and the `ItemSelector::addItem` wrapper"; ledger rows 16–18)
+> Built from 3b80404; drift: only `CustomLookAndFeel_Buttons.cpp` touched (FileLabel reads now at :483, :487, :494); `core_purpose_api` now lives under `[gates]` in `.claude/refactor.toml`, not `.claude/gates/design-rules.sh`.
 
 ## Summary
 `refactor.smell Source/UI` finds 8 accessors that hand out a non-public field. Under the Key Design Rules, each field should be public and its accessor deleted. Two of the accessors have no callers, so those are deleted and their fields stay private. The other six fields move to public scope, and their 27 call sites are rewritten mechanically. `ItemSelector::addItem` is a one-line `push_back` wrapper. Whether it is dissolved or declared core-purpose API is for you to decide. The whole change is structural, is 3 steps, and changes no behaviour. Priority P3.
@@ -88,3 +90,30 @@ Message thread only. No audio-thread code reads any of these members.
    
    Recommendation: **declare it core purpose**. A selector exists to hold and choose among items, and its add/remove pair is the thing it is for. If you prefer to dissolve it, Step 3's first branch applies.
 2. **Keep the `const` read-only view on `NodeManager::nodes` / `ArrowManager::arrows`?** The rule says no. Confirm you accept losing `const` on those two containers.
+
+### Answers (2026-09-27)
+1. **Core purpose.** `ItemSelector::addItem` is declared in `core_purpose_api` (`.claude/refactor.toml`). Step 3's second branch applies.
+2. **Keep the `const` views.** `NodeManager::all()` and `ArrowManager::all()` stay, and Step 2(a)/(b) are skipped. The owner chose to declare both in `core_purpose_api` so the gate exempts them.
+
+## Implementation Notes
+
+### Step 1 — done
+`refactor.decap` removed `ButtonPane::getSelectedButton` and `ItemSelector::getSelectedItemId`, neither of which had callers. No manual check is owed.
+
+### Step 2 — done, with (a)/(b) replaced per Decision 2
+- **(a)/(b) skipped.** `NodeManager::all()` and `ArrowManager::all()` keep their `const` views over `nodes` and `arrows`. `Source/UI/Canvas/NodeManager.h:all` and `Source/UI/Canvas/ArrowManager.h:all` are added to `core_purpose_api` in `.claude/refactor.toml`, so the design gate exempts them. `refactor.smell` does not read that list, so it still reports these two as accessors [58] and [59].
+- **(c)** `NodeCanvas::applicationContext` moved to the head of the public variable group, above `nodeManager` and the other parts, so they are still initialised after it. The leading `private:` is gone. `refactor.decap NodeCanvas::getApplicationContext` refused with "the address of getApplicationContext is taken", which is a false positive. The plan's fallback then ran: `refactor.rewrite '$M.getApplicationContext()' '$M.applicationContext' all` rewrote `ValueField.cpp:21`. `decap` still refused to delete the accessor, which now had no callers, so its one-line declaration was deleted by hand.
+- **(d)** `FileLabel::grabbed` and `selected` moved public, below `fileId`. `refactor.decap` inlined `isGrabbed` and `isSelected` into `CustomLookAndFeel_Buttons.cpp:483, 487, 494`.
+- **(e)** `ItemSelector::selectedLabel` moved public. `decap` gave the same false refusal, so `refactor.rewrite` rewrote `TraversalMenuListener.h:25` and the declaration was deleted by hand. Both refusals were on accessors returning `const&`, which suggests the `refactor-tools` address-taken check misreads a reference return type. That should be fixed in the `refactor-tools` repository.
+- **Beyond the plan.** In `ItemSelector.h`, `paint`/`resized` moved above the public variables. `readability.sh` had already flagged the interleaving at HEAD, and this step put `selectedLabel` into that block. Function declaration order is unchanged.
+
+### Step 3 — done (declared core purpose)
+`Source/UI/Menus/ItemSelector.h:addItem` is added to `core_purpose_api` in `.claude/refactor.toml`. No source changed.
+
+### Verification
+`SequenceTree_Standalone`, `SequenceTree_Tests` and `SequenceTree_GraphTests` build, and `ctest` passes 55/55. `design-rules.sh` reports no violations tree-wide, and `readability.sh` is clean on every touched header. The two `ValueField.cpp` readability findings (`render` at 104 lines, and definition order) were already present and are untouched.
+
+### Manual checks owed
+- The rules window: file-label selected and grabbed highlights and the selected marker bar.
+- The traversal menu: an empty display label still triggers the listener's refresh (`TraversalMenuListener.h:25`).
+- Paint mode on the canvas: `ValueField` reads MIDI notes through `owner.applicationContext`.

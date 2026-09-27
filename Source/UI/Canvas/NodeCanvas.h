@@ -31,9 +31,6 @@ class Arrow;
 
 class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
-    private:
-        const ApplicationContext& applicationContext;
-
     public:
 
         enum class AsyncUpdateType {None,NodeAdded,NodeRemoved,NodeMoved,ValueChanged,DanglingArrowsChanged,ArrowAdded,ArrowRemoved,ArrowInfoChanged,ArrowDurationChanged};
@@ -62,6 +59,8 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         juce::Point<int> snapPointToGrid(juce::Point<int> point) const;
 
         void cancelPendingUpdatesFor(int nodeId);
+
+        const ApplicationContext& applicationContext;
 
         juce::Colour canvasColour = juce::Colours::white;
         juce::String infoText;
@@ -94,6 +93,4 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         AudioCommandDrainer drainer            { *this, applicationContext };
         CanvasHitTester     hitTester          { *this };
         EncapsulationView   encapsulationView  { *this, applicationContext };
-
-        const ApplicationContext& getApplicationContext() { return applicationContext; }
 };

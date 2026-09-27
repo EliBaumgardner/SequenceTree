@@ -1,7 +1,9 @@
 # `getTargetNode` / `getRootNode`: Unchecked Lookups on the Audio Thread
 
-> Status: Draft
+> Status: Implemented
+> Implemented 2026-09-27 at uncommitted.
 > Written 2026-09-25 at 7f59922. Sources: Reviewed/ProgramAudits/software_architecture.md (What Survives: "P3: `getTargetNode` is a latent null dereference, and `getRootNode` is dead"; ledger rows 1–6), `.claude/notes/ongoing-issues.md` #7, #8
+> Built from 3b80404; drift: line moves only — the definitions are now at `TraversalLogic.cpp:542-543`. The `TraversalDispatcher.cpp` sites are still at `:699`, `:720-721` and `:746-747`.
 
 ## Summary
 `TraversalLogic::getTargetNode` and `getRootNode` both run `return *nodes.find(...)` (`Source/Audio/TraversalLogic.cpp:530-531`). `NodeMap::find` returns `nullptr` for a missing ID (`Source/Graph/RTData.h:125-134`). No path dereferences null today, but one of the two `getTargetNode` sites is safe only because of how a local is initialised. `getRootNode` has no callers. The plan deletes `getRootNode`, dissolves `getTargetNode` into its two call sites with an explicit null check at each, and brings `ongoing-issues.md` #7/#8 up to date. Their mechanism (`.at()`) and line numbers are stale. The change is 2 steps and about 10 lines. Priority P3.
@@ -88,3 +90,25 @@ Audio thread: `EventManager` → `NoteScheduler` note expiry → `TraversalDispa
 
 ## Decisions for the Owner
 None. The plan follows the review's recommendation and the resolutions already recorded for #7/#8.
+
+## Implementation Notes
+
+### Step 1 — done
+`getRootNode` was deleted from `TraversalLogic.h:152` and `TraversalLogic.cpp:543`. `refactor.decap TraversalLogic::getRootNode` refused with "the address of getRootNode is taken". That is a false positive, and it fires on functions that return `const&`. The function had no callers, so it was deleted by hand. No inlining was involved.
+
+### Step 2 — done
+`refactor.decap TraversalLogic::getTargetNode` gave the same false refusal. The plan's fallback applied, and every edit was made by hand exactly as specified:
+- `TraversalDispatcher.cpp:720-721` now reads `if (currentEntry != nullptr && runtime.repeatCount < repeatValue)` and calls `pushNote(*currentEntry, …, true)`.
+- `TraversalDispatcher.cpp:746-752` is now an `else` that looks up `nextEntry` once and calls `pushNote` only when it is non-null.
+- `getTargetNode` was removed from `TraversalLogic.h:151` and `.cpp:542`.
+
+The `decap` false positive on `const&`-returning functions should be fixed in the `refactor-tools` repository.
+
+### Step 3 — done
+`ongoing-issues.md` #7 and #8 are marked resolved on 2026-09-27. Their "Where" and mechanism now say `*find` (undefined behaviour) rather than `.at()`. The #7 "Related" item (`removeDeletedTraversals`) stays open.
+
+### Verification
+`SequenceTree_Standalone`, `SequenceTree_Tests` and `SequenceTree_GraphTests` build, and `ctest` passes 55/55. `design-rules.sh` reports no violations in the three touched files. Two `readability.sh` findings were already present at HEAD and are unchanged: `TraversalDispatcher::pushNote` at 165 lines, and the member interleaving at `TraversalLogic.h:146`.
+
+### Manual checks owed
+In the standalone, during playback, delete the sounding node with Shift+Right-Click. Do this once on a node with a repeat value above 1 and once on a node without. The traversal should continue or end without a crash, and the canvas highlight should clear.

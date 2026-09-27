@@ -1,6 +1,8 @@
 # Root Arrows Owned by Alternatives and Modulators
 
-> Status: Draft
+> Status: Implemented
+> Implemented 2026-09-27 at uncommitted.
+> Built from 3b80404; drift: 54446b7 and uncommitted getTargetNode removal shift the planned sites by ~1 line (advance :354-364, peekNextTarget :406-422, pushNote :313); no change of shape.
 > Written 2026-09-25 at 7f59922. Sources: Reviewed/ProgramAudits/software_architecture.md (What Survives: P1 "A Traversal arrow on the active alternative never fires…", P2 "Modulators can own cross-root and Traversal arrows, but the modulator walk honours neither"; ledger rows 7–10)
 
 ## Summary
@@ -159,3 +161,25 @@ The count the alternative's arrow is chosen by is a real choice. See *Decisions*
    - The host's `Count`: fires on the host's Nth visit, whichever voicing is active.
    
    Recommendation: **the alternative's own**.
+
+### Owner's answers (2026-09-27)
+1. **(a) Forbid.** Traversal arrows on modulators are not implemented; the canvas stops offering root arrows from modulators. **(c):** existing inert arrows are left in place.
+2. **The voiced alternative's arrows replace the host's.** While an alternative is voiced, only its traversal arrows are considered; the host's are ignored even when none of the alternative's is due. With the host voicing itself (no alternative active) the host's arrows work as before. Step 1 and Step 2 check the alternative *instead of* the host, not after it.
+3. **The alternative's own `Count`.**
+
+## Implementation Notes
+- **Steps 1 + 2 — built as one change**, as the owner approved. The voiced-alternative choice moved into the existing private `TraversalLogic::selectTreeJumpChild`, whose signature became `(nodes, host)`. It reads the voiced alternative's connections with `Count[A] + 1` when `primary.alternativeTarget` resolves, and otherwise the host's with `Count[H] + 1`. `advance` and `peekNextTarget` each call it in one line. This differs from the plan's inline sketch for two reasons: the inline version took `advance` to 88 lines, and it puts Decision 2 (as answered, the alternative replaces the host) in one place.
+  - Tests: shape `alternativeShapeWithTreeJump(ownerId, foreignRootLimit)`, with "a traversal arrow on the voiced alternative relocates the walker" and "a host's traversal arrow waits while one of its alternatives is voiced". Both shapes were added to the peek-leaves-walk-unchanged list.
+  - Both tests fail when the jump source is forced back to the host (the old behaviour), giving the sequences derived by hand.
+- **Step 3 — built in `dispatchPrimaryArrow`, not inline in `pushNote`**, as the owner approved, because `pushNote` was already 165 lines. `dispatchPrimaryArrow` takes one more parameter, `voicedAlternative`, and sends the progress command from the alternative when its connection to `nextTarget` is a tree jump. The alternative→parent call passes `nullptr`. The plan's host-first ordering was dropped: under Decision 2 only the voiced alternative's jump can be due while it is voiced.
+- **Step 4 — branch 1a**, with existing arrows left in place (1c).
+  - `ConnectionOps::connectsToOtherTreeRoot` returns false for `ModulatorData`, `ModulatorRootData` and `AlternativeModulatorData` parents. That disables the "traversal arrow" menu item and stops `applySelectedArrowInfo` assigning a root arrow type.
+  - `NodeController::findDanglingSnapTarget` refuses a `RootNodeData` target from a modulator start node.
+  - `NodeController::checkRootNodeSnap` returns early for a modulator source. `rootNear` only returns `RootNodeData`, so nothing else is lost.
+  - The test differs from the plan: `canBeTraversalArrow` needs an `Arrow*` canvas component, which GraphTests cannot build. At the owner's direction, `connectsToOtherTreeRoot` became public, and "only a note node's arrow into another tree's root is a root connection" checks it for a note node, the node's own root, and all three modulator types. The three modulator assertions fail without the guard.
+- **Manual checks owed:**
+  - Standalone: a traversal arrow from an alternative moves the walker onto the second tree when that alternative is voiced, and its trail animates along the alternative's arrow.
+  - While an alternative is voiced, the host's traversal arrow does not fire.
+  - Dragging a new modulator near a root shows no snap ghost.
+  - A dangling arrow from a modulator does not snap onto a root.
+  - The arrow menu's "traversal arrow" item is greyed out on existing modulator→root arrows.

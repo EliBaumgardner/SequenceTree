@@ -14,6 +14,7 @@ Read-only. Run these for evidence rather than reading everything by hand.
 | Purpose | Command |
 |---|---|
 | Wrappers and accessors | `refactor.smell <path>` |
+| Raw pointers | `refactor.smell pointers <path> [owning \| fields \| every]` |
 | Long functions | `refactor.find function 'numlines > 80' <path>` |
 | Duplication | `refactor.find repeating 'numlines > 3' <path>` and `refactor.find repeating shape 'numlines > 3' <path>` |
 | Callers and references | clangd, or `refactor.callers` / `refactor.refs` |

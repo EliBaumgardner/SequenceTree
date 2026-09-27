@@ -148,9 +148,6 @@ public:
     void peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& traverserIds);
     const RTNode* decideNextModulator(const NodeMap& nodes);
 
-    const RTNode& getTargetNode(const NodeMap& nodes) const;
-    const RTNode& getRootNode  (const NodeMap& nodes) const;
-
     int findActiveModulatorRoot(const NodeMap& nodes, int regularNodeId) const;
 
     static bool isDescendantOf(const NodeMap& nodes, int nodeId, int ancestorId);
@@ -160,7 +157,7 @@ public:
 private:
 
     int  selectNextChild(const NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible) const;
-    int  selectTreeJumpChild(const NodeMap& nodes, const RTNode& parent, int parentCount) const;
+    int  selectTreeJumpChild(const NodeMap& nodes, const RTNode& host) const;
     void selectSwitchNode(const NodeMap& nodes, int targetId, int& chosenNodeId);
     void registerTrigger(const NodeMap& nodes, int nodeId);
 

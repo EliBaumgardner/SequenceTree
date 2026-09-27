@@ -8,6 +8,7 @@ build_target = "SequenceTree_Standalone"
 Tests = ["SequenceTree_Tests", "SequenceTree_GraphTests"]
 
 [gates]
+pointer_level = "owning"
 core_purpose_api = [
     "Source/Audio/AudioUIBridge.h:highlightNode",
     "Source/Audio/AudioUIBridge.h:clearAllHighlights",
@@ -22,6 +23,9 @@ core_purpose_api = [
     "Source/Audio/TraversalPool.h:entries",
     "Source/Plugin/AudioSnapshotPublisher.h:beginBlock",
     "Source/Plugin/AudioSnapshotPublisher.h:endBlock",
+    "Source/UI/Canvas/NodeManager.h:all",
+    "Source/UI/Canvas/ArrowManager.h:all",
+    "Source/UI/Menus/ItemSelector.h:addItem",
 ]
 kept_small_classes = ["Source/Graph/RTData.h:NodeMap"]
 unchecked = [

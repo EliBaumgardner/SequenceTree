@@ -305,12 +305,12 @@ void TraversalDispatcher::pushNote(const RTNode& node, int runId,
         const RTNode* alternativeNodeParent = nodes.find(alternativeNode->parentId);
 
         if (alternativeNodeParent != nullptr) {
-            dispatchPrimaryArrow(*alternativeNode, alternativeNodeParent, danglingArrowFor(*alternativeNode),
+            dispatchPrimaryArrow(*alternativeNode, nullptr, alternativeNodeParent, danglingArrowFor(*alternativeNode),
                                  runId, wallClockMs, activeTypeId);
         }
     }
 
-    dispatchPrimaryArrow(node, nextTarget, danglingIndex, runId, wallClockMs, activeTypeId);
+    dispatchPrimaryArrow(node, alternativeNode, nextTarget, danglingIndex, runId, wallClockMs, activeTypeId);
     dispatchModulatorArrow(modulatorNode, nextModulatorTarget, modulatorDanglingIndex, runId, wallClockMs, activeTypeId);
 
     if (alternativeModulatorNode != nullptr) {
@@ -329,17 +329,28 @@ void TraversalDispatcher::pushNote(const RTNode& node, int runId,
     --dispatchDepth;
 }
 
-void TraversalDispatcher::dispatchPrimaryArrow(const RTNode& node, const RTNode* nextTarget, int danglingIndex,
+void TraversalDispatcher::dispatchPrimaryArrow(const RTNode& node, const RTNode* voicedAlternative,
+                                                const RTNode* nextTarget, int danglingIndex,
                                                 int runId, int wallClockMs, int colourTypeId)
 {
     if (nextTarget == nullptr && danglingIndex < 0) {
         return;
     }
 
+    int sourceId = node.nodeID;
+
+    if (voicedAlternative != nullptr && nextTarget != nullptr) {
+        const RTConnection* const alternativeJump = voicedAlternative->findConnection(nextTarget->nodeID);
+
+        if (alternativeJump != nullptr && alternativeJump->isTreeJump) {
+            sourceId = voicedAlternative->nodeID;
+        }
+    }
+
     const int targetId = (nextTarget != nullptr) ? nextTarget->nodeID
                                                  : (-(danglingIndex + 1));
 
-    bridge.pushProgress(node.nodeID, targetId, wallClockMs, AudioUIBridge::primaryTrail(runId), colourTypeId);
+    bridge.pushProgress(sourceId, targetId, wallClockMs, AudioUIBridge::primaryTrail(runId), colourTypeId);
 }
 
 void TraversalDispatcher::dispatchModulatorArrow(const RTNode* modulatorNode,
@@ -717,8 +728,8 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
 
         runtime.repeatCount++;
 
-        if (runtime.repeatCount < repeatValue) {
-            pushNote(traversal.getTargetNode(nodes), runId, context, expiryTime, true);
+        if (currentEntry != nullptr && runtime.repeatCount < repeatValue) {
+            pushNote(*currentEntry, runId, context, expiryTime, true);
         } else {
             runtime.repeatCount = 0;
 
@@ -743,8 +754,12 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
                     bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
                 }
             }
-            else if (nodes.find(traversal.primary.target) != nullptr) {
-                pushNote(traversal.getTargetNode(nodes), runId, context, expiryTime);
+            else {
+                const RTNode* const nextEntry = nodes.find(traversal.primary.target);
+
+                if (nextEntry != nullptr) {
+                    pushNote(*nextEntry, runId, context, expiryTime);
+                }
             }
         }
     }

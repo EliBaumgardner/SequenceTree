@@ -43,19 +43,18 @@ Problems confirmed by reading the code on 2026-09-24, while reviewing an externa
 - **Not a problem:** reopening the editor doesn't replay stale commands. `AudioCommandDrainer`'s constructor discards whatever is queued when the canvas is built, and `drainAll` resyncs after an overflow. (Resolved 2026-09-25: it used to discard on the first drain instead, which in the standalone was the first play, so the root's highlight and arrow were dropped and playback looked like it started on the second node.)
 - **Status:** confirmed, low priority. A fix has to make the FIFOs empty. Only checking for an editor before triggering would stop the wakeups but leave the FIFOs full.
 
-## 7. `getTargetNode` uses a throwing lookup on the audio thread
+## 7. `getTargetNode` dereferenced an unchecked lookup on the audio thread
 
-- **Where:** `Source/Audio/TraversalLogic.cpp:502` (`nodes.at(primary.target)`), called at `TraversalDispatcher.cpp:738` and `:764`.
-- **Current state:** can't throw today. `:764` is guarded by a `find`. `:738` is reached only when `repeatValue > 1`, and `repeatValue` is only read from a target that was found (`:715-731`), so a deleted target forces it to 1 and skips the branch.
-- **Problem:** `:738` is safe only because of how `repeatValue` happens to be initialized, and a later edit could remove that without anyone noticing. `std::out_of_range` on the audio thread would take down the host.
-- **Related:** `removeDeletedTraversals` (`Source/Audio/TraversalSession.cpp:159-190`) checks only the home root, so a running traversal can outlive its current target.
-- **Status:** hygiene, not a live crash. Make the lookup impossible to throw.
+- **Where:** `TraversalLogic::getTargetNode` was `return *nodes.find(primary.target);` (`Source/Audio/TraversalLogic.cpp:542`), called at `TraversalDispatcher.cpp:721` and `:747`.
+- **Problem:** `NodeMap::find` returns `nullptr` for a missing ID, so the dereference was undefined behaviour rather than the `std::out_of_range` of the older `.at()` lookup. `:721` was safe only because `repeatValue` defaults to 1 when the target is missing. `:747` looked up the same ID twice.
+- **Related:** `removeDeletedTraversals` (`Source/Audio/TraversalSession.cpp`) checks only the home root, so a running traversal can outlive its current target. This is still open.
+- **Status:** resolved 2026-09-27 (`Proposals/Implemented/traversal_target_lookup_hygiene.md`). `getTargetNode` is gone. The repeat branch checks the `currentEntry` it already looked up, and the next-note branch looks the target up once and checks it.
 
-## 8. `getRootNode` is dead code
+## 8. `getRootNode` was dead code
 
-- **Where:** `Source/Audio/TraversalLogic.cpp:503`, declared at `TraversalLogic.h:149`.
-- **Problem:** no callers, and it uses the same throwing `.at()` lookup.
-- **Status:** delete it with `refactor.decap TraversalLogic::getRootNode`.
+- **Where:** `TraversalLogic::getRootNode` was `return *nodes.find(rootId);` (`Source/Audio/TraversalLogic.cpp:543`, `TraversalLogic.h:152`).
+- **Problem:** it had no callers and dereferenced an unchecked `find`.
+- **Status:** resolved 2026-09-27 (`Proposals/Implemented/traversal_target_lookup_hygiene.md`). Deleted.
 
 ## 9. The only plugin parameter is a dummy
 
