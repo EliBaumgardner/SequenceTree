@@ -293,10 +293,9 @@ void CustomLookAndFeel::drawPaintToolIcon(juce::Graphics &g, juce::Rectangle<flo
         g.setColour(buttonColour);
     }
 
-    g.fillRect(area);
+    g.fillEllipse(area);
 
-    int wandBoundsReduction = 2;
-    auto wandArea = area.reduced(wandBoundsReduction);
+    auto wandArea = area.reduced(area.getWidth() * 0.2f);
 
     g.setColour(juce::Colours::black);
 

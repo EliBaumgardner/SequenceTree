@@ -41,6 +41,11 @@ target_compile_definitions(SequenceTree PRIVATE
         JUCE_VST3_CAN_REPLACE_VST2=0
 )
 
+target_compile_definitions(SequenceTree PUBLIC
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+)
+
 target_sources(SequenceTree PRIVATE
         Source/Plugin/PluginProcessor.cpp
         Source/Plugin/PluginEditor.cpp
@@ -130,6 +135,9 @@ target_link_libraries(SequenceTree PRIVATE
         juce::juce_audio_processors
         juce::juce_audio_devices
         juce::juce_audio_utils
+        PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
 )
 
 add_subdirectory(Catch2)

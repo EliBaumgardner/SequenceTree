@@ -158,17 +158,32 @@ ColourSelector::ColourSelector(const ApplicationContext& context)
 
 void ColourSelector::paint(juce::Graphics& g) {
 
-    g.setColour(juce::Colours::black);
-    g.drawRect(getLocalBounds(), 1.0f);
+    juce::Colour fill = colour;
 
     if (requiresNode && node == nullptr) {
-        g.setColour(juce::Colours::grey.withAlpha(0.3f));
-        g.fillRect(getLocalBounds().reduced(1.0f));
-        return;
+        fill = juce::Colours::grey.withAlpha(0.3f);
     }
 
-    g.setColour(colour);
-    g.fillRect(getLocalBounds().reduced(1.0f));
+    const auto outline = getLocalBounds().toFloat();
+    const auto inside  = outline.reduced(1.0f);
+
+    switch (shape) {
+        case Shape::Circle:
+            g.setColour(fill);
+            g.fillEllipse(inside);
+
+            g.setColour(juce::Colours::black);
+            g.drawEllipse(inside, 1.0f);
+            break;
+
+        case Shape::Square:
+            g.setColour(juce::Colours::black);
+            g.drawRect(outline, 1.0f);
+
+            g.setColour(fill);
+            g.fillRect(inside);
+            break;
+    }
 }
 
 void ColourSelector::mouseDown(const juce::MouseEvent& event) {

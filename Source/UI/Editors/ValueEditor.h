@@ -23,6 +23,7 @@ public:
     void paint  (juce::Graphics& g) override;
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
+    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
     void setPersistentEditor(bool shouldStayVisible);
     void beginEditing(bool selectAllText = true);
@@ -38,8 +39,11 @@ public:
 
     void valueChanged(juce::Value&) override;
 
-    static constexpr float defaultAutoFitInsetRatio = 0.25f;
-    static constexpr float baseFontHeight           = 9.0f;
+    enum class WheelResponse { PassToParent, StepValue };
+
+    static constexpr float  defaultAutoFitInsetRatio = 0.25f;
+    static constexpr float  baseFontHeight           = 9.0f;
+    static constexpr double wheelRangeFraction       = 1.0;
 
     std::function<void()> onValueChange;
     std::function<void()> onEditFinished;
@@ -53,6 +57,8 @@ public:
 
     float fontHeight        = baseFontHeight;
     float autoFitInsetRatio = defaultAutoFitInsetRatio;
+
+    WheelResponse wheelResponse = WheelResponse::PassToParent;
 
     bool autoFitText = false;
     bool editable    = true;

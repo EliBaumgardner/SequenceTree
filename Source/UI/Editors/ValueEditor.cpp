@@ -139,6 +139,33 @@ void ValueEditor::mouseDown(const juce::MouseEvent&)
     beginEditing();
 }
 
+void ValueEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
+{
+    if (wheelResponse == WheelResponse::PassToParent || isEditing || juce::approximatelyEqual(wheel.deltaY, 0.0f)) {
+        juce::Component::mouseWheelMove(e, wheel);
+        return;
+    }
+
+    double wheelDelta = wheel.deltaY;
+
+    if (wheel.isReversed) {
+        wheelDelta = -wheelDelta;
+    }
+
+    const double smallestStep = std::pow(10.0, -format->decimalPlaces);
+    double       step         = wheelDelta * (format->maximum - format->minimum) * wheelRangeFraction;
+
+    if (std::abs(step) < smallestStep) {
+        step = std::copysign(smallestStep, wheelDelta);
+    }
+
+    if (boundTree.isValid() && applicationContext.undoManager != nullptr) {
+        applicationContext.undoManager->beginNewTransaction();
+    }
+
+    setNumericValue(static_cast<double>(boundValue.getValue()) + step);
+}
+
 void ValueEditor::setPersistentEditor(bool shouldStayVisible)
 {
     persistentEditor = shouldStayVisible;
