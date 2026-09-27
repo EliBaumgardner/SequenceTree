@@ -73,8 +73,12 @@ class ColourSelector : public juce::Component, public juce::SettableTooltipClien
     void setNode(Node* node);
 
 
+    enum class Shape { Square, Circle };
+
     juce::Colour colour = juce::Colours::white;
     juce::Component::SafePointer<Node> node;
+
+    Shape shape = Shape::Square;
 
     static constexpr int pickerWidth  = 160;
     static constexpr int pickerHeight = 145;

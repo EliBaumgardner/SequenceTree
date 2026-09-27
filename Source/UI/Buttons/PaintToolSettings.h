@@ -72,8 +72,11 @@ public:
 
         colourSelector = std::make_unique<ColourSelector>(context);
         colourSelector->requiresNode = false;
+        colourSelector->shape        = ColourSelector::Shape::Circle;
         sizeEditor = std::make_unique<ValueEditor>(context);
         flowEditor = std::make_unique<ValueEditor>(context);
+        sizeEditor->wheelResponse = ValueEditor::WheelResponse::StepValue;
+        flowEditor->wheelResponse = ValueEditor::WheelResponse::StepValue;
 
         pitchPair.setting    = PaintSetting::Pitch;
         velocityPair.setting = PaintSetting::Velocity;
