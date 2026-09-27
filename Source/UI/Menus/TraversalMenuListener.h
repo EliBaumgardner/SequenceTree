@@ -22,7 +22,7 @@ public:
             int traversalId = child.getProperty(ValueTreeIdentifiers::TraversalId);
             traversalMenu.addTraversalToMenu(traversalId);
 
-            if (traversalMenu.displayMenu.getSelectedLabel().isEmpty()) {
+            if (traversalMenu.displayMenu.selectedLabel.isEmpty()) {
                 traversalMenu.selectTraversal(traversalId);
             }
         }

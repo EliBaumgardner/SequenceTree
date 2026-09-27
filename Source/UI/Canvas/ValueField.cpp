@@ -18,7 +18,7 @@ ValueField::~ValueField()
 
 juce::ValueTree ValueField::firstMidiNote(int nodeId) const
 {
-    return owner.getApplicationContext().graphState->getMidiNotes(nodeId).getChild(0);
+    return owner.applicationContext.graphState->getMidiNotes(nodeId).getChild(0);
 }
 
 void ValueField::setBrushColour(juce::Colour colour)

@@ -47,7 +47,8 @@ private:
                         double tempoMultiplier, const DispatchContext& context, int parentCount,
                         TraversalLogic& traversalLogic, int transpose);
 
-    void dispatchPrimaryArrow(const RTNode& node, const RTNode* nextTarget, int danglingIndex,
+    void dispatchPrimaryArrow(const RTNode& node, const RTNode* voicedAlternative,
+                              const RTNode* nextTarget, int danglingIndex,
                               int runId, int wallClockMs, int colourTypeId);
 
     void dispatchModulatorArrow(const RTNode* modulatorNode, const RTNode* nextModulatorTarget,

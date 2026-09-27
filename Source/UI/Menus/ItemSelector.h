@@ -27,17 +27,15 @@ public:
 
     void setSelectedItem(int itemId);
 
-    int  getSelectedItemId() const { return selectedItemId; }
-
-    const juce::String& getSelectedLabel() const { return selectedLabel; }
+    void paint(juce::Graphics& g) override;
+    void resized() override;
 
     std::function<void(int)> onItemSelected;
 
+    juce::String selectedLabel;
+
     static constexpr float contentInsetRatio = 0.14f;
     static constexpr float labelWidthRatio   = 2.0f / 3.0f;
-
-    void paint(juce::Graphics& g) override;
-    void resized() override;
 
 private:
 
@@ -60,7 +58,6 @@ private:
     std::vector<Item> items;
 
     int          selectedItemId = 0;
-    juce::String selectedLabel;
 };
 
 #endif //SEQUENCETREE_ITEMSELECTOR_H

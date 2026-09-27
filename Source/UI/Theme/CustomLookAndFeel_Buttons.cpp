@@ -480,18 +480,18 @@ void CustomLookAndFeel::drawFileLabel(juce::Graphics& g, const FileLabel& fileLa
 
     juce::Colour background = baseDarkColour1;
 
-    if (fileLabel.isSelected()) {
+    if (fileLabel.selected) {
         background = baseDarkColour1.brighter(0.18f);
     }
 
-    if (fileLabel.isGrabbed()) {
+    if (fileLabel.grabbed) {
         background = baseDarkColour1.brighter(0.3f);
     }
 
     g.setColour(background);
     g.fillRect(bounds);
 
-    if (fileLabel.isSelected()) {
+    if (fileLabel.selected) {
         g.setColour(baseLightColour2);
         g.fillRect(bounds.withWidth(fileLabelMarkerWidth));
     }

@@ -70,6 +70,12 @@ bool ConnectionOps::connectsToOtherTreeRoot(int parentNodeId, int childNodeId) c
 
     const juce::ValueTree parentTree = applicationContext.graphState->getNode(parentNodeId);
 
+    if (parentTree.getType() == ValueTreeIdentifiers::ModulatorData
+        || parentTree.getType() == ValueTreeIdentifiers::ModulatorRootData
+        || parentTree.getType() == ValueTreeIdentifiers::AlternativeModulatorData) {
+        return false;
+    }
+
     return static_cast<int>(parentTree.getProperty(ValueTreeIdentifiers::RootNodeId)) != childNodeId;
 }
 

@@ -23,10 +23,7 @@ public:
     void setFileName(const juce::String fileName);
 
     void setGrabbed(bool shouldBeGrabbed);
-    bool isGrabbed() const { return grabbed; }
-
     void setSelected(bool shouldBeSelected);
-    bool isSelected() const { return selected; }
 
     std::function<void()> onRemove;
     std::function<void()> onMouseClicked;
@@ -38,14 +35,14 @@ public:
 
     int fileId;
 
+    bool grabbed  = false;
+    bool selected = false;
+
 private:
 
     const ApplicationContext& context;
     std::unique_ptr<ValueEditor> fileText     = nullptr;
     std::unique_ptr<IconButton>  removeButton = nullptr;
-
-    bool grabbed  = false;
-    bool selected = false;
 };
 
 

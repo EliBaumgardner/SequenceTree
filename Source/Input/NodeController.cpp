@@ -274,6 +274,16 @@ Node* NodeController::findDanglingSnapTarget(const Node* startNode, juce::Point<
         return nullptr;
     }
 
+    const juce::Identifier startType = startNode->nodeValueTree.getType();
+
+    const bool startsOnModulator = startType == ValueTreeIdentifiers::ModulatorData
+                                || startType == ValueTreeIdentifiers::ModulatorRootData
+                                || startType == ValueTreeIdentifiers::AlternativeModulatorData;
+
+    if (startsOnModulator && snapTarget->nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
+        return nullptr;
+    }
+
     return snapTarget;
 }
 
@@ -968,6 +978,14 @@ void NodeController::handleNodeDrag(juce::UndoManager *undoManager, int nodeId, 
 void NodeController::checkRootNodeSnap(juce::Point<int> canvasPoint)
 {
     if (snapSourceNodeId < 0 || !draggedNodeTree.isValid()) {
+        return;
+    }
+
+    const juce::Identifier sourceType = applicationContext.graphState->getNode(snapSourceNodeId).getType();
+
+    if (sourceType == ValueTreeIdentifiers::ModulatorData
+        || sourceType == ValueTreeIdentifiers::ModulatorRootData
+        || sourceType == ValueTreeIdentifiers::AlternativeModulatorData) {
         return;
     }
 

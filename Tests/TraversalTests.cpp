@@ -251,6 +251,27 @@ static NodeMap stepIntoTreeShape(int foreignLoopLimit)
     });
 }
 
+static NodeMap alternativeShapeWithTreeJump(int jumpOwnerId, int foreignRootLimit)
+{
+    std::vector<RTNode> withForeignTree = alternativeShape(1).sortedById;
+
+    for (RTNode& node : withForeignTree) {
+        if (node.nodeID == jumpOwnerId) {
+            RTConnection jump;
+            jump.childId    = 5;
+            jump.duration   = 500;
+            jump.isTreeJump = true;
+
+            node.connections.push_back(jump);
+        }
+    }
+
+    withForeignTree.push_back(makeNode(5, 0, RTNode::NodeType::RootNode, foreignRootLimit, { 6 }));
+    withForeignTree.push_back(makeNode(6, 5, RTNode::NodeType::Node,     1,                {}));
+
+    return makeMap(withForeignTree);
+}
+
 TEST_CASE("a chain plays in order and loops back to the root", "[traversal]")
 {
     const std::vector<int> expected { 1, 2, 3, 1, 2, 3, 1 };
@@ -354,7 +375,8 @@ TEST_CASE("peeking at the next target leaves the walk unchanged", "[traversal]")
 
     const int steps = 64;
 
-    for (const NodeMap& nodes : { countGap, tiedLimits, switchCountShape() }) {
+    for (const NodeMap& nodes : { countGap, tiedLimits, switchCountShape(),
+                                  alternativeShapeWithTreeJump(10, 1), alternativeShapeWithTreeJump(2, 2) }) {
         TraversalLogic stepped;
         TraversalLogic peeked;
 
@@ -508,6 +530,20 @@ TEST_CASE("a traversal arrow relocates the walker onto the other tree for good",
     CHECK(jump.jumpedFromRootId == 1);
     CHECK(jump.enteredId == 5);
     CHECK(logic.rootId == 5);
+}
+
+TEST_CASE("a traversal arrow on the voiced alternative relocates the walker", "[traversal]")
+{
+    const std::vector<int> expected { 1, 2, 1, 2, 10, 5, 6, 5, 6, 5, 6, 5 };
+
+    CHECK(walkPrimary(alternativeShapeWithTreeJump(10, 1), 1, 10, NativeTraversalRule::instance()) == expected);
+}
+
+TEST_CASE("a host's traversal arrow waits while one of its alternatives is voiced", "[traversal]")
+{
+    const std::vector<int> expected { 1, 2, 1, 2, 10, 1, 2, 11, 1, 2, 5, 6, 5 };
+
+    CHECK(walkPrimary(alternativeShapeWithTreeJump(2, 2), 1, 10, NativeTraversalRule::instance()) == expected);
 }
 
 TEST_CASE("a cross root tree connection fires on its count limit and holds for its switch count", "[traversal]")

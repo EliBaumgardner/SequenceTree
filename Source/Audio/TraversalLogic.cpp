@@ -93,16 +93,26 @@ int TraversalLogic::selectNextChild(const NodeMap& nodes, int parentId, int pare
     return rule->selectChild(context);
 }
 
-int TraversalLogic::selectTreeJumpChild(const NodeMap& nodes, const RTNode& parent, int parentCount) const
+int TraversalLogic::selectTreeJumpChild(const NodeMap& nodes, const RTNode& host) const
 {
-    const RuleContext context { nodes, parent, parentCount,
+    const RTNode* parent = &host;
+
+    const RTNode* const voicedAlternative = nodes.find(primary.alternativeTarget);
+
+    if (voicedAlternative != nullptr) {
+        parent = voicedAlternative;
+    }
+
+    const int parentCount = nodeState.get(NodeStateSlot::Count, parent->nodeID) + 1;
+
+    const RuleContext context { nodes, *parent, parentCount,
                                 traversal.key, &isTreeJumpChild, nodeState,
                                 static_cast<int>(selectionRandom >> 1), true };
 
     int chosen   = -1;
     int maxLimit = 0;
 
-    for (const RTConnection& connection : parent.connections) {
+    for (const RTConnection& connection : parent->connections) {
         if (!connection.isTreeJump) {
             continue;
         }
@@ -351,8 +361,7 @@ void TraversalLogic::advance(const NodeMap& nodes)
         return;
     }
 
-    const int jumpCount    = nodeState.get(NodeStateSlot::Count, targetId) + 1;
-    const int jumpTargetId = selectTreeJumpChild(nodes, *targetNode, jumpCount);
+    const int jumpTargetId = selectTreeJumpChild(nodes, *targetNode);
 
     if (jumpTargetId != -1) {
         nodeState.increment(NodeStateSlot::Count, targetId);
@@ -410,7 +419,7 @@ const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes) const
     const RTNode* const targetNode = nodes.find(primary.target);
 
     if (targetNode != nullptr) {
-        const int jumpTargetId = selectTreeJumpChild(nodes, *targetNode, count);
+        const int jumpTargetId = selectTreeJumpChild(nodes, *targetNode);
 
         if (jumpTargetId != -1) {
             const RTNode* const jumpTargetNode = nodes.find(jumpTargetId);
@@ -538,9 +547,6 @@ const RTNode* TraversalLogic::decideNextModulator(const NodeMap& nodes)
 
     return decidedNode;
 }
-
-const RTNode& TraversalLogic::getTargetNode(const NodeMap& nodes) const { return *nodes.find(primary.target); }
-const RTNode& TraversalLogic::getRootNode  (const NodeMap& nodes) const { return *nodes.find(rootId);         }
 
 bool TraversalLogic::shouldTraverse() const
 {

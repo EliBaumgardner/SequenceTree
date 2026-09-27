@@ -76,8 +76,6 @@ public:
         }
     }
 
-    const IconButton* getSelectedButton() const { return selectedButton; }
-
     void paint(juce::Graphics& g) override
     {
         const Theme& theme = CustomLookAndFeel::get(*this);

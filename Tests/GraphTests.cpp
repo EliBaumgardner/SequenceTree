@@ -6,6 +6,7 @@
 #include "Graph/RTGraphBuilder.h"
 #include "Graph/ValueTreeIdentifiers.h"
 #include "Audio/TraversalLogic.h"
+#include "Input/ConnectionOps.h"
 #include "UI/Node/NodeFactory.h"
 
 #include <vector>
@@ -212,6 +213,36 @@ TEST_CASE("a modulator chain built through the graph walks like a node chain", "
     CHECK(visited == expected);
     CHECK(nodes.find(middleId) != nullptr);
     CHECK(nodes.find(leafId)   != nullptr);
+}
+
+TEST_CASE("only a note node's arrow into another tree's root is a root connection", "[graph][connection]")
+{
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+
+    const int rootId        = createRoot(graph, 0, 0);
+    const int nodeId        = createChild(graph, rootId, 100, 0);
+    const int foreignRootId = createRoot(graph, 0, 400);
+
+    const juce::ValueTree modulatorRoot = NodeFactory::createModulatorRoot(graph, nodeId, NodePosition { 100, 200, 25 }, nullptr);
+    const int modulatorRootId = modulatorRoot.getProperty(ValueTreeIdentifiers::Id);
+
+    const juce::ValueTree modulator = NodeFactory::createModulator(graph, modulatorRootId, NodePosition { 200, 200, 25 }, nullptr);
+    const int modulatorId = modulator.getProperty(ValueTreeIdentifiers::Id);
+
+    const juce::ValueTree alternativeModulator = NodeFactory::createAlternativeModulator(graph, modulatorId, NodePosition { 200, 300, 25 }, nullptr);
+    const int alternativeModulatorId = alternativeModulator.getProperty(ValueTreeIdentifiers::Id);
+
+    ApplicationContext context;
+    context.graphState = &graph;
+
+    const ConnectionOps connections { context };
+
+    CHECK(connections.connectsToOtherTreeRoot(nodeId, foreignRootId));
+    CHECK_FALSE(connections.connectsToOtherTreeRoot(nodeId, rootId));
+    CHECK_FALSE(connections.connectsToOtherTreeRoot(modulatorRootId, foreignRootId));
+    CHECK_FALSE(connections.connectsToOtherTreeRoot(modulatorId, foreignRootId));
+    CHECK_FALSE(connections.connectsToOtherTreeRoot(alternativeModulatorId, foreignRootId));
 }
 
 TEST_CASE("moving a pitch-bound node transposes around the pitch last typed", "[graph][pitch]")

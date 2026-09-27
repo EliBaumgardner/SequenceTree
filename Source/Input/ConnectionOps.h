@@ -23,6 +23,8 @@ public:
 
     void applySelectedArrowInfo(int parentNodeId, int childNodeId, ArrowType rootConnectionType);
 
+    bool connectsToOtherTreeRoot(int parentNodeId, int childNodeId) const;
+
 private:
 
     struct ArrowOwnership
@@ -32,8 +34,6 @@ private:
     };
 
     ArrowOwnership resolveOwnership(const Arrow* arrow) const;
-
-    bool connectsToOtherTreeRoot(int parentNodeId, int childNodeId) const;
 
     const ApplicationContext& applicationContext;
 };
