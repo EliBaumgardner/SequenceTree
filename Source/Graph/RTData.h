@@ -44,6 +44,16 @@ struct RTtraversal {
     double velocityMultiplier = 1.0;
 };
 
+struct RTPreviewRequest {
+
+    enum class Kind { Start, Stop };
+
+    Kind        kind       = Kind::Stop;
+    int         nodeId     = -1;
+    int         visitCount = 1;
+    RTtraversal traversal;
+};
+
 struct RTConnection {
 
     int  childId     = 0;

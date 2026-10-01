@@ -471,9 +471,10 @@ void Arrow::initHoverState(bool visibleNow)
     setVisible(visibleNow);
 }
 
-void Arrow::startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot)
+void Arrow::startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot,
+                          TrailSource source)
 {
-    animation.startTrail(trailId, durationMs, elapsedMs, colour, oneShot);
+    animation.startTrail(trailId, durationMs, elapsedMs, colour, oneShot, source);
 
     if (animationFrames.isEmpty()) {
         animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });

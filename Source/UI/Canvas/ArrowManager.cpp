@@ -160,6 +160,15 @@ void ArrowManager::remove(Arrow* arrow)
 
 void ArrowManager::removeForNode(const Node* node)
 {
+    if (preview != nullptr && preview->startNode == node) {
+        preview.reset();
+    }
+
+    if (snapGhostArrow != nullptr
+        && (snapGhostArrow->startNode == node || snapGhostArrow->endNode == node)) {
+        hideSnapGhost();
+    }
+
     removeMatching([node](Arrow* arrow) {
         return arrow->startNode == node || arrow->endNode == node;
     });

@@ -128,6 +128,41 @@ static std::vector<int> walkModulator(const NodeMap& nodes, int modulatorRootId,
     return visited;
 }
 
+static constexpr int maxPreviewSteps = 64;
+
+static std::vector<int> walkPreview(const NodeMap& nodes, int startId, int alternativeId, int visitCount)
+{
+    TraversalLogic logic;
+
+    logic.nodeState.prepare();
+    logic.reset(1, RTtraversal {});
+    logic.mode              = TraversalLogic::Mode::Preview;
+    logic.previewVisitCount = visitCount;
+    logic.beginPreview(nodes, startId, alternativeId);
+
+    std::vector<int> visited { logic.primary.target };
+
+    if (logic.primary.alternativeTarget != -1) {
+        visited.push_back(logic.primary.alternativeTarget);
+    }
+
+    for (int step = 0; step < maxPreviewSteps && logic.shouldTraverse(); ++step) {
+        const TraversalLogic::StepResult result = logic.handleNodeEvent(nodes);
+
+        if (result.kind == TraversalLogic::StepResult::Kind::Ended) {
+            break;
+        }
+
+        visited.push_back(result.enteredId);
+
+        if (result.enteredAlternativeId != -1) {
+            visited.push_back(result.enteredAlternativeId);
+        }
+    }
+
+    return visited;
+}
+
 static NodeMap chainShape()
 {
     return makeMap({
@@ -924,4 +959,88 @@ TEST_CASE("a host's last child is never one of its alternatives", "[traversal][s
     const std::vector<int> expected { 1, 2, 3, 1, 2, 10, 4, 1, 2, 3, 1, 2, 10, 4, 1, 2, 3, 1, 2, 10 };
 
     CHECK(walkPrimary(nodes, 1, 16, scriptRule) == expected);
+}
+
+TEST_CASE("a preview at count N takes the child the live walk takes on its Nth visit", "[traversal][preview]")
+{
+    const NodeMap          nodes = countLimitShape();
+    const std::vector<int> live  = walkPrimary(nodes, 1, 7, NativeTraversalRule::instance());
+
+    for (int visit = 1; visit <= 4; ++visit) {
+        const std::vector<int> expected { 1, live[static_cast<std::size_t>(visit * 2 - 1)] };
+
+        CHECK(walkPreview(nodes, 1, -1, visit) == expected);
+    }
+}
+
+TEST_CASE("a preview at count N voices the alternative the live walk voices on its Nth visit", "[traversal][preview]")
+{
+    const NodeMap nodes = alternativeShape(1);
+
+    TraversalLogic live;
+
+    live.nodeState.prepare();
+    live.reset(1, RTtraversal {});
+    live.begin(nodes, 1, 0);
+
+    std::vector<int> liveHostVisits;
+
+    for (int step = 0; step < maxPreviewSteps && liveHostVisits.size() < 5; ++step) {
+        const TraversalLogic::StepResult result = live.handleNodeEvent(nodes);
+
+        if (result.enteredId == 2) {
+            liveHostVisits.push_back(result.enteredAlternativeId);
+        }
+    }
+
+    REQUIRE(liveHostVisits.size() == 5);
+
+    for (int visit = 1; visit <= 5; ++visit) {
+        const int        liveAlternative = liveHostVisits[static_cast<std::size_t>(visit - 1)];
+        std::vector<int> expected { 2 };
+
+        if (liveAlternative != -1) {
+            expected.push_back(liveAlternative);
+        }
+
+        CHECK(walkPreview(nodes, 2, -1, visit) == expected);
+    }
+}
+
+TEST_CASE("a preview started on an alternative voices it on its host", "[traversal][preview]")
+{
+    const std::vector<int> expected { 2, 11 };
+
+    CHECK(walkPreview(alternativeShape(1), 2, 11, 1) == expected);
+}
+
+TEST_CASE("a preview ends at its leaf and pushes no counts", "[traversal][preview]")
+{
+    const NodeMap          nodes = chainShape();
+    const std::vector<int> expected { 1, 2, 3 };
+
+    TraversalLogic logic;
+
+    logic.nodeState.prepare();
+    logic.reset(1, RTtraversal {});
+    logic.mode = TraversalLogic::Mode::Preview;
+    logic.beginPreview(nodes, 1, -1);
+
+    CHECK_FALSE(logic.handleNodeEvent(nodes).pushCounts);
+    CHECK(walkPreview(nodes, 1, -1, 1) == expected);
+}
+
+TEST_CASE("a preview plays each sub loop once and walks on", "[traversal][preview]")
+{
+    SECTION("sub loop") {
+        const std::vector<int> expected { 1, 2, 3 };
+
+        CHECK(walkPreview(subLoopShape(), 1, -1, 1) == expected);
+    }
+
+    SECTION("encapsulated group") {
+        const std::vector<int> expected { 1, 2, 3, 4 };
+
+        CHECK(walkPreview(encapsulationShape(), 1, -1, 1) == expected);
+    }
 }

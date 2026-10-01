@@ -35,7 +35,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         enum class AsyncUpdateType {None,NodeAdded,NodeRemoved,NodeMoved,ValueChanged,DanglingArrowsChanged,ArrowAdded,ArrowRemoved,ArrowInfoChanged,ArrowDurationChanged};
 
-        enum class QuaverMode { Off, PlacingNotes };
+        enum class QuaverMode { Off, Preview };
 
         struct AsyncUpdate {
             AsyncUpdateType type       = AsyncUpdateType::None;
@@ -77,6 +77,9 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         bool paintMode = false;
         bool spanMode  = false;
         QuaverMode quaverMode = QuaverMode::Off;
+
+        int         quaverTraversalId = 1;
+        juce::Value quaverCount { minimumCountLimit };
 
         int  spanAnchorNodeId = -1;
 

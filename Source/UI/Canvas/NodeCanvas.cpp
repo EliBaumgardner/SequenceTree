@@ -260,6 +260,7 @@ void NodeCanvas::setQuaverMode(QuaverMode mode)
     quaverMode = mode;
 
     if (mode == QuaverMode::Off) {
+        applicationContext.processor->traversalSession.previewRequests.push({ RTPreviewRequest::Kind::Stop });
         setMouseCursor(juce::MouseCursor::NormalCursor);
         return;
     }

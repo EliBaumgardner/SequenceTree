@@ -90,6 +90,8 @@ public:
 
     enum class TraversalState { Active, End, Reset, Jump };
 
+    enum class Mode { Live, Preview };
+
     struct StepResult
     {
         enum class Kind { None, Advanced, LoopedToRoot, JumpedToTree, Ended };
@@ -125,6 +127,9 @@ public:
 
     TraversalState state = TraversalState::End;
 
+    Mode mode              = Mode::Live;
+    int  previewVisitCount = 1;
+
     unsigned int selectionRandom = 1;
 
     const TraversalRule* rule = &NativeTraversalRule::instance();
@@ -135,7 +140,7 @@ public:
 
     void begin(const NodeMap& nodes, int startNodeId, int graphLoopLimit);
 
-    void beginPreview(const NodeMap& nodes, int startNodeId, int alternativeId, int visitCount);
+    void beginPreview(const NodeMap& nodes, int startNodeId, int alternativeId);
 
     StepResult handleNodeEvent(const NodeMap& nodes);
 

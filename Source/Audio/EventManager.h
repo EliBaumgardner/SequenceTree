@@ -8,11 +8,13 @@ class EventManager
 {
 public:
 
-    AudioUIBridge       bridge;
+    AudioUIBridge&      bridge;
     NoteScheduler       scheduler;
     TraversalDispatcher dispatcher  { scheduler, bridge };
 
     double lastTempoMultiplier = 0.0;
+
+    explicit EventManager(AudioUIBridge& bridgeRef);
 
     void followTempo(double tempoMultiplier);
     void processEvents(int numSamples, const DispatchContext& context);

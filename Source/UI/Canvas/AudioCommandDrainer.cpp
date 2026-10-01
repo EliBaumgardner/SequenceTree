@@ -117,7 +117,7 @@ void AudioCommandDrainer::drainArrows()
             }
 
             entry->second->startProgress(command.trailId, command.durationMs, command.elapsedMs,
-                                         progressColour, isConnection);
+                                         progressColour, isConnection, command.source);
         }
     });
 }

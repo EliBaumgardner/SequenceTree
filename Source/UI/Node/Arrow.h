@@ -72,7 +72,8 @@ public:
   void triggerSnapAnimation();
   void setHoverFade(bool shouldBeVisible);
   void initHoverState(bool visibleNow);
-  void startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot = false);
+  void startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot,
+                     TrailSource source);
   void resetProgress();
   void resetProgress(int trailId);
   void resumeProgress();

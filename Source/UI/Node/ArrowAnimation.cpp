@@ -1,12 +1,13 @@
 #include "ArrowAnimation.h"
 
-void ArrowAnimation::startTrail(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot)
+void ArrowAnimation::startTrail(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot,
+                                TrailSource source)
 {
     Trail& trail = trails[trailId];
 
     double originMs = juce::Time::getMillisecondCounterHiRes();
 
-    if (trailsPaused) {
+    if (trailsPaused && source == TrailSource::Live) {
         originMs = pausedAtMs;
     }
 
@@ -16,6 +17,7 @@ void ArrowAnimation::startTrail(int trailId, int durationMs, int elapsedMs, juce
     trail.colour     = colour;
     trail.active     = durationMs > 0;
     trail.oneShot    = oneShot;
+    trail.source     = source;
 }
 
 void ArrowAnimation::resumeTrails()
@@ -27,7 +29,9 @@ void ArrowAnimation::resumeTrails()
     const double pausedForMs = juce::Time::getMillisecondCounterHiRes() - pausedAtMs;
 
     for (auto& [trailId, trail] : trails) {
-        trail.startMs += pausedForMs;
+        if (trail.source == TrailSource::Live) {
+            trail.startMs += pausedForMs;
+        }
     }
 
     trailsPaused = false;
@@ -85,10 +89,6 @@ bool ArrowAnimation::snapSettled()
 
 bool ArrowAnimation::advanceTrails()
 {
-    if (trailsPaused) {
-        return false;
-    }
-
     bool anyActive = false;
 
     const double nowMs = juce::Time::getMillisecondCounterHiRes();
@@ -97,7 +97,7 @@ bool ArrowAnimation::advanceTrails()
     {
         Trail& trail = entry->second;
 
-        if (! trail.active) {
+        if (! trail.active || (trailsPaused && trail.source == TrailSource::Live)) {
             ++entry;
             continue;
         }

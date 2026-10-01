@@ -106,6 +106,9 @@ public:
                 slot.entry.second.logic.selectionRandom = 0;
             }
 
+            slot.entry.second.logic.mode              = mode;
+            slot.entry.second.logic.previewVisitCount = previewVisitCount;
+
             ++activeCount;
             ++epoch;
 
@@ -179,6 +182,11 @@ public:
 
     Choices choices = Choices::Random;
 
+    TraversalLogic::Mode mode              = TraversalLogic::Mode::Live;
+    int                  previewVisitCount = 1;
+
+    int runIdCounter = 0;
+
 private:
     constexpr int slotCount() const
     {
@@ -199,8 +207,6 @@ private:
     std::vector<Slot> slots;
 
     int activeCount = 0;
-
-    int runIdCounter = 0;
 };
 
 struct DispatchContext

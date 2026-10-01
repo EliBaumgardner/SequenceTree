@@ -36,6 +36,8 @@ public:
     void updateDurationMaps(std::span<const int> nodeIds);
     void discardGraph(int graphId);
 
+    RTtraversal buildRTtraversal(TraversalKey key);
+
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
     void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& propertyIdentifier) override;
@@ -78,8 +80,6 @@ private:
                                        RTConnection& connection);
 
     static NodeMap freezeNodes(NodeBuildMap& source);
-
-    RTtraversal buildRTtraversal(TraversalKey key);
 
     void rebuildGraphsForTraversal(int traversalId);
 

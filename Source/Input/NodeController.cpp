@@ -20,6 +20,7 @@
 #include "../Graph/GraphState.h"
 #include "../UI/Menus/AllowedTraversalsMenu.h"
 #include "../UI/Theme/CustomLookAndFeel.h"
+#include "../Plugin/PluginProcessor.h"
 
 
 
@@ -195,13 +196,17 @@ void NodeController::endDrag()
 
 void NodeController::finishArrowHeadDrag()
 {
-    const int nodeId = draggingArrowHeadNode->nodeId;
+    const Node* const headNode = draggingArrowHeadNode;
 
     draggingArrowHeadNode = nullptr;
     dragState             = DragState::Idle;
     isDragStart           = true;
 
-    canvas.arrowManager.triggerSnapForNode(nodeId);
+    if (headNode == nullptr) {
+        return;
+    }
+
+    canvas.arrowManager.triggerSnapForNode(headNode->nodeId);
 }
 
 void NodeController::finishDanglingTipDrag()
@@ -210,6 +215,12 @@ void NodeController::finishDanglingTipDrag()
 
     draggingDanglingArrow = nullptr;
     dragState             = DragState::Idle;
+
+    if (arrow == nullptr) {
+        danglingSnapTarget = nullptr;
+        canvas.hideGrid();
+        return;
+    }
 
     if (danglingSnapTarget != nullptr) {
         connectDanglingToTarget(arrow->startNode);
@@ -356,7 +367,7 @@ void NodeController::connectWithSnapAnimation(int parentNodeId, int childNodeId,
 
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
-    if (dragState == DragState::MovingArrowHead && draggingArrowHeadNode != nullptr) {
+    if (dragState == DragState::MovingArrowHead) {
         finishArrowHeadDrag();
         return;
     }
@@ -370,7 +381,7 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
         dragState = DragState::Idle;
     }
 
-    if (draggingDanglingArrow != nullptr) {
+    if (dragState == DragState::MovingDanglingTip) {
         finishDanglingTipDrag();
         return;
     }
@@ -682,8 +693,12 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 {
     dragState             = DragState::Idle;
     draggingArrowHeadNode = nullptr;
-    danglingSnapTarget      = nullptr;
-    danglingSourceNode      = nullptr;
+    draggingDanglingArrow = nullptr;
+    draggingValueNode     = nullptr;
+    danglingSnapTarget    = nullptr;
+    danglingSourceNode    = nullptr;
+    snapTargetRoot        = nullptr;
+    flagConnectionTarget  = nullptr;
 
     if (canvas.paintMode) {
         if (e.mods.isLeftButtonDown() || e.mods.isRightButtonDown()) {
@@ -696,6 +711,18 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     if (canvas.spanMode) {
         if (Node* spanNode = dynamic_cast<Node*>(e.eventComponent)) {
             selectSpanNode(*spanNode);
+        }
+        return;
+    }
+
+    if (canvas.quaverMode == NodeCanvas::QuaverMode::Preview) {
+        if (Node* previewNode = dynamic_cast<Node*>(e.eventComponent)) {
+            applicationContext.processor->traversalSession.previewRequests.push({
+                RTPreviewRequest::Kind::Start,
+                previewNode->nodeId,
+                static_cast<int>(canvas.quaverCount.getValue()),
+                applicationContext.rtGraphBuilder->buildRTtraversal({ canvas.quaverTraversalId, 0 })
+            });
         }
         return;
     }
@@ -761,8 +788,8 @@ void NodeController::dragFlagConnection(const juce::MouseEvent& e, Node& node, c
 
 void NodeController::handleCanvasMouseDrag(const juce::MouseEvent& e)
 {
-    if (dragState == DragState::MovingArrowHead && draggingArrowHeadNode != nullptr) {
-        if (e.getDistanceFromDragStart() < dragThreshold) {
+    if (dragState == DragState::MovingArrowHead) {
+        if (draggingArrowHeadNode == nullptr || e.getDistanceFromDragStart() < dragThreshold) {
             return;
         }
 
@@ -809,7 +836,9 @@ void NodeController::handleNodeMouseDrag(const juce::MouseEvent& e, Node& node)
     }
 
     if (dragState == DragState::CreatingDanglingArrow && isArrowMode()) {
-        updateConnectionPreview(danglingSourceNode, newPosition, false);
+        if (danglingSourceNode != nullptr) {
+            updateConnectionPreview(danglingSourceNode, newPosition, false);
+        }
         return;
     }
 
@@ -847,7 +876,7 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         return;
     }
 
-    if (canvas.spanMode) {
+    if (canvas.spanMode || canvas.quaverMode != NodeCanvas::QuaverMode::Off) {
         return;
     }
 
@@ -856,8 +885,10 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         return;
     }
 
-    if (draggingDanglingArrow != nullptr) {
-        dragDanglingTip(e);
+    if (dragState == DragState::MovingDanglingTip) {
+        if (draggingDanglingArrow != nullptr) {
+            dragDanglingTip(e);
+        }
         return;
     }
 

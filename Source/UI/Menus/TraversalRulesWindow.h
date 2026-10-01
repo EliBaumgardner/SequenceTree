@@ -69,17 +69,17 @@ private:
         explicit RulesPanel(const ApplicationContext& context);
         ~RulesPanel() override;
 
-        std::function<void(int)>              propagateLabelClicked;
-        std::function<void(int)>              propagateLabelRemoved;
-        std::function<void()>                 propagateAddClicked;
-        std::function<void(std::vector<int>)> propagateLabelsReordered;
-
         void addLabel   (int fileId, const juce::String& name);
         void removeLabel(int fileId);
         void selectLabel(int fileId);
 
         void paint(juce::Graphics& g) override;
         void resized() override;
+
+        std::function<void(int)>              propagateLabelClicked;
+        std::function<void(int)>              propagateLabelRemoved;
+        std::function<void()>                 propagateAddClicked;
+        std::function<void(std::vector<int>)> propagateLabelsReordered;
 
         static constexpr int resizerWidth      = 10;
         static constexpr int minPanelWidth     = 60;
@@ -131,9 +131,8 @@ private:
     int  clampPanelWidth(int newWidth) const;
     void setPanelWidth(int newWidth);
 
-    RulesTitlebar  titlebar;
-    RulesPanel     rulesPanel;
-    juce::Viewport filePageViewport;
+    RulesTitlebar titlebar;
+    RulesPanel    rulesPanel;
 
     const ApplicationContext& context;
 

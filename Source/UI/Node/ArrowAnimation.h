@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "../../Audio/AudioUIBridge.h"
 #include <map>
 
 class ArrowAnimation
@@ -15,9 +16,11 @@ public:
         juce::Colour colour     { juce::Colours::white };
         bool         active     = false;
         bool         oneShot    = false;
+        TrailSource  source     = TrailSource::Live;
     };
 
-    void startTrail(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot);
+    void startTrail(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot,
+                    TrailSource source);
     void resumeTrails();
 
     bool advance(double frameSec);

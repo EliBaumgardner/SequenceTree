@@ -4,82 +4,60 @@
 
 #include "FilePage.h"
 
-#include "LineEditor.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-#include <cmath>
 
+FilePage::FilePage(const ApplicationContext& context)
+    : juce::CodeEditorComponent(*this, nullptr)
+{
+    const Theme& theme = *context.lookAndFeel;
 
-FilePage::FilePage(const ApplicationContext&context) : context(context) {
+    setNewLineCharacters("\n");
+    addListener(this);
 
-    createNewFile();
+    setColour(backgroundColourId,               theme.baseDarkColour2);
+    setColour(defaultTextColourId,              juce::Colours::lightgrey);
+    setColour(highlightColourId,                theme.baseLightColour2.withAlpha(selectionAlpha));
+    setColour(lineNumberBackgroundId,           juce::Colours::transparentBlack);
+    setColour(lineNumberTextId,                 theme.lineNumberColour);
+    setColour(juce::CaretComponent::caretColourId, juce::Colours::white);
+
+    setLineNumbersShown(true);
+    setTabSize(indentSize, true);
+    setFont(juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), baseFontHeight, juce::Font::plain)));
 }
 
-int FilePage::rowCountFor(const juce::String& text, int editorWidth) {
+FilePage::~FilePage() {
 
-    if (editorWidth <= 0 || text.isEmpty()) {
-        return 1;
+    removeListener(this);
+}
+
+void FilePage::paintOverChildren(juce::Graphics& g) {
+
+    const int firstLine = getFirstLineOnScreen();
+    const int lastLine  = firstLine + getNumLinesOnScreen();
+
+    g.setColour(CustomLookAndFeel::get(*this).scriptErrorColour.withAlpha(errorLineAlpha));
+
+    for (int line : errorLines) {
+        if (line >= firstLine && line <= lastLine) {
+            g.fillRect(0, (line - firstLine) * getLineHeight(), getWidth(), getLineHeight());
+        }
     }
-
-    const int wrapWidth = juce::jmax(1, editorWidth - editorRightEdgeSpace);
-
-    const auto shapingOptions = juce::detail::ShapedTextOptions{}
-                                    .withFont(juce::Font(juce::FontOptions(fontHeight())))
-                                    .withTrailingWhitespacesShouldFit(true)
-                                    .withWordWrapWidth(static_cast<float>(wrapWidth))
-                                    .withAllowBreakingInsideWord();
-
-    const juce::detail::ShapedText shapedLine { text, shapingOptions };
-
-    return juce::jmax(1, static_cast<int>(shapedLine.getLineTextRanges().size()));
-}
-
-void FilePage::paint(juce::Graphics &g) {
-
-    g.setColour(CustomLookAndFeel::get(*this).baseDarkColour2);
-    g.fillRect(getLocalBounds());
-}
-
-float FilePage::fontHeight() const {
-
-    return baseFontHeight * zoom;
-}
-
-int FilePage::lineHeight() const {
-
-    const juce::Font font { juce::FontOptions(fontHeight()) };
-
-    return juce::jmax(1, static_cast<int>(std::ceil(font.getHeight())));
-}
-
-int FilePage::preferredHeightForWidth(int width) {
-
-    const int lineWidth = width - textAreaInset * 2;
-    const int rowHeight = lineHeight();
-
-    int total = textAreaInset * 2;
-
-    for (const auto& fileLine : fileLines) {
-        total += rowCountFor(fileLine->getText(), fileLine->editorWidthFor(lineWidth)) * rowHeight;
-    }
-
-    return total;
-}
-
-void FilePage::handleAsyncUpdate() {
-
-    setSize(getWidth(), preferredHeightForWidth(getWidth()));
-    resized();
 }
 
 void FilePage::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) {
 
     if (! e.mods.isShiftDown()) {
-        juce::Component::mouseWheelMove(e, wheel);
+        juce::CodeEditorComponent::mouseWheelMove(e, wheel);
         return;
     }
 
-    const float delta = wheel.isReversed ? -wheel.deltaY : wheel.deltaY;
+    float delta = wheel.deltaY;
+
+    if (wheel.isReversed) {
+        delta = -delta;
+    }
 
     setZoom(zoom * (1.0f + delta * zoomSensitivity));
 }
@@ -99,262 +77,19 @@ void FilePage::setZoom(float newZoom) {
 
     zoom = clamped;
 
-    applyLineMetrics();
-    setSize(getWidth(), preferredHeightForWidth(getWidth()));
-    resized();
+    setFont(getFont().withHeight(baseFontHeight * zoom));
 }
 
-void FilePage::applyLineMetrics() {
+void FilePage::codeDocumentTextInserted(const juce::String&, int) {
 
-    const float textHeight = fontHeight();
-
-    const juce::Font gutterFont { juce::FontOptions(textHeight) };
-
-    const int gutterWidth = juce::roundToInt(FileLine::gutterTextInset * 2 * zoom)
-                          + static_cast<int>(std::ceil(gutterFont.getStringWidthFloat(juce::String(fileLines.size()))));
-
-    const int rowHeight = lineHeight();
-
-    for (auto& fileLine : fileLines) {
-        fileLine->setGutterWidth(gutterWidth);
-        fileLine->setFontHeight(textHeight);
-        fileLine->setRowHeight(rowHeight);
-    }
-}
-
-void FilePage::resized() {
-
-    auto textArea = getLocalBounds().reduced(textAreaInset);
-
-    const int rowHeight = lineHeight();
-    const int lineWidth = textArea.getWidth();
-
-    for (auto& fileLine : fileLines) {
-        const int rows = rowCountFor(fileLine->getText(), fileLine->editorWidthFor(lineWidth));
-
-        fileLine->setBounds(textArea.removeFromTop(rows * rowHeight));
-    }
-}
-
-void FilePage::setFile(std::vector<std::unique_ptr<FileLine>> newFileLines) {
-
-    fileLines = std::move(newFileLines);
-
-    refreshLines();
-    resized();
-}
-
-void FilePage::refreshLines() {
-
-    for (int i = 0; i < static_cast<int>(fileLines.size()); ++i) {
-
-        FileLine& fileLine = *fileLines[i];
-
-        fileLine.setLineNumber(i + 1);
-
-        LineEditor& lineEditor = *fileLine.lineEditor;
-
-        lineEditor.onInsertLine            = [this, line = &fileLine] { insertLineAfter(line); };
-        lineEditor.onMoveToNextLine        = [this, line = &fileLine] { focusRelative(line, 1); };
-        lineEditor.onMoveToPreviousLine    = [this, line = &fileLine] { focusRelative(line, -1); };
-        lineEditor.onMergeWithPreviousLine = [this, line = &fileLine] { mergeWithPreviousLine(line); };
-        lineEditor.onWrapChanged           = [this] {
-            triggerAsyncUpdate();
-            notifyTextChanged();
-        };
-
-        addAndMakeVisible(fileLine);
-    }
-
-    applyLineMetrics();
-}
-
-void FilePage::setText(const juce::String& text) {
-
-    juce::StringArray lines;
-    lines.addLines(text);
-
-    if (lines.isEmpty()) {
-        lines.add({});
-    }
-
-    std::vector<std::unique_ptr<FileLine>> newFileLines;
-    newFileLines.reserve(lines.size());
-
-    for (const juce::String& line : lines) {
-        auto fileLine = std::make_unique<FileLine>(context);
-        fileLine->lineEditor->commitText(line);
-
-        newFileLines.push_back(std::move(fileLine));
-    }
-
-    const juce::ScopedValueSetter<bool> silence(suppressTextChanged, true);
-
-    setFile(std::move(newFileLines));
-}
-
-juce::String FilePage::getText() const {
-
-    juce::StringArray lines;
-
-    for (const auto& fileLine : fileLines) {
-        lines.add(fileLine->getText());
-    }
-
-    return lines.joinIntoString("\n");
-}
-
-void FilePage::clearLineErrors() {
-
-    for (auto& fileLine : fileLines) {
-        fileLine->clearError();
-    }
-}
-
-void FilePage::setLineError(int lineNumber, const juce::String& message) {
-
-    const int index = lineNumber - 1;
-
-    if (index >= 0 && index < static_cast<int>(fileLines.size())) {
-        fileLines[index]->setError(message);
-    }
-}
-
-void FilePage::notifyTextChanged() {
-
-    if (!suppressTextChanged && onTextChanged != nullptr) {
+    if (! suppressTextChanged && onTextChanged != nullptr) {
         onTextChanged();
     }
 }
 
-int FilePage::indexOf(const FileLine* line) const {
+void FilePage::codeDocumentTextDeleted(int, int) {
 
-    for (int i = 0; i < static_cast<int>(fileLines.size()); ++i) {
-        if (fileLines[i].get() == line) {
-            return i;
-        }
+    if (! suppressTextChanged && onTextChanged != nullptr) {
+        onTextChanged();
     }
-
-    return -1;
-}
-
-void FilePage::focusRelative(const FileLine* line, int offset) {
-
-    const int index = indexOf(line);
-
-    if (index < 0) {
-        return;
-    }
-
-    focusLine(index + offset);
-}
-
-void FilePage::mergeWithPreviousLine(const FileLine* line) {
-
-    if (indexOf(line) <= 0 || line == nullptr) {
-        return;
-    }
-
-    juce::MessageManager::callAsync([page = juce::Component::SafePointer<FilePage>(this), line] {
-        if (page != nullptr) {
-            page->performMerge(line);
-        }
-    });
-}
-
-void FilePage::performMerge(const FileLine* line) {
-
-    const int index = indexOf(line);
-
-    if (index <= 0) {
-        return;
-    }
-
-    LineEditor& previousEditor = *fileLines[index - 1]->lineEditor;
-
-    const juce::String previousText = previousEditor.getLineText();
-    const int          joinPosition = previousText.length();
-
-    previousEditor.commitText(previousText + fileLines[index]->getText());
-
-    fileLines.erase(fileLines.begin() + index);
-
-    refreshLines();
-
-    setSize(getWidth(), preferredHeightForWidth(getWidth()));
-    resized();
-
-    focusLine(index - 1);
-
-    fileLines[index - 1]->lineEditor->setCaretPosition(joinPosition);
-
-    notifyTextChanged();
-}
-
-void FilePage::insertLineAfter(const FileLine* line) {
-
-    const int index = indexOf(line);
-
-    if (index < 0) {
-        return;
-    }
-
-    LineEditor& editor = *fileLines[index]->lineEditor;
-
-    const juce::String text  = editor.getLineText();
-    const int          caret = juce::jlimit(0, text.length(), editor.getCaretPosition());
-
-    auto newLine = std::make_unique<FileLine>(context);
-    newLine->lineEditor->commitText(text.substring(caret));
-
-    editor.commitText(text.substring(0, caret));
-
-    fileLines.insert(fileLines.begin() + index + 1, std::move(newLine));
-
-    refreshLines();
-
-    setSize(getWidth(), preferredHeightForWidth(getWidth()));
-    resized();
-
-    focusLine(index + 1);
-
-    fileLines[index + 1]->lineEditor->setCaretPosition(0);
-
-    notifyTextChanged();
-}
-
-void FilePage::focusLine(int index) {
-
-    if (index < 0 || index >= static_cast<int>(fileLines.size())) {
-        return;
-    }
-
-    FileLine& fileLine = *fileLines[index];
-
-    if (auto* viewport = findParentComponentOfClass<juce::Viewport>()) {
-
-        const juce::Rectangle<int> lineBounds = fileLine.getBounds();
-        const juce::Rectangle<int> visibleArea = viewport->getViewArea();
-
-        if (lineBounds.getY() < visibleArea.getY()) {
-            viewport->setViewPosition(visibleArea.getX(), lineBounds.getY());
-        }
-        else if (lineBounds.getBottom() > visibleArea.getBottom()) {
-            viewport->setViewPosition(visibleArea.getX(), lineBounds.getBottom() - visibleArea.getHeight());
-        }
-    }
-
-    fileLine.lineEditor->beginEditing(false);
-}
-
-void FilePage::createNewFile() {
-
-    std::vector<std::unique_ptr<FileLine>> newFileLines;
-    newFileLines.reserve(initialLineCount);
-
-    for (int i = 0; i < initialLineCount; ++i) {
-        newFileLines.push_back(std::make_unique<FileLine>(context));
-    }
-
-    setFile(std::move(newFileLines));
 }

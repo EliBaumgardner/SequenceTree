@@ -8,6 +8,8 @@
 
 enum class CommandDelivery { Deliver, Record };
 
+enum class TrailSource { Live, Preview };
+
 template <typename Command, int Capacity = 512>
 class CommandFifo
 {
@@ -73,13 +75,14 @@ public:
 
     struct ArrowCommand
     {
-        ArrowKind kind         = ArrowKind::Progress;
-        int       parentNodeId = 0;
-        int       childNodeId  = 0;
-        int       durationMs   = 0;
-        int       trailId      = -1;
-        int       traversalId  = -1;
-        int       elapsedMs    = 0;
+        ArrowKind   kind         = ArrowKind::Progress;
+        int         parentNodeId = 0;
+        int         childNodeId  = 0;
+        int         durationMs   = 0;
+        int         trailId      = -1;
+        int         traversalId  = -1;
+        int         elapsedMs    = 0;
+        TrailSource source       = TrailSource::Live;
     };
 
     struct CountCommand
@@ -283,9 +286,9 @@ private:
     }
 
     void pushProgress(int parentNodeId, int childNodeId, int durationMs, int trailId, int traversalId,
-                      ArrowKind kind = ArrowKind::Progress)
+                      TrailSource source, ArrowKind kind = ArrowKind::Progress)
     {
-        send(ArrowCommand { kind, parentNodeId, childNodeId, durationMs, trailId, traversalId });
+        send(ArrowCommand { kind, parentNodeId, childNodeId, durationMs, trailId, traversalId, 0, source });
     }
 
     void pushArrowReset(int trailId)
