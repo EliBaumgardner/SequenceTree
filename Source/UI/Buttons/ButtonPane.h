@@ -103,17 +103,17 @@ private:
 
     void layOutAsRow()
     {
-        const int  numButtons = buttons.size();
-        const auto bounds     = getLocalBounds().reduced(2.0f);
+        const int   numButtons       = buttons.size();
+        const auto  bounds           = getLocalBounds().reduced(juce::roundToInt(getHeight() * Theme::contentInsetRatio));
+        const float widthPerButton   = bounds.getWidth() / (numButtons + (numButtons + 1) * Theme::iconGapRatio);
+        const int   buttonSize       = juce::jmax(0, juce::jmin(bounds.getHeight(), static_cast<int>(widthPerButton)));
+        const float spacing          = (bounds.getWidth() - buttonSize * numButtons) / static_cast<float>(numButtons + 1);
+        const int   y                = bounds.getCentreY() - buttonSize / 2;
 
-        const int   buttonSize       = bounds.getHeight();
-        const float totalButtonWidth = buttonSize * numButtons;
-        const float spacing          = (bounds.getWidth() - totalButtonWidth) / (numButtons + 1);
-
-        int x = static_cast<int>(bounds.getX() + spacing);
+        float x = bounds.getX() + spacing;
 
         for (IconButton* button : buttons) {
-            button->setBounds(x, bounds.getY(), buttonSize, buttonSize);
+            button->setBounds(juce::roundToInt(x), y, buttonSize, buttonSize);
             x += buttonSize + spacing;
         }
     }

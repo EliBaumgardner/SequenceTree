@@ -24,10 +24,8 @@ public:
     static constexpr float minBrushRadius = 1.0f;
     static constexpr float maxBrushRadius = 200.0f;
 
-    static constexpr float widthToHeightRatio = 9.0f;
-    static constexpr float panelInsetRatio    = 0.1f;
-    static constexpr float cellGapRatio       = 0.2f;
-    static constexpr float labelWidthRatio    = 1.6f;
+    static constexpr float cellWidthRatio     = 0.09f;
+    static constexpr float labelWidthRatio    = 0.144f;
 
     enum class PaintSetting {Pitch, Duration, Velocity};
 
@@ -128,8 +126,9 @@ public:
         const auto setUpLabel = [this](juce::Label& label, juce::String text) {
             label.setText(std::move(text), juce::dontSendNotification);
             label.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-            label.setFont(juce::Font(juce::FontOptions(9.0f)));
             label.setJustificationType(juce::Justification::centredLeft);
+            label.setBorderSize({});
+            label.setMinimumHorizontalScale(1.0f);
             addAndMakeVisible(label);
         };
 
@@ -140,7 +139,6 @@ public:
         addAndMakeVisible(colourSelector.get());
         addAndMakeVisible(sizeEditor.get());
         addAndMakeVisible(flowEditor.get());
-
     };
 
     void paint(juce::Graphics& g) override {
@@ -151,16 +149,17 @@ public:
 
         const int height = getLocalBounds().getHeight();
 
-        auto bounds = getLocalBounds().reduced(juce::roundToInt(height * panelInsetRatio));
+        auto bounds = getLocalBounds().reduced(juce::roundToInt(height * Theme::contentInsetRatio));
 
-        const int cellHeight = bounds.getHeight();
-        const int cellGap    = juce::roundToInt(cellHeight * cellGapRatio);
-        const int labelWidth = juce::roundToInt(cellHeight * labelWidthRatio);
+        const int width      = bounds.getWidth();
+        const int cellSide   = juce::jmin(bounds.getHeight(), juce::roundToInt(width * cellWidthRatio));
+        const int cellGap    = juce::roundToInt(width * Theme::contentSpacingRatio);
+        const int labelWidth = juce::roundToInt(width * labelWidthRatio);
 
-        paintTool->setBounds(bounds.removeFromLeft(cellHeight));
+        paintTool->setBounds(bounds.removeFromLeft(cellSide).withSizeKeepingCentre(cellSide, cellSide));
         bounds.removeFromLeft(cellGap);
 
-        colourSelector->setBounds(bounds.removeFromLeft(cellHeight));
+        colourSelector->setBounds(bounds.removeFromLeft(cellSide).withSizeKeepingCentre(cellSide, cellSide));
         bounds.removeFromLeft(cellGap);
 
         const int editorWidth = (bounds.getWidth() - labelWidth * 2 - cellGap) / 2;

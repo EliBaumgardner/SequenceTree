@@ -7,6 +7,7 @@
 #include "../Buttons/IconButton.h"
 #include "../Buttons/PaintToolSettings.h"
 #include "../Editors/FileLabel.h"
+#include "../Buttons/ValueSlider.h"
 
 constexpr float transportGlyphInsetRatio = 0.2f;
 
@@ -50,23 +51,6 @@ constexpr float squareGlyphInsetRatio     = 0.18f;
 constexpr float squareGlyphOutlineRatio   = 0.06f;
 constexpr float squareGlyphBarInsetRatio  = 0.28f;
 constexpr float squareGlyphBarWidthRatio  = 0.12f;
-
-static void fillSquareGlyph(juce::Graphics& g, juce::Rectangle<float> area, bool includeVerticalBar)
-{
-    const float side   = juce::jmin(area.getWidth(), area.getHeight()) * (1.0f - squareGlyphInsetRatio * 2.0f);
-    const auto  square = area.withSizeKeepingCentre(side, side);
-
-    g.drawRect(square, juce::jmax(1.0f, side * squareGlyphOutlineRatio));
-
-    const auto  bar       = square.reduced(side * squareGlyphBarInsetRatio);
-    const float thickness = juce::jmax(1.0f, side * squareGlyphBarWidthRatio);
-
-    g.fillRect(bar.withSizeKeepingCentre(bar.getWidth(), thickness));
-
-    if (includeVerticalBar) {
-        g.fillRect(bar.withSizeKeepingCentre(thickness, bar.getHeight()));
-    }
-}
 
 static void fillArrowGlyph(juce::Graphics& g, juce::Rectangle<float> glyphArea,
                     float shaftThicknessFactor, float headLengthFactor, float headWidthFactor)
@@ -191,16 +175,29 @@ void CustomLookAndFeel::drawTraversalFlagIcon(juce::Graphics &g, juce::Rectangle
 
 void CustomLookAndFeel::drawAddIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, const ButtonState& state)
 {
+    const float side      = juce::jmin(boundsIn.getWidth(), boundsIn.getHeight()) * (1.0f - squareGlyphInsetRatio * 2.0f);
+    const auto  square    = boundsIn.withSizeKeepingCentre(side, side);
+    const auto  bar       = square.reduced(side * squareGlyphBarInsetRatio);
+    const float thickness = juce::jmax(1.0f, side * squareGlyphBarWidthRatio);
+
     g.setColour(pressableButtonColour(state));
 
-    fillSquareGlyph(g, boundsIn, true);
+    g.drawRect(square, juce::jmax(1.0f, side * squareGlyphOutlineRatio));
+    g.fillRect(bar.withSizeKeepingCentre(bar.getWidth(), thickness));
+    g.fillRect(bar.withSizeKeepingCentre(thickness, bar.getHeight()));
 }
 
 void CustomLookAndFeel::drawRemoveIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, const ButtonState& state)
 {
+    const float side      = juce::jmin(boundsIn.getWidth(), boundsIn.getHeight()) * (1.0f - squareGlyphInsetRatio * 2.0f);
+    const auto  square    = boundsIn.withSizeKeepingCentre(side, side);
+    const auto  bar       = square.reduced(side * squareGlyphBarInsetRatio);
+    const float thickness = juce::jmax(1.0f, side * squareGlyphBarWidthRatio);
+
     g.setColour(pressableButtonColour(state));
 
-    fillSquareGlyph(g, boundsIn, false);
+    g.drawRect(square, juce::jmax(1.0f, side * squareGlyphOutlineRatio));
+    g.fillRect(bar.withSizeKeepingCentre(bar.getWidth(), thickness));
 }
 
 void CustomLookAndFeel::drawUndoIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
@@ -232,6 +229,34 @@ void CustomLookAndFeel::drawResetIcon(juce::Graphics &g, juce::Rectangle<float> 
 
     fillTriangle(g, area.removeFromLeft (triangleWidth), TriangleDirection::left);
     fillTriangle(g, area.removeFromRight(triangleWidth), TriangleDirection::left);
+}
+
+void CustomLookAndFeel::drawSyncIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
+{
+    const auto  area       = bounds.reduced(bounds.getWidth() * transportGlyphInsetRatio);
+    const float diameter   = juce::jmin(area.getWidth(), area.getHeight());
+    const auto  circle     = area.withSizeKeepingCentre(diameter, diameter);
+    const auto  glyphArea  = circle.reduced(diameter * 0.14f, diameter * 0.3f);
+    const float headLength = glyphArea.getWidth() * 0.28f;
+    const float centreY    = glyphArea.getCentreY();
+    juce::Colour circleColour = pressableButtonColour(state);
+    juce::Path   shaft;
+
+    if (state.isSelected) {
+        circleColour = circleColour.brighter(0.6f);
+    }
+
+    g.setColour(circleColour);
+    g.fillEllipse(circle);
+
+    g.setColour(juce::Colours::black);
+
+    shaft.addLineSegment({ glyphArea.getX() + headLength, centreY, glyphArea.getRight() - headLength, centreY },
+                         glyphArea.getHeight() * 0.25f);
+    g.fillPath(shaft);
+
+    fillTriangle(g, glyphArea.withWidth(headLength), TriangleDirection::left);
+    fillTriangle(g, glyphArea.withTrimmedLeft(glyphArea.getWidth() - headLength), TriangleDirection::right);
 }
 
 void CustomLookAndFeel::drawDisplayArrowIcon(juce::Graphics &g, juce::Rectangle<float> boundsIn, const ButtonState& state)
@@ -281,7 +306,8 @@ void CustomLookAndFeel::drawTextButton(juce::Graphics &g, juce::Rectangle<float>
 
     g.setColour(juce::Colours::black.withAlpha(0.8f));
     g.setFont(juce::Font(juce::FontOptions(fontHeight)));
-    g.drawText(state.text, bounds, juce::Justification::centred);
+    g.drawFittedText(state.text, area.reduced(innerButtonBoundsReduction, 0.0f).toNearestInt(),
+                     juce::Justification::centred, 1);
 }
 
 void CustomLookAndFeel::drawPaintToolIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state) {
@@ -354,6 +380,49 @@ void CustomLookAndFeel::drawSpanToolIcon(juce::Graphics &g, juce::Rectangle<floa
 
     g.fillEllipse(endpointBounds.withCentre({ glyphArea.getX(),     glyphArea.getCentreY() }));
     g.fillEllipse(endpointBounds.withCentre({ glyphArea.getRight(), glyphArea.getCentreY() }));
+}
+
+void CustomLookAndFeel::drawQuaverToolIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
+{
+    const auto   area         = bounds.reduced(bounds.getWidth() * transportGlyphInsetRatio);
+    const float  diameter     = juce::jmin(area.getWidth(), area.getHeight());
+    const auto   circle       = area.withSizeKeepingCentre(diameter, diameter);
+    const float  side         = diameter * 0.6f;
+    const auto   square       = circle.withSizeKeepingCentre(side, side);
+    const float  headX        = square.getX() + side * 0.34f;
+    const float  headY        = square.getBottom() - side * 0.2f;
+    const float  stemX        = headX + side * 0.19f;
+    const float  stemTopY     = square.getY() + side * 0.04f;
+    juce::Colour circleColour = pressableButtonColour(state);
+    juce::Path   head;
+    juce::Path   stem;
+    juce::Path   flag;
+
+    if (state.isSelected) {
+        circleColour = circleColour.brighter(0.6f);
+    }
+
+    g.setColour(circleColour);
+    g.fillEllipse(circle);
+
+    g.setColour(juce::Colours::black);
+
+    head.addEllipse(juce::Rectangle<float>(side * 0.44f, side * 0.3f).withCentre({ headX, headY }));
+    head.applyTransform(juce::AffineTransform::rotation(-0.35f, headX, headY));
+    g.fillPath(head);
+
+    stem.addLineSegment({ stemX, headY - side * 0.04f, stemX, stemTopY }, juce::jmax(1.0f, side * 0.08f));
+    g.fillPath(stem);
+
+    flag.startNewSubPath(stemX, stemTopY);
+    flag.cubicTo(stemX + side * 0.08f, stemTopY + side * 0.18f,
+                 stemX + side * 0.36f, stemTopY + side * 0.24f,
+                 stemX + side * 0.26f, stemTopY + side * 0.56f);
+    flag.cubicTo(stemX + side * 0.28f, stemTopY + side * 0.34f,
+                 stemX + side * 0.12f, stemTopY + side * 0.3f,
+                 stemX, stemTopY + side * 0.26f);
+    flag.closeSubPath();
+    g.fillPath(flag);
 }
 
 void CustomLookAndFeel::drawNodeArrowIcon(juce::Graphics &g, juce::Rectangle<float> bounds, const ButtonState& state)
@@ -498,4 +567,21 @@ void CustomLookAndFeel::drawFileLabel(juce::Graphics& g, const FileLabel& fileLa
 
     g.setColour(juce::Colours::black.withAlpha(0.35f));
     g.drawHorizontalLine(static_cast<int>(bounds.getBottom()) - 1, bounds.getX(), bounds.getRight());
+}
+
+void CustomLookAndFeel::drawValueSlider(juce::Graphics& g, const ValueSlider& valueSlider) {
+
+    const auto bounds = valueSlider.getLocalBounds().toFloat();
+
+    g.setColour(valueSliderTrackColour);
+    g.fillRect(bounds);
+
+    g.setColour(valueSliderFillColour);
+    g.fillRect(valueSlider.slider);
+}
+
+void CustomLookAndFeel::drawValueSliderHandle(juce::Graphics& g, juce::Rectangle<float> bounds) {
+
+    g.setColour(valueSliderHandleColour);
+    g.fillRect(bounds.withSizeKeepingCentre(valueSliderHandleLineWidth, bounds.getHeight()));
 }

@@ -2,12 +2,6 @@
 
 #include <cstddef>
 
-struct FieldEntry
-{
-    const char* name;
-    ScriptField field;
-};
-
 const FieldEntry childFieldTable[] = {
     { "id",           ScriptField::ChildId },
     { "eligible",     ScriptField::ChildIsEligible },
@@ -54,8 +48,6 @@ bool lookupField(const FieldEntry (&table)[count], const std::string& name, Scri
 
     return false;
 }
-
-struct EmitFailure {};
 
 void Emitter::run(std::span<const StatementPtr> program)
 {

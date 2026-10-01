@@ -23,7 +23,6 @@ private:
     void resized() override;
 
     static constexpr float iconInsetRatio = 0.214f;
-    static constexpr int maxIconSize = 24;
 };
 
 

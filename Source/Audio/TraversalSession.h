@@ -21,6 +21,7 @@ public:
     void clearTraversals();
 
     void suspendActiveNotes(juce::MidiBuffer& midiMessages);
+    void resumeSuspendedNotes(juce::MidiBuffer& midiMessages);
 
     void restartActiveTraversals(const DispatchContext& context);
 
@@ -30,7 +31,7 @@ public:
 
     void setSelectChildScript(const RTScript* script);
 
-    enum class Playback { Live, Replaying };
+    enum class Playback { Live, Suspended, Replaying };
 
     void     beginReplay   (const DispatchContext& context, double targetSamples);
     Playback continueReplay(const DispatchContext& context, std::uint64_t graphGeneration, int numSamples,
@@ -55,8 +56,6 @@ private:
 
     void stopTraversalNotes(int runId, juce::MidiBuffer& midiMessages);
 
-    int findFirstUnlinkedRootId(const NodeMap& nodes);
-
 
     EventManager& eventManager;
 
@@ -70,7 +69,6 @@ private:
 
     std::vector<int> activeRootIdScratch;
     std::vector<int> restartRootScratch;
-    std::vector<int> linkedRootScratch;
     std::vector<int> removedRunIdScratch;
 
     static constexpr int    replayChunkSamples      = 1024;

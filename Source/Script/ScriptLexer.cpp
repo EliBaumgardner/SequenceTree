@@ -3,12 +3,6 @@
 #include <cctype>
 
 
-struct KeywordEntry
-{
-    const char* name;
-    TokenKind   kind;
-};
-
 const KeywordEntry keywordTable[] = {
     { "let",      TokenKind::KeywordLet },
     { "if",       TokenKind::KeywordIf },

@@ -83,8 +83,6 @@ private:
         }
     };
 
-    static constexpr int rowHeight = 20;
-    static constexpr int rowGap    = 6;
 };
 
 #endif //SEQUENCETREE_NODEMENU_H

@@ -34,6 +34,8 @@ public:
 
     juce::String selectedLabel;
 
+    std::unique_ptr<ValueEditor> labelEditor;
+
     static constexpr float contentInsetRatio = 0.14f;
     static constexpr float labelWidthRatio   = 2.0f / 3.0f;
 
@@ -53,7 +55,6 @@ private:
     const ApplicationContext& applicationContext;
 
     std::unique_ptr<IconButton> button;
-    std::unique_ptr<ValueEditor> labelEditor;
 
     std::vector<Item> items;
 

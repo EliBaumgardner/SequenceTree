@@ -42,6 +42,8 @@ void AudioSnapshotPublisher::publishGraph(int graphId, NodeMap graphNodes)
                                {}, &RTNode::nodeID, &RTNode::nodeID);
     }
 
+    merged->firstUnlinkedRootId = findFirstUnlinkedRootId(*merged);
+
     edit->globalNodes = std::move(merged);
 
     publish(std::move(edit));
@@ -106,4 +108,31 @@ void AudioSnapshotPublisher::collectRetiredSnapshots()
 void AudioSnapshotPublisher::releaseRetiredSnapshots()
 {
     retiredSnapshots.clear();
+}
+
+int AudioSnapshotPublisher::findFirstUnlinkedRootId(const NodeMap& nodes)
+{
+    std::vector<int> linkedRootIds;
+
+    for (const RTNode& node : nodes.sortedById) {
+        for (const RTConnection& connection : node.connections) {
+            const int childId = connection.childId;
+
+            const RTNode* const childNode = nodes.find(childId);
+
+            if (childNode != nullptr && childNode->nodeID == childNode->graphID) {
+                linkedRootIds.push_back(childId);
+            }
+        }
+    }
+
+    std::ranges::sort(linkedRootIds);
+
+    for (const RTNode& node : nodes.sortedById) {
+        if (node.nodeID == node.graphID && !std::ranges::binary_search(linkedRootIds, node.nodeID)) {
+            return node.nodeID;
+        }
+    }
+
+    return -1;
 }

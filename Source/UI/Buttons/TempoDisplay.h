@@ -15,8 +15,6 @@ class TempoDisplay : public juce::Component, public juce::SettableTooltipClient 
 
     public:
 
-    static constexpr int contentInset = 2;
-
     ValueEditor editor;
 
     explicit TempoDisplay(const ApplicationContext& context)
@@ -31,7 +29,6 @@ class TempoDisplay : public juce::Component, public juce::SettableTooltipClient 
         tempoFormat->suffix = "x";
 
         editor.setFormat(std::move(tempoFormat));
-        editor.autoFitText = true;
 
         addAndMakeVisible(editor);
     }
@@ -46,7 +43,7 @@ class TempoDisplay : public juce::Component, public juce::SettableTooltipClient 
 
     void resized() override
     {
-        editor.setBounds(getLocalBounds().reduced(contentInset));
+        editor.setBounds(getLocalBounds().reduced(juce::roundToInt(getHeight() * Theme::contentInsetRatio)));
     }
 };
 

@@ -64,7 +64,7 @@ Problems confirmed by reading the code on 2026-09-24, while reviewing an externa
 
 ## 10. Arrow trail drawing flattens each curve three times per trail per frame
 
-- **Where:** `trimPathToFraction` and `drawArrowProgress` in `Source/UI/Theme/CustomLookAndFeel_Nodes.cpp:119-228`.
+- **Where:** `trimPathToFraction` and `drawArrowProgress` in `Source/UI/Theme/CustomLookAndFeelArrows.cpp`.
 - **Problem:** for every active trail on every frame, the shaft is copied and translated, flattened once to measure its length (`:131`), flattened again to trim it (`:148`), and flattened a third time inside `g.strokePath`.
 - **Possible fix:** the per-trail offset is a pure translation (`:215-217`), so one arc-length table per shaft, rebuilt when the geometry changes, would serve every trail and remove the first two passes.
 - **Status:** unmeasured. Profile during playback before changing it.
@@ -94,3 +94,10 @@ Problems confirmed by reading the code on 2026-09-24, while reviewing an externa
 - **Where:** `TraversalLogic::peekNextTarget` against `advance`'s `encapsulationLoopTarget` redirect.
 - **Problem:** when a member's fresh pick leaves its group before the group's sub-loop is done, `advance` enters the group's entry instead, but `peekNextTarget` returns the exit child. The arrow and the note length follow the exit arrow, then the walker jumps back to the entry. Shape: root 1 → entry 2 (sub-loop 2) → member 3 → exit 4. At 3 on the first pass, peek gives 4 and the walk enters 2.
 - **Status:** confirmed 2026-09-25, not yet fixed.
+
+## 15. Starting a walk could allocate on the audio thread
+
+- **Where:** `TraversalSession::findFirstUnlinkedRootId`, called from `startTraversalsFromFirstRoot`, which runs from `driveWalk` (on an empty pool) and from `beginReplay`.
+- **Problem:** to find the lowest-ID root that no arrow points into, it pushed one entry per arrow into a root node onto `linkedRootScratch`, which was reserved to 256. A graph with more than 256 root-bound arrows reallocated inside `processBlock`.
+- **Evidence:** "starting a walk stays realtime-safe with more root-bound arrows than the scratch reserve" (`Tests/RealtimeTests.cpp`), with one root, 257 children each arrowed to a second root. It aborted under RealtimeSanitizer at 2233a2a with `malloc` ← `findFirstUnlinkedRootId` ← `startTraversalsFromFirstRoot` ← `beginReplay` ← `driveWalk` ← `processBlock`.
+- **Status:** resolved 2026-09-30 (`Proposals/Implemented/first_unlinked_root_off_the_audio_thread.md`). `AudioSnapshotPublisher::publishGraph` computes it on the message thread into `NodeMap::firstUnlinkedRootId`. `startTraversalsFromFirstRoot` reads the field and checks the lookup for `nullptr`. The scratch vector and the audio-thread sort are gone. Covered by the realtime test above and by "the published graph names its first unlinked root" (`Tests/GraphTests.cpp`).

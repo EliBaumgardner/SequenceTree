@@ -122,6 +122,8 @@ struct NodeMap {
 
     std::vector<RTNode> sortedById;
 
+    int firstUnlinkedRootId = -1;
+
     const RTNode* find(int nodeId) const
     {
         const auto position = std::ranges::lower_bound(sortedById, nodeId, {}, &RTNode::nodeID);

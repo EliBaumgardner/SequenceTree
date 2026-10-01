@@ -38,6 +38,8 @@ struct Theme
 
     juce::Colour popupMenuColour              = baseDarkColour1.withAlpha(0.97f);
     juce::Colour popupMenuBorderColour        = juce::Colours::black.withAlpha(0.5f);
+
+    float textHeight = labelFontHeight;
     juce::Colour popupMenuTextColour          = baseLightColour1;
     juce::Colour popupMenuHighlightColour     = baseLightColour2;
     juce::Colour popupMenuHighlightTextColour = juce::Colours::black.withAlpha(0.8f);
@@ -45,6 +47,10 @@ struct Theme
     juce::Colour scrollBarTrackColour      = baseDarkColour2.darker(0.5f);
     juce::Colour scrollBarThumbColour      = baseLightColour2.withAlpha(0.5f);
     juce::Colour scrollBarThumbHoverColour = baseLightColour2.withAlpha(0.85f);
+
+    juce::Colour valueSliderTrackColour  = baseDarkColour1;
+    juce::Colour valueSliderFillColour   = baseLightColour2.withAlpha(0.35f);
+    juce::Colour valueSliderHandleColour = baseLightColour1;
 
     juce::Colour arrowColour         = juce::Colours::black;
     juce::Colour arrowProgressColour = baseLightColour2;
@@ -79,6 +85,8 @@ struct Theme
 
     static constexpr float paneCornerRadius = 4.0f;
 
+    static constexpr float valueSliderHandleLineWidth = 2.0f;
+
     static constexpr float fileLabelMarkerWidth = 2.0f;
 
     static constexpr float innerButtonBoundsReduction = 5.0f;
@@ -86,8 +94,17 @@ struct Theme
 
     static constexpr float labelFontHeight = 9.0f;
 
-    static constexpr int textButtonHeight = 22;
     static constexpr int menuEdgeInset    = 6;
+
+    static constexpr float barHeightRatio        = 0.05f;
+    static constexpr float textHeightRatio       = 0.376f;
+    static constexpr float textWidthRatio        = 0.0136f;
+    static constexpr float contentInsetRatio     = 0.1f;
+    static constexpr float contentSpacingRatio   = 0.018f;
+    static constexpr float iconGapRatio          = 0.2f;
+    static constexpr float menuSpacingRatio      = 0.24f;
+    static constexpr float menuRowHeightRatio    = 0.8f;
+    static constexpr float menuButtonHeightRatio = 0.88f;
 
     static constexpr float popupMenuBorderThickness = 1.0f;
     static constexpr float popupMenuItemInset       = 2.0f;

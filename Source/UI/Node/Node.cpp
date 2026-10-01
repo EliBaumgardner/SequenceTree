@@ -233,6 +233,11 @@ void Node::bindToTree()
     countEditor       .bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
     switchCountEditor .bindEditor(nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
 
+    if (isAlternativeNode) {
+        subLoopLimitEditor.setVisible(false);
+        return;
+    }
+
     juce::Identifier subLoopProperty = ValueTreeIdentifiers::SubLoopCountLimit;
 
     if (nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {

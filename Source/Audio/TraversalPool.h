@@ -35,6 +35,8 @@ public:
 
     using Entry = std::pair<int, Instance>;
 
+    enum class Choices { Random, Fixed };
+
     struct Slot
     {
         Entry entry;
@@ -99,6 +101,10 @@ public:
             slot.entry.first = runId;
             slot.entry.second.logic.reset(rootId, traversal);
             slot.entry.second.runtime = {};
+
+            if (choices == Choices::Fixed) {
+                slot.entry.second.logic.selectionRandom = 0;
+            }
 
             ++activeCount;
             ++epoch;
@@ -170,6 +176,8 @@ public:
     int nextRunId() { return ++runIdCounter; }
 
     std::uint64_t epoch = 0;
+
+    Choices choices = Choices::Random;
 
 private:
     constexpr int slotCount() const

@@ -656,21 +656,21 @@ void TraversalLogic::handleLoopReset(const NodeMap& nodes, StepResult& result)
     result.leftAlternativeId = primary.alternativeTarget;
 
     primary.target = rootId;
-    advanceAlternative(nodes, rootId);
-
-    result.enteredId            = rootId;
-    result.enteredAlternativeId = primary.alternativeTarget;
-
-    result.clearTrail = true;
 
     if (primary.subRootNode != -1) {
         const int subRootTarget = advanceSubRoot(nodes, primary);
 
         if (subRootTarget != -1) {
-            primary.target   = subRootTarget;
-            result.enteredId = primary.target;
+            primary.target = subRootTarget;
         }
     }
+
+    advanceAlternative(nodes, primary.target);
+
+    result.enteredId            = primary.target;
+    result.enteredAlternativeId = primary.alternativeTarget;
+
+    result.clearTrail = true;
 
     const RTNode* const enteredNode = nodes.find(primary.target);
 

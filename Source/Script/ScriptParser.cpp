@@ -1,7 +1,5 @@
 #include "ScriptParser.h"
 
-struct ParseFailure {};
-
 std::vector<StatementPtr> Parser::run()
 {
     std::vector<StatementPtr> program;
