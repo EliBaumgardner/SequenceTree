@@ -121,8 +121,6 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Bars/MenuBar.cpp
         Source/UI/LabelPanel.cpp
         Source/UI/Editors/FileLabel.cpp
-        Source/UI/Editors/FileLine.cpp
-        Source/UI/Editors/LineEditor.cpp
         Source/UI/Editors/FilePage.cpp
 )
 

@@ -13,7 +13,7 @@ class TraversalSession
 {
 public:
 
-    explicit TraversalSession(EventManager& eventManager);
+    TraversalSession(EventManager& eventManager, EventManager& previewEventManager);
 
     void prepare();
 
@@ -31,6 +31,8 @@ public:
 
     void setSelectChildScript(const RTScript* script);
 
+    void playPreview(const DispatchContext& context, int numSamples);
+
     enum class Playback { Live, Suspended, Replaying };
 
     void     beginReplay   (const DispatchContext& context, double targetSamples);
@@ -38,6 +40,11 @@ public:
                             bool playing);
 
     TraversalPool traversals;
+    TraversalPool previewTraversals;
+
+    static constexpr int previewRequestCapacity = 16;
+
+    CommandFifo<RTPreviewRequest, previewRequestCapacity> previewRequests;
 
     Playback playback               = Playback::Live;
     double   replayRemainingSamples = 0.0;
@@ -56,8 +63,12 @@ private:
 
     void stopTraversalNotes(int runId, juce::MidiBuffer& midiMessages);
 
+    void startPreview(const RTPreviewRequest& request, const DispatchContext& context);
+    void stopPreview (juce::MidiBuffer& midiMessages);
+
 
     EventManager& eventManager;
+    EventManager& previewEventManager;
 
     RTScript            nativeFallbackScript;
     ScriptTraversalRule scriptRule;
@@ -66,6 +77,8 @@ private:
 
     static constexpr int scratchCapacity           = 256;
     static constexpr int maxConcurrentTraversals   = 128;
+    static constexpr int maxPreviewTraversals      = 16;
+    static constexpr int previewRunIdBase          = 1 << 24;
 
     std::vector<int> activeRootIdScratch;
     std::vector<int> restartRootScratch;

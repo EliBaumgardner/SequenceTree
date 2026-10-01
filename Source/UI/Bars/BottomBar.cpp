@@ -43,7 +43,7 @@ BottomBar::BottomBar(const ApplicationContext& context)
             quaverTool->toggleSelected();
 
             if (quaverTool->isSelected()) {
-                applicationContext.canvas->setQuaverMode(NodeCanvas::QuaverMode::PlacingNotes);
+                applicationContext.canvas->setQuaverMode(NodeCanvas::QuaverMode::Preview);
                 return;
             }
 
@@ -58,7 +58,7 @@ BottomBar::BottomBar(const ApplicationContext& context)
 
     countsEditor.setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
     countsEditor.wheelResponse = ValueEditor::WheelResponse::StepValue;
-    countsEditor.boundValue    = minimumCountLimit;
+    countsEditor.boundValue.referTo(applicationContext.canvas->quaverCount);
     countsEditor.setTooltip("Counts");
 
     addAndMakeVisible(quaverPane);

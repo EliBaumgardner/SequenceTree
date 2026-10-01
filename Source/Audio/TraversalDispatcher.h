@@ -1,12 +1,11 @@
 #pragma once
 
+#include "AudioUIBridge.h"
 #include "FlagScheduler.h"
 #include "NoteScheduler.h"
 #include <cstdint>
 #include <memory>
 #include <atomic>
-
-class AudioUIBridge;
 
 class TraversalDispatcher
 {
@@ -49,14 +48,15 @@ private:
 
     void dispatchPrimaryArrow(const RTNode& node, const RTNode* voicedAlternative,
                               const RTNode* nextTarget, int danglingIndex,
-                              int runId, int wallClockMs, int colourTypeId);
+                              int runId, int wallClockMs, int colourTypeId, TrailSource source);
 
     void dispatchModulatorArrow(const RTNode* modulatorNode, const RTNode* nextModulatorTarget,
-                                int danglingIndex, int runId, int wallClockMs, int colourTypeId);
+                                int danglingIndex, int runId, int wallClockMs, int colourTypeId,
+                                TrailSource source);
 
     void dispatchCrossTree(const RTNode& node, int sourceRunId, double sample,
                            double tempoMultiplier, const DispatchContext& context,
-                           TraversalLogic& traversal);
+                           TraversalLogic& traversal, TrailSource source);
 
     void startCrossTreeTraversal(const RTNode& targetRootNode, const RTtraversal& traversal,
                                  double sample, const DispatchContext& context);

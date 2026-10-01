@@ -93,7 +93,13 @@ void ItemSelector::showMenu()
         menu.addItem(item.id, item.label);
     }
 
-    menu.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
+    juce::Component::SafePointer<ItemSelector> safeSelector(this);
+
+    menu.showMenuAsync(juce::PopupMenu::Options(), [this, safeSelector](int result) {
+        if (safeSelector == nullptr) {
+            return;
+        }
+
         button->setSelected(false);
         repaint();
 

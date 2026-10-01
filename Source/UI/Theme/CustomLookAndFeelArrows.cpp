@@ -101,12 +101,20 @@ static void drawArrowProgress(juce::Graphics& g, const Arrow& arrow, const juce:
         offsetLine.applyTransform(juce::AffineTransform::translation(-chord.y * offsetDistance,
                                                                      chord.x * offsetDistance));
 
-        const juce::Path progressPath = trimPathToFraction(offsetLine, trail.t);
+        juce::Path progressPath = trimPathToFraction(offsetLine, trail.t);
         if (! progressPath.isEmpty()) {
+            const juce::PathStrokeType progressStroke(0.75f, juce::PathStrokeType::curved, juce::PathStrokeType::butt);
+
             g.setColour(trail.colour);
-            g.strokePath(progressPath, juce::PathStrokeType(0.75f,
-                                                           juce::PathStrokeType::curved,
-                                                           juce::PathStrokeType::butt));
+
+            if (trail.source == TrailSource::Preview) {
+                float dashLengths[] = { 4.0f, 3.0f };
+                progressStroke.createDashedStroke(progressPath, progressPath, dashLengths, 2);
+                g.fillPath(progressPath);
+            }
+            else {
+                g.strokePath(progressPath, progressStroke);
+            }
         }
         ++drawnCount;
     }

@@ -40,7 +40,7 @@ class NodeController : public juce::MouseListener {
 public:
 
     using NodeControllerMode = NodeCreationMode;
-    NodeControllerMode nodeControllerMode;
+    NodeControllerMode nodeControllerMode = NodeControllerMode::Node;
     SelectionOps       selectionOps;
 
     NodeController(const ApplicationContext& context, NodeCanvas& canvas);
@@ -152,25 +152,22 @@ private:
 
     bool arrowMode = false;
 
-    Arrow* draggingDanglingArrow = nullptr;
-
-    Node* danglingSnapTarget = nullptr;
-
-    Node* danglingSourceNode = nullptr;
+    juce::Component::SafePointer<Arrow> draggingDanglingArrow;
+    juce::Component::SafePointer<Node> danglingSnapTarget;
+    juce::Component::SafePointer<Node> danglingSourceNode;
 
     PopupWindowLauncher allowedTraversalsLauncher { "Allowed Traversals" };
 
-    Node* snapTargetRoot           = nullptr;
-
-    Node* draggingArrowHeadNode    = nullptr;
+    juce::Component::SafePointer<Node> snapTargetRoot;
+    juce::Component::SafePointer<Node> draggingArrowHeadNode;
 
     int   flagConnectionSourceId   = -1;
-    Node* flagConnectionTarget     = nullptr;
+    juce::Component::SafePointer<Node> flagConnectionTarget;
 
     bool isDragStart               = true;
 
     double dragStartValue          = 0.0;
-    Node*  draggingValueNode       = nullptr;
+    juce::Component::SafePointer<Node> draggingValueNode;
 
     juce::Point<float> dragParentCenter;
 

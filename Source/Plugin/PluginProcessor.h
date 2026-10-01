@@ -30,7 +30,8 @@ public:
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) noexcept [[clang::nonblocking]] override;
     void driveWalk(const AudioSnapshotPublisher::Snapshot& snap, juce::MidiBuffer& midiMessages,
-                   const int numSamples, const bool playing, const bool resetHit) noexcept;
+                   const int numSamples, const bool playing, const bool resetHit,
+                   const bool replayThisBlock) noexcept;
     void followHostTransport(const int numSamples) noexcept;
 
     juce::AudioProcessorEditor* createEditor() override;
@@ -111,8 +112,10 @@ public:
         }
     };
 
-    EventManager     eventManager;
-    TraversalSession traversalSession { eventManager };
+    AudioUIBridge    bridge;
+    EventManager     eventManager        { bridge };
+    EventManager     previewEventManager { bridge };
+    TraversalSession traversalSession    { eventManager, previewEventManager };
 
     std::vector<juce::MidiMessage> pendingNoteOffs;
 

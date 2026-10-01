@@ -16,11 +16,8 @@ TraversalRulesWindow::TraversalRulesWindow(const ApplicationContext& context) : 
 
     rulesPanel.resizer.onWidthDragged = [this](int newWidth) { setPanelWidth(newWidth); };
 
-    filePageViewport.setScrollBarsShown(true, false);
-
     addAndMakeVisible(titlebar);
     addAndMakeVisible(rulesPanel);
-    addAndMakeVisible(filePageViewport);
 
     rulesPanel.propagateLabelClicked = [this](int fileId) { setActivePage(fileId); };
     rulesPanel.propagateAddClicked   = [this] { addRule(); };
@@ -85,12 +82,8 @@ void TraversalRulesWindow::resized() {
     rulesPanel.setBounds(bounds.removeFromLeft(panelWidth));
     titlebar.setBounds(bounds.removeFromTop(RulesTitlebar::preferredHeight));
 
-    filePageViewport.setBounds(bounds);
-
     if (activePage != nullptr) {
-        const int pageWidth = filePageViewport.getMaximumVisibleWidth();
-
-        activePage->setSize(pageWidth, activePage->preferredHeightForWidth(pageWidth));
+        activePage->setBounds(bounds);
     }
 }
 
@@ -134,8 +127,10 @@ void TraversalRulesWindow::syncWithRuleState() {
             rulesPanel.addLabel(ruleId, rule.getProperty(ValueTreeIdentifiers::RuleName).toString());
             createPage(ruleId, source);
         }
-        else if (match->second->getText() != source) {
-            match->second->setText(source);
+        else if (match->second->getDocument().getAllContent() != source) {
+            const juce::ScopedValueSetter<bool> silence(match->second->suppressTextChanged, true);
+
+            match->second->loadContent(source);
         }
     }
 
@@ -148,8 +143,6 @@ void TraversalRulesWindow::syncWithRuleState() {
         if (activePage == page->second.get()) {
             activePage   = nullptr;
             viewedRuleId = -1;
-
-            filePageViewport.setViewedComponent(nullptr, false);
         }
 
         rulesPanel.removeLabel(page->first);
@@ -171,12 +164,12 @@ void TraversalRulesWindow::syncWithRuleState() {
 void TraversalRulesWindow::createPage(int ruleId, const juce::String& source) {
     auto page = std::make_unique<FilePage>(context);
 
-    page->setText(source);
+    page->loadContent(source);
 
     FilePage* createdPage = page.get();
 
     page->onTextChanged = [this, ruleId, createdPage] {
-        context.traversalRuleState->setRuleSource(ruleId, createdPage->getText(), nullptr);
+        context.traversalRuleState->setRuleSource(ruleId, createdPage->getDocument().getAllContent(), nullptr);
 
         startTimer(compileDelayMs);
     };
@@ -226,10 +219,14 @@ void TraversalRulesWindow::setActivePage(int id) {
         return;
     }
 
+    if (activePage != nullptr) {
+        removeChildComponent(activePage);
+    }
+
     activePage   = page;
     viewedRuleId = id;
 
-    filePageViewport.setViewedComponent(page, false);
+    addAndMakeVisible(page);
     rulesPanel.selectLabel(id);
 
     resized();
@@ -259,17 +256,19 @@ void TraversalRulesWindow::compileViewedPage() {
 
     TraversalRuleState& state = *context.traversalRuleState;
 
-    const juce::String source = activePage->getText();
+    const juce::String source = activePage->getDocument().getAllContent();
 
     state.setRuleSource(viewedRuleId, source, nullptr);
 
     ScriptCompileResult result = compileTraversalScript(source.toStdString());
 
-    activePage->clearLineErrors();
+    activePage->errorLines.clear();
 
     for (const ScriptDiagnostic& diagnostic : result.diagnostics) {
-        activePage->setLineError(diagnostic.line, diagnostic.message);
+        activePage->errorLines.push_back(diagnostic.line - 1);
     }
+
+    activePage->repaint();
 
     if (!result.succeeded()) {
         const ScriptDiagnostic& first = result.diagnostics.front();

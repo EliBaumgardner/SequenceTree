@@ -8,6 +8,7 @@
 #include "../../Graph/GraphState.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/NodeInfo.h"
+#include "../Canvas/NodeCanvas.h"
 
 #include <limits>
 
@@ -110,6 +111,8 @@ void TraversalMenu::selectTraversal(int traversalId) {
     }
 
     currentTraversalData = traversalData;
+
+    applicationContext.canvas->quaverTraversalId = traversalId;
 
     const auto bindWithDefault = [&traversalData](ValueEditor& editor, const juce::Identifier& propertyId,
                                            const juce::var& defaultValue) {

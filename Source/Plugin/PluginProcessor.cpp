@@ -33,7 +33,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { tempoParameterId, parameterVersion },
-                                                           "Tempo Multiplier", tempoRange, 1.0f));
+                                                           "Tempo Multiplier", tempoRange, 1.0f,
+                                                           juce::AudioParameterFloatAttributes().withStringFromValueFunction([](float value, int) {
+                                                               return juce::String(value, 2);
+                                                           })));
 
     layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { velocityParameterId, parameterVersion },
                                                          "Velocity", 0, maximumMidiVelocity, maximumMidiVelocity));
@@ -119,14 +122,16 @@ void SequenceTreeAudioProcessor::releaseResources()
 {
     pendingNoteOffs.clear();
 
-    for (const auto& note : eventManager.scheduler.activeNotes) {
-        if (NoteScheduler::isNoteSounding(note)) {
-            pendingNoteOffs.push_back(
-                juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch));
+    for (EventManager* manager : { &eventManager, &previewEventManager }) {
+        for (const auto& note : manager->scheduler.activeNotes) {
+            if (NoteScheduler::isNoteSounding(note)) {
+                pendingNoteOffs.push_back(
+                    juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch));
+            }
         }
-    }
 
-    eventManager.scheduler.activeNotes.clear();
+        manager->scheduler.activeNotes.clear();
+    }
 
     snapshots.releaseRetiredSnapshots();
 }
@@ -318,7 +323,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     traversalSession.setSelectChildScript(activeScript);
 
-    if (!hasGraph || (!playing && !replayThisBlock)) {
+    if (!hasGraph) {
         if (resetHit) {
             traversalSession.clearTraversals();
         }
@@ -326,11 +331,12 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         return;
     }
 
-    driveWalk(*snap, midiMessages, numSamples, playing, resetHit);
+    driveWalk(*snap, midiMessages, numSamples, playing, resetHit, replayThisBlock);
 }
 
 void SequenceTreeAudioProcessor::driveWalk(const AudioSnapshotPublisher::Snapshot& snap, juce::MidiBuffer& midiMessages,
-                                           const int numSamples, const bool playing, const bool resetHit) noexcept
+                                           const int numSamples, const bool playing, const bool resetHit,
+                                           const bool replayThisBlock) noexcept
 {
     double hostTempoScale = 1.0;
 
@@ -347,6 +353,20 @@ void SequenceTreeAudioProcessor::driveWalk(const AudioSnapshotPublisher::Snapsho
         juce::roundToInt(transposeParameter.load()),
         velocityParameter.load() / static_cast<double>(maximumMidiVelocity)
     };
+
+    const DispatchContext previewContext { context.nodes, traversalSession.previewTraversals, context.midiMessages,
+                                           context.sampleRate, context.tempoMultiplier,
+                                           context.transpose, context.velocityScale };
+
+    traversalSession.playPreview(previewContext, numSamples);
+
+    if (!playing && !replayThisBlock) {
+        if (resetHit) {
+            traversalSession.clearTraversals();
+        }
+
+        return;
+    }
 
     eventManager.followTempo(context.tempoMultiplier);
 

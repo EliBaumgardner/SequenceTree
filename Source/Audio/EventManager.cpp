@@ -2,6 +2,10 @@
 #include <algorithm>
 #include <functional>
 
+EventManager::EventManager(AudioUIBridge& bridgeRef) : bridge(bridgeRef)
+{
+}
+
 void EventManager::handleOrphanNotes(const DispatchContext& context)
 {
     auto& activeNotes = scheduler.activeNotes;
