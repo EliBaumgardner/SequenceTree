@@ -16,6 +16,8 @@
 
 struct RTNote {
 
+    static constexpr int fallbackValue = 63;
+
     int pitch       = 0;
     int velocity    = 0;
     int duration    = 0;

@@ -33,6 +33,7 @@ void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, d
     newNote.nodeId              = node.nodeID;
     newNote.nodeType            = node.nodeType;
     newNote.isConnectionTrigger = isConnectionTrigger;
+    newNote.sound               = voicing.sound;
 
     if (!isConnectionTrigger && !node.notes.empty()) {
         const RTNote& noteData       = node.notes[0];
@@ -67,7 +68,7 @@ void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, d
 
     activeNotes.push_back(newNote);
 
-    if (!isConnectionTrigger && isNodeAudible(node.nodeType)) {
+    if (isNoteSounding(newNote)) {
         midiMessages.addEvent(juce::MidiMessage::noteOn(newNote.event.midiChannel, newNote.event.pitch,
                               static_cast<juce::uint8>(newNote.event.velocity)), static_cast<int>(sample));
     }
@@ -75,7 +76,7 @@ void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, d
 
 bool NoteScheduler::isNoteSounding(const ActiveNote& note)
 {
-    return isNodeAudible(note.nodeType) && !note.isConnectionTrigger;
+    return isNodeAudible(note.nodeType) && !note.isConnectionTrigger && note.sound == Sound::Audible;
 }
 
 void NoteScheduler::sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample)

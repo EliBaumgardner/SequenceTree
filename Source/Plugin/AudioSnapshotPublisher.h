@@ -17,7 +17,7 @@ public:
     struct Snapshot
     {
         std::shared_ptr<NodeMap>      globalNodes;
-        std::shared_ptr<RTScript>     selectChildScript;
+        std::shared_ptr<RTScript>     traversalScript;
 
         std::uint64_t                 generation = 0;
     };

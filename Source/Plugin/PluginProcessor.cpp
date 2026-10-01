@@ -299,7 +299,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     const RTScript* activeScript    = nullptr;
 
     if (snap != nullptr) {
-        activeScript = snap->selectChildScript.get();
+        activeScript = snap->traversalScript.get();
     }
 
     buffer.clear();
@@ -321,7 +321,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     wasPlaying = playing;
 
-    traversalSession.setSelectChildScript(activeScript);
+    traversalSession.setTraversalScript(activeScript);
 
     if (!hasGraph) {
         if (resetHit) {

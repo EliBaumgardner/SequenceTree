@@ -21,6 +21,8 @@ struct TraversalRuntime
 
     int  repeatCount = 0;
 
+    ScriptNote scriptNote;
+
     bool isSpawned() const { return asFlag || asCrossTree; }
 };
 
@@ -108,6 +110,7 @@ public:
 
             slot.entry.second.logic.mode              = mode;
             slot.entry.second.logic.previewVisitCount = previewVisitCount;
+            slot.entry.second.logic.script            = script;
 
             ++activeCount;
             ++epoch;
@@ -184,6 +187,8 @@ public:
 
     TraversalLogic::Mode mode              = TraversalLogic::Mode::Live;
     int                  previewVisitCount = 1;
+
+    const RTScript* script = nullptr;
 
     int runIdCounter = 0;
 

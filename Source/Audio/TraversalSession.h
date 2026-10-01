@@ -2,7 +2,6 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "TraversalPool.h"
-#include "ScriptTraversalRule.h"
 #include "TraversalDispatcher.h"
 #include "../Graph/RTData.h"
 #include <cstdint>
@@ -29,7 +28,7 @@ public:
 
     bool startTraversalsFromFirstRoot(const DispatchContext& context);
 
-    void setSelectChildScript(const RTScript* script);
+    void setTraversalScript(const RTScript* script);
 
     void playPreview(const DispatchContext& context, int numSamples);
 
@@ -69,11 +68,6 @@ private:
 
     EventManager& eventManager;
     EventManager& previewEventManager;
-
-    RTScript            nativeFallbackScript;
-    ScriptTraversalRule scriptRule;
-
-    static constexpr bool useScriptedChildSelection = true;
 
     static constexpr int scratchCapacity           = 256;
     static constexpr int maxConcurrentTraversals   = 128;

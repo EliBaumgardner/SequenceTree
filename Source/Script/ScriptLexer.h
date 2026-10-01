@@ -14,6 +14,7 @@ enum class TokenKind
     Terminator,
     Identifier,
     Number,
+    Decimal,
 
     KeywordLet,
     KeywordIf,
@@ -24,12 +25,22 @@ enum class TokenKind
     KeywordBreak,
     KeywordContinue,
     KeywordReturn,
+    KeywordClass,
+    KeywordPublic,
+    KeywordVoid,
+    KeywordInt,
+    KeywordFloat,
+    KeywordDouble,
+    KeywordNode,
+    KeywordNone,
 
     LeftBrace,
     RightBrace,
     LeftParen,
     RightParen,
     Dot,
+    Colon,
+    Comma,
 
     Assign,
     PlusAssign,
@@ -55,12 +66,13 @@ enum class TokenKind
 
 struct Token
 {
-    TokenKind   kind   = TokenKind::Null;
+    TokenKind   kind         = TokenKind::Null;
     std::string text;
-    int         value  = 0;
-    int         line   = 1;
-    int         column = 1;
-    int         length = 1;
+    int         value        = 0;
+    double      decimalValue = 0.0;
+    int         line         = 1;
+    int         column       = 1;
+    int         length       = 1;
 };
 
 struct KeywordEntry

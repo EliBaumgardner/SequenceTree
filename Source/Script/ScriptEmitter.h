@@ -17,12 +17,32 @@ struct LocalBinding
 {
     std::string name;
     int         slot = 0;
+    ValueType   type = ValueType::Int;
 };
+
+struct FunctionSignature
+{
+    std::string            name;
+    ValueType              returnType = ValueType::Void;
+    std::vector<ValueType> parameterTypes;
+    int                    index       = 0;
+    int                    declaration = 0;
+};
+
+enum class FieldAccess { ReadOnly, Writable };
 
 struct FieldEntry
 {
     const char* name;
     ScriptField field;
+    ValueType   type;
+    FieldAccess access;
+};
+
+struct ContextEntry
+{
+    const char*        name;
+    ScriptContextValue value;
 };
 
 struct EmitFailure {};
@@ -34,14 +54,21 @@ public:
     Emitter(RTScript& target, std::vector<ScriptDiagnostic>& diagnosticList)
         : script(target), diagnostics(diagnosticList) {}
 
-    void run(std::span<const StatementPtr> program);
+    void run(const ClassDeclaration& declaration);
 
 private:
 
     static int stackDelta(ScriptOpcode opcode);
 
+    static const char* typeName(ValueType type);
+
+    static ScriptNumber numberKind(ValueType type);
+
+    static ValueType commonType(ValueType left, ValueType right);
+
     int emit(ScriptOpcode opcode, int operand = 0);
-    int emit(ScriptOpcode opcode, ScriptField field);
+
+    bool emitConversion(ValueType from, ValueType to);
 
     int here() const;
 
@@ -51,19 +78,26 @@ private:
     [[noreturn]] void fail(const std::string& message, const Expression& expression);
 
     int allocateSlot();
-    int declareLocal(const std::string& name);
+    int declareLocal(const std::string& name, ValueType type);
 
-    bool findLocal(const std::string& name, int& slot) const;
+    const LocalBinding*      findLocal   (const std::string& name) const;
+    const LocalBinding*      findMember  (const std::string& name) const;
+    const FunctionSignature* findFunction(const std::string& name) const;
 
     void openScope();
     void closeScope();
+
+    void declareMembers  (const ClassDeclaration& declaration);
+    void declareFunctions(const ClassDeclaration& declaration);
+    void emitFunction    (const FunctionDeclaration& declaration, const FunctionSignature& signature);
 
     void emitSequence(std::span<const StatementPtr> statements);
     void emitBlock(std::span<const StatementPtr> body);
 
     void emitStatement(const Statement& statement);
-    void emitLet(const Statement& statement);
+    void emitDeclare(const Statement& statement);
     void emitAssign(const Statement& statement);
+    void emitAssignField(const Statement& statement);
     void emitIf(const Statement& statement);
     void emitFor(const Statement& statement);
     void emitWhile(const Statement& statement);
@@ -73,25 +107,30 @@ private:
 
     void patchLoopFrame(const LoopFrame& frame, int continueTarget, int exitTarget);
 
-    void emitExpression(const Expression& expression);
-    void emitLiteral(const Expression& expression);
-    void emitName(const Expression& expression);
-    void emitMember(const Expression& expression);
-    void emitUnary(const Expression& expression);
-    void emitBinary(const Expression& expression);
+    ValueType emitExpression(const Expression& expression);
+    ValueType emitName(const Expression& expression);
+    ValueType emitField(const Expression& expression);
+    ValueType emitCall(const Expression& expression);
+    ValueType emitUnary(const Expression& expression);
+    ValueType emitBinary(const Expression& expression);
+
+    const FieldEntry& nodeField(const Expression& expression);
 
     ScriptOpcode binaryOpcode(const Expression& expression);
 
     RTScript&                      script;
     std::vector<ScriptDiagnostic>& diagnostics;
 
-    std::vector<LocalBinding> locals;
-    std::vector<std::size_t>  scopeMarks;
-    std::vector<int>          slotMarks;
+    std::vector<LocalBinding>      locals;
+    std::vector<LocalBinding>      members;
+    std::vector<FunctionSignature> functions;
+
+    std::vector<std::size_t> scopeMarks;
+    std::vector<int>         slotMarks;
 
     std::vector<LoopFrame> loopStack;
 
-    std::string childBinding;
+    const FunctionSignature* currentFunction = nullptr;
 
     int nextSlot      = 0;
     int highWaterSlot = 0;

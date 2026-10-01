@@ -7,8 +7,11 @@
 #include "Graph/ValueTreeIdentifiers.h"
 #include "Audio/TraversalLogic.h"
 #include "Input/ConnectionOps.h"
+#include "Script/ScriptCompiler.h"
 #include "UI/Node/NodeFactory.h"
 
+#include <memory>
+#include <string>
 #include <vector>
 
 int main(int argc, char* argv[])
@@ -522,4 +525,141 @@ TEST_CASE("a restored graph indexes, numbers and walks like the one it was saved
 
     CHECK(walks[0] == expected);
     CHECK(walks[1] == expected);
+}
+
+struct HostPlayHead : juce::AudioPlayHead
+{
+    PositionInfo position;
+
+    juce::Optional<PositionInfo> getPosition() const override
+    {
+        return position;
+    }
+};
+
+struct PlayedNote
+{
+    int pitch    = 0;
+    int velocity = 0;
+    int sample   = 0;
+
+    bool operator==(const PlayedNote&) const = default;
+};
+
+static std::vector<PlayedNote> playChainWithScript(const char* scriptSource)
+{
+    constexpr double sampleRate = 48000.0;
+    constexpr int    blockSize  = 512;
+    constexpr int    blockCount = 400;
+
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+
+    HostPlayHead             playHead;
+    juce::AudioBuffer<float> buffer(2, blockSize);
+    juce::MidiBuffer         midi;
+    std::vector<PlayedNote>  played;
+    double                   ppq = 0.0;
+
+    const int rootId  = createRoot(graph, 0, 0);
+    const int firstId = createChild(graph, rootId, 100, 0);
+
+    createChild(graph, firstId, 220, 0);
+    rebuildAndPublish(processor);
+
+    processor.snapshots.publishScript(nullptr);
+
+    if (scriptSource != nullptr) {
+        ScriptCompileResult compiled = compileTraversalScript(scriptSource);
+
+        REQUIRE(compiled.succeeded());
+
+        processor.snapshots.publishScript(std::make_shared<RTScript>(std::move(compiled.script)));
+    }
+
+    playHead.position.setIsPlaying(true);
+    playHead.position.setBpm(120.0);
+
+    processor.setPlayHead(&playHead);
+    processor.prepareToPlay(sampleRate, blockSize);
+
+    midi.ensureSize(2048);
+
+    for (int block = 0; block < blockCount; ++block) {
+        playHead.position.setPpqPosition(ppq);
+        processor.processBlock(buffer, midi);
+
+        ppq += blockSize / sampleRate * *playHead.position.getBpm() / 60.0;
+
+        for (const auto event : midi) {
+            if (event.getMessage().isNoteOn()) {
+                played.push_back({ event.getMessage().getNoteNumber(), event.getMessage().getVelocity(),
+                                   block * blockSize + event.samplePosition });
+            }
+        }
+    }
+
+    processor.releaseResources();
+    processor.setPlayHead(nullptr);
+
+    return played;
+}
+
+static std::string traversalWithMain(const std::string& mainBody)
+{
+    return "class Traversal : defaultTraversal {\npublic:\n    Node selectedNode;\n    void main() {\n"
+           + mainBody + "\n    }\n};\n";
+}
+
+TEST_CASE("the default script plays exactly what the built-in traversal plays", "[graph][script]")
+{
+    const std::vector<PlayedNote> builtIn = playChainWithScript(nullptr);
+
+    REQUIRE(builtIn.size() > 4);
+    CHECK(playChainWithScript(defaultTraversalScriptSource()) == builtIn);
+}
+
+TEST_CASE("main's playNote values reach the MIDI output, and the rhythm is unchanged", "[graph][script]")
+{
+    const std::vector<PlayedNote> builtIn = playChainWithScript(nullptr);
+
+    const std::string shifted = traversalWithMain(
+        "        selectedNode = advance(1);\n"
+        "        int velocity = selectedNode.velocity;\n"
+        "        velocity += 10;\n"
+        "        playNote(selectedNode, selectedNode.pitch - 12, selectedNode.duration, velocity);");
+
+    const std::vector<PlayedNote> played = playChainWithScript(shifted.c_str());
+
+    REQUIRE(played.size() == builtIn.size());
+
+    CHECK(played.front() == builtIn.front());
+
+    for (std::size_t index = 1; index < played.size(); ++index) {
+        CAPTURE(index);
+        CHECK(played[index].sample   == builtIn[index].sample);
+        CHECK(played[index].pitch    == builtIn[index].pitch - 12);
+        CHECK(played[index].velocity == juce::jlimit(0, 127, builtIn[index].velocity + 10));
+    }
+}
+
+TEST_CASE("a main that never plays is silent, and the walk still keeps time", "[graph][script]")
+{
+    const std::vector<PlayedNote> builtIn = playChainWithScript(nullptr);
+
+    const std::string silentEveryOther = traversalWithMain(
+        "        selectedNode = advance(1);\n"
+        "        if selectedNode.id % 2 == 0 {\n"
+        "            playNote(selectedNode, selectedNode.pitch, selectedNode.duration, selectedNode.velocity);\n"
+        "        }");
+
+    const std::vector<PlayedNote> played = playChainWithScript(silentEveryOther.c_str());
+
+    CHECK(playChainWithScript(traversalWithMain("        selectedNode = advance(1);").c_str()).size() == 1);
+    CHECK(played.size() < builtIn.size());
+    CHECK(played.size() > 1);
+
+    for (const PlayedNote& note : played) {
+        CHECK(std::ranges::find(builtIn, note) != builtIn.end());
+    }
 }

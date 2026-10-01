@@ -1,26 +1,26 @@
 #include "ScriptParser.h"
 
-std::vector<StatementPtr> Parser::run()
+ClassDeclaration Parser::run()
 {
-    std::vector<StatementPtr> program;
+    ClassDeclaration declaration;
 
     skipTerminators();
 
-    while (current().kind != TokenKind::End) {
-        try {
-            program.push_back(parseStatement());
-        } catch (const ParseFailure&) {
-            recover();
-
-            if (current().kind == TokenKind::RightBrace) {
-                ++position;
-            }
-        }
-
-        skipTerminators();
+    try {
+        parseClassHeader(declaration);
+    } catch (const ParseFailure&) {
+        return declaration;
     }
 
-    return program;
+    parseClassBody(declaration);
+
+    skipTerminators();
+
+    if (current().kind != TokenKind::End) {
+        diagnostics.push_back({ "nothing may follow the class", current().line, current().column, current().length });
+    }
+
+    return declaration;
 }
 
 const Token& Parser::current() const { return tokens[position]; }
@@ -95,6 +95,144 @@ void Parser::fail(const std::string& message)
     throw ParseFailure{};
 }
 
+ValueType Parser::parseType()
+{
+    if (match(TokenKind::KeywordInt)) {
+        return ValueType::Int;
+    }
+
+    if (match(TokenKind::KeywordFloat)) {
+        return ValueType::Float;
+    }
+
+    if (match(TokenKind::KeywordDouble)) {
+        return ValueType::Double;
+    }
+
+    if (match(TokenKind::KeywordNode)) {
+        return ValueType::Node;
+    }
+
+    fail("expected a type, 'int', 'float', 'double' or 'Node'");
+}
+
+void Parser::parseClassHeader(ClassDeclaration& declaration)
+{
+    if (current().kind != TokenKind::KeywordClass) {
+        fail("a traversal script is a class, such as 'class Traversal : defaultTraversal { ... };'");
+    }
+
+    ++position;
+
+    declaration.name = expect(TokenKind::Identifier, "a class name").text;
+
+    if (match(TokenKind::Colon)) {
+        const Token& base = expect(TokenKind::Identifier, "'defaultTraversal' after ':'");
+
+        if (base.text != "defaultTraversal") {
+            diagnostics.push_back({ "a traversal can only build on 'defaultTraversal'",
+                                    base.line, base.column, base.length });
+            throw ParseFailure{};
+        }
+    }
+
+    expect(TokenKind::LeftBrace, "'{' to open the class");
+}
+
+void Parser::parseClassBody(ClassDeclaration& declaration)
+{
+    skipTerminators();
+
+    while (current().kind != TokenKind::RightBrace) {
+        if (current().kind == TokenKind::End) {
+            diagnostics.push_back({ "expected '}' to close the class",
+                                    current().line, current().column, current().length });
+            return;
+        }
+
+        try {
+            parseClassMember(declaration);
+        } catch (const ParseFailure&) {
+            recover();
+        }
+
+        skipTerminators();
+    }
+
+    ++position;
+}
+
+void Parser::parseClassMember(ClassDeclaration& declaration)
+{
+    ValueType type = ValueType::Void;
+
+    if (match(TokenKind::KeywordPublic)) {
+        expect(TokenKind::Colon, "':' after 'public'");
+        return;
+    }
+
+    if (current().kind == TokenKind::Identifier) {
+        fail("give '" + current().text + "' a type, such as 'Node " + current().text + ";' or 'int "
+             + current().text + ";'");
+    }
+
+    if (!match(TokenKind::KeywordVoid)) {
+        type = parseType();
+    }
+
+    const Token& nameToken = expect(TokenKind::Identifier, "a name");
+
+    if (current().kind == TokenKind::LeftParen) {
+        parseFunction(declaration, type, nameToken);
+        return;
+    }
+
+    if (type == ValueType::Void) {
+        fail("only a function can be 'void'");
+    }
+
+    if (current().kind == TokenKind::Assign) {
+        fail("a member starts at 0, or at none for a Node; give it a value inside a function");
+    }
+
+    expect(TokenKind::Terminator, "';' after a member");
+
+    declaration.members.push_back({ type, nameToken.text, nameToken.line, nameToken.column, nameToken.length });
+}
+
+void Parser::parseFunction(ClassDeclaration& declaration, ValueType returnType, const Token& nameToken)
+{
+    FunctionDeclaration function;
+
+    function.returnType = returnType;
+    function.name       = nameToken.text;
+    function.line       = nameToken.line;
+    function.column     = nameToken.column;
+    function.length     = nameToken.length;
+
+    expect(TokenKind::LeftParen, "'('");
+
+    if (current().kind != TokenKind::RightParen) {
+        do {
+            Parameter parameter;
+
+            parameter.line   = current().line;
+            parameter.column = current().column;
+            parameter.type   = parseType();
+            parameter.name   = expect(TokenKind::Identifier, "a parameter name").text;
+            parameter.length = tokens[position - 1].column + tokens[position - 1].length - parameter.column;
+
+            function.parameters.push_back(parameter);
+        } while (match(TokenKind::Comma));
+    }
+
+    expect(TokenKind::RightParen, "')' after the parameters");
+
+    function.body = parseBlock();
+
+    declaration.functions.push_back(std::move(function));
+}
+
 StatementPtr Parser::makeStatement(StatementKind kind, const Token& token)
 {
     StatementPtr statement = std::make_unique<Statement>();
@@ -110,52 +248,78 @@ StatementPtr Parser::makeStatement(StatementKind kind, const Token& token)
 StatementPtr Parser::parseStatement()
 {
     switch (current().kind) {
-        case TokenKind::KeywordLet:      return parseLet();
+        case TokenKind::KeywordLet:
+        case TokenKind::KeywordInt:
+        case TokenKind::KeywordFloat:
+        case TokenKind::KeywordDouble:
+        case TokenKind::KeywordNode:     return parseDeclaration();
         case TokenKind::KeywordIf:       return parseIf();
         case TokenKind::KeywordFor:      return parseFor();
         case TokenKind::KeywordWhile:    return parseWhile();
         case TokenKind::KeywordBreak:    return parseSimple(StatementKind::Break);
         case TokenKind::KeywordContinue: return parseSimple(StatementKind::Continue);
         case TokenKind::KeywordReturn:   return parseReturn();
-        case TokenKind::Identifier:      return parseAssign();
+        case TokenKind::Identifier:      return parseAssignOrCall();
         default:                         break;
     }
 
     fail("expected a statement");
 }
 
-StatementPtr Parser::parseLet()
+StatementPtr Parser::parseDeclaration()
 {
-    StatementPtr statement = makeStatement(StatementKind::Let, current());
-    ++position;
+    StatementPtr statement = makeStatement(StatementKind::Declare, current());
+
+    if (match(TokenKind::KeywordLet)) {
+        statement->declaredType = ValueType::Inferred;
+    }
+    else {
+        statement->declaredType = parseType();
+    }
 
     statement->name = expect(TokenKind::Identifier, "a variable name").text;
 
-    expect(TokenKind::Assign, "'=' after a variable name");
-
-    statement->value = parseExpression();
+    if (statement->declaredType == ValueType::Inferred) {
+        expect(TokenKind::Assign, "'=' after a variable name");
+        statement->value = parseExpression();
+    }
+    else if (match(TokenKind::Assign)) {
+        statement->value = parseExpression();
+    }
 
     endStatement();
 
     return statement;
 }
 
-StatementPtr Parser::parseAssign()
+StatementPtr Parser::parseAssignOrCall()
 {
     StatementPtr statement = makeStatement(StatementKind::Assign, current());
 
-    statement->name = current().text;
-    ++position;
-
+    ExpressionPtr   target     = parsePostfix();
     const TokenKind assignKind = current().kind;
 
     if (assignKind != TokenKind::Assign
         && assignKind != TokenKind::PlusAssign
         && assignKind != TokenKind::MinusAssign) {
-        fail("expected '=', '+=' or '-=' after a variable name");
+        if (target->kind != ExpressionKind::Call) {
+            fail("expected '=', '+=' or '-='");
+        }
+
+        statement->kind  = StatementKind::Call;
+        statement->value = std::move(target);
+
+        endStatement();
+
+        return statement;
     }
 
-    statement->op = assignKind;
+    if (target->kind != ExpressionKind::Name && target->kind != ExpressionKind::Field) {
+        fail("only a variable or a node property can be assigned");
+    }
+
+    statement->op     = assignKind;
+    statement->target = std::move(target);
     ++position;
 
     statement->value = parseExpression();
@@ -196,11 +360,14 @@ StatementPtr Parser::parseFor()
 
     expect(TokenKind::KeywordIn, "'in' after a loop variable name");
 
-    const Token& iterable = expect(TokenKind::Identifier, "'children'");
+    ExpressionPtr iterable = parsePostfix();
 
-    if (iterable.text != "children") {
-        diagnostics.push_back({ "only 'children' can be iterated",
-                                iterable.line, iterable.column, iterable.length });
+    if (iterable->kind == ExpressionKind::Field && iterable->name == "children") {
+        statement->target = std::move(iterable->left);
+    }
+    else if (iterable->kind != ExpressionKind::Name || iterable->name != "children") {
+        diagnostics.push_back({ "only children can be iterated, such as 'children' or 'node.children'",
+                                iterable->line, iterable->column, iterable->length });
         throw ParseFailure{};
     }
 
@@ -235,7 +402,9 @@ StatementPtr Parser::parseReturn()
     StatementPtr statement = makeStatement(StatementKind::Return, current());
     ++position;
 
-    statement->value = parseExpression();
+    if (current().kind != TokenKind::Terminator) {
+        statement->value = parseExpression();
+    }
 
     endStatement();
 
@@ -340,8 +509,9 @@ ExpressionPtr Parser::parseUnary()
         ExpressionPtr operand = parseUnary();
 
         if (operatorToken.kind == TokenKind::Minus
-            && operand->kind == ExpressionKind::Literal) {
-            operand->value = -operand->value;
+            && (operand->kind == ExpressionKind::Literal || operand->kind == ExpressionKind::Decimal)) {
+            operand->value        = -operand->value;
+            operand->decimalValue = -operand->decimalValue;
             return operand;
         }
 
@@ -353,7 +523,32 @@ ExpressionPtr Parser::parseUnary()
         return expression;
     }
 
-    return parsePrimary();
+    return parsePostfix();
+}
+
+ExpressionPtr Parser::parsePostfix()
+{
+    ExpressionPtr expression = parsePrimary();
+
+    while (match(TokenKind::Dot)) {
+        const Token& memberToken = expect(TokenKind::Identifier, "a property name");
+
+        ExpressionPtr field = makeExpression(ExpressionKind::Field, memberToken);
+
+        field->name   = memberToken.text;
+        field->line   = expression->line;
+        field->column = expression->column;
+        field->length = expression->length;
+
+        if (memberToken.line == expression->line) {
+            field->length = memberToken.column + memberToken.length - expression->column;
+        }
+
+        field->left = std::move(expression);
+        expression  = std::move(field);
+    }
+
+    return expression;
 }
 
 ExpressionPtr Parser::parsePrimary()
@@ -363,6 +558,13 @@ ExpressionPtr Parser::parsePrimary()
     if (token.kind == TokenKind::Number) {
         ExpressionPtr expression = makeExpression(ExpressionKind::Literal, token);
         expression->value = token.value;
+        ++position;
+        return expression;
+    }
+
+    if (token.kind == TokenKind::Decimal) {
+        ExpressionPtr expression = makeExpression(ExpressionKind::Decimal, token);
+        expression->decimalValue = token.decimalValue;
         ++position;
         return expression;
     }
@@ -377,19 +579,29 @@ ExpressionPtr Parser::parsePrimary()
         return expression;
     }
 
+    if (token.kind == TokenKind::KeywordNone) {
+        ++position;
+        return makeExpression(ExpressionKind::None, token);
+    }
+
     if (token.kind == TokenKind::Identifier) {
         ++position;
 
-        if (current().kind == TokenKind::Dot) {
-            ++position;
+        if (match(TokenKind::LeftParen)) {
+            ExpressionPtr expression = makeExpression(ExpressionKind::Call, token);
+            expression->name = token.text;
 
-            const Token& memberToken = expect(TokenKind::Identifier, "a property name");
+            if (current().kind != TokenKind::RightParen) {
+                do {
+                    expression->arguments.push_back(parseExpression());
+                } while (match(TokenKind::Comma));
+            }
 
-            ExpressionPtr expression = makeExpression(ExpressionKind::Member, token);
+            const Token& closing = expect(TokenKind::RightParen, "')' after the arguments");
 
-            expression->name   = token.text;
-            expression->member = memberToken.text;
-            expression->length = memberToken.column + memberToken.length - token.column;
+            if (closing.line == token.line) {
+                expression->length = closing.column + closing.length - token.column;
+            }
 
             return expression;
         }

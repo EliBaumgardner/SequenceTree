@@ -7,12 +7,17 @@ enum class ScriptOpcode
     Halt,
 
     PushInt,
+    PushReal,
     PushLocal,
-    PushField,
+    PushMember,
+    PushContext,
+    PushNodeField,
     StoreLocal,
+    StoreMember,
+    StoreNodeField,
     Pop,
 
-    LoadChild,
+    ChildAt,
 
     Add,
     Subtract,
@@ -20,6 +25,7 @@ enum class ScriptOpcode
     Divide,
     Modulo,
     Negate,
+    Convert,
 
     Equal,
     NotEqual,
@@ -36,31 +42,50 @@ enum class ScriptOpcode
     JumpIfFalse,
     JumpIfTrue,
 
+    Call,
+    Advance,
+    PlayNote,
+
     Return
+};
+
+enum class ScriptNumber
+{
+    Int,
+    Float,
+    Double
+};
+
+enum class ScriptContextValue
+{
+    Current,
+    TraversalId,
+    TraversalRandom,
+    TraversalInstance
 };
 
 enum class ScriptField
 {
-    ParentId,
-    ParentCount,
-    ParentChildCount,
-    ParentLastChosenChild,
+    Id,
+    Pitch,
+    Velocity,
+    Duration,
 
-    TraversalId,
-    TraversalRandom,
-    TraversalInstance,
+    Count,
+    SwitchCount,
+    TriggerCount,
+    SubLoopCount,
 
-    ChildId,
-    ChildIsEligible,
-    ChildCountLimit,
-    ChildTriggerLimit,
-    ChildTriggerCount,
-    ChildVisitCount,
-    ChildRepeatValue,
-    ChildPitchOffset,
-    ChildSwitchCountLimit,
-    ChildSubLoopCountLimit,
-    ChildProbability
+    CountLimit,
+    TriggerLimit,
+    SwitchLimit,
+    SubLoopLimit,
+    Repeat,
+    Probability,
+    ChildCount,
+    LastChild,
+    Parent,
+    Eligible
 };
 
 struct ScriptInstruction
@@ -75,20 +100,31 @@ struct ScriptInstruction
 
     ScriptInstruction(ScriptOpcode instructionOpcode, int instructionOperand)
         : opcode(instructionOpcode), operand(instructionOperand) {}
+};
 
-    ScriptInstruction(ScriptOpcode instructionOpcode, ScriptField field)
-        : opcode(instructionOpcode), operand(static_cast<int>(field)) {}
+struct ScriptFunction
+{
+    int entry          = 0;
+    int parameterCount = 0;
+    int localCount     = 0;
 };
 
 struct RTScript
 {
-    static constexpr int maxLocals  = 32;
-    static constexpr int maxStack   = 64;
+    static constexpr int maxLocals         = 32;
+    static constexpr int maxStack          = 64;
+    static constexpr int maxMembers        = 32;
+    static constexpr int maxCallDepth      = 8;
     static constexpr int defaultStepBudget = 8192;
 
     std::vector<ScriptInstruction> instructions;
+    std::vector<ScriptFunction>    functions;
+    std::vector<double>            memberDefaults;
+    std::vector<double>            constants;
 
-    int localCount = 0;
+    int mainFunction    = -1;
+    int advanceFunction = -1;
+
     int stepBudget = defaultStepBudget;
 
     bool isEmpty() const { return instructions.empty(); }

@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "Audio/ScriptTraversalRule.h"
+#include "Audio/ScriptRun.h"
 #include "Audio/TraversalLogic.h"
 #include "Script/ScriptCompiler.h"
 
@@ -68,13 +68,15 @@ static NodeMap mirrorAsModulators(const NodeMap& tree)
     return mirror;
 }
 
-static std::vector<int> walkPrimary(const NodeMap& nodes, int rootId, int steps, const TraversalRule& rule)
+static std::vector<int> walkPrimary(const NodeMap& nodes, int rootId, int steps, const TraversalRule& rule,
+                                    const RTScript* script = nullptr)
 {
     TraversalLogic logic;
 
     logic.nodeState.prepare();
     logic.reset(rootId, RTtraversal {});
-    logic.rule = &rule;
+    logic.rule   = &rule;
+    logic.script = script;
     logic.begin(nodes, rootId, 0);
 
     std::vector<int> visited { logic.primary.target };
@@ -96,7 +98,8 @@ static std::vector<int> walkPrimary(const NodeMap& nodes, int rootId, int steps,
     return visited;
 }
 
-static std::vector<int> walkModulator(const NodeMap& nodes, int modulatorRootId, int steps)
+static std::vector<int> walkModulator(const NodeMap& nodes, int modulatorRootId, int steps,
+                                      const RTScript* script = nullptr)
 {
     const int hostId = 0;
 
@@ -104,6 +107,7 @@ static std::vector<int> walkModulator(const NodeMap& nodes, int modulatorRootId,
 
     logic.nodeState.prepare();
     logic.reset(hostId, RTtraversal {});
+    logic.script = script;
     logic.mod.activate(modulatorRootId, hostId);
     logic.advanceAlternative(nodes, modulatorRootId);
 
@@ -784,15 +788,49 @@ TEST_CASE("a modulator walk unfolds the same sequence as a node traversal", "[tr
     }
 }
 
-TEST_CASE("the default script picks the same children as the native rule", "[traversal][script]")
+static RTScript compileScript(const char* source)
 {
-    const ScriptCompileResult compiled = compileTraversalScript(defaultTraversalScriptSource());
+    ScriptCompileResult compiled = compileTraversalScript(source);
 
     REQUIRE(compiled.succeeded());
 
-    ScriptTraversalRule scriptRule;
-    scriptRule.script = &compiled.script;
+    return compiled.script;
+}
 
+static const char* const countingAdvanceSource =
+    "class Traversal : defaultTraversal {\n"
+    "public:\n"
+    "    Node advance(int numSteps) {\n"
+    "        current.count += 1;\n"
+    "        int maxLimit = 0;\n"
+    "        for child in children {\n"
+    "            if child.eligible and current.count % child.limit == 0 and child.limit > maxLimit {\n"
+    "                maxLimit = child.limit;\n"
+    "            }\n"
+    "        }\n"
+    "        int totalWeight = 0;\n"
+    "        for child in children {\n"
+    "            if child.eligible and current.count % child.limit == 0 and child.limit == maxLimit {\n"
+    "                totalWeight += child.probability;\n"
+    "            }\n"
+    "        }\n"
+    "        if totalWeight <= 0 { return none; }\n"
+    "        int span = totalWeight;\n"
+    "        if span < 100 { span = 100; }\n"
+    "        int pick = traversal.random % span;\n"
+    "        int running = 0;\n"
+    "        for child in children {\n"
+    "            if child.eligible and current.count % child.limit == 0 and child.limit == maxLimit {\n"
+    "                running += child.probability;\n"
+    "                if pick < running { return child; }\n"
+    "            }\n"
+    "        }\n"
+    "        return none;\n"
+    "    }\n"
+    "};\n";
+
+static NodeMap weightedShape()
+{
     RTNode weightedRoot = makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2, 3 });
 
     RTNode heavy = makeNode(2, 1, RTNode::NodeType::Node, 1, {});
@@ -801,16 +839,145 @@ TEST_CASE("the default script picks the same children as the native rule", "[tra
     heavy.probability = 70;
     light.probability = 30;
 
-    const NodeMap weighted = makeMap({ weightedRoot, heavy, light });
+    return makeMap({ weightedRoot, heavy, light });
+}
+
+TEST_CASE("the default script leaves every walk to the built-in traversal", "[traversal][script]")
+{
+    const RTScript script = compileScript(defaultTraversalScriptSource());
 
     const int steps = 64;
 
     for (const NodeMap& nodes : { chainShape(), countLimitShape(), switchCountShape(), subLoopShape(),
-                                  triggerLimitShape(), weighted, alternativeShape(1), alternativeShape(3),
+                                  triggerLimitShape(), weightedShape(), alternativeShape(1), alternativeShape(3),
                                   hostHoldWithAlternativeShape(), encapsulationShape(),
                                   stepIntoTreeShape(0), stepIntoTreeShape(2) }) {
-        CHECK(walkPrimary(nodes, 1, steps, scriptRule) == walkPrimary(nodes, 1, steps, NativeTraversalRule::instance()));
+        CHECK(walkPrimary(nodes, 1, steps, NativeTraversalRule::instance(), &script)
+              == walkPrimary(nodes, 1, steps, NativeTraversalRule::instance()));
     }
+}
+
+TEST_CASE("an advance that counts and picks like the built-in rule walks the same sequence", "[traversal][script]")
+{
+    const RTScript script = compileScript(countingAdvanceSource);
+
+    const int steps = 64;
+
+    for (const NodeMap& nodes : { chainShape(), countLimitShape(), weightedShape() }) {
+        CHECK(walkPrimary(nodes, 1, steps, NativeTraversalRule::instance(), &script)
+              == walkPrimary(nodes, 1, steps, NativeTraversalRule::instance()));
+    }
+}
+
+TEST_CASE("a scripted modulator walk unfolds the same sequence as a scripted node traversal", "[traversal][parity][script]")
+{
+    const RTScript script = compileScript(countingAdvanceSource);
+
+    const int steps = 48;
+
+    for (const NodeMap& nodes : { chainShape(), countLimitShape() }) {
+        CHECK(walkModulator(mirrorAsModulators(nodes), 1, steps, &script)
+              == walkPrimary(nodes, 1, steps, NativeTraversalRule::instance(), &script));
+    }
+}
+
+TEST_CASE("peeking with a scripted advance leaves the walk unchanged", "[traversal][script]")
+{
+    const RTScript script = compileScript(countingAdvanceSource);
+
+    const int steps = 32;
+
+    for (const NodeMap& nodes : { countLimitShape(), weightedShape() }) {
+        TraversalLogic stepped;
+        TraversalLogic peeked;
+
+        std::vector<int> steppedWalk;
+        std::vector<int> peekedWalk;
+
+        for (TraversalLogic* logic : { &stepped, &peeked }) {
+            logic->nodeState.prepare();
+            logic->reset(1, RTtraversal {});
+            logic->script = &script;
+            logic->begin(nodes, 1, 0);
+        }
+
+        for (int step = 0; step < steps; ++step) {
+            const RTNode* const peekedTarget = peeked.peekNextTarget(nodes);
+            const TraversalLogic::StepResult peekedStep = peeked.handleNodeEvent(nodes);
+
+            steppedWalk.push_back(stepped.handleNodeEvent(nodes).enteredId);
+            steppedWalk.push_back(stepped.nodeState.get(NodeStateSlot::Count, 1));
+
+            peekedWalk.push_back(peekedStep.enteredId);
+            peekedWalk.push_back(peeked.nodeState.get(NodeStateSlot::Count, 1));
+
+            if (peekedTarget != nullptr) {
+                CHECK(peekedTarget->nodeID == peekedStep.enteredId);
+            }
+        }
+
+        CHECK(peekedWalk == steppedWalk);
+    }
+}
+
+TEST_CASE("advancing two steps skips the node in between without counting it", "[traversal]")
+{
+    const NodeMap nodes = makeMap({
+        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        makeNode(2, 1, RTNode::NodeType::Node,     1, { 3 }),
+        makeNode(3, 2, RTNode::NodeType::Node,     1, { 4 }),
+        makeNode(4, 3, RTNode::NodeType::Node,     1, {})
+    });
+
+    TraversalLogic logic;
+
+    logic.nodeState.prepare();
+    logic.reset(1, RTtraversal {});
+    logic.begin(nodes, 1, 0);
+
+    const TraversalLogic::StepResult skipped = logic.handleNodeEvent(nodes, 2);
+
+    CHECK(skipped.leftId == 1);
+    CHECK(skipped.enteredId == 3);
+    CHECK(logic.nodeState.get(NodeStateSlot::Count, 1) == 1);
+    CHECK(logic.nodeState.get(NodeStateSlot::Count, 2) == 0);
+    CHECK(logic.handleNodeEvent(nodes).enteredId == 4);
+}
+
+TEST_CASE("a scripted advance receives the number of steps to take", "[traversal][script]")
+{
+    const RTScript script = compileScript(
+        "class Traversal : defaultTraversal {\n"
+        "public:\n"
+        "    Node advance(int numSteps) {\n"
+        "        Node at = current;\n"
+        "        int taken = 0;\n"
+        "        while taken < numSteps {\n"
+        "            Node next = none;\n"
+        "            for child in at.children { if child.eligible { next = child; break; } }\n"
+        "            if next == none { return none; }\n"
+        "            at = next;\n"
+        "            taken += 1;\n"
+        "        }\n"
+        "        return at;\n"
+        "    }\n"
+        "};\n");
+
+    const NodeMap nodes = makeMap({
+        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        makeNode(2, 1, RTNode::NodeType::Node,     1, { 3 }),
+        makeNode(3, 2, RTNode::NodeType::Node,     1, {})
+    });
+
+    TraversalLogic logic;
+
+    logic.nodeState.prepare();
+    logic.reset(1, RTtraversal {});
+    logic.script = &script;
+    logic.begin(nodes, 1, 0);
+
+    CHECK(logic.handleNodeEvent(nodes, 2).enteredId == 3);
+    CHECK(logic.handleNodeEvent(nodes, 1).kind == TraversalLogic::StepResult::Kind::LoopedToRoot);
 }
 
 TEST_CASE("node ids past the state table size walk like small ones", "[traversal][parity]")
@@ -912,37 +1079,29 @@ TEST_CASE("an unprepared state table drops every write and reads defaults", "[st
     CHECK(table.get(NodeStateSlot::LastNode, 5) == -1);
 }
 
-TEST_CASE("a script that declines every child sends the walker back to its root", "[traversal][script]")
+TEST_CASE("a script whose advance returns none sends the walker back to its root", "[traversal][script]")
 {
-    const ScriptCompileResult compiled = compileTraversalScript("return -1;");
-
-    REQUIRE(compiled.succeeded());
-
-    ScriptTraversalRule scriptRule;
-    scriptRule.script = &compiled.script;
+    const RTScript script = compileScript(
+        "class Traversal : defaultTraversal { public: Node advance(int numSteps) { return none; } };");
 
     const std::vector<int> expected { 1, 1, 1, 1 };
 
-    CHECK(walkPrimary(chainShape(), 1, 3, scriptRule) == expected);
+    CHECK(walkPrimary(chainShape(), 1, 3, NativeTraversalRule::instance(), &script) == expected);
 }
 
-TEST_CASE("a host's last child is never one of its alternatives", "[traversal][script]")
+TEST_CASE("a scripted advance never lands on an alternative, and alternatives still rotate", "[traversal][script]")
 {
-    const ScriptCompileResult compiled = compileTraversalScript(
-        "for child in children {\n"
-        "    if child.eligible and child.id != parent.lastChild { return child.id; }\n"
-        "}\n"
-        "for child in children {\n"
-        "    if child.eligible { return child.id; }\n"
-        "}\n"
-        "return -1;\n");
+    const RTScript script = compileScript(
+        "class Traversal : defaultTraversal {\n"
+        "public:\n"
+        "    Node advance(int numSteps) {\n"
+        "        current.count += 1;\n"
+        "        for child in children { if child.eligible { return child; } }\n"
+        "        return none;\n"
+        "    }\n"
+        "};\n");
 
-    REQUIRE(compiled.succeeded());
-
-    ScriptTraversalRule scriptRule;
-    scriptRule.script = &compiled.script;
-
-    RTNode host = makeNode(2, 1, RTNode::NodeType::Node, 1, { 3, 4, 10 });
+    RTNode host = makeNode(2, 1, RTNode::NodeType::Node, 1, { 10, 3 });
     host.alternativeRootId = 10;
 
     RTNode alternative = makeNode(10, 2, RTNode::NodeType::Alternative, 1, {});
@@ -952,13 +1111,29 @@ TEST_CASE("a host's last child is never one of its alternatives", "[traversal][s
         makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
         host,
         makeNode(3, 2, RTNode::NodeType::Node,     1, {}),
-        makeNode(4, 2, RTNode::NodeType::Node,     1, {}),
         alternative
     });
 
-    const std::vector<int> expected { 1, 2, 3, 1, 2, 10, 4, 1, 2, 3, 1, 2, 10, 4, 1, 2, 3, 1, 2, 10 };
+    TraversalLogic logic;
 
-    CHECK(walkPrimary(nodes, 1, 16, scriptRule) == expected);
+    bool alternativeVoiced = false;
+
+    logic.nodeState.prepare();
+    logic.reset(1, RTtraversal {});
+    logic.script = &script;
+    logic.begin(nodes, 1, 0);
+
+    for (int step = 0; step < 24; ++step) {
+        const TraversalLogic::StepResult result = logic.handleNodeEvent(nodes);
+
+        CHECK(result.enteredId != 10);
+
+        if (result.enteredAlternativeId == 10) {
+            alternativeVoiced = true;
+        }
+    }
+
+    CHECK(alternativeVoiced);
 }
 
 TEST_CASE("a preview at count N takes the child the live walk takes on its Nth visit", "[traversal][preview]")
