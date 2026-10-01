@@ -29,6 +29,8 @@ public:
 #endif
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) noexcept [[clang::nonblocking]] override;
+    void driveWalk(const AudioSnapshotPublisher::Snapshot& snap, juce::MidiBuffer& midiMessages,
+                   const int numSamples, const bool playing, const bool resetHit) noexcept;
     void followHostTransport(const int numSamples) noexcept;
 
     juce::AudioProcessorEditor* createEditor() override;
@@ -62,6 +64,7 @@ public:
     static constexpr const char* tempoParameterId     = "tempoMultiplier";
     static constexpr const char* velocityParameterId  = "velocity";
     static constexpr const char* transposeParameterId = "transpose";
+    static constexpr const char* hostSyncParameterId  = "hostSync";
     static constexpr int         parameterVersion     = 1;
 
     juce::AudioProcessorValueTreeState valueTreeState;
@@ -69,6 +72,7 @@ public:
     std::atomic<float>& tempoParameter     = *valueTreeState.getRawParameterValue(tempoParameterId);
     std::atomic<float>& velocityParameter  = *valueTreeState.getRawParameterValue(velocityParameterId);
     std::atomic<float>& transposeParameter = *valueTreeState.getRawParameterValue(transposeParameterId);
+    std::atomic<float>& hostSyncParameter  = *valueTreeState.getRawParameterValue(hostSyncParameterId);
 
     juce::UndoManager undoManager;
 
@@ -88,12 +92,24 @@ public:
 
         double currentSampleRate = 44100.0;
         double hostBpm           = 0.0;
+        bool   hostWasPlaying    = false;
 
         std::optional<double> expectedPpq;
-        std::optional<double> pendingRelocationPpq;
+        std::optional<double> pendingRelocationSamples;
     };
 
     TempoInfo tempoInfo;
+
+    struct BlockScope
+    {
+        AudioSnapshotPublisher&                 publisher;
+        const AudioSnapshotPublisher::Snapshot* snapshot = publisher.beginBlock();
+
+        ~BlockScope()
+        {
+            publisher.endBlock();
+        }
+    };
 
     EventManager     eventManager;
     TraversalSession traversalSession { eventManager };

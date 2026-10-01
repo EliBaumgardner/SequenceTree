@@ -21,7 +21,6 @@ TraversalSession::TraversalSession(EventManager& eventManager) : eventManager(ev
 {
     activeRootIdScratch.reserve(scratchCapacity);
     restartRootScratch.reserve(scratchCapacity);
-    linkedRootScratch.reserve(scratchCapacity);
     removedRunIdScratch.reserve(maxConcurrentTraversals);
     replayMidi.ensureSize(replayMidiCapacityBytes);
 }
@@ -74,8 +73,8 @@ TraversalSession::Playback TraversalSession::continueReplay(const DispatchContex
                                                             std::uint64_t graphGeneration, int numSamples,
                                                             bool playing)
 {
-    if (playback == Playback::Live) {
-        return Playback::Live;
+    if (playback != Playback::Replaying) {
+        return playback;
     }
 
     const DispatchContext replayContext { context.nodes, context.traversalMap, replayMidi,
@@ -127,6 +126,10 @@ void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
     eventManager.bridge.clearAllHighlights();
     eventManager.bridge.pushArrowReset(AudioUIBridge::allTrails);
     eventManager.scheduler.activeNotes.clear();
+
+    if (playback == Playback::Suspended) {
+        playback = Playback::Live;
+    }
 }
 
 void TraversalSession::clearTraversals()
@@ -138,9 +141,27 @@ void TraversalSession::clearTraversals()
 
 void TraversalSession::suspendActiveNotes(juce::MidiBuffer& midiMessages)
 {
+    if (playback != Playback::Live) {
+        return;
+    }
+
     for (const auto& note : eventManager.scheduler.activeNotes) {
         eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
     }
+
+    playback = Playback::Suspended;
+}
+
+void TraversalSession::resumeSuspendedNotes(juce::MidiBuffer& midiMessages)
+{
+    for (const auto& note : eventManager.scheduler.activeNotes) {
+        if (NoteScheduler::isNoteSounding(note)) {
+            midiMessages.addEvent(juce::MidiMessage::noteOn(note.event.midiChannel, note.event.pitch,
+                                  static_cast<juce::uint8>(note.event.velocity)), 0);
+        }
+    }
+
+    playback = Playback::Live;
 }
 
 void TraversalSession::restartActiveTraversals(const DispatchContext& context)
@@ -327,54 +348,17 @@ void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
     }
 }
 
-namespace {
-
-bool isRootNode(const RTNode& node)
-{
-    return node.nodeID == node.graphID;
-}
-
-}
-
-int TraversalSession::findFirstUnlinkedRootId(const NodeMap& nodes)
-{
-    linkedRootScratch.clear();
-
-    for (const RTNode& node : nodes.sortedById) {
-        for (const RTConnection& connection : node.connections) {
-            const int childId = connection.childId;
-
-            const RTNode* const childNode = nodes.find(childId);
-
-            if (childNode != nullptr && isRootNode(*childNode)) {
-                linkedRootScratch.push_back(childId);
-            }
-        }
-    }
-
-    std::ranges::sort(linkedRootScratch);
-
-    for (const RTNode& node : nodes.sortedById) {
-        if (isRootNode(node) && !std::ranges::binary_search(linkedRootScratch, node.nodeID)) {
-            return node.nodeID;
-        }
-    }
-
-    return -1;
-}
-
 bool TraversalSession::startTraversalsFromFirstRoot(const DispatchContext& context)
 {
-    const int rootId = findFirstUnlinkedRootId(context.nodes);
+    const int           rootId   = context.nodes.firstUnlinkedRootId;
+    const RTNode* const rootNode = context.nodes.find(rootId);
 
-    if (rootId == -1) {
+    if (rootNode == nullptr) {
         return false;
     }
 
-    const RTNode& rootNode = *context.nodes.find(rootId);
-
-    for (const RTtraversal& traversal : rootNode.traversals) {
-        startTraversal(rootNode, traversal, context);
+    for (const RTtraversal& traversal : rootNode->traversals) {
+        startTraversal(*rootNode, traversal, context);
     }
 
     return true;

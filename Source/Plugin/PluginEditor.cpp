@@ -60,6 +60,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     addAndMakeVisible(bottomBar.get());
 
     setResizable(true,false);
+    setResizeLimits(minimumWindowSide, minimumWindowSide, maximumWindowSide, maximumWindowSide);
     setSize (700, 500);
 
     audioCommandFrames = juce::VBlankAttachment(this, [this](double) {
@@ -94,12 +95,15 @@ void SequenceTreeAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds();
 
-    auto barHeight = static_cast<int>(bounds.getHeight() * 0.05f);
-    auto menuAreaWidth = juce::jmax(MenuArea::minMenuWidth, static_cast<int>(bounds.getWidth() * menuAreaWidthRatio));
+    auto barHeight = static_cast<int>(bounds.getHeight() * Theme::barHeightRatio);
+    auto minMenuWidth = juce::roundToInt(barHeight * (MenuArea::menuBarWidthRatio + MenuArea::resizerWidthRatio));
+    auto menuAreaWidth = juce::jmax(minMenuWidth, static_cast<int>(bounds.getWidth() * menuAreaWidthRatio));
 
     auto menuAreaBounds   = bounds.removeFromLeft(menuAreaWidth);
     auto titleArea        = bounds.removeFromTop(barHeight);
     auto bottomArea       = bounds.removeFromBottom(barHeight);
+
+    lookAndFeel.textHeight = juce::jmin(barHeight * Theme::textHeightRatio, bounds.getWidth() * Theme::textWidthRatio);
 
     menuArea ->setBounds(menuAreaBounds);
     titleBar ->setBounds(titleArea);

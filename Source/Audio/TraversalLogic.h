@@ -135,6 +135,8 @@ public:
 
     void begin(const NodeMap& nodes, int startNodeId, int graphLoopLimit);
 
+    void beginPreview(const NodeMap& nodes, int startNodeId, int alternativeId, int visitCount);
+
     StepResult handleNodeEvent(const NodeMap& nodes);
 
     void advanceAlternative(const NodeMap& nodes, int parentId);

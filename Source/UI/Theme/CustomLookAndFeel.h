@@ -16,6 +16,8 @@ class PaintToolSettings;
 
 class FileLabel;
 
+class ValueSlider;
+
 struct ButtonState;
 struct NodeVisual;
 
@@ -87,16 +89,21 @@ public:
     void drawUndoIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawRedoIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawResetIcon      (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawSyncIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
 
     void drawPaintToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawArrowToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawSpanToolIcon   (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawQuaverToolIcon (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawNodeArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawPolyphonicArrowIcon (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawTraversalArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawPaintToolSettings (juce::Graphics& g, const PaintToolSettings& paintToolSettings);
 
     void drawFileLabel(juce::Graphics& g, const FileLabel& fileLabel);
+
+    void drawValueSlider       (juce::Graphics& g, const ValueSlider& valueSlider);
+    void drawValueSliderHandle (juce::Graphics& g, juce::Rectangle<float> bounds);
 
 };
 

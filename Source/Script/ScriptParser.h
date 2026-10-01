@@ -73,6 +73,8 @@ struct Statement
     int length = 1;
 };
 
+struct ParseFailure {};
+
 class Parser
 {
 public:

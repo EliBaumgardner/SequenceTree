@@ -41,6 +41,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::
     layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { transposeParameterId, parameterVersion },
                                                          "Transpose", minimumGlobalTranspose, maximumGlobalTranspose, 0));
 
+    layout.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID { hostSyncParameterId, parameterVersion },
+                                                          "Sync To Host", true));
+
     return layout;
 }
 
@@ -270,20 +273,29 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 {
     juce::ScopedNoDenormals noDenormals;
 
-    struct BlockScope
-    {
-        AudioSnapshotPublisher&                 publisher;
-        const AudioSnapshotPublisher::Snapshot* snapshot = publisher.beginBlock();
+    const BlockScope                        blockScope { snapshots };
+    const AudioSnapshotPublisher::Snapshot* snap       = blockScope.snapshot;
+    const int                               numSamples = buffer.getNumSamples();
+    bool                                    resetHit   = resetRequested.exchange(false);
 
-        ~BlockScope()
-        {
-            publisher.endBlock();
-        }
-    };
+    if (resetHit && traversalSession.playback == TraversalSession::Playback::Replaying) {
+        tempoInfo.expectedPpq.reset();
+        resetHit = false;
+    }
 
-    const BlockScope blockScope { snapshots };
+    followHostTransport(numSamples);
 
-    const int numSamples = buffer.getNumSamples();
+    const bool      playing         = isPlaying.load();
+    const bool      suspended       = wasPlaying && !playing;
+    const bool      hasGraph        = snap != nullptr && snap->globalNodes != nullptr;
+    const bool      replayWanted    = tempoInfo.pendingRelocationSamples.has_value()
+                                   || traversalSession.playback == TraversalSession::Playback::Replaying;
+    const bool      replayThisBlock = replayWanted && !resetHit;
+    const RTScript* activeScript    = nullptr;
+
+    if (snap != nullptr) {
+        activeScript = snap->selectChildScript.get();
+    }
 
     buffer.clear();
     midiMessages.clear();
@@ -294,16 +306,9 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     pendingNoteOffs.clear();
 
-    followHostTransport(numSamples);
-
-    const bool resetHit = resetRequested.exchange(false);
-
     if (resetHit) {
         traversalSession.silenceAllNotes(midiMessages);
     }
-
-    const bool playing   = isPlaying.load();
-    const bool suspended = wasPlaying && !playing;
 
     if (suspended) {
         traversalSession.suspendActiveNotes(midiMessages);
@@ -311,20 +316,9 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     wasPlaying = playing;
 
-    const AudioSnapshotPublisher::Snapshot* snap = blockScope.snapshot;
-
-    const RTScript* activeScript = nullptr;
-
-    if (snap != nullptr) {
-        activeScript = snap->selectChildScript.get();
-    }
-
     traversalSession.setSelectChildScript(activeScript);
 
-    const bool replayWanted = tempoInfo.pendingRelocationPpq.has_value()
-                           || traversalSession.playback == TraversalSession::Playback::Replaying;
-
-    if ((!playing && (resetHit || !replayWanted)) || !snap || !snap->globalNodes) {
+    if (!hasGraph || (!playing && !replayThisBlock)) {
         if (resetHit) {
             traversalSession.clearTraversals();
         }
@@ -332,6 +326,12 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         return;
     }
 
+    driveWalk(*snap, midiMessages, numSamples, playing, resetHit);
+}
+
+void SequenceTreeAudioProcessor::driveWalk(const AudioSnapshotPublisher::Snapshot& snap, juce::MidiBuffer& midiMessages,
+                                           const int numSamples, const bool playing, const bool resetHit) noexcept
+{
     double hostTempoScale = 1.0;
 
     if (tempoInfo.hostBpm > 0.0) {
@@ -339,7 +339,7 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
     }
 
     const DispatchContext context {
-        *snap->globalNodes,
+        *snap.globalNodes,
         traversalSession.traversals,
         midiMessages,
         tempoInfo.currentSampleRate,
@@ -350,15 +350,12 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 
     eventManager.followTempo(context.tempoMultiplier);
 
-    if (tempoInfo.pendingRelocationPpq) {
-        const double targetSamples = std::round(*tempoInfo.pendingRelocationPpq * 60.0 / tempoInfo.hostBpm
-                                               * tempoInfo.currentSampleRate);
-
-        traversalSession.beginReplay(context, targetSamples);
-        tempoInfo.pendingRelocationPpq.reset();
+    if (tempoInfo.pendingRelocationSamples) {
+        traversalSession.beginReplay(context, *tempoInfo.pendingRelocationSamples);
+        tempoInfo.pendingRelocationSamples.reset();
     }
 
-    if (traversalSession.continueReplay(context, snap->generation, numSamples, playing) == TraversalSession::Playback::Replaying) {
+    if (traversalSession.continueReplay(context, snap.generation, numSamples, playing) == TraversalSession::Playback::Replaying) {
         return;
     }
 
@@ -366,13 +363,17 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
         return;
     }
 
+    if (traversalSession.playback == TraversalSession::Playback::Suspended) {
+        traversalSession.resumeSuspendedNotes(midiMessages);
+    }
+
     if (resetHit) {
         traversalSession.restartActiveTraversals(context);
     }
 
-    traversalSession.syncWithGraph(context, snap->generation);
+    traversalSession.syncWithGraph(context, snap.generation);
 
-    if ((traversalSession.traversals.empty()) && !traversalSession.startTraversalsFromFirstRoot(context)) {
+    if (traversalSession.traversals.empty() && !traversalSession.startTraversalsFromFirstRoot(context)) {
         if (!eventManager.scheduler.activeNotes.empty()) {
             traversalSession.silenceAllNotes(midiMessages);
         }
@@ -399,11 +400,14 @@ void SequenceTreeAudioProcessor::followHostTransport(const int numSamples) noexc
                 const juce::Optional<double> hostPpq = position->getPpqPosition();
 
                 if (hostPpq && tempoInfo.hostBpm > 0.0) {
-                    const bool resumed = hostPlaying && !wasPlaying;
-                    const bool jumped  = resumed || !tempoInfo.expectedPpq || std::abs(*hostPpq - *tempoInfo.expectedPpq) > TempoInfo::relocationToleranceBeats;
+                    const bool resumed           = hostPlaying && !tempoInfo.hostWasPlaying;
+                    const bool resumeNeedsReplay = resumed && traversalSession.playback == TraversalSession::Playback::Live;
+                    const bool jumped            = resumeNeedsReplay || !tempoInfo.expectedPpq || std::abs(*hostPpq - *tempoInfo.expectedPpq) > TempoInfo::relocationToleranceBeats;
+                    const bool syncedToHost      = hostSyncParameter.load() >= 0.5f;
 
-                    if (jumped) {
-                        tempoInfo.pendingRelocationPpq = juce::jmax(0.0, *hostPpq);
+                    if (jumped && syncedToHost) {
+                        tempoInfo.pendingRelocationSamples = std::round(juce::jmax(0.0, *hostPpq) * 60.0 / tempoInfo.hostBpm
+                                                                        * tempoInfo.currentSampleRate);
                     }
 
                     tempoInfo.expectedPpq = *hostPpq;
@@ -417,6 +421,8 @@ void SequenceTreeAudioProcessor::followHostTransport(const int numSamples) noexc
                 }
             }
         }
+
+        tempoInfo.hostWasPlaying = hostPlaying;
 
         if (hostPlaying != isPlaying.exchange(hostPlaying)) {
             playbackStateChanged.store(true);

@@ -98,9 +98,10 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Node/Encapsulator.cpp
         Source/UI/Node/TraversalFlagNode.cpp
         Source/UI/Theme/CustomLookAndFeel.cpp
-        Source/UI/Theme/CustomLookAndFeel_Nodes.cpp
-        Source/UI/Theme/CustomLookAndFeel_Buttons.cpp
-        Source/UI/Theme/CustomLookAndFeel_Menus.cpp
+        Source/UI/Theme/CustomLookAndFeelNodes.cpp
+        Source/UI/Theme/CustomLookAndFeelArrows.cpp
+        Source/UI/Theme/CustomLookAndFeelButtons.cpp
+        Source/UI/Theme/CustomLookAndFeelMenus.cpp
         Source/UI/Theme/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp
         Source/UI/Menus/ArrowWindow.cpp

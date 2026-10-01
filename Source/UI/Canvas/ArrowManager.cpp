@@ -71,8 +71,8 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
     attach(*arrow);
     arrow->setInterceptsMouseClicks(false, true);
 
-    Arrow* const raw = arrow.release();
-    adopt(raw);
+    Arrow* const raw = arrow.get();
+    adopt(std::move(arrow));
     return raw;
 }
 
@@ -100,17 +100,17 @@ Arrow* ArrowManager::connectParentToChild(Node* parentNode, Node* childNode)
     return arrow;
 }
 
-void ArrowManager::adopt(Arrow* arrow)
+void ArrowManager::adopt(std::unique_ptr<Arrow> arrow)
 {
     if (arrow == nullptr) {
         return;
     }
 
     if (arrow->startNode != nullptr) {
-        arrow->startNode->nodeArrows.insert({ arrowKey(*arrow), arrow });
+        arrow->startNode->nodeArrows.insert({ arrowKey(*arrow), arrow.get() });
     }
 
-    arrows.add(arrow);
+    arrows.add(arrow.release());
 }
 
 int ArrowManager::arrowKey(const Arrow& arrow)
@@ -271,7 +271,7 @@ void ArrowManager::rebuildDanglingForNode(int nodeId)
         attach(*arrow);
         arrow->setVisible(! node->isEncapsulated || node->isEncapsulationExit);
         arrow->setArrowBounds();
-        adopt(arrow.release());
+        adopt(std::move(arrow));
     }
 }
 

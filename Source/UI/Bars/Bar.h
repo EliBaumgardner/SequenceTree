@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../../Util/ApplicationContext.h"
+#include "../Theme/Theme.h"
 
 class Bar : public juce::Component
 {
@@ -11,7 +12,7 @@ public:
 
     struct Style {
         Orientation orientation       = Orientation::horizontal;
-        float       contentInsetRatio = 0.10f;
+        float       contentInsetRatio = Theme::contentInsetRatio;
     };
 
     Bar(const ApplicationContext& context, Style style);

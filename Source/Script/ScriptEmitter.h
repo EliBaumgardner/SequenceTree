@@ -19,6 +19,14 @@ struct LocalBinding
     int         slot = 0;
 };
 
+struct FieldEntry
+{
+    const char* name;
+    ScriptField field;
+};
+
+struct EmitFailure {};
+
 class Emitter
 {
 public:

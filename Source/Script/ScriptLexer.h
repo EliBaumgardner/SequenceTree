@@ -63,6 +63,12 @@ struct Token
     int         length = 1;
 };
 
+struct KeywordEntry
+{
+    const char* name;
+    TokenKind   kind;
+};
+
 class Lexer
 {
 public:

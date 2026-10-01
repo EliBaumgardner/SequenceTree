@@ -29,7 +29,7 @@ public:
 
     Arrow* connect(Node* startNode, Node* endNode);
     Arrow* connectParentToChild(Node* parentNode, Node* childNode);
-    void   adopt(Arrow* arrow);
+    void   adopt(std::unique_ptr<Arrow> arrow);
     void   attach(Arrow& arrow);
 
     void remove(Arrow* arrow);

@@ -24,9 +24,8 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    static constexpr int resizerWidth = 10;
-    static constexpr int menuBarWidth = 28;
-    static constexpr int minMenuWidth = resizerWidth + menuBarWidth;
+    static constexpr float resizerWidthRatio = 0.4f;
+    static constexpr float menuBarWidthRatio = 1.12f;
 
     PanelResizer resizer;
 

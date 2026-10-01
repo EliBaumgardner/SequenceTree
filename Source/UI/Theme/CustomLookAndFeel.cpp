@@ -50,9 +50,9 @@ void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
 }
 
 juce::CaretComponent* CustomLookAndFeel::createCaretComponent(juce::Component* keyFocusOwner) {
-    auto* caret = new CustomTextCaret(keyFocusOwner);
+    auto caret = std::make_unique<CustomTextCaret>(keyFocusOwner);
     caret->caretWidth = 1.0f;
-    return caret;
+    return caret.release();
 }
 
 int CustomLookAndFeel::getDefaultScrollbarWidth()

@@ -41,12 +41,13 @@ void MenuArea::paint(juce::Graphics &g) {
 }
 
 void MenuArea::resized() {
-    auto bounds = getLocalBounds();
+    auto bounds    = getLocalBounds();
+    int  barHeight = static_cast<int>(getHeight() * Theme::barHeightRatio);
 
-    resizer.setBounds(bounds.removeFromRight(resizerWidth));
-    menuBar->setBounds(bounds.removeFromRight(menuBarWidth));
+    resizer.setBounds(bounds.removeFromRight(juce::roundToInt(barHeight * resizerWidthRatio)));
+    menuBar->setBounds(bounds.removeFromRight(juce::roundToInt(barHeight * menuBarWidthRatio)));
 
-    topBar.setBounds(bounds.withHeight(static_cast<int>(getHeight() * 0.05f)));
+    topBar.setBounds(bounds.withHeight(barHeight));
 
     traversalMenu->setBounds(bounds);
     nodeMenu->setBounds(bounds);

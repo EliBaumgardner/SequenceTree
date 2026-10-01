@@ -113,3 +113,72 @@ TEST_CASE("processBlock stays realtime-safe while playing, editing, retiming, re
 
     REQUIRE(noteOns > 0);
 }
+
+TEST_CASE("starting a walk stays realtime-safe with more root-bound arrows than the scratch reserve", "[realtime]")
+{
+    constexpr double sampleRate      = 48000.0;
+    constexpr int    blockSize       = 512;
+    constexpr int    rootBoundArrows = 257;
+
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+
+    HostPlayHead             playHead;
+    juce::AudioBuffer<float> buffer(2, blockSize);
+    juce::MidiBuffer         midi;
+    int                      noteOns = 0;
+    double                   ppq     = 0.0;
+
+    NodeFactory::createRootNode(graph, NodePosition { 0, 0, 25 }, nullptr);
+
+    const int sourceRootId = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1)
+                                          .getProperty(ValueTreeIdentifiers::Id);
+
+    NodeFactory::createRootNode(graph, NodePosition { 0, 600, 25 }, nullptr);
+
+    const int targetRootId = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1)
+                                          .getProperty(ValueTreeIdentifiers::Id);
+
+    for (int i = 0; i < rootBoundArrows; ++i) {
+        const juce::ValueTree child = NodeFactory::createNode(graph, sourceRootId, ValueTreeIdentifiers::NodeData,
+                                                              NodePosition { 100 + 10 * i, 40 * (i % 8) - 140, 25 },
+                                                              nullptr);
+
+        graph.connectNodes(child.getProperty(ValueTreeIdentifiers::Id), targetRootId, nullptr);
+    }
+
+    processor.rtGraphBuilder.rebuildAllGraphs();
+
+    playHead.position.setIsPlaying(true);
+    playHead.position.setBpm(120.0);
+
+    processor.setPlayHead(&playHead);
+    processor.prepareToPlay(sampleRate, blockSize);
+
+    midi.ensureSize(2048);
+
+    auto playBlocks = [&](int blockCount) {
+        for (int block = 0; block < blockCount; ++block) {
+            playHead.position.setPpqPosition(ppq);
+            processor.processBlock(buffer, midi);
+
+            ppq += blockSize / sampleRate * *playHead.position.getBpm() / 60.0;
+
+            for (const auto event : midi) {
+                if (event.getMessage().isNoteOn()) {
+                    ++noteOns;
+                }
+            }
+        }
+    };
+
+    playBlocks(50);
+
+    ppq = 16.0;
+    playBlocks(50);
+
+    processor.releaseResources();
+    processor.setPlayHead(nullptr);
+
+    REQUIRE(noteOns > 0);
+}

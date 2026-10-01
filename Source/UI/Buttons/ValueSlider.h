@@ -7,6 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../../Util/ApplicationContext.h"
+#include "../Theme/CustomLookAndFeel.h"
 
 
 class ValueSliderHandle : public juce::Component {
@@ -17,10 +18,7 @@ public:
     }
 
     void paint(juce::Graphics &g) override {
-        auto bounds = getLocalBounds();
-
-        g.setColour(juce::Colours::black);
-        g.fillRect(bounds);
+        CustomLookAndFeel::get(*this).drawValueSliderHandle(g, getLocalBounds().toFloat());
     }
 
 };
@@ -29,7 +27,7 @@ class ValueSlider : public juce::Component, public juce::SettableTooltipClient {
 
     public:
 
-    bool intersectsHandle = false;
+    float handleWidthRatio = 0.1f;
 
     std::unique_ptr<ValueSliderHandle> handle;
     std::function<void()> valueChanged;
@@ -47,21 +45,17 @@ class ValueSlider : public juce::Component, public juce::SettableTooltipClient {
     }
 
     void paint(juce::Graphics &g) override {
-        auto bounds = getLocalBounds();
-
-        g.setColour(juce::Colours::black);
-        g.drawRect(bounds, 1);
-
-        g.setColour(juce::Colours::grey);
-        g.fillRect(slider);
+        CustomLookAndFeel::get(*this).drawValueSlider(g, *this);
     }
 
     void resized() override {
         const auto bounds = getLocalBounds();
-        const int handleWidth = bounds.getWidth() * 0.1f;
+        const int handleWidth = bounds.getWidth() * handleWidthRatio;
+
+        const float lineWidth = Theme::valueSliderHandleLineWidth;
 
         const float value = juce::jlimit(0.0f,1.0f, static_cast<float>(boundValue.getValue()));
-        const int handleX = static_cast<int>(handleWidth/2 + value * (bounds.getWidth() - handleWidth));
+        const int handleX = static_cast<int>(lineWidth/2 + value * (bounds.getWidth() - lineWidth));
 
         handle->setBounds(handleX - handleWidth/2, bounds.getY(), handleWidth, bounds.getHeight());
         slider.setBounds(0,0,handleX,bounds.getHeight());
@@ -72,27 +66,22 @@ class ValueSlider : public juce::Component, public juce::SettableTooltipClient {
         this->boundValue.referTo(boundValue);
     }
 
-    void mouseDrag(const juce::MouseEvent& e) override {
+    void mouseDown(const juce::MouseEvent& e) override {
+        const float width = static_cast<float>(getWidth());
+        const float lineWidth = Theme::valueSliderHandleLineWidth;
+        const float value = juce::jlimit(0.0f, 1.0f,
+            (e.getPosition().getX() - lineWidth/2.0f) / (width - lineWidth));
+        boundValue.setValue(value);
+        resized();
+        repaint();
 
-        if (!intersectsHandle) {
-            intersectsHandle = handle->getBounds().contains(e.getPosition());
-        }
-
-        if (intersectsHandle) {
-            DBG("intersects handle");
-            const float width = static_cast<float>(getWidth());
-            const float handleWidth = width * 0.1f;
-            const float value = juce::jlimit(0.0f, 1.0f,
-                (e.getPosition().getX() - handleWidth/2.0f) / (width - handleWidth));
-            boundValue.setValue(value);
-            resized();
-            repaint();
+        if (valueChanged) {
             valueChanged();
         }
     }
 
-    void mouseUp(const juce::MouseEvent& e) override {
-        intersectsHandle = false;
+    void mouseDrag(const juce::MouseEvent& e) override {
+        mouseDown(e);
     }
 };
 

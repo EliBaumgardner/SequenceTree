@@ -45,24 +45,25 @@ NodeMenu::NodeMenu(const ApplicationContext& context)
     pitchLabel                .setText("PIT", juce::dontSendNotification);
     channelLabel              .setText("CH",  juce::dontSendNotification);
 
+    for (juce::Label* label : { &colourLabel, &countLimitLabel, &repeatLabel, &switchCountLimitLabel, &subLoopCountLimitLabel,
+                                &probabilityLabel, &velocityLabel, &pitchLabel, &channelLabel }) {
+        label->setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+        label->setMinimumHorizontalScale(1.0f);
+        label->setBorderSize({});
+        label->setJustificationType(juce::Justification::centredLeft);
+    }
+
     for (const auto& row : labeledRows) {
-        row.label.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-        row.label.setFont(juce::Font(juce::FontOptions(9.0f)));
-        row.label.setJustificationType(juce::Justification::centredLeft);
         addChildComponent(row.label);
         addChildComponent(row.editor);
     }
 
-    colourLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    colourLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
-    colourLabel.setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(colourLabel);
     addAndMakeVisible(colourSelector);
 
-
     editTraversalRulesButton = std::make_unique<IconButton>(
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawTextButton(g, bounds, state);
+            CustomLookAndFeel::get(*this).drawTextButton(g, bounds, state, CustomLookAndFeel::get(*this).textHeight);
         }, context.lookAndFeel);
 
     editTraversalRulesButton->setText("edit traversal rules");
@@ -76,7 +77,6 @@ NodeMenu::NodeMenu(const ApplicationContext& context)
         } else {
             colourSelector.setNode(nullptr);
         }
-
 
         if (selected && node != nullptr) {
             bindToNode(node);
@@ -96,13 +96,17 @@ NodeMenu::~NodeMenu() {
 void NodeMenu::bindToNode(const Node* node) {
     const bool hasNodeTree = node->nodeValueTree.isValid();
     const bool hasMidi     = node->midiNoteData.isValid();
+    const bool hasSubLoop  = hasNodeTree && ! node->isAlternativeNode;
 
     if (hasNodeTree) {
         countLimitEditor       .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::CountLimit);
         repeatEditor            .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::RepeatValue);
         switchCountLimitEditor  .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
-        subLoopCountLimitEditor .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::SubLoopCountLimit);
         probabilityEditor       .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::Probability);
+    }
+
+    if (hasSubLoop) {
+        subLoopCountLimitEditor .bindEditor(node->nodeValueTree, ValueTreeIdentifiers::SubLoopCountLimit);
     }
 
     if (hasMidi) {
@@ -117,8 +121,8 @@ void NodeMenu::bindToNode(const Node* node) {
     repeatEditor             .setVisible(hasNodeTree);
     switchCountLimitLabel    .setVisible(hasNodeTree);
     switchCountLimitEditor   .setVisible(hasNodeTree);
-    subLoopCountLimitLabel   .setVisible(hasNodeTree);
-    subLoopCountLimitEditor  .setVisible(hasNodeTree);
+    subLoopCountLimitLabel   .setVisible(hasSubLoop);
+    subLoopCountLimitEditor  .setVisible(hasSubLoop);
     probabilityLabel         .setVisible(hasNodeTree);
     probabilityEditor        .setVisible(hasNodeTree);
     velocityLabel             .setVisible(hasMidi);
@@ -143,16 +147,25 @@ void NodeMenu::paint(juce::Graphics& g) {
 }
 
 void NodeMenu::resized() {
-    auto bounds = getLocalBounds().reduced(Theme::menuEdgeInset);
+    int        barHeight  = static_cast<int>(getHeight() * Theme::barHeightRatio);
+    int        spacing    = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
+    int        rowHeight  = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
+    auto       bounds     = getLocalBounds().reduced(spacing);
+    float      textHeight = CustomLookAndFeel::get(*this).textHeight;
+    juce::Font textFont   { juce::FontOptions(textHeight) };
 
-    editTraversalRulesButton->setBounds(bounds.removeFromBottom(Theme::textButtonHeight));
+    editTraversalRulesButton->setBounds(bounds.removeFromBottom(juce::roundToInt(barHeight * Theme::menuButtonHeightRatio)));
 
     auto colourRowBounds = bounds.removeFromTop(rowHeight);
+    colourLabel.setFont(textFont);
     colourLabel.setBounds(colourRowBounds.removeFromLeft(colourRowBounds.getWidth() / 3));
     colourSelector.setBounds(colourRowBounds);
-    bounds.removeFromTop(rowGap);
+    bounds.removeFromTop(spacing);
 
     for (const auto& row : labeledRows) {
+        row.label.setFont(textFont);
+        row.editor.setFontHeight(textHeight);
+
         if (!row.editor.isVisible()) {
             continue;
         }
@@ -160,6 +173,6 @@ void NodeMenu::resized() {
         auto rowBounds = bounds.removeFromTop(rowHeight);
         row.label.setBounds(rowBounds.removeFromLeft(rowBounds.getWidth() / 3));
         row.editor.setBounds(rowBounds);
-        bounds.removeFromTop(rowGap);
+        bounds.removeFromTop(spacing);
     }
 }

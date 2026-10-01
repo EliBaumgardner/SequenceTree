@@ -51,6 +51,8 @@ private:
     ButtonPane           undoRedoPane;
 
     IconButton*          playButton = nullptr;
+    IconButton*          syncButton = nullptr;
 
     std::unique_ptr<juce::ParameterAttachment> tempoAttachment;
+    std::unique_ptr<juce::ParameterAttachment> syncAttachment;
 };

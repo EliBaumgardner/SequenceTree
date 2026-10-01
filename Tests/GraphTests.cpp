@@ -245,6 +245,30 @@ TEST_CASE("only a note node's arrow into another tree's root is a root connectio
     CHECK_FALSE(connections.connectsToOtherTreeRoot(alternativeModulatorId, foreignRootId));
 }
 
+TEST_CASE("the published graph names its first unlinked root", "[graph]")
+{
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+
+    const int firstRootId   = createRoot(graph, 0, 0);
+    const int secondRootId  = createRoot(graph, 0, 400);
+    const int firstChildId  = createChild(graph, firstRootId, 100, 0);
+    const int secondChildId = createChild(graph, secondRootId, 100, 400);
+
+    REQUIRE(firstRootId < secondRootId);
+
+    CHECK(rebuildAndPublish(processor).firstUnlinkedRootId == firstRootId);
+
+    graph.connectNodes(firstChildId, secondRootId, nullptr);
+    CHECK(rebuildAndPublish(processor).firstUnlinkedRootId == firstRootId);
+
+    graph.connectNodes(secondChildId, firstRootId, nullptr);
+    CHECK(rebuildAndPublish(processor).firstUnlinkedRootId == -1);
+
+    graph.disconnectNodes(firstChildId, secondRootId, nullptr);
+    CHECK(rebuildAndPublish(processor).firstUnlinkedRootId == secondRootId);
+}
+
 TEST_CASE("moving a pitch-bound node transposes around the pitch last typed", "[graph][pitch]")
 {
     SequenceTreeAudioProcessor processor;

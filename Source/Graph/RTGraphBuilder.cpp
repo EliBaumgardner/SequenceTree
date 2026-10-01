@@ -308,16 +308,20 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
         int subLoopLimit     = currentValueTree.getProperty(ValueTreeIdentifiers::SubLoopCountLimit);
         int loopLimit        = currentValueTree.getProperty(ValueTreeIdentifiers::LoopLimit, GraphState::defaultRootLoopLimit);
 
-        if (nodeType == ValueTreeIdentifiers::RootNodeData) {
-            subLoopLimit = loopLimit;
-        }
-
         int repeatValue = currentValueTree.getProperty(ValueTreeIdentifiers::RepeatValue, GraphState::defaultRepeatValue);
         int probability = currentValueTree.getProperty(ValueTreeIdentifiers::Probability, GraphState::defaultProbability);
         int modAmount   = currentValueTree.getProperty(ValueTreeIdentifiers::ModAmount, GraphState::defaultModAmount);
 
         bool isAlternativeNode = (nodeType == ValueTreeIdentifiers::AlternativeNodeData
                               || nodeType == ValueTreeIdentifiers::AlternativeModulatorData);
+
+        if (nodeType == ValueTreeIdentifiers::RootNodeData) {
+            subLoopLimit = loopLimit;
+        }
+
+        if (isAlternativeNode) {
+            subLoopLimit = GraphState::defaultSubLoopCountLimit;
+        }
 
         if(tempNodeMap.count(nodeId) == false) {
 

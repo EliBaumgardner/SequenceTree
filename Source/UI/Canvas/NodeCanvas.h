@@ -35,10 +35,17 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         enum class AsyncUpdateType {None,NodeAdded,NodeRemoved,NodeMoved,ValueChanged,DanglingArrowsChanged,ArrowAdded,ArrowRemoved,ArrowInfoChanged,ArrowDurationChanged};
 
+        enum class QuaverMode { Off, PlacingNotes };
+
         struct AsyncUpdate {
             AsyncUpdateType type       = AsyncUpdateType::None;
             int             nodeId     = -1;
             int             rootNodeId = -1;
+        };
+
+        struct NodePair {
+            int parentNodeId;
+            int childNodeId;
         };
 
         NodeCanvas(const ApplicationContext& context);
@@ -53,6 +60,7 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
 
         void setPaintMode(bool enabled);
         void setSpanMode (bool enabled);
+        void setQuaverMode (QuaverMode mode);
 
         void showGrid();
         void hideGrid();
@@ -68,10 +76,12 @@ class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
         bool start     = false;
         bool paintMode = false;
         bool spanMode  = false;
+        QuaverMode quaverMode = QuaverMode::Off;
 
         int  spanAnchorNodeId = -1;
 
-        static constexpr int spanCursorSize = 16;
+        static constexpr int spanCursorSize   = 16;
+        static constexpr int quaverCursorSize = 24;
 
         bool gridVisible = false;
         bool gridOriginSet = false;

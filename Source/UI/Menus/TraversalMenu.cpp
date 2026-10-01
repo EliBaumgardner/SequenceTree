@@ -20,10 +20,13 @@ TraversalMenu::TraversalMenu(const ApplicationContext& context)
     addAndMakeVisible(topBar);
     addAndMakeVisible(displayMenu);
 
+    displayMenu.labelEditor->autoFitText = false;
+
     const auto setUpLabel = [this](juce::Label& label, juce::String text) {
         label.setText(std::move(text), juce::dontSendNotification);
         label.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-        label.setFont(juce::Font(juce::FontOptions(9.0f)));
+        label.setMinimumHorizontalScale(1.0f);
+        label.setBorderSize({});
         label.setJustificationType(juce::Justification::centredLeft);
         addAndMakeVisible(label);
     };
@@ -62,7 +65,7 @@ TraversalMenu::TraversalMenu(const ApplicationContext& context)
 
     editTraversalRulesButton = std::make_unique<IconButton>(
         [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawTextButton(g, bounds, state);
+            CustomLookAndFeel::get(*this).drawTextButton(g, bounds, state, CustomLookAndFeel::get(*this).textHeight);
         }, context.lookAndFeel);
 
     editTraversalRulesButton->setText("edit traversal rules");
@@ -147,23 +150,33 @@ void TraversalMenu::paint(juce::Graphics &g) {
 }
 
 void TraversalMenu::resized() {
-    auto bounds = getLocalBounds();
+    int        barHeight  = static_cast<int>(getHeight() * Theme::barHeightRatio);
+    int        spacing    = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
+    int        rowHeight  = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
+    auto       bounds     = getLocalBounds();
+    auto       barArea    = bounds.removeFromTop(barHeight);
+    float      textHeight = CustomLookAndFeel::get(*this).textHeight;
+    juce::Font textFont   { juce::FontOptions(textHeight) };
 
-    auto editRulesArea = bounds.removeFromBottom(Theme::textButtonHeight + Theme::menuEdgeInset * 2);
-    editTraversalRulesButton->setBounds(editRulesArea.reduced(Theme::menuEdgeInset));
-
-    int barHeight = static_cast<int>(getHeight() * 0.05f);
-    auto barArea = bounds.removeFromTop(barHeight);
     topBar.setBounds(barArea);
-    displayMenu.setBounds(barArea.reduced(4));
+    displayMenu.labelEditor->setFontHeight(textHeight);
+    displayMenu.setBounds(barArea.reduced(juce::roundToInt(barHeight * Theme::contentInsetRatio)));
 
-    int rowHeight = juce::jmax(18, barHeight);
+    bounds.reduce(spacing, spacing);
+    editTraversalRulesButton->setBounds(bounds.removeFromBottom(juce::roundToInt(barHeight * Theme::menuButtonHeightRatio)));
 
-    auto layoutRow = [&bounds, rowHeight](juce::Label& label, juce::Component& control) {
-        auto rowArea = bounds.removeFromTop(rowHeight).reduced(4, 2);
+    auto layoutRow = [&bounds, &textFont, rowHeight, spacing](juce::Label& label, juce::Component& control) {
+        auto rowArea = bounds.removeFromTop(rowHeight);
+        label.setFont(textFont);
         label.setBounds(rowArea.removeFromLeft(rowArea.getWidth() / 2));
         control.setBounds(rowArea);
+        bounds.removeFromTop(spacing);
     };
+
+    multiplierEditor.setFontHeight(textHeight);
+    channelEditor.setFontHeight(textHeight);
+    transposeEditor.setFontHeight(textHeight);
+    velocityEditor.setFontHeight(textHeight);
 
     layoutRow(multiplierLabel, multiplierEditor);
     layoutRow(channelLabel,    channelEditor);

@@ -58,6 +58,8 @@ private:
 
     void collectRetiredSnapshots();
 
+    static int findFirstUnlinkedRootId(const NodeMap& nodes);
+
     TraversalRuleState& traversalRuleState;
 
     std::atomic<Snapshot*>       currentSnapshot { nullptr };

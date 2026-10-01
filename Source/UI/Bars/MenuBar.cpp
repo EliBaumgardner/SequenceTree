@@ -33,7 +33,7 @@ void MenuBar::resized()
 
     constexpr int numIcons = 3;
 
-    const int iconSize = juce::jmin(bounds.getWidth(), maxIconSize);
+    const int iconSize = juce::jmax(0, juce::jmin(bounds.getWidth(), static_cast<int>(bounds.getHeight() / (numIcons + (numIcons + 1) * Theme::iconGapRatio))));
     const int gap      = (bounds.getHeight() - iconSize * numIcons) / (numIcons + 1);
     const int x        = bounds.getX() + (bounds.getWidth() - iconSize) / 2;
 

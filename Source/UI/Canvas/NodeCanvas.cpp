@@ -151,11 +151,6 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
 
     std::unordered_map<int,juce::ValueTree> rootNodeMap;
 
-    struct NodePair {
-        int parentNodeId;
-        int childNodeId;
-    };
-
     std::vector<NodePair> nodePairs;
 
     if (stateTree.getNumChildren() == 0) { DBG("stateTree is empty"); }
@@ -258,6 +253,49 @@ void NodeCanvas::setSpanMode(bool enabled)
     cursorGraphics.drawRect(cursorImage.getBounds().reduced(1), 1);
 
     setMouseCursor(juce::MouseCursor(cursorImage, spanCursorSize / 2, spanCursorSize / 2));
+}
+
+void NodeCanvas::setQuaverMode(QuaverMode mode)
+{
+    quaverMode = mode;
+
+    if (mode == QuaverMode::Off) {
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+        return;
+    }
+
+    juce::Image    cursorImage(juce::Image::ARGB, quaverCursorSize, quaverCursorSize, true);
+    juce::Graphics cursorGraphics(cursorImage);
+    const auto     square   = cursorImage.getBounds().toFloat().reduced(1.0f);
+    const float    side     = square.getWidth();
+    const float    headX    = square.getX() + side * 0.34f;
+    const float    headY    = square.getBottom() - side * 0.2f;
+    const float    stemX    = headX + side * 0.19f;
+    const float    stemTopY = square.getY() + side * 0.04f;
+    juce::Path     head;
+    juce::Path     stem;
+    juce::Path     flag;
+
+    cursorGraphics.setColour(juce::Colours::black);
+
+    head.addEllipse(juce::Rectangle<float>(side * 0.44f, side * 0.3f).withCentre({ headX, headY }));
+    head.applyTransform(juce::AffineTransform::rotation(-0.35f, headX, headY));
+    cursorGraphics.fillPath(head);
+
+    stem.addLineSegment({ stemX, headY - side * 0.04f, stemX, stemTopY }, juce::jmax(1.0f, side * 0.08f));
+    cursorGraphics.fillPath(stem);
+
+    flag.startNewSubPath(stemX, stemTopY);
+    flag.cubicTo(stemX + side * 0.08f, stemTopY + side * 0.18f,
+                 stemX + side * 0.36f, stemTopY + side * 0.24f,
+                 stemX + side * 0.26f, stemTopY + side * 0.56f);
+    flag.cubicTo(stemX + side * 0.28f, stemTopY + side * 0.34f,
+                 stemX + side * 0.12f, stemTopY + side * 0.3f,
+                 stemX, stemTopY + side * 0.26f);
+    flag.closeSubPath();
+    cursorGraphics.fillPath(flag);
+
+    setMouseCursor(juce::MouseCursor(cursorImage, quaverCursorSize / 2, quaverCursorSize / 2));
 }
 
 void NodeCanvas::showGrid()

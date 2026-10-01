@@ -65,6 +65,8 @@ void Titlebar::configureDisplaySelector()
         });
     };
 
+    displaySelector.labelEditor->autoFitText = false;
+
     addDisplayMode(1, "show pitch",       NodeDisplayMode::Pitch);
     addDisplayMode(2, "show velocity",    NodeDisplayMode::Velocity);
     addDisplayMode(3, "show countLimit",  NodeDisplayMode::CountLimit);
@@ -97,6 +99,23 @@ void Titlebar::configureTransportPane()
         },
         "Reset",
         [this]() { resetTraversals(); });
+
+    if (applicationContext.processor->wrapperType == juce::AudioProcessor::wrapperType_Standalone) {
+        return;
+    }
+
+    syncButton = &transportPane.addButton(
+        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
+            CustomLookAndFeel::get(*this).drawSyncIcon(g, bounds, state);
+        },
+        "Sync to host playhead",
+        [this]() { syncAttachment->setValueAsCompleteGesture(static_cast<float>(! syncButton->isSelected())); });
+
+    syncAttachment = std::make_unique<juce::ParameterAttachment>(
+        *applicationContext.processor->valueTreeState.getParameter(SequenceTreeAudioProcessor::hostSyncParameterId),
+        [this](float synced) { syncButton->setSelected(synced >= 0.5f); });
+
+    syncAttachment->sendInitialUpdate();
 }
 
 void Titlebar::applyPlaybackState(bool shouldPlay)
@@ -194,20 +213,25 @@ void Titlebar::resized()
     int transportPaneWidth = bounds.getWidth() / 8;
     int tempoDisplayWidth = bounds.getWidth() / 8;
     int buttonPaneWidth = bounds.getWidth() / 8;
-    int displaySelectorWidth = bounds.getWidth() / 8;
+    int displaySelectorWidth = bounds.getWidth() / 6;
     int undoRedoPaneWidth = bounds.getWidth() / 8;
+    int spacing = juce::roundToInt(bounds.getWidth() * Theme::contentSpacingRatio);
+    float textHeight = CustomLookAndFeel::get(*this).textHeight;
+
+    tempoDisplay.editor.setFontHeight(textHeight);
+    displaySelector.labelEditor->setFontHeight(textHeight);
 
     transportPane.setBounds(bounds.removeFromLeft(transportPaneWidth));
-    bounds.removeFromLeft(contentSpacing);
+    bounds.removeFromLeft(spacing);
 
     tempoDisplay.setBounds(bounds.removeFromLeft(tempoDisplayWidth));
-    bounds.removeFromLeft(contentSpacing);
+    bounds.removeFromLeft(spacing);
 
     undoRedoPane.setBounds(bounds.removeFromLeft(undoRedoPaneWidth));
-    bounds.removeFromLeft(contentSpacing);
+    bounds.removeFromLeft(spacing);
 
     displaySelector.setBounds(bounds.removeFromRight(displaySelectorWidth));
-    bounds.removeFromRight(contentSpacing);
+    bounds.removeFromRight(spacing);
 
     buttonPane.setBounds(bounds.removeFromRight(buttonPaneWidth));
 }

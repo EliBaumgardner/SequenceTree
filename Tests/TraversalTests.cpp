@@ -170,6 +170,23 @@ static NodeMap subLoopShape()
     });
 }
 
+static NodeMap subLoopWithAlternativeShape()
+{
+    RTNode loopEntry = makeNode(2, 1, RTNode::NodeType::Node, 1, { 3, 10 });
+    loopEntry.subLoopCountLimit = 2;
+    loopEntry.alternativeRootId = 10;
+
+    RTNode alternative = makeNode(10, 2, RTNode::NodeType::Alternative, 1, {});
+    alternative.alternativeRootId = 10;
+
+    return makeMap({
+        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        loopEntry,
+        makeNode(3, 2, RTNode::NodeType::Node,     1, {}),
+        alternative
+    });
+}
+
 static NodeMap triggerLimitShape()
 {
     RTNode spent = makeNode(2, 1, RTNode::NodeType::Node, 1, {});
@@ -298,6 +315,13 @@ TEST_CASE("a sub loop replays its subtree before returning to the root", "[trave
     const std::vector<int> expected { 1, 2, 3, 2, 3, 1, 2, 3, 2, 3, 1 };
 
     CHECK(walkPrimary(subLoopShape(), 1, 10, NativeTraversalRule::instance()) == expected);
+}
+
+TEST_CASE("a sub loop's repeats rotate the repeated node's alternatives", "[traversal]")
+{
+    const std::vector<int> expected { 1, 2, 3, 2, 10, 3, 1, 2, 3, 2, 10, 3, 1 };
+
+    CHECK(walkPrimary(subLoopWithAlternativeShape(), 1, 10, NativeTraversalRule::instance()) == expected);
 }
 
 TEST_CASE("a spent trigger limit makes the child ineligible", "[traversal]")
@@ -671,6 +695,11 @@ TEST_CASE("a modulator walk unfolds the same sequence as a node traversal", "[tr
     SECTION("sub loop") {
         CHECK(walkModulator(mirrorAsModulators(subLoopShape()), 1, steps)
               == walkPrimary(subLoopShape(), 1, steps, NativeTraversalRule::instance()));
+    }
+
+    SECTION("sub loop with an alternative") {
+        CHECK(walkModulator(mirrorAsModulators(subLoopWithAlternativeShape()), 1, steps)
+              == walkPrimary(subLoopWithAlternativeShape(), 1, steps, NativeTraversalRule::instance()));
     }
 
     SECTION("trigger limit") {
