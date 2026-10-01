@@ -62,6 +62,7 @@ void TraversalLogic::reset(int root, const RTtraversal& newTraversal)
     rootId              = root;
     referenceTargetId   = 0;
     pendingJumpTargetId = -1;
+    membersScript       = nullptr;
 
     state = TraversalState::End;
 }
@@ -201,6 +202,8 @@ void TraversalLogic::registerTrigger(const NodeMap& nodes, int nodeId)
 
 void TraversalLogic::ModulatorWalk::decide(const NodeMap& nodes, TraversalLogic& owner)
 {
+    const bool scriptAdvances = owner.script != nullptr && owner.script->advanceFunction != -1;
+
     if (decidedTarget != -1) {
         return;
     }
@@ -217,25 +220,19 @@ void TraversalLogic::ModulatorWalk::decide(const NodeMap& nodes, TraversalLogic&
 
     int chosen = -1;
 
-    owner.selectSwitchNode(nodes, walker.target, chosen);
+    if (scriptAdvances) {
+        ScriptRun run(owner.makeScriptContext(nodes, Walk::Modulator, ScriptWrites::Commit, nullptr));
 
-    if (chosen == -1) {
-        const int count = owner.nodeState.increment(NodeStateSlot::ModulatorCount, walker.target);
+        const int scriptArguments[] = { 1 };
 
-        chosen = owner.selectNextChild(nodes, walker.target, count, &isModulatorChild);
+        chosen = run.call(owner.script->advanceFunction, scriptArguments);
 
-        owner.nodeState.set(NodeStateSlot::SwitchCandidate, walker.target, chosen);
-        owner.nodeState.set(NodeStateSlot::LastNode, walker.target, chosen);
-
-        if (chosen != -1) {
-            const int encapsulationEntryId = owner.encapsulationLoopTarget(nodes, walker, walker.target, chosen);
-
-            if (encapsulationEntryId != -1) {
-                chosen = encapsulationEntryId;
-            }
-
-            owner.registerTrigger(nodes, chosen);
+        if (nodes.find(chosen) == nullptr) {
+            chosen = -1;
         }
+    }
+    else {
+        chosen = owner.chooseChild(nodes, walker, NodeStateSlot::ModulatorCount, &isModulatorChild);
     }
 
     if (chosen == -1) {
@@ -263,7 +260,7 @@ void TraversalLogic::ModulatorWalk::decide(const NodeMap& nodes, TraversalLogic&
 
     const RTNode* const chosenNode = nodes.find(chosen);
 
-    if (chosenNode != nullptr) {
+    if (chosenNode != nullptr && !scriptAdvances) {
         owner.armSubLoop(walker, *chosenNode);
     }
 }
@@ -383,7 +380,7 @@ void TraversalLogic::selectSwitchNode(const NodeMap& nodes,int targetId, int& ch
     }
 }
 
-void TraversalLogic::advance(const NodeMap& nodes)
+void TraversalLogic::advance(const NodeMap& nodes, int steps)
 {
     const int targetId     = primary.target;
     int       chosenNodeId = -1;
@@ -405,6 +402,11 @@ void TraversalLogic::advance(const NodeMap& nodes)
         return;
     }
 
+    if (script != nullptr && script->advanceFunction != -1) {
+        advanceByScript(nodes, *targetNode, steps, deadEndState);
+        return;
+    }
+
     if (targetNode->connections.empty()) {
         nodeState.increment(NodeStateSlot::Count, targetId);
         state = deadEndState;
@@ -422,26 +424,7 @@ void TraversalLogic::advance(const NodeMap& nodes)
         return;
     }
 
-    selectSwitchNode(nodes, targetId, chosenNodeId);
-
-    if (chosenNodeId == -1) {
-        const int count = nodeState.increment(NodeStateSlot::Count, targetId);
-
-        chosenNodeId = selectNextChild(nodes,targetId, count, &isAdvanceableChild);
-
-        nodeState.set(NodeStateSlot::SwitchCandidate, targetId, chosenNodeId);
-        nodeState.set(NodeStateSlot::LastNode, targetId, chosenNodeId);
-
-        if (chosenNodeId != -1) {
-            const int encapsulationEntryId = encapsulationLoopTarget(nodes, primary, targetId, chosenNodeId);
-
-            if (encapsulationEntryId != -1) {
-                chosenNodeId = encapsulationEntryId;
-            }
-
-            registerTrigger(nodes, chosenNodeId);
-        }
-    }
+    chosenNodeId = chooseChild(nodes, primary, NodeStateSlot::Count, &isAdvanceableChild);
 
     if (chosenNodeId  != -1) {
         const RTNode* const nextTargetNode = nodes.find(chosenNodeId);
@@ -459,14 +442,132 @@ void TraversalLogic::advance(const NodeMap& nodes)
 
     if (primary.target == primary.last) {
         state = deadEndState;
+        return;
+    }
+
+    skipAhead(nodes, steps);
+}
+
+int TraversalLogic::chooseChild(const NodeMap& nodes, Walker& walker, NodeStateSlot countSlot,
+                                ChildPredicate isEligible)
+{
+    const int targetId     = walker.target;
+    int       chosenNodeId = -1;
+
+    selectSwitchNode(nodes, targetId, chosenNodeId);
+
+    if (chosenNodeId != -1) {
+        return chosenNodeId;
+    }
+
+    const int count = nodeState.increment(countSlot, targetId);
+
+    chosenNodeId = selectNextChild(nodes, targetId, count, isEligible);
+
+    nodeState.set(NodeStateSlot::SwitchCandidate, targetId, chosenNodeId);
+    nodeState.set(NodeStateSlot::LastNode, targetId, chosenNodeId);
+
+    if (chosenNodeId == -1) {
+        return -1;
+    }
+
+    const int encapsulationEntryId = encapsulationLoopTarget(nodes, walker, targetId, chosenNodeId);
+
+    if (encapsulationEntryId != -1) {
+        chosenNodeId = encapsulationEntryId;
+    }
+
+    registerTrigger(nodes, chosenNodeId);
+
+    return chosenNodeId;
+}
+
+void TraversalLogic::skipAhead(const NodeMap& nodes, int steps)
+{
+    const int stepCount = std::min(steps, maxAdvanceSteps);
+
+    for (int skipped = 1; skipped < stepCount; ++skipped) {
+        const RTNode* const skipTarget = peekNextTarget(nodes);
+
+        if (skipTarget == nullptr || skipTarget->nodeType == RTNode::NodeType::RootNode) {
+            return;
+        }
+
+        primary.target = skipTarget->nodeID;
+        advanceAlternative(nodes, primary.target);
     }
 }
 
-const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes) const
+void TraversalLogic::advanceByScript(const NodeMap& nodes, const RTNode& leavingNode, int steps,
+                                     TraversalState deadEndState)
+{
+    const int scriptArguments[] = { std::min(steps, maxAdvanceSteps) };
+
+    ScriptRun run(makeScriptContext(nodes, Walk::Primary, ScriptWrites::Commit, nullptr));
+
+    const int                 chosenId   = run.call(script->advanceFunction, scriptArguments);
+    const RTNode*       const chosenNode = nodes.find(chosenId);
+    const RTConnection* const connection = leavingNode.findConnection(chosenId);
+
+    if (chosenNode == nullptr || chosenId == leavingNode.nodeID) {
+        state = deadEndState;
+        return;
+    }
+
+    if (connection != nullptr && connection->isTreeJump) {
+        pendingJumpTargetId = chosenId;
+        state               = TraversalState::Jump;
+        return;
+    }
+
+    primary.target = chosenId;
+    advanceAlternative(nodes, chosenId);
+}
+
+ScriptRunContext TraversalLogic::makeScriptContext(const NodeMap& nodes, Walk walk, ScriptWrites writes,
+                                                   ScriptHost* host)
+{
+    ScriptRunContext context { *script, nodes, nodeState, scriptMembers, traversal.key,
+                               static_cast<int>(selectionRandom >> 1), primary.target, NodeStateSlot::Count,
+                               &isAdvanceableChild, writes, host };
+
+    const std::size_t memberCount = std::min(script->memberDefaults.size(), scriptMembers.size());
+
+    if (membersScript != script) {
+        scriptMembers.fill(0);
+        std::copy_n(script->memberDefaults.begin(), memberCount, scriptMembers.begin());
+
+        membersScript = script;
+    }
+
+    if (walk == Walk::Modulator) {
+        context.currentNodeId = mod.walker.target;
+        context.countSlot     = NodeStateSlot::ModulatorCount;
+        context.isEligible    = &isModulatorChild;
+    }
+
+    return context;
+}
+
+const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes)
 {
     const int count = nodeState.get(NodeStateSlot::Count, primary.target) + 1;
 
     const RTNode* const targetNode = nodes.find(primary.target);
+
+    if (script != nullptr && script->advanceFunction != -1) {
+        ScriptRun run(makeScriptContext(nodes, Walk::Primary, ScriptWrites::Trial, nullptr));
+
+        const int scriptArguments[] = { 1 };
+
+        const RTNode* const scriptTarget = nodes.find(run.call(script->advanceFunction, scriptArguments));
+
+        if (scriptTarget == nullptr || scriptTarget->nodeID == primary.target) {
+            return nullptr;
+        }
+
+        return scriptTarget;
+    }
 
     if (targetNode != nullptr) {
         const int jumpTargetId = selectTreeJumpChild(nodes, *targetNode);
@@ -767,9 +868,9 @@ void TraversalLogic::handleTreeJump(const NodeMap& nodes, StepResult& result)
     loop.limit  = 0;
 }
 
-TraversalLogic::StepResult TraversalLogic::stepActive(const NodeMap& nodes)
+TraversalLogic::StepResult TraversalLogic::stepActive(const NodeMap& nodes, int steps)
 {
-    advance(nodes);
+    advance(nodes, steps);
 
     selectionRandom ^= selectionRandom << 13;
     selectionRandom ^= selectionRandom >> 17;
@@ -812,10 +913,10 @@ TraversalLogic::StepResult TraversalLogic::stepActive(const NodeMap& nodes)
     return result;
 }
 
-TraversalLogic::StepResult TraversalLogic::handleNodeEvent(const NodeMap& nodes) {
+TraversalLogic::StepResult TraversalLogic::handleNodeEvent(const NodeMap& nodes, int steps) {
     switch (state) {
         case TraversalState::Active:
-            return stepActive(nodes);
+            return stepActive(nodes, steps);
 
         case TraversalState::End: {
             StepResult result;

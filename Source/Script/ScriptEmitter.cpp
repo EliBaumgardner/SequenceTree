@@ -2,68 +2,41 @@
 
 #include <cstddef>
 
-const FieldEntry childFieldTable[] = {
-    { "id",           ScriptField::ChildId },
-    { "eligible",     ScriptField::ChildIsEligible },
-    { "limit",        ScriptField::ChildCountLimit },
-    { "countLimit",   ScriptField::ChildCountLimit },
-    { "triggerLimit", ScriptField::ChildTriggerLimit },
-    { "triggerCount", ScriptField::ChildTriggerCount },
-    { "visits",       ScriptField::ChildVisitCount },
-    { "visitCount",   ScriptField::ChildVisitCount },
-    { "repeat",       ScriptField::ChildRepeatValue },
-    { "pitch",        ScriptField::ChildPitchOffset },
-    { "pitchOffset",  ScriptField::ChildPitchOffset },
-    { "switchLimit",  ScriptField::ChildSwitchCountLimit },
-    { "subLoopLimit", ScriptField::ChildSubLoopCountLimit },
-    { "probability",  ScriptField::ChildProbability }
+const FieldEntry nodeFieldTable[] = {
+    { "id",           ScriptField::Id,           ValueType::Int,  FieldAccess::ReadOnly },
+    { "pitch",        ScriptField::Pitch,        ValueType::Int,  FieldAccess::ReadOnly },
+    { "velocity",     ScriptField::Velocity,     ValueType::Int,  FieldAccess::ReadOnly },
+    { "duration",     ScriptField::Duration,     ValueType::Int,  FieldAccess::ReadOnly },
+    { "count",        ScriptField::Count,        ValueType::Int,  FieldAccess::Writable },
+    { "switchCount",  ScriptField::SwitchCount,  ValueType::Int,  FieldAccess::Writable },
+    { "triggerCount", ScriptField::TriggerCount, ValueType::Int,  FieldAccess::Writable },
+    { "subLoopCount", ScriptField::SubLoopCount, ValueType::Int,  FieldAccess::Writable },
+    { "limit",        ScriptField::CountLimit,   ValueType::Int,  FieldAccess::ReadOnly },
+    { "countLimit",   ScriptField::CountLimit,   ValueType::Int,  FieldAccess::ReadOnly },
+    { "triggerLimit", ScriptField::TriggerLimit, ValueType::Int,  FieldAccess::ReadOnly },
+    { "switchLimit",  ScriptField::SwitchLimit,  ValueType::Int,  FieldAccess::ReadOnly },
+    { "subLoopLimit", ScriptField::SubLoopLimit, ValueType::Int,  FieldAccess::ReadOnly },
+    { "repeat",       ScriptField::Repeat,       ValueType::Int,  FieldAccess::ReadOnly },
+    { "probability",  ScriptField::Probability,  ValueType::Int,  FieldAccess::ReadOnly },
+    { "childCount",   ScriptField::ChildCount,   ValueType::Int,  FieldAccess::ReadOnly },
+    { "lastChild",    ScriptField::LastChild,    ValueType::Node, FieldAccess::ReadOnly },
+    { "parent",       ScriptField::Parent,       ValueType::Node, FieldAccess::ReadOnly },
+    { "eligible",     ScriptField::Eligible,     ValueType::Int,  FieldAccess::ReadOnly }
 };
 
-const FieldEntry parentFieldTable[] = {
-    { "id",         ScriptField::ParentId },
-    { "count",      ScriptField::ParentCount },
-    { "childCount", ScriptField::ParentChildCount },
-    { "lastChild",  ScriptField::ParentLastChosenChild }
+const ContextEntry traversalContextTable[] = {
+    { "id",       ScriptContextValue::TraversalId },
+    { "random",   ScriptContextValue::TraversalRandom },
+    { "instance", ScriptContextValue::TraversalInstance }
 };
 
-const FieldEntry childrenFieldTable[] = {
-    { "count", ScriptField::ParentChildCount }
-};
-
-const FieldEntry traversalFieldTable[] = {
-    { "id",       ScriptField::TraversalId },
-    { "random",   ScriptField::TraversalRandom },
-    { "instance", ScriptField::TraversalInstance }
-};
-
-template <std::size_t count>
-bool lookupField(const FieldEntry (&table)[count], const std::string& name, ScriptField& field)
+void Emitter::run(const ClassDeclaration& declaration)
 {
-    for (const FieldEntry& entry : table) {
-        if (name == entry.name) {
-            field = entry.field;
-            return true;
-        }
-    }
+    declareMembers(declaration);
+    declareFunctions(declaration);
 
-    return false;
-}
-
-void Emitter::run(std::span<const StatementPtr> program)
-{
-    emitSequence(program);
-
-    emit(ScriptOpcode::PushInt, -1);
-    emit(ScriptOpcode::Return);
-
-    script.localCount = highWaterSlot;
-
-    if (highWaterStack > RTScript::maxStack) {
-        diagnostics.push_back({ "expression nesting is too deep for the traversal stack", 1, 1, 1 });
-    }
-
-    if (highWaterSlot > RTScript::maxLocals) {
-        diagnostics.push_back({ "too many variables for the traversal stack", 1, 1, 1 });
+    for (const FunctionSignature& signature : functions) {
+        emitFunction(declaration.functions[static_cast<std::size_t>(signature.declaration)], signature);
     }
 }
 
@@ -71,27 +44,71 @@ int Emitter::stackDelta(ScriptOpcode opcode)
 {
     switch (opcode) {
         case ScriptOpcode::PushInt:
+        case ScriptOpcode::PushReal:
         case ScriptOpcode::PushLocal:
-        case ScriptOpcode::PushField:
+        case ScriptOpcode::PushMember:
+        case ScriptOpcode::PushContext:
+        case ScriptOpcode::Call:
             return 1;
 
-        case ScriptOpcode::StoreLocal:
-        case ScriptOpcode::Pop:
-        case ScriptOpcode::LoadChild:
-        case ScriptOpcode::JumpIfFalse:
-        case ScriptOpcode::JumpIfTrue:
-        case ScriptOpcode::Return:
-            return -1;
-
         case ScriptOpcode::Halt:
+        case ScriptOpcode::PushNodeField:
         case ScriptOpcode::Negate:
+        case ScriptOpcode::Convert:
         case ScriptOpcode::LogicalNot:
         case ScriptOpcode::Jump:
+        case ScriptOpcode::Advance:
             return 0;
+
+        case ScriptOpcode::StoreNodeField:
+            return -2;
+
+        case ScriptOpcode::PlayNote:
+            return -3;
 
         default:
             return -1;
     }
+}
+
+const char* Emitter::typeName(ValueType type)
+{
+    switch (type) {
+        case ValueType::Int:    return "an int";
+        case ValueType::Float:  return "a float";
+        case ValueType::Double: return "a double";
+        case ValueType::Node:   return "a Node";
+        default:                return "no value";
+    }
+}
+
+ScriptNumber Emitter::numberKind(ValueType type)
+{
+    switch (type) {
+        case ValueType::Float:  return ScriptNumber::Float;
+        case ValueType::Double: return ScriptNumber::Double;
+        default:                return ScriptNumber::Int;
+    }
+}
+
+ValueType Emitter::commonType(ValueType left, ValueType right)
+{
+    const bool leftIsNumber  = left == ValueType::Int || left == ValueType::Float || left == ValueType::Double;
+    const bool rightIsNumber = right == ValueType::Int || right == ValueType::Float || right == ValueType::Double;
+
+    if (!leftIsNumber || !rightIsNumber) {
+        return ValueType::Void;
+    }
+
+    if (left == ValueType::Double || right == ValueType::Double) {
+        return ValueType::Double;
+    }
+
+    if (left == ValueType::Float || right == ValueType::Float) {
+        return ValueType::Float;
+    }
+
+    return ValueType::Int;
 }
 
 int Emitter::emit(ScriptOpcode opcode, int operand)
@@ -109,9 +126,21 @@ int Emitter::emit(ScriptOpcode opcode, int operand)
     return index;
 }
 
-int Emitter::emit(ScriptOpcode opcode, ScriptField field)
+bool Emitter::emitConversion(ValueType from, ValueType to)
 {
-    return emit(opcode, static_cast<int>(field));
+    if (from == to) {
+        return true;
+    }
+
+    if (commonType(from, to) == ValueType::Void) {
+        return false;
+    }
+
+    if (to != ValueType::Double) {
+        emit(ScriptOpcode::Convert, static_cast<int>(numberKind(to)));
+    }
+
+    return true;
 }
 
 int Emitter::here() const { return static_cast<int>(script.instructions.size()); }
@@ -144,23 +173,44 @@ int Emitter::allocateSlot()
     return slot;
 }
 
-int Emitter::declareLocal(const std::string& name)
+int Emitter::declareLocal(const std::string& name, ValueType type)
 {
     const int slot = allocateSlot();
-    locals.push_back({ name, slot });
+    locals.push_back({ name, slot, type });
     return slot;
 }
 
-bool Emitter::findLocal(const std::string& name, int& slot) const
+const LocalBinding* Emitter::findLocal(const std::string& name) const
 {
     for (std::size_t index = locals.size(); index > 0; --index) {
         if (locals[index - 1].name == name) {
-            slot = locals[index - 1].slot;
-            return true;
+            return &locals[index - 1];
         }
     }
 
-    return false;
+    return nullptr;
+}
+
+const LocalBinding* Emitter::findMember(const std::string& name) const
+{
+    for (const LocalBinding& member : members) {
+        if (member.name == name) {
+            return &member;
+        }
+    }
+
+    return nullptr;
+}
+
+const FunctionSignature* Emitter::findFunction(const std::string& name) const
+{
+    for (const FunctionSignature& signature : functions) {
+        if (signature.name == name) {
+            return &signature;
+        }
+    }
+
+    return nullptr;
 }
 
 void Emitter::openScope()
@@ -178,12 +228,165 @@ void Emitter::closeScope()
     slotMarks.pop_back();
 }
 
+void Emitter::declareMembers(const ClassDeclaration& declaration)
+{
+    for (const MemberDeclaration& member : declaration.members) {
+        int defaultValue = 0;
+
+        if (findMember(member.name) != nullptr) {
+            diagnostics.push_back({ "'" + member.name + "' is already a member",
+                                    member.line, member.column, member.length });
+            continue;
+        }
+
+        if (member.name == "current") {
+            diagnostics.push_back({ "'current' is the node the walk is on and cannot be a member",
+                                    member.line, member.column, member.length });
+            continue;
+        }
+
+        if (static_cast<int>(members.size()) >= RTScript::maxMembers) {
+            diagnostics.push_back({ "too many members for the traversal",
+                                    member.line, member.column, member.length });
+            continue;
+        }
+
+        if (member.type == ValueType::Node) {
+            defaultValue = -1;
+        }
+
+        members.push_back({ member.name, static_cast<int>(members.size()), member.type });
+        script.memberDefaults.push_back(defaultValue);
+    }
+}
+
+void Emitter::declareFunctions(const ClassDeclaration& declaration)
+{
+    for (std::size_t index = 0; index < declaration.functions.size(); ++index) {
+        const FunctionDeclaration& function = declaration.functions[index];
+
+        const int functionIndex = static_cast<int>(functions.size());
+
+        const bool isMain    = function.name == "main";
+        const bool isAdvance = function.name == "advance";
+
+        const bool mainMatches    = function.returnType == ValueType::Void && function.parameters.empty();
+        const bool advanceMatches = function.returnType == ValueType::Node && function.parameters.size() == 1
+                                    && function.parameters.front().type == ValueType::Int;
+
+        FunctionSignature signature { function.name, function.returnType, {}, functionIndex,
+                                      static_cast<int>(index) };
+
+        if (findFunction(function.name) != nullptr) {
+            diagnostics.push_back({ "'" + function.name + "' is already a function",
+                                    function.line, function.column, function.length });
+            continue;
+        }
+
+        if (function.name == "playNote") {
+            diagnostics.push_back({ "'playNote' is built in and cannot be redefined",
+                                    function.line, function.column, function.length });
+            continue;
+        }
+
+        if (isMain && !mainMatches) {
+            diagnostics.push_back({ "main is written 'void main()'",
+                                    function.line, function.column, function.length });
+            continue;
+        }
+
+        if (isAdvance && !advanceMatches) {
+            diagnostics.push_back({ "advance is written 'Node advance(int numSteps)'",
+                                    function.line, function.column, function.length });
+            continue;
+        }
+
+        if (isMain) {
+            script.mainFunction = functionIndex;
+        }
+
+        if (isAdvance) {
+            script.advanceFunction = functionIndex;
+        }
+
+        for (const Parameter& parameter : function.parameters) {
+            signature.parameterTypes.push_back(parameter.type);
+        }
+
+        functions.push_back(signature);
+    }
+
+    script.functions.resize(functions.size());
+}
+
+void Emitter::emitFunction(const FunctionDeclaration& declaration, const FunctionSignature& signature)
+{
+    ScriptFunction& function = script.functions[static_cast<std::size_t>(signature.index)];
+
+    int defaultReturn = 0;
+
+    locals.clear();
+    scopeMarks.clear();
+    slotMarks.clear();
+    loopStack.clear();
+
+    nextSlot        = 0;
+    highWaterSlot   = 0;
+    stackDepth      = 0;
+    highWaterStack  = 0;
+    currentFunction = &signature;
+
+    function.entry          = here();
+    function.parameterCount = static_cast<int>(declaration.parameters.size());
+
+    for (const Parameter& parameter : declaration.parameters) {
+        if (findLocal(parameter.name) != nullptr) {
+            diagnostics.push_back({ "'" + parameter.name + "' is already a parameter",
+                                    parameter.line, parameter.column, parameter.length });
+        }
+
+        declareLocal(parameter.name, parameter.type);
+    }
+
+    emitSequence(declaration.body);
+
+    if (signature.returnType == ValueType::Node) {
+        defaultReturn = -1;
+    }
+
+    emit(ScriptOpcode::PushInt, defaultReturn);
+    emit(ScriptOpcode::Return);
+
+    function.localCount = highWaterSlot;
+
+    if (highWaterStack > RTScript::maxStack) {
+        diagnostics.push_back({ "expression nesting is too deep for the traversal stack",
+                                declaration.line, declaration.column, declaration.length });
+    }
+
+    if (highWaterSlot > RTScript::maxLocals) {
+        diagnostics.push_back({ "too many variables for the traversal stack",
+                                declaration.line, declaration.column, declaration.length });
+    }
+
+    currentFunction = nullptr;
+}
+
 void Emitter::emitSequence(std::span<const StatementPtr> statements)
 {
     for (const StatementPtr& statement : statements) {
+        const std::size_t scopeDepth = scopeMarks.size();
+        const std::size_t localCount = locals.size();
+        const int         slotMark   = nextSlot;
+
         try {
             emitStatement(*statement);
         } catch (const EmitFailure&) {
+            scopeMarks.resize(scopeDepth);
+            slotMarks.resize(scopeDepth);
+            locals.resize(localCount);
+
+            nextSlot   = slotMark;
             stackDepth = 0;
         }
     }
@@ -201,7 +404,7 @@ void Emitter::emitBlock(std::span<const StatementPtr> body)
 void Emitter::emitStatement(const Statement& statement)
 {
     switch (statement.kind) {
-        case StatementKind::Let:      emitLet(statement);      break;
+        case StatementKind::Declare:  emitDeclare(statement);  break;
         case StatementKind::Assign:   emitAssign(statement);   break;
         case StatementKind::If:       emitIf(statement);       break;
         case StatementKind::For:      emitFor(statement);      break;
@@ -209,52 +412,171 @@ void Emitter::emitStatement(const Statement& statement)
         case StatementKind::Break:    emitBreak(statement);    break;
         case StatementKind::Continue: emitContinue(statement); break;
         case StatementKind::Return:   emitReturn(statement);   break;
+
+        case StatementKind::Call: {
+            emitExpression(*statement.value);
+            emit(ScriptOpcode::Pop);
+            break;
+        }
     }
 }
 
-void Emitter::emitLet(const Statement& statement)
+void Emitter::emitDeclare(const Statement& statement)
 {
-    emitExpression(*statement.value);
+    ValueType type         = statement.declaredType;
+    int       defaultValue = 0;
 
-    if (statement.name == childBinding) {
-        fail("'" + statement.name + "' is the loop variable and cannot be redeclared", statement);
+    if (statement.value == nullptr) {
+        if (type == ValueType::Node) {
+            defaultValue = -1;
+        }
+
+        emit(ScriptOpcode::PushInt, defaultValue);
+    }
+    else {
+        const ValueType valueType = emitExpression(*statement.value);
+
+        if (valueType == ValueType::Void) {
+            fail("this gives no value to store in '" + statement.name + "'", *statement.value);
+        }
+
+        if (type == ValueType::Inferred) {
+            type = valueType;
+        }
+
+        if (!emitConversion(valueType, type)) {
+            fail("'" + statement.name + "' holds " + typeName(type) + ", but this is "
+                 + typeName(valueType), *statement.value);
+        }
     }
 
-    emit(ScriptOpcode::StoreLocal, declareLocal(statement.name));
+    emit(ScriptOpcode::StoreLocal, declareLocal(statement.name, type));
 }
 
 void Emitter::emitAssign(const Statement& statement)
 {
-    int slot = 0;
+    const Expression& target = *statement.target;
 
-    if (!findLocal(statement.name, slot)) {
-        if (statement.name == childBinding) {
-            fail("'" + statement.name + "' is the loop variable and cannot be assigned", statement);
-        }
+    const LocalBinding* local  = nullptr;
+    const LocalBinding* member = nullptr;
 
-        fail("'" + statement.name + "' is not declared; use 'let " + statement.name + " = ...'", statement);
+    ScriptOpcode loadOpcode  = ScriptOpcode::PushLocal;
+    ScriptOpcode storeOpcode = ScriptOpcode::StoreLocal;
+    int          slot        = 0;
+    ValueType    type        = ValueType::Int;
+
+    if (target.kind == ExpressionKind::Field) {
+        emitAssignField(statement);
+        return;
+    }
+
+    local  = findLocal(target.name);
+    member = findMember(target.name);
+
+    if (local != nullptr) {
+        slot = local->slot;
+        type = local->type;
+    }
+    else if (member != nullptr) {
+        loadOpcode  = ScriptOpcode::PushMember;
+        storeOpcode = ScriptOpcode::StoreMember;
+        slot        = member->slot;
+        type        = member->type;
+    }
+    else if (target.name == "current") {
+        fail("'current' is where the walk is; move it by returning a node from advance", target);
+    }
+    else {
+        fail("'" + target.name + "' is not declared; declare it with 'int " + target.name + " = ...;'", target);
     }
 
     if (statement.op != TokenKind::Assign) {
-        emit(ScriptOpcode::PushLocal, slot);
+        if (commonType(type, type) == ValueType::Void) {
+            fail("only a number can be added to or taken from", target);
+        }
+
+        emit(loadOpcode, slot);
     }
 
-    emitExpression(*statement.value);
+    ValueType valueType = emitExpression(*statement.value);
+
+    if (statement.op != TokenKind::Assign) {
+        valueType = commonType(type, valueType);
+
+        if (valueType == ValueType::Void) {
+            fail("only a number can be added to or taken from", *statement.value);
+        }
+    }
 
     if (statement.op == TokenKind::PlusAssign) {
-        emit(ScriptOpcode::Add);
+        emit(ScriptOpcode::Add, static_cast<int>(numberKind(valueType)));
     }
 
     if (statement.op == TokenKind::MinusAssign) {
-        emit(ScriptOpcode::Subtract);
+        emit(ScriptOpcode::Subtract, static_cast<int>(numberKind(valueType)));
     }
 
-    emit(ScriptOpcode::StoreLocal, slot);
+    if (!emitConversion(valueType, type)) {
+        fail("'" + target.name + "' holds " + typeName(type) + ", but this is " + typeName(valueType),
+             *statement.value);
+    }
+
+    emit(storeOpcode, slot);
+}
+
+void Emitter::emitAssignField(const Statement& statement)
+{
+    const Expression& target = *statement.target;
+    const FieldEntry& field  = nodeField(target);
+
+    const int nodeSlot = allocateSlot();
+
+    if (field.access == FieldAccess::ReadOnly) {
+        fail("'" + target.name + "' can only be read; a played note's values are passed to playNote", target);
+    }
+
+    if (emitExpression(*target.left) != ValueType::Node) {
+        fail("only a Node has properties", *target.left);
+    }
+
+    emit(ScriptOpcode::StoreLocal, nodeSlot);
+    emit(ScriptOpcode::PushLocal, nodeSlot);
+
+    if (statement.op != TokenKind::Assign) {
+        emit(ScriptOpcode::PushLocal, nodeSlot);
+        emit(ScriptOpcode::PushNodeField, static_cast<int>(field.field));
+    }
+
+    ValueType valueType = emitExpression(*statement.value);
+
+    if (statement.op != TokenKind::Assign) {
+        valueType = commonType(field.type, valueType);
+    }
+
+    if (statement.op == TokenKind::PlusAssign) {
+        emit(ScriptOpcode::Add, static_cast<int>(numberKind(valueType)));
+    }
+
+    if (statement.op == TokenKind::MinusAssign) {
+        emit(ScriptOpcode::Subtract, static_cast<int>(numberKind(valueType)));
+    }
+
+    if (!emitConversion(valueType, field.type)) {
+        fail("'" + target.name + "' holds " + typeName(field.type), *statement.value);
+    }
+
+    emit(ScriptOpcode::StoreNodeField, static_cast<int>(field.field));
+
+    --nextSlot;
 }
 
 void Emitter::emitIf(const Statement& statement)
 {
-    emitExpression(*statement.value);
+    const ValueType conditionType = emitExpression(*statement.value);
+
+    if (commonType(conditionType, conditionType) == ValueType::Void) {
+        fail("a condition must be a number; compare a Node with '==' or '!='", *statement.value);
+    }
 
     const int falseJump = emit(ScriptOpcode::JumpIfFalse);
 
@@ -276,36 +598,42 @@ void Emitter::emitIf(const Statement& statement)
 
 void Emitter::emitFor(const Statement& statement)
 {
-    if (!childBinding.empty()) {
-        fail("child loops cannot be nested", statement);
-    }
-
     openScope();
 
-    const int indexSlot = allocateSlot();
+    const int parentSlot = allocateSlot();
+    const int indexSlot  = allocateSlot();
 
+    if (statement.target == nullptr) {
+        emit(ScriptOpcode::PushContext, static_cast<int>(ScriptContextValue::Current));
+    }
+    else if (emitExpression(*statement.target) != ValueType::Node) {
+        fail("only a Node has children", *statement.target);
+    }
+
+    emit(ScriptOpcode::StoreLocal, parentSlot);
     emit(ScriptOpcode::PushInt, 0);
     emit(ScriptOpcode::StoreLocal, indexSlot);
 
     const int loopTop = here();
 
     emit(ScriptOpcode::PushLocal, indexSlot);
-    emit(ScriptOpcode::PushField, ScriptField::ParentChildCount);
+    emit(ScriptOpcode::PushLocal, parentSlot);
+    emit(ScriptOpcode::PushNodeField, static_cast<int>(ScriptField::ChildCount));
     emit(ScriptOpcode::Less);
 
     const int exitJump = emit(ScriptOpcode::JumpIfFalse);
 
+    emit(ScriptOpcode::PushLocal, parentSlot);
     emit(ScriptOpcode::PushLocal, indexSlot);
-    emit(ScriptOpcode::LoadChild);
+    emit(ScriptOpcode::ChildAt);
+    emit(ScriptOpcode::StoreLocal, declareLocal(statement.name, ValueType::Node));
 
-    childBinding = statement.name;
     loopStack.push_back({});
 
     emitBlock(statement.body);
 
     LoopFrame frame = std::move(loopStack.back());
     loopStack.pop_back();
-    childBinding.clear();
 
     const int continueTarget = here();
 
@@ -328,7 +656,11 @@ void Emitter::emitWhile(const Statement& statement)
 {
     const int loopTop = here();
 
-    emitExpression(*statement.value);
+    const ValueType conditionType = emitExpression(*statement.value);
+
+    if (commonType(conditionType, conditionType) == ValueType::Void) {
+        fail("a condition must be a number; compare a Node with '==' or '!='", *statement.value);
+    }
 
     const int exitJump = emit(ScriptOpcode::JumpIfFalse);
 
@@ -379,112 +711,241 @@ void Emitter::emitContinue(const Statement& statement)
 
 void Emitter::emitReturn(const Statement& statement)
 {
-    emitExpression(*statement.value);
+    const ValueType returnType = currentFunction->returnType;
+
+    if (statement.value == nullptr) {
+        if (returnType != ValueType::Void) {
+            fail("'" + currentFunction->name + "' must return " + typeName(returnType), statement);
+        }
+
+        emit(ScriptOpcode::PushInt, 0);
+        emit(ScriptOpcode::Return);
+        return;
+    }
+
+    if (returnType == ValueType::Void) {
+        fail("'" + currentFunction->name + "' gives no value; use 'return;'", *statement.value);
+    }
+
+    if (!emitConversion(emitExpression(*statement.value), returnType)) {
+        fail("'" + currentFunction->name + "' must return " + typeName(returnType), *statement.value);
+    }
+
     emit(ScriptOpcode::Return);
 }
 
-void Emitter::emitExpression(const Expression& expression)
+ValueType Emitter::emitExpression(const Expression& expression)
 {
     switch (expression.kind) {
-        case ExpressionKind::Literal: emitLiteral(expression); break;
-        case ExpressionKind::Name:    emitName(expression);    break;
-        case ExpressionKind::Member:  emitMember(expression);  break;
-        case ExpressionKind::Unary:   emitUnary(expression);   break;
-        case ExpressionKind::Binary:  emitBinary(expression);  break;
+        case ExpressionKind::Literal: {
+            emit(ScriptOpcode::PushInt, expression.value);
+            return ValueType::Int;
+        }
+
+        case ExpressionKind::Decimal: {
+            emit(ScriptOpcode::PushReal, static_cast<int>(script.constants.size()));
+            script.constants.push_back(expression.decimalValue);
+            return ValueType::Double;
+        }
+
+        case ExpressionKind::None: {
+            emit(ScriptOpcode::PushInt, -1);
+            return ValueType::Node;
+        }
+
+        case ExpressionKind::Name:   return emitName(expression);
+        case ExpressionKind::Field:  return emitField(expression);
+        case ExpressionKind::Call:   return emitCall(expression);
+        case ExpressionKind::Unary:  return emitUnary(expression);
+        case ExpressionKind::Binary: return emitBinary(expression);
     }
+
+    fail("expected a value", expression);
 }
 
-void Emitter::emitLiteral(const Expression& expression)
+ValueType Emitter::emitName(const Expression& expression)
 {
-    emit(ScriptOpcode::PushInt, expression.value);
-}
+    const LocalBinding* const local  = findLocal(expression.name);
+    const LocalBinding* const member = findMember(expression.name);
 
-void Emitter::emitName(const Expression& expression)
-{
-    int slot = 0;
-
-    if (findLocal(expression.name, slot)) {
-        emit(ScriptOpcode::PushLocal, slot);
-        return;
+    if (local != nullptr) {
+        emit(ScriptOpcode::PushLocal, local->slot);
+        return local->type;
     }
 
-    if (!childBinding.empty() && expression.name == childBinding) {
-        emit(ScriptOpcode::PushField, ScriptField::ChildId);
-        return;
+    if (member != nullptr) {
+        emit(ScriptOpcode::PushMember, member->slot);
+        return member->type;
     }
 
-    if (expression.name == "parent" || expression.name == "children"
-        || expression.name == "traversal") {
-        fail("'" + expression.name + "' needs a property, such as '" + expression.name + ".count'",
-             expression);
+    if (expression.name == "current") {
+        emit(ScriptOpcode::PushContext, static_cast<int>(ScriptContextValue::Current));
+        return ValueType::Node;
+    }
+
+    if (expression.name == "children") {
+        fail("'children' can only be walked, as in 'for child in children { }'", expression);
+    }
+
+    if (expression.name == "traversal") {
+        fail("'traversal' needs a property, such as 'traversal.random'", expression);
     }
 
     fail("'" + expression.name + "' is not declared", expression);
 }
 
-void Emitter::emitMember(const Expression& expression)
+ValueType Emitter::emitField(const Expression& expression)
 {
-    ScriptField field = ScriptField::ParentId;
+    const Expression& object = *expression.left;
 
-    if (!childBinding.empty() && expression.name == childBinding) {
-        if (!lookupField(childFieldTable, expression.member, field)) {
-            fail("a child has no property '" + expression.member + "'", expression);
+    const bool namesTraversal = object.kind == ExpressionKind::Name && object.name == "traversal"
+                                && findLocal(object.name) == nullptr && findMember(object.name) == nullptr;
+
+    if (namesTraversal) {
+        for (const ContextEntry& entry : traversalContextTable) {
+            if (expression.name == entry.name) {
+                emit(ScriptOpcode::PushContext, static_cast<int>(entry.value));
+                return ValueType::Int;
+            }
         }
 
-        emit(ScriptOpcode::PushField, field);
-        return;
+        fail("the traversal has no property '" + expression.name + "'", expression);
     }
 
-    if (expression.name == "parent") {
-        if (!lookupField(parentFieldTable, expression.member, field)) {
-            fail("the parent has no property '" + expression.member + "'", expression);
-        }
+    const FieldEntry& field = nodeField(expression);
 
-        emit(ScriptOpcode::PushField, field);
-        return;
+    if (emitExpression(object) != ValueType::Node) {
+        fail("only a Node has properties", object);
+    }
+
+    emit(ScriptOpcode::PushNodeField, static_cast<int>(field.field));
+
+    return field.type;
+}
+
+ValueType Emitter::emitCall(const Expression& expression)
+{
+    const FunctionSignature* const signature = findFunction(expression.name);
+
+    const bool isAdvance  = expression.name == "advance";
+    const bool isPlayNote = expression.name == "playNote";
+
+    const bool insideAdvance = currentFunction != nullptr && currentFunction->name == "advance";
+
+    std::vector<ValueType> parameterTypes;
+    ValueType              returnType = ValueType::Void;
+
+    if (isAdvance) {
+        parameterTypes = { ValueType::Int };
+        returnType     = ValueType::Node;
+    }
+    else if (isPlayNote) {
+        parameterTypes = { ValueType::Node, ValueType::Int, ValueType::Int, ValueType::Int };
+    }
+    else if (signature != nullptr) {
+        parameterTypes = signature->parameterTypes;
+        returnType     = signature->returnType;
+    }
+    else {
+        fail("'" + expression.name + "' is not a function", expression);
+    }
+
+    if ((isAdvance || isPlayNote) && insideAdvance) {
+        fail("advance only chooses where the walk goes; call '" + expression.name + "' from main", expression);
+    }
+
+    if (expression.arguments.size() != parameterTypes.size()) {
+        fail("'" + expression.name + "' takes " + std::to_string(parameterTypes.size()) + " values", expression);
+    }
+
+    for (std::size_t index = 0; index < parameterTypes.size(); ++index) {
+        const Expression& argument = *expression.arguments[index];
+
+        if (!emitConversion(emitExpression(argument), parameterTypes[index])) {
+            fail("this should be " + std::string(typeName(parameterTypes[index])), argument);
+        }
+    }
+
+    if (isAdvance) {
+        emit(ScriptOpcode::Advance);
+    }
+    else if (isPlayNote) {
+        emit(ScriptOpcode::PlayNote);
+    }
+    else {
+        emit(ScriptOpcode::Call, signature->index);
+        stackDepth -= static_cast<int>(parameterTypes.size());
+    }
+
+    return returnType;
+}
+
+ValueType Emitter::emitUnary(const Expression& expression)
+{
+    const ValueType operandType = emitExpression(*expression.left);
+
+    if (commonType(operandType, operandType) == ValueType::Void) {
+        fail("this needs a number", *expression.left);
+    }
+
+    if (expression.op == TokenKind::Minus) {
+        emit(ScriptOpcode::Negate, static_cast<int>(numberKind(operandType)));
+        return operandType;
+    }
+
+    emit(ScriptOpcode::LogicalNot, static_cast<int>(numberKind(operandType)));
+
+    return ValueType::Int;
+}
+
+ValueType Emitter::emitBinary(const Expression& expression)
+{
+    const bool comparesIdentity = expression.op == TokenKind::EqualEqual || expression.op == TokenKind::NotEqual;
+
+    const bool producesNumber = expression.op == TokenKind::Plus || expression.op == TokenKind::Minus
+                                || expression.op == TokenKind::Star || expression.op == TokenKind::Slash
+                                || expression.op == TokenKind::Percent;
+
+    const ValueType leftType   = emitExpression(*expression.left);
+    const ValueType rightType  = emitExpression(*expression.right);
+    const ValueType numberType = commonType(leftType, rightType);
+
+    const bool comparesNodes = comparesIdentity && leftType == ValueType::Node && rightType == ValueType::Node;
+
+    if (comparesIdentity && !comparesNodes && numberType == ValueType::Void) {
+        fail("'==' and '!=' compare two numbers or two Nodes", expression);
+    }
+
+    if (!comparesIdentity && numberType == ValueType::Void) {
+        fail("this operator works on numbers; read a number from a Node, such as 'node.count'", expression);
+    }
+
+    if (expression.op == TokenKind::Percent && numberType != ValueType::Int) {
+        fail("'%' works on ints; store the value in an int first", expression);
+    }
+
+    emit(binaryOpcode(expression), static_cast<int>(numberKind(numberType)));
+
+    if (producesNumber) {
+        return numberType;
+    }
+
+    return ValueType::Int;
+}
+
+const FieldEntry& Emitter::nodeField(const Expression& expression)
+{
+    for (const FieldEntry& entry : nodeFieldTable) {
+        if (expression.name == entry.name) {
+            return entry;
+        }
     }
 
     if (expression.name == "children") {
-        if (!lookupField(childrenFieldTable, expression.member, field)) {
-            fail("'children' has no property '" + expression.member + "'", expression);
-        }
-
-        emit(ScriptOpcode::PushField, field);
-        return;
+        fail("'children' can only be walked, as in 'for child in node.children { }'", expression);
     }
 
-    if (expression.name == "traversal") {
-        if (!lookupField(traversalFieldTable, expression.member, field)) {
-            fail("the traversal has no property '" + expression.member + "'", expression);
-        }
-
-        emit(ScriptOpcode::PushField, field);
-        return;
-    }
-
-    int slot = 0;
-
-    if (findLocal(expression.name, slot)) {
-        fail("'" + expression.name + "' is a number and has no properties", expression);
-    }
-
-    fail("'" + expression.name + "' is not declared; child properties are only available inside "
-         "'for ... in children'", expression);
-}
-
-void Emitter::emitUnary(const Expression& expression)
-{
-    emitExpression(*expression.left);
-
-    emit(expression.op == TokenKind::Minus ? ScriptOpcode::Negate : ScriptOpcode::LogicalNot);
-}
-
-void Emitter::emitBinary(const Expression& expression)
-{
-    emitExpression(*expression.left);
-    emitExpression(*expression.right);
-
-    emit(binaryOpcode(expression));
+    fail("a Node has no property '" + expression.name + "'", expression);
 }
 
 ScriptOpcode Emitter::binaryOpcode(const Expression& expression)

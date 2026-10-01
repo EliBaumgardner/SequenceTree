@@ -8,11 +8,24 @@
 
 #include "ScriptLexer.h"
 
+enum class ValueType
+{
+    Int,
+    Float,
+    Double,
+    Node,
+    Void,
+    Inferred
+};
+
 enum class ExpressionKind
 {
     Literal,
+    Decimal,
+    None,
     Name,
-    Member,
+    Field,
+    Call,
     Unary,
     Binary
 };
@@ -24,15 +37,17 @@ struct Expression
 {
     ExpressionKind kind = ExpressionKind::Literal;
 
-    int value = 0;
+    int    value        = 0;
+    double decimalValue = 0.0;
 
     std::string name;
-    std::string member;
 
     TokenKind op = TokenKind::Null;
 
     ExpressionPtr left;
     ExpressionPtr right;
+
+    std::vector<ExpressionPtr> arguments;
 
     int line   = 1;
     int column = 1;
@@ -41,8 +56,9 @@ struct Expression
 
 enum class StatementKind
 {
-    Let,
+    Declare,
     Assign,
+    Call,
     If,
     For,
     While,
@@ -58,9 +74,11 @@ struct Statement
 {
     StatementKind kind = StatementKind::Return;
 
+    ValueType   declaredType = ValueType::Inferred;
     std::string name;
     TokenKind   op = TokenKind::Assign;
 
+    ExpressionPtr target;
     ExpressionPtr value;
 
     std::vector<StatementPtr> body;
@@ -73,6 +91,47 @@ struct Statement
     int length = 1;
 };
 
+struct Parameter
+{
+    ValueType   type = ValueType::Int;
+    std::string name;
+
+    int line   = 1;
+    int column = 1;
+    int length = 1;
+};
+
+struct FunctionDeclaration
+{
+    ValueType   returnType = ValueType::Void;
+    std::string name;
+
+    std::vector<Parameter>    parameters;
+    std::vector<StatementPtr> body;
+
+    int line   = 1;
+    int column = 1;
+    int length = 1;
+};
+
+struct MemberDeclaration
+{
+    ValueType   type = ValueType::Int;
+    std::string name;
+
+    int line   = 1;
+    int column = 1;
+    int length = 1;
+};
+
+struct ClassDeclaration
+{
+    std::string name;
+
+    std::vector<MemberDeclaration>   members;
+    std::vector<FunctionDeclaration> functions;
+};
+
 struct ParseFailure {};
 
 class Parser
@@ -82,7 +141,7 @@ public:
     Parser(std::span<const Token> tokenList, std::vector<ScriptDiagnostic>& diagnosticList)
         : tokens(tokenList), diagnostics(diagnosticList) {}
 
-    std::vector<StatementPtr> run();
+    ClassDeclaration run();
 
 private:
 
@@ -98,11 +157,18 @@ private:
 
     [[noreturn]] void fail(const std::string& message);
 
+    ValueType parseType();
+
+    void parseClassHeader(ClassDeclaration& declaration);
+    void parseClassBody(ClassDeclaration& declaration);
+    void parseClassMember(ClassDeclaration& declaration);
+    void parseFunction(ClassDeclaration& declaration, ValueType returnType, const Token& nameToken);
+
     StatementPtr makeStatement(StatementKind kind, const Token& token);
 
     StatementPtr parseStatement();
-    StatementPtr parseLet();
-    StatementPtr parseAssign();
+    StatementPtr parseDeclaration();
+    StatementPtr parseAssignOrCall();
     StatementPtr parseIf();
     StatementPtr parseFor();
     StatementPtr parseWhile();
@@ -118,6 +184,7 @@ private:
     ExpressionPtr parseExpression();
     ExpressionPtr parseBinary(int minimumPrecedence);
     ExpressionPtr parseUnary();
+    ExpressionPtr parsePostfix();
     ExpressionPtr parsePrimary();
 
     std::span<const Token>         tokens;

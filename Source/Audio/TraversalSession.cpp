@@ -1,6 +1,5 @@
 #include "TraversalSession.h"
 #include "EventManager.h"
-#include "../Script/ScriptCompiler.h"
 
 #include <algorithm>
 
@@ -28,33 +27,36 @@ TraversalSession::TraversalSession(EventManager& eventManager, EventManager& pre
 
 void TraversalSession::prepare()
 {
-    const TraversalRule* rule = &NativeTraversalRule::instance();
+    const TraversalRule& rule = NativeTraversalRule::instance();
 
     syncedGraphGeneration = 0;
     syncedPoolEpoch       = 0;
 
-    nativeFallbackScript = compileTraversalScript(defaultTraversalScriptSource()).script;
-    scriptRule.script = &nativeFallbackScript;
-
-    if (useScriptedChildSelection) {
-        rule = &scriptRule;
-    }
-
-    traversals.prepare(maxConcurrentTraversals, *rule);
-    previewTraversals.prepare(maxPreviewTraversals, *rule);
+    traversals.prepare(maxConcurrentTraversals, rule);
+    previewTraversals.prepare(maxPreviewTraversals, rule);
 
     previewTraversals.mode         = TraversalLogic::Mode::Preview;
     previewTraversals.runIdCounter = juce::jmax(previewTraversals.runIdCounter, previewRunIdBase);
 }
 
-void TraversalSession::setSelectChildScript(const RTScript* script)
+void TraversalSession::setTraversalScript(const RTScript* script)
 {
+    const RTScript* activeScript = nullptr;
+
     if (script != nullptr && !script->isEmpty()) {
-        scriptRule.script = script;
-        return;
+        activeScript = script;
     }
 
-    scriptRule.script = &nativeFallbackScript;
+    traversals.script        = activeScript;
+    previewTraversals.script = activeScript;
+
+    for (auto& [runId, instance] : traversals.entries()) {
+        instance.logic.script = activeScript;
+    }
+
+    for (auto& [runId, instance] : previewTraversals.entries()) {
+        instance.logic.script = activeScript;
+    }
 }
 
 void TraversalSession::beginReplay(const DispatchContext& context, double targetSamples)

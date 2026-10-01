@@ -41,7 +41,7 @@ private:
     constexpr static float zoomSensitivity = 0.15f;
 
     constexpr static float baseFontHeight = 12.0f;
-    constexpr static int   indentSize     = 10;
+    constexpr static int   indentSize     = 4;
     constexpr static float errorLineAlpha = 0.14f;
     constexpr static float selectionAlpha = 0.35f;
 

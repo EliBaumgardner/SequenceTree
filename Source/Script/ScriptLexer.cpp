@@ -1,6 +1,7 @@
 #include "ScriptLexer.h"
 
 #include <cctype>
+#include <cstdlib>
 
 
 const KeywordEntry keywordTable[] = {
@@ -13,6 +14,14 @@ const KeywordEntry keywordTable[] = {
     { "break",    TokenKind::KeywordBreak },
     { "continue", TokenKind::KeywordContinue },
     { "return",   TokenKind::KeywordReturn },
+    { "class",    TokenKind::KeywordClass },
+    { "public",   TokenKind::KeywordPublic },
+    { "void",     TokenKind::KeywordVoid },
+    { "int",      TokenKind::KeywordInt },
+    { "float",    TokenKind::KeywordFloat },
+    { "double",   TokenKind::KeywordDouble },
+    { "Node",     TokenKind::KeywordNode },
+    { "none",     TokenKind::KeywordNone },
     { "and",      TokenKind::And },
     { "or",       TokenKind::Or },
     { "not",      TokenKind::Not }
@@ -136,6 +145,21 @@ Token Lexer::readNumber()
         advance();
     }
 
+    if (peek(0) == '.' && std::isdigit(static_cast<unsigned char>(peek(1))) != 0) {
+        token.kind = TokenKind::Decimal;
+        overflowed = false;
+
+        token.text.push_back(source[position]);
+        advance();
+
+        while (position < source.size() && std::isdigit(static_cast<unsigned char>(source[position])) != 0) {
+            token.text.push_back(source[position]);
+            advance();
+        }
+
+        token.decimalValue = std::strtod(token.text.c_str(), nullptr);
+    }
+
     token.length = static_cast<int>(token.text.size());
     token.value  = static_cast<int>(accumulated);
 
@@ -182,6 +206,8 @@ Token Lexer::readPunctuation()
         case '(': return readFixed(TokenKind::LeftParen, 1);
         case ')': return readFixed(TokenKind::RightParen, 1);
         case '.': return readFixed(TokenKind::Dot, 1);
+        case ':': return readFixed(TokenKind::Colon, 1);
+        case ',': return readFixed(TokenKind::Comma, 1);
         case '=': return readFixed(TokenKind::Assign, 1);
         case '+': return readFixed(TokenKind::Plus, 1);
         case '-': return readFixed(TokenKind::Minus, 1);

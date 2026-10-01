@@ -57,7 +57,7 @@ target_sources(SequenceTree PRIVATE
         Source/Audio/FlagScheduler.cpp
         Source/Audio/TraversalSession.cpp
         Source/Audio/TraversalRule.cpp
-        Source/Audio/ScriptTraversalRule.cpp
+        Source/Audio/ScriptRun.cpp
         Source/Script/ScriptLexer.cpp
         Source/Script/ScriptParser.cpp
         Source/Script/ScriptEmitter.cpp
@@ -149,7 +149,7 @@ add_executable(SequenceTree_Tests
         Tests/ScriptCompilerTests.cpp
         Source/Audio/TraversalLogic.cpp
         Source/Audio/TraversalRule.cpp
-        Source/Audio/ScriptTraversalRule.cpp
+        Source/Audio/ScriptRun.cpp
         Source/Audio/NodeStateTable.cpp
         Source/Script/ScriptLexer.cpp
         Source/Script/ScriptParser.cpp

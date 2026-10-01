@@ -7,11 +7,15 @@
 #include <memory>
 #include <atomic>
 
-class TraversalDispatcher
+class TraversalDispatcher : public ScriptHost
 {
 public:
 
     TraversalDispatcher(NoteScheduler& scheduler, AudioUIBridge& bridge);
+
+    int  advance(int steps) override;
+    void playNote(const ScriptNote& note) override;
+    int  noteDuration(int nodeId) override;
 
     void pushNote(const RTNode& node, int runId, const DispatchContext& context,
                   double sample, bool isPrimaryRepeat = false);
@@ -26,6 +30,17 @@ public:
     FlagScheduler flagScheduler;
 
 private:
+
+    struct MainRun
+    {
+        TraversalPool::Instance* instance = nullptr;
+        const DispatchContext*   context  = nullptr;
+        int                      runId    = -1;
+        ScriptNote               note;
+    };
+
+    void stepTraversal(TraversalPool::Instance& instance, int runId, const DispatchContext& context,
+                       double expiryTime);
 
     void applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes,
                          int runId, int typeId);
@@ -69,6 +84,8 @@ private:
     AudioUIBridge&  bridge;
 
     int                                dispatchDepth = 0;
+
+    MainRun                            mainRun;
 
     NodeRowMap                         chordVisits;
     std::vector<std::pair<int, int>>   chordFrontier;

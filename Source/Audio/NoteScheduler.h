@@ -18,6 +18,8 @@ public:
 
     enum class NoteRole { Stepping, ChordVoice };
 
+    enum class Sound { Audible, Silent };
+
     struct ActiveNote
     {
         MidiEvent        event;
@@ -27,6 +29,7 @@ public:
         int              nodeId           = 0;
         RTNode::NodeType nodeType         = RTNode::NodeType::Node;
         bool             isConnectionTrigger = false;
+        Sound            sound               = Sound::Audible;
     };
 
     struct NoteVoicing
@@ -36,6 +39,7 @@ public:
         double velocityMultiplier = 1.0;
         int    pitchOverride      = -1;
         int    velocityOverride   = -1;
+        Sound  sound              = Sound::Audible;
     };
 
     static constexpr int maxExpectedActiveNotes = 1024;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Graph/RTData.h"
+#include "ScriptRun.h"
 #include "TraversalRule.h"
 #include <unordered_map>
 #include <vector>
@@ -92,6 +93,8 @@ public:
 
     enum class Mode { Live, Preview };
 
+    enum class Walk { Primary, Modulator };
+
     struct StepResult
     {
         enum class Kind { None, Advanced, LoopedToRoot, JumpedToTree, Ended };
@@ -134,6 +137,12 @@ public:
 
     const TraversalRule* rule = &NativeTraversalRule::instance();
 
+    static constexpr int maxAdvanceSteps = 64;
+
+    const RTScript* script        = nullptr;
+    const RTScript* membersScript = nullptr;
+    ScriptMembers   scriptMembers {};
+
     constexpr TraversalLogic() = default;
 
     void reset(int root, const RTtraversal& newTraversal);
@@ -142,13 +151,15 @@ public:
 
     void beginPreview(const NodeMap& nodes, int startNodeId, int alternativeId);
 
-    StepResult handleNodeEvent(const NodeMap& nodes);
+    StepResult handleNodeEvent(const NodeMap& nodes, int steps = 1);
 
     void advanceAlternative(const NodeMap& nodes, int parentId);
 
-    void advance(const NodeMap& nodes);
+    void advance(const NodeMap& nodes, int steps = 1);
 
-    const RTNode* peekNextTarget(const NodeMap& nodes) const;
+    const RTNode* peekNextTarget(const NodeMap& nodes);
+
+    ScriptRunContext makeScriptContext(const NodeMap& nodes, Walk walk, ScriptWrites writes, ScriptHost* host);
 
     static constexpr int maxCrossTreeTargets = NodeStateTable::maxNodeIds;
 
@@ -171,7 +182,11 @@ private:
     const RTNode* eligibleModulatorRoot(const NodeMap& nodes, const RTConnection& connection,
                                         int hostCount) const;
 
-    StepResult stepActive(const NodeMap& nodes);
+    StepResult stepActive(const NodeMap& nodes, int steps);
+    int        chooseChild(const NodeMap& nodes, Walker& walker, NodeStateSlot countSlot, ChildPredicate isEligible);
+    void       skipAhead(const NodeMap& nodes, int steps);
+    void       advanceByScript(const NodeMap& nodes, const RTNode& leavingNode, int steps,
+                               TraversalState deadEndState);
     void       handleLoopReset(const NodeMap& nodes, StepResult& result);
     void       handleTreeJump(const NodeMap& nodes, StepResult& result);
     int        advanceSubRoot(const NodeMap& nodes, Walker& walker);

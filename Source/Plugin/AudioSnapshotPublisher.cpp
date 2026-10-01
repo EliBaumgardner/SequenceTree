@@ -16,7 +16,7 @@ std::shared_ptr<AudioSnapshotPublisher::Snapshot> AudioSnapshotPublisher::beginE
 
     if (publishedSnapshot != nullptr) {
         edit->globalNodes       = publishedSnapshot->globalNodes;
-        edit->selectChildScript = publishedSnapshot->selectChildScript;
+        edit->traversalScript   = publishedSnapshot->traversalScript;
     }
 
     return edit;
@@ -53,7 +53,7 @@ void AudioSnapshotPublisher::publishScript(std::shared_ptr<RTScript> script)
 {
     auto edit = beginEdit();
 
-    edit->selectChildScript = std::move(script);
+    edit->traversalScript = std::move(script);
 
     publish(std::move(edit));
 }

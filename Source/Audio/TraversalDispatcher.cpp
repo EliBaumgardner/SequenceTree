@@ -12,6 +12,73 @@ TraversalDispatcher::TraversalDispatcher(NoteScheduler& s, AudioUIBridge& b)
     crossTreeScratch.reserve(TraversalLogic::maxCrossTreeTargets);
 }
 
+int TraversalDispatcher::advance(int steps)
+{
+    if (mainRun.instance == nullptr) {
+        return -1;
+    }
+
+    TraversalLogic&        traversal = mainRun.instance->logic;
+    TraversalRuntime&      runtime   = mainRun.instance->runtime;
+    const DispatchContext& context   = *mainRun.context;
+
+    if (steps < 1 && traversal.shouldTraverse()) {
+        return traversal.primary.target;
+    }
+
+    const TraversalLogic::StepResult step = traversal.handleNodeEvent(context.nodes, steps);
+
+    applyStepResult(step, context.nodes, mainRun.runId, traversal.traversal.key.typeId);
+    applyTreeJump(step, traversal, runtime, context);
+
+    if (!traversal.shouldTraverse()) {
+        return -1;
+    }
+
+    return traversal.primary.target;
+}
+
+void TraversalDispatcher::playNote(const ScriptNote& note)
+{
+    if (mainRun.context == nullptr || mainRun.context->nodes.find(note.nodeId) == nullptr) {
+        return;
+    }
+
+    mainRun.note = note;
+}
+
+int TraversalDispatcher::noteDuration(int nodeId)
+{
+    if (mainRun.instance == nullptr) {
+        return 0;
+    }
+
+    TraversalLogic& traversal = mainRun.instance->logic;
+    const NodeMap&  nodes     = mainRun.context->nodes;
+
+    const RTNode* const node        = nodes.find(nodeId);
+    const RTNode* const alternative = nodes.find(traversal.nodeState.get(NodeStateSlot::ActiveAlternative, nodeId));
+    const RTNode*       voiced      = node;
+    const RTNode*       nextTarget  = nullptr;
+
+    if (node == nullptr) {
+        return 0;
+    }
+
+    if (alternative != nullptr && !node->notes.empty()) {
+        voiced = alternative;
+    }
+
+    if (nodeId == traversal.primary.target) {
+        nextTarget = traversal.peekNextTarget(nodes);
+    }
+
+    const int visitCount    = traversal.nodeState.get(NodeStateSlot::Count, voiced->nodeID) + 1;
+    const int danglingIndex = traversal.rule->selectDanglingArrow(*voiced, visitCount, traversal.traversal.key);
+
+    return resolveDuration(*voiced, nextTarget, traversal.primary.last, nodes, danglingIndex);
+}
+
 bool TraversalDispatcher::markChordVisited(int nodeId)
 {
     if (chordVisits.find(nodeId) >= 0) {
@@ -187,7 +254,20 @@ void TraversalDispatcher::pushNote(const RTNode& node, int runId,
 
     ++dispatchDepth;
 
-    TraversalLogic& traversalLogic = traversalInstance->logic;
+    TraversalLogic&   traversalLogic = traversalInstance->logic;
+    const ScriptNote& scriptNote     = traversalInstance->runtime.scriptNote;
+
+    ScriptNote::Kind     scriptKind      = ScriptNote::Kind::Default;
+    NoteScheduler::Sound sound           = NoteScheduler::Sound::Audible;
+    int                  scriptTranspose = 0;
+
+    if (scriptNote.nodeId == node.nodeID) {
+        scriptKind = scriptNote.kind;
+    }
+
+    if (scriptKind == ScriptNote::Kind::Silent) {
+        sound = NoteScheduler::Sound::Silent;
+    }
 
     const RTNode* modulatorNode            = nullptr;
     const RTNode* nextModulatorTarget      = nullptr;
@@ -241,6 +321,22 @@ void TraversalDispatcher::pushNote(const RTNode& node, int runId,
         }
     }
 
+    if (scriptKind == ScriptNote::Kind::Played) {
+        int voicedPitch = RTNote::fallbackValue;
+
+        if (!node.notes.empty()) {
+            voicedPitch = node.notes[0].pitch;
+        }
+
+        if (pitchOverride >= 0) {
+            voicedPitch = pitchOverride;
+        }
+
+        pitchOverride    = juce::jlimit(0, 127, scriptNote.pitch);
+        velocityOverride = juce::jlimit(0, 127, scriptNote.velocity);
+        scriptTranspose  = pitchOverride - voicedPitch;
+    }
+
     const TraversalKey activeKey    = traversalLogic.traversal.key;
     const int          activeTypeId = activeKey.typeId;
 
@@ -267,6 +363,11 @@ void TraversalDispatcher::pushNote(const RTNode& node, int runId,
     }
     else {
         duration = resolveDuration(node, nextTarget, traversalLogic.primary.last, nodes, danglingIndex);
+    }
+
+    if (scriptKind == ScriptNote::Kind::Played) {
+        duration = static_cast<int>(juce::jlimit(1.0, ArrowInfo::maximumDurationMs,
+                                                 static_cast<double>(scriptNote.duration)));
     }
 
     int transpose = traversalLogic.traversal.transpose;
@@ -299,14 +400,18 @@ void TraversalDispatcher::pushNote(const RTNode& node, int runId,
         transpose + context.transpose,
         traversalLogic.traversal.velocityMultiplier * context.velocityScale,
         pitchOverride,
-        velocityOverride
+        velocityOverride,
+        sound
     };
 
     scheduler.scheduleNote(node, NoteScheduler::NoteRole::Stepping, runId, sample,
                            context.midiMessages,
                            sampleRate, tempoMultiplier, duration, false, voicing);
 
-    pushChordNotes(node, runId, sample, duration, tempoMultiplier, context, nodeCount, traversalLogic, transpose);
+    if (sound == NoteScheduler::Sound::Audible) {
+        pushChordNotes(node, runId, sample, duration, tempoMultiplier, context, nodeCount, traversalLogic,
+                       transpose + scriptTranspose);
+    }
 
     const int wallClockMs = static_cast<int>(juce::jlimit(0.0, ArrowInfo::maximumDurationMs,
                                                           duration / tempoMultiplier));
@@ -748,35 +853,65 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
         } else {
             runtime.repeatCount = 0;
 
-            const TraversalLogic::StepResult step = traversal.handleNodeEvent(nodes);
-
-            applyStepResult(step, nodes, runId, traversal.traversal.key.typeId);
-            applyTreeJump(step, traversal, runtime, context);
-
-            if (!traversal.shouldTraverse()) {
-                if (traversal.mod.isActive()) {
-                    int displayedModulatorId = traversal.mod.walker.target;
-
-                    if (traversal.mod.walker.alternativeTarget != -1) {
-                        displayedModulatorId = traversal.mod.walker.alternativeTarget;
-                    }
-
-                    if (displayedModulatorId != -1) {
-                        bridge.highlightNode(displayedModulatorId, AudioUIBridge::HighlightKind::Hide, runId,
-                                             traversal.traversal.key.typeId);
-                    }
-
-                    bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
-                }
-            }
-            else {
-                const RTNode* const nextEntry = nodes.find(traversal.primary.target);
-
-                if (nextEntry != nullptr) {
-                    pushNote(*nextEntry, runId, context, expiryTime);
-                }
-            }
+            stepTraversal(*traversalInstance, runId, context, expiryTime);
         }
+    }
+}
+
+void TraversalDispatcher::stepTraversal(TraversalPool::Instance& instance, int runId,
+                                        const DispatchContext& context, double expiryTime)
+{
+    TraversalLogic&   traversal = instance.logic;
+    TraversalRuntime& runtime   = instance.runtime;
+
+    const bool scriptHasMain = traversal.script != nullptr && traversal.script->mainFunction != -1;
+
+    mainRun = { &instance, &context, runId, {} };
+
+    if (scriptHasMain) {
+        ScriptRun run(traversal.makeScriptContext(context.nodes, TraversalLogic::Walk::Primary,
+                                                  ScriptWrites::Commit, this));
+
+        run.call(traversal.script->mainFunction, {});
+
+        if (mainRun.note.kind == ScriptNote::Kind::Default) {
+            mainRun.note = { ScriptNote::Kind::Silent, traversal.primary.target };
+        }
+    }
+    else {
+        advance(1);
+    }
+
+    runtime.scriptNote = mainRun.note;
+    mainRun            = {};
+
+    const RTNode* nextEntry = context.nodes.find(traversal.primary.target);
+
+    if (runtime.scriptNote.kind != ScriptNote::Kind::Default) {
+        nextEntry = context.nodes.find(runtime.scriptNote.nodeId);
+    }
+
+    if (traversal.shouldTraverse()) {
+        if (nextEntry != nullptr) {
+            pushNote(*nextEntry, runId, context, expiryTime);
+        }
+
+        return;
+    }
+
+    if (traversal.mod.isActive()) {
+        int displayedModulatorId = traversal.mod.walker.target;
+
+        if (traversal.mod.walker.alternativeTarget != -1) {
+            displayedModulatorId = traversal.mod.walker.alternativeTarget;
+        }
+
+        if (displayedModulatorId != -1) {
+            bridge.highlightNode(displayedModulatorId, AudioUIBridge::HighlightKind::Hide, runId,
+                                 traversal.traversal.key.typeId);
+        }
+
+        bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
     }
 }
 
