@@ -46,49 +46,6 @@ void ItemSelector::resized()
     button.setBounds(contentBounds);
 }
 
-void ItemSelector::addItem(int itemId, juce::String label, Action onChosen)
-{
-    items.push_back({ itemId, std::move(label), std::move(onChosen) });
-}
-
-void ItemSelector::removeItem(int itemId)
-{
-    std::erase_if(items, [itemId](const Item& item) { return item.id == itemId; });
-
-    if (selectedItemId == itemId) {
-        selectedItemId = 0;
-
-        selectedLabel.clear();
-
-        resized();
-    }
-}
-
-void ItemSelector::clearItems()
-{
-    selectedItemId = 0;
-
-    items.clear();
-    selectedLabel.clear();
-
-    resized();
-}
-
-void ItemSelector::setSelectedItem(int itemId)
-{
-    const Item* const item = findItem(itemId);
-
-    if (item == nullptr) {
-        return;
-    }
-
-    selectedItemId = item->id;
-    selectedLabel  = item->label;
-
-    resized();
-    repaint();
-}
-
 void ItemSelector::showMenu()
 {
     ContextMenu menu(applicationContext);
@@ -141,4 +98,47 @@ const ItemSelector::Item* ItemSelector::findItem(int itemId) const
     }
 
     return nullptr;
+}
+
+void ItemSelector::addItem(int itemId, juce::String label, Action onChosen)
+{
+    items.push_back({ itemId, std::move(label), std::move(onChosen) });
+}
+
+void ItemSelector::removeItem(int itemId)
+{
+    std::erase_if(items, [itemId](const Item& item) { return item.id == itemId; });
+
+    if (selectedItemId == itemId) {
+        selectedItemId = 0;
+
+        selectedLabel.clear();
+
+        resized();
+    }
+}
+
+void ItemSelector::clearItems()
+{
+    selectedItemId = 0;
+
+    items.clear();
+    selectedLabel.clear();
+
+    resized();
+}
+
+void ItemSelector::setSelectedItem(int itemId)
+{
+    const Item* const item = findItem(itemId);
+
+    if (item == nullptr) {
+        return;
+    }
+
+    selectedItemId = item->id;
+    selectedLabel  = item->label;
+
+    resized();
+    repaint();
 }

@@ -14,7 +14,6 @@ public:
     ~FilePage() override;
 
     void paintOverChildren(juce::Graphics& graphics) override;
-
     void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
     void mouseMagnify(const juce::MouseEvent& event, float scaleFactor) override;
 
@@ -27,7 +26,6 @@ public:
 private:
 
     void setZoom(float newZoom);
-
     void codeDocumentTextInserted(const juce::String& newText, int insertIndex) override;
     void codeDocumentTextDeleted(int startIndex, int endIndex) override;
 

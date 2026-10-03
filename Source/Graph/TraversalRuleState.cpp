@@ -7,30 +7,6 @@ TraversalRuleState::TraversalRuleState()
     rules = juce::ValueTree(ValueTreeIdentifiers::TraversalRules);
 }
 
-void TraversalRuleState::replaceState(const juce::ValueTree& restoredRules)
-{
-    rules.removeAllChildren(nullptr);
-    rules.removeAllProperties(nullptr);
-
-    for (int i = 0; i < restoredRules.getNumChildren(); ++i) {
-        rules.addChild(restoredRules.getChild(i).createCopy(), -1, nullptr);
-    }
-
-    if (restoredRules.hasProperty(ValueTreeIdentifiers::ActiveRuleId)) {
-        rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, restoredRules.getProperty(ValueTreeIdentifiers::ActiveRuleId), nullptr);
-    }
-
-    ruleIdIncrement = 0;
-
-    for (int i = 0; i < rules.getNumChildren(); ++i) {
-        const int id = rules.getChild(i).getProperty(ValueTreeIdentifiers::Id);
-
-        if (id > ruleIdIncrement) {
-            ruleIdIncrement = id;
-        }
-    }
-}
-
 juce::ValueTree TraversalRuleState::addRule(juce::UndoManager* undoManager)
 {
     ++ruleIdIncrement;
@@ -121,5 +97,29 @@ void TraversalRuleState::ensureDefaultRule()
 
     if (! activeRule.isValid()) {
         rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, rules.getChild(0).getProperty(ValueTreeIdentifiers::Id), nullptr);
+    }
+}
+
+void TraversalRuleState::replaceState(const juce::ValueTree& restoredRules)
+{
+    rules.removeAllChildren(nullptr);
+    rules.removeAllProperties(nullptr);
+
+    for (int i = 0; i < restoredRules.getNumChildren(); ++i) {
+        rules.addChild(restoredRules.getChild(i).createCopy(), -1, nullptr);
+    }
+
+    if (restoredRules.hasProperty(ValueTreeIdentifiers::ActiveRuleId)) {
+        rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, restoredRules.getProperty(ValueTreeIdentifiers::ActiveRuleId), nullptr);
+    }
+
+    ruleIdIncrement = 0;
+
+    for (int i = 0; i < rules.getNumChildren(); ++i) {
+        const int id = rules.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+
+        if (id > ruleIdIncrement) {
+            ruleIdIncrement = id;
+        }
     }
 }

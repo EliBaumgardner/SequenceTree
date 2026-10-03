@@ -44,24 +44,20 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
+    void incrementNodeValue(int incrementValue);
+    void refreshValueDisplay();
     NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const;
-
     void setHoverVisual(bool isHovered);
     void setSelectVisual(bool isSelected);
     void setSelectVisual();
     void setHighlightVisual(int runId, bool isHighlighted, juce::Colour colour);
     void advancePulse(double frameSec);
-
     virtual juce::Point<int> getNodeCentre() const;
     virtual float            getVisualRadius() const;
     virtual float            getBodyExtent(juce::Point<float> approachDirection) const;
-
     virtual void bindToTree();
     virtual void bindValueEditorForMode();
-
     void setDisplayMode(NodeDisplayMode mode);
-    void incrementNodeValue(int incrementValue);
-    void refreshValueDisplay();
 
     std::function<void(Node*, bool)> onSelected;
 

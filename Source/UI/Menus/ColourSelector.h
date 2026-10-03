@@ -15,12 +15,11 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
+    void renderSaturationBrightnessImage();
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
     void mouseUp(const juce::MouseEvent& event) override;
-
     void showColour(juce::Colour colour);
-    void renderSaturationBrightnessImage();
 
     static constexpr int   presetCount          = 8;
     static constexpr float heightToWidthRatio   = 1.41f;

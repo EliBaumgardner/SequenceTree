@@ -25,7 +25,6 @@ public:
 
     void prepare();
     void clear();
-
     int find (int nodeId) const;
     int claim(int nodeId);
 
@@ -49,19 +48,16 @@ public:
     static constexpr std::size_t valueCount = static_cast<std::size_t>(slotCount) * maxNodeIds;
 
     void prepare();
+    static int defaultValue(NodeStateSlot slot);
     void clear();
-
     int  get      (NodeStateSlot slot, int nodeId) const;
     void set      (NodeStateSlot slot, int nodeId, int value);
     int  increment(NodeStateSlot slot, int nodeId);
     int& ref      (NodeStateSlot slot, int nodeId);
 
-    static int defaultValue(NodeStateSlot slot);
-
 private:
 
     static int indexOf(NodeStateSlot slot, int row);
-
     bool isAddressable(int nodeId) const;
 
     std::vector<int> values;

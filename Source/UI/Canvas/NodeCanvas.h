@@ -58,20 +58,17 @@ public:
 
     void paint(juce::Graphics& graphics) override;
 
+    void clearCanvas();
     void enqueueAsyncUpdate(const AsyncUpdate& update);
     void setProcessorPlayback(bool isPlaying);
     void rebuildFromNodeMap(const juce::ValueTree& stateTree);
-    void clearCanvas();
     void handleAsyncUpdate() override;
-
     void setPaintMode(bool enabled);
     void setSpanMode(bool enabled);
     void setQuaverMode(QuaverMode mode);
-
     void showGrid();
     void hideGrid();
     juce::Point<int> snapPointToGrid(juce::Point<int> point) const;
-
     void cancelPendingUpdatesFor(int nodeId);
 
     const ApplicationContext& applicationContext;

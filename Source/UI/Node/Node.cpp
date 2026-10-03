@@ -85,6 +85,25 @@ void Node::resized()
     subLoopLimitEditor.setBounds(nodeSquare.getX(), nodeSquare.getBottom() - editorHeight, editorWidth, editorHeight);
 }
 
+void Node::incrementNodeValue(int incrementValue)
+{
+    const double currentValue = static_cast<double>(nodeValueEditor.boundValue.getValue());
+
+    if (applicationContext.undoManager != nullptr) {
+        applicationContext.undoManager->beginNewTransaction();
+    }
+
+    nodeValueEditor.setNumericValue(currentValue + incrementValue);
+
+    refreshValueDisplay();
+}
+
+void Node::refreshValueDisplay()
+{
+    nodeValueEditor.repaint();
+    repaint();
+}
+
 NodeVisual Node::getNodeVisual(juce::Rectangle<float> bounds) const
 {
     return { bounds, nodeColour, activeHighlights, isHovered, isSelected, isOutlined,
@@ -305,25 +324,6 @@ void Node::setDisplayMode(NodeDisplayMode newMode)
 
     bindValueEditorForMode();
 
-    nodeValueEditor.repaint();
-    repaint();
-}
-
-void Node::incrementNodeValue(int incrementValue)
-{
-    const double currentValue = static_cast<double>(nodeValueEditor.boundValue.getValue());
-
-    if (applicationContext.undoManager != nullptr) {
-        applicationContext.undoManager->beginNewTransaction();
-    }
-
-    nodeValueEditor.setNumericValue(currentValue + incrementValue);
-
-    refreshValueDisplay();
-}
-
-void Node::refreshValueDisplay()
-{
     nodeValueEditor.repaint();
     repaint();
 }

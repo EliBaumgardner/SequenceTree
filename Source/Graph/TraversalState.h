@@ -15,11 +15,8 @@ public:
     explicit TraversalState(GraphState& graphState);
 
     juce::ValueTree addTraversalData(int traversalId, juce::UndoManager* undoManager);
-
     void collectKeys(std::vector<TraversalKey>& keys) const;
-
     int unusedInstance(int traversalTypeId) const;
-
     static juce::ValueTree findReference(const juce::ValueTree& references, const TraversalKey& key);
 
     juce::ValueTree map;

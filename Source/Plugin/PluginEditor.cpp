@@ -9,7 +9,6 @@
 #include "PluginEditor.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 
-
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
 : AudioProcessorEditor(p), audioProcessor(p)
 {
@@ -115,25 +114,6 @@ void SequenceTreeAudioProcessorEditor::resized()
     port->setBounds(bounds);
 }
 
-void SequenceTreeAudioProcessorEditor::parentHierarchyChanged()
-{
-    auto* top = getTopLevelComponent();
-
-    if (top == keyListenerTarget) {
-        return;
-    }
-
-    if (keyListenerTarget != nullptr) {
-        keyListenerTarget->removeKeyListener(this);
-    }
-
-    keyListenerTarget = top;
-
-    if (keyListenerTarget != nullptr) {
-        keyListenerTarget->addKeyListener(this);
-    }
-}
-
 bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, juce::Component*)
 {
     const bool isStandalone = audioProcessor.wrapperType == juce::AudioProcessor::wrapperType_Standalone;
@@ -213,5 +193,24 @@ void SequenceTreeAudioProcessorEditor::toggleFullScreen()
     }
     else {
         desktop.setKioskModeComponent(nullptr);
+    }
+}
+
+void SequenceTreeAudioProcessorEditor::parentHierarchyChanged()
+{
+    auto* top = getTopLevelComponent();
+
+    if (top == keyListenerTarget) {
+        return;
+    }
+
+    if (keyListenerTarget != nullptr) {
+        keyListenerTarget->removeKeyListener(this);
+    }
+
+    keyListenerTarget = top;
+
+    if (keyListenerTarget != nullptr) {
+        keyListenerTarget->addKeyListener(this);
     }
 }

@@ -17,10 +17,9 @@ public:
 private:
 
     void drainHighlights();
+    juce::Colour getTraversalColour(int traversalId) const;
     void drainArrows();
     void drainCounts();
-
-    juce::Colour getTraversalColour(int traversalId) const;
 
     NodeCanvas&         canvas;
     const ApplicationContext& applicationContext;

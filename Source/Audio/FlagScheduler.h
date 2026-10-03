@@ -18,9 +18,7 @@ public:
                        const DispatchContext& context);
 
     bool startNextDue(double before, const DispatchContext& context);
-
     void advance(int numSamples);
-
     void clear();
 
     struct PendingStart
@@ -37,14 +35,14 @@ public:
 
 private:
 
-    void queueStart(const RTNode& flagNode, const TraversalKey& hostKey, int delayMs, double sample,
-                    double tempoMultiplier, const DispatchContext& context);
-
     void queueRemoval(const RTNode& flagNode, int hostRunId, const TraversalKey& hostKey,
                       TraversalPool& traversalMap);
 
     void startFlagTraversal(const RTNode& flagNode, const TraversalKey& hostKey, double sample,
                             const DispatchContext& context);
+
+    void queueStart(const RTNode& flagNode, const TraversalKey& hostKey, int delayMs, double sample,
+                    double tempoMultiplier, const DispatchContext& context);
 
     TraversalDispatcher& dispatcher;
     AudioUIBridge&       bridge;

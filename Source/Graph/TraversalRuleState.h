@@ -12,15 +12,10 @@ public:
 
     juce::ValueTree addRule   (juce::UndoManager* undoManager);
     void            removeRule(int ruleId, juce::UndoManager* undoManager);
-
     void reorderRules(std::span<const int> ruleIds, juce::UndoManager* undoManager);
-
     void setRuleSource(int ruleId, const juce::String& source, juce::UndoManager* undoManager);
-
     juce::String activeRuleSource() const;
-
     void ensureDefaultRule();
-
     void replaceState(const juce::ValueTree& restoredRules);
 
     juce::ValueTree rules;

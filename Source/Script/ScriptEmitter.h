@@ -58,65 +58,47 @@ public:
 
 private:
 
-    static int stackDelta(ScriptOpcode opcode);
-
-    static const char* typeName(ValueType type);
-
-    static ScriptNumber numberKind(ValueType type);
-
-    static ValueType commonType(ValueType left, ValueType right);
-
-    int emit(ScriptOpcode opcode, int operand = 0);
-
-    bool emitConversion(ValueType from, ValueType to);
-
-    int here() const;
-
-    void patch(int jumpIndex, int target);
-
-    [[noreturn]] void fail(const std::string& message, const Statement& statement);
-    [[noreturn]] void fail(const std::string& message, const Expression& expression);
-
-    int allocateSlot();
-    int declareLocal(const std::string& name, ValueType type);
-
-    const LocalBinding*      findLocal   (const std::string& name) const;
-    const LocalBinding*      findMember  (const std::string& name) const;
-    const FunctionSignature* findFunction(const std::string& name) const;
-
-    void openScope();
-    void closeScope();
-
     void declareMembers  (const ClassDeclaration& declaration);
+    const LocalBinding*      findMember  (const std::string& name) const;
     void declareFunctions(const ClassDeclaration& declaration);
+    const FunctionSignature* findFunction(const std::string& name) const;
     void emitFunction    (const FunctionDeclaration& declaration, const FunctionSignature& signature);
-
+    int here() const;
+    const LocalBinding*      findLocal   (const std::string& name) const;
+    int declareLocal(const std::string& name, ValueType type);
+    int allocateSlot();
     void emitSequence(std::span<const StatementPtr> statements);
-    void emitBlock(std::span<const StatementPtr> body);
-
     void emitStatement(const Statement& statement);
     void emitDeclare(const Statement& statement);
+    int emit(ScriptOpcode opcode, int operand = 0);
+    static int stackDelta(ScriptOpcode opcode);
+    ValueType emitExpression(const Expression& expression);
+    ValueType emitName(const Expression& expression);
+    [[noreturn]] void fail(const std::string& message, const Expression& expression);
+    ValueType emitField(const Expression& expression);
+    const FieldEntry& nodeField(const Expression& expression);
+    ValueType emitCall(const Expression& expression);
+    bool emitConversion(ValueType from, ValueType to);
+    static ValueType commonType(ValueType left, ValueType right);
+    static ScriptNumber numberKind(ValueType type);
+    static const char* typeName(ValueType type);
+    ValueType emitUnary(const Expression& expression);
+    ValueType emitBinary(const Expression& expression);
+    ScriptOpcode binaryOpcode(const Expression& expression);
     void emitAssign(const Statement& statement);
     void emitAssignField(const Statement& statement);
     void emitIf(const Statement& statement);
+    void emitBlock(std::span<const StatementPtr> body);
+    void openScope();
+    void closeScope();
+    void patch(int jumpIndex, int target);
     void emitFor(const Statement& statement);
+    void patchLoopFrame(const LoopFrame& frame, int continueTarget, int exitTarget);
     void emitWhile(const Statement& statement);
     void emitBreak(const Statement& statement);
+    [[noreturn]] void fail(const std::string& message, const Statement& statement);
     void emitContinue(const Statement& statement);
     void emitReturn(const Statement& statement);
-
-    void patchLoopFrame(const LoopFrame& frame, int continueTarget, int exitTarget);
-
-    ValueType emitExpression(const Expression& expression);
-    ValueType emitName(const Expression& expression);
-    ValueType emitField(const Expression& expression);
-    ValueType emitCall(const Expression& expression);
-    ValueType emitUnary(const Expression& expression);
-    ValueType emitBinary(const Expression& expression);
-
-    const FieldEntry& nodeField(const Expression& expression);
-
-    ScriptOpcode binaryOpcode(const Expression& expression);
 
     RTScript&                      script;
     std::vector<ScriptDiagnostic>& diagnostics;

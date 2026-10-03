@@ -21,20 +21,18 @@ public:
     ~NodeManager();
 
     Node* find(int nodeId) const;
+
     const std::unordered_map<int, std::unique_ptr<Node>>& all() const
     {
         return nodes;
     }
 
     Node* instantiateFromTree(const juce::ValueTree& nodeValueTree);
-
+    void setPosition(int nodeId);
     void add(int nodeId);
     void remove(int nodeId);
     void clear();
-
-    void setPosition(int nodeId);
     void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY);
-
     void setDisplayMode(NodeDisplayMode mode);
     void clearHighlights();
     void clearOutlines();
@@ -47,13 +45,12 @@ public:
 
 private:
 
-    void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY,
-                         std::unordered_set<int>& visited, int draggedNodeId);
-
-    void moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY);
-
     void connectIncomingArrows(int nodeId, Node* node);
     void connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node);
+    void moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY);
+
+    void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY,
+                         std::unordered_set<int>& visited, int draggedNodeId);
 
     NodeCanvas&               canvas;
     const ApplicationContext& applicationContext;

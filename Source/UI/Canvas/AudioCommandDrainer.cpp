@@ -77,6 +77,24 @@ void AudioCommandDrainer::drainHighlights()
     canvas.encapsulationView.syncHighlights();
 }
 
+juce::Colour AudioCommandDrainer::getTraversalColour(int traversalId) const
+{
+    const juce::ValueTree traversalData = applicationContext.graphState->traversals.map
+        .getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+
+    if (!traversalData.isValid()) {
+        return juce::Colours::white;
+    }
+
+    const juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
+
+    if (colourString.isEmpty()) {
+        return juce::Colours::white;
+    }
+
+    return juce::Colour::fromString(colourString);
+}
+
 void AudioCommandDrainer::drainArrows()
 {
     applicationContext.processor->eventManager.bridge.arrows.drain([this](const AudioUIBridge::ArrowCommand& command) {
@@ -133,22 +151,4 @@ void AudioCommandDrainer::drainCounts()
 
         node->repaint();
     });
-}
-
-juce::Colour AudioCommandDrainer::getTraversalColour(int traversalId) const
-{
-    const juce::ValueTree traversalData = applicationContext.graphState->traversals.map
-        .getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
-
-    if (!traversalData.isValid()) {
-        return juce::Colours::white;
-    }
-
-    const juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
-
-    if (colourString.isEmpty()) {
-        return juce::Colours::white;
-    }
-
-    return juce::Colour::fromString(colourString);
 }

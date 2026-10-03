@@ -41,6 +41,15 @@ void LabelPanel::mouseDrag(const juce::MouseEvent& event)
     resized();
 }
 
+int LabelPanel::labelIndexAt(int positionY) const
+{
+    if (labels.empty() || labelHeight <= 0) {
+        return -1;
+    }
+
+    return juce::jlimit(0, static_cast<int>(labels.size()) - 1, positionY / (labelHeight + labelGap));
+}
+
 void LabelPanel::mouseDown(const juce::MouseEvent& event)
 {
     draggedIndex = labelIndexAt(event.getEventRelativeTo(this).getPosition().y);
@@ -113,6 +122,13 @@ void LabelPanel::addFileLabel(juce::String fileName)
     resized();
 }
 
+void LabelPanel::setSelectedLabel(const FileLabel* label)
+{
+    for (auto& candidate : labels) {
+        candidate->setSelected(candidate.get() == label);
+    }
+}
+
 void LabelPanel::removeFileLabel(const FileLabel* label)
 {
     const auto match = std::ranges::find_if(labels,
@@ -127,13 +143,6 @@ void LabelPanel::removeFileLabel(const FileLabel* label)
     draggedIndex = -1;
 
     resized();
-}
-
-void LabelPanel::setSelectedLabel(const FileLabel* label)
-{
-    for (auto& candidate : labels) {
-        candidate->setSelected(candidate.get() == label);
-    }
 }
 
 void LabelPanel::applyOrder(std::span<const int> fileIds)
@@ -153,13 +162,4 @@ void LabelPanel::applyOrder(std::span<const int> fileIds)
     }
 
     resized();
-}
-
-int LabelPanel::labelIndexAt(int positionY) const
-{
-    if (labels.empty() || labelHeight <= 0) {
-        return -1;
-    }
-
-    return juce::jlimit(0, static_cast<int>(labels.size()) - 1, positionY / (labelHeight + labelGap));
 }

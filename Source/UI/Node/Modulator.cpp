@@ -15,6 +15,14 @@ void Modulator::paint(juce::Graphics& graphics)
     CustomLookAndFeel::get(*this).drawModulatorNode(graphics, getNodeVisual(getSquareBounds()));
 }
 
+juce::Rectangle<float> Modulator::getSquareBounds() const
+{
+    const auto  circleBounds = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
+    const float side         = circleBounds.getWidth() * equalAreaSideFactor;
+
+    return circleBounds.withSizeKeepingCentre(side, side);
+}
+
 bool Modulator::hitTest(int x, int y)
 {
     const juce::Point<int> point(x, y);
@@ -48,14 +56,6 @@ void Modulator::bindValueEditorForMode()
     nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::ModAmount);
 
     nodeValueEditor.editable = true;
-}
-
-juce::Rectangle<float> Modulator::getSquareBounds() const
-{
-    const auto  circleBounds = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
-    const float side         = circleBounds.getWidth() * equalAreaSideFactor;
-
-    return circleBounds.withSizeKeepingCentre(side, side);
 }
 
 float Modulator::getBodyExtent(juce::Point<float> approachDirection) const

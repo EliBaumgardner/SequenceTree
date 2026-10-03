@@ -16,10 +16,9 @@ public:
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
-    void bindToTree() override;
 
     void equipTraversals();
-
+    void bindToTree() override;
     juce::Point<int> getNodeCentre() const override;
     float            getBodyExtent(juce::Point<float> approachDirection) const override;
 };

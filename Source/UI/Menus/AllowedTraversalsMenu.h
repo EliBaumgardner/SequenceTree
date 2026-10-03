@@ -31,6 +31,7 @@ private:
     public:
 
         void paint(juce::Graphics& graphics) override;
+
         void mouseDown(const juce::MouseEvent& event) override;
 
         bool                      isOn = true;

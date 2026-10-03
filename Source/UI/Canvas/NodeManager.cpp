@@ -97,115 +97,6 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
     return createdNode;
 }
 
-void NodeManager::connectIncomingArrows(int nodeId, Node* node)
-{
-    const juce::ValueTree nodeMapTree = applicationContext.graphState->nodeMap;
-
-    for (int parentIndex = 0; parentIndex < nodeMapTree.getNumChildren(); ++parentIndex) {
-        const juce::ValueTree parentTree        = nodeMapTree.getChild(parentIndex);
-        const juce::ValueTree parentChildrenIds = parentTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-
-        if (! parentChildrenIds.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId).isValid()) {
-            continue;
-        }
-
-        const int   parentNodeId = parentTree.getProperty(ValueTreeIdentifiers::Id);
-        Node* const parentNode   = find(parentNodeId);
-
-        if (parentNode == nullptr || parentNodeId == nodeId) {
-            continue;
-        }
-
-        canvas.arrowManager.connectParentToChild(parentNode, node);
-    }
-}
-
-void NodeManager::connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node)
-{
-    const int             nodeId          = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
-    const juce::ValueTree nodeChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-
-    for (int childIndex = 0; childIndex < nodeChildrenIds.getNumChildren(); ++childIndex) {
-        const int   childNodeId = nodeChildrenIds.getChild(childIndex).getProperty(ValueTreeIdentifiers::Id);
-        Node* const childNode   = find(childNodeId);
-
-        if (childNode == nullptr || childNodeId == nodeId) {
-            continue;
-        }
-
-        canvas.arrowManager.connectParentToChild(node, childNode);
-    }
-}
-
-void NodeManager::add(int nodeId)
-{
-    const juce::ValueTree nodeChildTree = applicationContext.graphState->getNode(nodeId);
-
-    jassert(nodeChildTree.isValid());
-
-    Node* const childNode = instantiateFromTree(nodeChildTree);
-
-    if (childNode == nullptr) {
-        return;
-    }
-
-    connectIncomingArrows(nodeId, childNode);
-    connectOutgoingArrows(nodeChildTree, childNode);
-
-    if (nodeChildTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-        canvas.encapsulationView.collapse(nodeId);
-    }
-
-    const int owningEncapsulatorId = nodeChildTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-
-    if (auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(find(owningEncapsulatorId))) {
-        if (owningEncapsulator->isExpanded) {
-            canvas.encapsulationView.refreshMembership(owningEncapsulatorId);
-        }
-        else {
-            canvas.encapsulationView.collapse(owningEncapsulatorId);
-        }
-    }
-
-    if (!canvas.gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
-        const NodePosition rootPosition = applicationContext.graphState->getNodePosition(nodeId);
-
-        canvas.gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
-        canvas.gridSpacing   = ArrowInfo::pixelsPerGridSpace;
-        canvas.gridOriginSet = true;
-    }
-}
-
-void NodeManager::remove(int nodeId)
-{
-    Node* const node = find(nodeId);
-
-    if (node == nullptr) {
-        return;
-    }
-
-    if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node)) {
-        canvas.encapsulationView.showMembers(encapsulator->memberNodeIds);
-    }
-
-    const int encapsulatorId = node->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-
-    canvas.arrowManager.removeForNode(node);
-    canvas.removeChildComponent(node);
-    nodes.erase(nodeId);
-
-    canvas.encapsulationView.refreshMembership(encapsulatorId);
-}
-
-void NodeManager::clear()
-{
-    for (auto& [nodeId, node] : nodes) {
-        canvas.removeChildComponent(node.get());
-    }
-
-    nodes.clear();
-}
-
 void NodeManager::setPosition(int nodeId)
 {
     Node* const           node          = find(nodeId);
@@ -250,6 +141,115 @@ void NodeManager::setPosition(int nodeId)
     }
 
     canvas.arrowManager.refreshFor(node);
+}
+
+void NodeManager::add(int nodeId)
+{
+    const juce::ValueTree nodeChildTree = applicationContext.graphState->getNode(nodeId);
+
+    jassert(nodeChildTree.isValid());
+
+    Node* const childNode = instantiateFromTree(nodeChildTree);
+
+    if (childNode == nullptr) {
+        return;
+    }
+
+    connectIncomingArrows(nodeId, childNode);
+    connectOutgoingArrows(nodeChildTree, childNode);
+
+    if (nodeChildTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
+        canvas.encapsulationView.collapse(nodeId);
+    }
+
+    const int owningEncapsulatorId = nodeChildTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    if (auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(find(owningEncapsulatorId))) {
+        if (owningEncapsulator->isExpanded) {
+            canvas.encapsulationView.refreshMembership(owningEncapsulatorId);
+        }
+        else {
+            canvas.encapsulationView.collapse(owningEncapsulatorId);
+        }
+    }
+
+    if (!canvas.gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
+        const NodePosition rootPosition = applicationContext.graphState->getNodePosition(nodeId);
+
+        canvas.gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
+        canvas.gridSpacing   = ArrowInfo::pixelsPerGridSpace;
+        canvas.gridOriginSet = true;
+    }
+}
+
+void NodeManager::connectIncomingArrows(int nodeId, Node* node)
+{
+    const juce::ValueTree nodeMapTree = applicationContext.graphState->nodeMap;
+
+    for (int parentIndex = 0; parentIndex < nodeMapTree.getNumChildren(); ++parentIndex) {
+        const juce::ValueTree parentTree        = nodeMapTree.getChild(parentIndex);
+        const juce::ValueTree parentChildrenIds = parentTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+        if (! parentChildrenIds.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId).isValid()) {
+            continue;
+        }
+
+        const int   parentNodeId = parentTree.getProperty(ValueTreeIdentifiers::Id);
+        Node* const parentNode   = find(parentNodeId);
+
+        if (parentNode == nullptr || parentNodeId == nodeId) {
+            continue;
+        }
+
+        canvas.arrowManager.connectParentToChild(parentNode, node);
+    }
+}
+
+void NodeManager::connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node)
+{
+    const int             nodeId          = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+    const juce::ValueTree nodeChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+    for (int childIndex = 0; childIndex < nodeChildrenIds.getNumChildren(); ++childIndex) {
+        const int   childNodeId = nodeChildrenIds.getChild(childIndex).getProperty(ValueTreeIdentifiers::Id);
+        Node* const childNode   = find(childNodeId);
+
+        if (childNode == nullptr || childNodeId == nodeId) {
+            continue;
+        }
+
+        canvas.arrowManager.connectParentToChild(node, childNode);
+    }
+}
+
+void NodeManager::remove(int nodeId)
+{
+    Node* const node = find(nodeId);
+
+    if (node == nullptr) {
+        return;
+    }
+
+    if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node)) {
+        canvas.encapsulationView.showMembers(encapsulator->memberNodeIds);
+    }
+
+    const int encapsulatorId = node->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    canvas.arrowManager.removeForNode(node);
+    canvas.removeChildComponent(node);
+    nodes.erase(nodeId);
+
+    canvas.encapsulationView.refreshMembership(encapsulatorId);
+}
+
+void NodeManager::clear()
+{
+    for (auto& [nodeId, node] : nodes) {
+        canvas.removeChildComponent(node.get());
+    }
+
+    nodes.clear();
 }
 
 static std::unordered_set<int> collectAncestorIds(const GraphState& graphState, int nodeId)

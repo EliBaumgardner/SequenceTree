@@ -12,6 +12,33 @@ void NodeFactory::createRootNode(GraphState& state, const NodePosition& nodePosi
     setDefaultTraversal(state, rootId, undoManager);
 }
 
+void NodeFactory::setDefaultNodeNote(GraphState& state, int nodeId, juce::UndoManager* undoManager)
+{
+    NodeNote note;
+
+    note.pitch       = 60;
+    note.velocity    = 60;
+    note.duration    = 1000;
+    note.midiChannel = GraphState::defaultMidiChannel;
+
+    state.addMidiNote(nodeId, note, undoManager);
+}
+
+void NodeFactory::setDefaultTraversal(GraphState& state, int nodeId, juce::UndoManager* undoManager)
+{
+    const juce::ValueTree rootNodeValueTree    = state.getNode(nodeId);
+    const int             traversalInstance    = state.traversals.unusedInstance(TraversalState::defaultTraversalId);
+    juce::ValueTree       traversalChildrenIds = rootNodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
+    juce::ValueTree       traversalId          { ValueTreeIdentifiers::TraversalId };
+
+    state.traversals.addTraversalData(TraversalState::defaultTraversalId, undoManager);
+
+    traversalId.setProperty(ValueTreeIdentifiers::TraversalId,       TraversalState::defaultTraversalId, undoManager);
+    traversalId.setProperty(ValueTreeIdentifiers::TraversalInstance, traversalInstance,                  undoManager);
+
+    traversalChildrenIds.addChild(traversalId, -1, undoManager);
+}
+
 juce::ValueTree NodeFactory::createNode(GraphState& state, int parentNodeId, const juce::Identifier& nodeType,
                                         const NodePosition& nodePosition, juce::UndoManager* undoManager)
 {
@@ -23,6 +50,45 @@ juce::ValueTree NodeFactory::createNode(GraphState& state, int parentNodeId, con
     inheritFromParent(state, parentNodeId, nodeId, childNodeValueTree, undoManager);
 
     return childNodeValueTree;
+}
+
+void NodeFactory::inheritFromParent(GraphState& state, int parentNodeId, int newNodeId, juce::ValueTree newNode,
+                                    juce::UndoManager* undoManager)
+{
+    const juce::ValueTree  parentNode         = state.getNode(parentNodeId);
+    const juce::ValueTree  parentMidi         = parentNode.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
+    juce::ValueTree        newMidi            = newNode.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
+    const juce::Identifier inheritedProperties[] = {
+        ValueTreeIdentifiers::CountLimit,
+        ValueTreeIdentifiers::SwitchCountLimit,
+        ValueTreeIdentifiers::SubLoopCountLimit,
+        ValueTreeIdentifiers::RepeatValue,
+        ValueTreeIdentifiers::Probability
+    };
+
+    const bool parentIsNoteNode = parentNode.getType() == ValueTreeIdentifiers::NodeData
+                               || parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData
+                               || parentNode.getType() == ValueTreeIdentifiers::RootNodeData;
+
+    if (!parentNode.isValid() || !parentIsNoteNode) {
+        setDefaultNodeNote(state, newNodeId, undoManager);
+        return;
+    }
+
+    for (const juce::Identifier& property : inheritedProperties) {
+        if (parentNode.hasProperty(property)) {
+            newNode.setProperty(property, parentNode.getProperty(property), undoManager);
+        }
+    }
+
+    if (!parentMidi.isValid() || parentMidi.getNumChildren() == 0) {
+        setDefaultNodeNote(state, newNodeId, undoManager);
+        return;
+    }
+
+    for (int noteIndex = 0; noteIndex < parentMidi.getNumChildren(); ++noteIndex) {
+        newMidi.addChild(parentMidi.getChild(noteIndex).createCopy(), -1, undoManager);
+    }
 }
 
 juce::ValueTree NodeFactory::createTraversalFlagNode(GraphState& state, int parentNodeId, const NodePosition& nodePosition,
@@ -127,70 +193,4 @@ void NodeFactory::setDanglingArrowTip(GraphState& state, juce::ValueTree arrowTr
     arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride, undoManager);
 
     state.arrows.syncPitchBindings(arrowTree.getParent().getParent().getProperty(ValueTreeIdentifiers::Id), undoManager);
-}
-
-void NodeFactory::setDefaultTraversal(GraphState& state, int nodeId, juce::UndoManager* undoManager)
-{
-    const juce::ValueTree rootNodeValueTree    = state.getNode(nodeId);
-    const int             traversalInstance    = state.traversals.unusedInstance(TraversalState::defaultTraversalId);
-    juce::ValueTree       traversalChildrenIds = rootNodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
-    juce::ValueTree       traversalId          { ValueTreeIdentifiers::TraversalId };
-
-    state.traversals.addTraversalData(TraversalState::defaultTraversalId, undoManager);
-
-    traversalId.setProperty(ValueTreeIdentifiers::TraversalId,       TraversalState::defaultTraversalId, undoManager);
-    traversalId.setProperty(ValueTreeIdentifiers::TraversalInstance, traversalInstance,                  undoManager);
-
-    traversalChildrenIds.addChild(traversalId, -1, undoManager);
-}
-
-void NodeFactory::setDefaultNodeNote(GraphState& state, int nodeId, juce::UndoManager* undoManager)
-{
-    NodeNote note;
-
-    note.pitch       = 60;
-    note.velocity    = 60;
-    note.duration    = 1000;
-    note.midiChannel = GraphState::defaultMidiChannel;
-
-    state.addMidiNote(nodeId, note, undoManager);
-}
-
-void NodeFactory::inheritFromParent(GraphState& state, int parentNodeId, int newNodeId, juce::ValueTree newNode,
-                                    juce::UndoManager* undoManager)
-{
-    const juce::ValueTree  parentNode         = state.getNode(parentNodeId);
-    const juce::ValueTree  parentMidi         = parentNode.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
-    juce::ValueTree        newMidi            = newNode.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
-    const juce::Identifier inheritedProperties[] = {
-        ValueTreeIdentifiers::CountLimit,
-        ValueTreeIdentifiers::SwitchCountLimit,
-        ValueTreeIdentifiers::SubLoopCountLimit,
-        ValueTreeIdentifiers::RepeatValue,
-        ValueTreeIdentifiers::Probability
-    };
-
-    const bool parentIsNoteNode = parentNode.getType() == ValueTreeIdentifiers::NodeData
-                               || parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData
-                               || parentNode.getType() == ValueTreeIdentifiers::RootNodeData;
-
-    if (!parentNode.isValid() || !parentIsNoteNode) {
-        setDefaultNodeNote(state, newNodeId, undoManager);
-        return;
-    }
-
-    for (const juce::Identifier& property : inheritedProperties) {
-        if (parentNode.hasProperty(property)) {
-            newNode.setProperty(property, parentNode.getProperty(property), undoManager);
-        }
-    }
-
-    if (!parentMidi.isValid() || parentMidi.getNumChildren() == 0) {
-        setDefaultNodeNote(state, newNodeId, undoManager);
-        return;
-    }
-
-    for (int noteIndex = 0; noteIndex < parentMidi.getNumChildren(); ++noteIndex) {
-        newMidi.addChild(parentMidi.getChild(noteIndex).createCopy(), -1, undoManager);
-    }
 }

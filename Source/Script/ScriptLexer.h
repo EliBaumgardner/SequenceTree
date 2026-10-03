@@ -93,20 +93,15 @@ public:
     std::vector<Token> run();
 
 private:
-    static bool isIdentifierPart(char c);
-
-    char peek(std::size_t offset) const;
-
     void advance(int count = 1);
-
-    Token makeToken(TokenKind kind, int length) const;
-
+    char peek(std::size_t offset) const;
     Token readNumber();
+    Token makeToken(TokenKind kind, int length) const;
+    void report(const std::string& message, const Token& token);
     Token readIdentifier();
+    static bool isIdentifierPart(char c);
     Token readPunctuation();
     Token readFixed(TokenKind kind, int length);
-
-    void report(const std::string& message, const Token& token);
 
     const std::string&             source;
     std::vector<ScriptDiagnostic>& diagnostics;

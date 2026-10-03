@@ -35,6 +35,16 @@ void NodeCanvasTreeListener::valueTreeChildAdded(juce::ValueTree& parent, juce::
     }
 }
 
+void NodeCanvasTreeListener::enqueueDanglingArrowsChanged(const juce::ValueTree& nodeTree) const
+{
+    if (! nodeTree.isValid()) {
+        return;
+    }
+
+    canvas.enqueueAsyncUpdate({ .type   = NodeCanvas::AsyncUpdateType::DanglingArrowsChanged,
+                                .nodeId = nodeTree.getProperty(ValueTreeIdentifiers::Id) });
+}
+
 void NodeCanvasTreeListener::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex)
 {
     if (parent.getType() == ValueTreeIdentifiers::NodeMap) {
@@ -101,14 +111,4 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
                                     .nodeId     = tree.getParent().getParent().getProperty(ValueTreeIdentifiers::Id),
                                     .rootNodeId = tree.getProperty(ValueTreeIdentifiers::Id) });
     }
-}
-
-void NodeCanvasTreeListener::enqueueDanglingArrowsChanged(const juce::ValueTree& nodeTree) const
-{
-    if (! nodeTree.isValid()) {
-        return;
-    }
-
-    canvas.enqueueAsyncUpdate({ .type   = NodeCanvas::AsyncUpdateType::DanglingArrowsChanged,
-                                .nodeId = nodeTree.getProperty(ValueTreeIdentifiers::Id) });
 }

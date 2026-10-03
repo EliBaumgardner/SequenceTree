@@ -20,32 +20,30 @@ public:
     ~GraphState() override;
 
     juce::ValueTree addRootNode         (juce::UndoManager* undoManager);
+
     juce::ValueTree addChildNode        (int parentNodeId, const juce::Identifier& nodeType,
                                          juce::UndoManager* undoManager);
+
+    juce::ValueTree getNode      (int nodeId) const;
+    void connectNodes   (int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
     juce::ValueTree addTraversalFlagNode(int parentNodeId, juce::UndoManager* undoManager);
     juce::ValueTree addModulatorRoot    (int parentNodeId, juce::UndoManager* undoManager);
     juce::ValueTree addModulator        (int parentNodeId, juce::UndoManager* undoManager);
     juce::ValueTree addAlternativeModulator(int parentNodeId, juce::UndoManager* undoManager);
-
     void addMidiNote(int nodeId, NodeNote note, juce::UndoManager* undoManager);
 
     void replaceState(const juce::ValueTree& restoredNodeMap,
                       const juce::ValueTree& restoredTraversalMap);
 
-    void connectNodes   (int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
     void disconnectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
-
     void removeNode(int nodeId, juce::UndoManager* undoManager);
 
     void         setNodePosition(juce::ValueTree node, NodePosition nodePosition,
                                  juce::UndoManager* undoManager);
+
     NodePosition getNodePosition(int nodeId) const;
-
     void setNodeColour(int nodeId, const juce::String& colourText, juce::UndoManager* undoManager);
-
     std::vector<int> nodeIdsBetween(int startNodeId, int endNodeId) const;
-
-    juce::ValueTree getNode      (int nodeId) const;
     juce::ValueTree getNodeParent(int nodeId) const;
     juce::ValueTree getMidiNotes (int nodeId) const;
     juce::ValueTree getConnection(int parentNodeId, int childNodeId) const;
@@ -72,19 +70,17 @@ public:
 
 private:
 
-    void valueTreeChildAdded  (juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
-
-    void indexNode  (const juce::ValueTree& node);
-    void unindexNode(const juce::ValueTree& node);
-
-    void linkParent  (int parentNodeId, int childNodeId);
-    void unlinkParent(int parentNodeId, int childNodeId);
-
     void setNodeLimitProperties(juce::ValueTree node, juce::UndoManager* undoManager);
 
     juce::ValueTree addModulatorNode(juce::ValueTree parentNode, const juce::Identifier& nodeType,
                                      int newNodeId, juce::UndoManager* undoManager);
+
+    void valueTreeChildAdded  (juce::ValueTree& parent, juce::ValueTree& child) override;
+    void indexNode  (const juce::ValueTree& node);
+    void linkParent  (int parentNodeId, int childNodeId);
+    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
+    void unindexNode(const juce::ValueTree& node);
+    void unlinkParent(int parentNodeId, int childNodeId);
 
     std::unordered_map<int, juce::ValueTree> nodeIndex;
 };

@@ -38,25 +38,23 @@ juce::ValueTree EncapsulationOps::create(std::span<const int> memberNodeIds, juc
     return encapsulator;
 }
 
-int EncapsulationOps::unusedLabel() const
+void EncapsulationOps::dissolve(int encapsulatorId, juce::UndoManager* undoManager)
 {
-    std::unordered_set<int> usedLabels;
+    juce::ValueTree encapsulator = graphState.getNode(encapsulatorId);
 
-    for (int i = 0; i < graphState.nodeMap.getNumChildren(); ++i) {
-        const juce::ValueTree existing = graphState.nodeMap.getChild(i);
+    if (! encapsulator.isValid()) {
+        return;
+    }
 
-        if (existing.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-            usedLabels.insert(static_cast<int>(existing.getProperty(ValueTreeIdentifiers::EncapsulatorLabel)));
+    for (const int memberNodeId : memberIds(encapsulatorId)) {
+        juce::ValueTree member = graphState.getNode(memberNodeId);
+
+        if (member.isValid()) {
+            member.removeProperty(ValueTreeIdentifiers::EncapsulatorId, undoManager);
         }
     }
 
-    int encapsulatorLabel = 0;
-
-    while (usedLabels.count(encapsulatorLabel) > 0) {
-        encapsulatorLabel = encapsulatorLabel + 1;
-    }
-
-    return encapsulatorLabel;
+    graphState.nodeMap.removeChild(encapsulator, undoManager);
 }
 
 std::vector<int> EncapsulationOps::memberIds(int encapsulatorId) const
@@ -71,6 +69,17 @@ std::vector<int> EncapsulationOps::memberIds(int encapsulatorId) const
     }
 
     return memberNodeIds;
+}
+
+void EncapsulationOps::removeGroup(int encapsulatorId, juce::UndoManager* undoManager)
+{
+    for (const int memberNodeId : memberIds(encapsulatorId)) {
+        if (graphState.getNode(memberNodeId).isValid()) {
+            graphState.removeNode(memberNodeId, undoManager);
+        }
+    }
+
+    dissolve(encapsulatorId, undoManager);
 }
 
 void EncapsulationOps::insertNodeAfter(int nodeId, int siblingNodeId, juce::UndoManager* undoManager)
@@ -100,32 +109,23 @@ void EncapsulationOps::insertNodeAfter(int nodeId, int siblingNodeId, juce::Undo
     node.setProperty(ValueTreeIdentifiers::EncapsulatorId, encapsulatorId, undoManager);
 }
 
-void EncapsulationOps::dissolve(int encapsulatorId, juce::UndoManager* undoManager)
+int EncapsulationOps::unusedLabel() const
 {
-    juce::ValueTree encapsulator = graphState.getNode(encapsulatorId);
+    std::unordered_set<int> usedLabels;
 
-    if (! encapsulator.isValid()) {
-        return;
-    }
+    for (int i = 0; i < graphState.nodeMap.getNumChildren(); ++i) {
+        const juce::ValueTree existing = graphState.nodeMap.getChild(i);
 
-    for (const int memberNodeId : memberIds(encapsulatorId)) {
-        juce::ValueTree member = graphState.getNode(memberNodeId);
-
-        if (member.isValid()) {
-            member.removeProperty(ValueTreeIdentifiers::EncapsulatorId, undoManager);
+        if (existing.getType() == ValueTreeIdentifiers::EncapsulatorData) {
+            usedLabels.insert(static_cast<int>(existing.getProperty(ValueTreeIdentifiers::EncapsulatorLabel)));
         }
     }
 
-    graphState.nodeMap.removeChild(encapsulator, undoManager);
-}
+    int encapsulatorLabel = 0;
 
-void EncapsulationOps::removeGroup(int encapsulatorId, juce::UndoManager* undoManager)
-{
-    for (const int memberNodeId : memberIds(encapsulatorId)) {
-        if (graphState.getNode(memberNodeId).isValid()) {
-            graphState.removeNode(memberNodeId, undoManager);
-        }
+    while (usedLabels.count(encapsulatorLabel) > 0) {
+        encapsulatorLabel = encapsulatorLabel + 1;
     }
 
-    dissolve(encapsulatorId, undoManager);
+    return encapsulatorLabel;
 }

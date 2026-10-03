@@ -38,10 +38,8 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
-    void componentCallBack();
-
     void configureValueFields(ValueField &valueField, float brushFlow);
-
-    juce::Colour& paintLayerColour();
+    void componentCallBack();
     void setPaintMode(ValueField::PaintLayer layer);
+    juce::Colour& paintLayerColour();
 };

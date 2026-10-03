@@ -60,6 +60,37 @@ int ScriptRun::call(int functionIndex, std::span<const int> arguments)
     return -1;
 }
 
+bool ScriptRun::enterFunction(int functionIndex, int returnAddress, int& programCounter)
+{
+    const int functionCount = static_cast<int>(context.script.functions.size());
+    const int localBase     = frameCount * RTScript::maxLocals;
+
+    if (functionIndex < 0 || functionIndex >= functionCount || frameCount >= RTScript::maxCallDepth) {
+        return false;
+    }
+
+    const ScriptFunction& function = context.script.functions[static_cast<std::size_t>(functionIndex)];
+
+    if (stackTop < function.parameterCount || function.parameterCount > RTScript::maxLocals) {
+        return false;
+    }
+
+    for (int slot = 0; slot < RTScript::maxLocals; ++slot) {
+        locals[static_cast<std::size_t>(localBase + slot)] = 0;
+    }
+
+    stackTop -= function.parameterCount;
+
+    for (int parameter = 0; parameter < function.parameterCount; ++parameter) {
+        locals[static_cast<std::size_t>(localBase + parameter)] = stack[static_cast<std::size_t>(stackTop + parameter)];
+    }
+
+    frames[static_cast<std::size_t>(frameCount++)] = { returnAddress, localBase, stackTop };
+
+    programCounter = function.entry;
+    return true;
+}
+
 ScriptRun::Progress ScriptRun::execute(const ScriptInstruction& instruction, int& programCounter, int& result)
 {
     switch (instruction.opcode) {
@@ -185,6 +216,18 @@ ScriptRun::Progress ScriptRun::pushValue(const ScriptInstruction& instruction)
     return Progress::Running;
 }
 
+int ScriptRun::readContext(ScriptContextValue value) const
+{
+    switch (value) {
+        case ScriptContextValue::Current:           return context.currentNodeId;
+        case ScriptContextValue::TraversalId:       return context.traversalKey.typeId;
+        case ScriptContextValue::TraversalRandom:   return context.randomValue;
+        case ScriptContextValue::TraversalInstance: return context.traversalKey.instance;
+    }
+
+    return 0;
+}
+
 ScriptRun::Progress ScriptRun::popValue(const ScriptInstruction& instruction, int& programCounter, int& result)
 {
     const int operand   = instruction.operand;
@@ -232,6 +275,36 @@ ScriptRun::Progress ScriptRun::popValue(const ScriptInstruction& instruction, in
     }
 
     return Progress::Running;
+}
+
+double ScriptRun::convert(ScriptNumber number, double value)
+{
+    constexpr double intLowest    = std::numeric_limits<int>::min();
+    constexpr double intHighest   = std::numeric_limits<int>::max();
+    constexpr double floatHighest = std::numeric_limits<float>::max();
+
+    switch (number) {
+        case ScriptNumber::Int: {
+            if (std::isnan(value)) {
+                return 0.0;
+            }
+
+            return std::trunc(std::clamp(value, intLowest, intHighest));
+        }
+
+        case ScriptNumber::Float: {
+            if (std::isfinite(value)) {
+                value = std::clamp(value, -floatHighest, floatHighest);
+            }
+
+            return static_cast<float>(value);
+        }
+
+        case ScriptNumber::Double:
+            return value;
+    }
+
+    return value;
 }
 
 ScriptRun::Progress ScriptRun::executeNodeOpcode(const ScriptInstruction& instruction)
@@ -315,6 +388,154 @@ ScriptRun::Progress ScriptRun::executeNodeOpcode(const ScriptInstruction& instru
     }
 }
 
+int ScriptRun::readField(ScriptField field, int nodeId)
+{
+    const RTNode* const node = context.nodes.find(nodeId);
+
+    if (node == nullptr) {
+        if (field == ScriptField::Id || field == ScriptField::LastChild || field == ScriptField::Parent) {
+            return -1;
+        }
+
+        return 0;
+    }
+
+    switch (field) {
+        case ScriptField::Id:           return nodeId;
+        case ScriptField::Pitch:        return noteValue(field, *node);
+        case ScriptField::Velocity:     return noteValue(field, *node);
+        case ScriptField::Count:        return readState(context.countSlot, nodeId);
+        case ScriptField::SwitchCount:  return readState(NodeStateSlot::SwitchCount, nodeId);
+        case ScriptField::TriggerCount: return readState(NodeStateSlot::Trigger, nodeId);
+        case ScriptField::SubLoopCount: return readState(NodeStateSlot::SubRootCount, nodeId);
+        case ScriptField::CountLimit:   return node->countLimit;
+        case ScriptField::TriggerLimit: return node->triggerLimit;
+        case ScriptField::SwitchLimit:  return node->switchCountLimit;
+        case ScriptField::SubLoopLimit: return node->subLoopCountLimit;
+        case ScriptField::Repeat:       return node->repeatValue;
+        case ScriptField::Probability:  return node->probability;
+        case ScriptField::ChildCount:   return static_cast<int>(node->connections.size());
+        case ScriptField::LastChild:    return readState(NodeStateSlot::LastNode, nodeId);
+        case ScriptField::Eligible:     return 1;
+
+        case ScriptField::Duration: {
+            if (context.host == nullptr) {
+                return 0;
+            }
+
+            return context.host->noteDuration(nodeId);
+        }
+
+        case ScriptField::Parent: {
+            if (context.nodes.find(node->parentId) == nullptr) {
+                return -1;
+            }
+
+            return node->parentId;
+        }
+    }
+
+    return 0;
+}
+
+int ScriptRun::noteValue(ScriptField field, const RTNode& node) const
+{
+    const int           alternativeId = readState(NodeStateSlot::ActiveAlternative, node.nodeID);
+    const RTNode* const alternative   = context.nodes.find(alternativeId);
+
+    const RTNode* voiced   = &node;
+    int           velocity = 0;
+
+    if (node.notes.empty()) {
+        return RTNote::fallbackValue;
+    }
+
+    if (alternative != nullptr && !alternative->notes.empty()) {
+        voiced = alternative;
+    }
+
+    if (field == ScriptField::Pitch) {
+        return voiced->notes[0].pitch;
+    }
+
+    velocity = voiced->notes[0].velocity;
+
+    if (velocity <= 0) {
+        velocity = RTNote::fallbackValue;
+    }
+
+    return velocity;
+}
+
+int ScriptRun::readState(NodeStateSlot slot, int nodeId) const
+{
+    for (int index = trialWriteCount; index > 0; --index) {
+        const TrialWrite& write = trialWrites[static_cast<std::size_t>(index - 1)];
+
+        if (write.slot == slot && write.nodeId == nodeId) {
+            return write.value;
+        }
+    }
+
+    return context.nodeState.get(slot, nodeId);
+}
+
+void ScriptRun::writeField(ScriptField field, int nodeId, int value)
+{
+    if (context.nodes.find(nodeId) == nullptr) {
+        return;
+    }
+
+    switch (field) {
+        case ScriptField::Count:        writeState(context.countSlot, nodeId, value);            break;
+        case ScriptField::SwitchCount:  writeState(NodeStateSlot::SwitchCount, nodeId, value);  break;
+        case ScriptField::TriggerCount: writeState(NodeStateSlot::Trigger, nodeId, value);      break;
+        case ScriptField::SubLoopCount: writeState(NodeStateSlot::SubRootCount, nodeId, value); break;
+        default:                                                                                 break;
+    }
+}
+
+void ScriptRun::writeState(NodeStateSlot slot, int nodeId, int value)
+{
+    if (context.writes == ScriptWrites::Commit) {
+        context.nodeState.set(slot, nodeId, value);
+        return;
+    }
+
+    for (int index = 0; index < trialWriteCount; ++index) {
+        TrialWrite& write = trialWrites[static_cast<std::size_t>(index)];
+
+        if (write.slot == slot && write.nodeId == nodeId) {
+            write.value = value;
+            return;
+        }
+    }
+
+    if (trialWriteCount < trialWriteCapacity) {
+        trialWrites[static_cast<std::size_t>(trialWriteCount++)] = { slot, nodeId, value };
+    }
+}
+
+int ScriptRun::childAt(int parentId, int childIndex) const
+{
+    const RTNode* const parent = context.nodes.find(parentId);
+
+    if (parent == nullptr || childIndex < 0 || childIndex >= static_cast<int>(parent->connections.size())) {
+        return -1;
+    }
+
+    const RuleContext ruleContext { context.nodes, *parent, 0, context.traversalKey, context.isEligible,
+                                    context.nodeState, context.randomValue };
+
+    const int childId = parent->connections[static_cast<std::size_t>(childIndex)].childId;
+
+    if (ruleContext.eligibleChild(childId) == nullptr) {
+        return -1;
+    }
+
+    return childId;
+}
+
 ScriptRun::Progress ScriptRun::drawRandom()
 {
     constexpr double unitScale = 1.0 / 16777216.0;
@@ -332,37 +553,6 @@ ScriptRun::Progress ScriptRun::drawRandom()
 
     centre += centre * spread * (2.0 * static_cast<double>(randomState >> 8) * unitScale - 1.0);
     return Progress::Running;
-}
-
-bool ScriptRun::enterFunction(int functionIndex, int returnAddress, int& programCounter)
-{
-    const int functionCount = static_cast<int>(context.script.functions.size());
-    const int localBase     = frameCount * RTScript::maxLocals;
-
-    if (functionIndex < 0 || functionIndex >= functionCount || frameCount >= RTScript::maxCallDepth) {
-        return false;
-    }
-
-    const ScriptFunction& function = context.script.functions[static_cast<std::size_t>(functionIndex)];
-
-    if (stackTop < function.parameterCount || function.parameterCount > RTScript::maxLocals) {
-        return false;
-    }
-
-    for (int slot = 0; slot < RTScript::maxLocals; ++slot) {
-        locals[static_cast<std::size_t>(localBase + slot)] = 0;
-    }
-
-    stackTop -= function.parameterCount;
-
-    for (int parameter = 0; parameter < function.parameterCount; ++parameter) {
-        locals[static_cast<std::size_t>(localBase + parameter)] = stack[static_cast<std::size_t>(stackTop + parameter)];
-    }
-
-    frames[static_cast<std::size_t>(frameCount++)] = { returnAddress, localBase, stackTop };
-
-    programCounter = function.entry;
-    return true;
 }
 
 double ScriptRun::calculate(const ScriptInstruction& instruction, double left, double right)
@@ -452,194 +642,4 @@ double ScriptRun::realArithmetic(ScriptOpcode opcode, double left, double right)
         default:
             return 0.0;
     }
-}
-
-double ScriptRun::convert(ScriptNumber number, double value)
-{
-    constexpr double intLowest    = std::numeric_limits<int>::min();
-    constexpr double intHighest   = std::numeric_limits<int>::max();
-    constexpr double floatHighest = std::numeric_limits<float>::max();
-
-    switch (number) {
-        case ScriptNumber::Int: {
-            if (std::isnan(value)) {
-                return 0.0;
-            }
-
-            return std::trunc(std::clamp(value, intLowest, intHighest));
-        }
-
-        case ScriptNumber::Float: {
-            if (std::isfinite(value)) {
-                value = std::clamp(value, -floatHighest, floatHighest);
-            }
-
-            return static_cast<float>(value);
-        }
-
-        case ScriptNumber::Double:
-            return value;
-    }
-
-    return value;
-}
-
-int ScriptRun::readContext(ScriptContextValue value) const
-{
-    switch (value) {
-        case ScriptContextValue::Current:           return context.currentNodeId;
-        case ScriptContextValue::TraversalId:       return context.traversalKey.typeId;
-        case ScriptContextValue::TraversalRandom:   return context.randomValue;
-        case ScriptContextValue::TraversalInstance: return context.traversalKey.instance;
-    }
-
-    return 0;
-}
-
-int ScriptRun::readField(ScriptField field, int nodeId)
-{
-    const RTNode* const node = context.nodes.find(nodeId);
-
-    if (node == nullptr) {
-        if (field == ScriptField::Id || field == ScriptField::LastChild || field == ScriptField::Parent) {
-            return -1;
-        }
-
-        return 0;
-    }
-
-    switch (field) {
-        case ScriptField::Id:           return nodeId;
-        case ScriptField::Pitch:        return noteValue(field, *node);
-        case ScriptField::Velocity:     return noteValue(field, *node);
-        case ScriptField::Count:        return readState(context.countSlot, nodeId);
-        case ScriptField::SwitchCount:  return readState(NodeStateSlot::SwitchCount, nodeId);
-        case ScriptField::TriggerCount: return readState(NodeStateSlot::Trigger, nodeId);
-        case ScriptField::SubLoopCount: return readState(NodeStateSlot::SubRootCount, nodeId);
-        case ScriptField::CountLimit:   return node->countLimit;
-        case ScriptField::TriggerLimit: return node->triggerLimit;
-        case ScriptField::SwitchLimit:  return node->switchCountLimit;
-        case ScriptField::SubLoopLimit: return node->subLoopCountLimit;
-        case ScriptField::Repeat:       return node->repeatValue;
-        case ScriptField::Probability:  return node->probability;
-        case ScriptField::ChildCount:   return static_cast<int>(node->connections.size());
-        case ScriptField::LastChild:    return readState(NodeStateSlot::LastNode, nodeId);
-        case ScriptField::Eligible:     return 1;
-
-        case ScriptField::Duration: {
-            if (context.host == nullptr) {
-                return 0;
-            }
-
-            return context.host->noteDuration(nodeId);
-        }
-
-        case ScriptField::Parent: {
-            if (context.nodes.find(node->parentId) == nullptr) {
-                return -1;
-            }
-
-            return node->parentId;
-        }
-    }
-
-    return 0;
-}
-
-void ScriptRun::writeField(ScriptField field, int nodeId, int value)
-{
-    if (context.nodes.find(nodeId) == nullptr) {
-        return;
-    }
-
-    switch (field) {
-        case ScriptField::Count:        writeState(context.countSlot, nodeId, value);            break;
-        case ScriptField::SwitchCount:  writeState(NodeStateSlot::SwitchCount, nodeId, value);  break;
-        case ScriptField::TriggerCount: writeState(NodeStateSlot::Trigger, nodeId, value);      break;
-        case ScriptField::SubLoopCount: writeState(NodeStateSlot::SubRootCount, nodeId, value); break;
-        default:                                                                                 break;
-    }
-}
-
-int ScriptRun::readState(NodeStateSlot slot, int nodeId) const
-{
-    for (int index = trialWriteCount; index > 0; --index) {
-        const TrialWrite& write = trialWrites[static_cast<std::size_t>(index - 1)];
-
-        if (write.slot == slot && write.nodeId == nodeId) {
-            return write.value;
-        }
-    }
-
-    return context.nodeState.get(slot, nodeId);
-}
-
-void ScriptRun::writeState(NodeStateSlot slot, int nodeId, int value)
-{
-    if (context.writes == ScriptWrites::Commit) {
-        context.nodeState.set(slot, nodeId, value);
-        return;
-    }
-
-    for (int index = 0; index < trialWriteCount; ++index) {
-        TrialWrite& write = trialWrites[static_cast<std::size_t>(index)];
-
-        if (write.slot == slot && write.nodeId == nodeId) {
-            write.value = value;
-            return;
-        }
-    }
-
-    if (trialWriteCount < trialWriteCapacity) {
-        trialWrites[static_cast<std::size_t>(trialWriteCount++)] = { slot, nodeId, value };
-    }
-}
-
-int ScriptRun::noteValue(ScriptField field, const RTNode& node) const
-{
-    const int           alternativeId = readState(NodeStateSlot::ActiveAlternative, node.nodeID);
-    const RTNode* const alternative   = context.nodes.find(alternativeId);
-
-    const RTNode* voiced   = &node;
-    int           velocity = 0;
-
-    if (node.notes.empty()) {
-        return RTNote::fallbackValue;
-    }
-
-    if (alternative != nullptr && !alternative->notes.empty()) {
-        voiced = alternative;
-    }
-
-    if (field == ScriptField::Pitch) {
-        return voiced->notes[0].pitch;
-    }
-
-    velocity = voiced->notes[0].velocity;
-
-    if (velocity <= 0) {
-        velocity = RTNote::fallbackValue;
-    }
-
-    return velocity;
-}
-
-int ScriptRun::childAt(int parentId, int childIndex) const
-{
-    const RTNode* const parent = context.nodes.find(parentId);
-
-    if (parent == nullptr || childIndex < 0 || childIndex >= static_cast<int>(parent->connections.size())) {
-        return -1;
-    }
-
-    const RuleContext ruleContext { context.nodes, *parent, 0, context.traversalKey, context.isEligible,
-                                    context.nodeState, context.randomValue };
-
-    const int childId = parent->connections[static_cast<std::size_t>(childIndex)].childId;
-
-    if (ruleContext.eligibleChild(childId) == nullptr) {
-        return -1;
-    }
-
-    return childId;
 }

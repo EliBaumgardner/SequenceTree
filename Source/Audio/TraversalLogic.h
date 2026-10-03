@@ -150,17 +150,17 @@ public:
 
     void begin(const NodeMap& nodes, int startNodeId, int graphLoopLimit);
 
+    void advanceAlternative(const NodeMap& nodes, int parentId);
+
     void beginPreview(const NodeMap& nodes, int startNodeId, int alternativeId);
 
     StepResult handleNodeEvent(const NodeMap& nodes, int steps = 1);
 
-    void advanceAlternative(const NodeMap& nodes, int parentId);
-
     void advance(const NodeMap& nodes, int steps = 1);
 
-    const RTNode* peekNextTarget(const NodeMap& nodes);
-
     ScriptRunContext makeScriptContext(const NodeMap& nodes, Walk walk, ScriptWrites writes, ScriptHost* host);
+
+    const RTNode* peekNextTarget(const NodeMap& nodes);
 
     static constexpr int maxCrossTreeTargets = NodeStateTable::maxNodeIds;
 
@@ -176,24 +176,25 @@ public:
 private:
 
     int  selectNextChild(const NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible) const;
+    StepResult stepActive(const NodeMap& nodes, int steps);
+
+    void       advanceByScript(const NodeMap& nodes, const RTNode& leavingNode, int steps,
+                               TraversalState deadEndState);
+
     int  selectTreeJumpChild(const NodeMap& nodes, const RTNode& host) const;
+    int        chooseChild(const NodeMap& nodes, Walker& walker, NodeStateSlot countSlot, ChildPredicate isEligible);
     void selectSwitchNode(const NodeMap& nodes, int targetId, int& chosenNodeId);
+    int        encapsulationLoopTarget(const NodeMap& nodes, Walker& walker, int leavingNodeId, int chosenNodeId);
     void registerTrigger(const NodeMap& nodes, int nodeId);
+    void       armSubLoop(Walker& walker, const RTNode& enteredNode);
+    void       skipAhead(const NodeMap& nodes, int steps);
+    void       handleLoopReset(const NodeMap& nodes, StepResult& result);
+    int        advanceSubRoot(const NodeMap& nodes, Walker& walker);
+    void       handleTreeJump(const NodeMap& nodes, StepResult& result);
+    void       fillEndedResult(StepResult& result) const;
 
     const RTNode* eligibleModulatorRoot(const NodeMap& nodes, const RTConnection& connection,
                                         int hostCount) const;
-
-    StepResult stepActive(const NodeMap& nodes, int steps);
-    int        chooseChild(const NodeMap& nodes, Walker& walker, NodeStateSlot countSlot, ChildPredicate isEligible);
-    void       skipAhead(const NodeMap& nodes, int steps);
-    void       advanceByScript(const NodeMap& nodes, const RTNode& leavingNode, int steps,
-                               TraversalState deadEndState);
-    void       handleLoopReset(const NodeMap& nodes, StepResult& result);
-    void       handleTreeJump(const NodeMap& nodes, StepResult& result);
-    int        advanceSubRoot(const NodeMap& nodes, Walker& walker);
-    void       armSubLoop(Walker& walker, const RTNode& enteredNode);
-    int        encapsulationLoopTarget(const NodeMap& nodes, Walker& walker, int leavingNodeId, int chosenNodeId);
-    void       fillEndedResult(StepResult& result) const;
 
     int referenceTargetId   = 0;
     int pendingJumpTargetId = -1;

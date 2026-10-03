@@ -36,12 +36,11 @@ public:
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
-    void lookAndFeelChanged() override;
 
+    void lookAndFeelChanged() override;
     void setText(juce::String newText);
     void setCaption(const juce::String& newCaption);
     void setSelected(bool shouldBeSelected);
-
     void mouseEnter(const juce::MouseEvent& event) override;
     void mouseExit(const juce::MouseEvent& event) override;
     void mouseDown(const juce::MouseEvent& event) override;

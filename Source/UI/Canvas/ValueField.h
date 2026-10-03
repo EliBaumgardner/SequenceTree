@@ -45,14 +45,13 @@ private:
 
     void render();
     void accumulateNodeGlow(int fieldWidth, int fieldHeight);
+    juce::Identifier paintLayerValueId() const;
+    juce::Colour     mapFieldColour(float factor) const;
     void ensurePaintBuffers();
     void seedStrokeDensityFromNodes();
     void accumulateStroke(juce::Point<float> from, juce::Point<float> to, bool rearm = false);
     void applyPaintToNodes(juce::Point<float> from, juce::Point<float> to);
     std::optional<float> densityUnderNode(const Node& node) const;
-    juce::Colour     mapFieldColour(float factor) const;
-    juce::Identifier paintLayerValueId() const;
-
     void timerCallback() override;
 
     NodeCanvas& owner;
