@@ -48,12 +48,13 @@ struct RTtraversal {
 
 struct RTPreviewRequest {
 
-    enum class Kind { Start, Stop };
+    enum class Kind { Start, Stop, SetRepeat };
 
     Kind        kind       = Kind::Stop;
     int         nodeId     = -1;
     int         visitCount = 1;
     RTtraversal traversal;
+    bool        repeat     = false;
 };
 
 struct RTConnection {

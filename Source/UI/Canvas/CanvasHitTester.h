@@ -10,7 +10,9 @@ class CanvasHitTester
 {
 public:
 
-    explicit CanvasHitTester(NodeCanvas& canvas) : canvas(canvas) {}
+    explicit CanvasHitTester(NodeCanvas& canvas) : canvas(canvas)
+    {
+    }
 
     Arrow* arrowNear        (juce::Point<float> point, float radius) const;
     Arrow* arrowHeadNear    (juce::Point<float> point, float radius) const;
@@ -22,7 +24,7 @@ public:
 
     Node*  nodeContaining (juce::Point<float> point, int excludeId) const;
 
-    static float distanceToSegment(juce::Point<float> p, juce::Point<float> a, juce::Point<float> b);
+    static float distanceToSegment(juce::Point<float> point, juce::Point<float> segmentStart, juce::Point<float> segmentEnd);
 
 private:
 

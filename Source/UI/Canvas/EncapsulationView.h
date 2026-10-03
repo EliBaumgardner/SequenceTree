@@ -1,9 +1,4 @@
-//
-// Created by Eli Baumgardner on 9/7/26.
-//
-
-#ifndef SEQUENCETREE_ENCAPSULATIONVIEW_H
-#define SEQUENCETREE_ENCAPSULATIONVIEW_H
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <span>
@@ -12,8 +7,8 @@ class NodeCanvas;
 class Encapsulator;
 struct ApplicationContext;
 
-class EncapsulationView {
-
+class EncapsulationView
+{
 public:
 
     EncapsulationView(NodeCanvas& canvas, const ApplicationContext& context);
@@ -28,7 +23,7 @@ public:
     juce::Point<int> collapsedSpanShift(int nodeId) const;
 
     void syncHighlights() const;
-    void recolourGroup(const Encapsulator& encapsulator, juce::Colour colour) const;
+    void recolourGroup(const Encapsulator& encapsulator) const;
 
 private:
 
@@ -38,5 +33,3 @@ private:
     NodeCanvas&         canvas;
     const ApplicationContext& applicationContext;
 };
-
-#endif //SEQUENCETREE_ENCAPSULATIONVIEW_H

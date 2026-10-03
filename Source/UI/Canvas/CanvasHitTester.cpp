@@ -12,55 +12,45 @@
 
 namespace
 {
-
 template <std::ranges::input_range Range,
           std::indirectly_unary_invocable<std::ranges::iterator_t<const Range>> Project,
           std::indirect_unary_predicate<std::projected<std::ranges::iterator_t<const Range>, Project>> Keep,
-          std::indirectly_unary_invocable<std::projected<std::ranges::iterator_t<const Range>, Project>> Dist>
-auto nearest(const Range& range, Project project, Keep keep, Dist dist, float radius)
+          std::indirectly_unary_invocable<std::projected<std::ranges::iterator_t<const Range>, Project>> Distance>
+auto nearest(const Range& range, Project project, Keep keep, Distance distanceTo, float radius)
     -> std::indirect_result_t<Project&, std::ranges::iterator_t<const Range>>
 {
     using Candidate = std::indirect_result_t<Project&, std::ranges::iterator_t<const Range>>;
 
-    Candidate best    = nullptr;
-    float      minDist = radius;
+    Candidate best            = nullptr;
+    float     closestDistance = radius;
 
     for (const auto& element : range) {
         Candidate const candidate = project(element);
+
         if (candidate == nullptr || ! keep(candidate)) {
             continue;
         }
 
-        const float d = dist(candidate);
-        if (d < minDist) {
-            minDist = d;
-            best    = candidate;
+        const float distance = distanceTo(candidate);
+
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            best            = candidate;
         }
     }
 
     return best;
 }
 
-Arrow* identity(Arrow* arrow) { return arrow; }
-
-Node* nodeOf(const std::pair<const int, std::unique_ptr<Node>>& entry) { return entry.second.get(); }
-
+Arrow* identity(Arrow* arrow)
+{
+    return arrow;
 }
 
-float CanvasHitTester::distanceToSegment(juce::Point<float> p, juce::Point<float> a, juce::Point<float> b)
+Node* nodeOf(const std::pair<const int, std::unique_ptr<Node>>& entry)
 {
-    const juce::Point<float> ab = b - a;
-    const float lengthSquared = ab.x * ab.x + ab.y * ab.y;
-
-    if (lengthSquared < 1.0e-6f) {
-        return p.getDistanceFrom(a);
-    }
-
-    float t = ((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / lengthSquared;
-    t = juce::jlimit(0.0f, 1.0f, t);
-
-    const juce::Point<float> projection = a + ab * t;
-    return p.getDistanceFrom(projection);
+    return entry.second.get();
+}
 }
 
 Arrow* CanvasHitTester::arrowNear(juce::Point<float> point, float radius) const
@@ -68,9 +58,7 @@ Arrow* CanvasHitTester::arrowNear(juce::Point<float> point, float radius) const
     return nearest(canvas.arrowManager.all(), identity,
         [] (Arrow* arrow) { return arrow->startNode != nullptr && arrow->isVisible(); },
         [point] (Arrow* arrow) {
-            return distanceToSegment(point,
-                                     arrow->startNode->getNodeCentre().toFloat(),
-                                     arrow->getTip().toFloat());
+            return distanceToSegment(point, arrow->startNode->getNodeCentre().toFloat(), arrow->getTip().toFloat());
         },
         radius);
 }
@@ -119,6 +107,19 @@ Node* CanvasHitTester::nodeNear(juce::Point<float> point, float radius, int excl
         radius);
 }
 
+Node* CanvasHitTester::rootNear(juce::Point<float> point, float radius, int excludeId) const
+{
+    return nearest(canvas.nodeManager.all(), nodeOf,
+        [excludeId] (Node* node) {
+            return node->nodeId != excludeId
+                && node->isVisible()
+                && node->nodeType != NodeType::Encapsulator
+                && node->nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData;
+        },
+        [point] (Node* node) { return point.getDistanceFrom(node->getNodeCentre().toFloat()); },
+        radius);
+}
+
 Node* CanvasHitTester::nodeContaining(juce::Point<float> point, int excludeId) const
 {
     return nearest(canvas.nodeManager.all(), nodeOf,
@@ -135,15 +136,16 @@ Node* CanvasHitTester::nodeContaining(juce::Point<float> point, int excludeId) c
         std::numeric_limits<float>::max());
 }
 
-Node* CanvasHitTester::rootNear(juce::Point<float> point, float radius, int excludeId) const
+float CanvasHitTester::distanceToSegment(juce::Point<float> point, juce::Point<float> segmentStart, juce::Point<float> segmentEnd)
 {
-    return nearest(canvas.nodeManager.all(), nodeOf,
-        [excludeId] (Node* node) {
-            return node->nodeId != excludeId
-                && node->isVisible()
-                && node->nodeType != NodeType::Encapsulator
-                && node->nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData;
-        },
-        [point] (Node* node) { return point.getDistanceFrom(node->getNodeCentre().toFloat()); },
-        radius);
+    const juce::Point<float> segment       = segmentEnd - segmentStart;
+    const float              lengthSquared = segment.x * segment.x + segment.y * segment.y;
+
+    if (lengthSquared < 1.0e-6f) {
+        return point.getDistanceFrom(segmentStart);
+    }
+
+    const float alongSegment = juce::jlimit(0.0f, 1.0f, ((point.x - segmentStart.x) * segment.x + (point.y - segmentStart.y) * segment.y) / lengthSquared);
+
+    return point.getDistanceFrom(segmentStart + segment * alongSegment);
 }

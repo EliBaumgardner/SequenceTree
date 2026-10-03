@@ -1,29 +1,22 @@
-//
-// Created by Eli Baumgardner on 7/20/26.
-//
-
-#ifndef SEQUENCETREE_MENUBAR_H
-#define SEQUENCETREE_MENUBAR_H
+#pragma once
 
 #include "Bar.h"
-#include "../Theme/CustomLookAndFeel.h"
 #include "../Buttons/IconButton.h"
 
-class MenuBar : public Bar {
+class MenuBar : public Bar
+{
 public:
 
-    explicit MenuBar(const ApplicationContext& context);
+    IconButton treeIcon;
+    IconButton nodeIcon;
+    IconButton traversalIcon;
 
-    std::unique_ptr<IconButton> treeIcon = nullptr;
-    std::unique_ptr<IconButton> nodeIcon = nullptr;
-    std::unique_ptr<IconButton> traversalIcon = nullptr;
+    explicit MenuBar(const ApplicationContext& context);
 
 private:
 
     void resized() override;
 
     static constexpr float iconInsetRatio = 0.214f;
+    static constexpr int   iconCount      = 3;
 };
-
-
-#endif //SEQUENCETREE_MENUBAR_H

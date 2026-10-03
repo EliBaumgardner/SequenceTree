@@ -22,6 +22,7 @@ const KeywordEntry keywordTable[] = {
     { "double",   TokenKind::KeywordDouble },
     { "Node",     TokenKind::KeywordNode },
     { "none",     TokenKind::KeywordNone },
+    { "import",   TokenKind::KeywordImport },
     { "and",      TokenKind::And },
     { "or",       TokenKind::Or },
     { "not",      TokenKind::Not }
@@ -198,6 +199,7 @@ Token Lexer::readPunctuation()
     if (current == '|' && next == '|') { return readFixed(TokenKind::Or, 2); }
     if (current == '+' && next == '=') { return readFixed(TokenKind::PlusAssign, 2); }
     if (current == '-' && next == '=') { return readFixed(TokenKind::MinusAssign, 2); }
+    if (current == ':' && next == ':') { return readFixed(TokenKind::Scope, 2); }
 
     switch (current) {
         case ';': return readFixed(TokenKind::Terminator, 1);

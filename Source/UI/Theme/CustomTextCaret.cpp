@@ -5,9 +5,9 @@ CustomTextCaret::CustomTextCaret(juce::Component* keyFocusOwner)
 {
 }
 
-void CustomTextCaret::paint(juce::Graphics& g)
+void CustomTextCaret::paint(juce::Graphics& graphics)
 {
     auto bounds = getLocalBounds().toFloat();
-    g.setColour(findColour(juce::CaretComponent::caretColourId, true));
-    g.fillRect(bounds.withWidth(caretWidth));
+    graphics.setColour(findColour(juce::CaretComponent::caretColourId, true));
+    graphics.fillRect(bounds.withWidth(caretWidth));
 }

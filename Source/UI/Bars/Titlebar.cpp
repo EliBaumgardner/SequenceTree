@@ -1,23 +1,11 @@
-/*
-  ==============================================================================
-
-    TitleBar.cpp
-    Created: 12 Jun 2025 6:50:43pm
-    Author:  Eli Baumgardner
-
-  ==============================================================================
-*/
-
-
 #include "../Canvas/NodeCanvas.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Plugin/PluginProcessor.h"
 
 #include "Titlebar.h"
 
-
 Titlebar::Titlebar(const ApplicationContext& context)
-    : Bar(context, { Orientation::horizontal }),
+    : Bar(context, { Orientation::Horizontal }),
       transportPane(context),
       buttonPane(context),
       displaySelector(context),
@@ -38,172 +26,11 @@ Titlebar::Titlebar(const ApplicationContext& context)
     configureTempoDisplay();
 }
 
-void Titlebar::configureTempoDisplay()
+void Titlebar::paintOverBar(juce::Graphics& graphics)
 {
-    SequenceTreeAudioProcessor& processor = *applicationContext.processor;
-
-    tempoAttachment = std::make_unique<juce::ParameterAttachment>(
-        *processor.valueTreeState.getParameter(SequenceTreeAudioProcessor::tempoParameterId),
-        [this](float tempoMultiplier) { tempoDisplay.editor.boundValue.setValue(tempoMultiplier); });
-
-    tempoDisplay.editor.onValueChange = [this]() {
-        tempoAttachment->setValueAsCompleteGesture(static_cast<float>(static_cast<double>(tempoDisplay.editor.boundValue.getValue())));
-    };
-
-    tempoAttachment->sendInitialUpdate();
-}
-
-void Titlebar::configureDisplaySelector()
-{
-    auto addDisplayMode = [this](int itemId, juce::String label, NodeDisplayMode mode) {
-        displaySelector.addItem(itemId, std::move(label), [this, mode]() {
-            applicationContext.canvas->nodeManager.setDisplayMode(mode);
-
-            if (onDisplayModeChanged) {
-                onDisplayModeChanged(mode);
-            }
-        });
-    };
-
-    displaySelector.labelEditor->autoFitText = false;
-
-    addDisplayMode(1, "show pitch",       NodeDisplayMode::Pitch);
-    addDisplayMode(2, "show velocity",    NodeDisplayMode::Velocity);
-    addDisplayMode(3, "show countLimit",  NodeDisplayMode::CountLimit);
-    addDisplayMode(4, "show channel",     NodeDisplayMode::Channel);
-    addDisplayMode(5, "show repeatValue", NodeDisplayMode::RepeatValue);
-    addDisplayMode(6, "show probability", NodeDisplayMode::Probability);
-
-    displaySelector.setSelectedItem(1);
-}
-
-void Titlebar::configureTransportPane()
-{
-    playButton = &transportPane.addButton(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawPlayIcon(g, bounds, state);
-        },
-        "Play / Pause",
-        [this]() { togglePlayback(); });
-
-    if (applicationContext.processor->wrapperType != juce::AudioProcessor::wrapperType_Standalone) {
-        playButton->onClick = nullptr;
-        playButton->setTooltip("Follows host transport");
-    }
-
-    playButton->setSelected(! applicationContext.processor->isPlaying.load());
-
-    transportPane.addButton(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawResetIcon(g, bounds, state);
-        },
-        "Reset",
-        [this]() { resetTraversals(); });
-
-    if (applicationContext.processor->wrapperType == juce::AudioProcessor::wrapperType_Standalone) {
-        return;
-    }
-
-    syncButton = &transportPane.addButton(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawSyncIcon(g, bounds, state);
-        },
-        "Sync to host playhead",
-        [this]() { syncAttachment->setValueAsCompleteGesture(static_cast<float>(! syncButton->isSelected())); });
-
-    syncAttachment = std::make_unique<juce::ParameterAttachment>(
-        *applicationContext.processor->valueTreeState.getParameter(SequenceTreeAudioProcessor::hostSyncParameterId),
-        [this](float synced) { syncButton->setSelected(synced >= 0.5f); });
-
-    syncAttachment->sendInitialUpdate();
-}
-
-void Titlebar::applyPlaybackState(bool shouldPlay)
-{
-    playButton->setSelected(! shouldPlay);
-
-    applicationContext.canvas->setProcessorPlayblack(shouldPlay);
-}
-
-void Titlebar::togglePlayback()
-{
-    applyPlaybackState(! applicationContext.canvas->start);
-}
-
-void Titlebar::resetTraversals()
-{
-    applicationContext.processor->resetRequested.store(true);
-
-    if (auto* canvas = applicationContext.canvas) {
-        canvas->arrowManager.resetAllProgress();
-    }
-}
-
-void Titlebar::configureModePane()
-{
-    buttonPane.enableToggleSelection();
-    buttonPane.allowEmptySelection();
-
-    buttonPane.onSelectionChanged = [this](const IconButton* selected) {
-        setDanglingArrowMode(selected == nullptr);
-    };
-
-    IconButton& nodeButton = buttonPane.addButton(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawNodeModeIcon(g, bounds, state);
-        },
-        "Node Mode",
-        [this]() { setControllerMode(NodeController::NodeControllerMode::Node); });
-
-    buttonPane.addButton(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawModulatorIcon(g, bounds, state);
-        },
-        "Modulator Mode",
-        [this]() { setControllerMode(NodeController::NodeControllerMode::Modulator); });
-
-    buttonPane.addButton(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawTraversalFlagIcon(g, bounds, state);
-        },
-        "Traversal Flag Mode",
-        [this]() { setControllerMode(NodeController::NodeControllerMode::TraversalFlag); });
-
-    buttonPane.setSelectedButton(&nodeButton);
-}
-
-void Titlebar::configureUndoRedoPane()
-{
-    undoRedoPane.addButton(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawUndoIcon(g, bounds, state);
-        },
-        "Undo",
-        [this]() { applicationContext.undoManager->undo(); });
-
-    undoRedoPane.addButton(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawRedoIcon(g, bounds, state);
-        },
-        "Redo",
-        [this]() { applicationContext.undoManager->redo(); });
-}
-
-void Titlebar::setControllerMode(NodeController::NodeControllerMode mode)
-{
-    applicationContext.nodeController->nodeControllerMode = mode;
-}
-
-void Titlebar::setDanglingArrowMode(bool shouldBeActive)
-{
-    applicationContext.nodeController->setArrowMode(shouldBeActive);
-}
-
-void Titlebar::paintOverBar(juce::Graphics& g)
-{
-    drawSeparator(g, (transportPane.getRight() + tempoDisplay.getX()) / 2);
-    drawSeparator(g, (tempoDisplay.getRight() + undoRedoPane.getX()) / 2);
-    drawSeparator(g, (buttonPane.getRight() + displaySelector.getX()) / 2);
+    drawSeparator(graphics, (transportPane.getRight() + tempoDisplay.getX()) / 2);
+    drawSeparator(graphics, (tempoDisplay.getRight() + undoRedoPane.getX()) / 2);
+    drawSeparator(graphics, (buttonPane.getRight() + displaySelector.getX()) / 2);
 }
 
 void Titlebar::resized()
@@ -219,7 +46,7 @@ void Titlebar::resized()
     float textHeight = CustomLookAndFeel::get(*this).textHeight;
 
     tempoDisplay.editor.setFontHeight(textHeight);
-    displaySelector.labelEditor->setFontHeight(textHeight);
+    displaySelector.labelEditor.setFontHeight(textHeight);
 
     transportPane.setBounds(bounds.removeFromLeft(transportPaneWidth));
     bounds.removeFromLeft(spacing);
@@ -234,4 +61,118 @@ void Titlebar::resized()
     bounds.removeFromRight(spacing);
 
     buttonPane.setBounds(bounds.removeFromRight(buttonPaneWidth));
+}
+
+void Titlebar::applyPlaybackState(bool shouldPlay)
+{
+    playButton->setSelected(! shouldPlay);
+
+    applicationContext.canvas->setProcessorPlayback(shouldPlay);
+}
+
+void Titlebar::configureDisplaySelector()
+{
+    auto addDisplayMode = [this](int itemId, juce::String label, NodeDisplayMode mode) {
+        displaySelector.addItem(itemId, std::move(label), [this, mode]() {
+            applicationContext.canvas->nodeManager.setDisplayMode(mode);
+
+            if (onDisplayModeChanged) {
+                onDisplayModeChanged(mode);
+            }
+        });
+    };
+
+    displaySelector.labelEditor.autoFitText = false;
+
+    addDisplayMode(1, "show pitch",       NodeDisplayMode::Pitch);
+    addDisplayMode(2, "show velocity",    NodeDisplayMode::Velocity);
+    addDisplayMode(3, "show countLimit",  NodeDisplayMode::CountLimit);
+    addDisplayMode(4, "show channel",     NodeDisplayMode::Channel);
+    addDisplayMode(5, "show repeatValue", NodeDisplayMode::RepeatValue);
+    addDisplayMode(6, "show probability", NodeDisplayMode::Probability);
+
+    displaySelector.setSelectedItem(1);
+}
+
+void Titlebar::configureTempoDisplay()
+{
+    SequenceTreeAudioProcessor& processor = *applicationContext.processor;
+
+    tempoAttachment = std::make_unique<juce::ParameterAttachment>(
+        *processor.valueTreeState.getParameter(SequenceTreeAudioProcessor::tempoParameterId),
+        [this](float tempoMultiplier) { tempoDisplay.editor.boundValue.setValue(tempoMultiplier); });
+
+    tempoDisplay.editor.onValueChange = [this]() {
+        tempoAttachment->setValueAsCompleteGesture(static_cast<float>(static_cast<double>(tempoDisplay.editor.boundValue.getValue())));
+    };
+
+    tempoAttachment->sendInitialUpdate();
+}
+
+void Titlebar::configureModePane()
+{
+    buttonPane.selection = ButtonPane::Selection::ExclusiveOrNone;
+
+    buttonPane.onSelectionChanged = [this](const IconButton* selected) {
+        applicationContext.nodeController->setArrowMode(selected == nullptr);
+    };
+
+    IconButton& nodeButton = buttonPane.addButton(&CustomLookAndFeel::drawNodeModeIcon, "Node Mode",
+        [this]() { applicationContext.nodeController->nodeControllerMode = NodeController::NodeControllerMode::Node; });
+
+    buttonPane.addButton(&CustomLookAndFeel::drawModulatorIcon, "Modulator Mode",
+        [this]() { applicationContext.nodeController->nodeControllerMode = NodeController::NodeControllerMode::Modulator; });
+
+    buttonPane.addButton(&CustomLookAndFeel::drawTraversalFlagIcon, "Traversal Flag Mode",
+        [this]() { applicationContext.nodeController->nodeControllerMode = NodeController::NodeControllerMode::TraversalFlag; });
+
+    buttonPane.setSelectedButton(&nodeButton);
+}
+
+void Titlebar::configureTransportPane()
+{
+    playButton = &transportPane.addButton(&CustomLookAndFeel::drawPlayIcon, "Play / Pause",
+        [this]() { applyPlaybackState(!applicationContext.canvas->start); });
+
+    if (applicationContext.processor->wrapperType != juce::AudioProcessor::wrapperType_Standalone) {
+        playButton->onClick = nullptr;
+
+        playButton->setTooltip("Follows host transport");
+    }
+
+    playButton->setSelected(! applicationContext.processor->isPlaying.load());
+
+    transportPane.addButton(&CustomLookAndFeel::drawResetIcon, "Reset",
+        [this]() { resetTraversals(); });
+
+    if (applicationContext.processor->wrapperType == juce::AudioProcessor::wrapperType_Standalone) {
+        return;
+    }
+
+    syncButton = &transportPane.addButton(&CustomLookAndFeel::drawSyncIcon, "Sync to host playhead",
+        [this]() { syncAttachment->setValueAsCompleteGesture(static_cast<float>(! syncButton->state.isSelected)); });
+
+    syncAttachment = std::make_unique<juce::ParameterAttachment>(
+        *applicationContext.processor->valueTreeState.getParameter(SequenceTreeAudioProcessor::hostSyncParameterId),
+        [this](float synced) { syncButton->setSelected(synced >= 0.5f); });
+
+    syncAttachment->sendInitialUpdate();
+}
+
+void Titlebar::configureUndoRedoPane()
+{
+    undoRedoPane.addButton(&CustomLookAndFeel::drawUndoIcon, "Undo",
+        [this]() { applicationContext.undoManager->undo(); });
+
+    undoRedoPane.addButton(&CustomLookAndFeel::drawRedoIcon, "Redo",
+        [this]() { applicationContext.undoManager->redo(); });
+}
+
+void Titlebar::resetTraversals()
+{
+    applicationContext.processor->resetRequested.store(true);
+
+    if (auto* canvas = applicationContext.canvas) {
+        canvas->arrowManager.resetAllProgress();
+    }
 }

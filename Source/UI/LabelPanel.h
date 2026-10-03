@@ -1,9 +1,4 @@
-//
-// Created by Eli Baumgardner on 8/16/26.
-//
-
-#ifndef SEQUENCETREE_LABELPANEL_H
-#define SEQUENCETREE_LABELPANEL_H
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Util/ApplicationContext.h"
@@ -11,34 +6,36 @@
 
 #include <span>
 
-
-class LabelPanel : public juce::Component {
+class LabelPanel : public juce::Component
+{
 public:
 
-    LabelPanel(const ApplicationContext& context);
+    static constexpr float labelAspectRatio = 0.3f;
+    static constexpr float labelGapRatio    = 0.12f;
 
-    void paint(juce::Graphics& g) override;
+    std::vector<std::unique_ptr<FileLabel>> labels;
+
+    std::function<void(FileLabel*)>       onLabelClicked;
+    std::function<void(int)>              onLabelRemoved;
+    std::function<void(std::vector<int>)> onLabelsReordered;
+
+    explicit LabelPanel(const ApplicationContext& context);
+
+    void paint(juce::Graphics& graphics) override;
     void resized() override;
 
-    void mouseDrag (const juce::MouseEvent& e) override;
-    void mouseDown (const juce::MouseEvent& e) override;
-    void mouseUp   (const juce::MouseEvent& e) override;
+    void mouseDrag(const juce::MouseEvent& event) override;
+    void mouseDown(const juce::MouseEvent& event) override;
+    void mouseUp(const juce::MouseEvent& event) override;
+
     void addFileLabel(juce::String fileName);
     void removeFileLabel(const FileLabel* label);
     void setSelectedLabel(const FileLabel* label);
     void applyOrder(std::span<const int> fileIds);
 
-    std::vector<std::unique_ptr<FileLabel>> labels;
-
-    std::function<void(FileLabel*)>        onLabelClicked;
-    std::function<void(int)>               onLabelRemoved;
-    std::function<void(std::vector<int>)>  onLabelsReordered;
-    static constexpr float labelAspectRatio = 0.3f;
-    static constexpr float labelGapRatio    = 0.12f;
-
 private:
 
-    int labelIndexAt(int y) const;
+    int labelIndexAt(int positionY) const;
 
     int  labelHeight  = 0;
     int  labelGap     = 0;
@@ -47,6 +44,3 @@ private:
 
     const ApplicationContext& context;
 };
-
-
-#endif //SEQUENCETREE_LABELPANEL_H

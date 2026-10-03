@@ -1,5 +1,5 @@
 #include "NodeCreationDispatcher.h"
-#include "../UI/Node/NodeFactory.h"
+#include "../Graph/NodeFactory.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "../Graph/GraphState.h"
 
@@ -16,12 +16,10 @@ juce::ValueTree NodeCreationDispatcher::create(NodeCreationMode         mode,
         case NodeCreationMode::Node:
         {
             if (makeAlternative) {
-                return NodeFactory::createNode(state, parentNodeId, ValueTreeIdentifiers::AlternativeNodeData,
-                                               position, undoManager);
+                return NodeFactory::createNode(state, parentNodeId, ValueTreeIdentifiers::AlternativeNodeData, position, undoManager);
             }
 
-            return NodeFactory::createNode(state, parentNodeId, ValueTreeIdentifiers::NodeData,
-                                           position, undoManager);
+            return NodeFactory::createNode(state, parentNodeId, ValueTreeIdentifiers::NodeData, position, undoManager);
         }
 
         case NodeCreationMode::Modulator:

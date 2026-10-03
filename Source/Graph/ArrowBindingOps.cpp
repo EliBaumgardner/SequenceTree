@@ -30,19 +30,18 @@ ArrowInfo ArrowBindingOps::getArrowInfo(const juce::ValueTree& arrowTree)
     }
 
     arrowInfo.type = static_cast<ArrowType>(static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowType,
-                                                                       static_cast<int>(arrowInfo.type))));
+                                                                               static_cast<int>(arrowInfo.type))));
 
     arrowInfo.xBinding = static_cast<ArrowBinding>(static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowXBinding,
-                                                                              static_cast<int>(arrowInfo.xBinding))));
+                                                                               static_cast<int>(arrowInfo.xBinding))));
 
     arrowInfo.yBinding = static_cast<ArrowBinding>(static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowYBinding,
-    static_cast<int>(arrowInfo.yBinding))));
+                                                                               static_cast<int>(arrowInfo.yBinding))));
 
     arrowInfo.xMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowXMultiplier, arrowInfo.xMultiplier);
     arrowInfo.yMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowYMultiplier, arrowInfo.yMultiplier);
     arrowInfo.isSynced    = arrowTree.getProperty(ValueTreeIdentifiers::ArrowSync,        arrowInfo.isSynced);
-    arrowInfo.durationOverride = arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration,
-                                                       arrowInfo.durationOverride);
+    arrowInfo.durationOverride = arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration, arrowInfo.durationOverride);
 
     return arrowInfo;
 }
@@ -161,12 +160,10 @@ void ArrowBindingOps::clearArrowDurations(int nodeId, juce::UndoManager* undoMan
             return;
         }
 
-        const int durationOverride = arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration,
-                                                           ArrowInfo::noDurationOverride);
+        const int durationOverride = arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride);
 
         if (durationOverride != ArrowInfo::noDurationOverride) {
-            arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration,
-                                  ArrowInfo::noDurationOverride, undoManager);
+            arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride, undoManager);
         }
     };
 
@@ -209,8 +206,7 @@ void ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManager* undoManag
             const int parentX = parent.getProperty(ValueTreeIdentifiers::XPosition);
             const int parentY = parent.getProperty(ValueTreeIdentifiers::YPosition);
 
-            applyArrowPitchOffset(graphState.getConnection(parentId, nodeId), nodeId,
-                                  centreX - parentX, centreY - parentY, undoManager);
+            applyArrowPitchOffset(graphState.getConnection(parentId, nodeId), nodeId, centreX - parentX, centreY - parentY, undoManager);
         }
     }
 
@@ -238,9 +234,7 @@ void ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManager* undoManag
     for (int i = 0; i < danglingArrows.getNumChildren(); ++i) {
         juce::ValueTree arrowTree = danglingArrows.getChild(i);
 
-        applyArrowPitchOffset(arrowTree, nodeId,
-                              static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
-                              static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)),
-                              undoManager);
+        applyArrowPitchOffset(arrowTree, nodeId, static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
+                              static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)), undoManager);
     }
 }

@@ -81,18 +81,6 @@ private:
         BoxSelecting
     };
 
-    enum class SelectionMenuItem {
-        Copy = 1,
-        Paste,
-        Remove
-    };
-
-    enum class ArrowMenuItem {
-        EditAllowedTraversals = 1,
-        TraversalArrow,
-        SyncModulator
-    };
-
     void handleCanvasMouseDown (const juce::MouseEvent& e);
     void handleNodeMouseDown   (const juce::MouseEvent& e, Node& node);
 
@@ -176,6 +164,4 @@ private:
     juce::ValueTree draggedNodeTree;
 
     int snapSourceNodeId = -1;
-
-    JUCE_DECLARE_WEAK_REFERENCEABLE (NodeController)
 };

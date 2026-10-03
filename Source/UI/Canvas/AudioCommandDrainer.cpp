@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 7/21/26.
-//
-
 #include "AudioCommandDrainer.h"
 
 #include "NodeCanvas.h"
@@ -12,16 +8,16 @@
 #include "../../Plugin/PluginProcessor.h"
 #include "../../Util/ApplicationContext.h"
 
-AudioCommandDrainer::AudioCommandDrainer(NodeCanvas& canvasRef, const ApplicationContext& context)
-    : canvas(canvasRef), applicationContext(context)
+AudioCommandDrainer::AudioCommandDrainer(NodeCanvas& canvas, const ApplicationContext& context)
+    : canvas(canvas), applicationContext(context)
 {
     AudioUIBridge& bridge = applicationContext.processor->eventManager.bridge;
 
     bridge.highlights.drain([](const AudioUIBridge::HighlightCommand&) {});
-    bridge.arrows    .drain([](const AudioUIBridge::ArrowCommand&)     {});
+    bridge.arrows.drain([](const AudioUIBridge::ArrowCommand&) {});
 
     bridge.highlights.overflowed.store(false);
-    bridge.arrows    .overflowed.store(false);
+    bridge.arrows.overflowed.store(false);
 }
 
 void AudioCommandDrainer::drainAll()
@@ -31,12 +27,11 @@ void AudioCommandDrainer::drainAll()
     const bool droppedHighlights = bridge.highlights.overflowed.exchange(false);
     const bool droppedArrows     = bridge.arrows.overflowed.exchange(false);
     const bool droppedCounts     = bridge.counts.overflowed.exchange(false);
-
-    const bool streamBroken = droppedHighlights || droppedArrows;
+    const bool streamBroken      = droppedHighlights || droppedArrows;
 
     if (streamBroken) {
         bridge.highlights.drain([](const AudioUIBridge::HighlightCommand&) {});
-        bridge.arrows    .drain([](const AudioUIBridge::ArrowCommand&)     {});
+        bridge.arrows.drain([](const AudioUIBridge::ArrowCommand&) {});
 
         canvas.nodeManager.clearHighlights();
         canvas.arrowManager.resetAllProgress();
@@ -57,21 +52,19 @@ void AudioCommandDrainer::drainAll()
 
 void AudioCommandDrainer::drainHighlights()
 {
-    applicationContext.processor->eventManager.bridge.highlights.drain(
-        [this](const AudioUIBridge::HighlightCommand& command)
-    {
+    applicationContext.processor->eventManager.bridge.highlights.drain([this](const AudioUIBridge::HighlightCommand& command) {
         if (command.kind == AudioUIBridge::HighlightKind::ClearEveryNode) {
             canvas.nodeManager.clearHighlights();
             return;
         }
 
         Node* const node = canvas.nodeManager.find(command.nodeId);
+
         if (node == nullptr) {
             return;
         }
 
-        const bool shouldHighlight = command.kind == AudioUIBridge::HighlightKind::Show;
-
+        const bool   shouldHighlight = command.kind == AudioUIBridge::HighlightKind::Show;
         juce::Colour highlightColour = juce::Colours::white;
 
         if (shouldHighlight) {
@@ -86,9 +79,7 @@ void AudioCommandDrainer::drainHighlights()
 
 void AudioCommandDrainer::drainArrows()
 {
-    applicationContext.processor->eventManager.bridge.arrows.drain(
-        [this](const AudioUIBridge::ArrowCommand& command)
-    {
+    applicationContext.processor->eventManager.bridge.arrows.drain([this](const AudioUIBridge::ArrowCommand& command) {
         if (command.kind == AudioUIBridge::ArrowKind::TrailReset) {
             if (command.trailId == AudioUIBridge::allTrails) {
                 canvas.arrowManager.resetAllProgress();
@@ -100,40 +91,46 @@ void AudioCommandDrainer::drainArrows()
         }
 
         Node* const parentNode = canvas.nodeManager.find(command.parentNodeId);
+
         if (parentNode == nullptr) {
             return;
         }
 
         const juce::Colour progressColour = getTraversalColour(command.traversalId);
+        const bool         isConnection   = command.kind == AudioUIBridge::ArrowKind::Connection;
+        const auto         arrowRange     = parentNode->nodeArrows.equal_range(command.childNodeId);
 
-        const bool isConnection = command.kind == AudioUIBridge::ArrowKind::Connection;
+        for (auto entry = arrowRange.first; entry != arrowRange.second; ++entry) {
+            Arrow* const arrow = entry->second;
 
-        const auto range = parentNode->nodeArrows.equal_range(command.childNodeId);
-
-        for (auto entry = range.first; entry != range.second; ++entry) {
-            if (entry->second == nullptr || ((entry->second->startNode != nullptr && entry->second->startNode->nodeType == NodeType::TraversalFlag)
-        || (entry->second->endNode   != nullptr && entry->second->endNode->nodeType   == NodeType::TraversalFlag))) {
+            if (arrow == nullptr) {
                 continue;
             }
 
-            entry->second->startProgress(command.trailId, command.durationMs, command.elapsedMs,
-                                         progressColour, isConnection, command.source);
+            const bool startsAtFlag = arrow->startNode != nullptr && arrow->startNode->nodeType == NodeType::TraversalFlag;
+            const bool endsAtFlag   = arrow->endNode   != nullptr && arrow->endNode->nodeType   == NodeType::TraversalFlag;
+
+            if (startsAtFlag || endsAtFlag) {
+                continue;
+            }
+
+            arrow->startProgress(command.trailId, command.durationMs, command.elapsedMs, progressColour, isConnection, command.source);
         }
     });
 }
 
 void AudioCommandDrainer::drainCounts()
 {
-    applicationContext.processor->eventManager.bridge.counts.drain(
-        [this](const AudioUIBridge::CountCommand& command)
-    {
+    applicationContext.processor->eventManager.bridge.counts.drain([this](const AudioUIBridge::CountCommand& command) {
         Node* const node = canvas.nodeManager.find(command.nodeId);
+
         if (node == nullptr) {
             return;
         }
 
         node->displayCurrentCount = command.currentCount;
         node->displayCountLimit   = juce::jmax(1, command.countLimit);
+
         node->repaint();
     });
 }

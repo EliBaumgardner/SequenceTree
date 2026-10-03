@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 8/23/26.
-//
-
 #include "ValueFormat.h"
 
 #include <iterator>
@@ -35,7 +31,9 @@ static const juce::String greekLetters[] = {
 
 static constexpr int greekLetterCount = static_cast<int>(std::size(greekLetters));
 
-GreekLetterFormat::GreekLetterFormat() : NumberFormat(0, greekLetterCount - 1) {}
+GreekLetterFormat::GreekLetterFormat() : NumberFormat(0, greekLetterCount - 1)
+{
+}
 
 juce::String GreekLetterFormat::text(const ValueBinding& binding, TextPurpose purpose) const
 {

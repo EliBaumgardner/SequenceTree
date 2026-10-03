@@ -1,279 +1,299 @@
-/*
-  ==============================================================================
-
-    ColourSelector.cpp
-    Created: 10 Aug 2025 5:05:50pm
-    Author:  Eli Baumgardner
-
-  ==============================================================================
-*/
-
 #include "ColourSelector.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../Canvas/NodeCanvas.h"
-#include "../Node/Encapsulator.h"
+#include "../../Plugin/PluginProcessor.h"
+#include "../Theme/CustomLookAndFeel.h"
 
-juce::Colour MainComponent::presetColours[MainComponent::numPresets] {};
-bool         MainComponent::presetSet[MainComponent::numPresets]     {};
-
-void Cursor::paint(juce::Graphics& g) {
-    auto bounds      = getLocalBounds().toFloat().reduced(0.1f);
-    auto boundsPoint = getLocalBounds().toFloat().reduced(4.5f);
-    g.drawEllipse(bounds, 1.0f);
-    g.drawEllipse(boundsPoint, 1.0f);
-}
-
-void PresetSwatch::paint(juce::Graphics& g) {
-    if (isSet) {
-        g.fillAll(colour);
-    } else {
-        g.fillAll(juce::Colour(0xff3a3a3a));
-    }
-
-    g.setColour(juce::Colours::black.withAlpha(0.5f));
-    g.drawRect(getLocalBounds(), 1);
-}
-
-void PresetSwatch::mouseDown(const juce::MouseEvent& e) {
-    if (e.mods.isRightButtonDown()) {
-        if (onSave) {
-            onSave();
-        }
-    } else if (isSet) {
-        if (onApply) {
-            onApply(colour);
-        }
-    }
-}
-
-MainComponent::MainComponent() {
-    addAndMakeVisible(cursor);
-    cursor.setInterceptsMouseClicks(false, false);
-    generateImage();
-
-    for (int i = 0; i < numPresets; ++i)
-    {
-        auto* const s = swatches.add(new PresetSwatch());
-        s->colour = presetColours[i];
-        s->isSet  = presetSet[i];
-
-        s->onApply = [this](juce::Colour c) {
-            colour = c;
-            updateCursorPosition(c);
-            if (colourPicked) {
-                colourPicked(c);
-            }
-        };
-
-        s->onSave = [this, i, s]() {
-            presetColours[i] = colour;
-            presetSet[i]     = true;
-            s->colour = colour;
-            s->isSet  = true;
-            s->repaint();
-        };
-
-        addAndMakeVisible(s);
-    }
-}
-
-void MainComponent::generateImage() {
-    const int width  = 100;
-    const int height = 100;
-
-    image = juce::Image(juce::Image::RGB, width, height, true);
-
-    for (int y = 0; y < height; ++y)
-        for (int x = 0; x < width; ++x)
-        {
-            const float hue        = juce::jmap(static_cast<float>(x), 0.0f, static_cast<float>(width),  0.0f, 1.0f);
-            const float saturation = juce::jmap(static_cast<float>(y), 0.0f, static_cast<float>(height), 1.0f, 0.0f);
-            image.setPixelAt(x, y, juce::Colour::fromHSV(hue, saturation, 1.0f, 1.0f));
-        }
-}
-
-void MainComponent::paint(juce::Graphics& g) {
-    const int pickerH = getHeight() - presetRowHeight;
-    if (image.isValid()) {
-        g.drawImageWithin(image, 0, 0, getWidth(), pickerH, juce::RectanglePlacement::stretchToFit);
-    }
-
-    g.setColour(juce::Colour(0xff2a2a2a));
-    g.fillRect(0, pickerH, getWidth(), presetRowHeight);
-}
-
-void MainComponent::resized() {
-    const int pickerH   = getHeight() - presetRowHeight;
-    const int swatchSize = presetRowHeight - 4;
-    const int padding    = 2;
-    const int startX     = padding;
-    const int swatchY    = pickerH + (presetRowHeight - swatchSize) / 2;
-
-    for (int i = 0; i < numPresets; ++i)
-        swatches[i]->setBounds(startX + i * (swatchSize + padding), swatchY, swatchSize, swatchSize);
-
-    updateCursorPosition(colour);
-}
-
-void MainComponent::mouseDrag(const juce::MouseEvent& event) {
-    const int pickerH = getHeight() - presetRowHeight;
-    if (event.y >= pickerH) {
-        return;
-    }
-
-    cursor.setCentrePosition(event.getPosition());
-
-    if (image.isValid()) {
-        const float imageX = juce::jmap<float>(event.x, 0.0f, static_cast<float>(getWidth()),  0.0f, static_cast<float>(image.getWidth()));
-        const float imageY = juce::jmap<float>(event.y, 0.0f, static_cast<float>(pickerH),     0.0f, static_cast<float>(image.getHeight()));
-
-        const int ix = juce::jlimit(0, image.getWidth()  - 1, static_cast<int>(imageX));
-        const int iy = juce::jlimit(0, image.getHeight() - 1, static_cast<int>(imageY));
-
-        colour = image.getPixelAt(ix, iy);
-        if (colourPicked) {
-            colourPicked(colour);
-        }
-    }
-}
-
-void MainComponent::updateCursorPosition(juce::Colour selectedColour) {
-    colour = selectedColour;
-
-    float h, s, v;
-    colour.getHSB(h, s, v);
-
-    const int pickerH = getHeight() - presetRowHeight;
-    const int x = static_cast<int>(juce::jmap(h, 0.0f, 1.0f, 0.0f, static_cast<float>(getWidth())));
-    const int y = static_cast<int>(juce::jmap(s, 1.0f, 0.0f, 0.0f, static_cast<float>(pickerH)));
-
-    cursor.setBounds(x, y, 10, 10);
-}
-
-
-ColourSelector::ColourSelector(const ApplicationContext& context)
+ColourPicker::ColourPicker(const ApplicationContext& context)
     : applicationContext(context)
 {
+    setLookAndFeel(context.lookAndFeel);
 }
 
-void ColourSelector::paint(juce::Graphics& g) {
+ColourPicker::~ColourPicker()
+{
+    setLookAndFeel(nullptr);
+}
 
-    juce::Colour fill = colour;
+void ColourPicker::paint(juce::Graphics& graphics)
+{
+    const Theme&             theme                      = CustomLookAndFeel::get(*this);
+    const juce::Colour       currentColour              = juce::Colour::fromHSV(hue, saturation, brightness, 1.0f);
+    const juce::ValueTree    presets                    = applicationContext.processor->colourPresets;
+    const float              cursorDiameter             = getWidth() * cursorRadiusRatio * 2.0f;
+    const float              presetGap                  = getWidth() * presetGapRatio;
+    const float              presetWidth                = (presetArea.getWidth() - presetGap * (presetCount - 1)) / presetCount;
+    const juce::Point<float> saturationBrightnessCentre { saturationBrightnessArea.getX() + saturation * saturationBrightnessArea.getWidth(),
+                                                          saturationBrightnessArea.getY() + (1.0f - brightness) * saturationBrightnessArea.getHeight() };
+    const juce::Point<float> hueCentre                  { hueArea.getX() + hue * hueArea.getWidth(), static_cast<float>(hueArea.getCentreY()) };
+    const auto               saturationBrightnessCursor = juce::Rectangle<float>(cursorDiameter, cursorDiameter).withCentre(saturationBrightnessCentre);
+    const auto               hueCursor                  = juce::Rectangle<float>(cursorDiameter, cursorDiameter).withCentre(hueCentre);
 
-    if (requiresNode && node == nullptr) {
-        fill = juce::Colours::grey.withAlpha(0.3f);
-    }
+    graphics.drawImage(saturationBrightnessImage, saturationBrightnessArea.toFloat());
+    graphics.drawImage(hueImage, hueArea.toFloat());
 
-    const auto outline = getLocalBounds().toFloat();
-    const auto inside  = outline.reduced(1.0f);
+    graphics.setColour(theme.popupMenuBorderColour);
+    graphics.drawRect(saturationBrightnessArea);
+    graphics.drawRect(hueArea);
 
-    switch (shape) {
-        case Shape::Circle:
-            g.setColour(fill);
-            g.fillEllipse(inside);
+    graphics.setColour(theme.selectionRingColour);
+    graphics.drawEllipse(saturationBrightnessCursor.expanded(cursorRingWidth), cursorRingWidth);
+    graphics.drawEllipse(hueCursor.expanded(cursorRingWidth), cursorRingWidth);
 
-            g.setColour(juce::Colours::black);
-            g.drawEllipse(inside, 1.0f);
-            break;
+    graphics.setColour(theme.hoverRingColour);
+    graphics.drawEllipse(saturationBrightnessCursor, cursorRingWidth);
+    graphics.drawEllipse(hueCursor, cursorRingWidth);
 
-        case Shape::Square:
-            g.setColour(juce::Colours::black);
-            g.drawRect(outline, 1.0f);
+    graphics.setColour(originalColour);
+    graphics.fillRect(originalArea);
 
-            g.setColour(fill);
-            g.fillRect(inside);
-            break;
+    graphics.setColour(currentColour);
+    graphics.fillRect(currentArea);
+
+    graphics.setColour(currentColour.contrasting());
+    graphics.setFont(juce::FontOptions(currentArea.getHeight() * hexTextHeightRatio));
+    graphics.drawText("#" + currentColour.toDisplayString(false), currentArea, juce::Justification::centred);
+
+    graphics.setColour(theme.popupMenuBorderColour);
+    graphics.drawRect(originalArea.getUnion(currentArea));
+
+    for (int presetIndex = 0; presetIndex < presetCount; ++presetIndex) {
+        const juce::ValueTree preset      = presets.getChild(presetIndex);
+        const bool            isSet       = preset.hasProperty(ValueTreeIdentifiers::PresetColour);
+        const auto            slot        = juce::Rectangle<float>(presetArea.getX() + presetIndex * (presetWidth + presetGap),
+                                                                   static_cast<float>(presetArea.getY()), presetWidth,
+                                                                   static_cast<float>(presetArea.getHeight()));
+        const float           glyphLength = slot.getWidth() * presetGlyphRatio;
+
+        if (isSet) {
+            graphics.setColour(juce::Colour::fromString(preset.getProperty(ValueTreeIdentifiers::PresetColour).toString()));
+            graphics.fillRoundedRectangle(slot, Theme::paneCornerRadius);
+        }
+        else {
+            graphics.setColour(theme.baseDarkColour2);
+            graphics.fillRoundedRectangle(slot, Theme::paneCornerRadius);
+
+            graphics.setColour(theme.captionColour);
+            graphics.drawLine(slot.getCentreX() - glyphLength * 0.5f, slot.getCentreY(), slot.getCentreX() + glyphLength * 0.5f, slot.getCentreY());
+            graphics.drawLine(slot.getCentreX(), slot.getCentreY() - glyphLength * 0.5f, slot.getCentreX(), slot.getCentreY() + glyphLength * 0.5f);
+        }
+
+        graphics.setColour(theme.popupMenuBorderColour);
+        graphics.drawRoundedRectangle(slot, Theme::paneCornerRadius, Theme::popupMenuBorderThickness);
     }
 }
 
-void ColourSelector::mouseDown(const juce::MouseEvent& event) {
+void ColourPicker::resized()
+{
+    const int padding = juce::roundToInt(getWidth() * paddingRatio);
+    const int gap     = juce::roundToInt(getWidth() * sectionGapRatio);
+    auto      bounds  = getLocalBounds().reduced(padding);
+    const int width   = bounds.getWidth();
 
-    pickerLauncher.show();
+    presetArea = bounds.removeFromBottom(juce::roundToInt(width * presetRowHeightRatio));
+    bounds.removeFromBottom(gap);
 
-    MainComponent* const picker = pickerLauncher.getContentAs<MainComponent>();
-    if (picker == nullptr) {
+    currentArea  = bounds.removeFromBottom(juce::roundToInt(width * swatchRowHeightRatio));
+    originalArea = currentArea.removeFromLeft(currentArea.getWidth() / 2);
+    bounds.removeFromBottom(gap);
+
+    hueArea = bounds.removeFromBottom(juce::roundToInt(width * hueStripHeightRatio));
+    bounds.removeFromBottom(gap);
+
+    saturationBrightnessArea = bounds;
+    hueImage                 = juce::Image(juce::Image::RGB, juce::jmax(1, hueArea.getWidth()), 1, false);
+
+    for (int column = 0; column < hueImage.getWidth(); ++column) {
+        hueImage.setPixelAt(column, 0, juce::Colour::fromHSV(static_cast<float>(column) / hueImage.getWidth(), 1.0f, 1.0f, 1.0f));
+    }
+
+    renderSaturationBrightnessImage();
+}
+
+void ColourPicker::mouseDown(const juce::MouseEvent& event)
+{
+    const juce::Point<int> position      = event.getPosition();
+    const juce::Colour     currentColour = juce::Colour::fromHSV(hue, saturation, brightness, 1.0f);
+    juce::ValueTree        presets       = applicationContext.processor->colourPresets;
+    juce::Colour           chosenColour  = originalColour;
+
+    applicationContext.undoManager->beginNewTransaction();
+
+    if (saturationBrightnessArea.contains(position)) {
+        dragTarget = DragTarget::SaturationBrightness;
+
+        mouseDrag(event);
+
         return;
     }
 
-    picker->updateCursorPosition(colour);
-    picker->colourPicked = [this](juce::Colour c) {
+    if (hueArea.contains(position)) {
+        dragTarget = DragTarget::Hue;
 
-        if(node != nullptr) {
-            node->nodeColour = c;
-            node->repaint();
-            applyColourToDescendants(node, c);
+        mouseDrag(event);
+
+        return;
+    }
+
+    if (presetArea.contains(position)) {
+        const int       presetIndex = juce::jlimit(0, presetCount - 1, (position.x - presetArea.getX()) * presetCount / presetArea.getWidth());
+        juce::ValueTree preset      = presets.getChild(presetIndex);
+
+        if (event.mods.isPopupMenu() || ! preset.hasProperty(ValueTreeIdentifiers::PresetColour)) {
+            preset.setProperty(ValueTreeIdentifiers::PresetColour, currentColour.toString(), nullptr);
+
+            repaint();
+
+            return;
         }
 
-        colour = c;
+        chosenColour = juce::Colour::fromString(preset.getProperty(ValueTreeIdentifiers::PresetColour).toString());
+    }
+    else if (! originalArea.contains(position)) {
+        return;
+    }
+
+    chosenColour.getHSB(hue, saturation, brightness);
+
+    renderSaturationBrightnessImage();
+    repaint();
+
+    if (onColourPicked) {
+        onColourPicked(chosenColour);
+    }
+}
+
+void ColourPicker::mouseDrag(const juce::MouseEvent& event)
+{
+    const juce::Point<int> position           = event.getPosition();
+    const float            horizontalFraction = static_cast<float>(position.x - saturationBrightnessArea.getX()) / saturationBrightnessArea.getWidth();
+    const float            verticalFraction   = static_cast<float>(position.y - saturationBrightnessArea.getY()) / saturationBrightnessArea.getHeight();
+    const float            hueFraction        = static_cast<float>(position.x - hueArea.getX()) / hueArea.getWidth();
+
+    switch (dragTarget) {
+        case DragTarget::SaturationBrightness:
+            saturation = juce::jlimit(0.0f, 1.0f, horizontalFraction);
+            brightness = 1.0f - juce::jlimit(0.0f, 1.0f, verticalFraction);
+            break;
+
+        case DragTarget::Hue:
+            hue = juce::jlimit(0.0f, 1.0f, hueFraction);
+
+            renderSaturationBrightnessImage();
+            break;
+
+        case DragTarget::None:
+            return;
+    }
+
+    repaint();
+
+    if (onColourPicked) {
+        onColourPicked(juce::Colour::fromHSV(hue, saturation, brightness, 1.0f));
+    }
+}
+
+void ColourPicker::mouseUp(const juce::MouseEvent&)
+{
+    dragTarget = DragTarget::None;
+}
+
+void ColourPicker::showColour(juce::Colour colour)
+{
+    juce::ValueTree presets = applicationContext.processor->colourPresets;
+
+    originalColour = colour;
+
+    colour.getHSB(hue, saturation, brightness);
+
+    while (presets.getNumChildren() < presetCount) {
+        presets.appendChild(juce::ValueTree(ValueTreeIdentifiers::ColourPreset), nullptr);
+    }
+
+    renderSaturationBrightnessImage();
+    repaint();
+}
+
+void ColourPicker::renderSaturationBrightnessImage()
+{
+    const int width  = juce::jmax(1, saturationBrightnessArea.getWidth());
+    const int height = juce::jmax(1, saturationBrightnessArea.getHeight());
+
+    saturationBrightnessImage = juce::Image(juce::Image::RGB, width, height, false);
+
+    juce::Image::BitmapData pixels(saturationBrightnessImage, juce::Image::BitmapData::writeOnly);
+
+    for (int row = 0; row < height; ++row) {
+        for (int column = 0; column < width; ++column) {
+            const float pixelSaturation = static_cast<float>(column) / width;
+            const float pixelBrightness = 1.0f - static_cast<float>(row) / height;
+
+            pixels.setPixelColour(column, row, juce::Colour::fromHSV(hue, pixelSaturation, pixelBrightness, 1.0f));
+        }
+    }
+}
+
+ColourSelector::ColourSelector(const ApplicationContext& context)
+    : picker(context)
+{
+    setRepaintsOnMouseActivity(true);
+
+    picker.onColourPicked = [this](juce::Colour pickedColour) {
+        colour = pickedColour;
+
         repaint();
 
         if (onColourPicked) {
-            onColourPicked(c);
+            onColourPicked(pickedColour);
         }
     };
 }
 
-void ColourSelector::setNode(Node* node) {
+void ColourSelector::paint(juce::Graphics& graphics)
+{
+    const Theme& theme   = CustomLookAndFeel::get(*this);
+    const auto   bounds  = getLocalBounds().toFloat().reduced(Theme::popupMenuBorderThickness);
+    juce::Colour fill    = colour;
+    juce::Colour outline = theme.popupMenuBorderColour;
 
-    this->node = node;
-
-    if (node == nullptr) {
-        repaint();
-        return;
+    if (! isEnabled()) {
+        fill = theme.buttonBarColour;
     }
 
-    colour = node->nodeColour;
-    repaint();
-    
-    if (MainComponent* const picker = pickerLauncher.getContentAs<MainComponent>()) {
-        pickerLauncher.toFront();
-        picker->updateCursorPosition(colour);
+    if (isEnabled() && isMouseOver()) {
+        outline = theme.hoverRingColour;
+    }
+
+    switch (shape) {
+        case Shape::Circle:
+            graphics.setColour(fill);
+            graphics.fillEllipse(bounds);
+
+            graphics.setColour(outline);
+            graphics.drawEllipse(bounds, Theme::popupMenuBorderThickness);
+            break;
+
+        case Shape::Square:
+            graphics.setColour(fill);
+            graphics.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
+
+            graphics.setColour(outline);
+            graphics.drawRoundedRectangle(bounds, Theme::paneCornerRadius, Theme::popupMenuBorderThickness);
+            break;
     }
 }
 
-void ColourSelector::applyColourToDescendants(const Node* n, juce::Colour c)
+void ColourSelector::mouseDown(const juce::MouseEvent&)
 {
-    if (const auto* const encapsulator = dynamic_cast<const Encapsulator*>(n)) {
-        applicationContext.canvas->encapsulationView.recolourGroup(*encapsulator, c);
-        return;
-    }
+    juce::Component* const editor      = getTopLevelComponent();
+    const int              pickerWidth = juce::roundToInt(editor->getHeight() * pickerWidthRatio);
 
-    const int encapsulatorId = n->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+    picker.setSize(pickerWidth, juce::roundToInt(pickerWidth * ColourPicker::heightToWidthRatio));
 
-    std::unordered_set<int> visited { static_cast<int>(n->nodeValueTree.getProperty(ValueTreeIdentifiers::Id)) };
-    applyColourToDescendants(n, c, encapsulatorId, visited);
-}
+    picker.showColour(colour);
 
-void ColourSelector::applyColourToDescendants(const Node* n, juce::Colour c, int encapsulatorId,
-                                              std::unordered_set<int>& visited)
-{
-    NodeCanvas* const canvas = applicationContext.canvas;
+    pickerBox = std::make_unique<juce::CallOutBox>(picker, editor->getLocalArea(this, getLocalBounds()), editor);
 
-    const juce::ValueTree childrenIds = n->nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-    if (! childrenIds.isValid()) {
-        return;
-    }
+    pickerBox->setLookAndFeel(&getLookAndFeel());
 
-    for (int i = 0; i < childrenIds.getNumChildren(); ++i)
-    {
-        const int childId = childrenIds.getChild(i).getProperty(ValueTreeIdentifiers::Id);
-        if (! visited.insert(childId).second) {
-            continue;
-        }
-
-        Node* const childNode = canvas->nodeManager.find(childId);
-        if (childNode == nullptr) {
-            continue;
-        }
-
-        const int childEncapsulatorId = childNode->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-
-        if (encapsulatorId >= 0 && childEncapsulatorId != encapsulatorId) {
-            continue;
-        }
-
-        childNode->nodeColour = c;
-        childNode->repaint();
-        applyColourToDescendants(childNode, c, encapsulatorId, visited);
-    }
+    pickerBox->enterModalState(true);
 }

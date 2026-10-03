@@ -41,6 +41,7 @@ struct Expression
     double decimalValue = 0.0;
 
     std::string name;
+    std::string scope;
 
     TokenKind op = TokenKind::Null;
 
@@ -128,6 +129,8 @@ struct ClassDeclaration
 {
     std::string name;
 
+    std::vector<std::string>         imports;
+
     std::vector<MemberDeclaration>   members;
     std::vector<FunctionDeclaration> functions;
 };
@@ -159,6 +162,7 @@ private:
 
     ValueType parseType();
 
+    void parseImports(ClassDeclaration& declaration);
     void parseClassHeader(ClassDeclaration& declaration);
     void parseClassBody(ClassDeclaration& declaration);
     void parseClassMember(ClassDeclaration& declaration);

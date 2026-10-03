@@ -1,48 +1,23 @@
 #include "BottomBar.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
+#include "../../Plugin/PluginProcessor.h"
 #include "../../Util/NodeInfo.h"
 
 BottomBar::BottomBar(const ApplicationContext& context)
-    : Bar(context, { Orientation::horizontal })
+    : Bar(context, { Orientation::Horizontal })
 {
-    paintPanel = std::make_unique<PaintToolSettings>(applicationContext);
+    arrowButton.icon = &CustomLookAndFeel::drawArrowToolIcon;
+    spanTool.icon    = &CustomLookAndFeel::drawSpanToolIcon;
 
-    addAndMakeVisible(*paintPanel);
+    arrowButton.setLookAndFeel(context.lookAndFeel);
+    spanTool.setLookAndFeel(context.lookAndFeel);
 
-    arrowButton = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawArrowToolIcon(g, bounds, state);
-        }, applicationContext.lookAndFeel);
-
-    arrowButton->setTooltip("Arrow Types");
-    arrowButton->onClick = [this]() { arrowWindowLauncher.show(); };
-
-    addAndMakeVisible(*arrowButton);
-
-    spanTool = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawSpanToolIcon(g, bounds, state);
-        }, applicationContext.lookAndFeel);
-
-    spanTool->setTooltip("Node Span");
-
-    spanTool->onClick = [this]() {
-        spanTool->toggleSelected();
-        applicationContext.canvas->setSpanMode(spanTool->isSelected());
-    };
-
-    addAndMakeVisible(*spanTool);
-
-    quaverTool = &quaverPane.addButton(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawQuaverToolIcon(g, bounds, state);
-        },
-        "Note",
+    quaverTool = &quaverPane.addButton(&CustomLookAndFeel::drawQuaverToolIcon, "Note",
         [this]() {
-            quaverTool->toggleSelected();
+            quaverTool->setSelected(! quaverTool->state.isSelected);
 
-            if (quaverTool->isSelected()) {
+            if (quaverTool->state.isSelected) {
                 applicationContext.canvas->setQuaverMode(NodeCanvas::QuaverMode::Preview);
                 return;
             }
@@ -50,69 +25,104 @@ BottomBar::BottomBar(const ApplicationContext& context)
             applicationContext.canvas->setQuaverMode(NodeCanvas::QuaverMode::Off);
         });
 
-    countsLabel.setText("counts:", juce::dontSendNotification);
-    countsLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    countsLabel.setJustificationType(juce::Justification::centredLeft);
-    countsLabel.setBorderSize({});
-    countsLabel.setMinimumHorizontalScale(1.0f);
+    arrowButton.setTooltip("Arrow Types");
+    spanTool.setTooltip("Node Span");
+    countsField.editor.setTooltip("Counts");
 
-    countsEditor.setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
-    countsEditor.wheelResponse = ValueEditor::WheelResponse::StepValue;
-    countsEditor.boundValue.referTo(applicationContext.canvas->quaverCount);
-    countsEditor.setTooltip("Counts");
+    arrowButton.onClick = [this]() { arrowWindowLauncher.show(); };
 
+    spanTool.onClick = [this]() {
+        spanTool.setSelected(! spanTool.state.isSelected);
+
+        applicationContext.canvas->setSpanMode(spanTool.state.isSelected);
+    };
+
+    quaverTool->onRightClick = [this]() { showQuaverMenu(); };
+
+    countsField.label.setText("counts:", juce::dontSendNotification);
+
+    countsField.editor.setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
+
+    countsField.editor.wheelResponse = ValueEditor::WheelResponse::StepValue;
+
+    countsField.editor.boundValue.referTo(applicationContext.canvas->quaverCount);
+
+    addAndMakeVisible(paintPanel);
+    addAndMakeVisible(arrowButton);
+    addAndMakeVisible(spanTool);
     addAndMakeVisible(quaverPane);
-    addAndMakeVisible(countsLabel);
-    addAndMakeVisible(countsEditor);
+    addAndMakeVisible(countsField);
+}
+
+void BottomBar::resized()
+{
+    auto                 bounds          = getContentBounds();
+    const int            width           = bounds.getWidth();
+    const int            height          = bounds.getHeight();
+    const int            spacing         = juce::roundToInt(width * Theme::contentSpacingRatio);
+    const int            toolSide        = juce::jmin(height, juce::roundToInt(width * toolWidthRatio));
+    const int            paneWidth       = juce::roundToInt(width * quaverPaneWidthRatio);
+    const int            paneInset       = juce::roundToInt(height * Theme::contentInsetRatio);
+    const int            innerHeight     = juce::jmax(0, height - paneInset * 2);
+    const int            buttonSlotWidth = juce::roundToInt(paneWidth * quaverButtonWidthRatio);
+    const int            buttonWidth     = juce::jlimit(0, innerHeight, buttonSlotWidth - paneInset * 2);
+    const int            labelWidth      = juce::roundToInt(paneWidth * countsLabelWidthRatio);
+    const int            editorWidth     = juce::roundToInt(paneWidth * countsEditorWidthRatio);
+    const float          textHeight      = CustomLookAndFeel::get(*this).textHeight;
+    const juce::Font     textFont        { juce::FontOptions(textHeight) };
+    juce::Rectangle<int> quaverPaneBounds;
+
+    paintPanel.sizeField.label.setFont(textFont);
+    paintPanel.flowField.label.setFont(textFont);
+    countsField.label.setFont(textFont);
+
+    paintPanel.sizeField.editor.setFontHeight(textHeight);
+    paintPanel.flowField.editor.setFontHeight(textHeight);
+    countsField.editor.setFontHeight(textHeight);
+
+    paintPanel.setBounds(bounds.removeFromLeft(juce::roundToInt(width * paintPanelWidthRatio)));
+
+    arrowButton.setBounds(bounds.removeFromRight(toolSide).withSizeKeepingCentre(toolSide, toolSide));
+    bounds.removeFromRight(spacing);
+    spanTool.setBounds(bounds.removeFromRight(toolSide).withSizeKeepingCentre(toolSide, toolSide));
+    bounds.removeFromRight(spacing);
+
+    quaverPaneBounds = bounds.removeFromRight(paneWidth);
+    quaverPane.gridLayout = ButtonPane::Grid { buttonWidth, innerHeight, 0, paneInset };
+
+    quaverPane.setBounds(quaverPaneBounds);
+    quaverPane.resized();
+
+    quaverPaneBounds = quaverPaneBounds.reduced(0, paneInset);
+
+    quaverPaneBounds.removeFromLeft(buttonSlotWidth);
+
+    countsField.labelWidth = labelWidth;
+
+    countsField.setBounds(quaverPaneBounds.removeFromLeft(labelWidth + editorWidth));
 }
 
 void BottomBar::applyDisplayMode(NodeDisplayMode mode)
 {
     switch (mode) {
-        case NodeDisplayMode::Pitch:    paintPanel->setPaintMode(PaintToolSettings::PaintSetting::Pitch);    break;
-        case NodeDisplayMode::Velocity: paintPanel->setPaintMode(PaintToolSettings::PaintSetting::Velocity); break;
+        case NodeDisplayMode::Pitch:    paintPanel.setPaintMode(ValueField::PaintLayer::Pitch);    break;
+        case NodeDisplayMode::Velocity: paintPanel.setPaintMode(ValueField::PaintLayer::Velocity); break;
         default: break;
     }
 }
 
-void BottomBar::resized()
+void BottomBar::showQuaverMenu()
 {
-    auto  bounds          = getContentBounds();
-    int   width           = bounds.getWidth();
-    int   height          = bounds.getHeight();
-    int   spacing         = juce::roundToInt(width * Theme::contentSpacingRatio);
-    int   toolSide        = juce::jmin(height, juce::roundToInt(width * toolWidthRatio));
-    int   paneWidth       = juce::roundToInt(width * quaverPaneWidthRatio);
-    int   paneInset       = juce::roundToInt(height * Theme::contentInsetRatio);
-    int   innerHeight     = juce::jmax(0, height - paneInset * 2);
-    int   buttonSlotWidth = juce::roundToInt(paneWidth * quaverButtonWidthRatio);
-    int   buttonWidth     = juce::jlimit(0, innerHeight, buttonSlotWidth - paneInset * 2);
-    int   labelWidth      = juce::roundToInt(paneWidth * countsLabelWidthRatio);
-    int   editorWidth     = juce::roundToInt(paneWidth * countsEditorWidthRatio);
-    float textHeight      = CustomLookAndFeel::get(*this).textHeight;
-    juce::Font textFont   { juce::FontOptions(textHeight) };
-    juce::Rectangle<int> quaverPaneBounds;
+    ContextMenu menu(applicationContext);
 
-    paintPanel->sizeLabel.setFont(textFont);
-    paintPanel->flowLabel.setFont(textFont);
-    paintPanel->sizeEditor->setFontHeight(textHeight);
-    paintPanel->flowEditor->setFontHeight(textHeight);
-    countsLabel.setFont(textFont);
-    countsEditor.setFontHeight(textHeight);
+    menu.addItem("repeat", ContextMenu::ItemKind::Toggle, [this]() {
+        applicationContext.canvas->quaverRepeat = ! applicationContext.canvas->quaverRepeat;
 
-    paintPanel->setBounds(bounds.removeFromLeft(juce::roundToInt(width * paintPanelWidthRatio)));
+        applicationContext.processor->traversalSession.previewRequests.push({
+            .kind   = RTPreviewRequest::Kind::SetRepeat,
+            .repeat = applicationContext.canvas->quaverRepeat
+        });
+    }, true, applicationContext.canvas->quaverRepeat);
 
-    arrowButton->setBounds(bounds.removeFromRight(toolSide).withSizeKeepingCentre(toolSide, toolSide));
-    bounds.removeFromRight(spacing);
-    spanTool->setBounds(bounds.removeFromRight(toolSide).withSizeKeepingCentre(toolSide, toolSide));
-    bounds.removeFromRight(spacing);
-
-    quaverPaneBounds = bounds.removeFromRight(paneWidth);
-    quaverPane.useGridLayout({ buttonWidth, innerHeight, 0, paneInset });
-    quaverPane.setBounds(quaverPaneBounds);
-
-    quaverPaneBounds = quaverPaneBounds.reduced(0, paneInset);
-    quaverPaneBounds.removeFromLeft(buttonSlotWidth);
-    countsLabel.setBounds(quaverPaneBounds.removeFromLeft(labelWidth));
-    countsEditor.setBounds(quaverPaneBounds.removeFromLeft(editorWidth));
+    menu.show(*quaverTool);
 }

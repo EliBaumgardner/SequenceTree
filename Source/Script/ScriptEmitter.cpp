@@ -1,5 +1,6 @@
 #include "ScriptEmitter.h"
 
+#include <algorithm>
 #include <cstddef>
 
 const FieldEntry nodeFieldTable[] = {
@@ -32,6 +33,8 @@ const ContextEntry traversalContextTable[] = {
 
 void Emitter::run(const ClassDeclaration& declaration)
 {
+    imports = declaration.imports;
+
     declareMembers(declaration);
     declareFunctions(declaration);
 
@@ -445,8 +448,7 @@ void Emitter::emitDeclare(const Statement& statement)
         }
 
         if (!emitConversion(valueType, type)) {
-            fail("'" + statement.name + "' holds " + typeName(type) + ", but this is "
-                 + typeName(valueType), *statement.value);
+            fail("'" + statement.name + "' holds " + typeName(type) + ", but this is " + typeName(valueType), *statement.value);
         }
     }
 
@@ -517,8 +519,7 @@ void Emitter::emitAssign(const Statement& statement)
     }
 
     if (!emitConversion(valueType, type)) {
-        fail("'" + target.name + "' holds " + typeName(type) + ", but this is " + typeName(valueType),
-             *statement.value);
+        fail("'" + target.name + "' holds " + typeName(type) + ", but this is " + typeName(valueType), *statement.value);
     }
 
     emit(storeOpcode, slot);
@@ -827,13 +828,21 @@ ValueType Emitter::emitCall(const Expression& expression)
 {
     const FunctionSignature* const signature = findFunction(expression.name);
 
-    const bool isAdvance  = expression.name == "advance";
-    const bool isPlayNote = expression.name == "playNote";
+    const bool isScoped   = !expression.scope.empty();
+    const bool isImported = std::find(imports.begin(), imports.end(), expression.scope) != imports.end();
+
+    const bool isAdvance    = !isScoped && expression.name == "advance";
+    const bool isPlayNote   = !isScoped && expression.name == "playNote";
+    const bool isCoreRandom = isScoped && expression.scope == "core" && expression.name == "random";
 
     const bool insideAdvance = currentFunction != nullptr && currentFunction->name == "advance";
 
     std::vector<ValueType> parameterTypes;
     ValueType              returnType = ValueType::Void;
+
+    if (isScoped && !isImported) {
+        fail("add 'import " + expression.scope + ";' at the top of the script to use '" + expression.scope + "::" + expression.name + "'", expression);
+    }
 
     if (isAdvance) {
         parameterTypes = { ValueType::Int };
@@ -841,6 +850,13 @@ ValueType Emitter::emitCall(const Expression& expression)
     }
     else if (isPlayNote) {
         parameterTypes = { ValueType::Node, ValueType::Int, ValueType::Int, ValueType::Int };
+    }
+    else if (isCoreRandom) {
+        parameterTypes = { ValueType::Double, ValueType::Double };
+        returnType     = ValueType::Double;
+    }
+    else if (isScoped) {
+        fail("'" + expression.scope + "' has no function '" + expression.name + "'", expression);
     }
     else if (signature != nullptr) {
         parameterTypes = signature->parameterTypes;
@@ -871,6 +887,9 @@ ValueType Emitter::emitCall(const Expression& expression)
     }
     else if (isPlayNote) {
         emit(ScriptOpcode::PlayNote);
+    }
+    else if (isCoreRandom) {
+        emit(ScriptOpcode::CoreRandom);
     }
     else {
         emit(ScriptOpcode::Call, signature->index);

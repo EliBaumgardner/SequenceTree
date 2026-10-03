@@ -44,8 +44,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::
     layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { transposeParameterId, parameterVersion },
                                                          "Transpose", minimumGlobalTranspose, maximumGlobalTranspose, 0));
 
-    layout.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID { hostSyncParameterId, parameterVersion },
-                                                          "Sync To Host", true));
+    layout.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID { hostSyncParameterId, parameterVersion }, "Sync To Host", true));
 
     return layout;
 }
@@ -125,8 +124,7 @@ void SequenceTreeAudioProcessor::releaseResources()
     for (EventManager* manager : { &eventManager, &previewEventManager }) {
         for (const auto& note : manager->scheduler.activeNotes) {
             if (NoteScheduler::isNoteSounding(note)) {
-                pendingNoteOffs.push_back(
-                    juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch));
+                pendingNoteOffs.push_back(juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch));
             }
         }
 
@@ -188,6 +186,7 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
         state.addChild(graphState.nodeMap.createCopy(),       -1, nullptr);
         state.addChild(graphState.traversals.map.createCopy(),-1, nullptr);
         state.addChild(traversalRuleState.rules.createCopy(), -1, nullptr);
+        state.addChild(colourPresets.createCopy(),            -1, nullptr);
         state.addChild(valueTreeState.copyState(),            -1, nullptr);
     }
 
@@ -207,11 +206,13 @@ void SequenceTreeAudioProcessor::applyRestoredState()
     juce::ValueTree restoredNodeMap = restoredTree;
     juce::ValueTree restoredTraversalMap;
     juce::ValueTree restoredRules;
+    juce::ValueTree restoredPresets;
 
     if (restoredTree.getType() == ValueTreeIdentifiers::PluginState) {
         restoredNodeMap      = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
         restoredTraversalMap = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalMap);
         restoredRules        = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalRules);
+        restoredPresets      = restoredTree.getChildWithName(ValueTreeIdentifiers::ColourPresets);
 
         const juce::ValueTree restoredParameters = restoredTree.getChildWithName(valueTreeState.state.getType());
 
@@ -224,6 +225,8 @@ void SequenceTreeAudioProcessor::applyRestoredState()
 
     traversalRuleState.replaceState(restoredRules);
     traversalRuleState.ensureDefaultRule();
+
+    colourPresets.copyPropertiesAndChildrenFrom(restoredPresets, nullptr);
 
     rtGraphBuilder.rebuildAllGraphs();
 
@@ -426,8 +429,7 @@ void SequenceTreeAudioProcessor::followHostTransport(const int numSamples) noexc
                     const bool syncedToHost      = hostSyncParameter.load() >= 0.5f;
 
                     if (jumped && syncedToHost) {
-                        tempoInfo.pendingRelocationSamples = std::round(juce::jmax(0.0, *hostPpq) * 60.0 / tempoInfo.hostBpm
-                                                                        * tempoInfo.currentSampleRate);
+                        tempoInfo.pendingRelocationSamples = std::round(juce::jmax(0.0, *hostPpq) * 60.0 / tempoInfo.hostBpm * tempoInfo.currentSampleRate);
                     }
 
                     tempoInfo.expectedPpq = *hostPpq;

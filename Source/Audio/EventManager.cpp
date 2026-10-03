@@ -45,8 +45,7 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
         traversal.primary.target = traversal.rootId;
         traversal.state          = TraversalLogic::TraversalState::Active;
         traversal.advanceAlternative(context.nodes, traversal.rootId);
-        bridge.highlightNode(*rootNode, AudioUIBridge::HighlightKind::Show, orphanedRunId,
-                             traversal.traversal.key.typeId);
+        bridge.highlightNode(*rootNode, AudioUIBridge::HighlightKind::Show, orphanedRunId, traversal.traversal.key.typeId);
         dispatcher.pushNote(*rootNode, orphanedRunId, context, 0);
     }
 }

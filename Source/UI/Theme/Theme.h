@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 7/21/26.
-//
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -9,13 +5,12 @@
 struct Theme
 {
     juce::Colour dropShadowColour     = juce::Colours::black;
-    juce::Colour baseDarkColour1      = juce::Colour::fromRGB(40,40,38);
-    juce::Colour baseDarkColour2      = juce::Colour::fromRGB(30,30,30);
-    juce::Colour baseLightColour1     = juce::Colour::fromRGB(195,174,132);
-    juce::Colour baseLightColour2     = juce::Colour::fromRGB(162,150,131);
-    juce::Colour baseLightColour3     = juce::Colour::fromRGB(217,217,217);
+    juce::Colour baseDarkColour1      = juce::Colour::fromRGB(40, 40, 38);
+    juce::Colour baseDarkColour2      = juce::Colour::fromRGB(30, 30, 30);
+    juce::Colour baseLightColour1     = juce::Colour::fromRGB(195, 174, 132);
+    juce::Colour baseLightColour2     = juce::Colour::fromRGB(162, 150, 131);
+    juce::Colour baseLightColour3     = juce::Colour::fromRGB(217, 217, 217);
     juce::Colour darkBrownColour      = juce::Colour::fromRGB(48, 32, 22);
-
 
     juce::Colour canvasColour = baseLightColour1.darker();
 
@@ -26,6 +21,7 @@ struct Theme
     juce::Colour editorColour        = baseDarkColour1;
     juce::Colour traversalMenuColour = darkBrownColour;
     juce::Colour textColour          = baseLightColour1;
+    juce::Colour captionColour       = juce::Colours::lightgrey;
     juce::Colour lineNumberColour    = juce::Colours::lightgrey.withAlpha(0.4f);
 
     juce::Colour scriptErrorColour   = juce::Colour::fromRGB(207, 102, 90);
@@ -47,10 +43,6 @@ struct Theme
     juce::Colour scrollBarTrackColour      = baseDarkColour2.darker(0.5f);
     juce::Colour scrollBarThumbColour      = baseLightColour2.withAlpha(0.5f);
     juce::Colour scrollBarThumbHoverColour = baseLightColour2.withAlpha(0.85f);
-
-    juce::Colour valueSliderTrackColour  = baseDarkColour1;
-    juce::Colour valueSliderFillColour   = baseLightColour2.withAlpha(0.35f);
-    juce::Colour valueSliderHandleColour = baseLightColour1;
 
     juce::Colour arrowColour         = juce::Colours::black;
     juce::Colour arrowProgressColour = baseLightColour2;
@@ -85,8 +77,6 @@ struct Theme
 
     static constexpr float paneCornerRadius = 4.0f;
 
-    static constexpr float valueSliderHandleLineWidth = 2.0f;
-
     static constexpr float fileLabelMarkerWidth = 2.0f;
 
     static constexpr float innerButtonBoundsReduction = 5.0f;
@@ -115,4 +105,7 @@ struct Theme
 
     static constexpr int   popupMenuItemHeight      = 18;
     static constexpr int   popupMenuPadding         = 4;
+
+    static constexpr float callOutShadowAlpha  = 0.6f;
+    static constexpr int   callOutShadowRadius = 8;
 };

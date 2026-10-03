@@ -52,6 +52,7 @@ const juce::Identifier ValueTreeIdentifiers::Probability          {"Probability"
 const juce::Identifier ValueTreeIdentifiers::XPosition            {"XPosition"};
 const juce::Identifier ValueTreeIdentifiers::YPosition            {"YPosition"};
 const juce::Identifier ValueTreeIdentifiers::Radius               {"Radius"};
+const juce::Identifier ValueTreeIdentifiers::NodeColour           {"NodeColour"};
 
 const juce::Identifier ValueTreeIdentifiers::MidiPitch            {"MidiPitch"};
 const juce::Identifier ValueTreeIdentifiers::MidiVelocity         {"MidiVelocity"};
@@ -79,3 +80,7 @@ const juce::Identifier ValueTreeIdentifiers::TraversalRuleData    {"TraversalRul
 const juce::Identifier ValueTreeIdentifiers::RuleName             {"RuleName"};
 const juce::Identifier ValueTreeIdentifiers::RuleSource           {"RuleSource"};
 const juce::Identifier ValueTreeIdentifiers::ActiveRuleId         {"ActiveRuleId"};
+
+const juce::Identifier ValueTreeIdentifiers::ColourPresets        {"ColourPresets"};
+const juce::Identifier ValueTreeIdentifiers::ColourPreset         {"ColourPreset"};
+const juce::Identifier ValueTreeIdentifiers::PresetColour         {"PresetColour"};

@@ -1,49 +1,38 @@
-//
-// Created by Eli Baumgardner on 7/20/26.
-//
-
 #include "MenuBar.h"
+#include "../Theme/CustomLookAndFeel.h"
 
 MenuBar::MenuBar(const ApplicationContext& context)
-    : Bar(context, { Orientation::vertical, iconInsetRatio })
+    : Bar(context, { Orientation::Vertical, iconInsetRatio })
 {
-    treeIcon = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawTreeIcon(g, bounds, state);
-        }, context.lookAndFeel);
+    treeIcon.icon      = &CustomLookAndFeel::drawTreeIcon;
+    nodeIcon.icon      = &CustomLookAndFeel::drawNodeIcon;
+    traversalIcon.icon = &CustomLookAndFeel::drawTraversalIcon;
 
-    nodeIcon = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawNodeIcon(g, bounds, state);
-        }, context.lookAndFeel);
+    treeIcon.setLookAndFeel(context.lookAndFeel);
+    nodeIcon.setLookAndFeel(context.lookAndFeel);
+    traversalIcon.setLookAndFeel(context.lookAndFeel);
 
-    traversalIcon = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawTraversalIcon(g, bounds, state);
-        }, context.lookAndFeel);
-
-    addAndMakeVisible(treeIcon.get());
-    addAndMakeVisible(nodeIcon.get());
-    addAndMakeVisible(traversalIcon.get());
+    addAndMakeVisible(treeIcon);
+    addAndMakeVisible(nodeIcon);
+    addAndMakeVisible(traversalIcon);
 }
 
 void MenuBar::resized()
 {
-    const auto bounds = getContentBounds();
+    const auto  bounds         = getContentBounds();
+    const float heightPerIcon  = bounds.getHeight() / (iconCount + (iconCount + 1) * Theme::iconGapRatio);
+    const int   iconSize       = juce::jmax(0, juce::jmin(bounds.getWidth(), static_cast<int>(heightPerIcon)));
+    const int   iconGap        = (bounds.getHeight() - iconSize * iconCount) / (iconCount + 1);
+    const int   iconX          = bounds.getX() + (bounds.getWidth() - iconSize) / 2;
+    int         iconY          = bounds.getY() + iconGap;
 
-    constexpr int numIcons = 3;
+    treeIcon.setBounds(iconX, iconY, iconSize, iconSize);
 
-    const int iconSize = juce::jmax(0, juce::jmin(bounds.getWidth(), static_cast<int>(bounds.getHeight() / (numIcons + (numIcons + 1) * Theme::iconGapRatio))));
-    const int gap      = (bounds.getHeight() - iconSize * numIcons) / (numIcons + 1);
-    const int x        = bounds.getX() + (bounds.getWidth() - iconSize) / 2;
+    iconY += iconSize + iconGap;
 
-    int y = bounds.getY() + gap;
+    nodeIcon.setBounds(iconX, iconY, iconSize, iconSize);
 
-    treeIcon->setBounds(x, y, iconSize, iconSize);
-    y += iconSize + gap;
+    iconY += iconSize + iconGap;
 
-    nodeIcon->setBounds(x, y, iconSize, iconSize);
-    y += iconSize + gap;
-
-    traversalIcon->setBounds(x, y, iconSize, iconSize);
+    traversalIcon.setBounds(iconX, iconY, iconSize, iconSize);
 }

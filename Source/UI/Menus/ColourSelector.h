@@ -1,107 +1,83 @@
-/*
-  ==============================================================================
-
-    ColourSelector.h
-    Created: 10 Aug 2025 5:05:50pm
-    Author:  Eli Baumgardner
-
-  ==============================================================================
-*/
-
 #pragma once
 
-
-#include <unordered_set>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../../Util/ApplicationContext.h"
-#include "../Node/Node.h"
-#include "../PopupWindow.h"
 
-
-class Cursor : public juce::Component
+class ColourPicker : public juce::Component
 {
 public:
-    void paint(juce::Graphics& g) override;
-};
 
-class PresetSwatch : public juce::Component
-{
-public:
-    void paint(juce::Graphics& g) override;
-    void mouseDown(const juce::MouseEvent& e) override;
+    enum class DragTarget { None, SaturationBrightness, Hue };
 
-    juce::Colour colour { juce::Colours::lightgrey };
-    bool isSet = false;
-    std::function<void(juce::Colour)> onApply;
-    std::function<void()>             onSave;
-};
+    explicit ColourPicker(const ApplicationContext& context);
+    ~ColourPicker() override;
 
-class MainComponent : public juce::Component
-{
-public:
-    static constexpr int numPresets     = 8;
-    static constexpr int presetRowHeight = 22;
-
-    MainComponent();
-
-    void paint(juce::Graphics& g) override;
+    void paint(juce::Graphics& graphics) override;
     void resized() override;
-    void mouseDrag(const juce::MouseEvent& event) override;
-    void generateImage();
-    void updateCursorPosition(juce::Colour selectedColour);
 
-    std::function<void(juce::Colour)> colourPicked;
-
-    juce::Colour colour = juce::Colours::white;
-    Cursor cursor;
-    juce::Image image;
-
-    static juce::Colour presetColours[numPresets];
-    static bool         presetSet[numPresets];
-
-private:
-    juce::OwnedArray<PresetSwatch> swatches;
-};
-
-class ColourSelector : public juce::Component, public juce::SettableTooltipClient {
-
-    public:
-
-    explicit ColourSelector(const ApplicationContext& context);
-    void paint(juce::Graphics& g) override;
     void mouseDown(const juce::MouseEvent& event) override;
-    void setNode(Node* node);
+    void mouseDrag(const juce::MouseEvent& event) override;
+    void mouseUp(const juce::MouseEvent& event) override;
 
+    void showColour(juce::Colour colour);
+    void renderSaturationBrightnessImage();
 
-    enum class Shape { Square, Circle };
-
-    juce::Colour colour = juce::Colours::white;
-    juce::Component::SafePointer<Node> node;
-
-    Shape shape = Shape::Square;
-
-    static constexpr int pickerWidth  = 160;
-    static constexpr int pickerHeight = 145;
-
-    bool requiresNode = true;
+    static constexpr int   presetCount          = 8;
+    static constexpr float heightToWidthRatio   = 1.41f;
+    static constexpr float paddingRatio         = 0.05f;
+    static constexpr float sectionGapRatio      = 0.04f;
+    static constexpr float hueStripHeightRatio  = 0.08f;
+    static constexpr float swatchRowHeightRatio = 0.14f;
+    static constexpr float presetRowHeightRatio = 0.1f;
+    static constexpr float presetGapRatio       = 0.02f;
+    static constexpr float presetGlyphRatio     = 0.4f;
+    static constexpr float cursorRadiusRatio    = 0.035f;
+    static constexpr float cursorRingWidth      = 1.5f;
+    static constexpr float hexTextHeightRatio   = 0.45f;
 
     std::function<void(juce::Colour)> onColourPicked;
 
+    juce::Colour originalColour = juce::Colours::white;
+
+    float hue        = 0.0f;
+    float saturation = 0.0f;
+    float brightness = 1.0f;
+
+    DragTarget dragTarget = DragTarget::None;
+
+    juce::Rectangle<int> saturationBrightnessArea;
+    juce::Rectangle<int> hueArea;
+    juce::Rectangle<int> originalArea;
+    juce::Rectangle<int> currentArea;
+    juce::Rectangle<int> presetArea;
+
+    juce::Image saturationBrightnessImage;
+    juce::Image hueImage;
+
 private:
+
     const ApplicationContext& applicationContext;
+};
 
-    PopupWindowLauncher pickerLauncher {
-        "",
-        []() {
-            auto content = std::make_unique<MainComponent>();
-            content->setSize(pickerWidth, pickerHeight);
+class ColourSelector : public juce::Component, public juce::SettableTooltipClient
+{
+public:
 
-            return content;
-        },
-        juce::Colours::white
-    };
+    enum class Shape { Square, Circle };
 
-    void applyColourToDescendants(const Node* n, juce::Colour c);
-    void applyColourToDescendants(const Node* n, juce::Colour c, int encapsulatorId,
-                                  std::unordered_set<int>& visited);
+    explicit ColourSelector(const ApplicationContext& context);
+
+    void paint(juce::Graphics& graphics) override;
+
+    void mouseDown(const juce::MouseEvent& event) override;
+
+    static constexpr float pickerWidthRatio = 0.3f;
+
+    std::function<void(juce::Colour)> onColourPicked;
+
+    juce::Colour colour = juce::Colours::white;
+    Shape        shape  = Shape::Square;
+
+    ColourPicker                      picker;
+    std::unique_ptr<juce::CallOutBox> pickerBox;
 };

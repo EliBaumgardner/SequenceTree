@@ -1,9 +1,4 @@
-//
-// Created by Eli Baumgardner on 7/17/26.
-//
-
-#ifndef SEQUENCETREE_MENUAREA_H
-#define SEQUENCETREE_MENUAREA_H
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -14,14 +9,14 @@ class MenuBar;
 class TraversalMenu;
 class NodeMenu;
 
-class MenuArea : public juce::Component {
-
+class MenuArea : public juce::Component
+{
 public:
 
     explicit MenuArea(const ApplicationContext& context);
     ~MenuArea() override;
 
-    void paint(juce::Graphics& g) override;
+    void paint(juce::Graphics& graphics) override;
     void resized() override;
 
     static constexpr float resizerWidthRatio = 0.4f;
@@ -37,11 +32,9 @@ private:
 
     Bar topBar;
 
-    std::unique_ptr<MenuBar> menuBar = nullptr;
-    std::unique_ptr<TraversalMenu> traversalMenu = nullptr;
-    std::unique_ptr<NodeMenu> nodeMenu = nullptr;
+    std::unique_ptr<MenuBar>       menuBar;
+    std::unique_ptr<TraversalMenu> traversalMenu;
+    std::unique_ptr<NodeMenu>      nodeMenu;
 
     ActivePanel activePanel = ActivePanel::None;
 };
-
-#endif //SEQUENCETREE_MENUAREA_H

@@ -1,79 +1,57 @@
-//
-// Created by Eli Baumgardner on 8/16/26.
-//
-
 #include "FileLabel.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-FileLabel::FileLabel(const ApplicationContext& context) : context(context) {
-
+FileLabel::FileLabel(const ApplicationContext& context)
+    : fileText(context)
+{
     setLookAndFeel(context.lookAndFeel);
-    fileText = std::make_unique<ValueEditor>(context);
-    fileText->setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength,
-                                                     TextFormat::labelCharacters));
-    fileText->autoFitText = true;
-    fileText->textEditor->setColour(juce::CaretComponent::caretColourId, juce::Colours::lightgrey);
-    fileText->editable = false;
 
-    fileText->setInterceptsMouseClicks(false,false);
+    removeButton.icon = &CustomLookAndFeel::drawRemoveIcon;
 
-    removeButton = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawRemoveIcon(g, bounds, state);
-        }, context.lookAndFeel);
+    removeButton.setLookAndFeel(context.lookAndFeel);
 
-    removeButton->setTooltip("Remove Rule");
+    fileText.autoFitText = true;
+    fileText.editable    = false;
 
-    removeButton->onClick = [this] {
+    fileText.setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength, TextFormat::labelCharacters));
+    fileText.setInterceptsMouseClicks(false, false);
+
+    fileText.textEditor->setColour(juce::CaretComponent::caretColourId, juce::Colours::lightgrey);
+
+    removeButton.setTooltip("Remove Rule");
+
+    removeButton.onClick = [this] {
         if (onRemove) {
             onRemove();
         }
     };
 
-    addAndMakeVisible(fileText.get());
-    addAndMakeVisible(removeButton.get());
+    addAndMakeVisible(fileText);
+    addAndMakeVisible(removeButton);
 }
 
-void FileLabel::paint(juce::Graphics &g) {
-
-    CustomLookAndFeel::get(*this).drawFileLabel(g,*this);
+void FileLabel::paint(juce::Graphics& graphics)
+{
+    CustomLookAndFeel::get(*this).drawFileLabel(graphics, *this);
 }
 
 void FileLabel::resized()
 {
-    auto bounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * contentInsetRatio));
+    auto bounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * fileLabelInsetRatio));
 
     const int buttonSide = juce::roundToInt(juce::jmin(bounds.getWidth(), bounds.getHeight()) * removeButtonRatio);
 
-    removeButton->setBounds(bounds.removeFromRight(buttonSide).withSizeKeepingCentre(buttonSide, buttonSide));
+    removeButton.setBounds(bounds.removeFromRight(buttonSide).withSizeKeepingCentre(buttonSide, buttonSide));
 
-    fileText->setBounds(bounds.withSizeKeepingCentre(
-        juce::roundToInt(bounds.getWidth()  * fileTextWidthRatio),
-        juce::roundToInt(bounds.getHeight() * fileTextHeightRatio)));
+    fileText.setBounds(bounds.withSizeKeepingCentre(juce::roundToInt(bounds.getWidth() * fileTextWidthRatio),
+                                                    juce::roundToInt(bounds.getHeight() * fileTextHeightRatio)));
 }
 
-void FileLabel::mouseDown(const juce::MouseEvent &event)
+void FileLabel::mouseDown(const juce::MouseEvent&)
 {
-    DBG("file label clicked");
-
     if (onMouseClicked) {
         onMouseClicked();
     }
-}
-
-void FileLabel::setFileName(const juce::String fileName)
-{
-    fileText->commitText(fileName);
-}
-
-void FileLabel::setSelected(bool shouldBeSelected)
-{
-    if (selected == shouldBeSelected) {
-        return;
-    }
-
-    selected = shouldBeSelected;
-    repaint();
 }
 
 void FileLabel::setGrabbed(bool shouldBeGrabbed)
@@ -83,5 +61,17 @@ void FileLabel::setGrabbed(bool shouldBeGrabbed)
     }
 
     grabbed = shouldBeGrabbed;
+
+    repaint();
+}
+
+void FileLabel::setSelected(bool shouldBeSelected)
+{
+    if (selected == shouldBeSelected) {
+        return;
+    }
+
+    selected = shouldBeSelected;
+
     repaint();
 }

@@ -72,8 +72,7 @@ ScriptCompileResult AudioSnapshotPublisher::publishActiveTraversalRule()
 
 void AudioSnapshotPublisher::publish(std::shared_ptr<Snapshot> snapshot)
 {
-    static_assert(std::atomic<Snapshot*>::is_always_lock_free,
-                  "the audio thread must be able to read the snapshot without a lock");
+    static_assert(std::atomic<Snapshot*>::is_always_lock_free, "the audio thread must be able to read the snapshot without a lock");
 
     snapshot->generation = ++snapshotGeneration;
 

@@ -1,28 +1,22 @@
-//
-// Created by Eli Baumgardner on 6/30/26.
-//
-
-#ifndef SEQUENCETREE_TRAVERSALFLAGNODE_H
-#define SEQUENCETREE_TRAVERSALFLAGNODE_H
+#pragma once
 
 #include "Node.h"
 
-class TraversalFlagNode : public Node {
-
-    public:
+class TraversalFlagNode : public Node
+{
+public:
 
     explicit TraversalFlagNode(const ApplicationContext& context);
-    void paint(juce::Graphics& g) override;
+
+    void paint(juce::Graphics& graphics) override;
     void resized() override;
     bool hitTest(int x, int y) override;
     void bindToTree() override;
 
-    private:
+private:
+
     juce::Path buildTrianglePath() const;
-    float      getBladeLength() const;
+
     juce::Colour outlineColour = juce::Colours::black;
-
-    std::unique_ptr<ValueEditor> traversalNumEditor = nullptr;
+    ValueEditor  traversalNumEditor;
 };
-
-#endif //SEQUENCETREE_TRAVERSALFLAGNODE_H

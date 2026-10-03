@@ -13,7 +13,7 @@ void ArrowAnimation::startTrail(int trailId, int durationMs, int elapsedMs, juce
 
     trail.durationMs = juce::jmax(1, durationMs);
     trail.startMs    = originMs - elapsedMs;
-    trail.t          = static_cast<float>(juce::jlimit(0.0, 1.0, elapsedMs / static_cast<double>(trail.durationMs)));
+    trail.progress   = static_cast<float>(juce::jlimit(0.0, 1.0, elapsedMs / static_cast<double>(trail.durationMs)));
     trail.colour     = colour;
     trail.active     = durationMs > 0;
     trail.oneShot    = oneShot;
@@ -68,12 +68,12 @@ bool ArrowAnimation::advanceSnap(float elapsedSec)
 
     const float springTicks = elapsedSec * snapSpringRateHz;
 
-    snapVelocity += (1.0f - snapT) * snapSpringStiffness * springTicks;
+    snapVelocity += (1.0f - snapProgress) * snapSpringStiffness * springTicks;
     snapVelocity *= std::pow(snapSpringDamping, springTicks);
-    snapT        += snapVelocity * springTicks;
+    snapProgress += snapVelocity * springTicks;
 
     if (snapSettled()) {
-        snapT        = 1.0f;
+        snapProgress = 1.0f;
         snapVelocity = 0.0f;
         return false;
     }
@@ -83,18 +83,16 @@ bool ArrowAnimation::advanceSnap(float elapsedSec)
 
 bool ArrowAnimation::snapSettled()
 {
-    return std::abs(snapT - 1.0f) < snapSettledEpsilon
+    return std::abs(snapProgress - 1.0f) < snapSettledEpsilon
         && std::abs(snapVelocity) < snapSettledEpsilon;
 }
 
 bool ArrowAnimation::advanceTrails()
 {
-    bool anyActive = false;
+    const double nowMs     = juce::Time::getMillisecondCounterHiRes();
+    bool         anyActive = false;
 
-    const double nowMs = juce::Time::getMillisecondCounterHiRes();
-
-    for (auto entry = trails.begin(); entry != trails.end(); )
-    {
+    for (auto entry = trails.begin(); entry != trails.end(); ) {
         Trail& trail = entry->second;
 
         if (! trail.active || (trailsPaused && trail.source == TrailSource::Live)) {
@@ -110,12 +108,12 @@ bool ArrowAnimation::advanceTrails()
                 continue;
             }
 
-            trail.t      = 1.0f;
-            trail.active = false;
+            trail.progress = 1.0f;
+            trail.active   = false;
         }
         else {
-            trail.t   = static_cast<float>(juce::jlimit(0.0, 1.0, normalised));
-            anyActive = true;
+            trail.progress = static_cast<float>(juce::jlimit(0.0, 1.0, normalised));
+            anyActive      = true;
         }
 
         ++entry;

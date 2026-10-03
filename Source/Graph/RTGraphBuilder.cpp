@@ -80,8 +80,7 @@ void RTGraphBuilder::classifyRootConnection(const juce::ValueTree& parentValueTr
         return;
     }
 
-    const int arrowType = childIdTree.getProperty(ValueTreeIdentifiers::ArrowType,
-                                                  static_cast<int>(ArrowType::Node));
+    const int arrowType = childIdTree.getProperty(ValueTreeIdentifiers::ArrowType, static_cast<int>(ArrowType::Node));
 
     connection.isTreeJump  = arrowType == static_cast<int>(ArrowType::Traversal);
     connection.isCrossRoot = arrowType == static_cast<int>(ArrowType::CrossRootTree)
@@ -130,8 +129,7 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
         if (parent.isValid()) {
             const int parentId = parent.getProperty(ValueTreeIdentifiers::Id);
 
-            rtNode.alternativeArrowDuration = durationTo(graphState.getConnection(parentId, rtNode.nodeID),
-                                                        parent);
+            rtNode.alternativeArrowDuration = durationTo(graphState.getConnection(parentId, rtNode.nodeID), parent);
         }
     }
 
@@ -168,8 +166,7 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
         RTNode::DanglingArrow dangling;
 
         dangling.duration   = ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(arrowTree), tipX, tipY);
-        dangling.countLimit = arrowTree.getProperty(ValueTreeIdentifiers::CountLimit,
-                                                    GraphState::defaultNodeCountLimit);
+        dangling.countLimit = arrowTree.getProperty(ValueTreeIdentifiers::CountLimit, GraphState::defaultNodeCountLimit);
 
         collectDisabledTraversals(arrowTree, dangling.disabledTraversals);
 
@@ -199,8 +196,7 @@ void RTGraphBuilder::fillEncapsulation(const juce::ValueTree& nodeValueTree, RTN
         return;
     }
 
-    const int encapsulationSubLoopLimit = encapsulator.getProperty(ValueTreeIdentifiers::SubLoopCountLimit,
-                                                                   GraphState::defaultSubLoopCountLimit);
+    const int encapsulationSubLoopLimit = encapsulator.getProperty(ValueTreeIdentifiers::SubLoopCountLimit, GraphState::defaultSubLoopCountLimit);
 
     const bool encapsulationOverridesEntrySubLoop =
         (encapsulationSubLoopLimit != GraphState::defaultSubLoopCountLimit);
@@ -504,9 +500,7 @@ RTtraversal RTGraphBuilder::buildRTtraversal(TraversalKey key)
         const double storedTempoMultiplier = traversalData.getProperty(ValueTreeIdentifiers::TempoMultiplier);
 
         if (storedTempoMultiplier > 0.0) {
-            rtTraversal.tempoMultiplier = juce::jlimit(RTtraversal::minimumTempoMultiplier,
-                                                       RTtraversal::maximumTempoMultiplier,
-                                                       storedTempoMultiplier);
+            rtTraversal.tempoMultiplier = juce::jlimit(RTtraversal::minimumTempoMultiplier, RTtraversal::maximumTempoMultiplier, storedTempoMultiplier);
         }
 
         if (traversalData.hasProperty(ValueTreeIdentifiers::TraversalChannel)) {

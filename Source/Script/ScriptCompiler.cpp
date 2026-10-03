@@ -38,6 +38,8 @@ ScriptCompileResult compileTraversalScript(const std::string& source)
 const char* defaultTraversalScriptSource()
 {
     return
+        "import core;\n"
+        "\n"
         "// This class runs the traversal. main runs\n"
         "// each time a note ends: it moves the walk\n"
         "// and decides what is heard next.\n"
@@ -76,6 +78,11 @@ const char* defaultTraversalScriptSource()
         "//\n"
         "// traversal.id, traversal.instance and\n"
         "// traversal.random, a fresh number per step.\n"
+        "//\n"
+        "// import core gives core::random(value,\n"
+        "// spread), a decimal spread evenly around\n"
+        "// value: core::random(50, 0.5) is anywhere\n"
+        "// from 25 to 75.\n"
         "//\n"
         "// Members keep their value from one step to\n"
         "// the next. A number starts at 0 and a Node\n"

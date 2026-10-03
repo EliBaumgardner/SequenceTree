@@ -7,8 +7,7 @@
 #include <concepts>
 
 enum class CommandDelivery { Deliver, Record };
-
-enum class TrailSource { Live, Preview };
+enum class TrailSource     { Live, Preview };
 
 template <typename Command, int Capacity = 512>
 class CommandFifo

@@ -7,6 +7,7 @@ ClassDeclaration Parser::run()
     skipTerminators();
 
     try {
+        parseImports(declaration);
         parseClassHeader(declaration);
     } catch (const ParseFailure&) {
         return declaration;
@@ -116,6 +117,24 @@ ValueType Parser::parseType()
     fail("expected a type, 'int', 'float', 'double' or 'Node'");
 }
 
+void Parser::parseImports(ClassDeclaration& declaration)
+{
+    while (match(TokenKind::KeywordImport)) {
+        const Token& library = expect(TokenKind::Identifier, "a library name after 'import', such as 'core'");
+
+        if (library.text != "core") {
+            diagnostics.push_back({ "there is no library '" + library.text + "'; the only library is 'core'",
+                                    library.line, library.column, library.length });
+            throw ParseFailure{};
+        }
+
+        endStatement();
+        skipTerminators();
+
+        declaration.imports.push_back(library.text);
+    }
+}
+
 void Parser::parseClassHeader(ClassDeclaration& declaration)
 {
     if (current().kind != TokenKind::KeywordClass) {
@@ -172,8 +191,7 @@ void Parser::parseClassMember(ClassDeclaration& declaration)
     }
 
     if (current().kind == TokenKind::Identifier) {
-        fail("give '" + current().text + "' a type, such as 'Node " + current().text + ";' or 'int "
-             + current().text + ";'");
+        fail("give '" + current().text + "' a type, such as 'Node " + current().text + ";' or 'int " + current().text + ";'");
     }
 
     if (!match(TokenKind::KeywordVoid)) {
@@ -585,11 +603,24 @@ ExpressionPtr Parser::parsePrimary()
     }
 
     if (token.kind == TokenKind::Identifier) {
+        const Token* nameToken = &token;
+        std::string  scope;
+
         ++position;
+
+        if (match(TokenKind::Scope)) {
+            scope     = token.text;
+            nameToken = &expect(TokenKind::Identifier, "a function name after '::'");
+
+            if (current().kind != TokenKind::LeftParen) {
+                fail("'" + scope + "::" + nameToken->text + "' is a function; call it with '( )'");
+            }
+        }
 
         if (match(TokenKind::LeftParen)) {
             ExpressionPtr expression = makeExpression(ExpressionKind::Call, token);
-            expression->name = token.text;
+            expression->name  = nameToken->text;
+            expression->scope = scope;
 
             if (current().kind != TokenKind::RightParen) {
                 do {

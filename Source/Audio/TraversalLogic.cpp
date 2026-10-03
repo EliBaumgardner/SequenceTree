@@ -76,9 +76,10 @@ void TraversalLogic::begin(const NodeMap& nodes, int startNodeId, int graphLoopL
 
     state = TraversalState::Active;
 
-    loop.active = true;
-    loop.count  = 0;
-    loop.limit  = graphLoopLimit;
+    loop.active   = true;
+    loop.count    = 0;
+    loop.limit    = graphLoopLimit;
+    loop.returnId = -1;
 
     if (mode == Mode::Preview) {
         loop.limit = 1;
@@ -120,6 +121,8 @@ void TraversalLogic::begin(const NodeMap& nodes, int startNodeId, int graphLoopL
 void TraversalLogic::beginPreview(const NodeMap& nodes, int startNodeId, int alternativeId)
 {
     begin(nodes, startNodeId, 1);
+
+    loop.returnId = startNodeId;
 
     if (alternativeId == -1) {
         return;
@@ -791,6 +794,8 @@ int TraversalLogic::advanceSubRoot(const NodeMap& nodes, Walker& walker)
 
 void TraversalLogic::handleLoopReset(const NodeMap& nodes, StepResult& result)
 {
+    const RTNode* const returnNode = nodes.find(loop.returnId);
+
     loop.count++;
 
     if (loop.limit > 0 && loop.count >= loop.limit) {
@@ -807,6 +812,11 @@ void TraversalLogic::handleLoopReset(const NodeMap& nodes, StepResult& result)
     result.leftAlternativeId = primary.alternativeTarget;
 
     primary.target = rootId;
+
+    if (returnNode != nullptr) {
+        rootId         = returnNode->graphID;
+        primary.target = returnNode->nodeID;
+    }
 
     if (primary.subRootNode != -1) {
         const int subRootTarget = advanceSubRoot(nodes, primary);
@@ -865,7 +875,10 @@ void TraversalLogic::handleTreeJump(const NodeMap& nodes, StepResult& result)
 
     loop.active = true;
     loop.count  = 0;
-    loop.limit  = 0;
+
+    if (mode == Mode::Live) {
+        loop.limit = 0;
+    }
 }
 
 TraversalLogic::StepResult TraversalLogic::stepActive(const NodeMap& nodes, int steps)

@@ -1,59 +1,44 @@
-//
-// Created by Eli Baumgardner on 5/23/26.
-//
-
-#ifndef SEQUENCETREE_TRAVERSALMENU_H
-#define SEQUENCETREE_TRAVERSALMENU_H
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <memory>
 
 #include "ItemSelector.h"
-#include "../Editors/ValueEditor.h"
+#include "../Editors/LabeledEditor.h"
 #include "ColourSelector.h"
 #include "../Buttons/IconButton.h"
 #include "TraversalRulesWindow.h"
 #include "../PopupWindow.h"
 #include "../Bars/Bar.h"
 
-class TraversalMenuListener;
-
-class TraversalMenu : public juce::Component {
-
+class TraversalMenu : public juce::Component, private juce::ValueTree::Listener
+{
 public:
 
     explicit TraversalMenu(const ApplicationContext& context);
     ~TraversalMenu() override;
 
-    void paint(juce::Graphics& g) override;
+    void paint(juce::Graphics& graphics) override;
     void resized() override;
 
     void selectTraversal(int traversalId);
-    void addTraversalToMenu(int traversalId);
 
     ItemSelector displayMenu;
 
-    juce::Label multiplierLabel;
-    ValueEditor multiplierEditor;
+    LabeledEditor multiplierField;
+    LabeledEditor channelField;
+    LabeledEditor transposeField;
+    LabeledEditor velocityField;
 
-    juce::Label channelLabel;
-    ValueEditor channelEditor;
-
-    juce::Label transposeLabel;
-    ValueEditor transposeEditor;
-
-    juce::Label velocityLabel;
-    ValueEditor velocityEditor;
-
-    juce::Label colourLabel;
+    CaptionLabel   colourLabel;
     ColourSelector colourSelector;
 
-    std::unique_ptr<IconButton> editTraversalRulesButton;
+    IconButton editTraversalRulesButton;
 
     PopupWindowLauncher traversalRulesLauncher {
         "Traversal Rules",
         [this]() {
             auto content = std::make_unique<TraversalRulesWindow>(applicationContext);
+
             content->setSize(TraversalRulesWindow::defaultWidth, TraversalRulesWindow::defaultHeight);
 
             return content;
@@ -62,13 +47,12 @@ public:
 
 private:
 
+    void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
+    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
+
     const ApplicationContext& applicationContext;
 
     Bar topBar;
 
     juce::ValueTree currentTraversalData;
-
-    std::unique_ptr<TraversalMenuListener> menuListener;
 };
-
-#endif //SEQUENCETREE_TRAVERSALMENU_H

@@ -121,6 +121,7 @@ private:
     RTScript&                      script;
     std::vector<ScriptDiagnostic>& diagnostics;
 
+    std::vector<std::string>       imports;
     std::vector<LocalBinding>      locals;
     std::vector<LocalBinding>      members;
     std::vector<FunctionSignature> functions;

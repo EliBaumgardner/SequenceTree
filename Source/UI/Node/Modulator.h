@@ -1,21 +1,16 @@
-//
-// Created by Eli Baumgardner on 10/6/25.
-//
-
-#ifndef SEQUENCETREE_MODULATOR_H
-#define SEQUENCETREE_MODULATOR_H
+#pragma once
 
 #include <juce_graphics/juce_graphics.h>
 #include "Node.h"
 
 class NodeCanvas;
 
-class Modulator : public Node {
-
+class Modulator : public Node
+{
     public:
 
     explicit Modulator(const ApplicationContext& context);
-    void  paint(juce::Graphics& g) override;
+    void  paint(juce::Graphics& graphics) override;
     bool  hitTest(int x, int y) override;
     void  bindValueEditorForMode() override;
 
@@ -28,5 +23,3 @@ class Modulator : public Node {
 
     static constexpr float equalAreaSideFactor = 0.8862f;
 };
-
-#endif //SEQUENCETREE_MODULATOR_H

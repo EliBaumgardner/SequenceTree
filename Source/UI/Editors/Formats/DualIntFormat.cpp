@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 8/23/26.
-//
-
 #include "ValueFormat.h"
 
 DualIntFormat::DualIntFormat(double lowest, double highest, const juce::Identifier& secondaryPropertyID)

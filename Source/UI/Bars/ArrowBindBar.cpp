@@ -1,25 +1,17 @@
-//
-// Created by Eli Baumgardner on 7/27/26.
-//
-
 #include "ArrowBindBar.h"
 #include "../Canvas/NodeCanvas.h"
 
 ArrowBindBar::ArrowBindBar(const ApplicationContext& context)
-    : Bar(context, { Orientation::horizontal, contentInsetRatio }),
+    : Bar(context, { Orientation::Horizontal, bindBarInsetRatio }),
       fieldSelector(context)
 {
-    configureField(pitchField,    durationField);
-    configureField(durationField, pitchField);
+    const ArrowInfo& arrowInfo = applicationContext.canvas->arrowManager.currentArrowInfo;
 
-    addAndMakeVisible(fieldSelector);
+    configureAxis(pitchField.x,    durationField.x, "X:");
+    configureAxis(pitchField.y,    durationField.y, "Y:");
+    configureAxis(durationField.x, pitchField.x,    "X:");
+    configureAxis(durationField.y, pitchField.y,    "Y:");
 
-    configureFieldSelector();
-    showCurrentBindings();
-}
-
-void ArrowBindBar::configureFieldSelector()
-{
     fieldSelector.setTooltip("Arrow Binding");
 
     fieldSelector.addItem(pitchItemId,    "pitch");
@@ -27,64 +19,87 @@ void ArrowBindBar::configureFieldSelector()
 
     fieldSelector.onItemSelected = [this](int itemId) { showField(itemId); };
 
+    addAndMakeVisible(fieldSelector);
+
     fieldSelector.setSelectedItem(pitchItemId);
+
     showField(pitchItemId);
-}
-
-void ArrowBindBar::configureField(BindField& field, BindField& otherField)
-{
-    configureAxis(field.x, otherField.x, "X:");
-    configureAxis(field.y, otherField.y, "Y:");
-}
-
-void ArrowBindBar::configureAxis(AxisControl& axis, AxisControl& otherAxis, const juce::String& text)
-{
-    axis.label.setText(text, juce::dontSendNotification);
-    axis.label.setColour(juce::Label::textColourId, juce::Colours::lightgrey.withAlpha(0.85f));
-    axis.label.setJustificationType(juce::Justification::centredRight);
-    axis.label.setBorderSize(juce::BorderSize<int>(0));
-
-    axis.editor = std::make_unique<ValueEditor>(applicationContext);
-    auto multiplierFormat = std::make_unique<NumberFormat>(deactivatedMultiplier, maximumMultiplier,
-                                                           ValueFormat::editableDecimalPlaces);
-    multiplierFormat->suffix = "x";
-
-    axis.editor->setFormat(std::move(multiplierFormat));
-    axis.editor->boundValue.setValue(defaultMultiplier);
-
-    axis.editor->onValueChange = [this, editor = axis.editor.get(), other = &otherAxis]() {
-        if (static_cast<double>(editor->boundValue.getValue()) > deactivatedMultiplier) {
-            other->editor->boundValue.setValue(deactivatedMultiplier);
-        }
-
-        publishBindings();
-    };
-
-    addChildComponent(axis.label);
-    addChildComponent(*axis.editor);
-}
-
-void ArrowBindBar::showCurrentBindings()
-{
-    const ArrowInfo& arrowInfo = applicationContext.canvas->arrowManager.currentArrowInfo;
 
     showAxis(xAxis, arrowInfo.xBinding, arrowInfo.xMultiplier);
     showAxis(yAxis, arrowInfo.yBinding, arrowInfo.yMultiplier);
 }
 
+void ArrowBindBar::resized()
+{
+    auto          row     = getContentBounds();
+    const int     width   = row.getWidth();
+    const Metrics metrics { juce::jmax(minimumSelectorWidth, juce::roundToInt(width * selectorWidthRatio)),
+                            juce::jmax(minimumControlWidth,  juce::roundToInt(width * controlWidthRatio)),
+                            juce::jmax(minimumGap,           juce::roundToInt(width * axisGapRatio)),
+                            juce::jmax(minimumGap,           juce::roundToInt(width * itemGapRatio)),
+                            juce::jmax(minimumFontHeight,    row.getHeight() * fontHeightRatio) };
+
+    layOutAxis(*pitchField.y, row, metrics);
+    row.removeFromRight(metrics.itemGap);
+    layOutAxis(*pitchField.x, row, metrics);
+
+    layOutAxis(*durationField.y, row, metrics);
+    row.removeFromRight(metrics.itemGap);
+    layOutAxis(*durationField.x, row, metrics);
+
+    fieldSelector.setBounds(row.removeFromLeft(metrics.selectorWidth));
+}
+
+void ArrowBindBar::configureAxis(std::unique_ptr<LabeledEditor>& axis, std::unique_ptr<LabeledEditor>& otherAxis, const juce::String& text)
+{
+    auto multiplierFormat = std::make_unique<NumberFormat>(deactivatedMultiplier, maximumMultiplier, ValueFormat::editableDecimalPlaces);
+
+    multiplierFormat->suffix = "x";
+    axis                     = std::make_unique<LabeledEditor>(applicationContext);
+
+    axis->label.setText(text, juce::dontSendNotification);
+    axis->label.setJustificationType(juce::Justification::centredRight);
+
+    axis->editor.setFormat(std::move(multiplierFormat));
+    axis->editor.boundValue.setValue(defaultMultiplier);
+
+    axis->editor.onValueChange = [this, editor = &axis->editor, other = &otherAxis]() {
+        if (static_cast<double>(editor->boundValue.getValue()) > deactivatedMultiplier) {
+            (*other)->editor.boundValue.setValue(deactivatedMultiplier);
+        }
+
+        publishBindings();
+    };
+
+    addChildComponent(*axis);
+}
+
+void ArrowBindBar::showField(int itemId)
+{
+    const bool showPitch = itemId == pitchItemId;
+
+    auto setFieldVisible = [](BindField& field, bool shouldBeVisible) {
+        field.x->setVisible(shouldBeVisible);
+        field.y->setVisible(shouldBeVisible);
+    };
+
+    setFieldVisible(pitchField,    showPitch);
+    setFieldVisible(durationField, ! showPitch);
+}
+
 void ArrowBindBar::showAxis(AxisMember axisMember, ArrowBinding binding, double multiplier)
 {
-    AxisControl& pitchAxis    = pitchField.*axisMember;
-    AxisControl& durationAxis = durationField.*axisMember;
+    LabeledEditor& pitchAxis    = *(pitchField.*axisMember);
+    LabeledEditor& durationAxis = *(durationField.*axisMember);
 
-    pitchAxis.editor   ->boundValue.setValue(deactivatedMultiplier);
-    durationAxis.editor->boundValue.setValue(deactivatedMultiplier);
+    pitchAxis.editor.boundValue.setValue(deactivatedMultiplier);
+    durationAxis.editor.boundValue.setValue(deactivatedMultiplier);
 
     if (binding == ArrowBinding::PitchBind) {
-        pitchAxis.editor->boundValue.setValue(multiplier);
+        pitchAxis.editor.boundValue.setValue(multiplier);
     }
     else if (binding == ArrowBinding::DurationBind) {
-        durationAxis.editor->boundValue.setValue(multiplier);
+        durationAxis.editor.boundValue.setValue(multiplier);
     }
 }
 
@@ -98,11 +113,11 @@ void ArrowBindBar::publishBindings()
 
 void ArrowBindBar::resolveAxis(AxisMember axisMember, ArrowBinding& binding, double& multiplier) const
 {
-    const AxisControl& pitchAxis    = pitchField.*axisMember;
-    const AxisControl& durationAxis = durationField.*axisMember;
+    const LabeledEditor& pitchAxis    = *(pitchField.*axisMember);
+    const LabeledEditor& durationAxis = *(durationField.*axisMember);
 
-    const double pitchMultiplier    = static_cast<double>(pitchAxis.editor->boundValue.getValue());
-    const double durationMultiplier = static_cast<double>(durationAxis.editor->boundValue.getValue());
+    const double pitchMultiplier    = static_cast<double>(pitchAxis.editor.boundValue.getValue());
+    const double durationMultiplier = static_cast<double>(durationAxis.editor.boundValue.getValue());
 
     if (pitchMultiplier > deactivatedMultiplier) {
         binding    = ArrowBinding::PitchBind;
@@ -120,64 +135,13 @@ void ArrowBindBar::resolveAxis(AxisMember axisMember, ArrowBinding& binding, dou
     multiplier = defaultMultiplier;
 }
 
-void ArrowBindBar::showField(int itemId)
+void ArrowBindBar::layOutAxis(LabeledEditor& axis, juce::Rectangle<int>& bounds, const Metrics& metrics)
 {
-    const bool showPitch = itemId == pitchItemId;
-
-    auto setFieldVisible = [](BindField& field, bool shouldBeVisible) {
-        field.x.label.setVisible(shouldBeVisible);
-        field.x.editor->setVisible(shouldBeVisible);
-        field.y.label.setVisible(shouldBeVisible);
-        field.y.editor->setVisible(shouldBeVisible);
-    };
-
-    setFieldVisible(pitchField,    showPitch);
-    setFieldVisible(durationField, ! showPitch);
-}
-
-int ArrowBindBar::scaled(int total, float ratio, int minimum)
-{
-    return juce::jmax(minimum, juce::roundToInt(total * ratio));
-}
-
-ArrowBindBar::Metrics ArrowBindBar::metricsFor(juce::Rectangle<int> bounds) const
-{
-    const int width = bounds.getWidth();
-
-    return { scaled(width, selectorWidthRatio, minimumSelectorWidth),
-             scaled(width, controlWidthRatio,  minimumControlWidth),
-             scaled(width, axisGapRatio,       minimumGap),
-             scaled(width, itemGapRatio,       minimumGap),
-             juce::jmax(minimumFontHeight, bounds.getHeight() * fontHeightRatio) };
-}
-
-void ArrowBindBar::layOutAxis(AxisControl& axis, juce::Rectangle<int>& bounds, const Metrics& metrics)
-{
-    axis.editor->setFontHeight(metrics.fontHeight);
-    axis.editor->setBounds(bounds.removeFromRight(metrics.controlWidth));
-
-    bounds.removeFromRight(metrics.axisGap);
-
+    axis.editor.setFontHeight(metrics.fontHeight);
     axis.label.setFont(juce::Font(juce::FontOptions(metrics.fontHeight)));
-    axis.label.setBounds(bounds.removeFromRight(metrics.controlWidth));
-}
 
-void ArrowBindBar::layOutField(BindField& field, juce::Rectangle<int> bounds, const Metrics& metrics)
-{
-    layOutAxis(field.y, bounds, metrics);
-    bounds.removeFromRight(metrics.itemGap);
+    axis.labelWidth = metrics.controlWidth;
+    axis.gap        = metrics.axisGap;
 
-    layOutAxis(field.x, bounds, metrics);
-}
-
-void ArrowBindBar::resized()
-{
-    auto row = getContentBounds();
-
-    const Metrics metrics = metricsFor(row);
-
-    layOutField(pitchField,    row, metrics);
-    layOutField(durationField, row, metrics);
-
-    fieldSelector.setBounds(row.removeFromLeft(metrics.selectorWidth));
+    axis.setBounds(bounds.removeFromRight(metrics.controlWidth * 2 + metrics.axisGap));
 }

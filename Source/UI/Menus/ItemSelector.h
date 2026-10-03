@@ -1,25 +1,24 @@
-//
-// Created by Eli Baumgardner on 11/9/25.
-//
-
-#ifndef SEQUENCETREE_ITEMSELECTOR_H
-#define SEQUENCETREE_ITEMSELECTOR_H
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>
 
 #include "../Editors/ValueEditor.h"
 #include "../Buttons/IconButton.h"
+#include "ContextMenu.h"
 
 struct ApplicationContext;
 
-class ItemSelector : public juce::Component, public juce::SettableTooltipClient {
-
+class ItemSelector : public juce::Component, public juce::SettableTooltipClient
+{
 public:
 
     using Action = std::function<void()>;
 
     explicit ItemSelector(const ApplicationContext& context);
+
+    void paint(juce::Graphics& graphics) override;
+    void resized() override;
 
     void addItem(int itemId, juce::String label, Action onChosen = nullptr);
     void removeItem(int itemId);
@@ -27,21 +26,19 @@ public:
 
     void setSelectedItem(int itemId);
 
-    void paint(juce::Graphics& g) override;
-    void resized() override;
-
     std::function<void(int)> onItemSelected;
 
     juce::String selectedLabel;
 
-    std::unique_ptr<ValueEditor> labelEditor;
+    ValueEditor labelEditor;
 
-    static constexpr float contentInsetRatio = 0.14f;
-    static constexpr float labelWidthRatio   = 2.0f / 3.0f;
+    static constexpr float selectorInsetRatio = 0.14f;
+    static constexpr float labelWidthRatio    = 2.0f / 3.0f;
 
 private:
 
-    struct Item {
+    struct Item
+    {
         int          id;
         juce::String label;
         Action       action;
@@ -54,11 +51,9 @@ private:
 
     const ApplicationContext& applicationContext;
 
-    std::unique_ptr<IconButton> button;
+    IconButton button;
 
     std::vector<Item> items;
 
-    int          selectedItemId = 0;
+    int selectedItemId = 0;
 };
-
-#endif //SEQUENCETREE_ITEMSELECTOR_H

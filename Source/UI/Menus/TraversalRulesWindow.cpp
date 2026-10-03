@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 7/21/26.
-//
-
 #include "TraversalRulesWindow.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Graph/TraversalRuleState.h"
@@ -9,24 +5,23 @@
 #include "../../Plugin/PluginProcessor.h"
 #include "../../Script/ScriptCompiler.h"
 
-TraversalRulesWindow::TraversalRulesWindow(const ApplicationContext& context) : context(context),
-    titlebar(context), rulesPanel(context)
+TraversalRulesWindow::TraversalRulesWindow(const ApplicationContext& context)
+    : titlebar(context),
+      rulesPanel(context),
+      context(context)
 {
     setLookAndFeel(context.lookAndFeel);
 
-    rulesPanel.resizer.onWidthDragged = [this](int newWidth) { setPanelWidth(newWidth); };
+    rulesPanel.resizer.onWidthDragged          = [this](int newWidth) { setPanelWidth(newWidth); };
+    rulesPanel.labelPanel.onLabelClicked       = [this](FileLabel* label) { setActivePage(label->fileId); };
+    rulesPanel.panelTitlebar.addButton.onClick = [this] { addRule(); };
+    titlebar.playButton.onClick                = [this] { makeViewedRuleActive(); };
 
-    addAndMakeVisible(titlebar);
-    addAndMakeVisible(rulesPanel);
-
-    rulesPanel.propagateLabelClicked = [this](int fileId) { setActivePage(fileId); };
-    rulesPanel.propagateAddClicked   = [this] { addRule(); };
-
-    rulesPanel.propagateLabelsReordered = [this](std::vector<int> fileIds) {
+    rulesPanel.labelPanel.onLabelsReordered = [this](std::vector<int> fileIds) {
         this->context.traversalRuleState->reorderRules(fileIds, nullptr);
     };
 
-    rulesPanel.propagateLabelRemoved = [this](int fileId) {
+    rulesPanel.labelPanel.onLabelRemoved = [this](int fileId) {
         juce::MessageManager::callAsync(
             [safeThis = juce::Component::SafePointer<TraversalRulesWindow>(this), fileId] {
                 if (safeThis != nullptr) {
@@ -35,47 +30,51 @@ TraversalRulesWindow::TraversalRulesWindow(const ApplicationContext& context) : 
             });
     };
 
-    titlebar.onPlayClicked = [this] { makeViewedRuleActive(); };
+    addAndMakeVisible(titlebar);
+    addAndMakeVisible(rulesPanel);
 
     context.traversalRuleState->rules.addListener(this);
 
     syncWithRuleState();
 }
 
-TraversalRulesWindow::~TraversalRulesWindow() {
+TraversalRulesWindow::~TraversalRulesWindow()
+{
     context.traversalRuleState->rules.removeListener(this);
 
     setLookAndFeel(nullptr);
 }
 
-void TraversalRulesWindow::paint(juce::Graphics& g) {
-    const Theme& theme = CustomLookAndFeel::get(*this);
+void TraversalRulesWindow::paint(juce::Graphics& graphics)
+{
+    const Theme&               theme        = CustomLookAndFeel::get(*this);
+    const juce::Rectangle<int> statusBounds = getLocalBounds().removeFromBottom(statusBarHeight);
 
-    g.setColour(theme.baseDarkColour2);
-    g.fillRect(getLocalBounds());
+    graphics.setColour(theme.baseDarkColour2);
+    graphics.fillRect(getLocalBounds());
 
-    const juce::Rectangle<int> statusBounds = statusBarBounds();
+    graphics.setColour(theme.baseDarkColour1);
+    graphics.fillRect(statusBounds);
 
-    g.setColour(theme.baseDarkColour1);
-    g.fillRect(statusBounds);
+    if (statusIsError) {
+        graphics.setColour(theme.scriptErrorColour);
+    }
+    else {
+        graphics.setColour(theme.scriptOkColour);
+    }
 
-    g.setColour(statusIsError ? theme.scriptErrorColour : theme.scriptOkColour);
-    g.setFont(juce::Font(juce::FontOptions(Theme::labelFontHeight)));
-    g.drawText(statusText, statusBounds.reduced(Theme::menuEdgeInset, 0),
-               juce::Justification::centredLeft, true);
+    graphics.setFont(juce::Font(juce::FontOptions(Theme::labelFontHeight)));
+    graphics.drawText(statusText, statusBounds.reduced(Theme::menuEdgeInset, 0), juce::Justification::centredLeft, true);
 
-    g.setColour(juce::Colours::black);
-    g.drawRect(getLocalBounds(), 1);
+    graphics.setColour(juce::Colours::black);
+    graphics.drawRect(getLocalBounds(), 1);
 }
 
-juce::Rectangle<int> TraversalRulesWindow::statusBarBounds() const {
-    return getLocalBounds().removeFromBottom(statusBarHeight);
-}
-
-void TraversalRulesWindow::resized() {
-    panelWidth = clampPanelWidth(panelWidth);
-
+void TraversalRulesWindow::resized()
+{
     auto bounds = getLocalBounds();
+
+    panelWidth = clampPanelWidth(panelWidth);
 
     bounds.removeFromBottom(statusBarHeight);
 
@@ -87,131 +86,13 @@ void TraversalRulesWindow::resized() {
     }
 }
 
-void TraversalRulesWindow::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) {
-    triggerAsyncUpdate();
-}
-
-void TraversalRulesWindow::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) {
-    triggerAsyncUpdate();
-}
-
-void TraversalRulesWindow::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) {
-    if (property == ValueTreeIdentifiers::ActiveRuleId) {
-        triggerAsyncUpdate();
-    }
-}
-
-void TraversalRulesWindow::handleAsyncUpdate() {
-    syncWithRuleState();
-}
-
-void TraversalRulesWindow::syncWithRuleState() {
-    TraversalRuleState& state = *context.traversalRuleState;
-
-    state.ensureDefaultRule();
-
-    std::vector<int> ruleOrder;
-    ruleOrder.reserve(static_cast<size_t>(state.rules.getNumChildren()));
-
-    for (int i = 0; i < state.rules.getNumChildren(); ++i) {
-        const juce::ValueTree rule = state.rules.getChild(i);
-
-        const int          ruleId = rule.getProperty(ValueTreeIdentifiers::Id);
-        const juce::String source = rule.getProperty(ValueTreeIdentifiers::RuleSource).toString();
-
-        ruleOrder.push_back(ruleId);
-
-        const auto match = filePages.find(ruleId);
-
-        if (match == filePages.end()) {
-            rulesPanel.addLabel(ruleId, rule.getProperty(ValueTreeIdentifiers::RuleName).toString());
-            createPage(ruleId, source);
-        }
-        else if (match->second->getDocument().getAllContent() != source) {
-            const juce::ScopedValueSetter<bool> silence(match->second->suppressTextChanged, true);
-
-            match->second->loadContent(source);
-        }
-    }
-
-    for (auto page = filePages.begin(); page != filePages.end(); ) {
-        if (state.rules.getChildWithProperty(ValueTreeIdentifiers::Id, page->first).isValid()) {
-            ++page;
-            continue;
-        }
-
-        if (activePage == page->second.get()) {
-            activePage   = nullptr;
-            viewedRuleId = -1;
-        }
-
-        rulesPanel.removeLabel(page->first);
-
-        page = filePages.erase(page);
-    }
-
-    rulesPanel.labelPanel->applyOrder(ruleOrder);
-
-    if (activePage == nullptr) {
-        setActivePage(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
-        return;
-    }
-
-    resized();
-    compileViewedPage();
-}
-
-void TraversalRulesWindow::createPage(int ruleId, const juce::String& source) {
-    auto page = std::make_unique<FilePage>(context);
-
-    page->loadContent(source);
-
-    FilePage* createdPage = page.get();
-
-    page->onTextChanged = [this, ruleId, createdPage] {
-        context.traversalRuleState->setRuleSource(ruleId, createdPage->getDocument().getAllContent(), nullptr);
-
-        startTimer(compileDelayMs);
-    };
-
-    filePages.emplace(ruleId, std::move(page));
-}
-
-void TraversalRulesWindow::addRule() {
-    const juce::ValueTree rule = context.traversalRuleState->addRule(nullptr);
-
-    syncWithRuleState();
-
-    setActivePage(rule.getProperty(ValueTreeIdentifiers::Id));
-}
-
-void TraversalRulesWindow::removeRule(int ruleId) {
-    TraversalRuleState& state = *context.traversalRuleState;
-
-    const bool wasLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == ruleId;
-
-    state.removeRule(ruleId, nullptr);
-
-    if (state.rules.getNumChildren() == 0) {
-        addRule();
-        state.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
-    }
-    else {
-        syncWithRuleState();
-    }
-
-    if (wasLiveRule) {
-        context.processor->snapshots.publishActiveTraversalRule();
-    }
-
-    compileViewedPage();
-}
-
-void TraversalRulesWindow::setActivePage(int id) {
+void TraversalRulesWindow::setActivePage(int id)
+{
     const auto match = filePages.find(id);
 
-    if (match == filePages.end())
+    if (match == filePages.end()) {
         return;
+    }
 
     FilePage* page = match->second.get();
 
@@ -227,13 +108,152 @@ void TraversalRulesWindow::setActivePage(int id) {
     viewedRuleId = id;
 
     addAndMakeVisible(page);
+
     rulesPanel.selectLabel(id);
 
     resized();
+
     compileViewedPage();
 }
 
-void TraversalRulesWindow::makeViewedRuleActive() {
+void TraversalRulesWindow::timerCallback()
+{
+    stopTimer();
+
+    compileViewedPage();
+}
+
+void TraversalRulesWindow::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
+{
+    triggerAsyncUpdate();
+}
+
+void TraversalRulesWindow::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex)
+{
+    triggerAsyncUpdate();
+}
+
+void TraversalRulesWindow::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
+{
+    if (property == ValueTreeIdentifiers::ActiveRuleId) {
+        triggerAsyncUpdate();
+    }
+}
+
+void TraversalRulesWindow::handleAsyncUpdate()
+{
+    syncWithRuleState();
+}
+
+void TraversalRulesWindow::syncWithRuleState()
+{
+    TraversalRuleState& state = *context.traversalRuleState;
+    std::vector<int>    ruleOrder;
+
+    state.ensureDefaultRule();
+
+    ruleOrder.reserve(static_cast<size_t>(state.rules.getNumChildren()));
+
+    for (int i = 0; i < state.rules.getNumChildren(); ++i) {
+        const juce::ValueTree rule   = state.rules.getChild(i);
+        const int             ruleId = rule.getProperty(ValueTreeIdentifiers::Id);
+        const juce::String    source = rule.getProperty(ValueTreeIdentifiers::RuleSource).toString();
+        const auto            match  = filePages.find(ruleId);
+
+        ruleOrder.push_back(ruleId);
+
+        if (match == filePages.end()) {
+            rulesPanel.addLabel(ruleId, rule.getProperty(ValueTreeIdentifiers::RuleName).toString());
+
+            createPage(ruleId, source);
+        }
+        else if (match->second->getDocument().getAllContent() != source) {
+            const juce::ScopedValueSetter<bool> silence(match->second->suppressTextChanged, true);
+
+            match->second->loadContent(source);
+        }
+    }
+
+    for (auto page = filePages.begin(); page != filePages.end(); ) {
+        if (state.rules.getChildWithProperty(ValueTreeIdentifiers::Id, page->first).isValid()) {
+            ++page;
+
+            continue;
+        }
+
+        if (activePage == page->second.get()) {
+            activePage   = nullptr;
+            viewedRuleId = -1;
+        }
+
+        rulesPanel.removeLabel(page->first);
+
+        page = filePages.erase(page);
+    }
+
+    rulesPanel.labelPanel.applyOrder(ruleOrder);
+
+    if (activePage == nullptr) {
+        setActivePage(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
+
+        return;
+    }
+
+    resized();
+
+    compileViewedPage();
+}
+
+void TraversalRulesWindow::addRule()
+{
+    const juce::ValueTree rule = context.traversalRuleState->addRule(nullptr);
+
+    syncWithRuleState();
+
+    setActivePage(rule.getProperty(ValueTreeIdentifiers::Id));
+}
+
+void TraversalRulesWindow::removeRule(int ruleId)
+{
+    TraversalRuleState& state       = *context.traversalRuleState;
+    const bool          wasLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == ruleId;
+
+    state.removeRule(ruleId, nullptr);
+
+    if (state.rules.getNumChildren() == 0) {
+        addRule();
+
+        state.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
+    }
+    else {
+        syncWithRuleState();
+    }
+
+    if (wasLiveRule) {
+        context.processor->snapshots.publishActiveTraversalRule();
+    }
+
+    compileViewedPage();
+}
+
+void TraversalRulesWindow::createPage(int ruleId, const juce::String& source)
+{
+    auto      page        = std::make_unique<FilePage>(context);
+    FilePage* createdPage = page.get();
+
+    page->loadContent(source);
+
+    page->onTextChanged = [this, ruleId, createdPage] {
+        context.traversalRuleState->setRuleSource(ruleId, createdPage->getDocument().getAllContent(), nullptr);
+
+        startTimer(compileDelayMs);
+    };
+
+    filePages.emplace(ruleId, std::move(page));
+}
+
+void TraversalRulesWindow::makeViewedRuleActive()
+{
     if (viewedRuleId < 0) {
         return;
     }
@@ -243,24 +263,21 @@ void TraversalRulesWindow::makeViewedRuleActive() {
     compileViewedPage();
 }
 
-void TraversalRulesWindow::timerCallback() {
-    stopTimer();
-    compileViewedPage();
-}
-
-void TraversalRulesWindow::compileViewedPage() {
+void TraversalRulesWindow::compileViewedPage()
+{
     if (activePage == nullptr || viewedRuleId < 0) {
         setStatus({}, false);
+
         return;
     }
 
-    TraversalRuleState& state = *context.traversalRuleState;
-
-    const juce::String source = activePage->getDocument().getAllContent();
+    TraversalRuleState& state            = *context.traversalRuleState;
+    const juce::String  source           = activePage->getDocument().getAllContent();
+    ScriptCompileResult result           = compileTraversalScript(source.toStdString());
+    const bool          isLiveRule       = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == viewedRuleId;
+    const juce::String  instructionCount = juce::String(static_cast<int>(result.script.instructions.size()));
 
     state.setRuleSource(viewedRuleId, source, nullptr);
-
-    ScriptCompileResult result = compileTraversalScript(source.toStdString());
 
     activePage->errorLines.clear();
 
@@ -273,17 +290,14 @@ void TraversalRulesWindow::compileViewedPage() {
     if (!result.succeeded()) {
         const ScriptDiagnostic& first = result.diagnostics.front();
 
-        setStatus(juce::String(first.line) + ":" + juce::String(first.column)
-                  + "  " + juce::String(first.message), true);
+        setStatus(juce::String(first.line) + ":" + juce::String(first.column) + "  " + juce::String(first.message), true);
+
         return;
     }
 
-    const bool isLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == viewedRuleId;
-
-    const juce::String instructionCount = juce::String(static_cast<int>(result.script.instructions.size()));
-
     if (!isLiveRule) {
         setStatus(instructionCount + " instructions - press play to make this the live rule", false);
+
         return;
     }
 
@@ -292,7 +306,8 @@ void TraversalRulesWindow::compileViewedPage() {
     setStatus(instructionCount + " instructions - live", false);
 }
 
-void TraversalRulesWindow::setStatus(const juce::String& text, bool isError) {
+void TraversalRulesWindow::setStatus(const juce::String& text, bool isError)
+{
     if (statusText == text && statusIsError == isError) {
         return;
     }
@@ -300,17 +315,19 @@ void TraversalRulesWindow::setStatus(const juce::String& text, bool isError) {
     statusText    = text;
     statusIsError = isError;
 
-    repaint(statusBarBounds());
+    repaint(getLocalBounds().removeFromBottom(statusBarHeight));
 }
 
-int TraversalRulesWindow::clampPanelWidth(int newWidth) const {
+int TraversalRulesWindow::clampPanelWidth(int newWidth) const
+{
     const int available = getWidth() - minContentWidth;
     const int maxWidth  = juce::jmax(RulesPanel::minPanelWidth, available);
 
     return juce::jlimit(RulesPanel::minPanelWidth, maxWidth, newWidth);
 }
 
-void TraversalRulesWindow::setPanelWidth(int newWidth) {
+void TraversalRulesWindow::setPanelWidth(int newWidth)
+{
     const int clamped = clampPanelWidth(newWidth);
 
     if (clamped == panelWidth) {
@@ -318,59 +335,46 @@ void TraversalRulesWindow::setPanelWidth(int newWidth) {
     }
 
     panelWidth = clamped;
+
     resized();
 }
 
 TraversalRulesWindow::RulesTitlebar::RulesTitlebar(const ApplicationContext& context)
-    : Bar(context, { Orientation::horizontal, contentInsetRatio }),
+    : Bar(context, { Orientation::Horizontal, titlebarInsetRatio }),
       undoRedoPane(context)
 {
-    playButton = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            ButtonState triangleState = state;
-            triangleState.isSelected = true;
+    playButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
+        ButtonState triangleState = state;
 
-            CustomLookAndFeel::get(*this).drawPlayIcon(g, bounds, triangleState);
-        }, context.lookAndFeel);
+        triangleState.isSelected = true;
 
-    playButton->setTooltip("Make this the live traversal rule");
-
-    playButton->onClick = [this] {
-        if (onPlayClicked != nullptr) {
-            onPlayClicked();
-        }
+        CustomLookAndFeel::get(*this).drawPlayIcon(graphics, bounds, triangleState);
     };
 
-    addAndMakeVisible(playButton.get());
+    playButton.setLookAndFeel(context.lookAndFeel);
+
+    undoRedoPane.addButton(&CustomLookAndFeel::drawUndoIcon, "Undo");
+
+    undoRedoPane.addButton(&CustomLookAndFeel::drawRedoIcon, "Redo");
+
+    playButton.setTooltip("Make this the live traversal rule");
+
+    addAndMakeVisible(playButton);
     addAndMakeVisible(undoRedoPane);
-
-    configureUndoRedoPane();
 }
 
-void TraversalRulesWindow::RulesTitlebar::configureUndoRedoPane() {
-    undoRedoPane.addButton(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawUndoIcon(g, bounds, state);
-        },
-        "Undo");
-
-    undoRedoPane.addButton(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawRedoIcon(g, bounds, state);
-        },
-        "Redo");
+void TraversalRulesWindow::RulesTitlebar::paintOverBar(juce::Graphics& graphics)
+{
+    drawSeparator(graphics, (playButton.getRight() + undoRedoPane.getX()) / 2);
 }
 
-void TraversalRulesWindow::RulesTitlebar::paintOverBar(juce::Graphics& g) {
-    drawSeparator(g, (playButton->getRight() + undoRedoPane.getX()) / 2);
-}
-
-void TraversalRulesWindow::RulesTitlebar::resized() {
-    auto bounds = getContentBounds();
-
+void TraversalRulesWindow::RulesTitlebar::resized()
+{
+    auto      bounds     = getContentBounds();
     const int buttonSize = bounds.getHeight();
 
-    playButton->setBounds(bounds.removeFromLeft(buttonSize));
+    playButton.setBounds(bounds.removeFromLeft(buttonSize));
+
     bounds.removeFromLeft(contentSpacing);
 
     undoRedoPane.setBounds(bounds.removeFromLeft(buttonSize * 3));
@@ -378,104 +382,82 @@ void TraversalRulesWindow::RulesTitlebar::resized() {
 
 TraversalRulesWindow::RulesPanel::RulesPanel(const ApplicationContext& context)
     : resizer(context, PanelResizer::Edge::Right),
+      labelPanel(context),
       panelTitlebar(context)
 {
     setLookAndFeel(context.lookAndFeel);
 
-    labelPanel = std::make_unique<LabelPanel>(context);
-
-    panelTitlebar.onAddClicked = [this] {
-        if (propagateAddClicked != nullptr) {
-            propagateAddClicked();
-        }
-    };
-
-    labelPanel->onLabelClicked = [this](FileLabel* label) {
-        if (propagateLabelClicked != nullptr) {
-            propagateLabelClicked(label->fileId);
-        }
-    };
-
-    labelPanel->onLabelRemoved = [this](int fileId) {
-        if (propagateLabelRemoved != nullptr) {
-            propagateLabelRemoved(fileId);
-        }
-    };
-
-    labelPanel->onLabelsReordered = [this](std::vector<int> fileIds) {
-        if (propagateLabelsReordered != nullptr) {
-            propagateLabelsReordered(std::move(fileIds));
-        }
-    };
-
     addAndMakeVisible(panelTitlebar);
-    addAndMakeVisible(labelPanel.get());
+    addAndMakeVisible(labelPanel);
     addAndMakeVisible(resizer);
 }
 
-TraversalRulesWindow::RulesPanel::~RulesPanel() {
+TraversalRulesWindow::RulesPanel::~RulesPanel()
+{
     setLookAndFeel(nullptr);
 }
 
-void TraversalRulesWindow::RulesPanel::addLabel(int fileId, const juce::String& name) {
-    labelPanel->addFileLabel(name);
-    labelPanel->labels.back()->fileId = fileId;
-}
-
-void TraversalRulesWindow::RulesPanel::removeLabel(int fileId) {
-    for (auto& label : labelPanel->labels) {
-        if (label->fileId == fileId) {
-            labelPanel->removeFileLabel(label.get());
-            return;
-        }
-    }
-}
-
-void TraversalRulesWindow::RulesPanel::selectLabel(int fileId) {
-    for (auto& label : labelPanel->labels) {
-        if (label->fileId == fileId) {
-            labelPanel->setSelectedLabel(label.get());
-            return;
-        }
-    }
-}
-
-void TraversalRulesWindow::RulesPanel::paint(juce::Graphics& g) {
+void TraversalRulesWindow::RulesPanel::paint(juce::Graphics& graphics)
+{
     const Theme& theme = CustomLookAndFeel::get(*this);
 
-    g.setColour(theme.baseDarkColour2);
-    g.fillRect(getLocalBounds());
+    graphics.setColour(theme.baseDarkColour2);
+    graphics.fillRect(getLocalBounds());
 }
 
-void TraversalRulesWindow::RulesPanel::resized() {
+void TraversalRulesWindow::RulesPanel::resized()
+{
     auto bounds = getLocalBounds();
 
     resizer.setBounds(bounds.removeFromRight(resizerWidth));
     panelTitlebar.setBounds(bounds.removeFromTop(RulesTitlebar::preferredHeight));
-    labelPanel->setBounds(bounds);
+    labelPanel.setBounds(bounds);
+}
+
+void TraversalRulesWindow::RulesPanel::addLabel(int fileId, const juce::String& name)
+{
+    labelPanel.addFileLabel(name);
+
+    labelPanel.labels.back()->fileId = fileId;
+}
+
+void TraversalRulesWindow::RulesPanel::removeLabel(int fileId)
+{
+    for (auto& label : labelPanel.labels) {
+        if (label->fileId == fileId) {
+            labelPanel.removeFileLabel(label.get());
+
+            return;
+        }
+    }
+}
+
+void TraversalRulesWindow::RulesPanel::selectLabel(int fileId)
+{
+    for (auto& label : labelPanel.labels) {
+        if (label->fileId == fileId) {
+            labelPanel.setSelectedLabel(label.get());
+
+            return;
+        }
+    }
 }
 
 TraversalRulesWindow::RulesPanel::PanelTitlebar::PanelTitlebar(const ApplicationContext& context)
-    : Bar(context, { Orientation::horizontal, RulesTitlebar::contentInsetRatio })
+    : Bar(context, { Orientation::Horizontal, RulesTitlebar::titlebarInsetRatio })
 {
-    addButton = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawAddIcon(g, bounds, state);
-        }, context.lookAndFeel);
+    addButton.icon = &CustomLookAndFeel::drawAddIcon;
 
-    addButton->setTooltip("Add Rule");
+    addButton.setLookAndFeel(context.lookAndFeel);
 
-    addButton->onClick = [this] {
-        if (onAddClicked) {
-            onAddClicked();
-        }
-    };
+    addButton.setTooltip("Add Rule");
 
-    addAndMakeVisible(addButton.get());
+    addAndMakeVisible(addButton);
 }
 
-void TraversalRulesWindow::RulesPanel::PanelTitlebar::resized() {
+void TraversalRulesWindow::RulesPanel::PanelTitlebar::resized()
+{
     auto bounds = getContentBounds();
 
-    addButton->setBounds(bounds.removeFromLeft(bounds.getHeight()));
+    addButton.setBounds(bounds.removeFromLeft(bounds.getHeight()));
 }

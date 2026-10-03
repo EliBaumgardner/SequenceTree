@@ -8,7 +8,7 @@
 #include "Audio/TraversalLogic.h"
 #include "Input/ConnectionOps.h"
 #include "Script/ScriptCompiler.h"
-#include "UI/Node/NodeFactory.h"
+#include "Graph/NodeFactory.h"
 
 #include <memory>
 #include <string>
@@ -143,6 +143,59 @@ TEST_CASE("a created child inherits its parent's limits", "[graph]")
 
     CHECK(nodes.find(childId)->countLimit       == 3);
     CHECK(nodes.find(childId)->switchCountLimit == 2);
+}
+
+TEST_CASE("recolouring a node colours its descendants, is inherited by new children, and undoes as one step", "[graph][colour]")
+{
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+    juce::UndoManager undoManager;
+
+    const int rootId       = createRoot(graph, 0, 0);
+    const int recolouredId = createChild(graph, rootId, 100, 0);
+    const int descendantId = createChild(graph, recolouredId, 200, 0);
+    const int siblingId    = createChild(graph, rootId, 100, 100);
+
+    undoManager.beginNewTransaction();
+    graph.setNodeColour(recolouredId, "ff336699", &undoManager);
+
+    CHECK(graph.getNode(recolouredId).getProperty(ValueTreeIdentifiers::NodeColour).toString() == "ff336699");
+    CHECK(graph.getNode(descendantId).getProperty(ValueTreeIdentifiers::NodeColour).toString() == "ff336699");
+    CHECK_FALSE(graph.getNode(rootId).hasProperty(ValueTreeIdentifiers::NodeColour));
+    CHECK_FALSE(graph.getNode(siblingId).hasProperty(ValueTreeIdentifiers::NodeColour));
+
+    const int newChildId = createChild(graph, descendantId, 300, 0);
+
+    CHECK(graph.getNode(newChildId).getProperty(ValueTreeIdentifiers::NodeColour).toString() == "ff336699");
+
+    undoManager.undo();
+
+    CHECK_FALSE(graph.getNode(recolouredId).hasProperty(ValueTreeIdentifiers::NodeColour));
+    CHECK_FALSE(graph.getNode(descendantId).hasProperty(ValueTreeIdentifiers::NodeColour));
+}
+
+TEST_CASE("node colours and colour presets survive saving and restoring the plugin state", "[graph][colour]")
+{
+    SequenceTreeAudioProcessor original;
+    SequenceTreeAudioProcessor restored;
+    juce::MemoryBlock          savedState;
+    juce::ValueTree            preset { ValueTreeIdentifiers::ColourPreset };
+
+    const int rootId = createRoot(original.graphState, 0, 0);
+
+    original.graphState.setNodeColour(rootId, "ff993300", nullptr);
+
+    preset.setProperty(ValueTreeIdentifiers::PresetColour, "ff00ff00", nullptr);
+
+    original.colourPresets.appendChild(preset, nullptr);
+
+    original.getStateInformation(savedState);
+
+    restored.setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
+
+    CHECK(restored.graphState.getNode(rootId).getProperty(ValueTreeIdentifiers::NodeColour).toString() == "ff993300");
+    REQUIRE(restored.colourPresets.getNumChildren() == 1);
+    CHECK(restored.colourPresets.getChild(0).getProperty(ValueTreeIdentifiers::PresetColour).toString() == "ff00ff00");
 }
 
 TEST_CASE("a chain built through the graph walks in order and loops", "[graph][traversal]")

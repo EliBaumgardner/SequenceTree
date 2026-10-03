@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 7/20/26.
-//
-
 #include "AllowedTraversalsMenu.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
@@ -10,54 +6,16 @@
 
 #include <algorithm>
 
-void AllowedTraversalsMenu::ToggleButton::paint(juce::Graphics& g) {
-    const auto bounds = getLocalBounds().toFloat().reduced(2.0f);
-
-    const juce::Colour onColour  = juce::Colour::fromRGB(195, 174, 132);
-    const juce::Colour offColour = juce::Colour::fromRGB(40, 40, 38);
-
-    if (isOn) {
-        g.setColour(onColour);
-    } else {
-        g.setColour(offColour);
-    }
-
-    g.fillRoundedRectangle(bounds, 4.0f);
-
-    g.setColour(juce::Colours::black.withAlpha(0.5f));
-    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
-
-    juce::Colour textColour = juce::Colour::fromRGB(195, 174, 132);
-    juce::String stateText  = "off";
-
-    if (isOn) {
-        textColour = juce::Colours::black.withAlpha(0.7f);
-        stateText  = "on";
-    }
-
-    g.setColour(textColour);
-    g.setFont(juce::Font(juce::FontOptions(9.0f)));
-    g.drawText(stateText, getLocalBounds(), juce::Justification::centred);
-}
-
-void AllowedTraversalsMenu::ToggleButton::mouseDown(const juce::MouseEvent& e) {
-    isOn = !isOn;
-    repaint();
-
-    if (onToggle) {
-        onToggle(isOn);
-    }
-}
-
 AllowedTraversalsMenu::AllowedTraversalsMenu(const ApplicationContext& context, juce::ValueTree connection)
     : applicationContext(context), connection(connection)
 {
-    setLookAndFeel(context.lookAndFeel);
-
+    const juce::ValueTree     traversalMap = applicationContext.graphState->traversals.map;
     std::vector<TraversalKey> keys;
 
-    for (int i = 0; i < applicationContext.graphState->traversals.map.getNumChildren(); ++i) {
-        const juce::ValueTree traversalData = applicationContext.graphState->traversals.map.getChild(i);
+    setLookAndFeel(context.lookAndFeel);
+
+    for (int traversalIndex = 0; traversalIndex < traversalMap.getNumChildren(); ++traversalIndex) {
+        const juce::ValueTree traversalData = traversalMap.getChild(traversalIndex);
 
         if (traversalData.getType() != ValueTreeIdentifiers::TraversalData) {
             continue;
@@ -71,33 +29,57 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(const ApplicationContext& context, 
     std::ranges::sort(keys);
 
     for (const TraversalKey& key : keys) {
-
         TraversalRow row;
-        row.key = key;
 
-        row.label = std::make_unique<juce::Label>();
-        row.label->setText("Traversal " + TraversalFlagFormat::describe(key), juce::dontSendNotification);
-        row.label->setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-        row.label->setFont(juce::Font(juce::FontOptions(9.0f)));
-        row.label->setJustificationType(juce::Justification::centredLeft);
-        addAndMakeVisible(row.label.get());
-
-        row.toggle = std::make_unique<ToggleButton>();
+        row.key          = key;
+        row.label        = std::make_unique<CaptionLabel>();
+        row.toggle       = std::make_unique<ToggleButton>();
         row.toggle->isOn = isTraversalEnabled(key);
+
         row.toggle->onToggle = [this, key](bool enabled) {
             setTraversalEnabled(key, enabled);
         };
+
+        row.label->setText("Traversal " + TraversalFlagFormat::describe(key), juce::dontSendNotification);
+        row.label->setFont(juce::Font(juce::FontOptions(9.0f)));
+
+        addAndMakeVisible(row.label.get());
         addAndMakeVisible(row.toggle.get());
 
         rows.push_back(std::move(row));
     }
 }
 
-int AllowedTraversalsMenu::getIdealHeight() const {
+void AllowedTraversalsMenu::paint(juce::Graphics& graphics)
+{
+    graphics.fillAll(juce::Colour::fromRGB(30, 30, 30));
+
+    graphics.setColour(juce::Colours::black);
+    graphics.drawRect(getLocalBounds(), 1);
+}
+
+void AllowedTraversalsMenu::resized()
+{
+    auto bounds = getLocalBounds().reduced(contentInset);
+
+    for (auto& row : rows) {
+        auto rowArea = bounds.removeFromTop(rowHeight).reduced(0, 2);
+
+        row.toggle->setBounds(rowArea.removeFromRight(toggleWidth));
+
+        rowArea.removeFromRight(6);
+
+        row.label->setBounds(rowArea);
+    }
+}
+
+int AllowedTraversalsMenu::getIdealHeight() const
+{
     return contentInset * 2 + rowHeight * juce::jmax(1, static_cast<int>(rows.size()));
 }
 
-bool AllowedTraversalsMenu::isTraversalEnabled(const TraversalKey& key) const {
+bool AllowedTraversalsMenu::isTraversalEnabled(const TraversalKey& key) const
+{
     const juce::ValueTree disabled = connection.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
 
     if (!disabled.isValid()) {
@@ -107,15 +89,16 @@ bool AllowedTraversalsMenu::isTraversalEnabled(const TraversalKey& key) const {
     return !TraversalState::findReference(disabled, key).isValid();
 }
 
-void AllowedTraversalsMenu::setTraversalEnabled(const TraversalKey& key, bool enabled) {
+void AllowedTraversalsMenu::setTraversalEnabled(const TraversalKey& key, bool enabled)
+{
+    juce::UndoManager* const undoManager = applicationContext.undoManager;
+    juce::ValueTree          disabled    = connection.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
+
     if (!connection.isValid()) {
         return;
     }
 
-    juce::UndoManager* const undoManager = applicationContext.undoManager;
     undoManager->beginNewTransaction();
-
-    juce::ValueTree disabled = connection.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
 
     if (enabled) {
         if (!disabled.isValid()) {
@@ -123,6 +106,7 @@ void AllowedTraversalsMenu::setTraversalEnabled(const TraversalKey& key, bool en
         }
 
         const juce::ValueTree entry = TraversalState::findReference(disabled, key);
+
         if (entry.isValid()) {
             disabled.removeChild(entry, undoManager);
         }
@@ -130,33 +114,58 @@ void AllowedTraversalsMenu::setTraversalEnabled(const TraversalKey& key, bool en
     else {
         if (!disabled.isValid()) {
             disabled = juce::ValueTree(ValueTreeIdentifiers::DisabledTraversalIds);
+
             connection.addChild(disabled, -1, undoManager);
         }
 
         if (!TraversalState::findReference(disabled, key).isValid()) {
             juce::ValueTree entry {ValueTreeIdentifiers::TraversalId};
+
             entry.setProperty(ValueTreeIdentifiers::TraversalId,       key.typeId,   undoManager);
             entry.setProperty(ValueTreeIdentifiers::TraversalInstance, key.instance, undoManager);
+
             disabled.addChild(entry, -1, undoManager);
         }
     }
-
 }
 
-void AllowedTraversalsMenu::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour::fromRGB(30, 30, 30));
+void AllowedTraversalsMenu::ToggleButton::paint(juce::Graphics& graphics)
+{
+    const auto         bounds     = getLocalBounds().toFloat().reduced(2.0f);
+    const juce::Colour onColour   = juce::Colour::fromRGB(195, 174, 132);
+    const juce::Colour offColour  = juce::Colour::fromRGB(40, 40, 38);
+    juce::Colour       textColour = juce::Colour::fromRGB(195, 174, 132);
+    juce::String       stateText  = "off";
 
-    g.setColour(juce::Colours::black);
-    g.drawRect(getLocalBounds(), 1);
+    if (isOn) {
+        graphics.setColour(onColour);
+    }
+    else {
+        graphics.setColour(offColour);
+    }
+
+    graphics.fillRoundedRectangle(bounds, 4.0f);
+
+    graphics.setColour(juce::Colours::black.withAlpha(0.5f));
+    graphics.drawRoundedRectangle(bounds, 4.0f, 1.0f);
+
+    if (isOn) {
+        textColour = juce::Colours::black.withAlpha(0.7f);
+        stateText  = "on";
+    }
+
+    graphics.setColour(textColour);
+    graphics.setFont(juce::Font(juce::FontOptions(9.0f)));
+    graphics.drawText(stateText, getLocalBounds(), juce::Justification::centred);
 }
 
-void AllowedTraversalsMenu::resized() {
-    auto bounds = getLocalBounds().reduced(contentInset);
+void AllowedTraversalsMenu::ToggleButton::mouseDown(const juce::MouseEvent&)
+{
+    isOn = !isOn;
 
-    for (auto& row : rows) {
-        auto rowArea = bounds.removeFromTop(rowHeight).reduced(0, 2);
-        row.toggle->setBounds(rowArea.removeFromRight(toggleWidth));
-        rowArea.removeFromRight(6);
-        row.label->setBounds(rowArea);
+    repaint();
+
+    if (onToggle) {
+        onToggle(isOn);
     }
 }

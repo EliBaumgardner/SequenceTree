@@ -1,22 +1,19 @@
-//
-// Created by Eli Baumgardner on 8/16/26.
-//
-
 #include "LabelPanel.h"
-#include "../UI/Theme/CustomLookAndFeel.h"
+#include "Theme/CustomLookAndFeel.h"
 
-LabelPanel::LabelPanel(const ApplicationContext&context) : context(context) {
-
+LabelPanel::LabelPanel(const ApplicationContext& context) : context(context)
+{
     setLookAndFeel(context.lookAndFeel);
 }
 
-void LabelPanel::paint(juce::Graphics &g) {
-    auto bounds = getLocalBounds();
-    g.setColour(CustomLookAndFeel::get(*this).baseDarkColour2);
-    g.fillRect(bounds);
+void LabelPanel::paint(juce::Graphics& graphics)
+{
+    graphics.setColour(CustomLookAndFeel::get(*this).baseDarkColour2);
+    graphics.fillRect(getLocalBounds());
 }
 
-void LabelPanel::resized() {
+void LabelPanel::resized()
+{
     labelHeight = juce::roundToInt(getWidth() * labelAspectRatio);
     labelGap    = juce::roundToInt(labelHeight * labelGapRatio);
 
@@ -28,17 +25,9 @@ void LabelPanel::resized() {
     }
 }
 
-int LabelPanel::labelIndexAt(int y) const {
-    if (labels.empty() || labelHeight <= 0) {
-        return -1;
-    }
-
-    return juce::jlimit(0, static_cast<int>(labels.size()) - 1, y / (labelHeight + labelGap));
-}
-
-void LabelPanel::mouseDrag(const juce::MouseEvent &e) {
-
-    const int targetIndex = labelIndexAt(e.getEventRelativeTo(this).getPosition().y);
+void LabelPanel::mouseDrag(const juce::MouseEvent& event)
+{
+    const int targetIndex = labelIndexAt(event.getEventRelativeTo(this).getPosition().y);
 
     if (draggedIndex < 0 || targetIndex < 0 || targetIndex == draggedIndex) {
         return;
@@ -52,16 +41,17 @@ void LabelPanel::mouseDrag(const juce::MouseEvent &e) {
     resized();
 }
 
-void LabelPanel::mouseDown(const juce::MouseEvent &e) {
-    draggedIndex = labelIndexAt(e.getEventRelativeTo(this).getPosition().y);
+void LabelPanel::mouseDown(const juce::MouseEvent& event)
+{
+    draggedIndex = labelIndexAt(event.getEventRelativeTo(this).getPosition().y);
 
     if (draggedIndex >= 0) {
         labels[static_cast<size_t>(draggedIndex)]->setGrabbed(true);
     }
 }
 
-void LabelPanel::mouseUp(const juce::MouseEvent &) {
-
+void LabelPanel::mouseUp(const juce::MouseEvent &)
+{
     if (draggedIndex >= 0 && draggedIndex < static_cast<int>(labels.size())) {
         labels[static_cast<size_t>(draggedIndex)]->setGrabbed(false);
     }
@@ -76,6 +66,7 @@ void LabelPanel::mouseUp(const juce::MouseEvent &) {
 
     if (onLabelsReordered != nullptr) {
         std::vector<int> fileIds;
+
         fileIds.reserve(labels.size());
 
         for (const auto& label : labels) {
@@ -86,32 +77,14 @@ void LabelPanel::mouseUp(const juce::MouseEvent &) {
     }
 }
 
-void LabelPanel::applyOrder(std::span<const int> fileIds)
-{
-    size_t position = 0;
-
-    for (int fileId : fileIds) {
-        for (size_t candidate = position; candidate < labels.size(); ++candidate) {
-            if (labels[candidate]->fileId == fileId) {
-                std::swap(labels[position], labels[candidate]);
-                ++position;
-                break;
-            }
-        }
-    }
-
-    resized();
-}
-
 void LabelPanel::addFileLabel(juce::String fileName)
 {
-
-    auto fileLabel = std::make_unique<FileLabel>(context);
-    fileLabel->setFileName(fileName);
-    fileLabel->addMouseListener(this, true);
-
+    auto                                           fileLabel = std::make_unique<FileLabel>(context);
     const juce::Component::SafePointer<FileLabel>  addedLabel(fileLabel.get());
     const juce::Component::SafePointer<LabelPanel> panel(this);
+
+    fileLabel->fileText.commitText(fileName);
+    fileLabel->addMouseListener(this, true);
 
     fileLabel->onRemove = [panel, addedLabel] {
         juce::MessageManager::callAsync([panel, addedLabel] {
@@ -134,16 +107,10 @@ void LabelPanel::addFileLabel(juce::String fileName)
     };
 
     addAndMakeVisible(*fileLabel);
+
     labels.push_back(std::move(fileLabel));
 
     resized();
-}
-
-void LabelPanel::setSelectedLabel(const FileLabel* label)
-{
-    for (auto& candidate : labels) {
-        candidate->setSelected(candidate.get() == label);
-    }
 }
 
 void LabelPanel::removeFileLabel(const FileLabel* label)
@@ -156,8 +123,43 @@ void LabelPanel::removeFileLabel(const FileLabel* label)
     }
 
     labels.erase(match);
+
     draggedIndex = -1;
 
     resized();
 }
 
+void LabelPanel::setSelectedLabel(const FileLabel* label)
+{
+    for (auto& candidate : labels) {
+        candidate->setSelected(candidate.get() == label);
+    }
+}
+
+void LabelPanel::applyOrder(std::span<const int> fileIds)
+{
+    size_t position = 0;
+
+    for (int fileId : fileIds) {
+        for (size_t candidate = position; candidate < labels.size(); ++candidate) {
+            if (labels[candidate]->fileId == fileId) {
+                std::swap(labels[position], labels[candidate]);
+
+                ++position;
+
+                break;
+            }
+        }
+    }
+
+    resized();
+}
+
+int LabelPanel::labelIndexAt(int positionY) const
+{
+    if (labels.empty() || labelHeight <= 0) {
+        return -1;
+    }
+
+    return juce::jlimit(0, static_cast<int>(labels.size()) - 1, positionY / (labelHeight + labelGap));
+}

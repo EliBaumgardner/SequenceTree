@@ -1,24 +1,17 @@
-//
-// Created by Eli Baumgardner on 4/11/26.
-//
-
-#ifndef SEQUENCETREE_ROOTARROW_H
-#define SEQUENCETREE_ROOTARROW_H
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Editors/ValueEditor.h"
 #include "../../Util/ApplicationContext.h"
 
-class RootRectangle : public juce::Component {
-
+class RootRectangle : public juce::Component
+{
 public:
+
     explicit RootRectangle(const ApplicationContext& context);
 
+    void paint(juce::Graphics& graphics) override;
     void resized() override;
-    void paint(juce::Graphics& g) override;
 
     ValueEditor traversalEditor;
 };
-
-
-#endif //SEQUENCETREE_ROOTARROW_H

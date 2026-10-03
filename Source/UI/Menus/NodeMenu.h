@@ -1,14 +1,11 @@
-//
-// Created by Eli Baumgardner on 7/20/26.
-//
-
-#ifndef SEQUENCETREE_NODEMENU_H
-#define SEQUENCETREE_NODEMENU_H
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <array>
 #include "../../Util/ApplicationContext.h"
-#include "../Editors/ValueEditor.h"
+#include "../Editors/LabeledEditor.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
+#include "../../Util/NodeInfo.h"
 #include "ColourSelector.h"
 #include "../Buttons/IconButton.h"
 #include "TraversalRulesWindow.h"
@@ -16,73 +13,72 @@
 
 class Node;
 
-class NodeMenu : public juce::Component {
-
+class NodeMenu : public juce::Component
+{
 public:
 
     explicit NodeMenu(const ApplicationContext& context);
     ~NodeMenu() override;
 
-    void paint(juce::Graphics& g) override;
+    void paint(juce::Graphics& graphics) override;
     void resized() override;
 
 private:
 
+    enum class RowSource { NodeTree, SubLoop, MidiNote };
+
+    struct LabeledRow
+    {
+        LabeledEditor&   field;
+        juce::String     labelText;
+        juce::String     tooltip;
+        juce::Identifier property;
+        RowSource        source;
+        int              minimum;
+        int              maximum;
+        juce::String     prefix;
+        juce::String     suffix;
+    };
+
     void bindToNode(const Node* node);
-    void clearBindings();
 
     const ApplicationContext& applicationContext;
 
     ColourSelector colourSelector { applicationContext };
-    juce::Label    colourLabel;
+    CaptionLabel   colourLabel;
 
-    ValueEditor countLimitEditor        { applicationContext };
-    ValueEditor repeatEditor            { applicationContext };
-    ValueEditor switchCountLimitEditor  { applicationContext };
-    ValueEditor subLoopCountLimitEditor { applicationContext };
-    ValueEditor probabilityEditor       { applicationContext };
-    ValueEditor velocityEditor          { applicationContext };
-    ValueEditor pitchEditor             { applicationContext };
-    ValueEditor channelEditor           { applicationContext };
+    int selectedNodeId = -1;
 
-    juce::Label countLimitLabel;
-    juce::Label repeatLabel;
-    juce::Label switchCountLimitLabel;
-    juce::Label subLoopCountLimitLabel;
-    juce::Label probabilityLabel;
-    juce::Label velocityLabel;
-    juce::Label pitchLabel;
-    juce::Label channelLabel;
-
-    struct LabeledRow
-    {
-        juce::Label& label;
-        ValueEditor& editor;
-    };
+    LabeledEditor countLimitField        { applicationContext };
+    LabeledEditor repeatField            { applicationContext };
+    LabeledEditor switchCountLimitField  { applicationContext };
+    LabeledEditor subLoopCountLimitField { applicationContext };
+    LabeledEditor probabilityField       { applicationContext };
+    LabeledEditor velocityField          { applicationContext };
+    LabeledEditor pitchField             { applicationContext };
+    LabeledEditor channelField           { applicationContext };
 
     std::array<LabeledRow, 8> labeledRows {{
-        { countLimitLabel,        countLimitEditor        },
-        { repeatLabel,            repeatEditor            },
-        { switchCountLimitLabel,  switchCountLimitEditor  },
-        { subLoopCountLimitLabel, subLoopCountLimitEditor },
-        { probabilityLabel,       probabilityEditor       },
-        { velocityLabel,          velocityEditor          },
-        { pitchLabel,             pitchEditor              },
-        { channelLabel,           channelEditor            }
+        { countLimitField,        "CNT", "Count Limit",          ValueTreeIdentifiers::CountLimit,        RowSource::NodeTree, minimumCountLimit,   maximumCountLimit,   "",  ""  },
+        { repeatField,            "RPT", "Repeat Value",         ValueTreeIdentifiers::RepeatValue,       RowSource::NodeTree, minimumRepeatValue,  maximumRepeatValue,  "x", ""  },
+        { switchCountLimitField,  "SW",  "Switch Count Limit",   ValueTreeIdentifiers::SwitchCountLimit,  RowSource::NodeTree, minimumCountLimit,   maximumCountLimit,   "",  ""  },
+        { subLoopCountLimitField, "SUB", "Sub Loop Count Limit", ValueTreeIdentifiers::SubLoopCountLimit, RowSource::SubLoop,  minimumCountLimit,   maximumCountLimit,   "",  ""  },
+        { probabilityField,       "PRB", "Probability",          ValueTreeIdentifiers::Probability,       RowSource::NodeTree, minimumProbability,  maximumProbability,  "",  "%" },
+        { velocityField,          "VEL", "Velocity",             ValueTreeIdentifiers::MidiVelocity,      RowSource::MidiNote, minimumMidiVelocity, maximumMidiVelocity, "",  ""  },
+        { pitchField,             "PIT", "Pitch",                ValueTreeIdentifiers::MidiPitch,         RowSource::MidiNote, minimumMidiPitch,    maximumMidiPitch,    "",  ""  },
+        { channelField,           "CH",  "Channel",              ValueTreeIdentifiers::MidiChannel,       RowSource::MidiNote, minimumMidiChannel,  maximumMidiChannel,  "",  ""  }
     }};
 
-    std::unique_ptr<IconButton> editTraversalRulesButton;
+    IconButton editTraversalRulesButton;
 
     PopupWindowLauncher traversalRulesLauncher {
         "Traversal Rules",
         [this]() {
             auto content = std::make_unique<TraversalRulesWindow>(applicationContext);
+
             content->setSize(TraversalRulesWindow::defaultWidth, TraversalRulesWindow::defaultHeight);
 
             return content;
         }
     };
-
 };
-
-#endif //SEQUENCETREE_NODEMENU_H
