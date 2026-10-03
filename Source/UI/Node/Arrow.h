@@ -1,13 +1,3 @@
-/*
-  ==============================================================================
-
-    Arrow.h
-    Created: 12 Jun 2025 12:45:57am
-    Author:  Eli Baumgardner
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -37,84 +27,87 @@ struct ArrowGeometry
 struct ArrowLabel
 {
     juce::Point<float> centre;
-    float angle = 0.0f;
+    float              angle = 0.0f;
 };
 
 class Arrow : public juce::Component
 {
 public:
 
-  Arrow(Node* startNode, Node* endNode, const ApplicationContext& context);
-  Arrow(Node* startNode, juce::Point<int> tipOffset, const ApplicationContext& context);
+    Arrow(Node* startNode, Node* endNode, const ApplicationContext& context);
+    Arrow(Node* startNode, juce::Point<int> tipOffset, const ApplicationContext& context);
 
-  bool isDangling() const { return endNode == nullptr; }
-  bool isDashed() const;
-  bool isTraversalArrow() const;
-  bool isSyncArrow() const;
+    void paint(juce::Graphics& graphics) override;
+    void resized() override;
 
-  juce::Point<int>   getTip() const;
-  juce::Point<float> getHeadAnchor() const;
-  int                getDuration() const;
-  bool               showsDurationLabel() const;
-  juce::String       getDurationLabel() const;
+    bool isDangling() const
+    {
+        return endNode == nullptr;
+    }
 
-  ArrowGeometry getGeometry(float animationT) const;
-  ArrowLabel    getLabel(const ArrowGeometry& geometry, float headLength) const;
-  juce::Path    buildShaftPath(const ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const;
+    bool isDashed() const;
+    bool isTraversalArrow() const;
+    bool isSyncArrow() const;
 
-  void paint (juce::Graphics& g) override;
-  void resized() override;
-  void setArrowBounds();
-  void setTipOffset(juce::Point<int> offset);
+    juce::Point<int>   getTip() const;
+    juce::Point<float> getHeadAnchor() const;
+    int                getDuration() const;
+    bool               showsDurationLabel() const;
+    juce::String       getDurationLabel() const;
 
-  void beginDurationEdit();
+    ArrowGeometry getGeometry(float animationProgress) const;
+    ArrowLabel    getLabel(const ArrowGeometry& geometry, float headLength) const;
+    juce::Path    buildShaftPath(const ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const;
 
-  void triggerSnapAnimation();
-  void setHoverFade(bool shouldBeVisible);
-  void initHoverState(bool visibleNow);
-  void startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot,
-                     TrailSource source);
-  void resetProgress();
-  void resetProgress(int trailId);
-  void resumeProgress();
-  void advanceAnimation(double frameSec);
+    void setArrowBounds();
+    void setTipOffset(juce::Point<int> offset);
 
-  Node* const startNode = nullptr;
-  Node* const endNode   = nullptr;
+    void beginDurationEdit();
 
-  juce::Point<int> tipOffset;
+    void triggerSnapAnimation();
+    void setHoverFade(bool shouldBeVisible);
+    void initHoverState(bool visibleNow);
+    void startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot,
+                       TrailSource source);
+    void resetProgress();
+    void resetProgress(int trailId);
+    void resumeProgress();
+    void advanceAnimation(double frameSec);
 
-  int danglingIndex = -1;
+    Node* const startNode = nullptr;
+    Node* const endNode   = nullptr;
 
-  std::unique_ptr<ValueEditor> valueEditor;
-  std::unique_ptr<ValueEditor> durationEditor;
+    juce::Point<int> tipOffset;
 
-  juce::ValueTree arrowTree;
+    int danglingIndex = -1;
 
-  static constexpr float curvePerpScale        {0.8f};
-  static constexpr float curveOffsetFactor     {0.15f};
-  static constexpr float headVisibleThreshold  {0.3f};
-  static constexpr float labelVisibleThreshold {0.8f};
-  static constexpr float headAnchorInset       {8.0f};
-  static constexpr float arrowHeadLength       {9.0f};
-  static constexpr float arrowHeadLengthHover  {11.0f};
-  static constexpr float verticalLabelThreshold{0.2f};
-  static constexpr int     arrowBoundsPadding    {40};
-  static constexpr int     valueEditorWidth      {30};
-  static constexpr int     valueEditorHeight     {12};
+    std::unique_ptr<ValueEditor> valueEditor;
+    std::unique_ptr<ValueEditor> durationEditor;
 
-  ArrowAnimation animation;
-  juce::VBlankAttachment animationFrames;
+    juce::ValueTree arrowTree;
 
-  bool sourceHovered    = false;
-  bool proximityHovered = false;
+    static constexpr float curvePerpScale         = 0.8f;
+    static constexpr float curveOffsetFactor      = 0.15f;
+    static constexpr float headVisibleThreshold   = 0.3f;
+    static constexpr float labelVisibleThreshold  = 0.8f;
+    static constexpr float headAnchorInset        = 8.0f;
+    static constexpr float arrowHeadLength        = 9.0f;
+    static constexpr float arrowHeadLengthHover   = 11.0f;
+    static constexpr float verticalLabelThreshold = 0.2f;
+    static constexpr int   arrowBoundsPadding     = 40;
+    static constexpr int   valueEditorWidth       = 30;
+    static constexpr int   valueEditorHeight      = 12;
 
-  bool editingDuration = false;
+    ArrowAnimation         animation;
+    juce::VBlankAttachment animationFrames;
 
-  bool isGhost  = false;
-  bool dashed   = false;
-  bool hovered  = false;
-  bool selected = false;
+    bool sourceHovered    = false;
+    bool proximityHovered = false;
 
-private:
+    bool editingDuration = false;
+
+    bool isGhost  = false;
+    bool dashed   = false;
+    bool hovered  = false;
+    bool selected = false;
 };

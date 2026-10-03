@@ -1,10 +1,10 @@
 # Research Tools
 
-The tools the research pipeline uses in SequenceTree. They come from the `refactor-tools` plugin and its `refactor.*` commands, and each stage reads the sections it needs. The analysis agent gets this whole file in its prompt.
+The tools the research pipeline uses in SequenceTree. They come from the `research-suite` plugin's refactoring suite and its `refactor.*` commands, and each stage reads the sections it needs. The analysis agent gets this whole file in its prompt.
 
 ## Design Rules
 
-- The **Key Design Rules** and **How to Systematically Solve Problems** are refactor-tools' `rules/style.md` and `rules/systematic.md`. A Claude session already has them in context; any other agent prints them, together with the Project Design Rules, with `session-rules.sh`.
+- The **Key Design Rules** and **How to Systematically Solve Problems** are research-suite's `rules/style.md` and `rules/systematic.md`. A Claude session already has them in context; any other agent prints them, together with the Project Design Rules, with `session-rules.sh`.
 - In short, the Key Design Rules forbid comments, ternaries, wrapper functions, getters and setters, booleans or ints standing in for named states (use an enum), namespaces and `inline`, and require braces on every block. They are the owner's decisions, and every recommendation and every line of code must be writable within them.
 - Three things are asked about before they are planned, never assumed: a new short function said to name a larger process, a new `core_purpose_api` entry under `[gates]` in `.claude/refactor.toml`, and keeping a class small enough to be flagged.
 ## Measurement
@@ -23,7 +23,7 @@ Read-only. Run these for evidence rather than reading everything by hand.
 - Quote every condition, or the shell reads `>` as a redirect.
 - Duplication questions go to `refactor.find repeating`, both likenesses, before reading files by hand — it reads the whole scope in about half a second and beats grepping for a remembered line.
 - **Start the threshold low and read upward.** `numlines > 3` first; a high threshold silently hides the shorter half of a finding, and there is no indication that it did. `count >= 3` asks the other question — what has been written three times over.
-- **`shape` relaxes spelling, not structure.** `shape_of` in refactor-tools' `refactor/reporting/find.py` spells every identifier as the one token `name`, so `spawnKey` is one token and `traversal.key` is three, and `obj.f(x)` and `f(x)` differ by a receiver. Both likenesses report *contiguous* runs, so two functions that do the same thing with different expressions plugged in come back as several short islands rather than one long finding. Read adjacent findings in the same pair of files as possibly one duplicate, and go read the sites before reporting a size.
+- **`shape` relaxes spelling, not structure.** `shape_of` in research-suite's `refactor/reporting/find.py` spells every identifier as the one token `name`, so `spawnKey` is one token and `traversal.key` is three, and `obj.f(x)` and `f(x)` differ by a receiver. Both likenesses report *contiguous* runs, so two functions that do the same thing with different expressions plugged in come back as several short islands rather than one long finding. Read adjacent findings in the same pair of files as possibly one duplicate, and go read the sites before reporting a size.
 
 ## Verification
 

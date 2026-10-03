@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 7/21/26.
-//
-
 #include "PopupWindow.h"
 
 PopupWindow::PopupWindow(const juce::String& title, std::unique_ptr<juce::Component> content,
@@ -15,13 +11,12 @@ PopupWindow::PopupWindow(const juce::String& title, std::unique_ptr<juce::Compon
         setAlwaysOnTop(true);
     }
 
-    setResizeLimits(juce::roundToInt(getWidth()  * minimumSizeRatio),
-                    juce::roundToInt(getHeight() * minimumSizeRatio),
-                    juce::roundToInt(getWidth()  * maximumSizeRatio),
-                    juce::roundToInt(getHeight() * maximumSizeRatio));
+    setResizeLimits(juce::roundToInt(getWidth() * minimumSizeRatio), juce::roundToInt(getHeight() * minimumSizeRatio),
+                    juce::roundToInt(getWidth() * maximumSizeRatio), juce::roundToInt(getHeight() * maximumSizeRatio));
 }
 
-void PopupWindow::closeButtonPressed() {
+void PopupWindow::closeButtonPressed()
+{
     setVisible(false);
 }
 
@@ -39,46 +34,32 @@ PopupWindowLauncher::PopupWindowLauncher(juce::String title, juce::Colour backgr
 {
 }
 
-void PopupWindowLauncher::createIfNeeded() {
+void PopupWindowLauncher::show()
+{
     if (window == nullptr) {
         window = std::make_unique<PopupWindow>(windowTitle, contentFactory(), windowBackgroundColour);
     }
-}
 
-void PopupWindowLauncher::show() {
-    createIfNeeded();
     presentWindow();
 }
 
-void PopupWindowLauncher::show(const ContentFactory& factory) {
+void PopupWindowLauncher::show(const ContentFactory& factory)
+{
     window = std::make_unique<PopupWindow>(windowTitle, factory(), windowBackgroundColour);
+
     presentWindow();
 }
 
-void PopupWindowLauncher::presentWindow() {
-    window->centreWithSize(window->getWidth(), window->getHeight());
-    window->setVisible(true);
-    window->toFront(true);
-}
-
-void PopupWindowLauncher::close() {
-    window.reset();
-}
-
-void PopupWindowLauncher::toFront() {
+void PopupWindowLauncher::toFront()
+{
     if (window != nullptr) {
         window->toFront(true);
     }
 }
 
-bool PopupWindowLauncher::isShowing() const {
-    return window != nullptr && window->isVisible();
-}
-
-juce::Component* PopupWindowLauncher::getContent() const {
-    if (window != nullptr) {
-        return window->getContentComponent();
-    }
-
-    return nullptr;
+void PopupWindowLauncher::presentWindow()
+{
+    window->centreWithSize(window->getWidth(), window->getHeight());
+    window->setVisible(true);
+    window->toFront(true);
 }

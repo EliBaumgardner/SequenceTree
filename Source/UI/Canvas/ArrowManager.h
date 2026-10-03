@@ -1,9 +1,4 @@
-//
-// Created by Eli Baumgardner on 7/21/26.
-//
-
-#ifndef SEQUENCETREE_ARROWMANAGER_H
-#define SEQUENCETREE_ARROWMANAGER_H
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <functional>
@@ -16,32 +11,31 @@ class Node;
 class Arrow;
 struct ApplicationContext;
 
-class ArrowManager {
-
+class ArrowManager
+{
 public:
 
     ArrowManager(NodeCanvas& canvas, const ApplicationContext& context);
     ~ArrowManager();
 
-    const juce::OwnedArray<Arrow>& all() const { return arrows; }
+    const juce::OwnedArray<Arrow>& all() const
+    {
+        return arrows;
+    }
 
     Arrow* find(int parentNodeId, int childNodeId) const;
 
     Arrow* connect(Node* startNode, Node* endNode);
     Arrow* connectParentToChild(Node* parentNode, Node* childNode);
     void   adopt(std::unique_ptr<Arrow> arrow);
-    void   attach(Arrow& arrow);
 
     void remove(Arrow* arrow);
     void removeForNode(const Node* node);
     void removeMatching(const std::function<bool(Arrow*)>& predicate);
     void clear();
 
-    void  updatePreview(Node* node, juce::Point<int> tipOffset, bool dashed = false);
-    void  commitPreview();
-    void  cancelPreview();
-    bool  hasPreview() const { return preview != nullptr; }
-    Node* previewStartNode() const;
+    void updatePreview(Node* node, juce::Point<int> tipOffset, bool dashed = false);
+    void commitPreview();
 
     void rebuildDanglingForNode(int nodeId);
 
@@ -49,8 +43,7 @@ public:
 
     void refreshEncapsulatedArrows();
 
-    void handleArrowAdded      (int parentNodeId, int childNodeId);
-    void handleArrowRemoved    (int parentNodeId, int childNodeId);
+    void handleArrowAdded(int parentNodeId, int childNodeId);
     void handleArrowInfoChanged(int parentNodeId, int childNodeId);
 
     void setSelected(Arrow* arrow);
@@ -63,10 +56,11 @@ public:
 
     void triggerSnapForNode(int nodeId);
 
-    void   showSnapGhost(Node* from, Node* to);
-    void   hideSnapGhost();
+    void showSnapGhost(Node* from, Node* to);
+    void hideSnapGhost();
 
-    ArrowInfo currentArrowInfo;
+    ArrowInfo              currentArrowInfo;
+    std::unique_ptr<Arrow> preview;
 
 private:
 
@@ -76,12 +70,9 @@ private:
 
     void detach(Arrow* arrow);
 
-    NodeCanvas& canvas;
+    NodeCanvas&               canvas;
     const ApplicationContext& applicationContext;
 
     juce::OwnedArray<Arrow> arrows;
-    std::unique_ptr<Arrow>  preview;
     std::unique_ptr<Arrow>  snapGhostArrow;
 };
-
-#endif //SEQUENCETREE_ARROWMANAGER_H

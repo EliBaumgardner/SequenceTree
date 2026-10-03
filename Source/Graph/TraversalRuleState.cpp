@@ -17,9 +17,7 @@ void TraversalRuleState::replaceState(const juce::ValueTree& restoredRules)
     }
 
     if (restoredRules.hasProperty(ValueTreeIdentifiers::ActiveRuleId)) {
-        rules.setProperty(ValueTreeIdentifiers::ActiveRuleId,
-                          restoredRules.getProperty(ValueTreeIdentifiers::ActiveRuleId),
-                          nullptr);
+        rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, restoredRules.getProperty(ValueTreeIdentifiers::ActiveRuleId), nullptr);
     }
 
     ruleIdIncrement = 0;
@@ -103,8 +101,7 @@ void TraversalRuleState::setRuleSource(int ruleId, const juce::String& source,
 juce::String TraversalRuleState::activeRuleSource() const
 {
     const juce::ValueTree rule =
-        rules.getChildWithProperty(ValueTreeIdentifiers::Id,
-                                   rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
+        rules.getChildWithProperty(ValueTreeIdentifiers::Id, rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
 
     if (! rule.isValid()) {
         return {};
@@ -120,12 +117,9 @@ void TraversalRuleState::ensureDefaultRule()
     }
 
     const juce::ValueTree activeRule =
-        rules.getChildWithProperty(ValueTreeIdentifiers::Id,
-                                   rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
+        rules.getChildWithProperty(ValueTreeIdentifiers::Id, rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
 
     if (! activeRule.isValid()) {
-        rules.setProperty(ValueTreeIdentifiers::ActiveRuleId,
-                          rules.getChild(0).getProperty(ValueTreeIdentifiers::Id),
-                          nullptr);
+        rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, rules.getChild(0).getProperty(ValueTreeIdentifiers::Id), nullptr);
     }
 }

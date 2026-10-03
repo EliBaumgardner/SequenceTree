@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 7/21/26.
-//
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -10,8 +6,8 @@ struct ApplicationContext;
 
 class NodeCanvas;
 
-class AudioCommandDrainer {
-
+class AudioCommandDrainer
+{
 public:
 
     AudioCommandDrainer(NodeCanvas& canvas, const ApplicationContext& context);

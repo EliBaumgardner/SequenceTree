@@ -9,6 +9,7 @@ ScriptRun::ScriptRun(const ScriptRunContext& runContext)
     : context(runContext)
 {
     memberValues = &context.members;
+    randomState  = (static_cast<unsigned int>(context.randomValue) * 2654435761u ^ 2463534242u) | 1u;
 
     if (context.writes == ScriptWrites::Trial) {
         trialMembers = context.members;
@@ -83,6 +84,9 @@ ScriptRun::Progress ScriptRun::execute(const ScriptInstruction& instruction, int
         case ScriptOpcode::Advance:
         case ScriptOpcode::PlayNote:
             return executeNodeOpcode(instruction);
+
+        case ScriptOpcode::CoreRandom:
+            return drawRandom();
 
         case ScriptOpcode::Jump: {
             programCounter = instruction.operand;
@@ -311,6 +315,25 @@ ScriptRun::Progress ScriptRun::executeNodeOpcode(const ScriptInstruction& instru
     }
 }
 
+ScriptRun::Progress ScriptRun::drawRandom()
+{
+    constexpr double unitScale = 1.0 / 16777216.0;
+
+    if (stackTop < 2) {
+        return Progress::Faulted;
+    }
+
+    const double spread = stack[static_cast<std::size_t>(--stackTop)];
+    double&      centre = stack[static_cast<std::size_t>(stackTop - 1)];
+
+    randomState ^= randomState << 13;
+    randomState ^= randomState >> 17;
+    randomState ^= randomState << 5;
+
+    centre += centre * spread * (2.0 * static_cast<double>(randomState >> 8) * unitScale - 1.0);
+    return Progress::Running;
+}
+
 bool ScriptRun::enterFunction(int functionIndex, int returnAddress, int& programCounter)
 {
     const int functionCount = static_cast<int>(context.script.functions.size());
@@ -351,8 +374,7 @@ double ScriptRun::calculate(const ScriptInstruction& instruction, double left, d
     }
 
     if (number == ScriptNumber::Float) {
-        return convert(ScriptNumber::Float, realArithmetic(instruction.opcode, convert(ScriptNumber::Float, left),
-                                                           convert(ScriptNumber::Float, right)));
+        return convert(ScriptNumber::Float, realArithmetic(instruction.opcode, convert(ScriptNumber::Float, left), convert(ScriptNumber::Float, right)));
     }
 
     return realArithmetic(instruction.opcode, left, right);

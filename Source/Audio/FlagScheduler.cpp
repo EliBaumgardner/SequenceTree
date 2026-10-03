@@ -187,8 +187,7 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKe
         }
     }
 
-    TraversalPool::Instance* instance = dispatcher.prepareTraversal(runId, rootId, startNode.nodeID,
-                                                                    flagNode.flagTraversal, context);
+    TraversalPool::Instance* instance = dispatcher.prepareTraversal(runId, rootId, startNode.nodeID, flagNode.flagTraversal, context);
 
     if (instance == nullptr) {
         return;

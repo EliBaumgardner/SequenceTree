@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 8/23/26.
-//
-
 #include "ValueFormat.h"
 #include "../../../Graph/ValueTreeIdentifiers.h"
 
@@ -52,11 +48,9 @@ juce::String TraversalFlagFormat::text(const ValueBinding& binding, TextPurpose 
 ParsedValue TraversalFlagFormat::parse(const juce::String& enteredText) const
 {
     const juce::String trimmed = enteredText.trim();
-
-    const bool spawns  = trimmed.startsWithChar('+');
-    const bool removes = trimmed.startsWithChar('-');
-
-    ParsedValue cleared { 0, { 0 } };
+    const bool         spawns  = trimmed.startsWithChar('+');
+    const bool         removes = trimmed.startsWithChar('-');
+    const ParsedValue  cleared { 0, { 0 } };
 
     if (! spawns && ! removes) {
         return cleared;
@@ -80,14 +74,13 @@ ParsedValue TraversalFlagFormat::parse(const juce::String& enteredText) const
 std::vector<TraversalKey> TraversalFlagFormat::parseKeys(const juce::String& text)
 {
     std::vector<TraversalKey> parsed;
-    juce::String digits;
+    juce::String              digits;
 
-    for (int i = 0; i <= text.length(); i++) {
-
-        const bool isDigit = i < text.length() && juce::CharacterFunctions::isDigit(text[i]);
+    for (int characterIndex = 0; characterIndex <= text.length(); ++characterIndex) {
+        const bool isDigit = characterIndex < text.length() && juce::CharacterFunctions::isDigit(text[characterIndex]);
 
         if (isDigit) {
-            digits += text[i];
+            digits += text[characterIndex];
             continue;
         }
 
@@ -96,10 +89,11 @@ std::vector<TraversalKey> TraversalFlagFormat::parseKeys(const juce::String& tex
         }
 
         TraversalKey key;
+
         key.typeId = digits.getIntValue();
 
-        if (i < text.length()) {
-            const int instance = instanceLetters.indexOfChar(text[i]);
+        if (characterIndex < text.length()) {
+            const int instance = instanceLetters.indexOfChar(text[characterIndex]);
 
             if (instance != -1) {
                 key.instance = instance;
@@ -107,6 +101,7 @@ std::vector<TraversalKey> TraversalFlagFormat::parseKeys(const juce::String& tex
         }
 
         parsed.push_back(key);
+
         digits.clear();
     }
 

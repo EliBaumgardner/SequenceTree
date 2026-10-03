@@ -1,7 +1,7 @@
 #include "SelectionOps.h"
 #include "../UI/Canvas/NodeCanvas.h"
 #include "../UI/Node/Node.h"
-#include "../UI/Node/NodeFactory.h"
+#include "../Graph/NodeFactory.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "../Graph/GraphState.h"
 
@@ -605,10 +605,8 @@ void SelectionOps::insertClipboardNodes(const PasteLayout& layout, juce::Point<i
         node.setProperty(ValueTreeIdentifiers::Id, newId, nullptr);
         node.setProperty(ValueTreeIdentifiers::RootNodeId, layout.rootIdOf.at(originalId), nullptr);
 
-        node.setProperty(ValueTreeIdentifiers::XPosition,
-                         static_cast<int>(node.getProperty(ValueTreeIdentifiers::XPosition)) + offset.x, nullptr);
-        node.setProperty(ValueTreeIdentifiers::YPosition,
-                         static_cast<int>(node.getProperty(ValueTreeIdentifiers::YPosition)) + offset.y, nullptr);
+        node.setProperty(ValueTreeIdentifiers::XPosition, static_cast<int>(node.getProperty(ValueTreeIdentifiers::XPosition)) + offset.x, nullptr);
+        node.setProperty(ValueTreeIdentifiers::YPosition, static_cast<int>(node.getProperty(ValueTreeIdentifiers::YPosition)) + offset.y, nullptr);
 
         node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).removeAllChildren(nullptr);
 
@@ -639,8 +637,7 @@ void SelectionOps::connectClipboardNodes(const PasteLayout& layout) const
             if (copiedChild != layout.idMap.end()) {
                 state.connectNodes(parentId, copiedChild->second, undoManager);
 
-                ArrowBindingOps::setArrowInfo(state.getConnection(parentId, copiedChild->second),
-                                   ArrowBindingOps::getArrowInfo(childId), undoManager);
+                ArrowBindingOps::setArrowInfo(state.getConnection(parentId, copiedChild->second), ArrowBindingOps::getArrowInfo(childId), undoManager);
             }
         }
     }
@@ -698,8 +695,7 @@ std::vector<int> SelectionOps::createPastedEncapsulators(const PasteLayout& layo
             continue;
         }
 
-        const int subLoopCountLimit = source.getProperty(ValueTreeIdentifiers::SubLoopCountLimit,
-                                                         GraphState::defaultSubLoopCountLimit);
+        const int subLoopCountLimit = source.getProperty(ValueTreeIdentifiers::SubLoopCountLimit, GraphState::defaultSubLoopCountLimit);
 
         const juce::ValueTree encapsulator =
             NodeFactory::createEncapsulator(state, pastedMemberIds, subLoopCountLimit, undoManager);

@@ -1,11 +1,6 @@
-//
-// Created by Eli Baumgardner on 8/19/26.
-//
-
 #include "FilePage.h"
 
 #include "../Theme/CustomLookAndFeel.h"
-
 
 FilePage::FilePage(const ApplicationContext& context)
     : juce::CodeEditorComponent(*this, nullptr)
@@ -27,29 +22,29 @@ FilePage::FilePage(const ApplicationContext& context)
     setFont(juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), baseFontHeight, juce::Font::plain)));
 }
 
-FilePage::~FilePage() {
-
+FilePage::~FilePage()
+{
     removeListener(this);
 }
 
-void FilePage::paintOverChildren(juce::Graphics& g) {
-
+void FilePage::paintOverChildren(juce::Graphics& graphics)
+{
     const int firstLine = getFirstLineOnScreen();
     const int lastLine  = firstLine + getNumLinesOnScreen();
 
-    g.setColour(CustomLookAndFeel::get(*this).scriptErrorColour.withAlpha(errorLineAlpha));
+    graphics.setColour(CustomLookAndFeel::get(*this).scriptErrorColour.withAlpha(errorLineAlpha));
 
     for (int line : errorLines) {
         if (line >= firstLine && line <= lastLine) {
-            g.fillRect(0, (line - firstLine) * getLineHeight(), getWidth(), getLineHeight());
+            graphics.fillRect(0, (line - firstLine) * getLineHeight(), getWidth(), getLineHeight());
         }
     }
 }
 
-void FilePage::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) {
-
-    if (! e.mods.isShiftDown()) {
-        juce::CodeEditorComponent::mouseWheelMove(e, wheel);
+void FilePage::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
+{
+    if (! event.mods.isShiftDown()) {
+        juce::CodeEditorComponent::mouseWheelMove(event, wheel);
         return;
     }
 
@@ -62,13 +57,13 @@ void FilePage::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelD
     setZoom(zoom * (1.0f + delta * zoomSensitivity));
 }
 
-void FilePage::mouseMagnify(const juce::MouseEvent&, float scaleFactor) {
-
+void FilePage::mouseMagnify(const juce::MouseEvent&, float scaleFactor)
+{
     setZoom(zoom * scaleFactor);
 }
 
-void FilePage::setZoom(float newZoom) {
-
+void FilePage::setZoom(float newZoom)
+{
     const float clamped = juce::jlimit(minZoom, maxZoom, newZoom);
 
     if (juce::approximatelyEqual(clamped, zoom)) {
@@ -80,15 +75,15 @@ void FilePage::setZoom(float newZoom) {
     setFont(getFont().withHeight(baseFontHeight * zoom));
 }
 
-void FilePage::codeDocumentTextInserted(const juce::String&, int) {
-
+void FilePage::codeDocumentTextInserted(const juce::String&, int)
+{
     if (! suppressTextChanged && onTextChanged != nullptr) {
         onTextChanged();
     }
 }
 
-void FilePage::codeDocumentTextDeleted(int, int) {
-
+void FilePage::codeDocumentTextDeleted(int, int)
+{
     if (! suppressTextChanged && onTextChanged != nullptr) {
         onTextChanged();
     }

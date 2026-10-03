@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 8/23/26.
-//
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -10,25 +6,28 @@
 
 #include "../../../Graph/RTData.h"
 
-struct InputRestrictions {
+struct InputRestrictions
+{
     int          maxLength = 4;
     juce::String allowedCharacters { "0123456789" };
 };
 
-struct ValueBinding {
+struct ValueBinding
+{
     const juce::Value&              primary;
     const std::vector<juce::Value>& secondaries;
 };
 
-struct ParsedValue {
+struct ParsedValue
+{
     juce::var              primary;
     std::vector<juce::var> secondaries;
 };
 
 enum class TextPurpose : uint8_t { Display, Editing };
 
-
-class ValueFormat {
+class ValueFormat
+{
 public:
 
     virtual ~ValueFormat() = default;
@@ -46,8 +45,8 @@ public:
     int    decimalPlaces = 0;
 };
 
-
-class NumberFormat : public ValueFormat {
+class NumberFormat : public ValueFormat
+{
 public:
 
     NumberFormat(double lowest, double highest, int places = 0);
@@ -63,8 +62,8 @@ public:
     bool   showsPositiveSign = false;
 };
 
-
-class PitchFormat : public NumberFormat {
+class PitchFormat : public NumberFormat
+{
 public:
 
     PitchFormat();
@@ -72,8 +71,8 @@ public:
     juce::String text(const ValueBinding& binding, TextPurpose purpose) const override;
 };
 
-
-class GreekLetterFormat : public NumberFormat {
+class GreekLetterFormat : public NumberFormat
+{
 public:
 
     GreekLetterFormat();
@@ -81,8 +80,8 @@ public:
     juce::String text(const ValueBinding& binding, TextPurpose purpose) const override;
 };
 
-
-class DualIntFormat : public NumberFormat {
+class DualIntFormat : public NumberFormat
+{
 public:
 
     DualIntFormat(double lowest, double highest, const juce::Identifier& secondaryPropertyID);
@@ -92,8 +91,8 @@ public:
     ParsedValue       parse(const juce::String& enteredText) const override;
 };
 
-
-class TraversalFlagFormat : public NumberFormat {
+class TraversalFlagFormat : public NumberFormat
+{
 public:
 
     TraversalFlagFormat();
@@ -108,8 +107,8 @@ public:
     static const juce::String instanceLetters;
 };
 
-
-class TextFormat : public ValueFormat {
+class TextFormat : public ValueFormat
+{
 public:
 
     TextFormat(int longestText, const juce::String& characters);
@@ -125,4 +124,3 @@ public:
     juce::String allowedCharacters;
     bool         trimsWhitespace = true;
 };
-

@@ -24,9 +24,10 @@ public:
 
     struct LoopState
     {
-        bool active = false;
-        int  count  = 0;
-        int  limit  = 0;
+        bool active   = false;
+        int  count    = 0;
+        int  limit    = 0;
+        int  returnId = -1;
     };
 
     struct ModulatorGate

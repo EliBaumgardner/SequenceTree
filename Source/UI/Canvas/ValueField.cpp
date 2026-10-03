@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 6/29/26.
-//
-
 #include "ValueField.h"
 #include "NodeCanvas.h"
 #include "../Node/Node.h"
@@ -9,32 +5,18 @@
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
-ValueField::ValueField(NodeCanvas& ownerIn) : owner(ownerIn) {}
+ValueField::ValueField(NodeCanvas& owner) : owner(owner)
+{
+}
 
 ValueField::~ValueField()
 {
     stopTimer();
 }
 
-juce::ValueTree ValueField::firstMidiNote(int nodeId) const
+void ValueField::setActivePaintLayer(PaintLayer layer)
 {
-    return owner.applicationContext.graphState->getMidiNotes(nodeId).getChild(0);
-}
-
-void ValueField::setBrushColour(juce::Colour colour)
-{
-    brushColour = colour;
-}
-
-void ValueField::setBrushRadius(float radius)
-{
-    brushRadius = radius;
-    updateBrushCursor();
-}
-
-void ValueField::setActivePaintLayer(int index)
-{
-    activePaintLayer = juce::jlimit(0, numPaintLayers - 1, index);
+    activePaintLayer = layer;
 
     if (owner.paintMode) {
         render();
@@ -43,15 +25,21 @@ void ValueField::setActivePaintLayer(int index)
     owner.repaint();
 }
 
-void ValueField::setViewZoom(float z)
+void ValueField::updateBrushCursor()
 {
-    viewZoom = z;
-    updateBrushCursor();
-}
+    if (!owner.paintMode) {
+        return;
+    }
 
-void ValueField::updateCursor()
-{
-    updateBrushCursor();
+    const int      cursorSize = juce::jmax(1, static_cast<int>(brushRadius * viewZoom * 2.0f));
+    const int      hotspot    = cursorSize / 2;
+    juce::Image    cursorImage(juce::Image::ARGB, cursorSize, cursorSize, true);
+    juce::Graphics cursorGraphics(cursorImage);
+
+    cursorGraphics.setColour(juce::Colours::black);
+    cursorGraphics.drawEllipse(cursorImage.getBounds().toFloat().reduced(1.0f), 1.0f);
+
+    owner.setMouseCursor(juce::MouseCursor(cursorImage, hotspot, hotspot));
 }
 
 void ValueField::refresh()
@@ -61,226 +49,206 @@ void ValueField::refresh()
     }
 
     render();
+
     owner.repaint();
 }
 
-void ValueField::paintStroke(juce::Point<float> canvasPos, bool isStart, bool erase)
+void ValueField::paintStroke(juce::Point<float> canvasPosition, bool isStart, bool erase)
 {
     if (isStart) {
-        brushStrokeActive = true;
-        brushErase = erase;
+        brushStroke = BrushStroke::Painting;
+
+        if (erase) {
+            brushStroke = BrushStroke::Erasing;
+        }
+
         ensurePaintBuffers();
+
         std::ranges::fill(strokeMask, 0.0f);
+
         seedStrokeDensityFromNodes();
-        strokePrevPoint = canvasPos;
+
+        strokePreviousPoint = canvasPosition;
+
         startTimerHz(dwellTimerHz);
     }
 
-    brushCurrentPoint = canvasPos;
-    accumulateStroke(strokePrevPoint, canvasPos);
-    applyPaintToNodes(strokePrevPoint, canvasPos);
-    strokePrevPoint = canvasPos;
+    brushCurrentPoint = canvasPosition;
+
+    accumulateStroke(strokePreviousPoint, canvasPosition);
+    applyPaintToNodes(strokePreviousPoint, canvasPosition);
+
+    strokePreviousPoint = canvasPosition;
 }
 
 void ValueField::endStroke()
 {
-    if (!brushStrokeActive) {
+    if (brushStroke == BrushStroke::Idle) {
         return;
     }
 
-    brushStrokeActive = false;
+    brushStroke = BrushStroke::Idle;
+
     stopTimer();
-}
-
-void ValueField::timerCallback()
-{
-    if (!brushStrokeActive) {
-        stopTimer();
-        return;
-    }
-
-    accumulateStroke(brushCurrentPoint, brushCurrentPoint, true);
-    applyPaintToNodes(brushCurrentPoint, brushCurrentPoint);
 }
 
 void ValueField::render()
 {
-    const int w = owner.getWidth();
-    const int h = owner.getHeight();
+    const int canvasWidth  = owner.getWidth();
+    const int canvasHeight = owner.getHeight();
 
-    if (w <= 0 || h <= 0) {
+    if (canvasWidth <= 0 || canvasHeight <= 0) {
         return;
     }
 
-    const juce::Identifier valueId = paintLayerValueId();
+    const int          fieldWidth  = juce::jmax(1, canvasWidth / fieldScale);
+    const int          fieldHeight = juce::jmax(1, canvasHeight / fieldScale);
+    const juce::Colour background  = CustomLookAndFeel::get(owner).canvasColour.brighter();
 
-    static constexpr int   kFieldScale  = 2;
-    static constexpr float glowRadius   = 330.0f;
+    accumulateNodeGlow(fieldWidth, fieldHeight);
 
-    const int fieldW = juce::jmax(1, w / kFieldScale);
-    const int fieldH = juce::jmax(1, h / kFieldScale);
+    if (image.getWidth() != fieldWidth || image.getHeight() != fieldHeight) {
+        image = juce::Image(juce::Image::ARGB, fieldWidth, fieldHeight, false);
+    }
 
-    const float fieldRadius  = glowRadius / static_cast<float>(kFieldScale);
-    const float fieldRadius2 = fieldRadius * fieldRadius;
+    juce::Image::BitmapData pixels(image, juce::Image::BitmapData::writeOnly);
 
-    const size_t numCells = static_cast<size_t>(fieldW) * static_cast<size_t>(fieldH);
-    fieldWeightedSum.assign(numCells, 0.0f);
-    fieldTotalWeight.assign(numCells, 0.0f);
-    fieldCoverageProd.assign(numCells, 1.0f);
-    float* weightedSum  = fieldWeightedSum.data();
-    float* totalWeight  = fieldTotalWeight.data();
-    float* coverageProd = fieldCoverageProd.data();
+    for (int row = 0; row < fieldHeight; ++row) {
+        const size_t rowStart     = static_cast<size_t>(row) * fieldWidth;
+        const float* weightedSum  = fieldWeightedSum.data()  + rowStart;
+        const float* totalWeight  = fieldTotalWeight.data()  + rowStart;
+        const float* coverageProd = fieldCoverageProd.data() + rowStart;
+        juce::uint8* line         = pixels.getLinePointer(row);
 
-    for (auto& [id, node] : owner.nodeManager.all()) {
+        for (int column = 0; column < fieldWidth; ++column) {
+            juce::Colour     pixelColour = background;
+            juce::PixelARGB* pixel       = reinterpret_cast<juce::PixelARGB*>(line + column * pixels.pixelStride);
+
+            if (totalWeight[column] > 0.0f) {
+                const float fieldFactor = weightedSum[column] / totalWeight[column];
+                const float coverage    = juce::jlimit(0.0f, 1.0f, 1.0f - coverageProd[column]);
+
+                pixelColour = background.interpolatedWith(mapFieldColour(fieldFactor), coverage);
+            }
+
+            pixel->setARGB(pixelColour.getAlpha(), pixelColour.getRed(), pixelColour.getGreen(), pixelColour.getBlue());
+        }
+    }
+}
+
+void ValueField::accumulateNodeGlow(int fieldWidth, int fieldHeight)
+{
+    const juce::Identifier valueId           = paintLayerValueId();
+    const float            fieldRadius       = glowRadius / static_cast<float>(fieldScale);
+    const float            fieldRadiusSquare = fieldRadius * fieldRadius;
+    const size_t           cellCount         = static_cast<size_t>(fieldWidth) * static_cast<size_t>(fieldHeight);
+
+    fieldWeightedSum.assign(cellCount, 0.0f);
+    fieldTotalWeight.assign(cellCount, 0.0f);
+    fieldCoverageProd.assign(cellCount, 1.0f);
+
+    for (auto& [nodeId, node] : owner.nodeManager.all()) {
         if (node == nullptr) {
             continue;
         }
 
-        juce::ValueTree note = firstMidiNote(id);
+        const juce::ValueTree note = owner.applicationContext.graphState->getMidiNotes(nodeId).getChild(0);
 
         if (!note.isValid()) {
             continue;
         }
 
-        const int   value  = static_cast<int>(note.getProperty(valueId));
-        const float factor = juce::jlimit(0.0f, 1.0f, value / 127.0f);
+        const float valueFactor = juce::jlimit(0.0f, 1.0f, static_cast<int>(note.getProperty(valueId)) / maximumMidiValue);
+        const auto  nodeCentre  = node->getBounds().getCentre().toFloat();
+        const float centreX     = nodeCentre.x / static_cast<float>(fieldScale);
+        const float centreY     = nodeCentre.y / static_cast<float>(fieldScale);
+        const int   firstColumn = juce::jmax(0,               static_cast<int>(std::floor(centreX - fieldRadius)));
+        const int   lastColumn  = juce::jmin(fieldWidth - 1,  static_cast<int>(std::ceil (centreX + fieldRadius)));
+        const int   firstRow    = juce::jmax(0,               static_cast<int>(std::floor(centreY - fieldRadius)));
+        const int   lastRow     = juce::jmin(fieldHeight - 1, static_cast<int>(std::ceil (centreY + fieldRadius)));
 
-        const auto  centre = node->getBounds().getCentre().toFloat();
-        const float cx = centre.x / static_cast<float>(kFieldScale);
-        const float cy = centre.y / static_cast<float>(kFieldScale);
+        for (int row = firstRow; row <= lastRow; ++row) {
+            const float  offsetY      = static_cast<float>(row) - centreY;
+            const size_t rowStart     = static_cast<size_t>(row) * fieldWidth;
+            float*       weightedSum  = fieldWeightedSum.data()  + rowStart;
+            float*       totalWeight  = fieldTotalWeight.data()  + rowStart;
+            float*       coverageProd = fieldCoverageProd.data() + rowStart;
 
-        const int x0 = juce::jmax(0,          static_cast<int>(std::floor(cx - fieldRadius)));
-        const int x1 = juce::jmin(fieldW - 1, static_cast<int>(std::ceil (cx + fieldRadius)));
-        const int y0 = juce::jmax(0,          static_cast<int>(std::floor(cy - fieldRadius)));
-        const int y1 = juce::jmin(fieldH - 1, static_cast<int>(std::ceil (cy + fieldRadius)));
+            for (int column = firstColumn; column <= lastColumn; ++column) {
+                const float offsetX        = static_cast<float>(column) - centreX;
+                const float distanceSquare = offsetX * offsetX + offsetY * offsetY;
 
-        for (int y = y0; y <= y1; ++y) {
-            const float dy  = static_cast<float>(y) - cy;
-            const float dy2 = dy * dy;
-            float* wsRow = weightedSum  + static_cast<size_t>(y) * fieldW;
-            float* twRow = totalWeight  + static_cast<size_t>(y) * fieldW;
-            float* cpRow = coverageProd + static_cast<size_t>(y) * fieldW;
-
-            for (int x = x0; x <= x1; ++x) {
-                const float dx = static_cast<float>(x) - cx;
-                const float d2 = dx * dx + dy2;
-
-                if (d2 >= fieldRadius2) {
+                if (distanceSquare >= fieldRadiusSquare) {
                     continue;
                 }
 
-                const float t = 1.0f - std::sqrt(d2) / fieldRadius;
-                const float wt = std::pow(t, 10.0f);
+                const float weight = std::pow(1.0f - std::sqrt(distanceSquare) / fieldRadius, 10.0f);
 
-                wsRow[x] += wt * factor;
-                twRow[x] += wt;
-                cpRow[x] *= (1.0f - wt);
+                weightedSum[column]  += weight * valueFactor;
+                totalWeight[column]  += weight;
+                coverageProd[column] *= (1.0f - weight);
             }
         }
     }
-
-    if (image.getWidth() != fieldW || image.getHeight() != fieldH) {
-        image = juce::Image(juce::Image::ARGB, fieldW, fieldH, false);
-    }
-
-    juce::Image::BitmapData pixels(image, juce::Image::BitmapData::writeOnly);
-    const juce::Colour bg = CustomLookAndFeel::get(owner).canvasColour.brighter();
-
-    for (int y = 0; y < fieldH; ++y) {
-        const float*  wsRow = weightedSum  + static_cast<size_t>(y) * fieldW;
-        const float*  twRow = totalWeight  + static_cast<size_t>(y) * fieldW;
-        const float*  cpRow = coverageProd + static_cast<size_t>(y) * fieldW;
-        juce::uint8*  line  = pixels.getLinePointer(y);
-
-        for (int x = 0; x < fieldW; ++x) {
-            juce::Colour out = bg;
-
-            const float tw = twRow[x];
-            if (tw > 0.0f) {
-                const float fieldFactor = wsRow[x] / tw;
-                const float coverage    = juce::jlimit(0.0f, 1.0f, 1.0f - cpRow[x]);
-                out = bg.interpolatedWith(mapFieldColour(fieldFactor), coverage);
-            }
-
-            auto* px = reinterpret_cast<juce::PixelARGB*>(line + x * pixels.pixelStride);
-            px->setARGB(out.getAlpha(), out.getRed(), out.getGreen(), out.getBlue());
-        }
-    }
-}
-
-void ValueField::updateBrushCursor()
-{
-    if (!owner.paintMode) {
-        return;
-    }
-
-    const int size    = juce::jmax(1, static_cast<int>(brushRadius * viewZoom * 2.0f));
-    const int hotspot = size / 2;
-
-    juce::Image img(juce::Image::ARGB, size, size, true);
-    juce::Graphics g(img);
-    g.setColour(juce::Colours::black);
-    g.drawEllipse(img.getBounds().toFloat().reduced(1.0f), 1.0f);
-
-    owner.setMouseCursor(juce::MouseCursor(img, hotspot, hotspot));
 }
 
 void ValueField::ensurePaintBuffers()
 {
-    const size_t expected = static_cast<size_t>(owner.getWidth()) * static_cast<size_t>(owner.getHeight());
+    const size_t        pixelCount = static_cast<size_t>(owner.getWidth()) * static_cast<size_t>(owner.getHeight());
+    std::vector<float>& density    = paintDensity[static_cast<size_t>(activePaintLayer)];
 
-    if (paintDensity[activePaintLayer].size() != expected) {
-        paintDensity[activePaintLayer].assign(expected, 0.0f);
+    if (density.size() != pixelCount) {
+        density.assign(pixelCount, 0.0f);
     }
 
-    if (strokeMask.size() != expected) {
-        strokeMask.assign(expected, 0.0f);
+    if (strokeMask.size() != pixelCount) {
+        strokeMask.assign(pixelCount, 0.0f);
     }
 }
 
 void ValueField::seedStrokeDensityFromNodes()
 {
-    const int w = owner.getWidth();
-    const int h = owner.getHeight();
+    const int canvasWidth  = owner.getWidth();
+    const int canvasHeight = owner.getHeight();
 
-    if (w <= 0 || h <= 0) {
+    if (canvasWidth <= 0 || canvasHeight <= 0) {
         return;
     }
 
     const juce::Identifier valueId = paintLayerValueId();
-    std::vector<float>& density = paintDensity[activePaintLayer];
+    std::vector<float>&    density = paintDensity[static_cast<size_t>(activePaintLayer)];
 
-    for (auto& [id, node] : owner.nodeManager.all()) {
+    for (auto& [nodeId, node] : owner.nodeManager.all()) {
         if (node == nullptr) {
             continue;
         }
 
-        juce::ValueTree note = firstMidiNote(id);
+        const juce::ValueTree note = owner.applicationContext.graphState->getMidiNotes(nodeId).getChild(0);
 
         if (!note.isValid()) {
             continue;
         }
 
-        const int   value = static_cast<int>(note.getProperty(valueId));
-        const float seed  = juce::jlimit(0.0f, 1.0f, value / 127.0f);
+        const float seedDensity  = juce::jlimit(0.0f, 1.0f, static_cast<int>(note.getProperty(valueId)) / maximumMidiValue);
+        const auto  nodeCentre   = node->getNodeCentre().toFloat();
+        const float nodeRadius   = node->getVisualRadius();
+        const float radiusSquare = nodeRadius * nodeRadius;
+        const int   firstColumn  = juce::jmax(0,                static_cast<int>(std::floor(nodeCentre.x - nodeRadius)));
+        const int   lastColumn   = juce::jmin(canvasWidth - 1,  static_cast<int>(std::ceil (nodeCentre.x + nodeRadius)));
+        const int   firstRow     = juce::jmax(0,                static_cast<int>(std::floor(nodeCentre.y - nodeRadius)));
+        const int   lastRow      = juce::jmin(canvasHeight - 1, static_cast<int>(std::ceil (nodeCentre.y + nodeRadius)));
 
-        const auto  centre = node->getNodeCentre().toFloat();
-        const float nodeR  = node->getVisualRadius();
-        const float nodeR2 = nodeR * nodeR;
+        for (int row = firstRow; row <= lastRow; ++row) {
+            const float offsetY = static_cast<float>(row) - nodeCentre.y;
 
-        const int x0 = juce::jmax(0,     static_cast<int>(std::floor(centre.x - nodeR)));
-        const int x1 = juce::jmin(w - 1, static_cast<int>(std::ceil (centre.x + nodeR)));
-        const int y0 = juce::jmax(0,     static_cast<int>(std::floor(centre.y - nodeR)));
-        const int y1 = juce::jmin(h - 1, static_cast<int>(std::ceil (centre.y + nodeR)));
+            for (int column = firstColumn; column <= lastColumn; ++column) {
+                const float offsetX = static_cast<float>(column) - nodeCentre.x;
 
-        for (int y = y0; y <= y1; ++y) {
-            const float ddy = static_cast<float>(y) - centre.y;
-            for (int x = x0; x <= x1; ++x) {
-                const float ddx = static_cast<float>(x) - centre.x;
-                if (ddx * ddx + ddy * ddy > nodeR2) {
+                if (offsetX * offsetX + offsetY * offsetY > radiusSquare) {
                     continue;
                 }
-                density[static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x)] = seed;
+
+                density[static_cast<size_t>(row) * static_cast<size_t>(canvasWidth) + static_cast<size_t>(column)] = seedDensity;
             }
         }
     }
@@ -288,60 +256,55 @@ void ValueField::seedStrokeDensityFromNodes()
 
 void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to, bool rearm)
 {
-    const int w = owner.getWidth();
-    const int h = owner.getHeight();
+    const int canvasWidth  = owner.getWidth();
+    const int canvasHeight = owner.getHeight();
 
-    if (w <= 0 || h <= 0) {
+    if (canvasWidth <= 0 || canvasHeight <= 0) {
         return;
     }
 
     ensurePaintBuffers();
 
-    const float r = brushRadius;
-    if (r <= 0.0f) {
+    if (brushRadius <= 0.0f) {
         return;
     }
 
-    const int x0 = juce::jmax(0,     static_cast<int>(std::floor(juce::jmin(from.x, to.x) - r - 1.0f)));
-    const int x1 = juce::jmin(w - 1, static_cast<int>(std::ceil (juce::jmax(from.x, to.x) + r + 1.0f)));
-    const int y0 = juce::jmax(0,     static_cast<int>(std::floor(juce::jmin(from.y, to.y) - r - 1.0f)));
-    const int y1 = juce::jmin(h - 1, static_cast<int>(std::ceil (juce::jmax(from.y, to.y) + r + 1.0f)));
+    const int           firstColumn  = juce::jmax(0,                static_cast<int>(std::floor(juce::jmin(from.x, to.x) - brushRadius - 1.0f)));
+    const int           lastColumn   = juce::jmin(canvasWidth - 1,  static_cast<int>(std::ceil (juce::jmax(from.x, to.x) + brushRadius + 1.0f)));
+    const int           firstRow     = juce::jmax(0,                static_cast<int>(std::floor(juce::jmin(from.y, to.y) - brushRadius - 1.0f)));
+    const int           lastRow      = juce::jmin(canvasHeight - 1, static_cast<int>(std::ceil (juce::jmax(from.y, to.y) + brushRadius + 1.0f)));
+    const float         strokeX      = to.x - from.x;
+    const float         strokeY      = to.y - from.y;
+    const float         strokeSquare = strokeX * strokeX + strokeY * strokeY;
+    std::vector<float>& density      = paintDensity[static_cast<size_t>(activePaintLayer)];
 
-    if (x1 < x0 || y1 < y0) {
+    if (lastColumn < firstColumn || lastRow < firstRow) {
         return;
     }
 
-    const float dx      = to.x - from.x;
-    const float dy      = to.y - from.y;
-    const float segLen2 = dx * dx + dy * dy;
+    for (int row = firstRow; row <= lastRow; ++row) {
+        for (int column = firstColumn; column <= lastColumn; ++column) {
+            const float offsetX = static_cast<float>(column) - from.x;
+            const float offsetY = static_cast<float>(row) - from.y;
+            float       along   = 0.0f;
 
-    std::vector<float>& density = paintDensity[activePaintLayer];
-
-    for (int y = y0; y <= y1; ++y) {
-        for (int x = x0; x <= x1; ++x) {
-            const float px = static_cast<float>(x) - from.x;
-            const float py = static_cast<float>(y) - from.y;
-
-            float t = 0.0f;
-
-            if (segLen2 > 0.0f) {
-                t = (px * dx + py * dy) / segLen2;
+            if (strokeSquare > 0.0f) {
+                along = (offsetX * strokeX + offsetY * strokeY) / strokeSquare;
             }
 
-            t = juce::jlimit(0.0f, 1.0f, t);
+            along = juce::jlimit(0.0f, 1.0f, along);
 
-            const float ox   = px - t * dx;
-            const float oy   = py - t * dy;
-            const float dist = std::sqrt(ox * ox + oy * oy);
+            const float  perpendicularX = offsetX - along * strokeX;
+            const float  perpendicularY = offsetY - along * strokeY;
+            const float  distance       = std::sqrt(perpendicularX * perpendicularX + perpendicularY * perpendicularY);
+            const size_t index          = static_cast<size_t>(row) * static_cast<size_t>(canvasWidth) + static_cast<size_t>(column);
 
-            if (dist >= r) {
+            if (distance >= brushRadius) {
                 continue;
             }
 
-            const float falloff  = 1.0f - dist / r;
+            const float falloff  = 1.0f - distance / brushRadius;
             const float coverage = falloff * falloff;
-
-            const size_t index = static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x);
 
             if (rearm) {
                 strokeMask[index] *= (1.0f - dwellRearm);
@@ -351,12 +314,12 @@ void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to
                 continue;
             }
 
-            const float delta = brushFlow * (coverage - strokeMask[index]);
+            const float delta   = brushFlow * (coverage - strokeMask[index]);
+            float       painted = density[index] + delta;
+
             strokeMask[index] = coverage;
 
-            float painted = density[index] + delta;
-
-            if (brushErase) {
+            if (brushStroke == BrushStroke::Erasing) {
                 painted = density[index] - delta;
             }
 
@@ -367,101 +330,113 @@ void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to
 
 void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> to)
 {
-    const int w = owner.getWidth();
-    const int h = owner.getHeight();
+    const int canvasWidth  = owner.getWidth();
+    const int canvasHeight = owner.getHeight();
 
-    if (w <= 0 || h <= 0 || owner.nodeManager.all().empty()) {
+    if (canvasWidth <= 0 || canvasHeight <= 0 || owner.nodeManager.all().empty()) {
         return;
     }
 
-    const std::vector<float>& density = paintDensity[activePaintLayer];
-    if (density.size() != static_cast<size_t>(w) * static_cast<size_t>(h)) {
+    const juce::Identifier valueId      = paintLayerValueId();
+    const float            strokeX      = to.x - from.x;
+    const float            strokeY      = to.y - from.y;
+    const float            strokeSquare = strokeX * strokeX + strokeY * strokeY;
+
+    if (paintDensity[static_cast<size_t>(activePaintLayer)].size() != static_cast<size_t>(canvasWidth) * static_cast<size_t>(canvasHeight)) {
         return;
     }
 
-    const juce::Identifier valueId = paintLayerValueId();
-
-    const float r       = brushRadius;
-    const float dx      = to.x - from.x;
-    const float dy      = to.y - from.y;
-    const float segLen2 = dx * dx + dy * dy;
-
-    for (auto& [id, node] : owner.nodeManager.all()) {
+    for (auto& [nodeId, node] : owner.nodeManager.all()) {
         if (node == nullptr) {
             continue;
         }
 
-        const auto  centre = node->getNodeCentre().toFloat();
-        const float nodeR  = node->getVisualRadius();
+        const auto  nodeCentre = node->getNodeCentre().toFloat();
+        const float offsetX    = nodeCentre.x - from.x;
+        const float offsetY    = nodeCentre.y - from.y;
+        const float reach      = brushRadius + node->getVisualRadius();
+        float       along      = 0.0f;
 
-        const float px = centre.x - from.x;
-        const float py = centre.y - from.y;
-
-        float t = 0.0f;
-
-        if (segLen2 > 0.0f) {
-            t = (px * dx + py * dy) / segLen2;
+        if (strokeSquare > 0.0f) {
+            along = (offsetX * strokeX + offsetY * strokeY) / strokeSquare;
         }
 
-        t = juce::jlimit(0.0f, 1.0f, t);
+        along = juce::jlimit(0.0f, 1.0f, along);
 
-        const float ox = px - t * dx;
-        const float oy = py - t * dy;
+        const float perpendicularX = offsetX - along * strokeX;
+        const float perpendicularY = offsetY - along * strokeY;
 
-        const float reach = r + nodeR;
-        if (ox * ox + oy * oy > reach * reach) {
+        if (perpendicularX * perpendicularX + perpendicularY * perpendicularY > reach * reach) {
             continue;
         }
 
-        const float nodeR2 = nodeR * nodeR;
+        const std::optional<float> sampled = densityUnderNode(*node);
 
-        const int x0 = juce::jmax(0,     static_cast<int>(std::floor(centre.x - nodeR)));
-        const int x1 = juce::jmin(w - 1, static_cast<int>(std::ceil (centre.x + nodeR)));
-        const int y0 = juce::jmax(0,     static_cast<int>(std::floor(centre.y - nodeR)));
-        const int y1 = juce::jmin(h - 1, static_cast<int>(std::ceil (centre.y + nodeR)));
-
-        float sample = 0.0f;
-
-        if (brushErase) {
-            sample = 1.0f;
-        }
-
-        bool found = false;
-
-        for (int y = y0; y <= y1; ++y) {
-            const float ddy = static_cast<float>(y) - centre.y;
-            for (int x = x0; x <= x1; ++x) {
-                const float ddx = static_cast<float>(x) - centre.x;
-                if (ddx * ddx + ddy * ddy > nodeR2) {
-                    continue;
-                }
-                const float dv = density[static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x)];
-                if (brushErase) {
-                    sample = juce::jmin(sample, dv);
-                } else {
-                    sample = juce::jmax(sample, dv);
-                }
-
-                found = true;
-            }
-        }
-
-        if (!found) {
+        if (!sampled.has_value()) {
             continue;
         }
 
-        const int value = juce::jlimit(0, 127, static_cast<int>(std::round(sample * 127.0f)));
-
-        juce::ValueTree note = firstMidiNote(id);
+        const int       paintedValue = juce::jlimit(0, 127, static_cast<int>(std::round(*sampled * maximumMidiValue)));
+        juce::ValueTree note         = owner.applicationContext.graphState->getMidiNotes(nodeId).getChild(0);
 
         if (!note.isValid()) {
             continue;
         }
 
-        if (static_cast<int>(note.getProperty(valueId)) != value) {
-            note.setProperty(valueId, value, nullptr);
+        if (static_cast<int>(note.getProperty(valueId)) != paintedValue) {
+            note.setProperty(valueId, paintedValue, nullptr);
         }
     }
+}
+
+std::optional<float> ValueField::densityUnderNode(const Node& node) const
+{
+    const int                 canvasWidth   = owner.getWidth();
+    const int                 canvasHeight  = owner.getHeight();
+    const std::vector<float>& density       = paintDensity[static_cast<size_t>(activePaintLayer)];
+    const bool                isErasing     = brushStroke == BrushStroke::Erasing;
+    const auto                nodeCentre    = node.getNodeCentre().toFloat();
+    const float               nodeRadius    = node.getVisualRadius();
+    const float               radiusSquare  = nodeRadius * nodeRadius;
+    const int                 firstColumn   = juce::jmax(0,                static_cast<int>(std::floor(nodeCentre.x - nodeRadius)));
+    const int                 lastColumn    = juce::jmin(canvasWidth - 1,  static_cast<int>(std::ceil (nodeCentre.x + nodeRadius)));
+    const int                 firstRow      = juce::jmax(0,                static_cast<int>(std::floor(nodeCentre.y - nodeRadius)));
+    const int                 lastRow       = juce::jmin(canvasHeight - 1, static_cast<int>(std::ceil (nodeCentre.y + nodeRadius)));
+    float                     sampled       = 0.0f;
+    bool                      foundCoverage = false;
+
+    if (isErasing) {
+        sampled = 1.0f;
+    }
+
+    for (int row = firstRow; row <= lastRow; ++row) {
+        const float offsetY = static_cast<float>(row) - nodeCentre.y;
+
+        for (int column = firstColumn; column <= lastColumn; ++column) {
+            const float offsetX = static_cast<float>(column) - nodeCentre.x;
+
+            if (offsetX * offsetX + offsetY * offsetY > radiusSquare) {
+                continue;
+            }
+
+            const float pixelDensity = density[static_cast<size_t>(row) * static_cast<size_t>(canvasWidth) + static_cast<size_t>(column)];
+
+            if (isErasing) {
+                sampled = juce::jmin(sampled, pixelDensity);
+            }
+            else {
+                sampled = juce::jmax(sampled, pixelDensity);
+            }
+
+            foundCoverage = true;
+        }
+    }
+
+    if (!foundCoverage) {
+        return std::nullopt;
+    }
+
+    return sampled;
 }
 
 juce::Colour ValueField::mapFieldColour(float factor) const
@@ -469,18 +444,28 @@ juce::Colour ValueField::mapFieldColour(float factor) const
     const float boosted    = factor * 1.6f;
     const float brightness = juce::jlimit(0.0f, 1.0f, boosted);
     const float whiteMix   = juce::jlimit(0.0f, 0.4f, boosted - 1.0f);
+
     return brushColour.withMultipliedBrightness(brightness).interpolatedWith(juce::Colours::white, whiteMix);
 }
 
 juce::Identifier ValueField::paintLayerValueId() const
 {
-    if (activePaintLayer == 1) {
-        return ValueTreeIdentifiers::MidiDuration;
-    }
-
-    if (activePaintLayer == 2) {
-        return ValueTreeIdentifiers::MidiVelocity;
+    switch (activePaintLayer) {
+        case PaintLayer::Duration: return ValueTreeIdentifiers::MidiDuration;
+        case PaintLayer::Velocity: return ValueTreeIdentifiers::MidiVelocity;
+        case PaintLayer::Pitch:    return ValueTreeIdentifiers::MidiPitch;
     }
 
     return ValueTreeIdentifiers::MidiPitch;
+}
+
+void ValueField::timerCallback()
+{
+    if (brushStroke == BrushStroke::Idle) {
+        stopTimer();
+        return;
+    }
+
+    accumulateStroke(brushCurrentPoint, brushCurrentPoint, true);
+    applyPaintToNodes(brushCurrentPoint, brushCurrentPoint);
 }

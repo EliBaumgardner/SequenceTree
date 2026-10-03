@@ -1,21 +1,13 @@
-#include <juce_gui_basics/juce_gui_basics.h>
-
-#include "../Theme/CustomLookAndFeel.h"
-#include "../../Graph/GraphState.h"
-#include "../../Plugin/PluginProcessor.h"
-#include "../Node/Arrow.h"
-#include "../../Graph/ValueTreeIdentifiers.h"
-
-#include "../Node/Node.h"
-#include "../Node/RootNode.h"
 #include "NodeCanvas.h"
-#include "../../Audio/EventManager.h"
+#include "../Theme/CustomLookAndFeel.h"
+#include "../Node/Node.h"
+#include "../Node/Arrow.h"
+#include "../Node/Encapsulator.h"
+#include "../../Graph/GraphState.h"
 #include "../../Graph/RTGraphBuilder.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
+#include "../../Plugin/PluginProcessor.h"
 
-#include "../Node/Modulator.h"
-#include "../Node/TraversalFlagNode.h"
-
-#include <algorithm>
 #include <cmath>
 
 NodeCanvas::NodeCanvas(const ApplicationContext& context) : applicationContext(context)
@@ -30,25 +22,23 @@ NodeCanvas::~NodeCanvas()
     clearCanvas();
 }
 
-
-void NodeCanvas::paint(juce::Graphics& g)
+void NodeCanvas::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawCanvas(g, *this);
-
+    CustomLookAndFeel::get(*this).drawCanvas(graphics, *this);
 
     if (paintMode && valueField.image.isValid()) {
-        g.setImageResamplingQuality(juce::Graphics::mediumResamplingQuality);
-        g.drawImage(valueField.image, getLocalBounds().toFloat());
+        graphics.setImageResamplingQuality(juce::Graphics::mediumResamplingQuality);
+        graphics.drawImage(valueField.image, getLocalBounds().toFloat());
     }
 
     if (!selectionBounds.isEmpty()) {
         const Theme& theme = CustomLookAndFeel::get(*this);
 
-        g.setColour(theme.selectionBoxColour.withAlpha(0.15f));
-        g.fillRect(selectionBounds);
+        graphics.setColour(theme.selectionBoxColour.withAlpha(0.15f));
+        graphics.fillRect(selectionBounds);
 
-        g.setColour(theme.selectionBoxColour);
-        g.drawRect(selectionBounds, 1);
+        graphics.setColour(theme.selectionBoxColour);
+        graphics.drawRect(selectionBounds, 1);
     }
 }
 
@@ -58,68 +48,10 @@ void NodeCanvas::enqueueAsyncUpdate(const AsyncUpdate& update)
     triggerAsyncUpdate();
 }
 
-void NodeCanvas::cancelPendingUpdatesFor(int nodeId)
-{
-    std::erase_if(asyncUpdates, [nodeId](const AsyncUpdate& update) {
-        return update.nodeId == nodeId
-            && update.type != AsyncUpdateType::NodeRemoved;
-    });
-}
-
-void NodeCanvas::handleAsyncUpdate() {
-    drainer.drainAll();
-
-    std::vector<AsyncUpdate> pendingUpdates;
-    pendingUpdates.swap(asyncUpdates);
-
-    for (auto& asyncUpdate  : pendingUpdates) {
-        int nodeId = asyncUpdate.nodeId;
-
-        AsyncUpdateType updateType = asyncUpdate.type;
-
-        if (updateType == AsyncUpdateType::NodeAdded) {
-            nodeManager.add(nodeId);
-        }
-        else if (updateType == AsyncUpdateType::NodeRemoved) {
-            nodeManager.remove(nodeId);
-        }
-        else if (updateType == AsyncUpdateType::NodeMoved) {
-            nodeManager.setPosition(nodeId);
-        }
-        else if (updateType == AsyncUpdateType::ValueChanged) {
-            if (Node* const changedNode = nodeManager.find(nodeId)) {
-                arrowManager.refreshFor(changedNode);
-            }
-        }
-        else if (updateType == AsyncUpdateType::DanglingArrowsChanged) {
-            arrowManager.rebuildDanglingForNode(nodeId);
-        }
-        else if (updateType == AsyncUpdateType::ArrowAdded) {
-            arrowManager.handleArrowAdded(nodeId, asyncUpdate.rootNodeId);
-        }
-        else if (updateType == AsyncUpdateType::ArrowRemoved) {
-            arrowManager.handleArrowRemoved(nodeId, asyncUpdate.rootNodeId);
-        }
-        else if (updateType == AsyncUpdateType::ArrowInfoChanged) {
-            arrowManager.handleArrowInfoChanged(nodeId, asyncUpdate.rootNodeId);
-        }
-        else if (updateType == AsyncUpdateType::ArrowDurationChanged) {
-            if (Node* const owningNode = nodeManager.find(nodeId)) {
-                arrowManager.refreshFor(owningNode);
-            }
-        }
-    }
-
-    const bool fieldNeedsRefresh = ! pendingUpdates.empty();
-
-    if (paintMode && fieldNeedsRefresh) {
-        valueField.refresh();
-    }
-}
-
-void NodeCanvas::setProcessorPlayblack(bool isPlaying)
+void NodeCanvas::setProcessorPlayback(bool isPlaying)
 {
     start = isPlaying;
+
     applicationContext.processor->isPlaying.store(start);
 
     if (isPlaying) {
@@ -133,15 +65,6 @@ void NodeCanvas::setProcessorPlayblack(bool isPlaying)
     applicationContext.rtGraphBuilder->handleUpdateNowIfNeeded();
 }
 
-void NodeCanvas::clearCanvas()
-{
-    arrowManager.clear();
-    nodeManager.clear();
-
-    gridOriginSet = false;
-    gridVisible = false;
-}
-
 void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
 {
     asyncUpdates.clear();
@@ -149,41 +72,34 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
 
     clearCanvas();
 
-    std::unordered_map<int,juce::ValueTree> rootNodeMap;
+    std::unordered_map<int, juce::ValueTree> rootNodeMap;
+    std::vector<NodePair>                    nodePairs;
 
-    std::vector<NodePair> nodePairs;
-
-    if (stateTree.getNumChildren() == 0) { DBG("stateTree is empty"); }
-
-    for (int i = 0 ; i < stateTree.getNumChildren(); i++) {
-
-        juce::ValueTree nodeValueTree = stateTree.getChild(i);
-        int nodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+    for (int nodeIndex = 0; nodeIndex < stateTree.getNumChildren(); ++nodeIndex) {
+        const juce::ValueTree nodeValueTree = stateTree.getChild(nodeIndex);
+        const juce::ValueTree childIds      = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+        const int             nodeId        = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
         if (nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
             rootNodeMap[nodeId] = nodeValueTree;
         }
 
-        juce::ValueTree nodeValueTreeChildren = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-        for (int j = 0; j < nodeValueTreeChildren.getNumChildren(); j++) {
-            int childId = nodeValueTreeChildren.getChild(j).getProperty(ValueTreeIdentifiers::Id);
-            nodePairs.push_back({ nodeId, childId });
+        for (int childIndex = 0; childIndex < childIds.getNumChildren(); ++childIndex) {
+            nodePairs.push_back({ nodeId, childIds.getChild(childIndex).getProperty(ValueTreeIdentifiers::Id) });
         }
 
         nodeManager.instantiateFromTree(nodeValueTree);
     }
 
-    for (auto [parentNodeId,childNodeId] : nodePairs) {
-
-        Node* parentNode = nodeManager.find(parentNodeId);
-        Node* childNode  = nodeManager.find(childNodeId);
+    for (auto [parentNodeId, childNodeId] : nodePairs) {
+        Node* const parentNode = nodeManager.find(parentNodeId);
+        Node* const childNode  = nodeManager.find(childNodeId);
+        Node*       startNode  = parentNode;
+        Node*       endNode    = childNode;
 
         if (parentNode == nullptr || childNode == nullptr) {
             continue;
         }
-
-        Node* startNode = parentNode;
-        Node* endNode   = childNode;
 
         if (childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData
             || childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeModulatorData) {
@@ -195,7 +111,6 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
             continue;
         }
 
-        endNode->nodeColour = startNode->nodeColour;
         arrowManager.connect(startNode, endNode);
         arrowManager.refreshFor(endNode);
     }
@@ -207,13 +122,82 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
     encapsulationView.collapseAll();
 
     if (!gridOriginSet && !rootNodeMap.empty()) {
-        auto it = rootNodeMap.begin();
-        int firstRootId = it->first;
-        NodePosition pos = applicationContext.graphState->getNodePosition(firstRootId);
-        gridOrigin    = { static_cast<float>(pos.xPosition),
-                          static_cast<float>(pos.yPosition) };
+        const NodePosition rootPosition = applicationContext.graphState->getNodePosition(rootNodeMap.begin()->first);
+
+        gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
         gridSpacing   = ArrowInfo::pixelsPerGridSpace;
         gridOriginSet = true;
+    }
+}
+
+void NodeCanvas::clearCanvas()
+{
+    arrowManager.clear();
+    nodeManager.clear();
+
+    gridOriginSet = false;
+    gridVisible   = false;
+}
+
+void NodeCanvas::handleAsyncUpdate()
+{
+    drainer.drainAll();
+
+    std::vector<AsyncUpdate> pendingUpdates;
+
+    pendingUpdates.swap(asyncUpdates);
+
+    for (const AsyncUpdate& asyncUpdate : pendingUpdates) {
+        const int nodeId = asyncUpdate.nodeId;
+
+        switch (asyncUpdate.type) {
+            case AsyncUpdateType::NodeAdded:
+                nodeManager.add(nodeId);
+                break;
+            case AsyncUpdateType::NodeRemoved:
+                nodeManager.remove(nodeId);
+                break;
+            case AsyncUpdateType::NodeMoved:
+                nodeManager.setPosition(nodeId);
+                break;
+            case AsyncUpdateType::ValueChanged:
+            case AsyncUpdateType::ArrowDurationChanged:
+                if (Node* const changedNode = nodeManager.find(nodeId)) {
+                    arrowManager.refreshFor(changedNode);
+                }
+                break;
+            case AsyncUpdateType::DanglingArrowsChanged:
+                arrowManager.rebuildDanglingForNode(nodeId);
+                break;
+            case AsyncUpdateType::ArrowAdded:
+                arrowManager.handleArrowAdded(nodeId, asyncUpdate.rootNodeId);
+                break;
+            case AsyncUpdateType::ArrowRemoved:
+                arrowManager.remove(arrowManager.find(nodeId, asyncUpdate.rootNodeId));
+                break;
+            case AsyncUpdateType::ArrowInfoChanged:
+                arrowManager.handleArrowInfoChanged(nodeId, asyncUpdate.rootNodeId);
+                break;
+            case AsyncUpdateType::NodeColourChanged:
+                if (Node* const recolouredNode = nodeManager.find(nodeId)) {
+                    const juce::var colourText = recolouredNode->nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, Node::defaultNodeColour.toString());
+
+                    recolouredNode->nodeColour = juce::Colour::fromString(colourText.toString());
+
+                    recolouredNode->repaint();
+
+                    if (const auto* const encapsulator = dynamic_cast<const Encapsulator*>(recolouredNode)) {
+                        encapsulationView.recolourGroup(*encapsulator);
+                    }
+                }
+                break;
+            case AsyncUpdateType::None:
+                break;
+        }
+    }
+
+    if (paintMode && !pendingUpdates.empty()) {
+        valueField.refresh();
     }
 }
 
@@ -224,7 +208,7 @@ void NodeCanvas::setPaintMode(bool enabled)
     nodeManager.setInterceptsClicks(!enabled, !enabled && !spanMode);
 
     if (enabled) {
-        valueField.updateCursor();
+        valueField.updateBrushCursor();
         valueField.refresh();
     }
     else {
@@ -287,12 +271,8 @@ void NodeCanvas::setQuaverMode(QuaverMode mode)
     cursorGraphics.fillPath(stem);
 
     flag.startNewSubPath(stemX, stemTopY);
-    flag.cubicTo(stemX + side * 0.08f, stemTopY + side * 0.18f,
-                 stemX + side * 0.36f, stemTopY + side * 0.24f,
-                 stemX + side * 0.26f, stemTopY + side * 0.56f);
-    flag.cubicTo(stemX + side * 0.28f, stemTopY + side * 0.34f,
-                 stemX + side * 0.12f, stemTopY + side * 0.3f,
-                 stemX, stemTopY + side * 0.26f);
+    flag.cubicTo(stemX + side * 0.08f, stemTopY + side * 0.18f, stemX + side * 0.36f, stemTopY + side * 0.24f, stemX + side * 0.26f, stemTopY + side * 0.56f);
+    flag.cubicTo(stemX + side * 0.28f, stemTopY + side * 0.34f, stemX + side * 0.12f, stemTopY + side * 0.3f, stemX, stemTopY + side * 0.26f);
     flag.closeSubPath();
     cursorGraphics.fillPath(flag);
 
@@ -303,6 +283,7 @@ void NodeCanvas::showGrid()
 {
     if (gridOriginSet) {
         gridVisible = true;
+
         repaint();
     }
 }
@@ -311,6 +292,7 @@ void NodeCanvas::hideGrid()
 {
     if (gridVisible) {
         gridVisible = false;
+
         repaint();
     }
 }
@@ -321,21 +303,26 @@ juce::Point<int> NodeCanvas::snapPointToGrid(juce::Point<int> point) const
         return point;
     }
 
-    const float originX = gridOrigin.x;
-    const float originY = gridOrigin.y;
-    const float snapThreshold = 5.0f;
-
-    const float snappedX = originX + std::round((static_cast<float>(point.x) - originX) / gridSpacing) * gridSpacing;
-    const float snappedY = originY + std::round((static_cast<float>(point.y) - originY) / gridSpacing) * gridSpacing;
-
-    juce::Point<int> result = point;
+    const float      snapThreshold = 5.0f;
+    const float      snappedX      = gridOrigin.x + std::round((static_cast<float>(point.x) - gridOrigin.x) / gridSpacing) * gridSpacing;
+    const float      snappedY      = gridOrigin.y + std::round((static_cast<float>(point.y) - gridOrigin.y) / gridSpacing) * gridSpacing;
+    juce::Point<int> result        = point;
 
     if (std::abs(static_cast<float>(point.x) - snappedX) < snapThreshold) {
         result.x = static_cast<int>(snappedX);
     }
+
     if (std::abs(static_cast<float>(point.y) - snappedY) < snapThreshold) {
         result.y = static_cast<int>(snappedY);
     }
 
     return result;
+}
+
+void NodeCanvas::cancelPendingUpdatesFor(int nodeId)
+{
+    std::erase_if(asyncUpdates, [nodeId](const AsyncUpdate& update) {
+        return update.nodeId == nodeId
+            && update.type != AsyncUpdateType::NodeRemoved;
+    });
 }

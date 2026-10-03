@@ -41,6 +41,8 @@ public:
                                  juce::UndoManager* undoManager);
     NodePosition getNodePosition(int nodeId) const;
 
+    void setNodeColour(int nodeId, const juce::String& colourText, juce::UndoManager* undoManager);
+
     std::vector<int> nodeIdsBetween(int startNodeId, int endNodeId) const;
 
     juce::ValueTree getNode      (int nodeId) const;

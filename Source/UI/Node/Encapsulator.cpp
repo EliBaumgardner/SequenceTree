@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 9/6/26.
-//
-
 #include "Encapsulator.h"
 
 #include "../../Graph/GraphState.h"
@@ -19,26 +15,14 @@ Encapsulator::Encapsulator(const ApplicationContext& context) : Node(context)
     subLoopLimitEditor.setVisible(false);
 }
 
-void Encapsulator::paint(juce::Graphics& g)
-{
-    CustomLookAndFeel::get(*this).drawNode(g, getNodeVisual());
-}
-
-void Encapsulator::bindValueEditorForMode()
-{
-    nodeValueEditor.setFormat(std::make_unique<GreekLetterFormat>());
-    nodeValueEditor.editable = false;
-    nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::EncapsulatorLabel);
-}
-
 void Encapsulator::bindToTree()
 {
     memberNodeIds.clear();
+
     firstMemberValueTree = {};
 
     if (applicationContext.graphState != nullptr) {
-        memberNodeIds = applicationContext.graphState->encapsulation.memberIds(
-            nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
+        memberNodeIds = applicationContext.graphState->encapsulation.memberIds(nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
     }
 
     if (! memberNodeIds.empty() && applicationContext.graphState != nullptr) {
@@ -51,23 +35,33 @@ void Encapsulator::bindToTree()
 
     const bool hasFirstMember = firstMemberValueTree.isValid();
 
-    countEditor      .setVisible(hasFirstMember);
+    countEditor.setVisible(hasFirstMember);
     switchCountEditor.setVisible(hasFirstMember);
 
     if (! hasFirstMember) {
         return;
     }
 
-    countEditor      .bindEditor(firstMemberValueTree, ValueTreeIdentifiers::CountLimit);
+    countEditor.bindEditor(firstMemberValueTree, ValueTreeIdentifiers::CountLimit);
     switchCountEditor.bindEditor(firstMemberValueTree, ValueTreeIdentifiers::SwitchCountLimit);
 
-    countEditor      .repaint();
+    countEditor.repaint();
     switchCountEditor.repaint();
+}
+
+void Encapsulator::bindValueEditorForMode()
+{
+    nodeValueEditor.setFormat(std::make_unique<GreekLetterFormat>());
+
+    nodeValueEditor.editable = false;
+
+    nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::EncapsulatorLabel);
 }
 
 void Encapsulator::syncHighlightsFromMembers()
 {
     std::map<int, juce::Colour> memberHighlights;
+    std::vector<int>            endedRunIds;
 
     for (const int memberNodeId : memberNodeIds) {
         Node* const member = applicationContext.canvas->nodeManager.find(memberNodeId);
@@ -80,8 +74,6 @@ void Encapsulator::syncHighlightsFromMembers()
             memberHighlights[highlight.first] = highlight.second;
         }
     }
-
-    std::vector<int> endedRunIds;
 
     for (const auto& highlight : activeHighlights) {
         if (memberHighlights.count(highlight.first) == 0) {

@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 4/11/26.
-//
-
 #include "RootNode.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Graph/GraphState.h"
@@ -13,20 +9,38 @@
 #include <cmath>
 #include <limits>
 
-RootNode::RootNode(const ApplicationContext& context) : Node(context)
+RootNode::RootNode(const ApplicationContext& context)
+    : Node(context),
+      rootRectangle(context)
 {
-    nodeType = NodeType::Root;
+    nodeType          = NodeType::Root;
+    interiorLeftInset = loopLimitRectangleWidth;
 
     setPaintingIsUnclipped(true);
 
-    rootRectangle = std::make_unique<RootRectangle>(context);
-    addAndMakeVisible(rootRectangle.get());
-
     subLoopLimitEditor.setTooltip("Loop Limit");
 
-    rootRectangle->traversalEditor.onValueChange = [this]() {
-        equipTraversals();
-    };
+    rootRectangle.traversalEditor.onValueChange = [this]() { equipTraversals(); };
+
+    addAndMakeVisible(rootRectangle);
+}
+
+void RootNode::paint(juce::Graphics& graphics)
+{
+    const auto circleBounds = getLocalBounds().toFloat()
+                            .withTrimmedLeft(static_cast<float>(loopLimitRectangleWidth));
+
+    CustomLookAndFeel::get(*this).drawNode(graphics, getNodeVisual(circleBounds));
+}
+
+void RootNode::resized()
+{
+    const int rectangleHeight = getHeight() / 2;
+    const int rectangleY      = (getHeight() - rectangleHeight) / 2;
+
+    rootRectangle.setBounds(0, rectangleY, loopLimitRectangleWidth + rectangleOverlap, rectangleHeight);
+
+    Node::resized();
 }
 
 void RootNode::bindToTree()
@@ -38,22 +52,18 @@ void RootNode::bindToTree()
     }
 
     const juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
+    juce::StringArray     equippedReferences;
 
-    juce::StringArray equippedReferences;
-
-    for (int i = 0; i < traversalChildrenIds.getNumChildren(); i++) {
-        const juce::ValueTree reference = traversalChildrenIds.getChild(i);
-
-        const TraversalKey key { static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
+    for (int referenceIndex = 0; referenceIndex < traversalChildrenIds.getNumChildren(); ++referenceIndex) {
+        const juce::ValueTree reference = traversalChildrenIds.getChild(referenceIndex);
+        const TraversalKey    key { static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
                                  static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) };
 
         equippedReferences.add(TraversalFlagFormat::describe(key));
     }
 
-    rootRectangle->traversalEditor.commitText(equippedReferences.joinIntoString(" "));
+    rootRectangle.traversalEditor.commitText(equippedReferences.joinIntoString(" "));
 }
-
-RootNode::~RootNode() = default;
 
 void RootNode::equipTraversals()
 {
@@ -61,38 +71,38 @@ void RootNode::equipTraversals()
         return;
     }
 
-    ValueEditor& traversalEditor = rootRectangle->traversalEditor;
-
-    const std::vector<TraversalKey> keys =
-        TraversalFlagFormat::parseKeys(traversalEditor.boundValue.getValue().toString());
-
+    const std::vector<TraversalKey> keys = TraversalFlagFormat::parseKeys(rootRectangle.traversalEditor.boundValue.getValue().toString());
     juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
 
-    for (int i = traversalChildrenIds.getNumChildren() - 1; i >= 0; i--) {
-
-        const juce::ValueTree reference = traversalChildrenIds.getChild(i);
-
-        const TraversalKey existingKey { static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
+    for (int referenceIndex = traversalChildrenIds.getNumChildren() - 1; referenceIndex >= 0; --referenceIndex) {
+        const juce::ValueTree reference = traversalChildrenIds.getChild(referenceIndex);
+        const TraversalKey    existingKey { static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
                                          static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) };
 
         if (std::ranges::find(keys, existingKey) == keys.end()) {
-            traversalChildrenIds.removeChild(i, nullptr);
+            traversalChildrenIds.removeChild(referenceIndex, nullptr);
         }
     }
 
     for (const TraversalKey& key : keys) {
-
         applicationContext.graphState->traversals.addTraversalData(key.typeId, nullptr);
 
         if (TraversalState::findReference(traversalChildrenIds, key).isValid()) {
             continue;
         }
 
-        juce::ValueTree traversalIdTree {ValueTreeIdentifiers::TraversalId};
+        juce::ValueTree traversalIdTree { ValueTreeIdentifiers::TraversalId };
+
         traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalId,       key.typeId,   nullptr);
         traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalInstance, key.instance, nullptr);
+
         traversalChildrenIds.addChild(traversalIdTree, -1, nullptr);
     }
+}
+
+juce::Point<int> RootNode::getNodeCentre() const
+{
+    return { getBounds().getX() + loopLimitRectangleWidth + getHeight() / 2, getBounds().getCentreY() };
 }
 
 float RootNode::getBodyExtent(juce::Point<float> approachDirection) const
@@ -102,24 +112,20 @@ float RootNode::getBodyExtent(juce::Point<float> approachDirection) const
     const juce::Rectangle<float> circle = CustomLookAndFeel::getNodeCircleBounds(
         getLocalBounds().toFloat().withTrimmedLeft(static_cast<float>(loopLimitRectangleWidth)));
 
-    const juce::Point<float> centre   = (getNodeCentre() - getPosition()).toFloat();
-    const juce::Point<float> toCircle = circle.getCentre() - centre;
-
-    const float radius    = std::max(0.0f, circle.getWidth() * 0.5f);
-    const float along     = approachDirection.getDotProduct(toCircle);
-    const float clearance = along * along - toCircle.getDistanceSquaredFromOrigin() + radius * radius;
-
-    float circleExtent = radius;
+    const juce::Point<float>     centre    = (getNodeCentre() - getPosition()).toFloat();
+    const juce::Point<float>     toCircle  = circle.getCentre() - centre;
+    const float                  radius    = std::max(0.0f, circle.getWidth() * 0.5f);
+    const float                  along     = approachDirection.getDotProduct(toCircle);
+    const float                  clearance = along * along - toCircle.getDistanceSquaredFromOrigin() + radius * radius;
+    const juce::Rectangle<float> rectangle = rootRectangle.getBounds().toFloat();
+    const juce::Point<float>     ray       = -approachDirection;
+    float                        circleExtent = radius;
+    float                        entry        = 0.0f;
+    float                        exit         = std::numeric_limits<float>::max();
 
     if (clearance > 0.0f) {
         circleExtent = std::max(0.0f, std::sqrt(clearance) - along);
     }
-
-    const juce::Rectangle<float> rectangle = rootRectangle->getBounds().toFloat();
-    const juce::Point<float>     ray       = -approachDirection;
-
-    float entry = 0.0f;
-    float exit  = std::numeric_limits<float>::max();
 
     if (std::abs(ray.x) < rayAxisEpsilon) {
         if (centre.x < rectangle.getX() || centre.x > rectangle.getRight()) {
@@ -153,25 +159,3 @@ float RootNode::getBodyExtent(juce::Point<float> approachDirection) const
 
     return std::max(circleExtent, exit);
 }
-
-void RootNode::paint(juce::Graphics& g)
-{
-    const auto circleBounds = getLocalBounds().toFloat()
-                            .withTrimmedLeft(static_cast<float>(loopLimitRectangleWidth));
-
-    CustomLookAndFeel::get(*this).drawNode(g, getNodeVisual(circleBounds));
-}
-
-void RootNode::resized() {
-    const int rw = loopLimitRectangleWidth;
-
-    const juce::Rectangle<int> bounds = getLocalBounds();
-
-    const int rectHeight = bounds.getHeight() / 2;
-    const int rectY      = (bounds.getHeight() - rectHeight) / 2;
-
-    rootRectangle->setBounds(0, rectY, rw + 8, rectHeight);
-
-    layoutInterior(bounds.withTrimmedLeft(rw));
-}
-

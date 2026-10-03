@@ -62,8 +62,7 @@ void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, d
     }
 
     if (voicing.velocityMultiplier != 1.0) {
-        newNote.event.velocity = juce::jlimit(0, 127,
-            juce::roundToInt(newNote.event.velocity * voicing.velocityMultiplier));
+        newNote.event.velocity = juce::jlimit(0, 127, juce::roundToInt(newNote.event.velocity * voicing.velocityMultiplier));
     }
 
     activeNotes.push_back(newNote);

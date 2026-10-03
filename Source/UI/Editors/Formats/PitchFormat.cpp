@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 8/23/26.
-//
-
 #include "ValueFormat.h"
 #include "../../../Util/NodeInfo.h"
 
@@ -22,7 +18,9 @@ static const juce::String pitchNames[] = {
 
 static constexpr int semitonesPerOctave = 12;
 
-PitchFormat::PitchFormat() : NumberFormat(minimumMidiPitch, maximumMidiPitch) {}
+PitchFormat::PitchFormat() : NumberFormat(minimumMidiPitch, maximumMidiPitch)
+{
+}
 
 juce::String PitchFormat::text(const ValueBinding& binding, TextPurpose purpose) const
 {

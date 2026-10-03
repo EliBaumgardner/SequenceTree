@@ -77,6 +77,7 @@ private:
     Progress pushValue(const ScriptInstruction& instruction);
     Progress popValue(const ScriptInstruction& instruction, int& programCounter, int& result);
     Progress executeNodeOpcode(const ScriptInstruction& instruction);
+    Progress drawRandom();
 
     bool enterFunction(int functionIndex, int returnAddress, int& programCounter);
 
@@ -110,4 +111,6 @@ private:
     int stackTop        = 0;
     int frameCount      = 0;
     int trialWriteCount = 0;
+
+    unsigned int randomState = 1;
 };

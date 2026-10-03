@@ -1,40 +1,25 @@
-//
-// Created by Eli Baumgardner on 4/11/26.
-//
-
-#ifndef SEQUENCETREE_ROOTNODE_H
-#define SEQUENCETREE_ROOTNODE_H
-
+#pragma once
 
 #include "Node.h"
 #include "../Buttons/RootRectangle.h"
 
-
-class RootNode : public Node {
-
-    public:
+class RootNode : public Node
+{
+public:
 
     static constexpr int loopLimitRectangleWidth = 10;
+    static constexpr int rectangleOverlap        = 8;
+
+    RootRectangle rootRectangle;
 
     explicit RootNode(const ApplicationContext& context);
-    ~RootNode() override;
-    void paint(juce::Graphics& g) override;
+
+    void paint(juce::Graphics& graphics) override;
     void resized() override;
     void bindToTree() override;
 
     void equipTraversals();
 
-    juce::Point<int> getNodeCentre() const override
-    {
-        return { getBounds().getX() + loopLimitRectangleWidth + getHeight() / 2,
-                 getBounds().getCentreY() };
-    }
-
-    float getBodyExtent(juce::Point<float> approachDirection) const override;
-
-    std::unique_ptr<RootRectangle> rootRectangle = nullptr;
-
+    juce::Point<int> getNodeCentre() const override;
+    float            getBodyExtent(juce::Point<float> approachDirection) const override;
 };
-
-
-#endif //SEQUENCETREE_ROOTNODE_H

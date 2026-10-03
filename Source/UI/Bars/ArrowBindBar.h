@@ -1,40 +1,32 @@
-//
-// Created by Eli Baumgardner on 7/27/26.
-//
-
-#ifndef SEQUENCETREE_ARROWBINDBAR_H
-#define SEQUENCETREE_ARROWBINDBAR_H
+#pragma once
 
 #include "../../Util/ArrowInfo.h"
 #include "Bar.h"
-#include "../Editors/ValueEditor.h"
+#include "../Editors/LabeledEditor.h"
 #include "../Menus/ItemSelector.h"
 
-class ArrowBindBar : public Bar {
-
+class ArrowBindBar : public Bar
+{
 public:
 
     explicit ArrowBindBar(const ApplicationContext& context);
 
     static constexpr int   preferredHeight   = 34;
     static constexpr int   minimumHeight     = 26;
-    static constexpr float contentInsetRatio = 0.154f;
+    static constexpr float bindBarInsetRatio = 0.154f;
 
 private:
 
-    struct AxisControl {
-        juce::Label                  label;
-        std::unique_ptr<ValueEditor> editor;
+    struct BindField
+    {
+        std::unique_ptr<LabeledEditor> x;
+        std::unique_ptr<LabeledEditor> y;
     };
 
-    struct BindField {
-        AxisControl x;
-        AxisControl y;
-    };
+    using AxisMember = std::unique_ptr<LabeledEditor> BindField::*;
 
-    using AxisMember = AxisControl BindField::*;
-
-    struct Metrics {
+    struct Metrics
+    {
         int   selectorWidth;
         int   controlWidth;
         int   axisGap;
@@ -44,24 +36,16 @@ private:
 
     void resized() override;
 
-    void configureFieldSelector();
-    void configureField(BindField& field, BindField& otherField);
-    void configureAxis (AxisControl& axis, AxisControl& otherAxis, const juce::String& text);
+    void configureAxis(std::unique_ptr<LabeledEditor>& axis, std::unique_ptr<LabeledEditor>& otherAxis, const juce::String& text);
 
     void showField(int itemId);
 
-    void showCurrentBindings();
     void showAxis(AxisMember axisMember, ArrowBinding binding, double multiplier);
 
     void publishBindings();
     void resolveAxis(AxisMember axisMember, ArrowBinding& binding, double& multiplier) const;
 
-    Metrics metricsFor(juce::Rectangle<int> bounds) const;
-
-    void layOutField(BindField& field, juce::Rectangle<int> bounds, const Metrics& metrics);
-    void layOutAxis (AxisControl& axis, juce::Rectangle<int>& bounds, const Metrics& metrics);
-
-    static int scaled(int total, float ratio, int minimum);
+    void layOutAxis(LabeledEditor& axis, juce::Rectangle<int>& bounds, const Metrics& metrics);
 
     static constexpr AxisMember xAxis = &BindField::x;
     static constexpr AxisMember yAxis = &BindField::y;
@@ -90,5 +74,3 @@ private:
     BindField pitchField;
     BindField durationField;
 };
-
-#endif //SEQUENCETREE_ARROWBINDBAR_H

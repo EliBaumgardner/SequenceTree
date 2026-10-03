@@ -46,6 +46,8 @@ enum class ScriptOpcode
     Advance,
     PlayNote,
 
+    CoreRandom,
+
     Return
 };
 

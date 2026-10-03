@@ -1,29 +1,26 @@
-//
-// Created by Eli Baumgardner on 4/12/26.
-//
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Formats/ValueFormat.h"
 #include "../../Util/ApplicationContext.h"
 
-
 class ValueEditor : public juce::Component,
                     public juce::SettableTooltipClient,
                     public juce::TextEditor::Listener,
-                    public juce::Value::Listener{
+                    public juce::Value::Listener
+{
 public:
 
     explicit ValueEditor(const ApplicationContext& context);
     ~ValueEditor() override;
 
+    void paint(juce::Graphics& graphics) override;
+    void resized() override;
+
     void setFormat(std::unique_ptr<ValueFormat> newFormat);
 
-    void paint  (juce::Graphics& g) override;
-    void resized() override;
-    void mouseDown(const juce::MouseEvent& e) override;
-    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
+    void mouseDown(const juce::MouseEvent& event) override;
+    void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
 
     void setPersistentEditor(bool shouldStayVisible);
     void beginEditing(bool selectAllText = true);
@@ -64,12 +61,14 @@ public:
     bool editable    = true;
 
 protected:
+
     void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
-    void textEditorFocusLost      (juce::TextEditor& editor) override;
+    void textEditorFocusLost(juce::TextEditor& editor) override;
 
     juce::Font displayFont(const juce::String& text) const;
 
 private:
+
     void bindSecondaryProperties();
 
     const ApplicationContext& applicationContext;

@@ -8,6 +8,7 @@
 #include <functional>
 #include "../Graph/GraphState.h"
 #include "../Graph/TraversalRuleState.h"
+#include "../Graph/ValueTreeIdentifiers.h"
 #include "../Graph/RTGraphBuilder.h"
 #include "../Audio/EventManager.h"
 #include "../Audio/TraversalSession.h"
@@ -80,6 +81,8 @@ public:
     GraphState graphState;
 
     TraversalRuleState traversalRuleState;
+
+    juce::ValueTree colourPresets { ValueTreeIdentifiers::ColourPresets };
 
     AudioSnapshotPublisher snapshots { traversalRuleState };
 

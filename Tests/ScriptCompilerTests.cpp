@@ -450,3 +450,70 @@ TEST_CASE("the compiler refuses functions that would overflow the traversal stac
     CHECK_FALSE(compileTraversalScript(classWith("int value() { return " + deepExpression + "; }")).succeeded());
     CHECK(compileTraversalScript(classWith("int value() {\n" + fittingLocals + "return 1; }")).succeeded());
 }
+
+TEST_CASE("core::random spreads evenly within the given fraction of its value", "[script]")
+{
+    const ScriptCompileResult compiled = compileTraversalScript("import core;\n" + classWith(
+        "int value() {\n"
+        "    int outside = 0;\n"
+        "    int low     = 0;\n"
+        "    int high    = 0;\n"
+        "    int draw    = 0;\n"
+        "    while draw < 250 {\n"
+        "        float sample = core::random(50, 0.5);\n"
+        "        if sample < 25 or sample >= 75 { outside += 1; }\n"
+        "        if sample < 31.25 { low += 1; }\n"
+        "        if sample >= 68.75 { high += 1; }\n"
+        "        draw += 1;\n"
+        "    }\n"
+        "    return outside * 1000000 + low * 1000 + high;\n"
+        "}"));
+
+    REQUIRE(compiled.succeeded());
+
+    ScriptFixture fixture;
+    ScriptRun     run(fixture.context(compiled.script, ScriptWrites::Commit, nullptr));
+
+    const int tally = run.call(0, {});
+
+    CHECK(tally / 1000000 == 0);
+    CHECK(tally / 1000 % 1000 > 0);
+    CHECK(tally % 1000 > 0);
+}
+
+TEST_CASE("core::random gives a new value per draw and the same values for the same step", "[script]")
+{
+    const ScriptCompileResult compiled = compileTraversalScript("import core;\n" + classWith(
+        "int value() { return core::random(1000000, 0.5); }\n"
+        "int differs() { double a = core::random(1000000, 0.5); double b = core::random(1000000, 0.5); "
+        "return a != b; }"));
+
+    REQUIRE(compiled.succeeded());
+
+    ScriptFixture firstFixture;
+    ScriptFixture replayFixture;
+    ScriptRun     firstRun (firstFixture.context(compiled.script, ScriptWrites::Commit, nullptr));
+    ScriptRun     replayRun(replayFixture.context(compiled.script, ScriptWrites::Commit, nullptr));
+    ScriptRun     pairRun  (firstFixture.context(compiled.script, ScriptWrites::Commit, nullptr));
+
+    CHECK(firstRun.call(0, {}) == replayRun.call(0, {}));
+    CHECK(pairRun.call(1, {}) == 1);
+}
+
+TEST_CASE("core functions need their import and must exist", "[script]")
+{
+    const ScriptCompileResult missingImport = compileTraversalScript(classWith(
+        "int value() { return core::random(50, 0.5); }"));
+
+    REQUIRE(missingImport.diagnostics.size() == 1);
+    CHECK(missingImport.diagnostics.front().message.find("import core;") != std::string::npos);
+
+    CHECK_FALSE(compileTraversalScript("import maths;\n" + classWith("int value() { return 0; }")).succeeded());
+    CHECK_FALSE(compileTraversalScript("import core\n" + classWith("int value() { return 0; }")).succeeded());
+    CHECK_FALSE(compileTraversalScript("import core;\n" + classWith(
+        "int value() { return core::nothing(1); }")).succeeded());
+    CHECK_FALSE(compileTraversalScript("import core;\n" + classWith(
+        "int value() { return core::random(50); }")).succeeded());
+    CHECK_FALSE(compileTraversalScript("import core;\n" + classWith(
+        "int value() { return core::random; }")).succeeded());
+}

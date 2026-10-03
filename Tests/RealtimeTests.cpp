@@ -5,7 +5,7 @@
 #include "Graph/GraphState.h"
 #include "Graph/RTGraphBuilder.h"
 #include "Graph/ValueTreeIdentifiers.h"
-#include "UI/Node/NodeFactory.h"
+#include "Graph/NodeFactory.h"
 
 int main(int argc, char* argv[])
 {

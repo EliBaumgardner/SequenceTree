@@ -59,6 +59,7 @@ public:
     static const juce::Identifier XPosition;
     static const juce::Identifier YPosition;
     static const juce::Identifier Radius;
+    static const juce::Identifier NodeColour;
 
     static const juce::Identifier MidiPitch;
     static const juce::Identifier MidiVelocity;
@@ -88,6 +89,10 @@ public:
     static const juce::Identifier TraversalChannel;
     static const juce::Identifier TraversalTranspose;
     static const juce::Identifier TraversalVelocity;
+
+    static const juce::Identifier ColourPresets;
+    static const juce::Identifier ColourPreset;
+    static const juce::Identifier PresetColour;
 };
 
 #endif //SEQUENCETREE_VALUETREEIDENTIFIERS_H

@@ -14,11 +14,12 @@
 #include "NodeController.h"
 #include "../UI/Node/Modulator.h"
 #include "../UI/Node/Encapsulator.h"
-#include "../UI/Node/NodeFactory.h"
+#include "../Graph/NodeFactory.h"
 #include "../UI/Canvas/DynamicPort.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "../Graph/GraphState.h"
 #include "../UI/Menus/AllowedTraversalsMenu.h"
+#include "../UI/Menus/ContextMenu.h"
 #include "../UI/Theme/CustomLookAndFeel.h"
 #include "../Plugin/PluginProcessor.h"
 
@@ -74,9 +75,7 @@ void NodeController::updateArrowHover(juce::Point<float> cursor)
             continue;
         }
 
-        const float dist = CanvasHitTester::distanceToSegment(cursor,
-                                       arrow->startNode->getNodeCentre().toFloat(),
-                                       arrow->endNode->getNodeCentre().toFloat());
+        const float dist = CanvasHitTester::distanceToSegment(cursor, arrow->startNode->getNodeCentre().toFloat(), arrow->endNode->getNodeCentre().toFloat());
 
         const bool nearby = dist < flagProximityRadius;
         if (nearby != arrow->proximityHovered) {
@@ -102,85 +101,50 @@ void NodeController::showArrowContextMenu(Arrow* arrow)
         return;
     }
 
-    juce::PopupMenu menu;
-    menu.setLookAndFeel(applicationContext.lookAndFeel);
-    menu.addItem(static_cast<int>(ArrowMenuItem::EditAllowedTraversals), "edit allowed traversals");
-    menu.addItem(static_cast<int>(ArrowMenuItem::TraversalArrow), "traversal arrow",
-                 connectionOps.canBeTraversalArrow(arrow), arrow->isTraversalArrow());
+    ContextMenu menu(applicationContext);
 
-    if (connectionOps.connectsToModulatorRoot(arrow)) {
-        menu.addItem(static_cast<int>(ArrowMenuItem::SyncModulator), "sync", true, arrow->isSyncArrow());
-    }
-
-    juce::Component::SafePointer<Arrow> safeArrow(arrow);
-    juce::WeakReference<NodeController> safeController(this);
-
-    menu.showMenuAsync(juce::PopupMenu::Options(), [this, safeController, safeArrow] (int result)
-    {
-        if (safeController == nullptr || safeArrow == nullptr) {
+    menu.addItem("edit allowed traversals", ContextMenu::ItemKind::Action, [this, arrow]() {
+        juce::ValueTree connection = connectionOps.connectionTreeFor(arrow);
+        if (!connection.isValid()) {
             return;
         }
 
-        switch (static_cast<ArrowMenuItem>(result))
-        {
-            case ArrowMenuItem::EditAllowedTraversals:
-            {
-                juce::ValueTree connection = connectionOps.connectionTreeFor(safeArrow);
-                if (!connection.isValid()) {
-                    break;
-                }
+        allowedTraversalsLauncher.show([this, connection]() {
+            auto content = std::make_unique<AllowedTraversalsMenu>(applicationContext, connection);
+            content->setSize(AllowedTraversalsMenu::defaultWidth, content->getIdealHeight());
 
-                allowedTraversalsLauncher.show([this, connection]() {
-                    auto content = std::make_unique<AllowedTraversalsMenu>(applicationContext, connection);
-                    content->setSize(AllowedTraversalsMenu::defaultWidth, content->getIdealHeight());
-
-                    return content;
-                });
-                break;
-            }
-            case ArrowMenuItem::TraversalArrow:
-            {
-                connectionOps.setArrowType(safeArrow, safeArrow->isTraversalArrow() ? ArrowType::Node
-                                                                                    : ArrowType::Traversal);
-                break;
-            }
-            case ArrowMenuItem::SyncModulator:
-            {
-                connectionOps.setArrowSync(safeArrow, ! safeArrow->isSyncArrow());
-                break;
-            }
-            default: break;
-        }
+            return content;
+        });
     });
+
+    menu.addItem("traversal arrow", ContextMenu::ItemKind::Toggle, [this, arrow]() {
+        if (arrow->isTraversalArrow()) {
+            connectionOps.setArrowType(arrow, ArrowType::Node);
+            return;
+        }
+
+        connectionOps.setArrowType(arrow, ArrowType::Traversal);
+    }, connectionOps.canBeTraversalArrow(arrow), arrow->isTraversalArrow());
+
+    if (connectionOps.connectsToModulatorRoot(arrow)) {
+        menu.addItem("sync", ContextMenu::ItemKind::Toggle, [this, arrow]() {
+            connectionOps.setArrowSync(arrow, ! arrow->isSyncArrow());
+        }, true, arrow->isSyncArrow());
+    }
+
+    menu.show(*arrow);
 }
 
 void NodeController::showSelectionMenu(juce::Point<int> canvasPoint)
 {
     const bool hasSelection = selectionOps.hasSelection();
+    ContextMenu menu(applicationContext);
 
-    juce::PopupMenu menu;
-    menu.setLookAndFeel(applicationContext.lookAndFeel);
+    menu.addItem("copy",   ContextMenu::ItemKind::Action, [this]() { selectionOps.copySelection(); }, hasSelection);
+    menu.addItem("paste",  ContextMenu::ItemKind::Action, [this, canvasPoint]() { selectionOps.pasteAt(canvasPoint); }, selectionOps.hasClipboard());
+    menu.addItem("delete", ContextMenu::ItemKind::Action, [this]() { selectionOps.deleteSelection(); }, hasSelection);
 
-    menu.addItem(static_cast<int>(SelectionMenuItem::Copy),   "copy",   hasSelection);
-    menu.addItem(static_cast<int>(SelectionMenuItem::Paste),  "paste",  selectionOps.hasClipboard());
-    menu.addItem(static_cast<int>(SelectionMenuItem::Remove), "delete", hasSelection);
-
-    juce::WeakReference<NodeController> safeController(this);
-
-    menu.showMenuAsync(juce::PopupMenu::Options(), [this, safeController, canvasPoint] (int result)
-    {
-        if (safeController == nullptr) {
-            return;
-        }
-
-        switch (static_cast<SelectionMenuItem>(result))
-        {
-            case SelectionMenuItem::Copy:   selectionOps.copySelection();   break;
-            case SelectionMenuItem::Paste:  selectionOps.pasteAt(canvasPoint); break;
-            case SelectionMenuItem::Remove: selectionOps.deleteSelection(); break;
-            default: break;
-        }
-    });
+    menu.show(canvas);
 }
 
 void NodeController::endDrag()
@@ -237,7 +201,7 @@ void NodeController::finishDanglingTipDrag()
 void NodeController::finishFlagConnection()
 {
     dragState = DragState::Idle;
-    canvas.arrowManager.cancelPreview();
+    canvas.arrowManager.preview.reset();
 
     if (flagConnectionTarget != nullptr) {
         commitFlagConnection(flagConnectionSourceId, flagConnectionTarget);
@@ -250,9 +214,14 @@ void NodeController::finishFlagConnection()
 void NodeController::finishDanglingArrowCreation()
 {
     if (danglingSnapTarget != nullptr) {
-        Node* const startNode = canvas.arrowManager.previewStartNode();
+        Node* startNode = nullptr;
 
-        canvas.arrowManager.cancelPreview();
+        if (canvas.arrowManager.preview != nullptr) {
+            startNode = canvas.arrowManager.preview->startNode;
+        }
+
+        canvas.arrowManager.preview.reset();
+
         connectDanglingToTarget(startNode);
     }
     else {
@@ -318,9 +287,7 @@ void NodeController::connectDanglingToTarget(const Node* startNode)
         return;
     }
 
-    connectWithSnapAnimation(startNode->nodeId,
-                             targetNode->nodeId,
-                             ArrowType::StepIntoTree);
+    connectWithSnapAnimation(startNode->nodeId, targetNode->nodeId, ArrowType::StepIntoTree);
 }
 
 void NodeController::connectDraggedNodeToRoot()
@@ -340,8 +307,7 @@ void NodeController::connectDraggedNodeToRoot()
 
     canvas.cancelPendingUpdatesFor(draggedNodeId);
 
-    connectWithSnapAnimation(parentNodeId, rootNodeId,
-                             ArrowType::CrossRootTree);
+    connectWithSnapAnimation(parentNodeId, rootNodeId, ArrowType::CrossRootTree);
 }
 
 void NodeController::connectWithSnapAnimation(int parentNodeId, int childNodeId,
@@ -396,7 +362,7 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
         return;
     }
 
-    if (isArrowMode() && canvas.arrowManager.hasPreview()) {
+    if (isArrowMode() && canvas.arrowManager.preview != nullptr) {
         finishDanglingArrowCreation();
         return;
     }
@@ -507,7 +473,7 @@ void NodeController::setArrowMode(bool enabled)
     arrowMode = enabled;
 
     if (!enabled) {
-        canvas.arrowManager.cancelPreview();
+        canvas.arrowManager.preview.reset();
     }
 }
 
@@ -685,8 +651,7 @@ void NodeController::selectSpanNode(Node& node)
     canvas.nodeManager.clearOutlines();
 
     undoManager->beginNewTransaction();
-    NodeFactory::createEncapsulator(graphState, spanNodeIds,
-                                    GraphState::defaultSubLoopCountLimit, undoManager);
+    NodeFactory::createEncapsulator(graphState, spanNodeIds, GraphState::defaultSubLoopCountLimit, undoManager);
 }
 
 void NodeController::mouseDown(const juce::MouseEvent& e)
@@ -721,7 +686,8 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
                 RTPreviewRequest::Kind::Start,
                 previewNode->nodeId,
                 static_cast<int>(canvas.quaverCount.getValue()),
-                applicationContext.rtGraphBuilder->buildRTtraversal({ canvas.quaverTraversalId, 0 })
+                applicationContext.rtGraphBuilder->buildRTtraversal({ canvas.quaverTraversalId, 0 }),
+                canvas.quaverRepeat
             });
         }
         return;
@@ -934,15 +900,13 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
     newPosition.xPosition += parentPosition.xPosition - parentCentre.x;
     newPosition.yPosition += parentPosition.yPosition - parentCentre.y;
 
-    draggedNodeTree = NodeCreationDispatcher::create(nodeControllerMode,graphState,
-                                                     parentNodeId,nodeType,mods.isCtrlDown(),newPosition,undoManager);
+    draggedNodeTree = NodeCreationDispatcher::create(nodeControllerMode, graphState, parentNodeId, nodeType, mods.isCtrlDown(), newPosition, undoManager);
 
     if (! draggedNodeTree.isValid()) {
         return;
     }
 
-    connectionOps.applySelectedArrowInfo(parentNodeId, draggedNodeTree.getProperty(ValueTreeIdentifiers::Id),
-                                         ArrowType::StepIntoTree);
+    connectionOps.applySelectedArrowInfo(parentNodeId, draggedNodeTree.getProperty(ValueTreeIdentifiers::Id), ArrowType::StepIntoTree);
 
     const int owningEncapsulatorId = parentNode->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
@@ -957,8 +921,7 @@ void NodeController::handleNodeDragStart(juce::UndoManager *undoManager, Node *n
         return;
     }
 
-    graphState.encapsulation.insertNodeAfter(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id),
-                                    parentNodeId, undoManager);
+    graphState.encapsulation.insertNodeAfter(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id), parentNodeId, undoManager);
 }
 
 void NodeController::updateConnectionPreview(Node *node, const NodePosition& newPosition, bool dashed)
@@ -983,8 +946,7 @@ void NodeController::commitFlagConnection(int sourceNodeId, Node* target)
         return;
     }
 
-    connectWithSnapAnimation(sourceNodeId, targetNodeId,
-                             ArrowType::StepIntoTree);
+    connectWithSnapAnimation(sourceNodeId, targetNodeId, ArrowType::StepIntoTree);
 }
 
 void NodeController::handleNodeDrag(juce::UndoManager *undoManager, int nodeId, NodePosition newPosition)

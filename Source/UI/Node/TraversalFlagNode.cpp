@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 6/30/26.
-//
-
 #include "TraversalFlagNode.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
@@ -10,158 +6,126 @@
 
 #include <cmath>
 
-TraversalFlagNode::TraversalFlagNode(const ApplicationContext& context) : Node(context)
+TraversalFlagNode::TraversalFlagNode(const ApplicationContext& context)
+    : Node(context),
+      traversalNumEditor(context)
 {
     nodeType = NodeType::TraversalFlag;
 
-    countEditor.setVisible(true);
-    switchCountEditor.setVisible(true);
+    traversalNumEditor.setFormat(std::make_unique<TraversalFlagFormat>());
+    traversalNumEditor.setInterceptsMouseClicks(true, false);
+    traversalNumEditor.setTooltip("Type +N to spawn traversal N, -N to remove it; +Na targets instance a");
 
-    subLoopLimitEditor.setVisible(false);
-    upButton->setVisible(false);
-    downButton->setVisible(false);
+    traversalNumEditor.boundValue.setValue(0);
 
-    traversalNumEditor = std::make_unique<ValueEditor>(context);
-    traversalNumEditor->setFormat(std::make_unique<TraversalFlagFormat>());
-    traversalNumEditor->setInterceptsMouseClicks(true, false);
-    traversalNumEditor->setTooltip("Type +N to spawn traversal N, -N to remove it; +Na targets instance a");
-    addAndMakeVisible(traversalNumEditor.get());
-
-    traversalNumEditor->boundValue.setValue(0);
-
-    traversalNumEditor->onValueChange = [this]() {
-
-        int typeId = static_cast<int>(traversalNumEditor->boundValue.getValue());
-
-        if (typeId < 0) {
-            typeId = -typeId;
-        }
+    traversalNumEditor.onValueChange = [this]() {
+        const int typeId = std::abs(static_cast<int>(traversalNumEditor.boundValue.getValue()));
 
         if (typeId > 0) {
             applicationContext.graphState->traversals.addTraversalData(typeId, nullptr);
         }
     };
 
+    countEditor.setVisible(true);
+    switchCountEditor.setVisible(true);
+    subLoopLimitEditor.setVisible(false);
+    upButton.setVisible(false);
+    downButton.setVisible(false);
     nodeValueEditor.setVisible(false);
+
+    addAndMakeVisible(traversalNumEditor);
+}
+
+void TraversalFlagNode::paint(juce::Graphics& graphics)
+{
+    const auto   bounds     = getLocalBounds().toFloat();
+    juce::Path   triangle   = buildTrianglePath();
+    float        pulseScale = 1.0f;
+    juce::Colour fillColour = nodeColour;
+
+    if (isHighlighted) {
+        pulseScale = 1.0f + 0.1f * std::sin(pulsePhase * juce::MathConstants<float>::pi);
+        fillColour = nodeColour.darker();
+    }
+
+    triangle.applyTransform(juce::AffineTransform::scale(pulseScale, pulseScale, bounds.getCentreX(), bounds.getCentreY()));
+
+    graphics.setColour(fillColour);
+    graphics.fillPath(triangle);
+
+    graphics.setColour(outlineColour);
+    graphics.strokePath(triangle, juce::PathStrokeType(1.0f));
+
+    if (isHovered) {
+        graphics.strokePath(triangle, juce::PathStrokeType(2.0f));
+    }
+
+    if (isSelected) {
+        const auto& theme = CustomLookAndFeel::get(*this);
+
+        graphics.setColour(theme.selectionRingColour);
+        graphics.strokePath(triangle, juce::PathStrokeType(Theme::selectionRimWidth));
+    }
+}
+
+void TraversalFlagNode::resized()
+{
+    const auto  bounds         = getLocalBounds().toFloat();
+    const float centreX        = bounds.getCentreX();
+    const float centreY        = bounds.getCentreY();
+    const float bladeLength    = (juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f - 4.0f) * 0.7f;
+    const int   numEditorSize  = juce::roundToInt(bladeLength * 0.7f);
+    const auto  triangleBounds = buildTrianglePath().getBounds();
+    const int   editorWidth    = juce::roundToInt(bladeLength * 0.45f);
+    const int   editorHeight   = juce::roundToInt(bladeLength * 0.30f);
+    juce::Point<float> numEditorCentre(centreX + bladeLength / 3.0f, centreY);
+
+    numEditorCentre.applyTransform(juce::AffineTransform::rotation(incomingAngle + juce::MathConstants<float>::halfPi, centreX, centreY));
+
+    traversalNumEditor.setBounds(juce::Rectangle<int>(0, 0, numEditorSize, numEditorSize).withCentre(numEditorCentre.roundToInt()));
+
+    countEditor.setBounds(juce::roundToInt(triangleBounds.getRight()) - editorWidth, juce::roundToInt(triangleBounds.getY()), editorWidth, editorHeight);
+
+    switchCountEditor.setBounds(juce::roundToInt(triangleBounds.getRight()) - editorWidth, juce::roundToInt(triangleBounds.getBottom()) - editorHeight,
+                                editorWidth, editorHeight);
+}
+
+bool TraversalFlagNode::hitTest(int x, int y)
+{
+    const juce::Point<int> point(x, y);
+
+    for (const ValueEditor* editor : { &countEditor, &switchCountEditor, &nodeValueEditor }) {
+        if (editor->isVisible() && editor->getBounds().contains(point)) {
+            return true;
+        }
+    }
+
+    return buildTrianglePath().contains(static_cast<float>(x), static_cast<float>(y));
 }
 
 void TraversalFlagNode::bindToTree()
 {
     Node::bindToTree();
 
-    if (nodeValueTree.isValid() && traversalNumEditor != nullptr) {
-        traversalNumEditor->bindEditor(nodeValueTree, ValueTreeIdentifiers::TraversalFlagValue);
+    if (nodeValueTree.isValid()) {
+        traversalNumEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::TraversalFlagValue);
     }
-}
-
-float TraversalFlagNode::getBladeLength() const
-{
-    const auto bounds = getLocalBounds().toFloat();
-    const float half = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f;
-
-    return (half - 4.0f) * 0.7f;
-}
-
-void TraversalFlagNode::resized() {
-
-    const auto bounds = getLocalBounds().toFloat();
-    const float cx = bounds.getCentreX();
-    const float cy = bounds.getCentreY();
-
-    const float bladeLength = getBladeLength();
-
-    juce::Point<float> centre(cx + bladeLength / 3.0f, cy);
-    centre.applyTransform(juce::AffineTransform::rotation(incomingAngle + juce::MathConstants<float>::halfPi,
-                                                          cx, cy));
-
-    const int size = juce::roundToInt(bladeLength * 0.7f);
-    traversalNumEditor->setBounds(juce::Rectangle<int>(0, 0, size, size).withCentre(centre.roundToInt()));
-
-    const auto triangleBounds = buildTrianglePath().getBounds();
-
-    const int editorWidth  = juce::roundToInt(bladeLength * 0.45f);
-    const int editorHeight = juce::roundToInt(bladeLength * 0.30f);
-
-    countEditor.setBounds(juce::roundToInt(triangleBounds.getRight()) - editorWidth,
-                          juce::roundToInt(triangleBounds.getY()),
-                          editorWidth, editorHeight);
-
-    switchCountEditor.setBounds(juce::roundToInt(triangleBounds.getRight()) - editorWidth,
-                                juce::roundToInt(triangleBounds.getBottom()) - editorHeight,
-                                editorWidth, editorHeight);
 }
 
 juce::Path TraversalFlagNode::buildTrianglePath() const
 {
-    const auto bounds = getLocalBounds().toFloat();
-    const float cx = bounds.getCentreX();
-    const float cy = bounds.getCentreY();
-
-    const float bladeLength    = getBladeLength();
+    const auto  bounds         = getLocalBounds().toFloat();
+    const float centreX        = bounds.getCentreX();
+    const float centreY        = bounds.getCentreY();
+    const float bladeLength    = (juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f - 4.0f) * 0.7f;
     const float baseHalfHeight = bladeLength * 0.5f;
+    juce::Path  triangle;
 
-    juce::Path triangle;
-    triangle.startNewSubPath(cx + bladeLength, cy);
-    triangle.lineTo(cx, cy + baseHalfHeight);
-    triangle.lineTo(cx, cy - baseHalfHeight);
+    triangle.startNewSubPath(centreX + bladeLength, centreY);
+    triangle.lineTo(centreX, centreY + baseHalfHeight);
+    triangle.lineTo(centreX, centreY - baseHalfHeight);
     triangle.closeSubPath();
+    triangle.applyTransform(juce::AffineTransform::rotation(incomingAngle + juce::MathConstants<float>::halfPi, centreX, centreY));
 
-    triangle.applyTransform(juce::AffineTransform::rotation(incomingAngle + juce::MathConstants<float>::halfPi,
-                                                            cx, cy));
     return triangle;
-}
-
-bool TraversalFlagNode::hitTest(int x, int y)
-{
-    const juce::Point<int> p(x, y);
-
-    if (countEditor.isVisible() && countEditor.getBounds().contains(p)) {
-        return true;
-    }
-    if (switchCountEditor.isVisible() && switchCountEditor.getBounds().contains(p)) {
-        return true;
-    }
-    if (nodeValueEditor.isVisible() && nodeValueEditor.getBounds().contains(p)) {
-        return true;
-    }
-
-    return buildTrianglePath().contains(static_cast<float>(x), static_cast<float>(y));
-}
-
-void TraversalFlagNode::paint(juce::Graphics& g)
-{
-    const auto bounds = getLocalBounds().toFloat();
-
-    const float pulseScale = isHighlighted
-                           ? 1.0f + 0.1f * std::sin(pulsePhase * juce::MathConstants<float>::pi)
-                           : 1.0f;
-
-    const auto pulseTransform = juce::AffineTransform::scale(pulseScale, pulseScale,
-                                                             bounds.getCentreX(),
-                                                             bounds.getCentreY());
-
-    juce::Path triangle = buildTrianglePath();
-    triangle.applyTransform(pulseTransform);
-
-    if (isHighlighted) {
-        g.setColour(nodeColour.darker());
-    }
-    else {
-        g.setColour(nodeColour);
-    }
-    g.fillPath(triangle);
-
-    g.setColour(outlineColour);
-    g.strokePath(triangle, juce::PathStrokeType(1.0f));
-
-    if (isHovered) {
-        g.strokePath(triangle, juce::PathStrokeType(2.0f));
-    }
-
-    if (isSelected) {
-        const auto& theme = CustomLookAndFeel::get(*this);
-
-        g.setColour(theme.selectionRingColour);
-        g.strokePath(triangle, juce::PathStrokeType(Theme::selectionRimWidth));
-    }
 }

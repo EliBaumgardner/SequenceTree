@@ -33,6 +33,7 @@ enum class TokenKind
     KeywordDouble,
     KeywordNode,
     KeywordNone,
+    KeywordImport,
 
     LeftBrace,
     RightBrace,
@@ -40,6 +41,7 @@ enum class TokenKind
     RightParen,
     Dot,
     Colon,
+    Scope,
     Comma,
 
     Assign,

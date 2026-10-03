@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 7/17/26.
-//
-
 #include "MenuArea.h"
 #include "../../Util/ApplicationContext.h"
 #include "../Theme/CustomLookAndFeel.h"
@@ -11,55 +7,59 @@
 
 MenuArea::MenuArea(const ApplicationContext& context)
     : resizer(context, PanelResizer::Edge::Right),
-      topBar(context, { Bar::Orientation::horizontal })
+      topBar(context, { Bar::Orientation::Horizontal })
 {
     setLookAndFeel(context.lookAndFeel);
 
-    menuBar = std::make_unique<MenuBar>(context);
-    menuBar->traversalIcon->onClick = [this] { togglePanel(ActivePanel::Traversal); };
-    menuBar->nodeIcon->onClick      = [this] { togglePanel(ActivePanel::Node); };
-
+    menuBar       = std::make_unique<MenuBar>(context);
     traversalMenu = std::make_unique<TraversalMenu>(context);
     nodeMenu      = std::make_unique<NodeMenu>(context);
 
+    menuBar->traversalIcon.onClick = [this] { togglePanel(ActivePanel::Traversal); };
+    menuBar->nodeIcon.onClick      = [this] { togglePanel(ActivePanel::Node); };
+
     addAndMakeVisible(topBar);
     addAndMakeVisible(menuBar.get());
+
     addChildComponent(traversalMenu.get());
     addChildComponent(nodeMenu.get());
+
     addAndMakeVisible(resizer);
 }
 
-MenuArea::~MenuArea() {
+MenuArea::~MenuArea()
+{
     setLookAndFeel(nullptr);
 }
 
-void MenuArea::paint(juce::Graphics &g) {
+void MenuArea::paint(juce::Graphics& graphics)
+{
     const Theme& theme = CustomLookAndFeel::get(*this);
 
-    g.setColour(theme.baseDarkColour2);
-    g.fillRect(getLocalBounds());
+    graphics.setColour(theme.baseDarkColour2);
+    graphics.fillRect(getLocalBounds());
 }
 
-void MenuArea::resized() {
-    auto bounds    = getLocalBounds();
-    int  barHeight = static_cast<int>(getHeight() * Theme::barHeightRatio);
+void MenuArea::resized()
+{
+    const int barHeight = static_cast<int>(getHeight() * Theme::barHeightRatio);
+    auto      bounds    = getLocalBounds();
 
     resizer.setBounds(bounds.removeFromRight(juce::roundToInt(barHeight * resizerWidthRatio)));
     menuBar->setBounds(bounds.removeFromRight(juce::roundToInt(barHeight * menuBarWidthRatio)));
-
     topBar.setBounds(bounds.withHeight(barHeight));
-
     traversalMenu->setBounds(bounds);
     nodeMenu->setBounds(bounds);
 }
 
-void MenuArea::togglePanel(ActivePanel panel) {
+void MenuArea::togglePanel(ActivePanel panel)
+{
     if (activePanel == panel) {
         activePanel = ActivePanel::None;
-    } else {
+    }
+    else {
         activePanel = panel;
     }
-
 
     traversalMenu->setVisible(activePanel == ActivePanel::Traversal);
     nodeMenu->setVisible(activePanel == ActivePanel::Node);

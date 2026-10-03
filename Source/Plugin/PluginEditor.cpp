@@ -40,7 +40,11 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
         resized();
     };
 
-    port->onZoomChanged = [canvasPtr = canvas.get()](float z) { canvasPtr->valueField.setViewZoom(z); };
+    port->onZoomChanged = [canvasPtr = canvas.get()](float zoom) {
+        canvasPtr->valueField.viewZoom = zoom;
+
+        canvasPtr->valueField.updateBrushCursor();
+    };
 
     if (audioProcessor.pendingRestoreState.isValid()) {
         audioProcessor.applyRestoredState();
@@ -157,7 +161,7 @@ bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, ju
     juce::UndoManager& undoManager  = *applicationContext.undoManager;
 
     if (key == juce::KeyPress::spaceKey) {
-        titleBar->togglePlayback();
+        titleBar->applyPlaybackState(!applicationContext.canvas->start);
         return true;
     }
 

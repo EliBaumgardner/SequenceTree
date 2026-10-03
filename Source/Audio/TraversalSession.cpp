@@ -3,6 +3,15 @@
 
 #include <algorithm>
 
+TraversalSession::TraversalSession(EventManager& eventManager, EventManager& previewEventManager)
+    : eventManager(eventManager), previewEventManager(previewEventManager)
+{
+    activeRootIdScratch.reserve(scratchCapacity);
+    restartRootScratch.reserve(scratchCapacity);
+    removedRunIdScratch.reserve(maxConcurrentTraversals);
+    replayMidi.ensureSize(replayMidiCapacityBytes);
+}
+
 namespace {
 
 int homeRootId(const TraversalPool::Instance& instance)
@@ -14,15 +23,6 @@ int homeRootId(const TraversalPool::Instance& instance)
     return instance.logic.rootId;
 }
 
-}
-
-TraversalSession::TraversalSession(EventManager& eventManager, EventManager& previewEventManager)
-    : eventManager(eventManager), previewEventManager(previewEventManager)
-{
-    activeRootIdScratch.reserve(scratchCapacity);
-    restartRootScratch.reserve(scratchCapacity);
-    removedRunIdScratch.reserve(maxConcurrentTraversals);
-    replayMidi.ensureSize(replayMidiCapacityBytes);
 }
 
 void TraversalSession::prepare()
@@ -96,8 +96,7 @@ TraversalSession::Playback TraversalSession::continueReplay(const DispatchContex
 
     while (replayRemainingSamples >= 1.0
            && juce::Time::getMillisecondCounterHiRes() - startedMs < budgetMs) {
-        const int chunkSamples = static_cast<int>(juce::jmin(replayRemainingSamples,
-                                                             static_cast<double>(replayChunkSamples)));
+        const int chunkSamples = static_cast<int>(juce::jmin(replayRemainingSamples, static_cast<double>(replayChunkSamples)));
         eventManager.processEvents(chunkSamples, replayContext);
         replayMidi.clear();
         replayRemainingSamples -= chunkSamples;
@@ -164,8 +163,7 @@ void TraversalSession::resumeSuspendedNotes(juce::MidiBuffer& midiMessages)
 {
     for (const auto& note : eventManager.scheduler.activeNotes) {
         if (NoteScheduler::isNoteSounding(note)) {
-            midiMessages.addEvent(juce::MidiMessage::noteOn(note.event.midiChannel, note.event.pitch,
-                                  static_cast<juce::uint8>(note.event.velocity)), 0);
+            midiMessages.addEvent(juce::MidiMessage::noteOn(note.event.midiChannel, note.event.pitch, static_cast<juce::uint8>(note.event.velocity)), 0);
         }
     }
 
@@ -348,8 +346,7 @@ void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
                 traversal.state          = TraversalLogic::TraversalState::Active;
                 traversal.advanceAlternative(context.nodes, traversal.rootId);
 
-                eventManager.bridge.highlightNode(rootNode, AudioUIBridge::HighlightKind::Show, runId,
-                                                  traversal.traversal.key.typeId);
+                eventManager.bridge.highlightNode(rootNode, AudioUIBridge::HighlightKind::Show, runId, traversal.traversal.key.typeId);
                 eventManager.dispatcher.pushNote(rootNode, runId, context, 0);
             }
         }
@@ -414,10 +411,31 @@ void TraversalSession::stopTraversalNotes(int runId, juce::MidiBuffer& midiMessa
 void TraversalSession::playPreview(const DispatchContext& context, int numSamples)
 {
     previewRequests.drain([this, &context](const RTPreviewRequest& request) {
-        stopPreview(context.midiMessages);
+        int loopLimit = 1;
 
-        if (request.kind == RTPreviewRequest::Kind::Start) {
-            startPreview(request, context);
+        switch (request.kind) {
+            case RTPreviewRequest::Kind::Start: {
+                stopPreview(context.midiMessages);
+                startPreview(request, context);
+                break;
+            }
+            case RTPreviewRequest::Kind::Stop: {
+                stopPreview(context.midiMessages);
+                break;
+            }
+            case RTPreviewRequest::Kind::SetRepeat: {
+                break;
+            }
+        }
+
+        if (request.repeat) {
+            loopLimit = 0;
+        }
+
+        for (auto& [runId, instance] : previewTraversals.entries()) {
+            if (instance.logic.loop.returnId != -1) {
+                instance.logic.loop.limit = loopLimit;
+            }
         }
     });
 
@@ -474,8 +492,7 @@ void TraversalSession::startPreview(const RTPreviewRequest& request, const Dispa
         return;
     }
 
-    instance->logic.selectionRandom = (instance->logic.selectionRandom
-                                       ^ static_cast<unsigned int>(runId) * 2246822519u) | 1u;
+    instance->logic.selectionRandom = (instance->logic.selectionRandom ^ static_cast<unsigned int>(runId) * 2246822519u) | 1u;
 
     instance->logic.beginPreview(context.nodes, hostNode->nodeID, alternativeId);
 

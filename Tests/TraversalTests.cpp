@@ -1219,3 +1219,88 @@ TEST_CASE("a preview plays each sub loop once and walks on", "[traversal][previe
         CHECK(walkPreview(encapsulationShape(), 1, -1, 1) == expected);
     }
 }
+
+TEST_CASE("a repeating preview returns to the node it started on, not to the root", "[traversal][preview]")
+{
+    SECTION("within one tree") {
+        const NodeMap          nodes = chainShape();
+        const std::vector<int> expected { 2, 3, 2, 3, 2, 3, 2 };
+
+        TraversalLogic   logic;
+        std::vector<int> visited;
+
+        logic.nodeState.prepare();
+        logic.reset(1, RTtraversal {});
+        logic.mode = TraversalLogic::Mode::Preview;
+        logic.beginPreview(nodes, 2, -1);
+        logic.loop.limit = 0;
+
+        visited.push_back(logic.primary.target);
+
+        for (int step = 0; step < 6; ++step) {
+            visited.push_back(logic.handleNodeEvent(nodes).enteredId);
+        }
+
+        CHECK(visited == expected);
+    }
+
+    SECTION("after a traversal arrow into another tree") {
+        RTNode leaving = makeNode(2, 1, RTNode::NodeType::Node, 1, { 5 });
+        leaving.connections[0].isTreeJump = true;
+
+        RTNode root = makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 });
+        RTNode foreignRoot = makeNode(5, 0, RTNode::NodeType::RootNode, 1, { 6 });
+        RTNode foreignLeaf = makeNode(6, 5, RTNode::NodeType::Node, 1, {});
+
+        root.graphID        = 1;
+        leaving.graphID     = 1;
+        foreignRoot.graphID = 5;
+        foreignLeaf.graphID = 5;
+
+        const NodeMap          nodes = makeMap({ root, leaving, foreignRoot, foreignLeaf });
+        const std::vector<int> expected { 2, 5, 6, 2, 5, 6, 2 };
+
+        TraversalLogic   logic;
+        std::vector<int> visited;
+
+        logic.nodeState.prepare();
+        logic.reset(1, RTtraversal {});
+        logic.mode = TraversalLogic::Mode::Preview;
+        logic.beginPreview(nodes, 2, -1);
+        logic.loop.limit = 0;
+
+        visited.push_back(logic.primary.target);
+
+        for (int step = 0; step < 6; ++step) {
+            visited.push_back(logic.handleNodeEvent(nodes).enteredId);
+        }
+
+        CHECK(visited == expected);
+        CHECK(logic.rootId == 1);
+    }
+
+    SECTION("a loop limit of 1 set mid walk ends it at the end of the pass") {
+        const NodeMap          nodes = chainShape();
+        const std::vector<int> expected { 2, 3, 2, 3 };
+
+        TraversalLogic   logic;
+        std::vector<int> visited;
+
+        logic.nodeState.prepare();
+        logic.reset(1, RTtraversal {});
+        logic.mode = TraversalLogic::Mode::Preview;
+        logic.beginPreview(nodes, 2, -1);
+        logic.loop.limit = 0;
+
+        visited.push_back(logic.primary.target);
+
+        for (int step = 0; step < 3; ++step) {
+            visited.push_back(logic.handleNodeEvent(nodes).enteredId);
+        }
+
+        logic.loop.limit = 1;
+
+        CHECK(logic.handleNodeEvent(nodes).kind == TraversalLogic::StepResult::Kind::Ended);
+        CHECK(visited == expected);
+    }
+}

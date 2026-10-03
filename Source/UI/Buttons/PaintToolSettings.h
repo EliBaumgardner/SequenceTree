@@ -1,21 +1,14 @@
-//
-// Created by Eli Baumgardner on 6/10/26.
-//
+#pragma once
 
-#ifndef SEQUENCETREE_PAINTTOOLSETTINGS_H
-#define SEQUENCETREE_PAINTTOOLSETTINGS_H
-
-#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include "../../Util/ApplicationContext.h"
-#include "../Theme/CustomLookAndFeel.h"
 #include "../Menus/ColourSelector.h"
-#include "../Editors/ValueEditor.h"
-#include "../Canvas/NodeCanvas.h"
+#include "../Editors/LabeledEditor.h"
+#include "../Canvas/ValueField.h"
 #include "IconButton.h"
 
-
-class PaintToolSettings : public juce::Component {
-
+class PaintToolSettings : public juce::Component
+{
 public:
 
     static constexpr float minBrushFlow = 0.002f;
@@ -24,168 +17,31 @@ public:
     static constexpr float minBrushRadius = 1.0f;
     static constexpr float maxBrushRadius = 200.0f;
 
-    static constexpr float cellWidthRatio     = 0.09f;
-    static constexpr float labelWidthRatio    = 0.144f;
-
-    enum class PaintSetting {Pitch, Duration, Velocity};
-
-    struct ColourVariablePair {
-        juce::Colour colour;
-        PaintSetting setting;
-    };
-
-    ColourVariablePair pitchPair    { juce::Colours::red,   PaintSetting::Pitch };
-    ColourVariablePair velocityPair { juce::Colours::green, PaintSetting::Velocity };
-    ColourVariablePair durationPair { juce::Colours::blue,  PaintSetting::Duration };
-
-    PaintSetting paintSetting = PaintSetting::Pitch;
-
-    ColourVariablePair& currentPair() {
-        switch (paintSetting) {
-            case PaintSetting::Velocity: return velocityPair;
-            case PaintSetting::Duration: return durationPair;
-            case PaintSetting::Pitch:
-            default:                     return pitchPair;
-        }
-    }
+    static constexpr float cellWidthRatio  = 0.09f;
+    static constexpr float labelWidthRatio = 0.144f;
 
     const ApplicationContext& context;
 
-    std::unique_ptr<IconButton>     paintTool;
-    std::unique_ptr<ColourSelector> colourSelector;
-    std::unique_ptr<ValueEditor>    sizeEditor;
-    std::unique_ptr<ValueEditor>    flowEditor;
+    juce::Colour pitchColour    = juce::Colours::red;
+    juce::Colour velocityColour = juce::Colours::green;
+    juce::Colour durationColour = juce::Colours::blue;
 
-    juce::Label sizeLabel;
-    juce::Label flowLabel;
+    ValueField::PaintLayer paintLayer = ValueField::PaintLayer::Pitch;
 
+    IconButton     paintTool;
+    ColourSelector colourSelector { context };
+    LabeledEditor  sizeField      { context };
+    LabeledEditor  flowField      { context };
 
-    explicit PaintToolSettings(const ApplicationContext& context) : context(context) {
-        setLookAndFeel(context.lookAndFeel);
+    explicit PaintToolSettings(const ApplicationContext& context);
 
-        paintTool = std::make_unique<IconButton>(
-            [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-                CustomLookAndFeel::get(*this).drawPaintToolIcon(g, bounds, state);
-            }, context.lookAndFeel);
+    void paint(juce::Graphics& graphics) override;
+    void resized() override;
 
-        colourSelector = std::make_unique<ColourSelector>(context);
-        colourSelector->requiresNode = false;
-        colourSelector->shape        = ColourSelector::Shape::Circle;
-        sizeEditor = std::make_unique<ValueEditor>(context);
-        flowEditor = std::make_unique<ValueEditor>(context);
-        sizeEditor->wheelResponse = ValueEditor::WheelResponse::StepValue;
-        flowEditor->wheelResponse = ValueEditor::WheelResponse::StepValue;
+    void componentCallBack();
 
-        pitchPair.setting    = PaintSetting::Pitch;
-        velocityPair.setting = PaintSetting::Velocity;
-        durationPair.setting = PaintSetting::Duration;
+    void configureValueFields(ValueField &valueField, float brushFlow);
 
-        paintTool->onClick = [this]() {
-            paintTool->toggleSelected();
-
-            const bool paintMode = paintTool->isSelected();
-            this->context.canvas->setPaintMode(paintMode);
-
-            if (paintMode) {
-                setPaintMode(paintSetting);
-            }
-        };
-
-        colourSelector->onColourPicked = [this](juce::Colour c) {
-            currentPair().colour = c;
-
-            this->context.canvas->valueField.setBrushColour(c);
-            this->context.canvas->valueField.refresh();
-        };
-
-        sizeEditor->setFormat(std::make_unique<NumberFormat>(0.0, 1.0, ValueFormat::editableDecimalPlaces));
-
-        sizeEditor->onValueChange = [this] {
-            const float value  = static_cast<float>(sizeEditor->boundValue.getValue());
-            const float radius = juce::jmap(value, 0.0f, 1.0f, minBrushRadius, maxBrushRadius);
-            this->context.canvas->valueField.setBrushRadius(radius);
-        };
-
-        sizeEditor->boundValue = juce::jmap(context.canvas->valueField.brushRadius,
-                                            minBrushRadius, maxBrushRadius, 0.0f, 1.0f);
-
-        flowEditor->setFormat(std::make_unique<NumberFormat>(0.0, 1.0, ValueFormat::editableDecimalPlaces));
-
-        flowEditor->onValueChange = [this] {
-            const float value = static_cast<float>(flowEditor->boundValue.getValue());
-            this->context.canvas->valueField.brushFlow = juce::jmap(value, 0.0f, 1.0f, minBrushFlow, maxBrushFlow);
-        };
-
-        const float flow = juce::jlimit(minBrushFlow, maxBrushFlow, context.canvas->valueField.brushFlow);
-        flowEditor->boundValue = juce::jmap(flow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);
-
-        colourSelector->setTooltip("Brush colour");
-        sizeEditor->setTooltip("Brush size");
-        flowEditor->setTooltip("Brush rate");
-
-        const auto setUpLabel = [this](juce::Label& label, juce::String text) {
-            label.setText(std::move(text), juce::dontSendNotification);
-            label.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-            label.setJustificationType(juce::Justification::centredLeft);
-            label.setBorderSize({});
-            label.setMinimumHorizontalScale(1.0f);
-            addAndMakeVisible(label);
-        };
-
-        setUpLabel(sizeLabel, "Size");
-        setUpLabel(flowLabel, "Rate");
-
-        addAndMakeVisible(paintTool.get());
-        addAndMakeVisible(colourSelector.get());
-        addAndMakeVisible(sizeEditor.get());
-        addAndMakeVisible(flowEditor.get());
-    };
-
-    void paint(juce::Graphics& g) override {
-        CustomLookAndFeel::get(*this).drawPaintToolSettings(g,*this);
-    };
-
-    void resized() override {
-
-        const int height = getLocalBounds().getHeight();
-
-        auto bounds = getLocalBounds().reduced(juce::roundToInt(height * Theme::contentInsetRatio));
-
-        const int width      = bounds.getWidth();
-        const int cellSide   = juce::jmin(bounds.getHeight(), juce::roundToInt(width * cellWidthRatio));
-        const int cellGap    = juce::roundToInt(width * Theme::contentSpacingRatio);
-        const int labelWidth = juce::roundToInt(width * labelWidthRatio);
-
-        paintTool->setBounds(bounds.removeFromLeft(cellSide).withSizeKeepingCentre(cellSide, cellSide));
-        bounds.removeFromLeft(cellGap);
-
-        colourSelector->setBounds(bounds.removeFromLeft(cellSide).withSizeKeepingCentre(cellSide, cellSide));
-        bounds.removeFromLeft(cellGap);
-
-        const int editorWidth = (bounds.getWidth() - labelWidth * 2 - cellGap) / 2;
-
-        sizeLabel.setBounds(bounds.removeFromLeft(labelWidth));
-        sizeEditor->setBounds(bounds.removeFromLeft(editorWidth));
-        bounds.removeFromLeft(cellGap);
-
-        flowLabel.setBounds(bounds.removeFromLeft(labelWidth));
-        flowEditor->setBounds(bounds.removeFromLeft(editorWidth));
-    };
-
-    void setPaintMode(PaintSetting setting) {
-
-        paintSetting = setting;
-
-        const juce::Colour saved = currentPair().colour;
-
-        colourSelector->colour = saved;
-        colourSelector->repaint();
-
-        context.canvas->valueField.setBrushColour(saved);
-        context.canvas->valueField.setActivePaintLayer(static_cast<int>(setting));
-    }
-
-
+    juce::Colour& paintLayerColour();
+    void setPaintMode(ValueField::PaintLayer layer);
 };
-
-#endif //SEQUENCETREE_PAINTTOOLSETTINGS_H

@@ -70,6 +70,7 @@ target_sources(SequenceTree PRIVATE
         Source/Graph/TraversalState.cpp
         Source/Graph/TraversalRuleState.cpp
         Source/Graph/ValueTreeIdentifiers.cpp
+        Source/Graph/NodeFactory.cpp
         Source/Input/NodeController.cpp
         Source/UI/Canvas/DynamicPort.cpp
         Source/UI/Canvas/NodeCanvas.cpp
@@ -104,9 +105,14 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Theme/CustomLookAndFeelMenus.cpp
         Source/UI/Theme/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp
+        Source/UI/Buttons/IconButton.cpp
+        Source/UI/Buttons/ButtonPane.cpp
+        Source/UI/Buttons/TempoDisplay.cpp
+        Source/UI/Buttons/PaintToolSettings.cpp
         Source/UI/Menus/ArrowWindow.cpp
         Source/UI/Bars/ArrowBindBar.cpp
         Source/UI/Menus/ItemSelector.cpp
+        Source/UI/Menus/ContextMenu.cpp
         Source/UI/Menus/TraversalMenu.cpp
         Source/UI/Menus/MenuArea.cpp
         Source/UI/PanelResizer.cpp

@@ -30,8 +30,7 @@ juce::ValueTree EncapsulationOps::create(std::span<const int> memberNodeIds, juc
 
     encapsulator.addChild(encapsulatedIds, -1, undoManager);
 
-    encapsulator.setProperty(ValueTreeIdentifiers::RootNodeId,
-                             firstMember.getProperty(ValueTreeIdentifiers::RootNodeId), undoManager);
+    encapsulator.setProperty(ValueTreeIdentifiers::RootNodeId, firstMember.getProperty(ValueTreeIdentifiers::RootNodeId), undoManager);
     encapsulator.setProperty(ValueTreeIdentifiers::Id, encapsulatorId, undoManager);
 
     graphState.nodeMap.addChild(encapsulator, -1, undoManager);

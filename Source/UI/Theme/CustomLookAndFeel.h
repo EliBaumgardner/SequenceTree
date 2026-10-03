@@ -1,9 +1,4 @@
-//
-// Created by Eli Baumgardner on 11/4/25.
-//
-
-#ifndef SEQUENCETREE_CUSTOMLOOKANDFEEL_H
-#define SEQUENCETREE_CUSTOMLOOKANDFEEL_H
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Theme.h"
@@ -12,28 +7,26 @@ class NodeCanvas;
 
 class Arrow;
 
-class PaintToolSettings;
-
 class FileLabel;
-
-class ValueSlider;
 
 struct ButtonState;
 struct NodeVisual;
 
 class CustomLookAndFeel : public juce::LookAndFeel_V4, public Theme
 {
-
 public:
 
     CustomLookAndFeel();
 
-    static CustomLookAndFeel& get(juce::Component& c) { return static_cast<CustomLookAndFeel&>(c.getLookAndFeel()); }
+    static CustomLookAndFeel& get(juce::Component& component)
+    {
+        return static_cast<CustomLookAndFeel&>(component.getLookAndFeel());
+    }
 
-    void drawPopupMenuBackgroundWithOptions (juce::Graphics& g, int width, int height,
+    void drawPopupMenuBackgroundWithOptions (juce::Graphics& graphics, int width, int height,
                                              const juce::PopupMenu::Options& options) override;
 
-    void drawPopupMenuItem (juce::Graphics& g, const juce::Rectangle<int>& area,
+    void drawPopupMenuItem (juce::Graphics& graphics, const juce::Rectangle<int>& area,
                             bool isSeparator, bool isActive, bool isHighlighted, bool isTicked,
                             bool hasSubMenu, const juce::String& text,
                             const juce::String& shortcutKeyText,
@@ -46,65 +39,58 @@ public:
     juce::Font getPopupMenuFont() override;
     int getPopupMenuBorderSize() override;
 
+    void drawCallOutBoxBackground(juce::CallOutBox& box, juce::Graphics& graphics, const juce::Path& path,
+                                  juce::Image& cachedShadow) override;
+
     int  getDefaultScrollbarWidth() override;
-    void drawScrollbar (juce::Graphics& g, juce::ScrollBar& scrollBar, int x, int y, int width, int height,
+    void drawScrollbar (juce::Graphics& graphics, juce::ScrollBar& scrollBar, int x, int y, int width, int height,
                         bool isScrollbarVertical, int thumbStartPosition, int thumbSize,
                         bool isMouseOver, bool isMouseDown) override;
 
     juce::CaretComponent* createCaretComponent(juce::Component* keyFocusOwner) override;
 
-    void drawCanvas         (juce::Graphics& g, const NodeCanvas& canvas);
+    void drawCanvas         (juce::Graphics& graphics, const NodeCanvas& canvas);
 
-
-    void drawNodeIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawTreeIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawTraversalIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-
-
+    void drawNodeIcon       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawTreeIcon       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawTraversalIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
     juce::Colour pressableButtonColour(const ButtonState& state) const;
 
     static juce::Rectangle<float> getNodeCircleBounds(juce::Rectangle<float> componentBounds);
 
-    void drawNode          (juce::Graphics& g, const NodeVisual& visual);
-    void drawModulatorNode (juce::Graphics& g, const NodeVisual& visual);
-    void drawRootRectangle (juce::Graphics& g, juce::Rectangle<float> bounds);
+    void drawNode          (juce::Graphics& graphics, const NodeVisual& visual);
+    void drawModulatorNode (juce::Graphics& graphics, const NodeVisual& visual);
+    void drawRootRectangle (juce::Graphics& graphics, juce::Rectangle<float> bounds);
 
-    void drawArrow          (juce::Graphics& g, const Arrow& arrow);
+    void drawArrow          (juce::Graphics& graphics, const Arrow& arrow);
 
-    void drawPlayIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawPlayIcon       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawNodeModeIcon      (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawModulatorIcon     (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawTraversalFlagIcon (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawNodeModeIcon      (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawModulatorIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawTraversalFlagIcon (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawDisplayArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawIncrementIcon     (juce::Graphics& g, juce::Rectangle<float> bounds, bool pointsUp);
+    void drawDisplayArrowIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawIncrementIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, bool pointsUp);
 
-    void drawTextButton        (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state,
+    void drawTextButton        (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state,
                                 float fontHeight = labelFontHeight);
 
-    void drawAddIcon        (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawRemoveIcon     (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawUndoIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawRedoIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawResetIcon      (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawSyncIcon       (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawAddIcon        (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawRemoveIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawUndoIcon       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawRedoIcon       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawResetIcon      (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawSyncIcon       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawPaintToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawArrowToolIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawSpanToolIcon   (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawQuaverToolIcon (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawNodeArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawPolyphonicArrowIcon (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawTraversalArrowIcon  (juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawPaintToolSettings (juce::Graphics& g, const PaintToolSettings& paintToolSettings);
+    void drawPaintToolIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawArrowToolIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawSpanToolIcon   (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawQuaverToolIcon (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawNodeArrowIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawPolyphonicArrowIcon (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawTraversalArrowIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawFileLabel(juce::Graphics& g, const FileLabel& fileLabel);
-
-    void drawValueSlider       (juce::Graphics& g, const ValueSlider& valueSlider);
-    void drawValueSliderHandle (juce::Graphics& g, juce::Rectangle<float> bounds);
-
+    void drawFileLabel(juce::Graphics& graphics, const FileLabel& fileLabel);
 };
-
-#endif //SEQUENCETREE_CUSTOMLOOKANDFEEL_H

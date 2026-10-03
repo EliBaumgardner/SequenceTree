@@ -1,13 +1,3 @@
-/*
-  ==============================================================================
-
-    NodeCanvas.h
-    Created: 6 May 2025 8:34:41pm
-    Author:  Eli Baumgardner
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <unordered_set>
@@ -29,81 +19,95 @@ class Node;
 class RootNode;
 class Arrow;
 
-class NodeCanvas : public juce::Component, public juce::AsyncUpdater {
+class NodeCanvas : public juce::Component, public juce::AsyncUpdater
+{
+public:
 
-    public:
+    enum class AsyncUpdateType
+    {
+        None,
+        NodeAdded,
+        NodeRemoved,
+        NodeMoved,
+        ValueChanged,
+        DanglingArrowsChanged,
+        ArrowAdded,
+        ArrowRemoved,
+        ArrowInfoChanged,
+        ArrowDurationChanged,
+        NodeColourChanged
+    };
 
-        enum class AsyncUpdateType {None,NodeAdded,NodeRemoved,NodeMoved,ValueChanged,DanglingArrowsChanged,ArrowAdded,ArrowRemoved,ArrowInfoChanged,ArrowDurationChanged};
+    enum class QuaverMode { Off, Preview };
 
-        enum class QuaverMode { Off, Preview };
+    struct AsyncUpdate
+    {
+        AsyncUpdateType type       = AsyncUpdateType::None;
+        int             nodeId     = -1;
+        int             rootNodeId = -1;
+    };
 
-        struct AsyncUpdate {
-            AsyncUpdateType type       = AsyncUpdateType::None;
-            int             nodeId     = -1;
-            int             rootNodeId = -1;
-        };
+    struct NodePair
+    {
+        int parentNodeId;
+        int childNodeId;
+    };
 
-        struct NodePair {
-            int parentNodeId;
-            int childNodeId;
-        };
+    explicit NodeCanvas(const ApplicationContext& context);
+    ~NodeCanvas() override;
 
-        NodeCanvas(const ApplicationContext& context);
-        ~NodeCanvas();
+    void paint(juce::Graphics& graphics) override;
 
-        void enqueueAsyncUpdate(const AsyncUpdate& update);
-        void paint(juce::Graphics& g) override;
-        void setProcessorPlayblack(bool isPlaying);
-        void rebuildFromNodeMap(const juce::ValueTree& stateTree);
-        void clearCanvas();
-        void handleAsyncUpdate() override;
+    void enqueueAsyncUpdate(const AsyncUpdate& update);
+    void setProcessorPlayback(bool isPlaying);
+    void rebuildFromNodeMap(const juce::ValueTree& stateTree);
+    void clearCanvas();
+    void handleAsyncUpdate() override;
 
-        void setPaintMode(bool enabled);
-        void setSpanMode (bool enabled);
-        void setQuaverMode (QuaverMode mode);
+    void setPaintMode(bool enabled);
+    void setSpanMode(bool enabled);
+    void setQuaverMode(QuaverMode mode);
 
-        void showGrid();
-        void hideGrid();
-        juce::Point<int> snapPointToGrid(juce::Point<int> point) const;
+    void showGrid();
+    void hideGrid();
+    juce::Point<int> snapPointToGrid(juce::Point<int> point) const;
 
-        void cancelPendingUpdatesFor(int nodeId);
+    void cancelPendingUpdatesFor(int nodeId);
 
-        const ApplicationContext& applicationContext;
+    const ApplicationContext& applicationContext;
 
-        juce::Colour canvasColour = juce::Colours::white;
-        juce::String infoText;
+    juce::Colour canvasColour = juce::Colours::white;
 
-        bool start     = false;
-        bool paintMode = false;
-        bool spanMode  = false;
-        QuaverMode quaverMode = QuaverMode::Off;
+    bool       start      = false;
+    bool       paintMode  = false;
+    bool       spanMode   = false;
+    QuaverMode quaverMode = QuaverMode::Off;
 
-        int         quaverTraversalId = 1;
-        juce::Value quaverCount { minimumCountLimit };
+    int         quaverTraversalId = 1;
+    juce::Value quaverCount { minimumCountLimit };
+    bool        quaverRepeat = false;
 
-        int  spanAnchorNodeId = -1;
+    int spanAnchorNodeId = -1;
 
-        static constexpr int spanCursorSize   = 16;
-        static constexpr int quaverCursorSize = 24;
+    static constexpr int spanCursorSize   = 16;
+    static constexpr int quaverCursorSize = 24;
 
-        bool gridVisible = false;
-        bool gridOriginSet = false;
-        juce::Point<float> gridOrigin { 0.0f, 0.0f };
-        float gridSpacing = ArrowInfo::pixelsPerGridSpace;
+    bool               gridVisible   = false;
+    bool               gridOriginSet = false;
+    juce::Point<float> gridOrigin    { 0.0f, 0.0f };
+    float              gridSpacing   = ArrowInfo::pixelsPerGridSpace;
 
-        juce::Rectangle<int> selectionBounds;
+    juce::Rectangle<int> selectionBounds;
 
-        juce::ValueTree canvasTree {"CanvasTree"};
+    std::vector<AsyncUpdate> asyncUpdates;
 
-        std::vector<AsyncUpdate> asyncUpdates;
+    NodeCanvasTreeListener treeListener { *this };
 
-        NodeCanvasTreeListener treeListener { *this };
+    ValueField valueField { *this };
 
-        ValueField valueField { *this };
-
-        NodeManager         nodeManager        { *this, applicationContext };
-        ArrowManager        arrowManager       { *this, applicationContext };
-        AudioCommandDrainer drainer            { *this, applicationContext };
-        CanvasHitTester     hitTester          { *this };
-        EncapsulationView   encapsulationView  { *this, applicationContext };
+    NodeManager         nodeManager       { *this, applicationContext };
+    ArrowManager        arrowManager      { *this, applicationContext };
+    AudioCommandDrainer drainer           { *this, applicationContext };
+    CanvasHitTester     hitTester         { *this };
+    EncapsulationView   encapsulationView { *this, applicationContext };
 };

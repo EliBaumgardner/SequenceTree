@@ -1,35 +1,49 @@
-//
-// Created by Eli Baumgardner on 11/9/25.
-//
-
 #include "ItemSelector.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/ApplicationContext.h"
 
-#include <algorithm>
-
 ItemSelector::ItemSelector(const ApplicationContext& context)
-    : applicationContext(context)
+    : labelEditor(context),
+      applicationContext(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
 
-    button = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawDisplayArrowIcon(g, bounds, state);
-        }, context.lookAndFeel);
+    button.icon = &CustomLookAndFeel::drawDisplayArrowIcon;
 
-    button->setTooltip("Display Options");
-    button->onClick = [this]() { showMenu(); };
+    button.setLookAndFeel(context.lookAndFeel);
 
-    labelEditor = std::make_unique<ValueEditor>(context);
-    labelEditor->setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength,
-                                                        TextFormat::labelCharacters));
-    labelEditor->autoFitText = true;
-    labelEditor->editable = false;
-    labelEditor->setInterceptsMouseClicks(false, false);
+    labelEditor.autoFitText = true;
+    labelEditor.editable    = false;
 
-    addAndMakeVisible(button.get());
-    addAndMakeVisible(labelEditor.get());
+    labelEditor.setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength, TextFormat::labelCharacters));
+    labelEditor.setInterceptsMouseClicks(false, false);
+
+    button.setTooltip("Display Options");
+
+    button.onClick = [this]() { showMenu(); };
+
+    addAndMakeVisible(button);
+    addAndMakeVisible(labelEditor);
+}
+
+void ItemSelector::paint(juce::Graphics& graphics)
+{
+    const Theme& theme  = CustomLookAndFeel::get(*this);
+    const auto   bounds = getLocalBounds().toFloat().reduced(Theme::outerButtonBoundsReduction);
+
+    graphics.setColour(theme.buttonBarColour);
+    graphics.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
+}
+
+void ItemSelector::resized()
+{
+    auto       contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * selectorInsetRatio));
+    const auto displayWidth  = juce::roundToInt(contentBounds.getWidth() * labelWidthRatio);
+
+    labelEditor.setBounds(contentBounds.removeFromLeft(displayWidth));
+    labelEditor.commitText(selectedLabel);
+
+    button.setBounds(contentBounds);
 }
 
 void ItemSelector::addItem(int itemId, juce::String label, Action onChosen)
@@ -43,22 +57,27 @@ void ItemSelector::removeItem(int itemId)
 
     if (selectedItemId == itemId) {
         selectedItemId = 0;
+
         selectedLabel.clear();
+
         resized();
     }
 }
 
 void ItemSelector::clearItems()
 {
-    items.clear();
     selectedItemId = 0;
+
+    items.clear();
     selectedLabel.clear();
+
     resized();
 }
 
 void ItemSelector::setSelectedItem(int itemId)
 {
     const Item* const item = findItem(itemId);
+
     if (item == nullptr) {
         return;
     }
@@ -70,51 +89,32 @@ void ItemSelector::setSelectedItem(int itemId)
     repaint();
 }
 
-const ItemSelector::Item* ItemSelector::findItem(int itemId) const
-{
-    for (const Item& item : items) {
-        if (item.id == itemId) {
-            return &item;
-        }
-    }
-
-    return nullptr;
-}
-
 void ItemSelector::showMenu()
 {
-    button->setSelected(true);
+    ContextMenu menu(applicationContext);
+
+    button.setSelected(true);
+
     repaint();
 
-    juce::PopupMenu menu;
-    menu.setLookAndFeel(applicationContext.lookAndFeel);
-
     for (const Item& item : items) {
-        menu.addItem(item.id, item.label);
+        menu.addItem(item.label, ContextMenu::ItemKind::Action, [this, itemId = item.id]() { handleResult(itemId); });
     }
 
-    juce::Component::SafePointer<ItemSelector> safeSelector(this);
+    menu.onDismissed = [this]() {
+        button.setSelected(false);
 
-    menu.showMenuAsync(juce::PopupMenu::Options(), [this, safeSelector](int result) {
-        if (safeSelector == nullptr) {
-            return;
-        }
-
-        button->setSelected(false);
         repaint();
+    };
 
-        handleResult(result);
-    });
+    menu.show(button);
 }
 
 void ItemSelector::handleResult(int itemId)
 {
-    if (itemId == 0) {
-        return;
-    }
-
     const Item* const item = findItem(itemId);
-    if (item == nullptr) {
+
+    if (itemId == 0 || item == nullptr) {
         return;
     }
 
@@ -132,21 +132,13 @@ void ItemSelector::handleResult(int itemId)
     resized();
 }
 
-void ItemSelector::paint(juce::Graphics& g)
+const ItemSelector::Item* ItemSelector::findItem(int itemId) const
 {
-    const Theme& theme = CustomLookAndFeel::get(*this);
-    const auto bounds = getLocalBounds().toFloat().reduced(Theme::outerButtonBoundsReduction);
-    g.setColour(theme.buttonBarColour);
-    g.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
-}
+    for (const Item& item : items) {
+        if (item.id == itemId) {
+            return &item;
+        }
+    }
 
-void ItemSelector::resized()
-{
-    auto contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * contentInsetRatio));
-    const auto displayWidth = juce::roundToInt(contentBounds.getWidth() * labelWidthRatio);
-
-    labelEditor->setBounds(contentBounds.removeFromLeft(displayWidth));
-    labelEditor->commitText(selectedLabel);
-
-    button->setBounds(contentBounds);
+    return nullptr;
 }

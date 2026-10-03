@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 4/12/26.
-//
-
 #include "ValueEditor.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
@@ -52,6 +48,23 @@ ValueEditor::~ValueEditor()
     setLookAndFeel(nullptr);
 }
 
+void ValueEditor::paint(juce::Graphics& graphics)
+{
+    if (! isEditing && ! persistentEditor) {
+        const juce::String displayed = format->text(binding, TextPurpose::Display);
+
+        graphics.setFont(displayFont(displayed));
+        graphics.setColour(juce::Colours::lightgrey.withAlpha(0.85f));
+
+        graphics.drawText(displayed, getLocalBounds(), justification, false);
+    }
+}
+
+void ValueEditor::resized()
+{
+    textEditor->setBounds(getLocalBounds());
+}
+
 void ValueEditor::setFormat(std::unique_ptr<ValueFormat> newFormat)
 {
     format = std::move(newFormat);
@@ -63,86 +76,15 @@ void ValueEditor::setFormat(std::unique_ptr<ValueFormat> newFormat)
     repaint();
 }
 
-void ValueEditor::bindSecondaryProperties()
-{
-    for (auto& value : secondaryValues) {
-        value.removeListener(this);
-    }
-
-    secondaryValues.clear();
-
-    if (! boundTree.isValid()) {
-        return;
-    }
-
-    secondaryValues.reserve(format->extraProperties.size());
-
-    for (const auto& identifier : format->extraProperties) {
-        secondaryValues.push_back(boundTree.getPropertyAsValue(identifier, applicationContext.undoManager));
-    }
-
-    for (auto& value : secondaryValues) {
-        value.addListener(this);
-    }
-}
-
-void ValueEditor::paint(juce::Graphics& g)
-{
-    if (! isEditing && ! persistentEditor) {
-        const juce::String displayed = format->text(binding, TextPurpose::Display);
-
-        g.setFont(displayFont(displayed));
-        g.setColour(juce::Colours::lightgrey.withAlpha(0.85f));
-
-        g.drawText(displayed, getLocalBounds(), justification, false);
-    }
-}
-
-juce::Font ValueEditor::displayFont(const juce::String& text) const
-{
-    juce::Font font { juce::FontOptions(fontHeight) };
-
-    if (! autoFitText) {
-        return font;
-    }
-
-    const float inset      = static_cast<float>(getHeight()) * autoFitInsetRatio;
-    const auto  bounds     = getLocalBounds().toFloat().reduced(inset);
-    const float textWidth  = font.getStringWidthFloat(text);
-    const float textHeight = font.getHeight();
-
-    if (bounds.getWidth() <= 0.0f || bounds.getHeight() <= 0.0f || textHeight <= 0.0f) {
-        return font;
-    }
-
-    float fittedHeight = bounds.getHeight();
-
-    if (textWidth > 0.0f) {
-        fittedHeight = std::min(textHeight * (bounds.getWidth() / textWidth), fittedHeight);
-    }
-
-    if (fittedHeight <= 0.0f || ! std::isfinite(fittedHeight)) {
-        return font;
-    }
-
-    font.setHeight(fittedHeight);
-    return font;
-}
-
-void ValueEditor::resized()
-{
-    textEditor->setBounds(getLocalBounds());
-}
-
 void ValueEditor::mouseDown(const juce::MouseEvent&)
 {
     beginEditing();
 }
 
-void ValueEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
+void ValueEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
 {
     if (wheelResponse == WheelResponse::PassToParent || isEditing || juce::approximatelyEqual(wheel.deltaY, 0.0f)) {
-        juce::Component::mouseWheelMove(e, wheel);
+        juce::Component::mouseWheelMove(event, wheel);
         return;
     }
 
@@ -218,6 +160,7 @@ void ValueEditor::bindEditor(juce::ValueTree tree, const juce::Identifier& prope
 
     boundTree       = tree;
     boundIdentifier = propertyID;
+
     boundValue.referTo(tree.getPropertyAsValue(propertyID, applicationContext.undoManager));
 
     boundValue.addListener(this);
@@ -248,6 +191,7 @@ void ValueEditor::setJustification(juce::Justification newJustification)
     justification = newJustification;
 
     textEditor->setJustification(newJustification);
+
     repaint();
 }
 
@@ -261,8 +205,8 @@ void ValueEditor::commitText(const juce::String& enteredText)
 
     boundValue.setValue(parsed.primary);
 
-    for (size_t i = 0; i < secondaryValues.size() && i < parsed.secondaries.size(); i++) {
-        secondaryValues[i].setValue(parsed.secondaries[i]);
+    for (size_t secondaryIndex = 0; secondaryIndex < secondaryValues.size() && secondaryIndex < parsed.secondaries.size(); ++secondaryIndex) {
+        secondaryValues[secondaryIndex].setValue(parsed.secondaries[secondaryIndex]);
     }
 
     if (persistentEditor) {
@@ -270,16 +214,6 @@ void ValueEditor::commitText(const juce::String& enteredText)
     }
 
     repaint();
-}
-
-void ValueEditor::textEditorReturnKeyPressed(juce::TextEditor&)
-{
-    commitValue();
-}
-
-void ValueEditor::textEditorFocusLost(juce::TextEditor&)
-{
-    commitValue();
 }
 
 void ValueEditor::commitValue()
@@ -305,8 +239,8 @@ void ValueEditor::commitValue()
 
         boundValue.setValue(parsed.primary);
 
-        for (size_t i = 0; i < secondaryValues.size() && i < parsed.secondaries.size(); i++) {
-            secondaryValues[i].setValue(parsed.secondaries[i]);
+        for (size_t secondaryIndex = 0; secondaryIndex < secondaryValues.size() && secondaryIndex < parsed.secondaries.size(); ++secondaryIndex) {
+            secondaryValues[secondaryIndex].setValue(parsed.secondaries[secondaryIndex]);
         }
     }
 
@@ -324,6 +258,7 @@ void ValueEditor::setNumericValue(double newValue)
     if (format->decimalPlaces > 0) {
         const double placeScale = std::pow(10.0, format->decimalPlaces);
         const double rounded    = std::round(newValue * placeScale) / placeScale;
+
         boundValue.setValue(juce::jlimit(format->minimum, format->maximum, rounded));
         return;
     }
@@ -337,5 +272,70 @@ void ValueEditor::valueChanged(juce::Value&)
 
     if (onValueChange) {
         onValueChange();
+    }
+}
+
+void ValueEditor::textEditorReturnKeyPressed(juce::TextEditor&)
+{
+    commitValue();
+}
+
+void ValueEditor::textEditorFocusLost(juce::TextEditor&)
+{
+    commitValue();
+}
+
+juce::Font ValueEditor::displayFont(const juce::String& text) const
+{
+    juce::Font font { juce::FontOptions(fontHeight) };
+
+    if (! autoFitText) {
+        return font;
+    }
+
+    const float inset      = static_cast<float>(getHeight()) * autoFitInsetRatio;
+    const auto  bounds     = getLocalBounds().toFloat().reduced(inset);
+    const float textWidth  = font.getStringWidthFloat(text);
+    const float textHeight = font.getHeight();
+
+    if (bounds.getWidth() <= 0.0f || bounds.getHeight() <= 0.0f || textHeight <= 0.0f) {
+        return font;
+    }
+
+    float fittedHeight = bounds.getHeight();
+
+    if (textWidth > 0.0f) {
+        fittedHeight = std::min(textHeight * (bounds.getWidth() / textWidth), fittedHeight);
+    }
+
+    if (fittedHeight <= 0.0f || ! std::isfinite(fittedHeight)) {
+        return font;
+    }
+
+    font.setHeight(fittedHeight);
+
+    return font;
+}
+
+void ValueEditor::bindSecondaryProperties()
+{
+    for (auto& value : secondaryValues) {
+        value.removeListener(this);
+    }
+
+    secondaryValues.clear();
+
+    if (! boundTree.isValid()) {
+        return;
+    }
+
+    secondaryValues.reserve(format->extraProperties.size());
+
+    for (const auto& identifier : format->extraProperties) {
+        secondaryValues.push_back(boundTree.getPropertyAsValue(identifier, applicationContext.undoManager));
+    }
+
+    for (auto& value : secondaryValues) {
+        value.addListener(this);
     }
 }

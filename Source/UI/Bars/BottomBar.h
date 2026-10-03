@@ -3,21 +3,26 @@
 #include "Bar.h"
 #include "../Buttons/IconButton.h"
 #include "../Buttons/ButtonPane.h"
-#include "../Editors/ValueEditor.h"
+#include "../Editors/LabeledEditor.h"
 #include "../Buttons/PaintToolSettings.h"
 #include "../Menus/ArrowWindow.h"
 #include "../PopupWindow.h"
+#include "../Menus/ContextMenu.h"
+#include "../../Util/NodeInfo.h"
 
 class BottomBar : public Bar
 {
 public:
+
     explicit BottomBar(const ApplicationContext& context);
+
+    void resized() override;
 
     void applyDisplayMode(NodeDisplayMode mode);
 
 private:
 
-    void resized() override;
+    void showQuaverMenu();
 
     static constexpr float paintPanelWidthRatio    = 0.26f;
     static constexpr float toolWidthRatio          = 0.03f;
@@ -36,13 +41,11 @@ private:
         }
     };
 
-    std::unique_ptr<PaintToolSettings> paintPanel;
-    std::unique_ptr<IconButton> arrowButton;
-    std::unique_ptr<IconButton> spanTool;
-
-    ButtonPane  quaverPane   { applicationContext };
-    juce::Label countsLabel;
-    ValueEditor countsEditor { applicationContext };
+    PaintToolSettings paintPanel   { applicationContext };
+    IconButton        arrowButton;
+    IconButton        spanTool;
+    ButtonPane        quaverPane   { applicationContext };
+    LabeledEditor     countsField  { applicationContext };
 
     IconButton* quaverTool = nullptr;
 };

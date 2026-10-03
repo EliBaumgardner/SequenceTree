@@ -1,12 +1,3 @@
-/*
-  ==============================================================================
-
-    Arrow.cpp
-    Created: 12 Jun 2025 12:45:57am
-    Author:  Eli Baumgardner
-
-  ==============================================================================
-*/
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "Arrow.h"
@@ -20,11 +11,13 @@ Arrow::Arrow(Node* startNode, Node* endNode, const ApplicationContext& context)
     setLookAndFeel(context.lookAndFeel);
 
     durationEditor = std::make_unique<ValueEditor>(context);
+
     durationEditor->setInterceptsMouseClicks(true, false);
     durationEditor->setTooltip("Arrow Duration");
 
     durationEditor->onEditFinished = [this] {
         editingDuration = false;
+
         durationEditor->setVisible(false);
         repaint();
     };
@@ -39,16 +32,19 @@ Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, const ApplicationConte
     setInterceptsMouseClicks(false, true);
 
     valueEditor = std::make_unique<ValueEditor>(context);
+
     valueEditor->setInterceptsMouseClicks(true, false);
     valueEditor->setTooltip("Count Limit");
     addAndMakeVisible(*valueEditor);
 
     durationEditor = std::make_unique<ValueEditor>(context);
+
     durationEditor->setInterceptsMouseClicks(true, false);
     durationEditor->setTooltip("Arrow Duration");
 
     durationEditor->onEditFinished = [this] {
         editingDuration = false;
+
         durationEditor->setVisible(false);
         repaint();
     };
@@ -56,21 +52,29 @@ Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, const ApplicationConte
     addChildComponent(*durationEditor);
 }
 
-void Arrow::paint(juce::Graphics &g) {
-  CustomLookAndFeel::get(*this).drawArrow(g, *this);
+void Arrow::paint(juce::Graphics& graphics)
+{
+  CustomLookAndFeel::get(*this).drawArrow(graphics, *this);
 }
 
-juce::Point<int> Arrow::getTip() const
+void Arrow::resized()
 {
-    if (endNode != nullptr) {
-        return endNode->getNodeCentre();
+    const ArrowGeometry geometry = getGeometry(1.0f);
+
+    if (geometry.valid) {
+        const ArrowLabel label = getLabel(geometry, arrowHeadLength);
+
+        const juce::Point<int> editorCentre = (label.centre - getPosition().toFloat()).roundToInt()
+                                            - juce::Point<int>(0, valueEditorHeight / 2);
+
+        durationEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight).withCentre(editorCentre));
     }
 
-    if (startNode == nullptr) {
-        return tipOffset;
+    if (valueEditor == nullptr) {
+        return;
     }
 
-    return startNode->getNodeCentre() + tipOffset;
+    valueEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight).withCentre(getTip() - getPosition()));
 }
 
 bool Arrow::isDashed() const
@@ -110,6 +114,34 @@ bool Arrow::isSyncArrow() const
     return ArrowBindingOps::getArrowInfo(arrowTree).isSynced;
 }
 
+juce::Point<int> Arrow::getTip() const
+{
+    if (endNode != nullptr) {
+        return endNode->getNodeCentre();
+    }
+
+    if (startNode == nullptr) {
+        return tipOffset;
+    }
+
+    return startNode->getNodeCentre() + tipOffset;
+}
+
+juce::Point<float> Arrow::getHeadAnchor() const
+{
+    if (isDangling()) {
+        return getTip().toFloat();
+    }
+
+    const ArrowGeometry geometry = getGeometry(1.0f);
+    if (! geometry.valid) {
+        return getTip().toFloat();
+    }
+
+    const float endExtent = endNode->getBodyExtent(geometry.chord);
+    return endNode->getNodeCentre().toFloat() - geometry.chord * (endExtent + headAnchorInset);
+}
+
 int Arrow::getDuration() const
 {
     if (startNode == nullptr) {
@@ -139,7 +171,6 @@ juce::String Arrow::getDurationLabel() const
     }
 
     if (! showsDurationLabel()) {
-
         const Node* pitchedNode = endNode;
 
         if (isDangling() || startNode->isAlternativeNode) {
@@ -147,8 +178,7 @@ juce::String Arrow::getDurationLabel() const
         }
 
         if (pitchedNode != nullptr) {
-            return juce::String(static_cast<int>(pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch,
-                                                                            defaultMidiPitch)));
+            return juce::String(static_cast<int>(pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch, defaultMidiPitch)));
         }
     }
 
@@ -161,22 +191,7 @@ juce::String Arrow::getDurationLabel() const
     return juce::String(duration);
 }
 
-juce::Point<float> Arrow::getHeadAnchor() const
-{
-    if (isDangling()) {
-        return getTip().toFloat();
-    }
-
-    const ArrowGeometry geometry = getGeometry(1.0f);
-    if (! geometry.valid) {
-        return getTip().toFloat();
-    }
-
-    const float endExtent = endNode->getBodyExtent(geometry.chord);
-    return endNode->getNodeCentre().toFloat() - geometry.chord * (endExtent + headAnchorInset);
-}
-
-ArrowGeometry Arrow::getGeometry(float animationT) const
+ArrowGeometry Arrow::getGeometry(float animationProgress) const
 {
     ArrowGeometry geometry;
 
@@ -187,7 +202,7 @@ ArrowGeometry Arrow::getGeometry(float animationT) const
     const juce::Point<float> centre = startNode->getNodeCentre().toFloat();
     const juce::Point<float> target = getTip().toFloat();
 
-    const juce::Point<float> delta = (target - centre) * animationT;
+    const juce::Point<float> delta = (target - centre) * animationProgress;
     const float length = delta.getDistanceFromOrigin();
 
     if (length < 1.0f) {
@@ -226,9 +241,9 @@ ArrowGeometry Arrow::getGeometry(float animationT) const
         geometry.chord = shaft / shaftLength;
     }
 
-    geometry.length    = length;
-    geometry.drawHead  = ! endIsTraversalFlag && animationT > headVisibleThreshold;
-    geometry.straight  = isDangling() || endIsTraversalFlag
+    geometry.length   = length;
+    geometry.drawHead = ! endIsTraversalFlag && animationProgress > headVisibleThreshold;
+    geometry.straight = isDangling() || endIsTraversalFlag
                       || std::abs(shaft.x) < 1.0f || std::abs(shaft.y) < 1.0f;
     geometry.valid     = true;
 
@@ -365,26 +380,11 @@ void Arrow::setArrowBounds()
     repaint();
 }
 
-void Arrow::resized()
+void Arrow::setTipOffset(juce::Point<int> offset)
 {
-    const ArrowGeometry geometry = getGeometry(1.0f);
+    tipOffset = offset;
 
-    if (geometry.valid) {
-        const ArrowLabel label = getLabel(geometry, arrowHeadLength);
-
-        const juce::Point<int> editorCentre = (label.centre - getPosition().toFloat()).roundToInt()
-                                            - juce::Point<int>(0, valueEditorHeight / 2);
-
-        durationEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight)
-                                      .withCentre(editorCentre));
-    }
-
-    if (valueEditor == nullptr) {
-        return;
-    }
-
-    valueEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight)
-                               .withCentre(getTip() - getPosition()));
+    setArrowBounds();
 }
 
 void Arrow::beginDurationEdit()
@@ -407,8 +407,7 @@ void Arrow::beginDurationEdit()
 
     durationEditor->setFormat(std::move(durationFormat));
 
-    const int durationOverride = arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration,
-                                                       ArrowInfo::noDurationOverride);
+    const int durationOverride = arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride);
 
     if (durationOverride == ArrowInfo::noDurationOverride) {
         arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration, getDuration(), nullptr);
@@ -424,15 +423,9 @@ void Arrow::beginDurationEdit()
     repaint();
 }
 
-void Arrow::setTipOffset(juce::Point<int> offset)
-{
-    tipOffset = offset;
-    setArrowBounds();
-}
-
 void Arrow::triggerSnapAnimation()
 {
-    animation.snapT        = 0.0f;
+    animation.snapProgress = 0.0f;
     animation.snapVelocity = 0.0f;
 
     if (animationFrames.isEmpty()) {

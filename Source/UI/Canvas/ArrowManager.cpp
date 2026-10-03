@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 7/21/26.
-//
-
 #include "ArrowManager.h"
 
 #include "NodeCanvas.h"
@@ -11,12 +7,11 @@
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
-#include "../Node/NodeFactory.h"
-#include "../../Audio/AudioUIBridge.h"
+#include "../../Graph/NodeFactory.h"
 #include "../../Util/ApplicationContext.h"
 
-ArrowManager::ArrowManager(NodeCanvas& canvasRef, const ApplicationContext& context)
-    : canvas(canvasRef), applicationContext(context)
+ArrowManager::ArrowManager(NodeCanvas& canvas, const ApplicationContext& context)
+    : canvas(canvas), applicationContext(context)
 {
 }
 
@@ -41,39 +36,27 @@ Arrow* ArrowManager::find(int parentNodeId, int childNodeId) const
     return nullptr;
 }
 
-juce::ValueTree ArrowManager::connectionTreeFor(int startNodeId, int endNodeId) const
-{
-    GraphState& state = *applicationContext.graphState;
-
-    const juce::ValueTree connection = state.getConnection(startNodeId, endNodeId);
-
-    if (connection.isValid()) {
-        return connection;
-    }
-
-    return state.getConnection(endNodeId, startNodeId);
-}
-
 Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
 {
-    const int parentNodeId = parentNode->nodeId;
-    const int childNodeId  = childNode->nodeId;
+    auto         arrow        = std::make_unique<Arrow>(parentNode, childNode, applicationContext);
+    Arrow* const createdArrow = arrow.get();
 
-    auto arrow = std::make_unique<Arrow>(parentNode, childNode, applicationContext);
-
-    arrow->arrowTree = connectionTreeFor(parentNodeId, childNodeId);
+    createdArrow->arrowTree = connectionTreeFor(parentNode->nodeId, childNode->nodeId);
 
     if (parentNode->nodeType == NodeType::TraversalFlag) {
-        arrow->sourceHovered = parentNode->isHovered;
-        arrow->initHoverState(parentNode->isHovered);
+        createdArrow->sourceHovered = parentNode->isHovered;
+
+        createdArrow->initHoverState(parentNode->isHovered);
     }
 
-    attach(*arrow);
-    arrow->setInterceptsMouseClicks(false, true);
+    canvas.addAndMakeVisible(*createdArrow);
 
-    Arrow* const raw = arrow.get();
+    createdArrow->toBack();
+    createdArrow->setInterceptsMouseClicks(false, true);
+
     adopt(std::move(arrow));
-    return raw;
+
+    return createdArrow;
 }
 
 Arrow* ArrowManager::connectParentToChild(Node* parentNode, Node* childNode)
@@ -87,14 +70,12 @@ Arrow* ArrowManager::connectParentToChild(Node* parentNode, Node* childNode)
         endNode   = parentNode;
     }
 
-    const int endNodeId = endNode->nodeId;
-    if (startNode->nodeArrows.count(endNodeId) > 0) {
+    if (startNode->nodeArrows.count(endNode->nodeId) > 0) {
         return nullptr;
     }
 
-    endNode->nodeColour = startNode->nodeColour;
-
     Arrow* const arrow = connect(startNode, endNode);
+
     refreshFor(endNode);
 
     return arrow;
@@ -113,38 +94,6 @@ void ArrowManager::adopt(std::unique_ptr<Arrow> arrow)
     arrows.add(arrow.release());
 }
 
-int ArrowManager::arrowKey(const Arrow& arrow)
-{
-    if (arrow.isDangling()) {
-        return (-((arrow.danglingIndex) + 1));
-    }
-
-    return arrow.endNode->nodeId;
-}
-
-void ArrowManager::attach(Arrow& arrow)
-{
-    canvas.addAndMakeVisible(arrow);
-    arrow.toBack();
-}
-
-void ArrowManager::detach(Arrow* arrow)
-{
-    if (arrow->startNode != nullptr) {
-        auto& nodeArrows = arrow->startNode->nodeArrows;
-        const auto range = nodeArrows.equal_range(arrowKey(*arrow));
-
-        for (auto entry = range.first; entry != range.second; ++entry) {
-            if (entry->second == arrow) {
-                nodeArrows.erase(entry);
-                break;
-            }
-        }
-    }
-
-    canvas.removeChildComponent(arrow);
-}
-
 void ArrowManager::remove(Arrow* arrow)
 {
     if (arrow == nullptr) {
@@ -152,6 +101,7 @@ void ArrowManager::remove(Arrow* arrow)
     }
 
     const int index = arrows.indexOf(arrow);
+
     if (index >= 0) {
         detach(arrow);
         arrows.remove(index);
@@ -176,12 +126,13 @@ void ArrowManager::removeForNode(const Node* node)
 
 void ArrowManager::removeMatching(const std::function<bool(Arrow*)>& predicate)
 {
-    for (int i = arrows.size() - 1; i >= 0; --i) {
-        Arrow* const arrow = arrows[i];
+    for (int arrowIndex = arrows.size() - 1; arrowIndex >= 0; --arrowIndex) {
+        Arrow* const arrow = arrows[arrowIndex];
 
         if (predicate(arrow)) {
             detach(arrow);
-            arrows.remove(i);
+
+            arrows.remove(arrowIndex);
         }
     }
 }
@@ -201,10 +152,14 @@ void ArrowManager::updatePreview(Node* node, juce::Point<int> tipOffset, bool da
 
     if (preview == nullptr || preview->startNode != node) {
         preview = std::make_unique<Arrow>(node, tipOffset, applicationContext);
-        attach(*preview);
+
+        canvas.addAndMakeVisible(*preview);
+
+        preview->toBack();
     }
 
     preview->dashed = dashed;
+
     preview->setTipOffset(tipOffset);
 }
 
@@ -214,7 +169,7 @@ void ArrowManager::commitPreview()
         return;
     }
 
-    const Node* const node = preview->startNode;
+    const Node* const      node      = preview->startNode;
     const juce::Point<int> tipOffset = preview->tipOffset;
 
     preview.reset();
@@ -224,27 +179,11 @@ void ArrowManager::commitPreview()
     }
 
     ArrowInfo arrowInfo = currentArrowInfo;
-
-    const int nodeId = node->nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+    const int nodeId    = node->nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
     applicationContext.graphState->arrows.applyNodeBinding(arrowInfo, nodeId);
 
-    NodeFactory::createDanglingArrow(*applicationContext.graphState, node->nodeValueTree, tipOffset,
-                                     arrowInfo, applicationContext.undoManager);
-}
-
-void ArrowManager::cancelPreview()
-{
-    preview.reset();
-}
-
-Node* ArrowManager::previewStartNode() const
-{
-    if (preview == nullptr) {
-        return nullptr;
-    }
-
-    return preview->startNode;
+    NodeFactory::createDanglingArrow(*applicationContext.graphState, node->nodeValueTree, tipOffset, arrowInfo, applicationContext.undoManager);
 }
 
 void ArrowManager::rebuildDanglingForNode(int nodeId)
@@ -265,21 +204,23 @@ void ArrowManager::rebuildDanglingForNode(int nodeId)
         return;
     }
 
-    for (int i = 0; i < arrowList.getNumChildren(); ++i) {
-        const juce::ValueTree arrowTree = arrowList.getChild(i);
+    for (int danglingIndex = 0; danglingIndex < arrowList.getNumChildren(); ++danglingIndex) {
+        const juce::ValueTree  arrowTree = arrowList.getChild(danglingIndex);
+        const juce::Point<int> tipOffset { static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
+                                           static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)) };
+        auto                   arrow     = std::make_unique<Arrow>(node, tipOffset, applicationContext);
 
-        const juce::Point<int> tipOffset {
-            static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
-            static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY))
-        };
-
-        auto arrow = std::make_unique<Arrow>(node, tipOffset, applicationContext);
         arrow->arrowTree     = arrowTree;
-        arrow->danglingIndex = i;
+        arrow->danglingIndex = danglingIndex;
+
         arrow->valueEditor->bindEditor(arrowTree, ValueTreeIdentifiers::CountLimit);
-        attach(*arrow);
+
+        canvas.addAndMakeVisible(*arrow);
+
+        arrow->toBack();
         arrow->setVisible(! node->isEncapsulated || node->isEncapsulationExit);
         arrow->setArrowBounds();
+
         adopt(std::move(arrow));
     }
 }
@@ -322,8 +263,8 @@ void ArrowManager::refreshEncapsulatedArrows()
 
 void ArrowManager::handleArrowAdded(int parentNodeId, int childNodeId)
 {
-    Node* parentNode = canvas.nodeManager.find(parentNodeId);
-    Node* childNode  = canvas.nodeManager.find(childNodeId);
+    Node* const parentNode = canvas.nodeManager.find(parentNodeId);
+    Node* const childNode  = canvas.nodeManager.find(childNodeId);
 
     if (parentNode == nullptr || childNode == nullptr) {
         return;
@@ -338,19 +279,9 @@ void ArrowManager::handleArrowInfoChanged(int parentNodeId, int childNodeId)
 
     if (arrow != nullptr) {
         arrow->arrowTree = connectionTreeFor(parentNodeId, childNodeId);
+
         arrow->repaint();
     }
-}
-
-void ArrowManager::handleArrowRemoved(int parentNodeId, int childNodeId)
-{
-    Arrow* target = find(parentNodeId, childNodeId);
-
-    if (target == nullptr) {
-        return;
-    }
-
-    remove(target);
 }
 
 void ArrowManager::setSelected(Arrow* arrow)
@@ -359,6 +290,7 @@ void ArrowManager::setSelected(Arrow* arrow)
 
     if (arrow != nullptr && ! arrow->selected) {
         arrow->selected = true;
+
         arrow->repaint();
     }
 }
@@ -368,6 +300,7 @@ void ArrowManager::clearSelection()
     for (Arrow* const arrow : arrows) {
         if (arrow->selected) {
             arrow->selected = false;
+
             arrow->repaint();
         }
     }
@@ -417,6 +350,7 @@ void ArrowManager::resetTrail(int trailId)
 void ArrowManager::triggerSnapForNode(int nodeId)
 {
     Node* const node = canvas.nodeManager.find(nodeId);
+
     if (node == nullptr) {
         return;
     }
@@ -439,11 +373,13 @@ void ArrowManager::showSnapGhost(Node* from, Node* to)
     hideSnapGhost();
 
     snapGhostArrow = std::make_unique<Arrow>(from, to, applicationContext);
+
     snapGhostArrow->isGhost = true;
+
+    canvas.addAndMakeVisible(*snapGhostArrow);
+
+    snapGhostArrow->toBack();
     snapGhostArrow->setInterceptsMouseClicks(false, false);
-
-    attach(*snapGhostArrow);
-
     snapGhostArrow->setArrowBounds();
     snapGhostArrow->triggerSnapAnimation();
 }
@@ -452,6 +388,45 @@ void ArrowManager::hideSnapGhost()
 {
     if (snapGhostArrow != nullptr) {
         canvas.removeChildComponent(snapGhostArrow.get());
+
         snapGhostArrow.reset();
     }
+}
+
+int ArrowManager::arrowKey(const Arrow& arrow)
+{
+    if (arrow.isDangling()) {
+        return -(arrow.danglingIndex + 1);
+    }
+
+    return arrow.endNode->nodeId;
+}
+
+juce::ValueTree ArrowManager::connectionTreeFor(int startNodeId, int endNodeId) const
+{
+    GraphState&           state      = *applicationContext.graphState;
+    const juce::ValueTree connection = state.getConnection(startNodeId, endNodeId);
+
+    if (connection.isValid()) {
+        return connection;
+    }
+
+    return state.getConnection(endNodeId, startNodeId);
+}
+
+void ArrowManager::detach(Arrow* arrow)
+{
+    if (arrow->startNode != nullptr) {
+        auto&      nodeArrows = arrow->startNode->nodeArrows;
+        const auto arrowRange = nodeArrows.equal_range(arrowKey(*arrow));
+
+        for (auto entry = arrowRange.first; entry != arrowRange.second; ++entry) {
+            if (entry->second == arrow) {
+                nodeArrows.erase(entry);
+                break;
+            }
+        }
+    }
+
+    canvas.removeChildComponent(arrow);
 }

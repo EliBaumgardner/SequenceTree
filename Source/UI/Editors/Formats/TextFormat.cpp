@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 8/23/26.
-//
-
 #include "ValueFormat.h"
 
 const juce::String TextFormat::labelCharacters {
@@ -9,7 +5,9 @@ const juce::String TextFormat::labelCharacters {
 };
 
 TextFormat::TextFormat(int longestText, const juce::String& characters)
-    : maxLength(longestText), allowedCharacters(characters) {}
+    : maxLength(longestText), allowedCharacters(characters)
+{
+}
 
 InputRestrictions TextFormat::restrictions() const
 {

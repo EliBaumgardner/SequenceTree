@@ -1,9 +1,4 @@
-//
-// Created by Eli Baumgardner on 7/21/26.
-//
-
-#ifndef SEQUENCETREE_POPUPWINDOW_H
-#define SEQUENCETREE_POPUPWINDOW_H
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -11,8 +6,8 @@
 #include <functional>
 #include <memory>
 
-class PopupWindow : public juce::DocumentWindow {
-
+class PopupWindow : public juce::DocumentWindow
+{
 public:
 
     PopupWindow(const juce::String& title, std::unique_ptr<juce::Component> content,
@@ -26,8 +21,8 @@ private:
     static constexpr float maximumSizeRatio = 4.0f;
 };
 
-class PopupWindowLauncher {
-
+class PopupWindowLauncher
+{
 public:
 
     using ContentFactory = std::function<std::unique_ptr<juce::Component>()>;
@@ -40,17 +35,17 @@ public:
 
     void show();
     void show(const ContentFactory& factory);
-    void close();
     void toFront();
 
-    void createIfNeeded();
-
-    bool isShowing() const;
-
-    juce::Component* getContent() const;
-
     template <std::derived_from<juce::Component> ContentType>
-    ContentType* getContentAs() const { return dynamic_cast<ContentType*>(getContent()); }
+    ContentType* getContentAs() const
+    {
+        if (window == nullptr) {
+            return nullptr;
+        }
+
+        return dynamic_cast<ContentType*>(window->getContentComponent());
+    }
 
     std::unique_ptr<PopupWindow> window;
 
@@ -62,5 +57,3 @@ private:
     ContentFactory contentFactory;
     juce::Colour   windowBackgroundColour;
 };
-
-#endif //SEQUENCETREE_POPUPWINDOW_H

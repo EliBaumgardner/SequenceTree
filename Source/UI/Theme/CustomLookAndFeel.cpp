@@ -1,71 +1,18 @@
-//
-// Created by Eli Baumgardner on 11/4/25.
-//
-
 #include "CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
 #include "CustomTextCaret.h"
-
-void CustomLookAndFeel::drawCanvas(juce::Graphics &g, const NodeCanvas &canvas)
-{
-
-    g.fillAll(canvasColour.brighter());
-
-    if (!canvas.gridVisible) {
-        return;
-    }
-
-    float spacing = canvas.gridSpacing;
-    if (spacing < 15.0f) {
-        return;
-    }
-
-    auto bounds = canvas.getLocalBounds().toFloat();
-    float ox;
-    float oy;
-    if (canvas.gridOriginSet) {
-        ox = canvas.gridOrigin.x;
-        oy = canvas.gridOrigin.y;
-    }
-    else {
-        ox = bounds.getCentreX();
-        oy = bounds.getCentreY();
-    }
-
-
-    const float armLen = 6.0f;
-    g.setColour(gridColour);
-
-    float startX = ox - std::ceil((ox - bounds.getX()) / spacing) * spacing;
-    float startY = oy - std::ceil((oy - bounds.getY()) / spacing) * spacing;
-
-    for (float x = startX; x <= bounds.getRight(); x += spacing)
-    {
-        for (float y = startY; y <= bounds.getBottom(); y += spacing)
-        {
-            g.drawLine(x - armLen, y, x + armLen, y, 0.5f);
-            g.drawLine(x, y - armLen, x, y + armLen, 0.5f);
-        }
-    }
-}
-
-juce::CaretComponent* CustomLookAndFeel::createCaretComponent(juce::Component* keyFocusOwner) {
-    auto caret = std::make_unique<CustomTextCaret>(keyFocusOwner);
-    caret->caretWidth = 1.0f;
-    return caret.release();
-}
 
 int CustomLookAndFeel::getDefaultScrollbarWidth()
 {
     return scrollBarThickness;
 }
 
-void CustomLookAndFeel::drawScrollbar(juce::Graphics& g, juce::ScrollBar&, int x, int y, int width, int height,
+void CustomLookAndFeel::drawScrollbar(juce::Graphics& graphics, juce::ScrollBar&, int x, int y, int width, int height,
                                       bool isScrollbarVertical, int thumbStartPosition, int thumbSize,
                                       bool isMouseOver, bool isMouseDown)
 {
-    g.setColour(scrollBarTrackColour);
-    g.fillRect(juce::Rectangle<int>(x, y, width, height));
+    graphics.setColour(scrollBarTrackColour);
+    graphics.fillRect(juce::Rectangle<int>(x, y, width, height));
 
     if (thumbSize <= 0) {
         return;
@@ -77,11 +24,50 @@ void CustomLookAndFeel::drawScrollbar(juce::Graphics& g, juce::ScrollBar&, int x
         thumb = juce::Rectangle<int>(x, thumbStartPosition, width, thumbSize);
     }
 
-    g.setColour(scrollBarThumbColour);
+    graphics.setColour(scrollBarThumbColour);
 
     if (isMouseOver || isMouseDown) {
-        g.setColour(scrollBarThumbHoverColour);
+        graphics.setColour(scrollBarThumbHoverColour);
     }
 
-    g.fillRoundedRectangle(thumb.toFloat().reduced(scrollBarThumbInset), scrollBarCornerRadius);
+    graphics.fillRoundedRectangle(thumb.toFloat().reduced(scrollBarThumbInset), scrollBarCornerRadius);
+}
+
+juce::CaretComponent* CustomLookAndFeel::createCaretComponent(juce::Component* keyFocusOwner)
+{
+    auto caret = std::make_unique<CustomTextCaret>(keyFocusOwner);
+    caret->caretWidth = 1.0f;
+    return caret.release();
+}
+
+void CustomLookAndFeel::drawCanvas(juce::Graphics& graphics, const NodeCanvas& canvas)
+{
+    const float spacing      = canvas.gridSpacing;
+    const auto  bounds       = canvas.getLocalBounds().toFloat();
+    const float crossArm     = 6.0f;
+    float       originX      = bounds.getCentreX();
+    float       originY      = bounds.getCentreY();
+
+    graphics.fillAll(canvasColour.brighter());
+
+    if (!canvas.gridVisible || spacing < 15.0f) {
+        return;
+    }
+
+    if (canvas.gridOriginSet) {
+        originX = canvas.gridOrigin.x;
+        originY = canvas.gridOrigin.y;
+    }
+
+    const float firstX = originX - std::ceil((originX - bounds.getX()) / spacing) * spacing;
+    const float firstY = originY - std::ceil((originY - bounds.getY()) / spacing) * spacing;
+
+    graphics.setColour(gridColour);
+
+    for (float crossX = firstX; crossX <= bounds.getRight(); crossX += spacing) {
+        for (float crossY = firstY; crossY <= bounds.getBottom(); crossY += spacing) {
+            graphics.drawLine(crossX - crossArm, crossY, crossX + crossArm, crossY, 0.5f);
+            graphics.drawLine(crossX, crossY - crossArm, crossX, crossY + crossArm, 0.5f);
+        }
+    }
 }

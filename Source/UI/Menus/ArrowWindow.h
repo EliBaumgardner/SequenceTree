@@ -1,9 +1,4 @@
-//
-// Created by Eli Baumgardner on 7/27/26.
-//
-
-#ifndef SEQUENCETREE_ARROWWINDOW_H
-#define SEQUENCETREE_ARROWWINDOW_H
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -15,8 +10,8 @@
 #include "../Buttons/ButtonPane.h"
 #include "../Bars/ArrowBindBar.h"
 
-class ArrowWindow : public juce::Component {
-
+class ArrowWindow : public juce::Component
+{
 public:
 
     explicit ArrowWindow(const ApplicationContext& context);
@@ -24,7 +19,7 @@ public:
 
     std::function<void(std::optional<ArrowType>)> onArrowTypeChanged;
 
-    void paint(juce::Graphics& g) override;
+    void paint(juce::Graphics& graphics) override;
     void resized() override;
 
     static constexpr int defaultWidth  = 220;
@@ -32,18 +27,15 @@ public:
 
 private:
 
-    struct ArrowTypeButton {
+    struct ArrowTypeButton
+    {
         ArrowType         type;
         const IconButton* button;
     };
 
-    void addArrowType(ArrowType type, const juce::String& caption, IconButton::Painter painter);
-
-    void showSelectedArrowType();
+    void addArrowType(ArrowType type, const juce::String& caption, IconButton::Icon icon);
 
     std::optional<ArrowType> arrowTypeFor(const IconButton* button) const;
-
-    static ButtonPane::Grid arrowGridFor(juce::Rectangle<int> bounds);
 
     static constexpr float bindBarHeightRatio = 0.2f;
 
@@ -62,5 +54,3 @@ private:
 
     std::vector<ArrowTypeButton> arrowTypeButtons;
 };
-
-#endif //SEQUENCETREE_ARROWWINDOW_H

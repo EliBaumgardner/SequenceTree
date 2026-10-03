@@ -1,9 +1,4 @@
-//
-// Created by Eli Baumgardner on 7/21/26.
-//
-
-#ifndef SEQUENCETREE_NODEMANAGER_H
-#define SEQUENCETREE_NODEMANAGER_H
+#pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <functional>
@@ -18,15 +13,18 @@ class NodeCanvas;
 class Node;
 struct ApplicationContext;
 
-class NodeManager {
-
+class NodeManager
+{
 public:
 
     NodeManager(NodeCanvas& canvas, const ApplicationContext& context);
     ~NodeManager();
 
     Node* find(int nodeId) const;
-    const std::unordered_map<int, std::unique_ptr<Node>>& all() const { return nodes; }
+    const std::unordered_map<int, std::unique_ptr<Node>>& all() const
+    {
+        return nodes;
+    }
 
     Node* instantiateFromTree(const juce::ValueTree& nodeValueTree);
 
@@ -39,7 +37,7 @@ public:
 
     void setDisplayMode(NodeDisplayMode mode);
     void clearHighlights();
-    void clearOutlines  ();
+    void clearOutlines();
     void equipRootTraversals();
     void setInterceptsClicks(bool shouldIntercept, bool shouldChildrenIntercept);
 
@@ -57,10 +55,8 @@ private:
     void connectIncomingArrows(int nodeId, Node* node);
     void connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node);
 
-    NodeCanvas& canvas;
+    NodeCanvas&               canvas;
     const ApplicationContext& applicationContext;
 
     std::unordered_map<int, std::unique_ptr<Node>> nodes;
 };
-
-#endif //SEQUENCETREE_NODEMANAGER_H

@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 9/7/26.
-//
-
 #include "EncapsulationView.h"
 
 #include "NodeCanvas.h"
@@ -15,68 +11,15 @@
 
 #include <unordered_set>
 
-EncapsulationView::EncapsulationView(NodeCanvas& canvasRef, const ApplicationContext& context)
-    : canvas(canvasRef), applicationContext(context)
+EncapsulationView::EncapsulationView(NodeCanvas& canvas, const ApplicationContext& context)
+    : canvas(canvas), applicationContext(context)
 {
-}
-
-bool EncapsulationView::applyCollapsedState(int encapsulatorId) const
-{
-    auto* const encapsulator = dynamic_cast<Encapsulator*>(canvas.nodeManager.find(encapsulatorId));
-
-    if (encapsulator == nullptr) {
-        return false;
-    }
-
-    encapsulator->isExpanded = false;
-    encapsulator->bindToTree();
-
-    encapsulator->setVisible(true);
-    encapsulator->setInterceptsMouseClicks(!canvas.paintMode, !canvas.paintMode && !canvas.spanMode);
-
-    for (const int memberNodeId : encapsulator->memberNodeIds) {
-        Node* const member = canvas.nodeManager.find(memberNodeId);
-
-        if (member == nullptr) {
-            continue;
-        }
-
-        member->isEncapsulated        = true;
-        member->isEncapsulationExit   = memberNodeId == encapsulator->memberNodeIds.back();
-        member->isOutlined            = false;
-        member->isEncapsulationRinged = false;
-        member->hasInnerRim           = false;
-        member->setVisible(false);
-        member->setInterceptsMouseClicks(false, false);
-    }
-
-    encapsulator->syncHighlightsFromMembers();
-    encapsulator->toFront(false);
-
-    return true;
 }
 
 void EncapsulationView::collapse(int encapsulatorId) const
 {
     if (! applyCollapsedState(encapsulatorId)) {
         return;
-    }
-
-    repositionAll();
-
-    canvas.arrowManager.refreshEncapsulatedArrows();
-}
-
-void EncapsulationView::collapseAll() const
-{
-    const juce::ValueTree nodeMap = applicationContext.graphState->nodeMap;
-
-    for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
-        const juce::ValueTree nodeValueTree = nodeMap.getChild(i);
-
-        if (nodeValueTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-            applyCollapsedState(nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
-        }
     }
 
     repositionAll();
@@ -93,6 +36,7 @@ void EncapsulationView::expand(int encapsulatorId) const
     }
 
     encapsulator->isExpanded = true;
+
     encapsulator->setVisible(false);
     encapsulator->setInterceptsMouseClicks(false, false);
 
@@ -101,21 +45,16 @@ void EncapsulationView::expand(int encapsulatorId) const
     refreshMembership(encapsulatorId);
 }
 
-void EncapsulationView::showMembers(std::span<const int> memberNodeIds) const
+void EncapsulationView::collapseAll() const
 {
-    for (const int memberNodeId : memberNodeIds) {
-        Node* const member = canvas.nodeManager.find(memberNodeId);
+    const juce::ValueTree nodeMap = applicationContext.graphState->nodeMap;
 
-        if (member == nullptr) {
-            continue;
+    for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
+        const juce::ValueTree nodeValueTree = nodeMap.getChild(i);
+
+        if (nodeValueTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
+            applyCollapsedState(nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
         }
-
-        member->isEncapsulated        = false;
-        member->isEncapsulationExit   = false;
-        member->isEncapsulationRinged = false;
-        member->hasInnerRim           = false;
-        member->setVisible(true);
-        member->setInterceptsMouseClicks(!canvas.paintMode, !canvas.paintMode && !canvas.spanMode);
     }
 
     repositionAll();
@@ -147,43 +86,32 @@ void EncapsulationView::refreshMembership(int encapsulatorId) const
         member->isEncapsulationRinged   = true;
         member->hasInnerRim             = memberNodeId == encapsulator->memberNodeIds.front();
         member->encapsulationRingColour = encapsulator->nodeColour;
+
         member->repaint();
     }
 }
 
-void EncapsulationView::recolourGroup(const Encapsulator& encapsulator, juce::Colour colour) const
+void EncapsulationView::showMembers(std::span<const int> memberNodeIds) const
 {
-    for (const int memberNodeId : encapsulator.memberNodeIds) {
+    for (const int memberNodeId : memberNodeIds) {
         Node* const member = canvas.nodeManager.find(memberNodeId);
 
         if (member == nullptr) {
             continue;
         }
 
-        member->encapsulationRingColour = colour;
+        member->isEncapsulated        = false;
+        member->isEncapsulationExit   = false;
+        member->isEncapsulationRinged = false;
+        member->hasInnerRim           = false;
 
-        if (memberNodeId == encapsulator.memberNodeIds.front()) {
-            member->nodeColour = colour;
-        }
-
-        member->repaint();
+        member->setVisible(true);
+        member->setInterceptsMouseClicks(!canvas.paintMode, !canvas.paintMode && !canvas.spanMode);
     }
-}
 
-void EncapsulationView::syncHighlights() const
-{
-    for (auto& [nodeId, node] : canvas.nodeManager.all()) {
-        if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node.get())) {
-            encapsulator->syncHighlightsFromMembers();
-        }
-    }
-}
+    repositionAll();
 
-void EncapsulationView::repositionAll() const
-{
-    for (const auto& [nodeId, node] : canvas.nodeManager.all()) {
-        canvas.nodeManager.setPosition(nodeId);
-    }
+    canvas.arrowManager.refreshEncapsulatedArrows();
 }
 
 juce::Point<int> EncapsulationView::collapsedSpanShift(int nodeId) const
@@ -261,4 +189,73 @@ juce::Point<int> EncapsulationView::collapsedSpanShift(int nodeId) const
     }
 
     return shift;
+}
+
+void EncapsulationView::syncHighlights() const
+{
+    for (auto& [nodeId, node] : canvas.nodeManager.all()) {
+        if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node.get())) {
+            encapsulator->syncHighlightsFromMembers();
+        }
+    }
+}
+
+void EncapsulationView::recolourGroup(const Encapsulator& encapsulator) const
+{
+    for (const int memberNodeId : encapsulator.memberNodeIds) {
+        Node* const member = canvas.nodeManager.find(memberNodeId);
+
+        if (member == nullptr) {
+            continue;
+        }
+
+        member->encapsulationRingColour = encapsulator.nodeColour;
+
+        member->repaint();
+    }
+}
+
+bool EncapsulationView::applyCollapsedState(int encapsulatorId) const
+{
+    auto* const encapsulator = dynamic_cast<Encapsulator*>(canvas.nodeManager.find(encapsulatorId));
+
+    if (encapsulator == nullptr) {
+        return false;
+    }
+
+    encapsulator->isExpanded = false;
+
+    encapsulator->bindToTree();
+
+    encapsulator->setVisible(true);
+    encapsulator->setInterceptsMouseClicks(!canvas.paintMode, !canvas.paintMode && !canvas.spanMode);
+
+    for (const int memberNodeId : encapsulator->memberNodeIds) {
+        Node* const member = canvas.nodeManager.find(memberNodeId);
+
+        if (member == nullptr) {
+            continue;
+        }
+
+        member->isEncapsulated        = true;
+        member->isEncapsulationExit   = memberNodeId == encapsulator->memberNodeIds.back();
+        member->isOutlined            = false;
+        member->isEncapsulationRinged = false;
+        member->hasInnerRim           = false;
+
+        member->setVisible(false);
+        member->setInterceptsMouseClicks(false, false);
+    }
+
+    encapsulator->syncHighlightsFromMembers();
+    encapsulator->toFront(false);
+
+    return true;
+}
+
+void EncapsulationView::repositionAll() const
+{
+    for (const auto& [nodeId, node] : canvas.nodeManager.all()) {
+        canvas.nodeManager.setPosition(nodeId);
+    }
 }

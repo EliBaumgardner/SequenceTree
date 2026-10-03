@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 8/23/26.
-//
-
 #include "ValueFormat.h"
 
 #include <cmath>
@@ -22,8 +18,7 @@ InputRestrictions NumberFormat::restrictions() const
 
     if (minimum < 0.0) {
         limits.allowedCharacters = "-" + limits.allowedCharacters;
-        limits.maxLength         = juce::jmax(limits.maxLength,
-                                              juce::String(static_cast<juce::int64>(minimum / displayDivisor)).length());
+        limits.maxLength         = juce::jmax(limits.maxLength, juce::String(static_cast<juce::int64>(minimum / displayDivisor)).length());
     }
 
     if (showsPositiveSign) {

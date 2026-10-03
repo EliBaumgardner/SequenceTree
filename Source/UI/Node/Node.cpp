@@ -1,131 +1,94 @@
- /*
-  ==============================================================================
-
-    Node.cpp
-    Created: 6 May 2025 8:37:02pm
-    Author:  Eli Baumgardner
-
-  ==============================================================================
-*/
-#include "../../Graph/GraphState.h"
-#include "../../Graph/ValueTreeIdentifiers.h"
+#include "Node.h"
+#include "Arrow.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
-#include "Arrow.h"
-
-#include "Node.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 
-
-
+const juce::Colour Node::defaultNodeColour = juce::Colour::fromRGB(195, 174, 132).darker().darker().darker();
 
 Node::Node(const ApplicationContext& context)
-    : applicationContext(context),
-      nodeValueEditor(context), countEditor(context), switchCountEditor(context), subLoopLimitEditor(context)
+    : nodeValueEditor(context),
+      countEditor(context),
+      switchCountEditor(context),
+      subLoopLimitEditor(context),
+      applicationContext(context)
 {
     setLookAndFeel(applicationContext.lookAndFeel);
 
-    upButton = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState&) {
-            CustomLookAndFeel::get(*this).drawIncrementIcon(g, bounds, true);
-        });
+    upButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState&) {
+        CustomLookAndFeel::get(*this).drawIncrementIcon(graphics, bounds, true);
+    };
 
-    downButton = std::make_unique<IconButton>(
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState&) {
-            CustomLookAndFeel::get(*this).drawIncrementIcon(g, bounds, false);
-        });
+    downButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState&) {
+        CustomLookAndFeel::get(*this).drawIncrementIcon(graphics, bounds, false);
+    };
 
-    upButton->setInterceptsMouseClicks(true,false);
-
-    downButton->setInterceptsMouseClicks(true,false);
-
-    nodeValueEditor.setInterceptsMouseClicks(false, false);
     nodeValueEditor.autoFitText       = true;
     nodeValueEditor.autoFitInsetRatio = nodeValueTextInsetRatio;
+
     nodeValueEditor.setFormat(std::make_unique<PitchFormat>());
-    nodeValueEditor.editable = false;
-    nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
-    nodeValueEditor.toBack();
-
-    countEditor.setInterceptsMouseClicks(true, false);
-    countEditor.setTooltip("Count Limit");
-    countEditor.setFormat(std::make_unique<DualIntFormat>(minimumCountLimit, maximumCountLimit,
-                                                          ValueTreeIdentifiers::TriggerLimit));
-
+    countEditor.setFormat(std::make_unique<DualIntFormat>(minimumCountLimit, maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
     subLoopLimitEditor.setFormat(std::make_unique<NumberFormat>(minimumSubLoopLimit, maximumSubLoopLimit));
-    subLoopLimitEditor.setTooltip("Sub Loop Count Limit");
-
-    switchCountEditor.setInterceptsMouseClicks(true, false);
     switchCountEditor.setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
+
+    nodeValueEditor.editable = false;
+
+    nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
+
+    countEditor.setTooltip("Count Limit");
+    subLoopLimitEditor.setTooltip("Sub Loop Count Limit");
     switchCountEditor.setTooltip("Switch Count Limit");
 
-    upButton->onClick = [this]() {
-        incrementNodeValue(1);
-    };
+    upButton.setInterceptsMouseClicks(true, false);
+    downButton.setInterceptsMouseClicks(true, false);
+    nodeValueEditor.setInterceptsMouseClicks(false, false);
+    countEditor.setInterceptsMouseClicks(true, false);
+    switchCountEditor.setInterceptsMouseClicks(true, false);
 
-    downButton->onClick = [this]() {
-        incrementNodeValue(-1);
-    };
+    upButton.onClick   = [this]() { incrementNodeValue(1); };
+    downButton.onClick = [this]() { incrementNodeValue(-1); };
 
-    addAndMakeVisible(upButton.get());
-    addAndMakeVisible(downButton.get());
+    addAndMakeVisible(upButton);
+    addAndMakeVisible(downButton);
     addAndMakeVisible(nodeValueEditor);
-
     addAndMakeVisible(switchCountEditor);
     addAndMakeVisible(countEditor);
     addAndMakeVisible(subLoopLimitEditor);
 }
 
-void Node::paint(juce::Graphics& g)
+void Node::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawNode(g, getNodeVisual());
+    CustomLookAndFeel::get(*this).drawNode(graphics, getNodeVisual(getLocalBounds().toFloat()));
 }
 
 void Node::resized()
 {
-    layoutInterior(getLocalBounds());
-}
+    const juce::Rectangle<int> nodeSquare = getLocalBounds().withTrimmedLeft(interiorLeftInset);
 
-float Node::getBodyExtent(juce::Point<float> approachDirection) const
-{
-    const juce::Rectangle<float> circle = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
-
-    const float radius = std::max(0.0f, circle.getWidth() * 0.5f);
-
-    const juce::Point<float> toCircle = circle.getCentre() - (getNodeCentre() - getPosition()).toFloat();
-
-    const float along     = approachDirection.getDotProduct(toCircle);
-    const float clearance = along * along - toCircle.getDistanceSquaredFromOrigin() + radius * radius;
-
-    if (clearance <= 0.0f) {
-        return radius;
-    }
-
-    return std::max(0.0f, std::sqrt(clearance) - along);
-}
-
-void Node::layoutInterior(juce::Rectangle<int> nodeSquare)
-{
     auto editorArea = CustomLookAndFeel::getNodeCircleBounds(nodeSquare.toFloat()).toNearestInt()
                           .reduced(editorAreaBoundsReduction);
 
     const int buttonHeight = juce::jmax(2, juce::roundToInt(editorArea.getHeight() * incrementButtonHeightFactor));
-
-    upButton->setBounds(editorArea.removeFromTop(buttonHeight));
-    downButton->setBounds(editorArea.removeFromBottom(buttonHeight));
-
-    nodeValueEditor.setBounds(editorArea);
-
     const int editorWidth  = static_cast<int>(nodeSquare.getWidth()  * nodeEditorWidthFactor);
     const int editorHeight = static_cast<int>(nodeSquare.getHeight() * nodeEditorHeightFactor);
 
+    upButton.setBounds(editorArea.removeFromTop(buttonHeight));
+    downButton.setBounds(editorArea.removeFromBottom(buttonHeight));
+
+    nodeValueEditor.setBounds(editorArea);
+
     countEditor.setBounds(nodeSquare.getRight() - editorWidth, nodeSquare.getY(), editorWidth, editorHeight);
-    switchCountEditor.setBounds(nodeSquare.getRight() - editorWidth, nodeSquare.getBottom() - editorHeight,
-                                editorWidth, editorHeight);
+    switchCountEditor.setBounds(nodeSquare.getRight() - editorWidth, nodeSquare.getBottom() - editorHeight, editorWidth, editorHeight);
     subLoopLimitEditor.setBounds(nodeSquare.getX(), nodeSquare.getBottom() - editorHeight, editorWidth, editorHeight);
+}
+
+NodeVisual Node::getNodeVisual(juce::Rectangle<float> bounds) const
+{
+    return { bounds, nodeColour, activeHighlights, isHovered, isSelected, isOutlined,
+             isEncapsulationRinged, hasInnerRim, encapsulationRingColour };
 }
 
 void Node::setHoverVisual(bool isHovered)
@@ -136,6 +99,7 @@ void Node::setHoverVisual(bool isHovered)
         for (auto& [childId, arrow] : nodeArrows) {
             if (arrow != nullptr) {
                 arrow->sourceHovered = isHovered;
+
                 arrow->setHoverFade(arrow->sourceHovered || arrow->proximityHovered);
             }
         }
@@ -147,17 +111,22 @@ void Node::setHoverVisual(bool isHovered)
 void Node::setSelectVisual(bool isSelected)
 {
     this->isSelected = isSelected;
+
     if (onSelected) {
         onSelected(this, isSelected);
     }
+
     repaint();
 }
 
-void Node::setSelectVisual() {
+void Node::setSelectVisual()
+{
     isSelected = !isSelected;
+
     if (onSelected) {
         onSelected(this, isSelected);
     }
+
     repaint();
 }
 
@@ -167,6 +136,7 @@ void Node::setHighlightVisual(int runId, bool shouldHighlight, juce::Colour colo
         for (int pendingId : pendingHighlightOffIds) {
             activeHighlights.erase(pendingId);
         }
+
         pendingHighlightOffIds.clear();
 
         activeHighlights[runId] = colour;
@@ -194,6 +164,7 @@ void Node::setHighlightVisual(int runId, bool shouldHighlight, juce::Colour colo
     }
 
     isHighlighted = ! activeHighlights.empty();
+
     repaint();
 }
 
@@ -205,8 +176,8 @@ void Node::advancePulse(double frameSec)
         elapsedSec = frameSec - lastPulseFrameSec;
     }
 
-    lastPulseFrameSec = frameSec;
-    pulsePhase += static_cast<float>(elapsedSec) * pulseRatePerSecond;
+    lastPulseFrameSec  = frameSec;
+    pulsePhase        += static_cast<float>(elapsedSec) * pulseRatePerSecond;
 
     repaint();
 
@@ -214,14 +185,41 @@ void Node::advancePulse(double frameSec)
         pulsePhase        = 1.0f;
         lastPulseFrameSec = 0.0;
 
-        for (int id : pendingHighlightOffIds) {
-            activeHighlights.erase(id);
+        for (int pendingId : pendingHighlightOffIds) {
+            activeHighlights.erase(pendingId);
         }
+
         pendingHighlightOffIds.clear();
+
         isHighlighted = ! activeHighlights.empty();
 
         pulseFrames = {};
     }
+}
+
+juce::Point<int> Node::getNodeCentre() const
+{
+    return getBounds().getCentre();
+}
+
+float Node::getVisualRadius() const
+{
+    return getHeight() * 0.5f;
+}
+
+float Node::getBodyExtent(juce::Point<float> approachDirection) const
+{
+    const juce::Rectangle<float> circle    = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
+    const float                  radius    = std::max(0.0f, circle.getWidth() * 0.5f);
+    const juce::Point<float>     toCircle  = circle.getCentre() - (getNodeCentre() - getPosition()).toFloat();
+    const float                  along     = approachDirection.getDotProduct(toCircle);
+    const float                  clearance = along * along - toCircle.getDistanceSquaredFromOrigin() + radius * radius;
+
+    if (clearance <= 0.0f) {
+        return radius;
+    }
+
+    return std::max(0.0f, std::sqrt(clearance) - along);
 }
 
 void Node::bindToTree()
@@ -230,8 +228,8 @@ void Node::bindToTree()
         return;
     }
 
-    countEditor       .bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
-    switchCountEditor .bindEditor(nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
+    countEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
+    switchCountEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
 
     if (isAlternativeNode) {
         subLoopLimitEditor.setVisible(false);
@@ -247,25 +245,15 @@ void Node::bindToTree()
     subLoopLimitEditor.bindEditor(nodeValueTree, subLoopProperty);
 }
 
-void Node::setDisplayMode(NodeDisplayMode newMode)
-{
-    mode = newMode;
-
-    bindValueEditorForMode();
-
-    nodeValueEditor.repaint();
-    repaint();
-}
-
 void Node::bindValueEditorForMode()
 {
     nodeValueEditor.editable = true;
 
     switch (mode) {
-
         case NodeDisplayMode::Pitch:
             nodeValueEditor.setFormat(std::make_unique<PitchFormat>());
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
+
             nodeValueEditor.editable = false;
             break;
 
@@ -275,8 +263,7 @@ void Node::bindValueEditorForMode()
             break;
 
         case NodeDisplayMode::CountLimit:
-            nodeValueEditor.setFormat(std::make_unique<DualIntFormat>(minimumCountLimit, maximumCountLimit,
-                                                                      ValueTreeIdentifiers::TriggerLimit));
+            nodeValueEditor.setFormat(std::make_unique<DualIntFormat>(minimumCountLimit, maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
             nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
             break;
 
@@ -287,6 +274,7 @@ void Node::bindValueEditorForMode()
 
         case NodeDisplayMode::RepeatValue: {
             auto repeatFormat = std::make_unique<NumberFormat>(minimumRepeatValue, maximumRepeatValue);
+
             repeatFormat->prefix = "x";
 
             nodeValueEditor.setFormat(std::move(repeatFormat));
@@ -296,6 +284,7 @@ void Node::bindValueEditorForMode()
 
         case NodeDisplayMode::Probability: {
             auto probabilityFormat = std::make_unique<NumberFormat>(minimumProbability, maximumProbability);
+
             probabilityFormat->suffix = "%";
 
             nodeValueEditor.setFormat(std::move(probabilityFormat));
@@ -310,7 +299,18 @@ void Node::bindValueEditorForMode()
     }
 }
 
-void Node::incrementNodeValue(int incrementValue) {
+void Node::setDisplayMode(NodeDisplayMode newMode)
+{
+    mode = newMode;
+
+    bindValueEditorForMode();
+
+    nodeValueEditor.repaint();
+    repaint();
+}
+
+void Node::incrementNodeValue(int incrementValue)
+{
     const double currentValue = static_cast<double>(nodeValueEditor.boundValue.getValue());
 
     if (applicationContext.undoManager != nullptr) {
@@ -318,10 +318,12 @@ void Node::incrementNodeValue(int incrementValue) {
     }
 
     nodeValueEditor.setNumericValue(currentValue + incrementValue);
+
     refreshValueDisplay();
 }
 
-void Node::refreshValueDisplay() {
+void Node::refreshValueDisplay()
+{
     nodeValueEditor.repaint();
     repaint();
 }

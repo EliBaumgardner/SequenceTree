@@ -1,7 +1,3 @@
-//
-// Created by Eli Baumgardner on 7/27/26.
-//
-
 #include "ArrowWindow.h"
 #include "../Canvas/NodeCanvas.h"
 #include "../Theme/CustomLookAndFeel.h"
@@ -9,10 +5,11 @@
 ArrowWindow::ArrowWindow(const ApplicationContext& context)
     : applicationContext(context), arrowTypePane(context), bindBar(context)
 {
+    const ArrowType currentType = applicationContext.canvas->arrowManager.currentArrowInfo.type;
+
     setLookAndFeel(context.lookAndFeel);
 
-    arrowTypePane.enableToggleSelection();
-    arrowTypePane.allowEmptySelection();
+    arrowTypePane.selection = ButtonPane::Selection::ExclusiveOrNone;
 
     arrowTypePane.onSelectionChanged = [this](const IconButton* selected) {
         const std::optional<ArrowType> arrowType = arrowTypeFor(selected);
@@ -27,37 +24,63 @@ ArrowWindow::ArrowWindow(const ApplicationContext& context)
     addAndMakeVisible(arrowTypePane);
     addAndMakeVisible(bindBar);
 
-    addArrowType(ArrowType::Node, "node arrow",
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawNodeArrowIcon(g, bounds, state);
-        });
+    addArrowType(ArrowType::Node,       "node arrow",       &CustomLookAndFeel::drawNodeArrowIcon);
+    addArrowType(ArrowType::Polyphonic, "polyphonic arrow", &CustomLookAndFeel::drawPolyphonicArrowIcon);
+    addArrowType(ArrowType::Traversal,  "traversal arrow",  &CustomLookAndFeel::drawTraversalArrowIcon);
 
-    addArrowType(ArrowType::Polyphonic, "polyphonic arrow",
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawPolyphonicArrowIcon(g, bounds, state);
-        });
-
-    addArrowType(ArrowType::Traversal, "traversal arrow",
-        [this](juce::Graphics& g, juce::Rectangle<float> bounds, const ButtonState& state) {
-            CustomLookAndFeel::get(*this).drawTraversalArrowIcon(g, bounds, state);
-        });
-
-    showSelectedArrowType();
+    for (const ArrowTypeButton& arrowTypeButton : arrowTypeButtons) {
+        if (currentType != ArrowType::Node && arrowTypeButton.type == currentType) {
+            arrowTypePane.setSelectedButton(arrowTypeButton.button);
+        }
+    }
 }
 
-ArrowWindow::~ArrowWindow() {
+ArrowWindow::~ArrowWindow()
+{
     setLookAndFeel(nullptr);
 }
 
-void ArrowWindow::addArrowType(ArrowType type, const juce::String& caption, IconButton::Painter painter) {
-    IconButton& button = arrowTypePane.addButton(std::move(painter), caption);
+void ArrowWindow::paint(juce::Graphics& graphics)
+{
+    const Theme& theme = CustomLookAndFeel::get(*this);
+
+    graphics.setColour(theme.baseDarkColour2);
+    graphics.fillRect(getLocalBounds());
+
+    graphics.setColour(juce::Colours::black);
+    graphics.drawRect(getLocalBounds(), 1);
+}
+
+void ArrowWindow::resized()
+{
+    auto      bounds        = getLocalBounds();
+    const int bindBarHeight = juce::jmax(ArrowBindBar::minimumHeight, juce::roundToInt(bounds.getHeight() * bindBarHeightRatio));
+
+    bindBar.setBounds(bounds.removeFromBottom(bindBarHeight));
+
+    const int cellSize = juce::jmax(minimumCellSize, juce::jmin(juce::roundToInt(bounds.getWidth()  * cellWidthRatio),
+                                                                juce::roundToInt(bounds.getHeight() * cellHeightRatio)));
+
+    arrowTypePane.gridLayout = ButtonPane::Grid { cellSize,
+                                                  cellSize,
+                                                  juce::jmax(minimumGridGap, juce::roundToInt(bounds.getWidth() * gridGapRatio)),
+                                                  juce::jmax(minimumGridGap, juce::roundToInt(bounds.getWidth() * gridInsetRatio)) };
+
+    arrowTypePane.setBounds(bounds);
+    arrowTypePane.resized();
+}
+
+void ArrowWindow::addArrowType(ArrowType type, const juce::String& caption, IconButton::Icon icon)
+{
+    IconButton& button = arrowTypePane.addButton(icon, caption);
 
     button.setCaption(caption);
 
     arrowTypeButtons.push_back({ type, &button });
 }
 
-std::optional<ArrowType> ArrowWindow::arrowTypeFor(const IconButton* button) const {
+std::optional<ArrowType> ArrowWindow::arrowTypeFor(const IconButton* button) const
+{
     for (const ArrowTypeButton& arrowTypeButton : arrowTypeButtons) {
         if (arrowTypeButton.button == button) {
             return arrowTypeButton.type;
@@ -65,50 +88,4 @@ std::optional<ArrowType> ArrowWindow::arrowTypeFor(const IconButton* button) con
     }
 
     return std::nullopt;
-}
-
-void ArrowWindow::showSelectedArrowType() {
-    if (applicationContext.canvas->arrowManager.currentArrowInfo.type == ArrowType::Node) {
-        return;
-    }
-
-    for (const ArrowTypeButton& arrowTypeButton : arrowTypeButtons) {
-        if (arrowTypeButton.type == applicationContext.canvas->arrowManager.currentArrowInfo.type) {
-            arrowTypePane.setSelectedButton(arrowTypeButton.button);
-            return;
-        }
-    }
-}
-
-void ArrowWindow::paint(juce::Graphics& g) {
-    const Theme& theme = CustomLookAndFeel::get(*this);
-
-    g.setColour(theme.baseDarkColour2);
-    g.fillRect(getLocalBounds());
-
-    g.setColour(juce::Colours::black);
-    g.drawRect(getLocalBounds(), 1);
-}
-
-ButtonPane::Grid ArrowWindow::arrowGridFor(juce::Rectangle<int> bounds) {
-    const int cellSize = juce::jmax(minimumCellSize,
-                                    juce::jmin(juce::roundToInt(bounds.getWidth()  * cellWidthRatio),
-                                               juce::roundToInt(bounds.getHeight() * cellHeightRatio)));
-
-    return { cellSize,
-             cellSize,
-             juce::jmax(minimumGridGap, juce::roundToInt(bounds.getWidth() * gridGapRatio)),
-             juce::jmax(minimumGridGap, juce::roundToInt(bounds.getWidth() * gridInsetRatio)) };
-}
-
-void ArrowWindow::resized() {
-    auto bounds = getLocalBounds();
-
-    const int bindBarHeight = juce::jmax(ArrowBindBar::minimumHeight,
-                                         juce::roundToInt(bounds.getHeight() * bindBarHeightRatio));
-
-    bindBar.setBounds(bounds.removeFromBottom(bindBarHeight));
-
-    arrowTypePane.setBounds(bounds);
-    arrowTypePane.useGridLayout(arrowGridFor(bounds));
 }
