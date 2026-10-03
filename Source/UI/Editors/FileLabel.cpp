@@ -12,11 +12,12 @@ FileLabel::FileLabel(const ApplicationContext& context)
 
     fileText.autoFitText = true;
     fileText.editable    = false;
+    fileText.fontStyle   = Theme::FontStyle::Regular;
 
     fileText.setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength, TextFormat::labelCharacters));
     fileText.setInterceptsMouseClicks(false, false);
 
-    fileText.textEditor->setColour(juce::CaretComponent::caretColourId, juce::Colours::lightgrey);
+    fileText.textEditor->setColour(juce::CaretComponent::caretColourId, context.lookAndFeel->accentColour);
 
     removeButton.setTooltip("Remove Rule");
 

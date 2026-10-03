@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
-const juce::Colour Node::defaultNodeColour = juce::Colour::fromRGB(195, 174, 132).darker().darker().darker();
+const juce::Colour Node::defaultNodeColour = juce::Colour::fromRGB(31, 36, 44);
 
 Node::Node(const ApplicationContext& context)
     : nodeValueEditor(context),
@@ -28,6 +28,10 @@ Node::Node(const ApplicationContext& context)
 
     nodeValueEditor.autoFitText       = true;
     nodeValueEditor.autoFitInsetRatio = nodeValueTextInsetRatio;
+    nodeValueEditor.fontStyle         = Theme::FontStyle::SemiBold;
+    countEditor.backdrop              = ValueEditor::Backdrop::Badge;
+    switchCountEditor.backdrop        = ValueEditor::Backdrop::Badge;
+    subLoopLimitEditor.backdrop       = ValueEditor::Backdrop::Badge;
 
     nodeValueEditor.setFormat(std::make_unique<PitchFormat>());
     countEditor.setFormat(std::make_unique<DualIntFormat>(minimumCountLimit, maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));

@@ -44,10 +44,10 @@ void ArrowWindow::paint(juce::Graphics& graphics)
 {
     const Theme& theme = CustomLookAndFeel::get(*this);
 
-    graphics.setColour(theme.baseDarkColour2);
+    graphics.setColour(theme.surfaceColour);
     graphics.fillRect(getLocalBounds());
 
-    graphics.setColour(juce::Colours::black);
+    graphics.setColour(theme.borderColour);
     graphics.drawRect(getLocalBounds(), 1);
 }
 
@@ -84,6 +84,8 @@ std::optional<ArrowType> ArrowWindow::arrowTypeFor(const IconButton* button) con
 void ArrowWindow::addArrowType(ArrowType type, const juce::String& caption, IconButton::Icon icon)
 {
     IconButton& button = arrowTypePane.addButton(icon, caption);
+
+    button.state.look = ButtonState::Look::Raised;
 
     button.setCaption(caption);
 

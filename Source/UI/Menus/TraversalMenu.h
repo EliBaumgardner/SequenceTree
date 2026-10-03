@@ -8,7 +8,6 @@
 #include "../Buttons/IconButton.h"
 #include "TraversalRulesWindow.h"
 #include "../PopupWindow.h"
-#include "../Bars/Bar.h"
 
 class TraversalMenu : public juce::Component, private juce::ValueTree::Listener
 {
@@ -51,8 +50,6 @@ private:
     void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
 
     const ApplicationContext& applicationContext;
-
-    Bar topBar;
 
     juce::ValueTree currentTraversalData;
 };

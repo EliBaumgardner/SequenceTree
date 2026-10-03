@@ -42,17 +42,20 @@ juce::CaretComponent* CustomLookAndFeel::createCaretComponent(juce::Component* k
 
 void CustomLookAndFeel::drawCanvas(juce::Graphics& graphics, const NodeCanvas& canvas)
 {
-    const float spacing      = canvas.gridSpacing;
-    const auto  bounds       = canvas.getLocalBounds().toFloat();
-    const float crossArm     = 6.0f;
-    float       originX      = bounds.getCentreX();
-    float       originY      = bounds.getCentreY();
+    const float                     spacing = canvas.gridSpacing;
+    const auto                      bounds  = canvas.getLocalBounds().toFloat().transformedBy(canvas.modelTransform);
+    const auto                      dot     = juce::Rectangle<float>(gridDotDiameter, gridDotDiameter);
+    float                           originX = bounds.getCentreX();
+    float                           originY = bounds.getCentreY();
+    juce::Graphics::ScopedSaveState savedState(graphics);
 
-    graphics.fillAll(canvasColour.brighter());
+    graphics.fillAll(canvasColour);
 
     if (!canvas.gridVisible || spacing < 15.0f) {
         return;
     }
+
+    graphics.addTransform(canvas.viewTransform);
 
     if (canvas.gridOriginSet) {
         originX = canvas.gridOrigin.x;
@@ -64,10 +67,20 @@ void CustomLookAndFeel::drawCanvas(juce::Graphics& graphics, const NodeCanvas& c
 
     graphics.setColour(gridColour);
 
-    for (float crossX = firstX; crossX <= bounds.getRight(); crossX += spacing) {
-        for (float crossY = firstY; crossY <= bounds.getBottom(); crossY += spacing) {
-            graphics.drawLine(crossX - crossArm, crossY, crossX + crossArm, crossY, 0.5f);
-            graphics.drawLine(crossX, crossY - crossArm, crossX, crossY + crossArm, 0.5f);
+    for (float dotX = firstX; dotX <= bounds.getRight(); dotX += spacing) {
+        for (float dotY = firstY; dotY <= bounds.getBottom(); dotY += spacing) {
+            graphics.fillEllipse(dot.withCentre({ dotX, dotY }));
         }
     }
+}
+
+void CustomLookAndFeel::drawPane(juce::Graphics& graphics, juce::Rectangle<float> bounds)
+{
+    const auto area = bounds.reduced(borderThickness * 0.5f);
+
+    graphics.setColour(surfaceColour);
+    graphics.fillRoundedRectangle(area, groupCornerRadius);
+
+    graphics.setColour(borderColour);
+    graphics.drawRoundedRectangle(area, groupCornerRadius, borderThickness);
 }

@@ -19,13 +19,15 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     applicationContext.traversalRuleState = &p.traversalRuleState;
     applicationContext.rtGraphBuilder     = &p.rtGraphBuilder;
 
+    setLookAndFeel(&lookAndFeel);
+
     canvas = std::make_unique<NodeCanvas>(applicationContext);
     applicationContext.canvas = canvas.get();
 
     nodeController = std::make_unique<NodeController>(applicationContext, *canvas);
     applicationContext.nodeController = nodeController.get();
 
-    port      = std::make_unique<DynamicPort>(canvas.get());
+    port      = std::make_unique<DynamicPort>(*canvas);
     menuArea  = std::make_unique<MenuArea>(applicationContext);
     titleBar  = std::make_unique<Titlebar>(applicationContext);
     bottomBar = std::make_unique<BottomBar>(applicationContext);
@@ -37,12 +39,6 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
         if (total <= 0) return;
         menuAreaWidthRatio = juce::jlimit(0.01f, 0.9f, static_cast<float>(newWidth) / static_cast<float>(total));
         resized();
-    };
-
-    port->onZoomChanged = [canvasPtr = canvas.get()](float zoom) {
-        canvasPtr->valueField.viewZoom = zoom;
-
-        canvasPtr->valueField.updateBrushCursor();
     };
 
     if (audioProcessor.pendingRestoreState.isValid()) {
@@ -90,19 +86,21 @@ SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
     }
 
     applicationContext.graphState->nodeMap.removeListener(&canvas->treeListener);
+
+    setLookAndFeel(nullptr);
 }
 
-void SequenceTreeAudioProcessorEditor::paint (juce::Graphics& g) { g.fillAll(juce::Colours::white); }
+void SequenceTreeAudioProcessorEditor::paint (juce::Graphics& g) { g.fillAll(lookAndFeel.windowColour); }
 
 void SequenceTreeAudioProcessorEditor::resized()
 {
-    auto bounds = getLocalBounds();
+    auto bounds = getLocalBounds().reduced(Theme::windowGutter);
 
     auto barHeight = static_cast<int>(bounds.getHeight() * Theme::barHeightRatio);
     auto minMenuWidth = juce::roundToInt(barHeight * (MenuArea::menuBarWidthRatio + MenuArea::resizerWidthRatio));
     auto menuAreaWidth = juce::jmax(minMenuWidth, static_cast<int>(bounds.getWidth() * menuAreaWidthRatio));
 
-    auto menuAreaBounds   = bounds.removeFromLeft(menuAreaWidth);
+    auto menuAreaBounds   = bounds.removeFromLeft(menuAreaWidth + Theme::windowGutter).withTrimmedRight(Theme::windowGutter);
     auto titleArea        = bounds.removeFromTop(barHeight);
     auto bottomArea       = bounds.removeFromBottom(barHeight);
 
@@ -166,13 +164,13 @@ bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, ju
     }
 
     if (key == juce::KeyPress('v', command, 0)) {
-        juce::Point<int> pastePoint = canvas->getLocalPoint(port.get(), port->getLocalBounds().getCentre());
+        juce::Point<float> pastePoint = canvas->getLocalPoint(port.get(), port->getLocalBounds().getCentre()).toFloat();
 
         if (port->getLocalBounds().contains(port->getMouseXYRelative())) {
-            pastePoint = canvas->getMouseXYRelative();
+            pastePoint = canvas->getMouseXYRelative().toFloat();
         }
 
-        selectionOps.pasteAt(pastePoint);
+        selectionOps.pasteAt(pastePoint.transformedBy(canvas->modelTransform).roundToInt());
         return true;
     }
 

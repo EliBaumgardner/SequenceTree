@@ -41,7 +41,7 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(const ApplicationContext& context, 
         };
 
         row.label->setText("Traversal " + TraversalFlagFormat::describe(key), juce::dontSendNotification);
-        row.label->setFont(juce::Font(juce::FontOptions(9.0f)));
+        row.label->setFont(context.lookAndFeel->font(Theme::FontStyle::Regular, Theme::labelFontHeight));
 
         addAndMakeVisible(row.label.get());
         addAndMakeVisible(row.toggle.get());
@@ -52,9 +52,11 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(const ApplicationContext& context, 
 
 void AllowedTraversalsMenu::paint(juce::Graphics& graphics)
 {
-    graphics.fillAll(juce::Colour::fromRGB(30, 30, 30));
+    const Theme& theme = CustomLookAndFeel::get(*this);
 
-    graphics.setColour(juce::Colours::black);
+    graphics.fillAll(theme.surfaceColour);
+
+    graphics.setColour(theme.borderColour);
     graphics.drawRect(getLocalBounds(), 1);
 }
 
@@ -131,10 +133,11 @@ int AllowedTraversalsMenu::getIdealHeight() const
 
 void AllowedTraversalsMenu::ToggleButton::paint(juce::Graphics& graphics)
 {
+    const Theme&       theme      = CustomLookAndFeel::get(*this);
     const auto         bounds     = getLocalBounds().toFloat().reduced(2.0f);
-    const juce::Colour onColour   = juce::Colour::fromRGB(195, 174, 132);
-    const juce::Colour offColour  = juce::Colour::fromRGB(40, 40, 38);
-    juce::Colour       textColour = juce::Colour::fromRGB(195, 174, 132);
+    const juce::Colour onColour   = theme.accentColour;
+    const juce::Colour offColour  = theme.raisedColour;
+    juce::Colour       textColour = theme.mutedTextColour;
     juce::String       stateText  = "off";
 
     if (isOn) {
@@ -144,18 +147,18 @@ void AllowedTraversalsMenu::ToggleButton::paint(juce::Graphics& graphics)
         graphics.setColour(offColour);
     }
 
-    graphics.fillRoundedRectangle(bounds, 4.0f);
+    graphics.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
 
-    graphics.setColour(juce::Colours::black.withAlpha(0.5f));
-    graphics.drawRoundedRectangle(bounds, 4.0f, 1.0f);
+    graphics.setColour(theme.borderStrongColour);
+    graphics.drawRoundedRectangle(bounds, Theme::paneCornerRadius, Theme::borderThickness);
 
     if (isOn) {
-        textColour = juce::Colours::black.withAlpha(0.7f);
+        textColour = theme.onAccentColour;
         stateText  = "on";
     }
 
     graphics.setColour(textColour);
-    graphics.setFont(juce::Font(juce::FontOptions(9.0f)));
+    graphics.setFont(theme.font(Theme::FontStyle::Regular, Theme::labelFontHeight));
     graphics.drawText(stateText, getLocalBounds(), juce::Justification::centred);
 }
 

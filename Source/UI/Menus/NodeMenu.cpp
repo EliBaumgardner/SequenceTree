@@ -11,7 +11,7 @@ NodeMenu::NodeMenu(const ApplicationContext& context)
     setLookAndFeel(applicationContext.lookAndFeel);
 
     editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawTextButton(graphics, bounds, state, CustomLookAndFeel::get(*this).textHeight);
+        CustomLookAndFeel::get(*this).drawRulesButton(graphics, bounds, state, CustomLookAndFeel::get(*this).textHeight);
     };
 
     editTraversalRulesButton.setLookAndFeel(context.lookAndFeel);
@@ -81,10 +81,7 @@ NodeMenu::~NodeMenu()
 
 void NodeMenu::paint(juce::Graphics& graphics)
 {
-    const Theme& theme = CustomLookAndFeel::get(*this);
-
-    graphics.setColour(theme.baseDarkColour2);
-    graphics.fillRect(getLocalBounds().toFloat());
+    CustomLookAndFeel::get(*this).drawPane(graphics, getLocalBounds().toFloat());
 }
 
 void NodeMenu::resized()
@@ -93,7 +90,7 @@ void NodeMenu::resized()
     const int        spacing         = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
     const int        rowHeight       = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
     const float      textHeight      = CustomLookAndFeel::get(*this).textHeight;
-    const juce::Font textFont        { juce::FontOptions(textHeight) };
+    const juce::Font textFont        = CustomLookAndFeel::get(*this).font(Theme::FontStyle::Regular, textHeight);
     auto             bounds          = getLocalBounds().reduced(spacing);
 
     editTraversalRulesButton.setBounds(bounds.removeFromBottom(juce::roundToInt(barHeight * Theme::menuButtonHeightRatio)));

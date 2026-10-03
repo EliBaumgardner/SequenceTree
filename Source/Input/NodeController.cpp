@@ -58,7 +58,7 @@ void NodeController::mouseMove(const juce::MouseEvent& e)
         return;
     }
 
-    updateArrowHover(e.getEventRelativeTo(&canvas).position);
+    updateArrowHover(e.getEventRelativeTo(&canvas).position.transformedBy(canvas.modelTransform));
 }
 
 void NodeController::updateArrowHover(juce::Point<float> cursor)
@@ -144,7 +144,7 @@ void NodeController::dragDanglingTip(const juce::MouseEvent& e)
         return;
     }
 
-    const juce::Point<int> tip    = danglingTipFor(startNode, e.getEventRelativeTo(&canvas).getPosition());
+    const juce::Point<int> tip    = danglingTipFor(startNode, e.getEventRelativeTo(&canvas).position.transformedBy(canvas.modelTransform).roundToInt());
     const juce::Point<int> centre = startNode->getNodeCentre();
 
     draggingDanglingArrow->setTipOffset({ tip.x - centre.x, tip.y - centre.y });
@@ -200,12 +200,12 @@ void NodeController::handleCanvasMouseDrag(const juce::MouseEvent& e)
         }
 
         const int nodeId = draggingArrowHeadNode->nodeId;
-        const auto position = e.getEventRelativeTo(&canvas).getPosition();
+        const auto position = e.getEventRelativeTo(&canvas).position.transformedBy(canvas.modelTransform).roundToInt();
 
         NodePosition newPosition;
         newPosition.xPosition = position.x;
         newPosition.yPosition = position.y;
-        newPosition.radius    = defaultNodeRadius;
+        newPosition.radius    = Theme::nodeRadius;
 
         handleNodeDrag(applicationContext.undoManager, nodeId, newPosition);
         return;
@@ -259,7 +259,7 @@ void NodeController::snapToGrid(juce::UndoManager *undoManager, NodePosition &ne
 
 void NodeController::updateBoxSelection(const juce::MouseEvent& e)
 {
-    const juce::Point<int> cursor = e.getEventRelativeTo(&canvas).getPosition();
+    const juce::Point<int> cursor = e.getEventRelativeTo(&canvas).position.transformedBy(canvas.modelTransform).roundToInt();
 
     canvas.selectionBounds = juce::Rectangle<int>(selectionAnchor, cursor);
     canvas.repaint();
@@ -270,12 +270,12 @@ void NodeController::handleNodeMouseDrag(const juce::MouseEvent& e, Node& node)
     juce::UndoManager* undoManager = applicationContext.undoManager;
 
     const int  nodeId   = node.nodeId;
-    const auto position = e.getEventRelativeTo(node.getParentComponent());
+    const auto position = e.getEventRelativeTo(&canvas).position.transformedBy(canvas.modelTransform).roundToInt();
 
     NodePosition newPosition;
     newPosition.xPosition = position.x;
     newPosition.yPosition = position.y;
-    newPosition.radius    = defaultNodeRadius;
+    newPosition.radius    = Theme::nodeRadius;
 
     if (e.getDistanceFromDragStart() < dragThreshold || !e.mods.isLeftButtonDown()) {
         return;
@@ -772,8 +772,8 @@ void NodeController::selectSpanNode(Node& node)
 
 void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
 {
-    juce::UndoManager* undoManager = applicationContext.undoManager;
-    const juce::Point<float> clickPoint { static_cast<float>(e.x), static_cast<float>(e.y) };
+    juce::UndoManager*       undoManager = applicationContext.undoManager;
+    const juce::Point<float> clickPoint  = e.getEventRelativeTo(&canvas).position.transformedBy(canvas.modelTransform);
 
     if (e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
         if (Arrow* arrow = canvas.hitTester.arrowNear(clickPoint, danglingArrowGrabRadius)) {
@@ -794,7 +794,7 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
             return;
         }
 
-        showSelectionMenu(e.getEventRelativeTo(&canvas).getPosition());
+        showSelectionMenu(clickPoint.roundToInt());
         return;
     }
 
@@ -838,14 +838,14 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
 
     if (e.mods.isShiftDown() && e.mods.isLeftButtonDown()) {
         if (!isNodeCreationModeActive()) {
-            beginBoxSelection(e.getEventRelativeTo(&canvas).getPosition());
+            beginBoxSelection(clickPoint.roundToInt());
             return;
         }
 
         NodePosition nodePosition;
-        nodePosition.xPosition = e.x;
-        nodePosition.yPosition = e.y;
-        nodePosition.radius    = 20;
+        nodePosition.xPosition = juce::roundToInt(clickPoint.x);
+        nodePosition.yPosition = juce::roundToInt(clickPoint.y);
+        nodePosition.radius    = Theme::nodeRadius;
 
         undoManager->beginNewTransaction();
         NodeFactory::createRootNode(*applicationContext.graphState, nodePosition, undoManager);

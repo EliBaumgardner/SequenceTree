@@ -7,12 +7,6 @@
 BottomBar::BottomBar(const ApplicationContext& context)
     : Bar(context, { Orientation::Horizontal })
 {
-    arrowButton.icon = &CustomLookAndFeel::drawArrowToolIcon;
-    spanTool.icon    = &CustomLookAndFeel::drawSpanToolIcon;
-
-    arrowButton.setLookAndFeel(context.lookAndFeel);
-    spanTool   .setLookAndFeel(context.lookAndFeel);
-
     quaverTool = &quaverPane.addButton(&CustomLookAndFeel::drawQuaverToolIcon, "Note",
         [this]() {
             quaverTool->setSelected(! quaverTool->state.isSelected);
@@ -25,25 +19,23 @@ BottomBar::BottomBar(const ApplicationContext& context)
             applicationContext.canvas->setQuaverMode(NodeCanvas::QuaverMode::Off);
         });
 
-    arrowButton       .setTooltip("Arrow Types");
-    spanTool          .setTooltip("Node Span");
+    spanTool = &toolPane.addButton(&CustomLookAndFeel::drawSpanToolIcon, "Node Span",
+        [this]() {
+            spanTool->setSelected(! spanTool->state.isSelected);
+
+            applicationContext.canvas->setSpanMode(spanTool->state.isSelected);
+        });
+
+    toolPane.addButton(&CustomLookAndFeel::drawArrowToolIcon, "Arrow Types",
+        [this]() { arrowWindowLauncher.show(); });
+
     countsField.editor.setTooltip("Counts");
-
-    arrowButton.onClick = [this]() {
-        arrowWindowLauncher.show();
-    };
-
-    spanTool.onClick = [this]() {
-        spanTool.setSelected(! spanTool.state.isSelected);
-
-        applicationContext.canvas->setSpanMode(spanTool.state.isSelected);
-    };
 
     quaverTool->onRightClick = [this]() {
         showQuaverMenu();
     };
 
-    countsField.label.setText("counts:", juce::dontSendNotification);
+    countsField.label.setText("counts", juce::dontSendNotification);
 
     countsField.editor.setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
 
@@ -52,8 +44,7 @@ BottomBar::BottomBar(const ApplicationContext& context)
     countsField.editor.boundValue.referTo(applicationContext.canvas->quaverCount);
 
     addAndMakeVisible(paintPanel);
-    addAndMakeVisible(arrowButton);
-    addAndMakeVisible(spanTool);
+    addAndMakeVisible(toolPane);
     addAndMakeVisible(quaverPane);
     addAndMakeVisible(countsField);
 }
@@ -64,7 +55,7 @@ void BottomBar::resized()
     const int            width           = bounds.getWidth();
     const int            height          = bounds.getHeight();
     const int            spacing         = juce::roundToInt(width * Theme::contentSpacingRatio);
-    const int            toolSide        = juce::jmin(height, juce::roundToInt(width * toolWidthRatio));
+    const int            toolPaneWidth   = toolPane.idealWidth(height);
     const int            paneWidth       = juce::roundToInt(width * quaverPaneWidthRatio);
     const int            paneInset       = juce::roundToInt(height * Theme::contentInsetRatio);
     const int            innerHeight     = juce::jmax(0, height - paneInset * 2);
@@ -73,7 +64,7 @@ void BottomBar::resized()
     const int            labelWidth      = juce::roundToInt(paneWidth * countsLabelWidthRatio);
     const int            editorWidth     = juce::roundToInt(paneWidth * countsEditorWidthRatio);
     const float          textHeight      = CustomLookAndFeel::get(*this).textHeight;
-    const juce::Font     textFont        { juce::FontOptions(textHeight) };
+    const juce::Font     textFont        = CustomLookAndFeel::get(*this).font(Theme::FontStyle::Regular, textHeight);
     juce::Rectangle<int> quaverPaneBounds;
 
     paintPanel.sizeField.label.setFont(textFont);
@@ -86,9 +77,7 @@ void BottomBar::resized()
 
     paintPanel.setBounds(bounds.removeFromLeft(juce::roundToInt(width * paintPanelWidthRatio)));
 
-    arrowButton.setBounds(bounds.removeFromRight(toolSide).withSizeKeepingCentre(toolSide, toolSide));
-    bounds.removeFromRight(spacing);
-    spanTool.setBounds(bounds.removeFromRight(toolSide).withSizeKeepingCentre(toolSide, toolSide));
+    toolPane.setBounds(bounds.removeFromRight(toolPaneWidth));
     bounds.removeFromRight(spacing);
 
     quaverPaneBounds = bounds.removeFromRight(paneWidth);
@@ -102,6 +91,7 @@ void BottomBar::resized()
     quaverPaneBounds.removeFromLeft(buttonSlotWidth);
 
     countsField.labelWidth = labelWidth;
+    countsField.gap        = paneInset;
 
     countsField.setBounds(quaverPaneBounds.removeFromLeft(labelWidth + editorWidth));
 }

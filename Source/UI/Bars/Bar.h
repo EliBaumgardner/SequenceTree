@@ -28,10 +28,8 @@ protected:
     }
 
     juce::Rectangle<int> getContentBounds() const;
-    void drawSeparator(juce::Graphics& graphics, int position);
 
-    static constexpr int   contentSpacing      = 12;
-    static constexpr float separatorInsetRatio = 0.22f;
+    static constexpr int contentSpacing = 12;
 
     const ApplicationContext& applicationContext;
 

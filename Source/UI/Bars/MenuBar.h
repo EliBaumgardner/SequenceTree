@@ -15,8 +15,8 @@ public:
 
 private:
 
+    void paintOverBar(juce::Graphics& graphics) override;
     void resized() override;
 
     static constexpr float iconInsetRatio = 0.214f;
-    static constexpr int   iconCount      = 3;
 };

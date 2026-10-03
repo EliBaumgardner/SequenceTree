@@ -38,14 +38,24 @@ TraversalFlagNode::TraversalFlagNode(const ApplicationContext& context)
 
 void TraversalFlagNode::paint(juce::Graphics& graphics)
 {
-    const auto   bounds     = getLocalBounds().toFloat();
-    juce::Path   triangle   = buildTrianglePath();
-    float        pulseScale = 1.0f;
-    juce::Colour fillColour = nodeColour;
+    const Theme& theme       = CustomLookAndFeel::get(*this);
+    const auto   bounds      = getLocalBounds().toFloat();
+    juce::Path   triangle    = buildTrianglePath();
+    float        pulseScale  = 1.0f;
+    juce::Colour fillColour  = nodeColour;
+    juce::Colour outline     = theme.borderStrongColour;
 
     if (isHighlighted) {
         pulseScale = 1.0f + 0.1f * std::sin(pulsePhase * juce::MathConstants<float>::pi);
-        fillColour = nodeColour.darker();
+        fillColour = nodeColour.brighter(Theme::hoverFillBrightness);
+    }
+
+    if (isHovered) {
+        outline = theme.hoverRingColour;
+    }
+
+    if (isSelected) {
+        outline = theme.selectionRingColour;
     }
 
     triangle.applyTransform(juce::AffineTransform::scale(pulseScale, pulseScale, bounds.getCentreX(), bounds.getCentreY()));
@@ -53,19 +63,8 @@ void TraversalFlagNode::paint(juce::Graphics& graphics)
     graphics.setColour(fillColour);
     graphics.fillPath(triangle);
 
-    graphics.setColour(outlineColour);
-    graphics.strokePath(triangle, juce::PathStrokeType(1.0f));
-
-    if (isHovered) {
-        graphics.strokePath(triangle, juce::PathStrokeType(2.0f));
-    }
-
-    if (isSelected) {
-        const auto& theme = CustomLookAndFeel::get(*this);
-
-        graphics.setColour(theme.selectionRingColour);
-        graphics.strokePath(triangle, juce::PathStrokeType(Theme::selectionRimWidth));
-    }
+    graphics.setColour(outline);
+    graphics.strokePath(triangle, juce::PathStrokeType(Theme::selectionRingWidth, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
 void TraversalFlagNode::resized()

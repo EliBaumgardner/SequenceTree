@@ -72,7 +72,7 @@ void ValueField::render()
 void ValueField::accumulateNodeGlow(int fieldWidth, int fieldHeight)
 {
     const juce::Identifier valueId           = paintLayerValueId();
-    const float            fieldRadius       = glowRadius / static_cast<float>(fieldScale);
+    const float            fieldRadius       = glowRadius * viewZoom / static_cast<float>(fieldScale);
     const float            fieldRadiusSquare = fieldRadius * fieldRadius;
     const size_t           cellCount         = static_cast<size_t>(fieldWidth) * static_cast<size_t>(fieldHeight);
 
@@ -92,7 +92,7 @@ void ValueField::accumulateNodeGlow(int fieldWidth, int fieldHeight)
         }
 
         const float valueFactor = juce::jlimit(0.0f, 1.0f, static_cast<int>(note.getProperty(valueId)) / maximumMidiValue);
-        const auto  nodeCentre  = node->getBounds().getCentre().toFloat();
+        const auto  nodeCentre  = node->getBounds().getCentre().toFloat().transformedBy(owner.viewTransform);
         const float centreX     = nodeCentre.x / static_cast<float>(fieldScale);
         const float centreY     = nodeCentre.y / static_cast<float>(fieldScale);
         const int   firstColumn = juce::jmax(0,               static_cast<int>(std::floor(centreX - fieldRadius)));
@@ -239,8 +239,8 @@ void ValueField::seedStrokeDensityFromNodes()
         }
 
         const float seedDensity  = juce::jlimit(0.0f, 1.0f, static_cast<int>(note.getProperty(valueId)) / maximumMidiValue);
-        const auto  nodeCentre   = node->getNodeCentre().toFloat();
-        const float nodeRadius   = node->getVisualRadius();
+        const auto  nodeCentre   = node->getNodeCentre().toFloat().transformedBy(owner.viewTransform);
+        const float nodeRadius   = node->getVisualRadius() * viewZoom;
         const float radiusSquare = nodeRadius * nodeRadius;
         const int   firstColumn  = juce::jmax(0,                static_cast<int>(std::floor(nodeCentre.x - nodeRadius)));
         const int   lastColumn   = juce::jmin(canvasWidth - 1,  static_cast<int>(std::ceil (nodeCentre.x + nodeRadius)));
@@ -265,8 +265,9 @@ void ValueField::seedStrokeDensityFromNodes()
 
 void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to, bool rearm)
 {
-    const int canvasWidth  = owner.getWidth();
-    const int canvasHeight = owner.getHeight();
+    const int   canvasWidth     = owner.getWidth();
+    const int   canvasHeight    = owner.getHeight();
+    const float viewBrushRadius = brushRadius * viewZoom;
 
     if (canvasWidth <= 0 || canvasHeight <= 0) {
         return;
@@ -274,14 +275,14 @@ void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to
 
     ensurePaintBuffers();
 
-    if (brushRadius <= 0.0f) {
+    if (viewBrushRadius <= 0.0f) {
         return;
     }
 
-    const int           firstColumn  = juce::jmax(0,                static_cast<int>(std::floor(juce::jmin(from.x, to.x) - brushRadius - 1.0f)));
-    const int           lastColumn   = juce::jmin(canvasWidth - 1,  static_cast<int>(std::ceil (juce::jmax(from.x, to.x) + brushRadius + 1.0f)));
-    const int           firstRow     = juce::jmax(0,                static_cast<int>(std::floor(juce::jmin(from.y, to.y) - brushRadius - 1.0f)));
-    const int           lastRow      = juce::jmin(canvasHeight - 1, static_cast<int>(std::ceil (juce::jmax(from.y, to.y) + brushRadius + 1.0f)));
+    const int           firstColumn  = juce::jmax(0,                static_cast<int>(std::floor(juce::jmin(from.x, to.x) - viewBrushRadius - 1.0f)));
+    const int           lastColumn   = juce::jmin(canvasWidth - 1,  static_cast<int>(std::ceil (juce::jmax(from.x, to.x) + viewBrushRadius + 1.0f)));
+    const int           firstRow     = juce::jmax(0,                static_cast<int>(std::floor(juce::jmin(from.y, to.y) - viewBrushRadius - 1.0f)));
+    const int           lastRow      = juce::jmin(canvasHeight - 1, static_cast<int>(std::ceil (juce::jmax(from.y, to.y) + viewBrushRadius + 1.0f)));
     const float         strokeX      = to.x - from.x;
     const float         strokeY      = to.y - from.y;
     const float         strokeSquare = strokeX * strokeX + strokeY * strokeY;
@@ -308,11 +309,11 @@ void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to
             const float  distance       = std::sqrt(perpendicularX * perpendicularX + perpendicularY * perpendicularY);
             const size_t index          = static_cast<size_t>(row) * static_cast<size_t>(canvasWidth) + static_cast<size_t>(column);
 
-            if (distance >= brushRadius) {
+            if (distance >= viewBrushRadius) {
                 continue;
             }
 
-            const float falloff  = 1.0f - distance / brushRadius;
+            const float falloff  = 1.0f - distance / viewBrushRadius;
             const float coverage = falloff * falloff;
 
             if (rearm) {
@@ -360,10 +361,10 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
             continue;
         }
 
-        const auto  nodeCentre = node->getNodeCentre().toFloat();
+        const auto  nodeCentre = node->getNodeCentre().toFloat().transformedBy(owner.viewTransform);
         const float offsetX    = nodeCentre.x - from.x;
         const float offsetY    = nodeCentre.y - from.y;
-        const float reach      = brushRadius + node->getVisualRadius();
+        const float reach      = (brushRadius + node->getVisualRadius()) * viewZoom;
         float       along      = 0.0f;
 
         if (strokeSquare > 0.0f) {
@@ -404,8 +405,8 @@ std::optional<float> ValueField::densityUnderNode(const Node& node) const
     const int                 canvasHeight  = owner.getHeight();
     const std::vector<float>& density       = paintDensity[static_cast<size_t>(activePaintLayer)];
     const bool                isErasing     = brushStroke == BrushStroke::Erasing;
-    const auto                nodeCentre    = node.getNodeCentre().toFloat();
-    const float               nodeRadius    = node.getVisualRadius();
+    const auto                nodeCentre    = node.getNodeCentre().toFloat().transformedBy(owner.viewTransform);
+    const float               nodeRadius    = node.getVisualRadius() * viewZoom;
     const float               radiusSquare  = nodeRadius * nodeRadius;
     const int                 firstColumn   = juce::jmax(0,                static_cast<int>(std::floor(nodeCentre.x - nodeRadius)));
     const int                 lastColumn    = juce::jmin(canvasWidth - 1,  static_cast<int>(std::ceil (nodeCentre.x + nodeRadius)));

@@ -8,6 +8,8 @@
 
 ValueEditor::ValueEditor(const ApplicationContext& context) : applicationContext(context)
 {
+    const Theme& theme = *applicationContext.lookAndFeel;
+
     setLookAndFeel(applicationContext.lookAndFeel);
 
     textEditor = std::make_unique<juce::TextEditor>();
@@ -25,9 +27,9 @@ ValueEditor::ValueEditor(const ApplicationContext& context) : applicationContext
     textEditor->setColour(juce::TextEditor::backgroundColourId,     juce::Colours::transparentBlack);
     textEditor->setColour(juce::TextEditor::outlineColourId,        juce::Colours::transparentBlack);
     textEditor->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
-    textEditor->setColour(juce::TextEditor::textColourId,           juce::Colours::lightgrey);
+    textEditor->setColour(juce::TextEditor::textColourId,           theme.textColour);
 
-    textEditor->setFont(juce::Font(juce::FontOptions(baseFontHeight)));
+    textEditor->setFont(theme.font(fontStyle, baseFontHeight));
     textEditor->setVisible(false);
 
     addChildComponent(textEditor.get());
@@ -50,19 +52,61 @@ ValueEditor::~ValueEditor()
 
 void ValueEditor::paint(juce::Graphics& graphics)
 {
+    const Theme& theme        = CustomLookAndFeel::get(*this);
+    const auto   bounds       = getLocalBounds().toFloat().reduced(Theme::borderThickness * 0.5f);
+    const double range        = format->maximum - format->minimum;
+    float        cornerRadius = Theme::paneCornerRadius;
+    float        gaugeLevel   = 0.0f;
+    juce::Colour inkColour    = theme.textColour;
+    auto         textBounds   = getLocalBounds();
+
+    if (backdrop == Backdrop::Badge) {
+        cornerRadius = bounds.getHeight() * 0.5f;
+        inkColour    = theme.softTextColour;
+    }
+
+    if (backdrop == Backdrop::Field || backdrop == Backdrop::Gauge) {
+        textBounds = textBounds.reduced(juce::roundToInt(Theme::fieldTextInset), 0);
+    }
+
+    if (range > 0.0) {
+        gaugeLevel = static_cast<float>(juce::jlimit(0.0, 1.0, (static_cast<double>(boundValue.getValue()) - format->minimum) / range));
+    }
+
+    if (backdrop != Backdrop::None) {
+        graphics.setColour(theme.raisedColour);
+        graphics.fillRoundedRectangle(bounds, cornerRadius);
+    }
+
+    if (backdrop == Backdrop::Gauge) {
+        graphics.setColour(theme.accentSoftColour);
+        graphics.fillRoundedRectangle(bounds.withWidth(bounds.getWidth() * gaugeLevel), cornerRadius);
+    }
+
+    if (backdrop != Backdrop::None) {
+        graphics.setColour(theme.borderStrongColour);
+        graphics.drawRoundedRectangle(bounds, cornerRadius, Theme::borderThickness);
+    }
+
     if (! isEditing && ! persistentEditor) {
         const juce::String displayed = format->text(binding, TextPurpose::Display);
 
         graphics.setFont(displayFont(displayed));
-        graphics.setColour(juce::Colours::lightgrey.withAlpha(0.85f));
+        graphics.setColour(inkColour);
 
-        graphics.drawText(displayed, getLocalBounds(), justification, false);
+        graphics.drawText(displayed, textBounds, justification, false);
     }
 }
 
 void ValueEditor::resized()
 {
-    textEditor->setBounds(getLocalBounds());
+    auto textBounds = getLocalBounds();
+
+    if (backdrop == Backdrop::Field || backdrop == Backdrop::Gauge) {
+        textBounds = textBounds.reduced(juce::roundToInt(Theme::fieldTextInset), 0);
+    }
+
+    textEditor->setBounds(textBounds);
 }
 
 void ValueEditor::setFormat(std::unique_ptr<ValueFormat> newFormat)
@@ -101,7 +145,7 @@ void ValueEditor::bindSecondaryProperties()
 
 juce::Font ValueEditor::displayFont(const juce::String& text) const
 {
-    juce::Font font { juce::FontOptions(fontHeight) };
+    juce::Font font = applicationContext.lookAndFeel->font(fontStyle, fontHeight);
 
     if (! autoFitText) {
         return font;

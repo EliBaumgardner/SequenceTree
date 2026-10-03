@@ -30,6 +30,8 @@ public:
     explicit LabeledEditor(const ApplicationContext& context)
         : editor(context)
     {
+        editor.backdrop = ValueEditor::Backdrop::Field;
+
         addAndMakeVisible(label);
         addAndMakeVisible(editor);
     }

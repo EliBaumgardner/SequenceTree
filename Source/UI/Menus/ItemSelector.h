@@ -31,8 +31,9 @@ public:
 
     ValueEditor labelEditor;
 
+    IconButton::Icon leadingIcon = nullptr;
+
     static constexpr float selectorInsetRatio = 0.14f;
-    static constexpr float labelWidthRatio    = 2.0f / 3.0f;
 
 private:
 

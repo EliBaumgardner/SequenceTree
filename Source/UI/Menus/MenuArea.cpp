@@ -36,7 +36,7 @@ void MenuArea::paint(juce::Graphics& graphics)
 {
     const Theme& theme = CustomLookAndFeel::get(*this);
 
-    graphics.setColour(theme.baseDarkColour2);
+    graphics.setColour(theme.windowColour);
     graphics.fillRect(getLocalBounds());
 }
 
@@ -64,5 +64,10 @@ void MenuArea::togglePanel(ActivePanel panel)
     traversalMenu->setVisible(activePanel == ActivePanel::Traversal);
     nodeMenu->setVisible(activePanel == ActivePanel::Node);
 
+    menuBar->traversalIcon.setSelected(activePanel == ActivePanel::Traversal);
+    menuBar->nodeIcon.setSelected(activePanel == ActivePanel::Node);
+
     resized();
+
+    menuBar->repaint();
 }

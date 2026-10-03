@@ -30,7 +30,6 @@ public:
 
     private:
 
-        void paintOverBar(juce::Graphics& graphics) override;
         void resized() override;
 
         ButtonPane undoRedoPane;

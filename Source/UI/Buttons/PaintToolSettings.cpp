@@ -30,11 +30,7 @@ PaintToolSettings::PaintToolSettings(const ApplicationContext& context)
 
 void PaintToolSettings::paint(juce::Graphics& graphics)
 {
-    const Theme& theme  = CustomLookAndFeel::get(*this);
-    const auto   bounds = getLocalBounds().toFloat().reduced(Theme::outerButtonBoundsReduction);
-
-    graphics.setColour(theme.buttonBarColour);
-    graphics.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
+    CustomLookAndFeel::get(*this).drawPane(graphics, getLocalBounds().toFloat());
 }
 
 void PaintToolSettings::resized()
@@ -68,6 +64,9 @@ void PaintToolSettings::configureValueFields(ValueField &valueField, const float
     sizeField.editor.wheelResponse = ValueEditor::WheelResponse::StepValue;
     flowField.editor.wheelResponse = ValueEditor::WheelResponse::StepValue;
 
+    sizeField.editor.backdrop = ValueEditor::Backdrop::Gauge;
+    flowField.editor.backdrop = ValueEditor::Backdrop::Gauge;
+
     sizeField.editor.setJustification(juce::Justification::centredLeft);
     flowField.editor.setJustification(juce::Justification::centredLeft);
 
@@ -80,8 +79,8 @@ void PaintToolSettings::configureValueFields(ValueField &valueField, const float
     sizeField.label.setJustificationType(juce::Justification::centredRight);
     flowField.label.setJustificationType(juce::Justification::centredRight);
 
-    sizeField.label.setText("Size:", juce::dontSendNotification);
-    flowField.label.setText("Rate:", juce::dontSendNotification);
+    sizeField.label.setText("Size", juce::dontSendNotification);
+    flowField.label.setText("Rate", juce::dontSendNotification);
 
     sizeField.editor.setTooltip("Brush size");
     flowField.editor.setTooltip("Brush rate");

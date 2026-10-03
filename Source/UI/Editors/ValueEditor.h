@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Formats/ValueFormat.h"
 #include "../../Util/ApplicationContext.h"
+#include "../Theme/Theme.h"
 
 class ValueEditor : public juce::Component,
                     public juce::SettableTooltipClient,
@@ -31,6 +32,7 @@ public:
     void valueChanged(juce::Value&) override;
 
     enum class WheelResponse { PassToParent, StepValue };
+    enum class Backdrop      { None, Badge, Field, Gauge };
 
     static constexpr float  defaultAutoFitInsetRatio = 0.25f;
     static constexpr float  baseFontHeight           = 9.0f;
@@ -49,7 +51,9 @@ public:
     float fontHeight        = baseFontHeight;
     float autoFitInsetRatio = defaultAutoFitInsetRatio;
 
-    WheelResponse wheelResponse = WheelResponse::PassToParent;
+    WheelResponse    wheelResponse = WheelResponse::PassToParent;
+    Backdrop         backdrop      = Backdrop::None;
+    Theme::FontStyle fontStyle     = Theme::FontStyle::Mono;
 
     bool autoFitText = false;
     bool editable    = true;

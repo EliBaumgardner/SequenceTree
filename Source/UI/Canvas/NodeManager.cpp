@@ -107,7 +107,7 @@ void NodeManager::setPosition(int nodeId)
     }
 
     const NodePosition     nodePosition       = applicationContext.graphState->getNodePosition(nodeId);
-    const int              radius             = nodePosition.radius;
+    const int              radius             = Theme::nodeRadius;
     const int              encapsulatorId     = nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
     const juce::ValueTree  encapsulator       = applicationContext.graphState->getNode(encapsulatorId);
     auto* const            owningEncapsulator = dynamic_cast<Encapsulator*>(find(encapsulatorId));

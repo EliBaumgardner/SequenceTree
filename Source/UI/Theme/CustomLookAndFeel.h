@@ -51,10 +51,12 @@ public:
 
     juce::CaretComponent* createCaretComponent(juce::Component* keyFocusOwner) override;
     void drawCanvas         (juce::Graphics& graphics, const NodeCanvas& canvas);
-    void drawNodeIcon       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawPane           (juce::Graphics& graphics, juce::Rectangle<float> bounds);
+    juce::Rectangle<float> drawButtonTile(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    juce::Colour pressableButtonColour(const ButtonState& state) const;
+    void drawNodeIcon      (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawTreeIcon       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawTraversalIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    juce::Colour pressableButtonColour(const ButtonState& state) const;
     static juce::Rectangle<float> getNodeCircleBounds(juce::Rectangle<float> componentBounds);
     void drawNode          (juce::Graphics& graphics, const NodeVisual& visual);
     void drawModulatorNode (juce::Graphics& graphics, const NodeVisual& visual);
@@ -66,9 +68,11 @@ public:
     void drawTraversalFlagIcon (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawDisplayArrowIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawIncrementIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, bool pointsUp);
+    void drawEyeIcon           (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawTempoIcon         (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawTextButton        (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state,
-                                float fontHeight = labelFontHeight);
+    void drawRulesButton(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state,
+                         float fontHeight = labelFontHeight);
 
     void drawAddIcon        (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawRemoveIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);

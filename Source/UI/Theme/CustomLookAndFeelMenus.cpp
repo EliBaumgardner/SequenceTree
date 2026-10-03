@@ -1,13 +1,23 @@
 #include "CustomLookAndFeel.h"
+#include "BinaryData.h"
 
 CustomLookAndFeel::CustomLookAndFeel()
 {
+    regularTypeface  = juce::Typeface::createSystemTypefaceFor(BinaryData::GeistRegular_ttf, BinaryData::GeistRegular_ttfSize);
+    semiBoldTypeface = juce::Typeface::createSystemTypefaceFor(BinaryData::GeistSemiBold_ttf, BinaryData::GeistSemiBold_ttfSize);
+    monoTypeface     = juce::Typeface::createSystemTypefaceFor(BinaryData::GeistMonoRegular_ttf, BinaryData::GeistMonoRegular_ttfSize);
+
     setColour(juce::PopupMenu::backgroundColourId,            popupMenuColour);
     setColour(juce::PopupMenu::textColourId,                  popupMenuTextColour);
     setColour(juce::PopupMenu::headerTextColourId,            popupMenuTextColour);
     setColour(juce::PopupMenu::highlightedBackgroundColourId, popupMenuHighlightColour);
     setColour(juce::PopupMenu::highlightedTextColourId,       popupMenuHighlightTextColour);
-    setColour(juce::CaretComponent::caretColourId,            baseDarkColour1);
+    setColour(juce::CaretComponent::caretColourId,            accentColour);
+    setColour(juce::TextEditor::highlightColourId,            accentSoftColour);
+    setColour(juce::TextEditor::highlightedTextColourId,      textColour);
+    setColour(juce::TooltipWindow::backgroundColourId,        raisedColour);
+    setColour(juce::TooltipWindow::textColourId,              textColour);
+    setColour(juce::TooltipWindow::outlineColourId,           borderStrongColour);
 }
 
 void CustomLookAndFeel::drawPopupMenuBackgroundWithOptions(juce::Graphics& graphics, int width, int height,
@@ -90,14 +100,14 @@ void CustomLookAndFeel::drawPopupMenuItem(juce::Graphics& graphics, const juce::
     graphics.drawFittedText(text, textBounds.toNearestInt(), juce::Justification::centredLeft, 1);
 
     if (shortcutKeyText.isNotEmpty()) {
-        graphics.setFont(juce::Font(juce::FontOptions(labelFontHeight * 0.85f)));
+        graphics.setFont(font(FontStyle::Mono, labelFontHeight * 0.85f));
         graphics.drawText(shortcutKeyText, textBounds, juce::Justification::centredRight, true);
     }
 }
 
 juce::Font CustomLookAndFeel::getPopupMenuFont()
 {
-    return juce::Font(juce::FontOptions(labelFontHeight));
+    return font(FontStyle::Regular, labelFontHeight);
 }
 
 void CustomLookAndFeel::getIdealPopupMenuItemSize(const juce::String& text, bool isSeparator,
