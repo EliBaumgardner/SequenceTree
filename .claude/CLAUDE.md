@@ -99,7 +99,7 @@ The analysis agent is the project's research analyst — whichever agent `[pipel
 - Nothing in `Unreviewed/` is trusted — the analysis agent's line numbers drift and some of its claims are wrong or already fixed. A proposal is never built on an unreviewed report.
 - **`/implement`** (the `implement` skill) builds one proposal from `Unimplemented/`. Its job is implementation, not verification: `/review` and `/propose` already did that, so it only checks whether the files the plan touches have changed since the proposal was written, and asks if the code it depends on has changed shape. It then carries out the plan one step at a time, and when every step is done it moves the proposal to `Implemented/` with implementation notes. An implemented proposal is never implemented again.
 - `/review` and `/propose` never edit `Source/`; only `/implement` does, and only after the owner has approved the proposal and answered its Decisions for the Owner.
-- `.claude/notes/ongoing-issues.md` stays the record of confirmed and resolved problems; reviews cite it rather than rediscovering what it already holds.
+- `.claude/notes/ongoing-issues.md` is a log of problems noticed in passing while working on something else, kept to go back over later or in a new session. Each entry says where the problem is, what it is, how it was confirmed and its status, and comes out of the file once it is solved. Reviews and proposals still read it so they don't rediscover an open entry; what was solved is in `Proposals/Implemented/` and the git history.
 
 ## Architecture Overview
 

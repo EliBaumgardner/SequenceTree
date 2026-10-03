@@ -1,104 +1,16 @@
 # Ongoing Issues
 
-Problems confirmed by reading the code on 2026-09-24, while reviewing an external architectural audit. Claims from that audit that turned out false or overstated are left out. Each entry says what was verified and what still needs checking.
+Problems noticed in passing while working on something else, kept to go back over later or in a new session. Each entry says where the problem is, what it is, how it was confirmed and its status. An entry comes out of this file once it is solved.
 
-## 1. `peekNextTarget` writes traversal state
+## `peekCrossTreeNode` is misnamed
 
-- **Where:** `peekNextTarget` in `Source/Audio/TraversalLogic.cpp`, called from `Source/Audio/TraversalDispatcher.cpp:209`.
-- **Problem (corrected):** the slot it wrote was `SwitchCandidate`, not `LastNode`. It wrote it through `selectNextChild`, plus a direct `-1` write when a tree jump was due. When the parent then advanced, `selectSwitchNode` read the peeked candidate as if a real step had chosen it. So a switch hold started one visit early, the parent's `Count` lagged behind (visible in the count display, `parent.count` in scripts, and modulator-root eligibility), and siblings that tie on count limit were held on the wrong child. Neither the modulator walk nor alternatives peek, so the primary walk was the only one that diverged.
-- **Status:** resolved 2026-09-24. `selectNextChild` and `peekNextTarget` are `const`. Each real selection (`advance`, `ModulatorWalk::decide`) records `SwitchCandidate` next to `LastNode`. Since #12, `advanceAlternative` no longer records `SwitchCandidate`, and writes `LastNode` only for an alternative. The jump-time `SwitchCandidate = -1` moved into `advance`, ahead of the switch hold, so a due tree jump still wins over a hold. Covered by "peeking at the next target leaves the walk unchanged".
+- **Where:** `TraversalLogic::peekCrossTreeNode` in `Source/Audio/TraversalLogic.cpp`, called from `TraversalDispatcher::dispatchCrossTree` and from `Tests/TraversalTests.cpp`.
+- **Problem:** it advances the `CrossTree` and `CrossTreeSwitch` counters, the only place they advance, but "peek" says it only inspects. Agreed new name: `advanceCrossTreeCounts`.
+- **Blocked:** `refactor.replace` refuses because the rename reaches `Tests/`. `refactor/editing/replace.py:101` checks `SOURCES` where `rewrite.py` and `signature.py` check `EDIT_ROOTS`, so no rename can touch a test file.
+- **Status:** open 2026-10-03, waiting on the `replace.py` fix in research-suite.
 
-## 2. `peekCrossTreeNode` is misnamed
+## Trails on dashed arrows may trace the dash outlines
 
-- **Where:** `Source/Audio/TraversalLogic.cpp:410-481`, called once from `TraversalDispatcher::dispatchCrossTree` (`TraversalDispatcher.cpp:390`).
-- **Problem:** it advances the `CrossTree` and `CrossTreeSwitch` counters. It is the only place those counters advance, so the behaviour is intended, but the name says it only inspects.
-- **Status:** naming only, no behaviour change needed. Rename it with `refactor.replace`.
-
-## 3. Graph publishing only happens from the UI
-
-- **Where:** every `makeRTGraph` / `rebuildAllGraphs` / `updateDurationMaps` call lives in `UI/Canvas/NodeCanvas.cpp`, `UI/Canvas/NodeManager.cpp` and `UI/Canvas/ArrowManager.cpp`.
-- **Problem:** the audio thread only gets a new graph when an editor exists to drive the rebuild. The data model depends on the view to reach the audio thread.
-- **Still to check:** whether any path edits the graph with no editor open, such as host state restore or undo with the window closed. If one does, the audio thread keeps playing a stale graph.
-- **Open design question:** where the rebuild trigger belongs. `GraphState` is one candidate, but it is the data model. Decide before writing anything.
-
-## 4. Node IDs are never reused, and the audio state table caps them at 1024
-
-- **Where:** `nodeIdIncrement` in `Source/Graph/GraphState.cpp:133`, `:167` and `Source/Graph/EncapsulationOps.cpp:15`. It is recomputed on load as the highest ID in use (`GraphState.cpp:109-115`). The cap is `NodeStateTable::maxNodeIds` (`Source/Audio/NodeStateTable.h`).
-- **Problem:** IDs only go up, and deleted nodes' IDs are never reclaimed, even across reloads. The limit applies to the highest ID, not to the number of nodes, so a long editing session can pass it with a small graph.
-- **Consequence:** debug builds assert. Release builds silently send traversal state for any ID ≥ 1024 to a sink (`NodeStateTable::isAddressable`), so sequencing breaks with no visible sign. `TraversalDispatcher.cpp:17` guards on the same limit.
-- **Also affected:** `TraversalDispatcher::markChordVisited` indexed `chordVisitStamps` by ID, so a chord member with an ID ≥ 1024 was silently never played.
-- **Status:** resolved 2026-09-24 by mapping IDs to dense rows inside the tables, not in `RTGraphBuilder`. `NodeRowMap` (in `NodeStateTable.h`) is a fixed-capacity, preallocated ID → row map. `NodeStateTable` claims a row on the first write to an ID and frees every row in `clear()`. The chord visited set is a second `NodeRowMap`, cleared at the start of each chord. Graph IDs stay monotonic, so a new node never inherits a deleted node's counts. The limit is now 1024 distinct nodes written by one traversal between resets, or 1024 nodes in one chord, not the highest ID. Covered by "node ids past the state table size walk like small ones".
-
-## 5. Host transport overrides the internal transport
-
-- **Where:** `Source/Plugin/PluginProcessor.cpp:280-295`.
-- **Problem:** whenever the plugin isn't standalone, `isPlaying` is overwritten with the host's transport state on every block. Inside a DAW, pressing the plugin's play button while the host is stopped gets undone on the next block.
-- **Conflict:** CLAUDE.md's Architecture Overview says "Transport is internal … not the host transport." That is only true standalone.
-- **Open question:** inside a host, should the plugin follow the host transport (update CLAUDE.md) or run off its own play button (fix the code)?
-
-## 6. Idle message-thread wakeups when the editor is closed
-
-- **Where:** `BlockScope::~BlockScope` in `Source/Plugin/PluginProcessor.cpp:254-264`, and `SequenceTreeAudioProcessor::handleAsyncUpdate` (`:363-378`).
-- **Problem:** with no editor, `handleAsyncUpdate` returns without draining the `AudioUIBridge` FIFOs. Once they fill, `hasPendingCommands()` stays true. When playback then stops, the audio thread keeps calling `triggerAsyncUpdate` at block rate, and the message thread keeps waking to do nothing while the plugin is idle.
-- **Not a problem:** reopening the editor doesn't replay stale commands. `AudioCommandDrainer`'s constructor discards whatever is queued when the canvas is built, and `drainAll` resyncs after an overflow. (Resolved 2026-09-25: it used to discard on the first drain instead, which in the standalone was the first play, so the root's highlight and arrow were dropped and playback looked like it started on the second node.)
-- **Status:** confirmed, low priority. A fix has to make the FIFOs empty. Only checking for an editor before triggering would stop the wakeups but leave the FIFOs full.
-
-## 7. `getTargetNode` dereferenced an unchecked lookup on the audio thread
-
-- **Where:** `TraversalLogic::getTargetNode` was `return *nodes.find(primary.target);` (`Source/Audio/TraversalLogic.cpp:542`), called at `TraversalDispatcher.cpp:721` and `:747`.
-- **Problem:** `NodeMap::find` returns `nullptr` for a missing ID, so the dereference was undefined behaviour rather than the `std::out_of_range` of the older `.at()` lookup. `:721` was safe only because `repeatValue` defaults to 1 when the target is missing. `:747` looked up the same ID twice.
-- **Related:** `removeDeletedTraversals` (`Source/Audio/TraversalSession.cpp`) checks only the home root, so a running traversal can outlive its current target. This is still open.
-- **Status:** resolved 2026-09-27 (`Proposals/Implemented/traversal_target_lookup_hygiene.md`). `getTargetNode` is gone. The repeat branch checks the `currentEntry` it already looked up, and the next-note branch looks the target up once and checks it.
-
-## 8. `getRootNode` was dead code
-
-- **Where:** `TraversalLogic::getRootNode` was `return *nodes.find(rootId);` (`Source/Audio/TraversalLogic.cpp:543`, `TraversalLogic.h:152`).
-- **Problem:** it had no callers and dereferenced an unchecked `find`.
-- **Status:** resolved 2026-09-27 (`Proposals/Implemented/traversal_target_lookup_hygiene.md`). Deleted.
-
-## 9. The only plugin parameter is a dummy
-
-- **Where:** `SequenceTreeAudioProcessor::createParameterLayout` (`Source/Plugin/PluginProcessor.cpp:380-392`).
-- **Problem:** it registers one `"gain"` parameter that nothing reads. The host sees one automatable control that does nothing.
-- **Status:** confirmed. Remove it, or replace it with real controls.
-
-## 10. Arrow trail drawing flattens each curve three times per trail per frame
-
-- **Where:** `trimPathToFraction` and `drawArrowProgress` in `Source/UI/Theme/CustomLookAndFeelArrows.cpp`.
-- **Problem:** for every active trail on every frame, the shaft is copied and translated, flattened once to measure its length (`:131`), flattened again to trim it (`:148`), and flattened a third time inside `g.strokePath`.
-- **Possible fix:** the per-trail offset is a pure translation (`:215-217`), so one arc-length table per shaft, rebuilt when the geometry changes, would serve every trail and remove the first two passes.
-- **Not a problem:** on macOS `strokePath` goes straight to CoreGraphics (`juce_CoreGraphicsContext_mac.mm:677`), so JUCE flattens twice per trail, not three times. A scratch benchmark against a CoreGraphics image measured the copy, translate and trim at 0.13 µs per trail on a straight shaft and 0.79 µs on a 30-segment cubic, against 77–93 µs for `strokeArrowShaft`'s three strokes and about 9 µs for one trail's trim and stroke. The arc-length table would save under 1 µs per trail per frame while adding geometry-invalidation state to `Arrow`, whose shape changes every frame during a snap or drag. If arrow drawing ever shows up in a profile, the three shaft strokes are where the time goes.
-- **Status:** closed 2026-10-03, not fixed.
-
-## 11. The modulator walk ignores trigger limits
-
-- **Where:** `registerTrigger` is called only from `TraversalLogic::advance`. `ModulatorWalk::decide` never calls it.
-- **Problem:** a spent trigger limit makes a node ineligible in the primary walk, but a modulator with the same limit is played forever. This breaks the rule that every walk is the same traversal.
-- **Evidence:** the "trigger limit" section of the parity test in `Tests/TraversalTests.cpp` fails at HEAD (7141024) as well as after the #1 fix: `ctest` reports 21/22.
-- **Status:** resolved 2026-09-24. `decide` now calls `registerTrigger` for a newly selected child, the same place `advance` does: inside the fresh-selection branch, so a switch hold doesn't count as a trigger.
-
-## 12. Alternatives overwrite their host's switch candidate
-
-- **Where:** `TraversalLogic::advanceAlternative` in `Source/Audio/TraversalLogic.cpp`. It wrote `SwitchCandidate[currentAltId]` and `LastNode[currentAltId]` after every alternative selection.
-- **Problem:** when a host `H` picked its first alternative `A`, it wrote `SwitchCandidate[H] = A`. That slot is `H`'s own child switch hold, which `selectSwitchNode` reads in both `advance` and `ModulatorWalk::decide`. So adding an alternative cut short the hold on `H`'s children. When `A.switchCountLimit > 1`, the walker stepped onto `A` as a primary target, and the modulator walk diverged from the node walk. The same write set `LastNode[H] = A` (or `-1` when no alternative was eligible), so a script's `parent.lastChild` on a host could return an alternative instead of a child.
-- **Evidence:** `alternativeShape` with the first alternative's switch count at 3 gave `1 2 1 2 10 10 1 2 10 10 11 …`. A host with a held child (count limit 2, switch count 3), a sibling and a default alternative gave `1 2 4 1 2 10 3 1 2 3 1 2 10 4 …`, so the hold on 3 was cut to 2.
-- **Status:** resolved 2026-09-25 (`Proposals/Implemented/alternative_switch_candidate_collision.md`). The `SwitchCandidate` write is gone, and `LastNode` is written only when `currentAltId != parentId`. Covered by "an alternative's switch count holds only that alternative", "an alternative leaves its host's switch hold on its children intact", the "held alternatives" and "host hold beside an alternative" parity sections, and "a host's last child is never one of its alternatives".
-
-## 13. The primary arrow and note length ignore the switch hold
-
-- **Where:** `TraversalLogic::peekNextTarget` in `Source/Audio/TraversalLogic.cpp`, read by `TraversalDispatcher::dispatchNode` (`TraversalDispatcher.cpp:198`) for `resolveDuration` and `dispatchPrimaryArrow`.
-- **Problem:** `peekNextTarget` checked for a tree jump and then made a fresh `selectNextChild` pick. `advance` applies the switch hold (`selectSwitchNode`) between those two. So on every held visit after the first, the arrow animated toward the fresh pick, usually the sibling, and the note took that arrow's length, while the walker then entered the held child. The modulator walk was unaffected: it draws from `decideNextModulator`, which runs the real decision.
-- **Status:** resolved 2026-09-25. `peekNextTarget` reads `SwitchCandidate` and `SwitchCount` after the tree-jump check and returns the held child when the hold continues, without writing. Covered by "the peeked target is the node the walk enters next". A scratch sweep of 1944 shapes shows no mismatches on advanced steps, against 102,713 at 7f59922.
-
-## 14. The primary arrow ignores an encapsulated group's loop back to its entry
-
-- **Where:** `TraversalLogic::peekNextTarget` against `advance`'s `encapsulationLoopTarget` redirect.
-- **Problem:** when a member's fresh pick leaves its group before the group's sub-loop is done, `advance` enters the group's entry instead, but `peekNextTarget` returns the exit child. The arrow and the note length follow the exit arrow, then the walker jumps back to the entry. Shape: root 1 → entry 2 (sub-loop 2) → member 3 → exit 4. At 3 on the first pass, peek gives 4 and the walk enters 2.
-- **Status:** confirmed 2026-09-25, not yet fixed.
-
-## 15. Starting a walk could allocate on the audio thread
-
-- **Where:** `TraversalSession::findFirstUnlinkedRootId`, called from `startTraversalsFromFirstRoot`, which runs from `driveWalk` (on an empty pool) and from `beginReplay`.
-- **Problem:** to find the lowest-ID root that no arrow points into, it pushed one entry per arrow into a root node onto `linkedRootScratch`, which was reserved to 256. A graph with more than 256 root-bound arrows reallocated inside `processBlock`.
-- **Evidence:** "starting a walk stays realtime-safe with more root-bound arrows than the scratch reserve" (`Tests/RealtimeTests.cpp`), with one root, 257 children each arrowed to a second root. It aborted under RealtimeSanitizer at 2233a2a with `malloc` ← `findFirstUnlinkedRootId` ← `startTraversalsFromFirstRoot` ← `beginReplay` ← `driveWalk` ← `processBlock`.
-- **Status:** resolved 2026-09-30 (`Proposals/Implemented/first_unlinked_root_off_the_audio_thread.md`). `AudioSnapshotPublisher::publishGraph` computes it on the message thread into `NodeMap::firstUnlinkedRootId`. `startTraversalsFromFirstRoot` reads the field and checks the lookup for `nullptr`. The scratch vector and the audio-thread sort are gone. Covered by the realtime test above and by "the published graph names its first unlinked root" (`Tests/GraphTests.cpp`).
+- **Where:** `CustomLookAndFeel::drawArrow` in `Source/UI/Theme/CustomLookAndFeelArrows.cpp`.
+- **Problem:** when `isDashed()` is true, `shaft` is replaced by `createDashedStroke`'s outline before `drawArrowProgress` reads it, so a trail is trimmed along the perimeter of every dash rather than the centre line. Arrows leaving a traversal flag are dashed.
+- **Status:** noticed 2026-10-03 while measuring the trail trimming cost, from reading the code only. Check on the canvas whether trails play on dashed arrows and how they look.

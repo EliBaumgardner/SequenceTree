@@ -1,4 +1,4 @@
-k#include "TraversalLogic.h"
+#include "TraversalLogic.h"
 
 #include <algorithm>
 #include <ranges>
@@ -635,11 +635,27 @@ const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes)
 
     const RTNode* const peekNode = nodes.find(peekTargetId);
 
-    if (peekNode != nullptr) {
+    if (peekNode == nullptr) {
+        return nullptr;
+    }
+
+    if (targetNode == nullptr || targetNode->encapsulationEntryId == -1) {
         return peekNode;
     }
 
-    return nullptr;
+    const int           entryId      = targetNode->encapsulationEntryId;
+    const RTNode* const entryNode    = nodes.find(entryId);
+    const int           subLoopCount = nodeState.get(NodeStateSlot::SubRootCount, entryId) + 1;
+
+    if (entryId != primary.subRootNode || peekNode->encapsulationEntryId == entryId || entryNode == nullptr) {
+        return peekNode;
+    }
+
+    if (entryNode->subLoopCountLimit > 0 && subLoopCount >= entryNode->subLoopCountLimit) {
+        return peekNode;
+    }
+
+    return entryNode;
 }
 
 void TraversalLogic::handleLoopReset(const NodeMap& nodes, StepResult& result)

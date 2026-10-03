@@ -383,7 +383,7 @@ TEST_CASE("the peeked target is the node the walk enters next", "[traversal]")
 
     const int steps = 64;
 
-    for (const NodeMap& nodes : { countGap, switchCountShape(), hostHoldWithAlternativeShape(), alternativeShape(3) }) {
+    for (const NodeMap& nodes : { countGap, switchCountShape(), hostHoldWithAlternativeShape(), alternativeShape(3), encapsulationShape() }) {
         TraversalLogic logic;
 
         logic.nodeState.prepare();
