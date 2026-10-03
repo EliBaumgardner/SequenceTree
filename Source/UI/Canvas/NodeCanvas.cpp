@@ -42,6 +42,15 @@ void NodeCanvas::paint(juce::Graphics& graphics)
     }
 }
 
+void NodeCanvas::clearCanvas()
+{
+    arrowManager.clear();
+    nodeManager.clear();
+
+    gridOriginSet = false;
+    gridVisible   = false;
+}
+
 void NodeCanvas::enqueueAsyncUpdate(const AsyncUpdate& update)
 {
     asyncUpdates.push_back(update);
@@ -128,15 +137,6 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
         gridSpacing   = ArrowInfo::pixelsPerGridSpace;
         gridOriginSet = true;
     }
-}
-
-void NodeCanvas::clearCanvas()
-{
-    arrowManager.clear();
-    nodeManager.clear();
-
-    gridOriginSet = false;
-    gridVisible   = false;
 }
 
 void NodeCanvas::handleAsyncUpdate()

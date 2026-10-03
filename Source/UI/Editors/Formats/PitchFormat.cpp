@@ -1,6 +1,10 @@
 #include "ValueFormat.h"
 #include "../../../Util/NodeInfo.h"
 
+PitchFormat::PitchFormat() : NumberFormat(minimumMidiPitch, maximumMidiPitch)
+{
+}
+
 static const juce::String pitchNames[] = {
     juce::String(L"C"),
     juce::String(L"C♯"),
@@ -17,10 +21,6 @@ static const juce::String pitchNames[] = {
 };
 
 static constexpr int semitonesPerOctave = 12;
-
-PitchFormat::PitchFormat() : NumberFormat(minimumMidiPitch, maximumMidiPitch)
-{
-}
 
 juce::String PitchFormat::text(const ValueBinding& binding, TextPurpose purpose) const
 {

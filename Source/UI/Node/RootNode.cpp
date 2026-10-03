@@ -43,28 +43,6 @@ void RootNode::resized()
     Node::resized();
 }
 
-void RootNode::bindToTree()
-{
-    Node::bindToTree();
-
-    if (! nodeValueTree.isValid()) {
-        return;
-    }
-
-    const juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
-    juce::StringArray     equippedReferences;
-
-    for (int referenceIndex = 0; referenceIndex < traversalChildrenIds.getNumChildren(); ++referenceIndex) {
-        const juce::ValueTree reference = traversalChildrenIds.getChild(referenceIndex);
-        const TraversalKey    key { static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
-                                 static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) };
-
-        equippedReferences.add(TraversalFlagFormat::describe(key));
-    }
-
-    rootRectangle.traversalEditor.commitText(equippedReferences.joinIntoString(" "));
-}
-
 void RootNode::equipTraversals()
 {
     if (! nodeValueTree.isValid()) {
@@ -98,6 +76,28 @@ void RootNode::equipTraversals()
 
         traversalChildrenIds.addChild(traversalIdTree, -1, nullptr);
     }
+}
+
+void RootNode::bindToTree()
+{
+    Node::bindToTree();
+
+    if (! nodeValueTree.isValid()) {
+        return;
+    }
+
+    const juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
+    juce::StringArray     equippedReferences;
+
+    for (int referenceIndex = 0; referenceIndex < traversalChildrenIds.getNumChildren(); ++referenceIndex) {
+        const juce::ValueTree reference = traversalChildrenIds.getChild(referenceIndex);
+        const TraversalKey    key { static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
+                                 static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) };
+
+        equippedReferences.add(TraversalFlagFormat::describe(key));
+    }
+
+    rootRectangle.traversalEditor.commitText(equippedReferences.joinIntoString(" "));
 }
 
 juce::Point<int> RootNode::getNodeCentre() const

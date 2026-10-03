@@ -46,66 +46,60 @@ ArrowInfo ArrowBindingOps::getArrowInfo(const juce::ValueTree& arrowTree)
     return arrowInfo;
 }
 
-void ArrowBindingOps::applyNodeBinding(ArrowInfo& arrowInfo, int nodeId,
-                                       const juce::ValueTree& newArrow) const
+void ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManager* undoManager)
 {
-    const juce::ValueTree node = graphState.getNode(nodeId);
+    juce::ValueTree node = graphState.getNode(nodeId);
 
     if (! node.isValid()) {
         return;
     }
 
-    auto targetsAlternative = [this](const juce::ValueTree& arrowTree) {
-        if (! arrowTree.hasProperty(ValueTreeIdentifiers::Id)) {
-            return false;
+    const int centreX = node.getProperty(ValueTreeIdentifiers::XPosition);
+    const int centreY = node.getProperty(ValueTreeIdentifiers::YPosition);
+
+    const auto parents = graphState.parentIdsOf.find(nodeId);
+
+    if (parents != graphState.parentIdsOf.end()) {
+        for (const int parentId : parents->second) {
+            const juce::ValueTree parent = graphState.getNode(parentId);
+
+            if (! parent.isValid()) {
+                continue;
+            }
+
+            const int parentX = parent.getProperty(ValueTreeIdentifiers::XPosition);
+            const int parentY = parent.getProperty(ValueTreeIdentifiers::YPosition);
+
+            applyArrowPitchOffset(graphState.getConnection(parentId, nodeId), nodeId, centreX - parentX, centreY - parentY, undoManager);
         }
-
-        const int targetId = arrowTree.getProperty(ValueTreeIdentifiers::Id);
-
-        const juce::Identifier targetType = graphState.getNode(targetId).getType();
-
-        return targetType == ValueTreeIdentifiers::AlternativeNodeData
-            || targetType == ValueTreeIdentifiers::AlternativeModulatorData;
-    };
-
-    juce::ValueTree establishedArrow;
+    }
 
     const juce::ValueTree childIds = node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
-    for (int i = 0; i < childIds.getNumChildren() && ! establishedArrow.isValid(); ++i) {
-        if (childIds.getChild(i) != newArrow && ! targetsAlternative(childIds.getChild(i))) {
-            establishedArrow = childIds.getChild(i);
+    for (int i = 0; i < childIds.getNumChildren(); ++i) {
+        juce::ValueTree arrowTree = childIds.getChild(i);
+
+        const int childId = arrowTree.getProperty(ValueTreeIdentifiers::Id);
+
+        const juce::ValueTree child = graphState.getNode(childId);
+
+        if (! child.isValid()) {
+            continue;
         }
+
+        const int childX = child.getProperty(ValueTreeIdentifiers::XPosition);
+        const int childY = child.getProperty(ValueTreeIdentifiers::YPosition);
+
+        applyArrowPitchOffset(arrowTree, childId, childX - centreX, childY - centreY, undoManager);
     }
 
     const juce::ValueTree danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
 
-    for (int i = 0; i < danglingArrows.getNumChildren() && ! establishedArrow.isValid(); ++i) {
-        if (danglingArrows.getChild(i) != newArrow) {
-            establishedArrow = danglingArrows.getChild(i);
-        }
-    }
+    for (int i = 0; i < danglingArrows.getNumChildren(); ++i) {
+        juce::ValueTree arrowTree = danglingArrows.getChild(i);
 
-    if (establishedArrow.isValid()) {
-        const ArrowInfo establishedInfo = getArrowInfo(establishedArrow);
-
-        arrowInfo.xBinding    = establishedInfo.xBinding;
-        arrowInfo.yBinding    = establishedInfo.yBinding;
-        arrowInfo.xMultiplier = establishedInfo.xMultiplier;
-        arrowInfo.yMultiplier = establishedInfo.yMultiplier;
-    }
-
-    if (targetsAlternative(newArrow)) {
-        std::swap(arrowInfo.xBinding,    arrowInfo.yBinding);
-        std::swap(arrowInfo.xMultiplier, arrowInfo.yMultiplier);
-
-        if (arrowInfo.xBinding == ArrowBinding::PitchBind) {
-            arrowInfo.xBinding = ArrowBinding::NoBind;
-        }
-
-        if (arrowInfo.yBinding == ArrowBinding::PitchBind) {
-            arrowInfo.yBinding = ArrowBinding::NoBind;
-        }
+        applyArrowPitchOffset(arrowTree, nodeId, static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
+                              static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)), undoManager);
     }
 }
 
@@ -182,59 +176,65 @@ void ArrowBindingOps::clearArrowDurations(int nodeId, juce::UndoManager* undoMan
     }
 }
 
-void ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManager* undoManager)
+void ArrowBindingOps::applyNodeBinding(ArrowInfo& arrowInfo, int nodeId,
+                                       const juce::ValueTree& newArrow) const
 {
-    juce::ValueTree node = graphState.getNode(nodeId);
+    const juce::ValueTree node = graphState.getNode(nodeId);
 
     if (! node.isValid()) {
         return;
     }
 
-    const int centreX = node.getProperty(ValueTreeIdentifiers::XPosition);
-    const int centreY = node.getProperty(ValueTreeIdentifiers::YPosition);
-
-    const auto parents = graphState.parentIdsOf.find(nodeId);
-
-    if (parents != graphState.parentIdsOf.end()) {
-        for (const int parentId : parents->second) {
-            const juce::ValueTree parent = graphState.getNode(parentId);
-
-            if (! parent.isValid()) {
-                continue;
-            }
-
-            const int parentX = parent.getProperty(ValueTreeIdentifiers::XPosition);
-            const int parentY = parent.getProperty(ValueTreeIdentifiers::YPosition);
-
-            applyArrowPitchOffset(graphState.getConnection(parentId, nodeId), nodeId, centreX - parentX, centreY - parentY, undoManager);
+    auto targetsAlternative = [this](const juce::ValueTree& arrowTree) {
+        if (! arrowTree.hasProperty(ValueTreeIdentifiers::Id)) {
+            return false;
         }
-    }
+
+        const int targetId = arrowTree.getProperty(ValueTreeIdentifiers::Id);
+
+        const juce::Identifier targetType = graphState.getNode(targetId).getType();
+
+        return targetType == ValueTreeIdentifiers::AlternativeNodeData
+            || targetType == ValueTreeIdentifiers::AlternativeModulatorData;
+    };
+
+    juce::ValueTree establishedArrow;
 
     const juce::ValueTree childIds = node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
-    for (int i = 0; i < childIds.getNumChildren(); ++i) {
-        juce::ValueTree arrowTree = childIds.getChild(i);
-
-        const int childId = arrowTree.getProperty(ValueTreeIdentifiers::Id);
-
-        const juce::ValueTree child = graphState.getNode(childId);
-
-        if (! child.isValid()) {
-            continue;
+    for (int i = 0; i < childIds.getNumChildren() && ! establishedArrow.isValid(); ++i) {
+        if (childIds.getChild(i) != newArrow && ! targetsAlternative(childIds.getChild(i))) {
+            establishedArrow = childIds.getChild(i);
         }
-
-        const int childX = child.getProperty(ValueTreeIdentifiers::XPosition);
-        const int childY = child.getProperty(ValueTreeIdentifiers::YPosition);
-
-        applyArrowPitchOffset(arrowTree, childId, childX - centreX, childY - centreY, undoManager);
     }
 
     const juce::ValueTree danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
 
-    for (int i = 0; i < danglingArrows.getNumChildren(); ++i) {
-        juce::ValueTree arrowTree = danglingArrows.getChild(i);
+    for (int i = 0; i < danglingArrows.getNumChildren() && ! establishedArrow.isValid(); ++i) {
+        if (danglingArrows.getChild(i) != newArrow) {
+            establishedArrow = danglingArrows.getChild(i);
+        }
+    }
 
-        applyArrowPitchOffset(arrowTree, nodeId, static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
-                              static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)), undoManager);
+    if (establishedArrow.isValid()) {
+        const ArrowInfo establishedInfo = getArrowInfo(establishedArrow);
+
+        arrowInfo.xBinding    = establishedInfo.xBinding;
+        arrowInfo.yBinding    = establishedInfo.yBinding;
+        arrowInfo.xMultiplier = establishedInfo.xMultiplier;
+        arrowInfo.yMultiplier = establishedInfo.yMultiplier;
+    }
+
+    if (targetsAlternative(newArrow)) {
+        std::swap(arrowInfo.xBinding,    arrowInfo.yBinding);
+        std::swap(arrowInfo.xMultiplier, arrowInfo.yMultiplier);
+
+        if (arrowInfo.xBinding == ArrowBinding::PitchBind) {
+            arrowInfo.xBinding = ArrowBinding::NoBind;
+        }
+
+        if (arrowInfo.yBinding == ArrowBinding::PitchBind) {
+            arrowInfo.yBinding = ArrowBinding::NoBind;
+        }
     }
 }

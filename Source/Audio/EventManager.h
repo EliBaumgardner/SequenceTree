@@ -16,7 +16,7 @@ public:
 
     explicit EventManager(AudioUIBridge& bridgeRef);
 
-    void followTempo(double tempoMultiplier);
+    void followTempo  (double tempoMultiplier);
     void processEvents(int numSamples, const DispatchContext& context);
 
 private:

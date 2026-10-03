@@ -25,73 +25,6 @@ void ValueField::setActivePaintLayer(PaintLayer layer)
     owner.repaint();
 }
 
-void ValueField::updateBrushCursor()
-{
-    if (!owner.paintMode) {
-        return;
-    }
-
-    const int      cursorSize = juce::jmax(1, static_cast<int>(brushRadius * viewZoom * 2.0f));
-    const int      hotspot    = cursorSize / 2;
-    juce::Image    cursorImage(juce::Image::ARGB, cursorSize, cursorSize, true);
-    juce::Graphics cursorGraphics(cursorImage);
-
-    cursorGraphics.setColour(juce::Colours::black);
-    cursorGraphics.drawEllipse(cursorImage.getBounds().toFloat().reduced(1.0f), 1.0f);
-
-    owner.setMouseCursor(juce::MouseCursor(cursorImage, hotspot, hotspot));
-}
-
-void ValueField::refresh()
-{
-    if (!owner.paintMode) {
-        return;
-    }
-
-    render();
-
-    owner.repaint();
-}
-
-void ValueField::paintStroke(juce::Point<float> canvasPosition, bool isStart, bool erase)
-{
-    if (isStart) {
-        brushStroke = BrushStroke::Painting;
-
-        if (erase) {
-            brushStroke = BrushStroke::Erasing;
-        }
-
-        ensurePaintBuffers();
-
-        std::ranges::fill(strokeMask, 0.0f);
-
-        seedStrokeDensityFromNodes();
-
-        strokePreviousPoint = canvasPosition;
-
-        startTimerHz(dwellTimerHz);
-    }
-
-    brushCurrentPoint = canvasPosition;
-
-    accumulateStroke(strokePreviousPoint, canvasPosition);
-    applyPaintToNodes(strokePreviousPoint, canvasPosition);
-
-    strokePreviousPoint = canvasPosition;
-}
-
-void ValueField::endStroke()
-{
-    if (brushStroke == BrushStroke::Idle) {
-        return;
-    }
-
-    brushStroke = BrushStroke::Idle;
-
-    stopTimer();
-}
-
 void ValueField::render()
 {
     const int canvasWidth  = owner.getWidth();
@@ -190,6 +123,82 @@ void ValueField::accumulateNodeGlow(int fieldWidth, int fieldHeight)
             }
         }
     }
+}
+
+juce::Identifier ValueField::paintLayerValueId() const
+{
+    switch (activePaintLayer) {
+        case PaintLayer::Duration: return ValueTreeIdentifiers::MidiDuration;
+        case PaintLayer::Velocity: return ValueTreeIdentifiers::MidiVelocity;
+        case PaintLayer::Pitch:    return ValueTreeIdentifiers::MidiPitch;
+    }
+
+    return ValueTreeIdentifiers::MidiPitch;
+}
+
+juce::Colour ValueField::mapFieldColour(float factor) const
+{
+    const float boosted    = factor * 1.6f;
+    const float brightness = juce::jlimit(0.0f, 1.0f, boosted);
+    const float whiteMix   = juce::jlimit(0.0f, 0.4f, boosted - 1.0f);
+
+    return brushColour.withMultipliedBrightness(brightness).interpolatedWith(juce::Colours::white, whiteMix);
+}
+
+void ValueField::updateBrushCursor()
+{
+    if (!owner.paintMode) {
+        return;
+    }
+
+    const int      cursorSize = juce::jmax(1, static_cast<int>(brushRadius * viewZoom * 2.0f));
+    const int      hotspot    = cursorSize / 2;
+    juce::Image    cursorImage(juce::Image::ARGB, cursorSize, cursorSize, true);
+    juce::Graphics cursorGraphics(cursorImage);
+
+    cursorGraphics.setColour(juce::Colours::black);
+    cursorGraphics.drawEllipse(cursorImage.getBounds().toFloat().reduced(1.0f), 1.0f);
+
+    owner.setMouseCursor(juce::MouseCursor(cursorImage, hotspot, hotspot));
+}
+
+void ValueField::refresh()
+{
+    if (!owner.paintMode) {
+        return;
+    }
+
+    render();
+
+    owner.repaint();
+}
+
+void ValueField::paintStroke(juce::Point<float> canvasPosition, bool isStart, bool erase)
+{
+    if (isStart) {
+        brushStroke = BrushStroke::Painting;
+
+        if (erase) {
+            brushStroke = BrushStroke::Erasing;
+        }
+
+        ensurePaintBuffers();
+
+        std::ranges::fill(strokeMask, 0.0f);
+
+        seedStrokeDensityFromNodes();
+
+        strokePreviousPoint = canvasPosition;
+
+        startTimerHz(dwellTimerHz);
+    }
+
+    brushCurrentPoint = canvasPosition;
+
+    accumulateStroke(strokePreviousPoint, canvasPosition);
+    applyPaintToNodes(strokePreviousPoint, canvasPosition);
+
+    strokePreviousPoint = canvasPosition;
 }
 
 void ValueField::ensurePaintBuffers()
@@ -439,24 +448,15 @@ std::optional<float> ValueField::densityUnderNode(const Node& node) const
     return sampled;
 }
 
-juce::Colour ValueField::mapFieldColour(float factor) const
+void ValueField::endStroke()
 {
-    const float boosted    = factor * 1.6f;
-    const float brightness = juce::jlimit(0.0f, 1.0f, boosted);
-    const float whiteMix   = juce::jlimit(0.0f, 0.4f, boosted - 1.0f);
-
-    return brushColour.withMultipliedBrightness(brightness).interpolatedWith(juce::Colours::white, whiteMix);
-}
-
-juce::Identifier ValueField::paintLayerValueId() const
-{
-    switch (activePaintLayer) {
-        case PaintLayer::Duration: return ValueTreeIdentifiers::MidiDuration;
-        case PaintLayer::Velocity: return ValueTreeIdentifiers::MidiVelocity;
-        case PaintLayer::Pitch:    return ValueTreeIdentifiers::MidiPitch;
+    if (brushStroke == BrushStroke::Idle) {
+        return;
     }
 
-    return ValueTreeIdentifiers::MidiPitch;
+    brushStroke = BrushStroke::Idle;
+
+    stopTimer();
 }
 
 void ValueField::timerCallback()

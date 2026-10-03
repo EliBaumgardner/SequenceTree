@@ -109,6 +109,25 @@ void ColourPicker::resized()
     renderSaturationBrightnessImage();
 }
 
+void ColourPicker::renderSaturationBrightnessImage()
+{
+    const int width  = juce::jmax(1, saturationBrightnessArea.getWidth());
+    const int height = juce::jmax(1, saturationBrightnessArea.getHeight());
+
+    saturationBrightnessImage = juce::Image(juce::Image::RGB, width, height, false);
+
+    juce::Image::BitmapData pixels(saturationBrightnessImage, juce::Image::BitmapData::writeOnly);
+
+    for (int row = 0; row < height; ++row) {
+        for (int column = 0; column < width; ++column) {
+            const float pixelSaturation = static_cast<float>(column) / width;
+            const float pixelBrightness = 1.0f - static_cast<float>(row) / height;
+
+            pixels.setPixelColour(column, row, juce::Colour::fromHSV(hue, pixelSaturation, pixelBrightness, 1.0f));
+        }
+    }
+}
+
 void ColourPicker::mouseDown(const juce::MouseEvent& event)
 {
     const juce::Point<int> position      = event.getPosition();
@@ -211,25 +230,6 @@ void ColourPicker::showColour(juce::Colour colour)
 
     renderSaturationBrightnessImage();
     repaint();
-}
-
-void ColourPicker::renderSaturationBrightnessImage()
-{
-    const int width  = juce::jmax(1, saturationBrightnessArea.getWidth());
-    const int height = juce::jmax(1, saturationBrightnessArea.getHeight());
-
-    saturationBrightnessImage = juce::Image(juce::Image::RGB, width, height, false);
-
-    juce::Image::BitmapData pixels(saturationBrightnessImage, juce::Image::BitmapData::writeOnly);
-
-    for (int row = 0; row < height; ++row) {
-        for (int column = 0; column < width; ++column) {
-            const float pixelSaturation = static_cast<float>(column) / width;
-            const float pixelBrightness = 1.0f - static_cast<float>(row) / height;
-
-            pixels.setPixelColour(column, row, juce::Colour::fromHSV(hue, pixelSaturation, pixelBrightness, 1.0f));
-        }
-    }
 }
 
 ColourSelector::ColourSelector(const ApplicationContext& context)

@@ -64,6 +64,29 @@ void PaintToolSettings::resized()
     flowField.setBounds(bounds.removeFromLeft(labelWidth + cellGap + editorWidth));
 }
 
+void PaintToolSettings::configureValueFields(ValueField &valueField, const float brushFlow) {
+    sizeField.editor.wheelResponse = ValueEditor::WheelResponse::StepValue;
+    flowField.editor.wheelResponse = ValueEditor::WheelResponse::StepValue;
+
+    sizeField.editor.setJustification(juce::Justification::centredLeft);
+    flowField.editor.setJustification(juce::Justification::centredLeft);
+
+    sizeField.editor.setFormat(std::make_unique<NumberFormat>(0.0, 1.0, ValueFormat::editableDecimalPlaces));
+    flowField.editor.setFormat(std::make_unique<NumberFormat>(0.0, 1.0, ValueFormat::editableDecimalPlaces));
+
+    sizeField.editor.boundValue = juce::jmap(valueField.brushRadius, minBrushRadius, maxBrushRadius, 0.0f, 1.0f);
+    flowField.editor.boundValue = juce::jmap(brushFlow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);
+
+    sizeField.label.setJustificationType(juce::Justification::centredRight);
+    flowField.label.setJustificationType(juce::Justification::centredRight);
+
+    sizeField.label.setText("Size:", juce::dontSendNotification);
+    flowField.label.setText("Rate:", juce::dontSendNotification);
+
+    sizeField.editor.setTooltip("Brush size");
+    flowField.editor.setTooltip("Brush rate");
+}
+
 void PaintToolSettings::componentCallBack() {
     paintTool.onClick = [this]() {
         const bool paintModeEnabled = ! paintTool.state.isSelected;
@@ -101,40 +124,6 @@ void PaintToolSettings::componentCallBack() {
     };
 }
 
-void PaintToolSettings::configureValueFields(ValueField &valueField, const float brushFlow) {
-    sizeField.editor.wheelResponse = ValueEditor::WheelResponse::StepValue;
-    flowField.editor.wheelResponse = ValueEditor::WheelResponse::StepValue;
-
-    sizeField.editor.setJustification(juce::Justification::centredLeft);
-    flowField.editor.setJustification(juce::Justification::centredLeft);
-
-    sizeField.editor.setFormat(std::make_unique<NumberFormat>(0.0, 1.0, ValueFormat::editableDecimalPlaces));
-    flowField.editor.setFormat(std::make_unique<NumberFormat>(0.0, 1.0, ValueFormat::editableDecimalPlaces));
-
-    sizeField.editor.boundValue = juce::jmap(valueField.brushRadius, minBrushRadius, maxBrushRadius, 0.0f, 1.0f);
-    flowField.editor.boundValue = juce::jmap(brushFlow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);
-
-    sizeField.label.setJustificationType(juce::Justification::centredRight);
-    flowField.label.setJustificationType(juce::Justification::centredRight);
-
-    sizeField.label.setText("Size:", juce::dontSendNotification);
-    flowField.label.setText("Rate:", juce::dontSendNotification);
-
-    sizeField.editor.setTooltip("Brush size");
-    flowField.editor.setTooltip("Brush rate");
-}
-
-juce::Colour& PaintToolSettings::paintLayerColour()
-{
-    switch (paintLayer) {
-        case ValueField::PaintLayer::Velocity: return velocityColour;
-        case ValueField::PaintLayer::Duration: return durationColour;
-        case ValueField::PaintLayer::Pitch:    return pitchColour;
-    }
-
-    return pitchColour;
-}
-
 void PaintToolSettings::setPaintMode(ValueField::PaintLayer layer)
 {
     paintLayer = layer;
@@ -148,4 +137,15 @@ void PaintToolSettings::setPaintMode(ValueField::PaintLayer layer)
     context.canvas->valueField.brushColour = savedColour;
 
     context.canvas->valueField.setActivePaintLayer(layer);
+}
+
+juce::Colour& PaintToolSettings::paintLayerColour()
+{
+    switch (paintLayer) {
+        case ValueField::PaintLayer::Velocity: return velocityColour;
+        case ValueField::PaintLayer::Duration: return durationColour;
+        case ValueField::PaintLayer::Pitch:    return pitchColour;
+    }
+
+    return pitchColour;
 }

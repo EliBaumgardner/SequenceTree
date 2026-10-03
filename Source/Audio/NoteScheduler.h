@@ -54,10 +54,8 @@ public:
                       int duration, bool isConnectionTrigger,
                       const NoteVoicing& voicing);
 
+    static bool isNoteSounding(const ActiveNote& note);
+    static bool isNodeAudible(RTNode::NodeType nodeType);
     void sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
     void removeNote(int index);
-
-    static bool isNoteSounding(const ActiveNote& note);
-
-    static bool isNodeAudible(RTNode::NodeType nodeType);
 };

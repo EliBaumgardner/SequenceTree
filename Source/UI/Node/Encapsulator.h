@@ -12,7 +12,6 @@ public:
 
     void bindToTree() override;
     void bindValueEditorForMode() override;
-
     void syncHighlightsFromMembers();
 
     std::vector<int> memberNodeIds;

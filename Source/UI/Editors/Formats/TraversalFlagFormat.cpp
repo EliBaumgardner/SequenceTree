@@ -1,9 +1,9 @@
 #include "ValueFormat.h"
 #include "../../../Graph/ValueTreeIdentifiers.h"
 
-static constexpr int maximumTraversalTypeId = 9999;
-
 const juce::String TraversalFlagFormat::instanceLetters { "abcdefghijklmnopqrstuvwxyz" };
+
+static constexpr int maximumTraversalTypeId = 9999;
 
 TraversalFlagFormat::TraversalFlagFormat()
     : NumberFormat(-maximumTraversalTypeId, maximumTraversalTypeId)

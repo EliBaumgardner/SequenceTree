@@ -1,6 +1,29 @@
 #include "CustomLookAndFeel.h"
 #include "../Node/Arrow.h"
 
+static void strokeArrowShaft(juce::Graphics& graphics, const juce::Path& shaft, bool emphasised, float alpha, juce::Colour colour)
+{
+    juce::Path shadowPath    = shaft;
+    juce::Path highlightPath = shaft;
+    shadowPath.applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
+    highlightPath.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
+
+    float strokeWidth = 1.25f;
+
+    if (emphasised) {
+        strokeWidth = 2.0f;
+    }
+
+    const juce::PathStrokeType stroke(strokeWidth);
+
+    graphics.setColour(colour.darker(0.4f).withAlpha(0.35f * alpha));
+    graphics.strokePath(shadowPath, stroke);
+    graphics.setColour(colour.brighter(0.4f).withAlpha(0.18f * alpha));
+    graphics.strokePath(highlightPath, stroke);
+    graphics.setColour(colour.withAlpha(alpha));
+    graphics.strokePath(shaft, stroke);
+}
+
 static juce::Path trimPathToFraction(const juce::Path& source, float fraction)
 {
     if (fraction <= 0.0f || source.isEmpty()) {
@@ -60,29 +83,6 @@ static juce::Path trimPathToFraction(const juce::Path& source, float fraction)
     }
 
     return trimmed;
-}
-
-static void strokeArrowShaft(juce::Graphics& graphics, const juce::Path& shaft, bool emphasised, float alpha, juce::Colour colour)
-{
-    juce::Path shadowPath    = shaft;
-    juce::Path highlightPath = shaft;
-    shadowPath.applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
-    highlightPath.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
-
-    float strokeWidth = 1.25f;
-
-    if (emphasised) {
-        strokeWidth = 2.0f;
-    }
-
-    const juce::PathStrokeType stroke(strokeWidth);
-
-    graphics.setColour(colour.darker(0.4f).withAlpha(0.35f * alpha));
-    graphics.strokePath(shadowPath, stroke);
-    graphics.setColour(colour.brighter(0.4f).withAlpha(0.18f * alpha));
-    graphics.strokePath(highlightPath, stroke);
-    graphics.setColour(colour.withAlpha(alpha));
-    graphics.strokePath(shaft, stroke);
 }
 
 static void drawArrowProgress(juce::Graphics& graphics, const Arrow& arrow, const juce::Path& shaft, juce::Point<float> chord)

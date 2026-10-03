@@ -21,8 +21,8 @@ public:
 
     void startTrail(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot,
                     TrailSource source);
-    void resumeTrails();
 
+    void resumeTrails();
     bool advance(double frameSec);
 
     static constexpr float snapSpringRateHz    = 60.0f;

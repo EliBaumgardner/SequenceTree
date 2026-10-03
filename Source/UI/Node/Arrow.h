@@ -40,39 +40,37 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
+    ArrowGeometry getGeometry(float animationProgress) const;
+    juce::Point<int>   getTip() const;
+
     bool isDangling() const
     {
         return endNode == nullptr;
     }
 
+    ArrowLabel    getLabel(const ArrowGeometry& geometry, float headLength) const;
     bool isDashed() const;
     bool isTraversalArrow() const;
     bool isSyncArrow() const;
-
-    juce::Point<int>   getTip() const;
     juce::Point<float> getHeadAnchor() const;
     int                getDuration() const;
     bool               showsDurationLabel() const;
     juce::String       getDurationLabel() const;
-
-    ArrowGeometry getGeometry(float animationProgress) const;
-    ArrowLabel    getLabel(const ArrowGeometry& geometry, float headLength) const;
     juce::Path    buildShaftPath(const ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const;
-
     void setArrowBounds();
     void setTipOffset(juce::Point<int> offset);
-
     void beginDurationEdit();
-
     void triggerSnapAnimation();
+    void advanceAnimation(double frameSec);
     void setHoverFade(bool shouldBeVisible);
     void initHoverState(bool visibleNow);
+
     void startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot,
                        TrailSource source);
+
     void resetProgress();
     void resetProgress(int trailId);
     void resumeProgress();
-    void advanceAnimation(double frameSec);
 
     Node* const startNode = nullptr;
     Node* const endNode   = nullptr;

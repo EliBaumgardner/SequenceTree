@@ -86,6 +86,27 @@ void TraversalRulesWindow::resized()
     }
 }
 
+void TraversalRulesWindow::setPanelWidth(int newWidth)
+{
+    const int clamped = clampPanelWidth(newWidth);
+
+    if (clamped == panelWidth) {
+        return;
+    }
+
+    panelWidth = clamped;
+
+    resized();
+}
+
+int TraversalRulesWindow::clampPanelWidth(int newWidth) const
+{
+    const int available = getWidth() - minContentWidth;
+    const int maxWidth  = juce::jmax(RulesPanel::minPanelWidth, available);
+
+    return juce::jlimit(RulesPanel::minPanelWidth, maxWidth, newWidth);
+}
+
 void TraversalRulesWindow::setActivePage(int id)
 {
     const auto match = filePages.find(id);
@@ -116,33 +137,68 @@ void TraversalRulesWindow::setActivePage(int id)
     compileViewedPage();
 }
 
-void TraversalRulesWindow::timerCallback()
+void TraversalRulesWindow::compileViewedPage()
 {
-    stopTimer();
+    if (activePage == nullptr || viewedRuleId < 0) {
+        setStatus({}, false);
 
-    compileViewedPage();
-}
-
-void TraversalRulesWindow::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
-{
-    triggerAsyncUpdate();
-}
-
-void TraversalRulesWindow::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex)
-{
-    triggerAsyncUpdate();
-}
-
-void TraversalRulesWindow::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
-{
-    if (property == ValueTreeIdentifiers::ActiveRuleId) {
-        triggerAsyncUpdate();
+        return;
     }
+
+    TraversalRuleState& state            = *context.traversalRuleState;
+    const juce::String  source           = activePage->getDocument().getAllContent();
+    ScriptCompileResult result           = compileTraversalScript(source.toStdString());
+    const bool          isLiveRule       = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == viewedRuleId;
+    const juce::String  instructionCount = juce::String(static_cast<int>(result.script.instructions.size()));
+
+    state.setRuleSource(viewedRuleId, source, nullptr);
+
+    activePage->errorLines.clear();
+
+    for (const ScriptDiagnostic& diagnostic : result.diagnostics) {
+        activePage->errorLines.push_back(diagnostic.line - 1);
+    }
+
+    activePage->repaint();
+
+    if (!result.succeeded()) {
+        const ScriptDiagnostic& first = result.diagnostics.front();
+
+        setStatus(juce::String(first.line) + ":" + juce::String(first.column) + "  " + juce::String(first.message), true);
+
+        return;
+    }
+
+    if (!isLiveRule) {
+        setStatus(instructionCount + " instructions - press play to make this the live rule", false);
+
+        return;
+    }
+
+    context.processor->snapshots.publishScript(std::make_shared<RTScript>(std::move(result.script)));
+
+    setStatus(instructionCount + " instructions - live", false);
 }
 
-void TraversalRulesWindow::handleAsyncUpdate()
+void TraversalRulesWindow::setStatus(const juce::String& text, bool isError)
 {
+    if (statusText == text && statusIsError == isError) {
+        return;
+    }
+
+    statusText    = text;
+    statusIsError = isError;
+
+    repaint(getLocalBounds().removeFromBottom(statusBarHeight));
+}
+
+void TraversalRulesWindow::addRule()
+{
+    const juce::ValueTree rule = context.traversalRuleState->addRule(nullptr);
+
     syncWithRuleState();
+
+    setActivePage(rule.getProperty(ValueTreeIdentifiers::Id));
 }
 
 void TraversalRulesWindow::syncWithRuleState()
@@ -204,38 +260,6 @@ void TraversalRulesWindow::syncWithRuleState()
     compileViewedPage();
 }
 
-void TraversalRulesWindow::addRule()
-{
-    const juce::ValueTree rule = context.traversalRuleState->addRule(nullptr);
-
-    syncWithRuleState();
-
-    setActivePage(rule.getProperty(ValueTreeIdentifiers::Id));
-}
-
-void TraversalRulesWindow::removeRule(int ruleId)
-{
-    TraversalRuleState& state       = *context.traversalRuleState;
-    const bool          wasLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == ruleId;
-
-    state.removeRule(ruleId, nullptr);
-
-    if (state.rules.getNumChildren() == 0) {
-        addRule();
-
-        state.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
-    }
-    else {
-        syncWithRuleState();
-    }
-
-    if (wasLiveRule) {
-        context.processor->snapshots.publishActiveTraversalRule();
-    }
-
-    compileViewedPage();
-}
-
 void TraversalRulesWindow::createPage(int ruleId, const juce::String& source)
 {
     auto      page        = std::make_unique<FilePage>(context);
@@ -263,80 +287,56 @@ void TraversalRulesWindow::makeViewedRuleActive()
     compileViewedPage();
 }
 
-void TraversalRulesWindow::compileViewedPage()
+void TraversalRulesWindow::removeRule(int ruleId)
 {
-    if (activePage == nullptr || viewedRuleId < 0) {
-        setStatus({}, false);
+    TraversalRuleState& state       = *context.traversalRuleState;
+    const bool          wasLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == ruleId;
 
-        return;
+    state.removeRule(ruleId, nullptr);
+
+    if (state.rules.getNumChildren() == 0) {
+        addRule();
+
+        state.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
+    }
+    else {
+        syncWithRuleState();
     }
 
-    TraversalRuleState& state            = *context.traversalRuleState;
-    const juce::String  source           = activePage->getDocument().getAllContent();
-    ScriptCompileResult result           = compileTraversalScript(source.toStdString());
-    const bool          isLiveRule       = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == viewedRuleId;
-    const juce::String  instructionCount = juce::String(static_cast<int>(result.script.instructions.size()));
-
-    state.setRuleSource(viewedRuleId, source, nullptr);
-
-    activePage->errorLines.clear();
-
-    for (const ScriptDiagnostic& diagnostic : result.diagnostics) {
-        activePage->errorLines.push_back(diagnostic.line - 1);
+    if (wasLiveRule) {
+        context.processor->snapshots.publishActiveTraversalRule();
     }
 
-    activePage->repaint();
-
-    if (!result.succeeded()) {
-        const ScriptDiagnostic& first = result.diagnostics.front();
-
-        setStatus(juce::String(first.line) + ":" + juce::String(first.column) + "  " + juce::String(first.message), true);
-
-        return;
-    }
-
-    if (!isLiveRule) {
-        setStatus(instructionCount + " instructions - press play to make this the live rule", false);
-
-        return;
-    }
-
-    context.processor->snapshots.publishScript(std::make_shared<RTScript>(std::move(result.script)));
-
-    setStatus(instructionCount + " instructions - live", false);
+    compileViewedPage();
 }
 
-void TraversalRulesWindow::setStatus(const juce::String& text, bool isError)
+void TraversalRulesWindow::timerCallback()
 {
-    if (statusText == text && statusIsError == isError) {
-        return;
-    }
+    stopTimer();
 
-    statusText    = text;
-    statusIsError = isError;
-
-    repaint(getLocalBounds().removeFromBottom(statusBarHeight));
+    compileViewedPage();
 }
 
-int TraversalRulesWindow::clampPanelWidth(int newWidth) const
+void TraversalRulesWindow::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
 {
-    const int available = getWidth() - minContentWidth;
-    const int maxWidth  = juce::jmax(RulesPanel::minPanelWidth, available);
-
-    return juce::jlimit(RulesPanel::minPanelWidth, maxWidth, newWidth);
+    triggerAsyncUpdate();
 }
 
-void TraversalRulesWindow::setPanelWidth(int newWidth)
+void TraversalRulesWindow::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex)
 {
-    const int clamped = clampPanelWidth(newWidth);
+    triggerAsyncUpdate();
+}
 
-    if (clamped == panelWidth) {
-        return;
+void TraversalRulesWindow::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
+{
+    if (property == ValueTreeIdentifiers::ActiveRuleId) {
+        triggerAsyncUpdate();
     }
+}
 
-    panelWidth = clamped;
-
-    resized();
+void TraversalRulesWindow::handleAsyncUpdate()
+{
+    syncWithRuleState();
 }
 
 TraversalRulesWindow::RulesTitlebar::RulesTitlebar(const ApplicationContext& context)

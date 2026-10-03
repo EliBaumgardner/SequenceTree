@@ -6,50 +6,6 @@ EventManager::EventManager(AudioUIBridge& bridgeRef) : bridge(bridgeRef)
 {
 }
 
-void EventManager::handleOrphanNotes(const DispatchContext& context)
-{
-    auto& activeNotes = scheduler.activeNotes;
-
-    for (int i = static_cast<int>(activeNotes.size()) - 1; i >= 0; --i)
-    {
-        auto& activeNote = activeNotes[i];
-
-        if (context.nodes.find(activeNote.nodeId) != nullptr) {
-            continue;
-        }
-
-        scheduler.sendNoteOff(activeNote, context.midiMessages, 0);
-
-        const int                     orphanedRunId = activeNote.runId;
-        const NoteScheduler::NoteRole orphanedRole  = activeNote.role;
-
-        scheduler.removeNote(i);
-
-        if (orphanedRole == NoteScheduler::NoteRole::ChordVoice) {
-            continue;
-        }
-
-        TraversalPool::Instance* const orphanedInstance = context.traversalMap.find(orphanedRunId);
-
-        if (orphanedInstance == nullptr) {
-            continue;
-        }
-
-        TraversalLogic& traversal = orphanedInstance->logic;
-        const RTNode*   rootNode  = context.nodes.find(traversal.rootId);
-
-        if (rootNode == nullptr) {
-            continue;
-        }
-
-        traversal.primary.target = traversal.rootId;
-        traversal.state          = TraversalLogic::TraversalState::Active;
-        traversal.advanceAlternative(context.nodes, traversal.rootId);
-        bridge.highlightNode(*rootNode, AudioUIBridge::HighlightKind::Show, orphanedRunId, traversal.traversal.key.typeId);
-        dispatcher.pushNote(*rootNode, orphanedRunId, context, 0);
-    }
-}
-
 void EventManager::followTempo(double tempoMultiplier)
 {
     if (lastTempoMultiplier > 0.0 && tempoMultiplier != lastTempoMultiplier) {
@@ -121,5 +77,49 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
 
     for (auto& note : activeNotes) {
         note.remainingSamples -= numSamples;
+    }
+}
+
+void EventManager::handleOrphanNotes(const DispatchContext& context)
+{
+    auto& activeNotes = scheduler.activeNotes;
+
+    for (int i = static_cast<int>(activeNotes.size()) - 1; i >= 0; --i)
+    {
+        auto& activeNote = activeNotes[i];
+
+        if (context.nodes.find(activeNote.nodeId) != nullptr) {
+            continue;
+        }
+
+        scheduler.sendNoteOff(activeNote, context.midiMessages, 0);
+
+        const int                     orphanedRunId = activeNote.runId;
+        const NoteScheduler::NoteRole orphanedRole  = activeNote.role;
+
+        scheduler.removeNote(i);
+
+        if (orphanedRole == NoteScheduler::NoteRole::ChordVoice) {
+            continue;
+        }
+
+        TraversalPool::Instance* const orphanedInstance = context.traversalMap.find(orphanedRunId);
+
+        if (orphanedInstance == nullptr) {
+            continue;
+        }
+
+        TraversalLogic& traversal = orphanedInstance->logic;
+        const RTNode*   rootNode  = context.nodes.find(traversal.rootId);
+
+        if (rootNode == nullptr) {
+            continue;
+        }
+
+        traversal.primary.target = traversal.rootId;
+        traversal.state          = TraversalLogic::TraversalState::Active;
+        traversal.advanceAlternative(context.nodes, traversal.rootId);
+        bridge.highlightNode(*rootNode, AudioUIBridge::HighlightKind::Show, orphanedRunId, traversal.traversal.key.typeId);
+        dispatcher.pushNote(*rootNode, orphanedRunId, context, 0);
     }
 }

@@ -28,8 +28,8 @@ public:
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
-    void mouseDown(const juce::MouseEvent& event) override;
 
+    void mouseDown(const juce::MouseEvent& event) override;
     void setGrabbed(bool shouldBeGrabbed);
     void setSelected(bool shouldBeSelected);
 };

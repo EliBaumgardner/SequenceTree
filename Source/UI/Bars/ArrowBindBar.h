@@ -37,14 +37,10 @@ private:
     void resized() override;
 
     void configureAxis(std::unique_ptr<LabeledEditor>& axis, std::unique_ptr<LabeledEditor>& otherAxis, const juce::String& text);
-
-    void showField(int itemId);
-
-    void showAxis(AxisMember axisMember, ArrowBinding binding, double multiplier);
-
     void publishBindings();
     void resolveAxis(AxisMember axisMember, ArrowBinding& binding, double& multiplier) const;
-
+    void showField(int itemId);
+    void showAxis(AxisMember axisMember, ArrowBinding binding, double multiplier);
     void layOutAxis(LabeledEditor& axis, juce::Rectangle<int>& bounds, const Metrics& metrics);
 
     static constexpr AxisMember xAxis = &BindField::x;

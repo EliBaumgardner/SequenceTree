@@ -90,26 +90,20 @@ private:
         PanelTitlebar panelTitlebar;
     };
 
+    void setPanelWidth(int newWidth);
+    int  clampPanelWidth(int newWidth) const;
+    void compileViewedPage();
+    void setStatus(const juce::String& text, bool isError);
+    void addRule();
+    void syncWithRuleState();
+    void createPage(int ruleId, const juce::String& source);
+    void makeViewedRuleActive();
+    void removeRule(int ruleId);
     void timerCallback() override;
-
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
     void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
-
     void handleAsyncUpdate() override;
-
-    void syncWithRuleState();
-    void addRule();
-    void removeRule(int ruleId);
-    void createPage(int ruleId, const juce::String& source);
-
-    void makeViewedRuleActive();
-    void compileViewedPage();
-
-    void setStatus(const juce::String& text, bool isError);
-
-    int  clampPanelWidth(int newWidth) const;
-    void setPanelWidth(int newWidth);
 
     RulesTitlebar titlebar;
     RulesPanel    rulesPanel;

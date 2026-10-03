@@ -5,12 +5,6 @@ NoteScheduler::NoteScheduler()
     activeNotes.reserve(maxExpectedActiveNotes);
 }
 
-bool NoteScheduler::isNodeAudible(RTNode::NodeType nodeType)
-{
-    return nodeType != RTNode::NodeType::ModulatorRoot
-        && nodeType != RTNode::NodeType::TraversalFlagData;
-}
-
 void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, double sample,
                                  juce::MidiBuffer& midiMessages,
                                  double sampleRate, double tempoMultiplier,
@@ -76,6 +70,12 @@ void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, d
 bool NoteScheduler::isNoteSounding(const ActiveNote& note)
 {
     return isNodeAudible(note.nodeType) && !note.isConnectionTrigger && note.sound == Sound::Audible;
+}
+
+bool NoteScheduler::isNodeAudible(RTNode::NodeType nodeType)
+{
+    return nodeType != RTNode::NodeType::ModulatorRoot
+        && nodeType != RTNode::NodeType::TraversalFlagData;
 }
 
 void NoteScheduler::sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample)

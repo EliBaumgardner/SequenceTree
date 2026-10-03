@@ -30,7 +30,7 @@ Read-only. Run these for evidence rather than reading everything by hand.
 Run on every file a change touches, and on the files a report makes design-rule claims about:
 
 - `design-rules.sh --file <path>` — the machine-checked Key Design Rules and this project's `[[gates.checks]]`. Its "NOT machine-checked" list is what is left to judge by hand.
-- `readability.sh --file <path>` — function length, one class per `.cpp`, member order and access sections.
+- `readability.sh --file <path>` — function length, one class per `.cpp`, definition order against the header within each access section, hierarchy order of definitions (`refactor.order --check`), and access sections.
 - `design-rules.sh --all` checks the whole tree.
 
 ## Mechanical Edits
@@ -44,4 +44,5 @@ Extracts, inlines, renames and multi-site rewrites go through these, never by ha
 | Rename variables | `refactor.replace '<the selection retyped with the new names>'` |
 | Structural search and replace | `refactor.rewrite '<pattern>' '<template>' <scope>`, with `--dry-run` first |
 | Apply `constexpr` | `refactor.const_exper <path>` |
+| Put definitions in hierarchy order | `refactor.order <path>` |
 | Put back the last edit | `refactor.undo` |

@@ -15,10 +15,9 @@ public:
 
     juce::ValueTree create         (std::span<const int> memberNodeIds, juce::UndoManager* undoManager);
     void            dissolve       (int encapsulatorId, juce::UndoManager* undoManager);
+    std::vector<int> memberIds  (int encapsulatorId) const;
     void            removeGroup    (int encapsulatorId, juce::UndoManager* undoManager);
     void            insertNodeAfter(int nodeId, int siblingNodeId, juce::UndoManager* undoManager);
-
-    std::vector<int> memberIds  (int encapsulatorId) const;
     int              unusedLabel() const;
 
 private:

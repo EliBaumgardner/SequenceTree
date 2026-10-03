@@ -22,54 +22,6 @@ std::shared_ptr<AudioSnapshotPublisher::Snapshot> AudioSnapshotPublisher::beginE
     return edit;
 }
 
-void AudioSnapshotPublisher::publishGraph(int graphId, NodeMap graphNodes)
-{
-    auto edit = beginEdit();
-
-    auto merged = std::make_shared<NodeMap>();
-
-    if (edit->globalNodes == nullptr) {
-        merged->sortedById = std::move(graphNodes.sortedById);
-    }
-    else {
-        auto isOutsideGraph = [graphId](const RTNode& node) { return node.graphID != graphId; };
-
-        merged->sortedById.reserve(edit->globalNodes->sortedById.size() + graphNodes.sortedById.size());
-
-        std::ranges::set_union(graphNodes.sortedById,
-                               edit->globalNodes->sortedById | std::views::filter(isOutsideGraph),
-                               std::back_inserter(merged->sortedById),
-                               {}, &RTNode::nodeID, &RTNode::nodeID);
-    }
-
-    merged->firstUnlinkedRootId = findFirstUnlinkedRootId(*merged);
-
-    edit->globalNodes = std::move(merged);
-
-    publish(std::move(edit));
-}
-
-void AudioSnapshotPublisher::publishScript(std::shared_ptr<RTScript> script)
-{
-    auto edit = beginEdit();
-
-    edit->traversalScript = std::move(script);
-
-    publish(std::move(edit));
-}
-
-ScriptCompileResult AudioSnapshotPublisher::publishActiveTraversalRule()
-{
-    ScriptCompileResult result =
-        compileTraversalScript(traversalRuleState.activeRuleSource().toStdString());
-
-    if (result.succeeded()) {
-        publishScript(std::make_shared<RTScript>(std::move(result.script)));
-    }
-
-    return result;
-}
-
 void AudioSnapshotPublisher::publish(std::shared_ptr<Snapshot> snapshot)
 {
     static_assert(std::atomic<Snapshot*>::is_always_lock_free, "the audio thread must be able to read the snapshot without a lock");
@@ -104,9 +56,31 @@ void AudioSnapshotPublisher::collectRetiredSnapshots()
     std::erase_if(retiredSnapshots, isUnreachableByAudioThread);
 }
 
-void AudioSnapshotPublisher::releaseRetiredSnapshots()
+void AudioSnapshotPublisher::publishGraph(int graphId, NodeMap graphNodes)
 {
-    retiredSnapshots.clear();
+    auto edit = beginEdit();
+
+    auto merged = std::make_shared<NodeMap>();
+
+    if (edit->globalNodes == nullptr) {
+        merged->sortedById = std::move(graphNodes.sortedById);
+    }
+    else {
+        auto isOutsideGraph = [graphId](const RTNode& node) { return node.graphID != graphId; };
+
+        merged->sortedById.reserve(edit->globalNodes->sortedById.size() + graphNodes.sortedById.size());
+
+        std::ranges::set_union(graphNodes.sortedById,
+                               edit->globalNodes->sortedById | std::views::filter(isOutsideGraph),
+                               std::back_inserter(merged->sortedById),
+                               {}, &RTNode::nodeID, &RTNode::nodeID);
+    }
+
+    merged->firstUnlinkedRootId = findFirstUnlinkedRootId(*merged);
+
+    edit->globalNodes = std::move(merged);
+
+    publish(std::move(edit));
 }
 
 int AudioSnapshotPublisher::findFirstUnlinkedRootId(const NodeMap& nodes)
@@ -134,4 +108,30 @@ int AudioSnapshotPublisher::findFirstUnlinkedRootId(const NodeMap& nodes)
     }
 
     return -1;
+}
+
+void AudioSnapshotPublisher::publishScript(std::shared_ptr<RTScript> script)
+{
+    auto edit = beginEdit();
+
+    edit->traversalScript = std::move(script);
+
+    publish(std::move(edit));
+}
+
+ScriptCompileResult AudioSnapshotPublisher::publishActiveTraversalRule()
+{
+    ScriptCompileResult result =
+        compileTraversalScript(traversalRuleState.activeRuleSource().toStdString());
+
+    if (result.succeeded()) {
+        publishScript(std::make_shared<RTScript>(std::move(result.script)));
+    }
+
+    return result;
+}
+
+void AudioSnapshotPublisher::releaseRetiredSnapshots()
+{
+    retiredSnapshots.clear();
 }

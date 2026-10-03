@@ -3,43 +3,6 @@
 #include <cctype>
 #include <cstdlib>
 
-
-const KeywordEntry keywordTable[] = {
-    { "let",      TokenKind::KeywordLet },
-    { "if",       TokenKind::KeywordIf },
-    { "else",     TokenKind::KeywordElse },
-    { "for",      TokenKind::KeywordFor },
-    { "in",       TokenKind::KeywordIn },
-    { "while",    TokenKind::KeywordWhile },
-    { "break",    TokenKind::KeywordBreak },
-    { "continue", TokenKind::KeywordContinue },
-    { "return",   TokenKind::KeywordReturn },
-    { "class",    TokenKind::KeywordClass },
-    { "public",   TokenKind::KeywordPublic },
-    { "void",     TokenKind::KeywordVoid },
-    { "int",      TokenKind::KeywordInt },
-    { "float",    TokenKind::KeywordFloat },
-    { "double",   TokenKind::KeywordDouble },
-    { "Node",     TokenKind::KeywordNode },
-    { "none",     TokenKind::KeywordNone },
-    { "import",   TokenKind::KeywordImport },
-    { "and",      TokenKind::And },
-    { "or",       TokenKind::Or },
-    { "not",      TokenKind::Not }
-};
-
-
-TokenKind keywordKind(const std::string& word)
-{
-    for (const KeywordEntry& entry : keywordTable) {
-        if (word == entry.name) {
-            return entry.kind;
-        }
-    }
-
-    return TokenKind::Identifier;
-}
-
 std::vector<Token> Lexer::run()
 {
     std::vector<Token> tokens;
@@ -92,17 +55,6 @@ std::vector<Token> Lexer::run()
     return tokens;
 }
 
-bool Lexer::isIdentifierPart(char c)
-{
-    return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
-}
-
-char Lexer::peek(std::size_t offset) const
-{
-    const std::size_t index = position + offset;
-    return index < source.size() ? source[index] : '\0';
-}
-
 void Lexer::advance(int count)
 {
     for (int i = 0; i < count; ++i) {
@@ -117,14 +69,10 @@ void Lexer::advance(int count)
     }
 }
 
-Token Lexer::makeToken(TokenKind kind, int length) const
+char Lexer::peek(std::size_t offset) const
 {
-    Token token;
-    token.kind   = kind;
-    token.line   = line;
-    token.column = column;
-    token.length = length;
-    return token;
+    const std::size_t index = position + offset;
+    return index < source.size() ? source[index] : '\0';
 }
 
 Token Lexer::readNumber()
@@ -171,6 +119,56 @@ Token Lexer::readNumber()
     return token;
 }
 
+Token Lexer::makeToken(TokenKind kind, int length) const
+{
+    Token token;
+    token.kind   = kind;
+    token.line   = line;
+    token.column = column;
+    token.length = length;
+    return token;
+}
+
+void Lexer::report(const std::string& message, const Token& token)
+{
+    diagnostics.push_back({ message, token.line, token.column, token.length });
+}
+
+const KeywordEntry keywordTable[] = {
+    { "let",      TokenKind::KeywordLet },
+    { "if",       TokenKind::KeywordIf },
+    { "else",     TokenKind::KeywordElse },
+    { "for",      TokenKind::KeywordFor },
+    { "in",       TokenKind::KeywordIn },
+    { "while",    TokenKind::KeywordWhile },
+    { "break",    TokenKind::KeywordBreak },
+    { "continue", TokenKind::KeywordContinue },
+    { "return",   TokenKind::KeywordReturn },
+    { "class",    TokenKind::KeywordClass },
+    { "public",   TokenKind::KeywordPublic },
+    { "void",     TokenKind::KeywordVoid },
+    { "int",      TokenKind::KeywordInt },
+    { "float",    TokenKind::KeywordFloat },
+    { "double",   TokenKind::KeywordDouble },
+    { "Node",     TokenKind::KeywordNode },
+    { "none",     TokenKind::KeywordNone },
+    { "import",   TokenKind::KeywordImport },
+    { "and",      TokenKind::And },
+    { "or",       TokenKind::Or },
+    { "not",      TokenKind::Not }
+};
+
+TokenKind keywordKind(const std::string& word)
+{
+    for (const KeywordEntry& entry : keywordTable) {
+        if (word == entry.name) {
+            return entry.kind;
+        }
+    }
+
+    return TokenKind::Identifier;
+}
+
 Token Lexer::readIdentifier()
 {
     Token token = makeToken(TokenKind::Identifier, 0);
@@ -184,6 +182,11 @@ Token Lexer::readIdentifier()
     token.kind   = keywordKind(token.text);
 
     return token;
+}
+
+bool Lexer::isIdentifierPart(char c)
+{
+    return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
 }
 
 Token Lexer::readPunctuation()
@@ -240,9 +243,4 @@ Token Lexer::readFixed(TokenKind kind, int length)
     }
 
     return token;
-}
-
-void Lexer::report(const std::string& message, const Token& token)
-{
-    diagnostics.push_back({ message, token.line, token.column, token.length });
 }

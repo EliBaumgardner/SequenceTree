@@ -50,20 +50,16 @@ public:
 
 private:
 
-    void syncActiveTraversals   (const NodeMap& nodes);
-    void removeDeletedTraversals(const NodeMap& nodes, juce::MidiBuffer& midiMessages);
-
-    void startMissingTraversals (const DispatchContext& context);
-
-    void syncTraversalLoopLimits(const DispatchContext& context);
-
     void startTraversal(const RTNode& rootNode, const RTtraversal& traversal,
                         const DispatchContext& context);
 
+    void syncActiveTraversals   (const NodeMap& nodes);
+    void removeDeletedTraversals(const NodeMap& nodes, juce::MidiBuffer& midiMessages);
     void stopTraversalNotes(int runId, juce::MidiBuffer& midiMessages);
-
-    void startPreview(const RTPreviewRequest& request, const DispatchContext& context);
+    void startMissingTraversals (const DispatchContext& context);
+    void syncTraversalLoopLimits(const DispatchContext& context);
     void stopPreview (juce::MidiBuffer& midiMessages);
+    void startPreview(const RTPreviewRequest& request, const DispatchContext& context);
 
 
     EventManager& eventManager;

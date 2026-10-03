@@ -35,6 +35,14 @@ void IconButton::resized()
     }
 }
 
+void IconButton::lookAndFeelChanged()
+{
+    if (const auto* theme = dynamic_cast<const Theme*>(&getLookAndFeel())) {
+        caption.setColour(juce::Label::textColourId, theme->textColour);
+        caption.setFont(juce::Font(juce::FontOptions(Theme::labelFontHeight)));
+    }
+}
+
 void IconButton::setText(juce::String newText)
 {
     if (state.text == newText) {
@@ -63,14 +71,6 @@ void IconButton::setSelected(bool shouldBeSelected)
     state.isSelected = shouldBeSelected;
 
     repaint();
-}
-
-void IconButton::lookAndFeelChanged()
-{
-    if (const auto* theme = dynamic_cast<const Theme*>(&getLookAndFeel())) {
-        caption.setColour(juce::Label::textColourId, theme->textColour);
-        caption.setFont(juce::Font(juce::FontOptions(Theme::labelFontHeight)));
-    }
 }
 
 void IconButton::mouseEnter(const juce::MouseEvent&)

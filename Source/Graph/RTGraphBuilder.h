@@ -32,12 +32,10 @@ public:
     ~RTGraphBuilder() override;
 
     void makeRTGraph(const juce::ValueTree& nodeValueTree);
+    void discardGraph(int graphId);
+    RTtraversal buildRTtraversal(TraversalKey key);
     void rebuildAllGraphs();
     void updateDurationMaps(std::span<const int> nodeIds);
-    void discardGraph(int graphId);
-
-    RTtraversal buildRTtraversal(TraversalKey key);
-
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
     void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& propertyIdentifier) override;
@@ -53,26 +51,20 @@ private:
         std::vector<int>        durationRefreshNodeIds;
     };
 
-    void rememberStructureChange(const juce::ValueTree& parent, const juce::ValueTree& child);
-
-    void rememberOwners(juce::ValueTree graphOwner, const juce::ValueTree& reshapedNode);
+    void rebuildGraphsForTraversal(int traversalId);
 
     void createRTNodes(juce::ValueTree rootNodeValueTree,
                        NodeBuildMap& builtNodes,
                        std::unordered_map<int, juce::ValueTree>& tempNodeMap);
 
-    void createRTNodeConnections(NodeBuildMap& builtNodes,
-                                 std::unordered_map<int, juce::ValueTree>& tempNodeMap);
-
+    void fillDurationMap(const juce::ValueTree& nodeValueTree, RTNode& rtNode);
+    static RTConnection& connectionFor(RTNode& node, int childId);
+    static void collectDisabledTraversals(const juce::ValueTree& owner, std::vector<TraversalKey>& disabledKeys);
+    void fillEncapsulation(const juce::ValueTree& nodeValueTree, RTNode& rtNode);
     static RTNode::NodeType rtNodeTypeFor(const juce::Identifier& valueTreeType);
 
-    void fillDurationMap(const juce::ValueTree& nodeValueTree, RTNode& rtNode);
-
-    void fillEncapsulation(const juce::ValueTree& nodeValueTree, RTNode& rtNode);
-
-    static void collectDisabledTraversals(const juce::ValueTree& owner, std::vector<TraversalKey>& disabledKeys);
-
-    static RTConnection& connectionFor(RTNode& node, int childId);
+    void createRTNodeConnections(NodeBuildMap& builtNodes,
+                                 std::unordered_map<int, juce::ValueTree>& tempNodeMap);
 
     static void classifyRootConnection(const juce::ValueTree& parentValueTree,
                                        const juce::ValueTree& childIdTree,
@@ -80,8 +72,8 @@ private:
                                        RTConnection& connection);
 
     static NodeMap freezeNodes(NodeBuildMap& source);
-
-    void rebuildGraphsForTraversal(int traversalId);
+    void rememberStructureChange(const juce::ValueTree& parent, const juce::ValueTree& child);
+    void rememberOwners(juce::ValueTree graphOwner, const juce::ValueTree& reshapedNode);
 
     SequenceTreeAudioProcessor& processor;
     GraphState&             graphState;

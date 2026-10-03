@@ -70,15 +70,6 @@ void ArrowWindow::resized()
     arrowTypePane.resized();
 }
 
-void ArrowWindow::addArrowType(ArrowType type, const juce::String& caption, IconButton::Icon icon)
-{
-    IconButton& button = arrowTypePane.addButton(icon, caption);
-
-    button.setCaption(caption);
-
-    arrowTypeButtons.push_back({ type, &button });
-}
-
 std::optional<ArrowType> ArrowWindow::arrowTypeFor(const IconButton* button) const
 {
     for (const ArrowTypeButton& arrowTypeButton : arrowTypeButtons) {
@@ -88,4 +79,13 @@ std::optional<ArrowType> ArrowWindow::arrowTypeFor(const IconButton* button) con
     }
 
     return std::nullopt;
+}
+
+void ArrowWindow::addArrowType(ArrowType type, const juce::String& caption, IconButton::Icon icon)
+{
+    IconButton& button = arrowTypePane.addButton(icon, caption);
+
+    button.setCaption(caption);
+
+    arrowTypeButtons.push_back({ type, &button });
 }

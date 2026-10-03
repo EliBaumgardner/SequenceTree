@@ -23,7 +23,6 @@ public:
     void addItem(int itemId, juce::String label, Action onChosen = nullptr);
     void removeItem(int itemId);
     void clearItems();
-
     void setSelectedItem(int itemId);
 
     std::function<void(int)> onItemSelected;
@@ -46,7 +45,6 @@ private:
 
     void showMenu();
     void handleResult(int itemId);
-
     const Item* findItem(int itemId) const;
 
     const ApplicationContext& applicationContext;

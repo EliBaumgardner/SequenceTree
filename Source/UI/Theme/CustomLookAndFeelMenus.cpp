@@ -10,16 +10,6 @@ CustomLookAndFeel::CustomLookAndFeel()
     setColour(juce::CaretComponent::caretColourId,            baseDarkColour1);
 }
 
-juce::Font CustomLookAndFeel::getPopupMenuFont()
-{
-    return juce::Font(juce::FontOptions(labelFontHeight));
-}
-
-int CustomLookAndFeel::getPopupMenuBorderSize()
-{
-    return popupMenuPadding;
-}
-
 void CustomLookAndFeel::drawPopupMenuBackgroundWithOptions(juce::Graphics& graphics, int width, int height,
                                                            const juce::PopupMenu::Options&)
 {
@@ -105,6 +95,11 @@ void CustomLookAndFeel::drawPopupMenuItem(juce::Graphics& graphics, const juce::
     }
 }
 
+juce::Font CustomLookAndFeel::getPopupMenuFont()
+{
+    return juce::Font(juce::FontOptions(labelFontHeight));
+}
+
 void CustomLookAndFeel::getIdealPopupMenuItemSize(const juce::String& text, bool isSeparator,
                                                   int standardMenuItemHeight,
                                                   int& idealWidth, int& idealHeight)
@@ -125,6 +120,11 @@ void CustomLookAndFeel::getIdealPopupMenuItemSize(const juce::String& text, bool
     idealWidth  = juce::GlyphArrangement::getStringWidthInt(getPopupMenuFont(), text)
                     + idealHeight
                     + static_cast<int>(popupMenuTextInset * 4.0f);
+}
+
+int CustomLookAndFeel::getPopupMenuBorderSize()
+{
+    return popupMenuPadding;
 }
 
 void CustomLookAndFeel::drawCallOutBoxBackground(juce::CallOutBox& box, juce::Graphics& graphics, const juce::Path& path,

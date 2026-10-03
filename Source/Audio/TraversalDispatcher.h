@@ -39,16 +39,11 @@ private:
         ScriptNote               note;
     };
 
-    void stepTraversal(TraversalPool::Instance& instance, int runId, const DispatchContext& context,
-                       double expiryTime);
-
     void applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes,
                          int runId, int typeId);
 
     void applyTreeJump(const TraversalLogic::StepResult& step, TraversalLogic& traversal,
                        TraversalRuntime& runtime, const DispatchContext& context);
-
-    void pushRootNodeConnection(int rootNodeId, const DispatchContext& context, double sample);
 
     int resolveDuration(const RTNode& node, const RTNode* nextTarget,
                         int lastTargetId, const NodeMap& nodes, int danglingIndex);
@@ -60,6 +55,8 @@ private:
     void pushChordNotes(const RTNode& node, int runId, double sample, int duration,
                         double tempoMultiplier, const DispatchContext& context, int parentCount,
                         TraversalLogic& traversalLogic, int transpose);
+
+    bool markChordVisited(int nodeId);
 
     void dispatchPrimaryArrow(const RTNode& node, const RTNode* voicedAlternative,
                               const RTNode* nextTarget, int danglingIndex,
@@ -73,10 +70,13 @@ private:
                            double tempoMultiplier, const DispatchContext& context,
                            TraversalLogic& traversal, TrailSource source);
 
+    void pushRootNodeConnection(int rootNodeId, const DispatchContext& context, double sample);
+
     void startCrossTreeTraversal(const RTNode& targetRootNode, const RTtraversal& traversal,
                                  double sample, const DispatchContext& context);
 
-    bool markChordVisited(int nodeId);
+    void stepTraversal(TraversalPool::Instance& instance, int runId, const DispatchContext& context,
+                       double expiryTime);
 
     static constexpr int maxDispatchDepth = 32;
 

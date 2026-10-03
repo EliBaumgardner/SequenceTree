@@ -36,16 +36,11 @@ public:
     }
 
     const Snapshot* getPublished() const { return publishedSnapshot.get(); }
-
     std::shared_ptr<Snapshot> beginEdit() const;
-
     void publish(std::shared_ptr<Snapshot> snapshot);
-
     void publishGraph (int graphId, NodeMap graphNodes);
     void publishScript(std::shared_ptr<RTScript> script);
-
     ScriptCompileResult publishActiveTraversalRule();
-
     void releaseRetiredSnapshots();
 
 private:
@@ -57,7 +52,6 @@ private:
     };
 
     void collectRetiredSnapshots();
-
     static int findFirstUnlinkedRootId(const NodeMap& nodes);
 
     TraversalRuleState& traversalRuleState;

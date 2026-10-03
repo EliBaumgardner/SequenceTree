@@ -2,9 +2,46 @@
 #include "../Buttons/IconButton.h"
 #include "../Editors/FileLabel.h"
 
-constexpr float transportGlyphInsetRatio = 0.2f;
-
 enum class TriangleDirection { left, right, up, down };
+
+void CustomLookAndFeel::drawNodeIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState&)
+{
+    graphics.setColour(buttonColour);
+    graphics.fillEllipse(bounds);
+
+    auto glyphBounds = bounds.reduced(bounds.getWidth() * 0.32f);
+    graphics.setColour(juce::Colours::black);
+    graphics.fillEllipse(glyphBounds);
+}
+
+void CustomLookAndFeel::drawTreeIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState&)
+{
+    graphics.setColour(buttonColour);
+    graphics.fillEllipse(bounds);
+
+    juce::Point<float> centre = bounds.getCentre();
+    const float outerRadius = bounds.getWidth() * 0.5f;
+
+    const float lineThickness   = 2.0f;
+    const float nodeRadius      = outerRadius * 0.24f;
+    const float insetMargin     = outerRadius * 0.15f;
+    const float placementRadius = outerRadius - nodeRadius - insetMargin;
+
+    juce::Point<float> rootPos (centre.x, centre.y - placementRadius * 0.55f);
+    juce::Point<float> leftPos (centre.x - placementRadius * 0.8f, centre.y + placementRadius * 0.55f);
+    juce::Point<float> rightPos(centre.x + placementRadius * 0.8f, centre.y + placementRadius * 0.55f);
+
+    graphics.setColour(juce::Colours::black);
+    graphics.drawLine(juce::Line<float>(rootPos, leftPos), lineThickness);
+    graphics.drawLine(juce::Line<float>(rootPos, rightPos), lineThickness);
+
+    auto nodeCircle = [&](juce::Point<float> pos) {
+        graphics.fillEllipse(juce::Rectangle<float>(nodeRadius * 2.0f, nodeRadius * 2.0f).withCentre(pos));
+    };
+    nodeCircle(rootPos);
+    nodeCircle(leftPos);
+    nodeCircle(rightPos);
+}
 
 static void fillTriangle(juce::Graphics& graphics, juce::Rectangle<float> bounds, TriangleDirection direction)
 {
@@ -40,11 +77,6 @@ static void fillTriangle(juce::Graphics& graphics, juce::Rectangle<float> bounds
     graphics.fillPath(triangle);
 }
 
-constexpr float squareGlyphInsetRatio     = 0.18f;
-constexpr float squareGlyphOutlineRatio   = 0.06f;
-constexpr float squareGlyphBarInsetRatio  = 0.28f;
-constexpr float squareGlyphBarWidthRatio  = 0.12f;
-
 static void fillArrowGlyph(juce::Graphics& graphics, juce::Rectangle<float> glyphArea,
                     float shaftThicknessFactor, float headLengthFactor, float headWidthFactor)
 {
@@ -61,32 +93,15 @@ static void fillArrowGlyph(juce::Graphics& graphics, juce::Rectangle<float> glyp
     fillTriangle(graphics, { head.x - headLength, head.y - headWidth, headLength, headWidth * 2.0f }, TriangleDirection::right);
 }
 
-static juce::Rectangle<float> fillArrowIconTile(juce::Graphics& graphics, juce::Rectangle<float> area,
-                                                const ButtonState& state, juce::Colour buttonColour,
-                                                float cornerRadius)
+void CustomLookAndFeel::drawTraversalIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState&)
 {
-    juce::Colour tileColour = buttonColour;
+    graphics.setColour(buttonColour);
+    graphics.fillEllipse(bounds);
 
-    if (state.isSelected) {
-        tileColour = buttonColour.brighter(0.3f);
-    }
-
-    if (state.isHovered) {
-        tileColour = tileColour.brighter(0.15f);
-    }
-
-    graphics.setColour(tileColour);
-    graphics.fillRoundedRectangle(area, cornerRadius);
-
-    const auto glyphArea = area.reduced(area.getWidth() * 0.18f, area.getHeight() * 0.34f);
-
-    const float nodeDiameter = glyphArea.getHeight();
+    auto glyphArea = bounds.reduced(bounds.getWidth() * 0.26f, bounds.getHeight() * 0.38f);
 
     graphics.setColour(juce::Colours::black);
-    graphics.fillEllipse(juce::Rectangle<float>(nodeDiameter, nodeDiameter)
-                      .withCentre({ glyphArea.getX(), glyphArea.getCentreY() }));
-
-    return glyphArea;
+    fillArrowGlyph(graphics, glyphArea, 0.24f, 0.4f, 0.65f);
 }
 
 juce::Colour CustomLookAndFeel::pressableButtonColour(const ButtonState& state) const
@@ -101,6 +116,8 @@ juce::Colour CustomLookAndFeel::pressableButtonColour(const ButtonState& state) 
 
     return buttonColour;
 }
+
+constexpr float transportGlyphInsetRatio = 0.2f;
 
 void CustomLookAndFeel::drawPlayIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state)
 {
@@ -165,6 +182,58 @@ void CustomLookAndFeel::drawTraversalFlagIcon(juce::Graphics& graphics, juce::Re
     graphics.fillPath(triangle);
     graphics.strokePath(triangle, juce::PathStrokeType(1.0f));
 }
+
+void CustomLookAndFeel::drawDisplayArrowIcon(juce::Graphics& graphics, juce::Rectangle<float> boundsIn, const ButtonState& state)
+{
+    auto bounds = boundsIn.reduced(outerButtonBoundsReduction);
+
+    graphics.setColour(buttonColour);
+
+    if (state.isSelected) {
+        graphics.setColour(buttonColour.darker());
+    }
+
+    fillTriangle(graphics, bounds.withSizeKeepingCentre(bounds.getWidth(), bounds.getHeight() * 0.9f), TriangleDirection::down);
+}
+
+void CustomLookAndFeel::drawIncrementIcon(juce::Graphics& graphics, juce::Rectangle<float> boundsIn, bool pointsUp)
+{
+    graphics.setColour(juce::Colours::black);
+
+    TriangleDirection direction = TriangleDirection::down;
+
+    if (pointsUp) {
+        direction = TriangleDirection::up;
+    }
+
+    fillTriangle(graphics, boundsIn.reduced(boundsIn.getWidth() * incrementIconWidthInset, boundsIn.getHeight() * incrementIconHeightInset), direction);
+}
+
+void CustomLookAndFeel::drawTextButton(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state,
+                                       float fontHeight)
+{
+    auto area = bounds.reduced(outerButtonBoundsReduction);
+
+    graphics.setColour(pressableButtonColour(state));
+
+    if (state.isSelected) {
+        graphics.setColour(buttonColour.darker());
+    }
+
+    graphics.fillRoundedRectangle(area, paneCornerRadius);
+
+    graphics.setColour(juce::Colours::black.withAlpha(0.5f));
+    graphics.drawRoundedRectangle(area, paneCornerRadius, 1.0f);
+
+    graphics.setColour(juce::Colours::black.withAlpha(0.8f));
+    graphics.setFont(juce::Font(juce::FontOptions(fontHeight)));
+    graphics.drawFittedText(state.text, area.reduced(innerButtonBoundsReduction, 0.0f).toNearestInt(), juce::Justification::centred, 1);
+}
+
+constexpr float squareGlyphInsetRatio     = 0.18f;
+constexpr float squareGlyphOutlineRatio   = 0.06f;
+constexpr float squareGlyphBarInsetRatio  = 0.28f;
+constexpr float squareGlyphBarWidthRatio  = 0.12f;
 
 void CustomLookAndFeel::drawAddIcon(juce::Graphics& graphics, juce::Rectangle<float> boundsIn, const ButtonState& state)
 {
@@ -249,53 +318,6 @@ void CustomLookAndFeel::drawSyncIcon(juce::Graphics& graphics, juce::Rectangle<f
 
     fillTriangle(graphics, glyphArea.withWidth(headLength), TriangleDirection::left);
     fillTriangle(graphics, glyphArea.withTrimmedLeft(glyphArea.getWidth() - headLength), TriangleDirection::right);
-}
-
-void CustomLookAndFeel::drawDisplayArrowIcon(juce::Graphics& graphics, juce::Rectangle<float> boundsIn, const ButtonState& state)
-{
-    auto bounds = boundsIn.reduced(outerButtonBoundsReduction);
-
-    graphics.setColour(buttonColour);
-
-    if (state.isSelected) {
-        graphics.setColour(buttonColour.darker());
-    }
-
-    fillTriangle(graphics, bounds.withSizeKeepingCentre(bounds.getWidth(), bounds.getHeight() * 0.9f), TriangleDirection::down);
-}
-
-void CustomLookAndFeel::drawIncrementIcon(juce::Graphics& graphics, juce::Rectangle<float> boundsIn, bool pointsUp)
-{
-    graphics.setColour(juce::Colours::black);
-
-    TriangleDirection direction = TriangleDirection::down;
-
-    if (pointsUp) {
-        direction = TriangleDirection::up;
-    }
-
-    fillTriangle(graphics, boundsIn.reduced(boundsIn.getWidth() * incrementIconWidthInset, boundsIn.getHeight() * incrementIconHeightInset), direction);
-}
-
-void CustomLookAndFeel::drawTextButton(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state,
-                                       float fontHeight)
-{
-    auto area = bounds.reduced(outerButtonBoundsReduction);
-
-    graphics.setColour(pressableButtonColour(state));
-
-    if (state.isSelected) {
-        graphics.setColour(buttonColour.darker());
-    }
-
-    graphics.fillRoundedRectangle(area, paneCornerRadius);
-
-    graphics.setColour(juce::Colours::black.withAlpha(0.5f));
-    graphics.drawRoundedRectangle(area, paneCornerRadius, 1.0f);
-
-    graphics.setColour(juce::Colours::black.withAlpha(0.8f));
-    graphics.setFont(juce::Font(juce::FontOptions(fontHeight)));
-    graphics.drawFittedText(state.text, area.reduced(innerButtonBoundsReduction, 0.0f).toNearestInt(), juce::Justification::centred, 1);
 }
 
 void CustomLookAndFeel::drawPaintToolIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state)
@@ -409,6 +431,34 @@ void CustomLookAndFeel::drawQuaverToolIcon(juce::Graphics& graphics, juce::Recta
     graphics.fillPath(flag);
 }
 
+static juce::Rectangle<float> fillArrowIconTile(juce::Graphics& graphics, juce::Rectangle<float> area,
+                                                const ButtonState& state, juce::Colour buttonColour,
+                                                float cornerRadius)
+{
+    juce::Colour tileColour = buttonColour;
+
+    if (state.isSelected) {
+        tileColour = buttonColour.brighter(0.3f);
+    }
+
+    if (state.isHovered) {
+        tileColour = tileColour.brighter(0.15f);
+    }
+
+    graphics.setColour(tileColour);
+    graphics.fillRoundedRectangle(area, cornerRadius);
+
+    const auto glyphArea = area.reduced(area.getWidth() * 0.18f, area.getHeight() * 0.34f);
+
+    const float nodeDiameter = glyphArea.getHeight();
+
+    graphics.setColour(juce::Colours::black);
+    graphics.fillEllipse(juce::Rectangle<float>(nodeDiameter, nodeDiameter)
+                      .withCentre({ glyphArea.getX(), glyphArea.getCentreY() }));
+
+    return glyphArea;
+}
+
 void CustomLookAndFeel::drawNodeArrowIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state)
 {
     const auto glyphArea = fillArrowIconTile(graphics, bounds.reduced(outerButtonBoundsReduction), state, buttonColour, paneCornerRadius);
@@ -464,56 +514,6 @@ void CustomLookAndFeel::drawTraversalArrowIcon(juce::Graphics& graphics, juce::R
     head.closeSubPath();
 
     graphics.strokePath(head, juce::PathStrokeType(juce::jmax(1.0f, thickness * 0.6f), juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
-}
-
-void CustomLookAndFeel::drawNodeIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState&)
-{
-    graphics.setColour(buttonColour);
-    graphics.fillEllipse(bounds);
-
-    auto glyphBounds = bounds.reduced(bounds.getWidth() * 0.32f);
-    graphics.setColour(juce::Colours::black);
-    graphics.fillEllipse(glyphBounds);
-}
-
-void CustomLookAndFeel::drawTreeIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState&)
-{
-    graphics.setColour(buttonColour);
-    graphics.fillEllipse(bounds);
-
-    juce::Point<float> centre = bounds.getCentre();
-    const float outerRadius = bounds.getWidth() * 0.5f;
-
-    const float lineThickness   = 2.0f;
-    const float nodeRadius      = outerRadius * 0.24f;
-    const float insetMargin     = outerRadius * 0.15f;
-    const float placementRadius = outerRadius - nodeRadius - insetMargin;
-
-    juce::Point<float> rootPos (centre.x, centre.y - placementRadius * 0.55f);
-    juce::Point<float> leftPos (centre.x - placementRadius * 0.8f, centre.y + placementRadius * 0.55f);
-    juce::Point<float> rightPos(centre.x + placementRadius * 0.8f, centre.y + placementRadius * 0.55f);
-
-    graphics.setColour(juce::Colours::black);
-    graphics.drawLine(juce::Line<float>(rootPos, leftPos), lineThickness);
-    graphics.drawLine(juce::Line<float>(rootPos, rightPos), lineThickness);
-
-    auto nodeCircle = [&](juce::Point<float> pos) {
-        graphics.fillEllipse(juce::Rectangle<float>(nodeRadius * 2.0f, nodeRadius * 2.0f).withCentre(pos));
-    };
-    nodeCircle(rootPos);
-    nodeCircle(leftPos);
-    nodeCircle(rightPos);
-}
-
-void CustomLookAndFeel::drawTraversalIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState&)
-{
-    graphics.setColour(buttonColour);
-    graphics.fillEllipse(bounds);
-
-    auto glyphArea = bounds.reduced(bounds.getWidth() * 0.26f, bounds.getHeight() * 0.38f);
-
-    graphics.setColour(juce::Colours::black);
-    fillArrowGlyph(graphics, glyphArea, 0.24f, 0.4f, 0.65f);
 }
 
 void CustomLookAndFeel::drawFileLabel(juce::Graphics& graphics, const FileLabel& fileLabel)

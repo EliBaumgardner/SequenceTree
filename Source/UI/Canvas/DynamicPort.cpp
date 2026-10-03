@@ -24,6 +24,13 @@ void DynamicPort::resized()
     applyTransform();
 }
 
+void DynamicPort::applyTransform()
+{
+    if (component != nullptr) {
+        component->setTransform(juce::AffineTransform::scale(zoom).translated(translateX, translateY));
+    }
+}
+
 void DynamicPort::mouseDown(const juce::MouseEvent& event)
 {
     lastMousePosition = event.getPosition();
@@ -67,11 +74,6 @@ void DynamicPort::mouseWheelMove(const juce::MouseEvent& event, const juce::Mous
     applyTransform();
 }
 
-void DynamicPort::mouseMagnify(const juce::MouseEvent& event, float scaleFactor)
-{
-    setZoom(std::clamp(zoom * scaleFactor, minimumZoom, maximumZoom), event.getEventRelativeTo(this).getPosition().toFloat());
-}
-
 void DynamicPort::setZoom(float newZoom, juce::Point<float> pivot)
 {
     if (component == nullptr) {
@@ -92,9 +94,7 @@ void DynamicPort::setZoom(float newZoom, juce::Point<float> pivot)
     }
 }
 
-void DynamicPort::applyTransform()
+void DynamicPort::mouseMagnify(const juce::MouseEvent& event, float scaleFactor)
 {
-    if (component != nullptr) {
-        component->setTransform(juce::AffineTransform::scale(zoom).translated(translateX, translateY));
-    }
+    setZoom(std::clamp(zoom * scaleFactor, minimumZoom, maximumZoom), event.getEventRelativeTo(this).getPosition().toFloat());
 }

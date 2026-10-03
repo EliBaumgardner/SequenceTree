@@ -67,7 +67,8 @@ Problems confirmed by reading the code on 2026-09-24, while reviewing an externa
 - **Where:** `trimPathToFraction` and `drawArrowProgress` in `Source/UI/Theme/CustomLookAndFeelArrows.cpp`.
 - **Problem:** for every active trail on every frame, the shaft is copied and translated, flattened once to measure its length (`:131`), flattened again to trim it (`:148`), and flattened a third time inside `g.strokePath`.
 - **Possible fix:** the per-trail offset is a pure translation (`:215-217`), so one arc-length table per shaft, rebuilt when the geometry changes, would serve every trail and remove the first two passes.
-- **Status:** unmeasured. Profile during playback before changing it.
+- **Not a problem:** on macOS `strokePath` goes straight to CoreGraphics (`juce_CoreGraphicsContext_mac.mm:677`), so JUCE flattens twice per trail, not three times. A scratch benchmark against a CoreGraphics image measured the copy, translate and trim at 0.13 µs per trail on a straight shaft and 0.79 µs on a 30-segment cubic, against 77–93 µs for `strokeArrowShaft`'s three strokes and about 9 µs for one trail's trim and stroke. The arc-length table would save under 1 µs per trail per frame while adding geometry-invalidation state to `Arrow`, whose shape changes every frame during a snap or drag. If arrow drawing ever shows up in a profile, the three shaft strokes are where the time goes.
+- **Status:** closed 2026-10-03, not fixed.
 
 ## 11. The modulator walk ignores trigger limits
 

@@ -11,7 +11,7 @@ BottomBar::BottomBar(const ApplicationContext& context)
     spanTool.icon    = &CustomLookAndFeel::drawSpanToolIcon;
 
     arrowButton.setLookAndFeel(context.lookAndFeel);
-    spanTool.setLookAndFeel(context.lookAndFeel);
+    spanTool   .setLookAndFeel(context.lookAndFeel);
 
     quaverTool = &quaverPane.addButton(&CustomLookAndFeel::drawQuaverToolIcon, "Note",
         [this]() {
@@ -25,11 +25,13 @@ BottomBar::BottomBar(const ApplicationContext& context)
             applicationContext.canvas->setQuaverMode(NodeCanvas::QuaverMode::Off);
         });
 
-    arrowButton.setTooltip("Arrow Types");
-    spanTool.setTooltip("Node Span");
+    arrowButton       .setTooltip("Arrow Types");
+    spanTool          .setTooltip("Node Span");
     countsField.editor.setTooltip("Counts");
 
-    arrowButton.onClick = [this]() { arrowWindowLauncher.show(); };
+    arrowButton.onClick = [this]() {
+        arrowWindowLauncher.show();
+    };
 
     spanTool.onClick = [this]() {
         spanTool.setSelected(! spanTool.state.isSelected);
@@ -37,7 +39,9 @@ BottomBar::BottomBar(const ApplicationContext& context)
         applicationContext.canvas->setSpanMode(spanTool.state.isSelected);
     };
 
-    quaverTool->onRightClick = [this]() { showQuaverMenu(); };
+    quaverTool->onRightClick = [this]() {
+        showQuaverMenu();
+    };
 
     countsField.label.setText("counts:", juce::dontSendNotification);
 
@@ -102,15 +106,6 @@ void BottomBar::resized()
     countsField.setBounds(quaverPaneBounds.removeFromLeft(labelWidth + editorWidth));
 }
 
-void BottomBar::applyDisplayMode(NodeDisplayMode mode)
-{
-    switch (mode) {
-        case NodeDisplayMode::Pitch:    paintPanel.setPaintMode(ValueField::PaintLayer::Pitch);    break;
-        case NodeDisplayMode::Velocity: paintPanel.setPaintMode(ValueField::PaintLayer::Velocity); break;
-        default: break;
-    }
-}
-
 void BottomBar::showQuaverMenu()
 {
     ContextMenu menu(applicationContext);
@@ -125,4 +120,13 @@ void BottomBar::showQuaverMenu()
     }, true, applicationContext.canvas->quaverRepeat);
 
     menu.show(*quaverTool);
+}
+
+void BottomBar::applyDisplayMode(NodeDisplayMode mode)
+{
+    switch (mode) {
+        case NodeDisplayMode::Pitch:    paintPanel.setPaintMode(ValueField::PaintLayer::Pitch);    break;
+        case NodeDisplayMode::Velocity: paintPanel.setPaintMode(ValueField::PaintLayer::Velocity); break;
+        default: break;
+    }
 }

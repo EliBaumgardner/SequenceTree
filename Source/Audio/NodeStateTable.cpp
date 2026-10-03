@@ -69,24 +69,6 @@ int NodeRowMap::claim(int nodeId)
     return rowCount - 1;
 }
 
-int NodeStateTable::defaultValue(NodeStateSlot slot)
-{
-    switch (slot) {
-        case NodeStateSlot::ActiveAlternative:
-        case NodeStateSlot::LastNode:
-        case NodeStateSlot::SwitchCandidate:
-            return -1;
-
-        default:
-            return 0;
-    }
-}
-
-int NodeStateTable::indexOf(NodeStateSlot slot, int row)
-{
-    return row * slotCount + static_cast<int>(slot);
-}
-
 void NodeStateTable::prepare()
 {
     if (values.size() == valueCount) {
@@ -100,6 +82,24 @@ void NodeStateTable::prepare()
         for (int slot = 0; slot < slotCount; ++slot) {
             values[static_cast<std::size_t>(indexOf(static_cast<NodeStateSlot>(slot), row))] = defaultValue(static_cast<NodeStateSlot>(slot));
         }
+    }
+}
+
+int NodeStateTable::indexOf(NodeStateSlot slot, int row)
+{
+    return row * slotCount + static_cast<int>(slot);
+}
+
+int NodeStateTable::defaultValue(NodeStateSlot slot)
+{
+    switch (slot) {
+        case NodeStateSlot::ActiveAlternative:
+        case NodeStateSlot::LastNode:
+        case NodeStateSlot::SwitchCandidate:
+            return -1;
+
+        default:
+            return 0;
     }
 }
 
@@ -118,19 +118,6 @@ void NodeStateTable::clear()
     rows.clear();
 }
 
-bool NodeStateTable::isAddressable(int nodeId) const
-{
-    if (values.empty()) {
-        return false;
-    }
-
-    const bool inRange = nodeId >= 0;
-
-    assert(inRange && "node id is negative");
-
-    return inRange;
-}
-
 int NodeStateTable::get(NodeStateSlot slot, int nodeId) const
 {
     if (!isAddressable(nodeId)) {
@@ -144,6 +131,19 @@ int NodeStateTable::get(NodeStateSlot slot, int nodeId) const
     }
 
     return values[static_cast<std::size_t>(indexOf(slot, row))];
+}
+
+bool NodeStateTable::isAddressable(int nodeId) const
+{
+    if (values.empty()) {
+        return false;
+    }
+
+    const bool inRange = nodeId >= 0;
+
+    assert(inRange && "node id is negative");
+
+    return inRange;
 }
 
 void NodeStateTable::set(NodeStateSlot slot, int nodeId, int value)

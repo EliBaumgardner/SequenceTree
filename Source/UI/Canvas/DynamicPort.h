@@ -21,9 +21,8 @@ public:
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
     void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
-    void mouseMagnify(const juce::MouseEvent& event, float scaleFactor) override;
-
     void setZoom(float newZoom, juce::Point<float> pivot);
+    void mouseMagnify(const juce::MouseEvent& event, float scaleFactor) override;
 
 private:
 

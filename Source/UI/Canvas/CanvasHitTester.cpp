@@ -63,6 +63,20 @@ Arrow* CanvasHitTester::arrowNear(juce::Point<float> point, float radius) const
         radius);
 }
 
+float CanvasHitTester::distanceToSegment(juce::Point<float> point, juce::Point<float> segmentStart, juce::Point<float> segmentEnd)
+{
+    const juce::Point<float> segment       = segmentEnd - segmentStart;
+    const float              lengthSquared = segment.x * segment.x + segment.y * segment.y;
+
+    if (lengthSquared < 1.0e-6f) {
+        return point.getDistanceFrom(segmentStart);
+    }
+
+    const float alongSegment = juce::jlimit(0.0f, 1.0f, ((point.x - segmentStart.x) * segment.x + (point.y - segmentStart.y) * segment.y) / lengthSquared);
+
+    return point.getDistanceFrom(segmentStart + segment * alongSegment);
+}
+
 Arrow* CanvasHitTester::arrowHeadNear(juce::Point<float> point, float radius) const
 {
     return nearest(canvas.arrowManager.all(), identity,
@@ -134,18 +148,4 @@ Node* CanvasHitTester::nodeContaining(juce::Point<float> point, int excludeId) c
         },
         [point] (Node* node) { return point.getDistanceFrom(node->getNodeCentre().toFloat()); },
         std::numeric_limits<float>::max());
-}
-
-float CanvasHitTester::distanceToSegment(juce::Point<float> point, juce::Point<float> segmentStart, juce::Point<float> segmentEnd)
-{
-    const juce::Point<float> segment       = segmentEnd - segmentStart;
-    const float              lengthSquared = segment.x * segment.x + segment.y * segment.y;
-
-    if (lengthSquared < 1.0e-6f) {
-        return point.getDistanceFrom(segmentStart);
-    }
-
-    const float alongSegment = juce::jlimit(0.0f, 1.0f, ((point.x - segmentStart.x) * segment.x + (point.y - segmentStart.y) * segment.y) / lengthSquared);
-
-    return point.getDistanceFrom(segmentStart + segment * alongSegment);
 }

@@ -73,11 +73,6 @@ void AllowedTraversalsMenu::resized()
     }
 }
 
-int AllowedTraversalsMenu::getIdealHeight() const
-{
-    return contentInset * 2 + rowHeight * juce::jmax(1, static_cast<int>(rows.size()));
-}
-
 bool AllowedTraversalsMenu::isTraversalEnabled(const TraversalKey& key) const
 {
     const juce::ValueTree disabled = connection.getChildWithName(ValueTreeIdentifiers::DisabledTraversalIds);
@@ -127,6 +122,11 @@ void AllowedTraversalsMenu::setTraversalEnabled(const TraversalKey& key, bool en
             disabled.addChild(entry, -1, undoManager);
         }
     }
+}
+
+int AllowedTraversalsMenu::getIdealHeight() const
+{
+    return contentInset * 2 + rowHeight * juce::jmax(1, static_cast<int>(rows.size()));
 }
 
 void AllowedTraversalsMenu::ToggleButton::paint(juce::Graphics& graphics)

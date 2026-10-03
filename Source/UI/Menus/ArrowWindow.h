@@ -33,9 +33,8 @@ private:
         const IconButton* button;
     };
 
-    void addArrowType(ArrowType type, const juce::String& caption, IconButton::Icon icon);
-
     std::optional<ArrowType> arrowTypeFor(const IconButton* button) const;
+    void addArrowType(ArrowType type, const juce::String& caption, IconButton::Icon icon);
 
     static constexpr float bindBarHeightRatio = 0.2f;
 

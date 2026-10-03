@@ -63,11 +63,79 @@ void Titlebar::resized()
     buttonPane.setBounds(bounds.removeFromRight(buttonPaneWidth));
 }
 
+void Titlebar::configureTransportPane()
+{
+    playButton = &transportPane.addButton(&CustomLookAndFeel::drawPlayIcon, "Play / Pause",
+        [this]() { applyPlaybackState(!applicationContext.canvas->start); });
+
+    if (applicationContext.processor->wrapperType != juce::AudioProcessor::wrapperType_Standalone) {
+        playButton->onClick = nullptr;
+
+        playButton->setTooltip("Follows host transport");
+    }
+
+    playButton->setSelected(! applicationContext.processor->isPlaying.load());
+
+    transportPane.addButton(&CustomLookAndFeel::drawResetIcon, "Reset",
+        [this]() { resetTraversals(); });
+
+    if (applicationContext.processor->wrapperType == juce::AudioProcessor::wrapperType_Standalone) {
+        return;
+    }
+
+    syncButton = &transportPane.addButton(&CustomLookAndFeel::drawSyncIcon, "Sync to host playhead",
+        [this]() { syncAttachment->setValueAsCompleteGesture(static_cast<float>(! syncButton->state.isSelected)); });
+
+    syncAttachment = std::make_unique<juce::ParameterAttachment>(
+        *applicationContext.processor->valueTreeState.getParameter(SequenceTreeAudioProcessor::hostSyncParameterId),
+        [this](float synced) { syncButton->setSelected(synced >= 0.5f); });
+
+    syncAttachment->sendInitialUpdate();
+}
+
 void Titlebar::applyPlaybackState(bool shouldPlay)
 {
     playButton->setSelected(! shouldPlay);
 
     applicationContext.canvas->setProcessorPlayback(shouldPlay);
+}
+
+void Titlebar::resetTraversals()
+{
+    applicationContext.processor->resetRequested.store(true);
+
+    if (auto* canvas = applicationContext.canvas) {
+        canvas->arrowManager.resetAllProgress();
+    }
+}
+
+void Titlebar::configureModePane()
+{
+    buttonPane.selection = ButtonPane::Selection::ExclusiveOrNone;
+
+    buttonPane.onSelectionChanged = [this](const IconButton* selected) {
+        applicationContext.nodeController->setArrowMode(selected == nullptr);
+    };
+
+    IconButton& nodeButton = buttonPane.addButton(&CustomLookAndFeel::drawNodeModeIcon, "Node Mode",
+        [this]() { applicationContext.nodeController->nodeControllerMode = NodeController::NodeControllerMode::Node; });
+
+    buttonPane.addButton(&CustomLookAndFeel::drawModulatorIcon, "Modulator Mode",
+        [this]() { applicationContext.nodeController->nodeControllerMode = NodeController::NodeControllerMode::Modulator; });
+
+    buttonPane.addButton(&CustomLookAndFeel::drawTraversalFlagIcon, "Traversal Flag Mode",
+        [this]() { applicationContext.nodeController->nodeControllerMode = NodeController::NodeControllerMode::TraversalFlag; });
+
+    buttonPane.setSelectedButton(&nodeButton);
+}
+
+void Titlebar::configureUndoRedoPane()
+{
+    undoRedoPane.addButton(&CustomLookAndFeel::drawUndoIcon, "Undo",
+        [this]() { applicationContext.undoManager->undo(); });
+
+    undoRedoPane.addButton(&CustomLookAndFeel::drawRedoIcon, "Redo",
+        [this]() { applicationContext.undoManager->redo(); });
 }
 
 void Titlebar::configureDisplaySelector()
@@ -107,72 +175,4 @@ void Titlebar::configureTempoDisplay()
     };
 
     tempoAttachment->sendInitialUpdate();
-}
-
-void Titlebar::configureModePane()
-{
-    buttonPane.selection = ButtonPane::Selection::ExclusiveOrNone;
-
-    buttonPane.onSelectionChanged = [this](const IconButton* selected) {
-        applicationContext.nodeController->setArrowMode(selected == nullptr);
-    };
-
-    IconButton& nodeButton = buttonPane.addButton(&CustomLookAndFeel::drawNodeModeIcon, "Node Mode",
-        [this]() { applicationContext.nodeController->nodeControllerMode = NodeController::NodeControllerMode::Node; });
-
-    buttonPane.addButton(&CustomLookAndFeel::drawModulatorIcon, "Modulator Mode",
-        [this]() { applicationContext.nodeController->nodeControllerMode = NodeController::NodeControllerMode::Modulator; });
-
-    buttonPane.addButton(&CustomLookAndFeel::drawTraversalFlagIcon, "Traversal Flag Mode",
-        [this]() { applicationContext.nodeController->nodeControllerMode = NodeController::NodeControllerMode::TraversalFlag; });
-
-    buttonPane.setSelectedButton(&nodeButton);
-}
-
-void Titlebar::configureTransportPane()
-{
-    playButton = &transportPane.addButton(&CustomLookAndFeel::drawPlayIcon, "Play / Pause",
-        [this]() { applyPlaybackState(!applicationContext.canvas->start); });
-
-    if (applicationContext.processor->wrapperType != juce::AudioProcessor::wrapperType_Standalone) {
-        playButton->onClick = nullptr;
-
-        playButton->setTooltip("Follows host transport");
-    }
-
-    playButton->setSelected(! applicationContext.processor->isPlaying.load());
-
-    transportPane.addButton(&CustomLookAndFeel::drawResetIcon, "Reset",
-        [this]() { resetTraversals(); });
-
-    if (applicationContext.processor->wrapperType == juce::AudioProcessor::wrapperType_Standalone) {
-        return;
-    }
-
-    syncButton = &transportPane.addButton(&CustomLookAndFeel::drawSyncIcon, "Sync to host playhead",
-        [this]() { syncAttachment->setValueAsCompleteGesture(static_cast<float>(! syncButton->state.isSelected)); });
-
-    syncAttachment = std::make_unique<juce::ParameterAttachment>(
-        *applicationContext.processor->valueTreeState.getParameter(SequenceTreeAudioProcessor::hostSyncParameterId),
-        [this](float synced) { syncButton->setSelected(synced >= 0.5f); });
-
-    syncAttachment->sendInitialUpdate();
-}
-
-void Titlebar::configureUndoRedoPane()
-{
-    undoRedoPane.addButton(&CustomLookAndFeel::drawUndoIcon, "Undo",
-        [this]() { applicationContext.undoManager->undo(); });
-
-    undoRedoPane.addButton(&CustomLookAndFeel::drawRedoIcon, "Redo",
-        [this]() { applicationContext.undoManager->redo(); });
-}
-
-void Titlebar::resetTraversals()
-{
-    applicationContext.processor->resetRequested.store(true);
-
-    if (auto* canvas = applicationContext.canvas) {
-        canvas->arrowManager.resetAllProgress();
-    }
 }

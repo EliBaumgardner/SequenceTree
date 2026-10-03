@@ -148,48 +148,36 @@ public:
 
 private:
 
-    const Token& current() const;
-
-    bool match(TokenKind kind);
-
-    const Token& expect(TokenKind kind, const char* description);
-
     void skipTerminators();
-    void endStatement();
-    void recover();
-
-    [[noreturn]] void fail(const std::string& message);
-
-    ValueType parseType();
-
+    const Token& current() const;
     void parseImports(ClassDeclaration& declaration);
+    bool match(TokenKind kind);
+    const Token& expect(TokenKind kind, const char* description);
+    [[noreturn]] void fail(const std::string& message);
+    void endStatement();
     void parseClassHeader(ClassDeclaration& declaration);
     void parseClassBody(ClassDeclaration& declaration);
     void parseClassMember(ClassDeclaration& declaration);
+    ValueType parseType();
     void parseFunction(ClassDeclaration& declaration, ValueType returnType, const Token& nameToken);
-
-    StatementPtr makeStatement(StatementKind kind, const Token& token);
-
+    std::vector<StatementPtr> parseBlock();
     StatementPtr parseStatement();
     StatementPtr parseDeclaration();
-    StatementPtr parseAssignOrCall();
+    StatementPtr makeStatement(StatementKind kind, const Token& token);
+    ExpressionPtr parseExpression();
+    ExpressionPtr parseBinary(int minimumPrecedence);
+    ExpressionPtr parseUnary();
+    ExpressionPtr makeExpression(ExpressionKind kind, const Token& token);
+    ExpressionPtr parsePostfix();
+    ExpressionPtr parsePrimary();
+    static int precedenceOf(TokenKind kind);
     StatementPtr parseIf();
     StatementPtr parseFor();
     StatementPtr parseWhile();
     StatementPtr parseSimple(StatementKind kind);
     StatementPtr parseReturn();
-
-    std::vector<StatementPtr> parseBlock();
-
-    ExpressionPtr makeExpression(ExpressionKind kind, const Token& token);
-
-    static int precedenceOf(TokenKind kind);
-
-    ExpressionPtr parseExpression();
-    ExpressionPtr parseBinary(int minimumPrecedence);
-    ExpressionPtr parseUnary();
-    ExpressionPtr parsePostfix();
-    ExpressionPtr parsePrimary();
+    StatementPtr parseAssignOrCall();
+    void recover();
 
     std::span<const Token>         tokens;
     std::vector<ScriptDiagnostic>& diagnostics;

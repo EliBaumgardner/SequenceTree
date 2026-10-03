@@ -57,11 +57,6 @@ void FilePage::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWh
     setZoom(zoom * (1.0f + delta * zoomSensitivity));
 }
 
-void FilePage::mouseMagnify(const juce::MouseEvent&, float scaleFactor)
-{
-    setZoom(zoom * scaleFactor);
-}
-
 void FilePage::setZoom(float newZoom)
 {
     const float clamped = juce::jlimit(minZoom, maxZoom, newZoom);
@@ -73,6 +68,11 @@ void FilePage::setZoom(float newZoom)
     zoom = clamped;
 
     setFont(getFont().withHeight(baseFontHeight * zoom));
+}
+
+void FilePage::mouseMagnify(const juce::MouseEvent&, float scaleFactor)
+{
+    setZoom(zoom * scaleFactor);
 }
 
 void FilePage::codeDocumentTextInserted(const juce::String&, int)

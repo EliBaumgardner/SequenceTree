@@ -51,6 +51,74 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostRunId, const Trave
     }
 }
 
+void FlagScheduler::queueRemoval(const RTNode& flagNode, int hostRunId, const TraversalKey& hostKey,
+                                 TraversalPool& traversalMap)
+{
+    const TraversalKey targetKey = flagNode.flagTraversal.key;
+
+    if (targetKey.typeId <= 0) {
+        return;
+    }
+
+    if (!(hostKey == targetKey)) {
+        return;
+    }
+
+    TraversalPool::Instance* const hostInstance = traversalMap.find(hostRunId);
+    if (hostInstance == nullptr) {
+        return;
+    }
+
+    hostInstance->runtime.pendingRemoval = true;
+}
+
+void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKey& hostKey, double sample,
+                                       const DispatchContext& context)
+{
+    const TraversalKey spawnKey = flagNode.flagTraversal.key;
+
+    if (spawnKey.typeId <= 0) {
+        return;
+    }
+
+    if (hostKey == spawnKey) {
+        return;
+    }
+
+    const RTNode* startEntry = context.nodes.find(flagNode.flagTargetId);
+    if (startEntry == nullptr) {
+        return;
+    }
+
+    const RTNode& startNode = *startEntry;
+    const int     rootId    = startNode.graphID;
+
+    int runId = context.traversalMap.findRunFor(rootId, spawnKey);
+
+    if (runId == -1) {
+        runId = context.traversalMap.nextRunId();
+    }
+    else {
+        const TraversalPool::Instance* const existingInstance = context.traversalMap.find(runId);
+
+        if (existingInstance != nullptr && existingInstance->logic.shouldTraverse()) {
+            return;
+        }
+    }
+
+    TraversalPool::Instance* instance = dispatcher.prepareTraversal(runId, rootId, startNode.nodeID, flagNode.flagTraversal, context);
+
+    if (instance == nullptr) {
+        return;
+    }
+
+    instance->runtime.asFlag       = true;
+    instance->runtime.sourceNodeId = flagNode.nodeID;
+
+    bridge.highlightNode(startNode, AudioUIBridge::HighlightKind::Show, runId, instance->logic.traversal.key.typeId);
+    dispatcher.pushNote(startNode, runId, context, sample);
+}
+
 void FlagScheduler::queueStart(const RTNode& flagNode, const TraversalKey& hostKey,
                                int delayMs, double sample, double tempoMultiplier,
                                const DispatchContext& context)
@@ -130,72 +198,4 @@ void FlagScheduler::clear()
     for (PendingStart& pending : pendingStarts) {
         pending.active = false;
     }
-}
-
-void FlagScheduler::queueRemoval(const RTNode& flagNode, int hostRunId, const TraversalKey& hostKey,
-                                 TraversalPool& traversalMap)
-{
-    const TraversalKey targetKey = flagNode.flagTraversal.key;
-
-    if (targetKey.typeId <= 0) {
-        return;
-    }
-
-    if (!(hostKey == targetKey)) {
-        return;
-    }
-
-    TraversalPool::Instance* const hostInstance = traversalMap.find(hostRunId);
-    if (hostInstance == nullptr) {
-        return;
-    }
-
-    hostInstance->runtime.pendingRemoval = true;
-}
-
-void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKey& hostKey, double sample,
-                                       const DispatchContext& context)
-{
-    const TraversalKey spawnKey = flagNode.flagTraversal.key;
-
-    if (spawnKey.typeId <= 0) {
-        return;
-    }
-
-    if (hostKey == spawnKey) {
-        return;
-    }
-
-    const RTNode* startEntry = context.nodes.find(flagNode.flagTargetId);
-    if (startEntry == nullptr) {
-        return;
-    }
-
-    const RTNode& startNode = *startEntry;
-    const int     rootId    = startNode.graphID;
-
-    int runId = context.traversalMap.findRunFor(rootId, spawnKey);
-
-    if (runId == -1) {
-        runId = context.traversalMap.nextRunId();
-    }
-    else {
-        const TraversalPool::Instance* const existingInstance = context.traversalMap.find(runId);
-
-        if (existingInstance != nullptr && existingInstance->logic.shouldTraverse()) {
-            return;
-        }
-    }
-
-    TraversalPool::Instance* instance = dispatcher.prepareTraversal(runId, rootId, startNode.nodeID, flagNode.flagTraversal, context);
-
-    if (instance == nullptr) {
-        return;
-    }
-
-    instance->runtime.asFlag       = true;
-    instance->runtime.sourceNodeId = flagNode.nodeID;
-
-    bridge.highlightNode(startNode, AudioUIBridge::HighlightKind::Show, runId, instance->logic.traversal.key.typeId);
-    dispatcher.pushNote(startNode, runId, context, sample);
 }

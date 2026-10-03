@@ -8,8 +8,8 @@ MenuBar::MenuBar(const ApplicationContext& context)
     nodeIcon.icon      = &CustomLookAndFeel::drawNodeIcon;
     traversalIcon.icon = &CustomLookAndFeel::drawTraversalIcon;
 
-    treeIcon.setLookAndFeel(context.lookAndFeel);
-    nodeIcon.setLookAndFeel(context.lookAndFeel);
+    treeIcon     .setLookAndFeel(context.lookAndFeel);
+    nodeIcon     .setLookAndFeel(context.lookAndFeel);
     traversalIcon.setLookAndFeel(context.lookAndFeel);
 
     addAndMakeVisible(treeIcon);

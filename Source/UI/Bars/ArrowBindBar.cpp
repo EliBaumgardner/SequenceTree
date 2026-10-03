@@ -74,35 +74,6 @@ void ArrowBindBar::configureAxis(std::unique_ptr<LabeledEditor>& axis, std::uniq
     addChildComponent(*axis);
 }
 
-void ArrowBindBar::showField(int itemId)
-{
-    const bool showPitch = itemId == pitchItemId;
-
-    auto setFieldVisible = [](BindField& field, bool shouldBeVisible) {
-        field.x->setVisible(shouldBeVisible);
-        field.y->setVisible(shouldBeVisible);
-    };
-
-    setFieldVisible(pitchField,    showPitch);
-    setFieldVisible(durationField, ! showPitch);
-}
-
-void ArrowBindBar::showAxis(AxisMember axisMember, ArrowBinding binding, double multiplier)
-{
-    LabeledEditor& pitchAxis    = *(pitchField.*axisMember);
-    LabeledEditor& durationAxis = *(durationField.*axisMember);
-
-    pitchAxis.editor.boundValue.setValue(deactivatedMultiplier);
-    durationAxis.editor.boundValue.setValue(deactivatedMultiplier);
-
-    if (binding == ArrowBinding::PitchBind) {
-        pitchAxis.editor.boundValue.setValue(multiplier);
-    }
-    else if (binding == ArrowBinding::DurationBind) {
-        durationAxis.editor.boundValue.setValue(multiplier);
-    }
-}
-
 void ArrowBindBar::publishBindings()
 {
     ArrowInfo& arrowInfo = applicationContext.canvas->arrowManager.currentArrowInfo;
@@ -133,6 +104,35 @@ void ArrowBindBar::resolveAxis(AxisMember axisMember, ArrowBinding& binding, dou
 
     binding    = ArrowBinding::NoBind;
     multiplier = defaultMultiplier;
+}
+
+void ArrowBindBar::showField(int itemId)
+{
+    const bool showPitch = itemId == pitchItemId;
+
+    auto setFieldVisible = [](BindField& field, bool shouldBeVisible) {
+        field.x->setVisible(shouldBeVisible);
+        field.y->setVisible(shouldBeVisible);
+    };
+
+    setFieldVisible(pitchField,    showPitch);
+    setFieldVisible(durationField, ! showPitch);
+}
+
+void ArrowBindBar::showAxis(AxisMember axisMember, ArrowBinding binding, double multiplier)
+{
+    LabeledEditor& pitchAxis    = *(pitchField.*axisMember);
+    LabeledEditor& durationAxis = *(durationField.*axisMember);
+
+    pitchAxis.editor.boundValue.setValue(deactivatedMultiplier);
+    durationAxis.editor.boundValue.setValue(deactivatedMultiplier);
+
+    if (binding == ArrowBinding::PitchBind) {
+        pitchAxis.editor.boundValue.setValue(multiplier);
+    }
+    else if (binding == ArrowBinding::DurationBind) {
+        durationAxis.editor.boundValue.setValue(multiplier);
+    }
 }
 
 void ArrowBindBar::layOutAxis(LabeledEditor& axis, juce::Rectangle<int>& bounds, const Metrics& metrics)

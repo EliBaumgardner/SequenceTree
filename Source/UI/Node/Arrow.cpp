@@ -77,120 +77,6 @@ void Arrow::resized()
     valueEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight).withCentre(getTip() - getPosition()));
 }
 
-bool Arrow::isDashed() const
-{
-    if (dashed || isGhost) {
-        return true;
-    }
-
-    if (startNode == nullptr) {
-        return false;
-    }
-
-    if (startNode->nodeType == NodeType::TraversalFlag) {
-        return true;
-    }
-
-    if (endNode == nullptr || endNode->nodeType != NodeType::Root || startNode->isAlternativeNode) {
-        return false;
-    }
-
-    const ArrowType arrowType = ArrowBindingOps::getArrowInfo(arrowTree).type;
-
-    return arrowType != ArrowType::Traversal && arrowType != ArrowType::StepIntoTree;
-}
-
-bool Arrow::isTraversalArrow() const
-{
-    if (isDangling() || ! arrowTree.isValid()) {
-        return false;
-    }
-
-    return ArrowBindingOps::getArrowInfo(arrowTree).type == ArrowType::Traversal;
-}
-
-bool Arrow::isSyncArrow() const
-{
-    return ArrowBindingOps::getArrowInfo(arrowTree).isSynced;
-}
-
-juce::Point<int> Arrow::getTip() const
-{
-    if (endNode != nullptr) {
-        return endNode->getNodeCentre();
-    }
-
-    if (startNode == nullptr) {
-        return tipOffset;
-    }
-
-    return startNode->getNodeCentre() + tipOffset;
-}
-
-juce::Point<float> Arrow::getHeadAnchor() const
-{
-    if (isDangling()) {
-        return getTip().toFloat();
-    }
-
-    const ArrowGeometry geometry = getGeometry(1.0f);
-    if (! geometry.valid) {
-        return getTip().toFloat();
-    }
-
-    const float endExtent = endNode->getBodyExtent(geometry.chord);
-    return endNode->getNodeCentre().toFloat() - geometry.chord * (endExtent + headAnchorInset);
-}
-
-int Arrow::getDuration() const
-{
-    if (startNode == nullptr) {
-        return 0;
-    }
-
-    const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
-
-    return ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(arrowTree), delta.x, delta.y);
-}
-
-bool Arrow::showsDurationLabel() const
-{
-    const ArrowInfo arrowInfo = ArrowBindingOps::getArrowInfo(arrowTree);
-
-    if (ArrowInfo::bindsTo(arrowInfo, ArrowBinding::DurationBind)) {
-        return true;
-    }
-
-    return ! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind);
-}
-
-juce::String Arrow::getDurationLabel() const
-{
-    if (startNode == nullptr) {
-        return "0";
-    }
-
-    if (! showsDurationLabel()) {
-        const Node* pitchedNode = endNode;
-
-        if (isDangling() || startNode->isAlternativeNode) {
-            pitchedNode = startNode;
-        }
-
-        if (pitchedNode != nullptr) {
-            return juce::String(static_cast<int>(pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch, defaultMidiPitch)));
-        }
-    }
-
-    const int duration = getDuration();
-
-    if (startNode->nodeType == NodeType::Modulator) {
-        return juce::String(duration / ArrowInfo::millisecondsPerDurationPercent) + "%";
-    }
-
-    return juce::String(duration);
-}
-
 ArrowGeometry Arrow::getGeometry(float animationProgress) const
 {
     ArrowGeometry geometry;
@@ -275,6 +161,19 @@ ArrowGeometry Arrow::getGeometry(float animationProgress) const
     return geometry;
 }
 
+juce::Point<int> Arrow::getTip() const
+{
+    if (endNode != nullptr) {
+        return endNode->getNodeCentre();
+    }
+
+    if (startNode == nullptr) {
+        return tipOffset;
+    }
+
+    return startNode->getNodeCentre() + tipOffset;
+}
+
 ArrowLabel Arrow::getLabel(const ArrowGeometry& geometry, float headLength) const
 {
     ArrowLabel label;
@@ -318,6 +217,107 @@ ArrowLabel Arrow::getLabel(const ArrowGeometry& geometry, float headLength) cons
     label.angle = angle;
 
     return label;
+}
+
+bool Arrow::isDashed() const
+{
+    if (dashed || isGhost) {
+        return true;
+    }
+
+    if (startNode == nullptr) {
+        return false;
+    }
+
+    if (startNode->nodeType == NodeType::TraversalFlag) {
+        return true;
+    }
+
+    if (endNode == nullptr || endNode->nodeType != NodeType::Root || startNode->isAlternativeNode) {
+        return false;
+    }
+
+    const ArrowType arrowType = ArrowBindingOps::getArrowInfo(arrowTree).type;
+
+    return arrowType != ArrowType::Traversal && arrowType != ArrowType::StepIntoTree;
+}
+
+bool Arrow::isTraversalArrow() const
+{
+    if (isDangling() || ! arrowTree.isValid()) {
+        return false;
+    }
+
+    return ArrowBindingOps::getArrowInfo(arrowTree).type == ArrowType::Traversal;
+}
+
+bool Arrow::isSyncArrow() const
+{
+    return ArrowBindingOps::getArrowInfo(arrowTree).isSynced;
+}
+
+juce::Point<float> Arrow::getHeadAnchor() const
+{
+    if (isDangling()) {
+        return getTip().toFloat();
+    }
+
+    const ArrowGeometry geometry = getGeometry(1.0f);
+    if (! geometry.valid) {
+        return getTip().toFloat();
+    }
+
+    const float endExtent = endNode->getBodyExtent(geometry.chord);
+    return endNode->getNodeCentre().toFloat() - geometry.chord * (endExtent + headAnchorInset);
+}
+
+int Arrow::getDuration() const
+{
+    if (startNode == nullptr) {
+        return 0;
+    }
+
+    const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
+
+    return ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(arrowTree), delta.x, delta.y);
+}
+
+bool Arrow::showsDurationLabel() const
+{
+    const ArrowInfo arrowInfo = ArrowBindingOps::getArrowInfo(arrowTree);
+
+    if (ArrowInfo::bindsTo(arrowInfo, ArrowBinding::DurationBind)) {
+        return true;
+    }
+
+    return ! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind);
+}
+
+juce::String Arrow::getDurationLabel() const
+{
+    if (startNode == nullptr) {
+        return "0";
+    }
+
+    if (! showsDurationLabel()) {
+        const Node* pitchedNode = endNode;
+
+        if (isDangling() || startNode->isAlternativeNode) {
+            pitchedNode = startNode;
+        }
+
+        if (pitchedNode != nullptr) {
+            return juce::String(static_cast<int>(pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch, defaultMidiPitch)));
+        }
+    }
+
+    const int duration = getDuration();
+
+    if (startNode->nodeType == NodeType::Modulator) {
+        return juce::String(duration / ArrowInfo::millisecondsPerDurationPercent) + "%";
+    }
+
+    return juce::String(duration);
 }
 
 juce::Path Arrow::buildShaftPath(const ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const
@@ -433,6 +433,23 @@ void Arrow::triggerSnapAnimation()
     }
 }
 
+void Arrow::advanceAnimation(double frameSec)
+{
+    const bool stillAnimating = animation.advance(frameSec);
+
+    setAlpha(animation.alpha);
+
+    if (animation.alpha <= 0.0f && isVisible()) {
+        setVisible(false);
+    }
+
+    repaint();
+
+    if (! stillAnimating) {
+        animationFrames = {};
+    }
+}
+
 void Arrow::setHoverFade(bool shouldBeVisible)
 {
     animation.alphaTarget = 0.0f;
@@ -499,22 +516,5 @@ void Arrow::resumeProgress()
 
     if (! animation.trails.empty() && animationFrames.isEmpty()) {
         animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
-    }
-}
-
-void Arrow::advanceAnimation(double frameSec)
-{
-    const bool stillAnimating = animation.advance(frameSec);
-
-    setAlpha(animation.alpha);
-
-    if (animation.alpha <= 0.0f && isVisible()) {
-        setVisible(false);
-    }
-
-    repaint();
-
-    if (! stillAnimating) {
-        animationFrames = {};
     }
 }

@@ -90,6 +90,24 @@ void TraversalFlagNode::resized()
                                 editorWidth, editorHeight);
 }
 
+juce::Path TraversalFlagNode::buildTrianglePath() const
+{
+    const auto  bounds         = getLocalBounds().toFloat();
+    const float centreX        = bounds.getCentreX();
+    const float centreY        = bounds.getCentreY();
+    const float bladeLength    = (juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f - 4.0f) * 0.7f;
+    const float baseHalfHeight = bladeLength * 0.5f;
+    juce::Path  triangle;
+
+    triangle.startNewSubPath(centreX + bladeLength, centreY);
+    triangle.lineTo(centreX, centreY + baseHalfHeight);
+    triangle.lineTo(centreX, centreY - baseHalfHeight);
+    triangle.closeSubPath();
+    triangle.applyTransform(juce::AffineTransform::rotation(incomingAngle + juce::MathConstants<float>::halfPi, centreX, centreY));
+
+    return triangle;
+}
+
 bool TraversalFlagNode::hitTest(int x, int y)
 {
     const juce::Point<int> point(x, y);
@@ -110,22 +128,4 @@ void TraversalFlagNode::bindToTree()
     if (nodeValueTree.isValid()) {
         traversalNumEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::TraversalFlagValue);
     }
-}
-
-juce::Path TraversalFlagNode::buildTrianglePath() const
-{
-    const auto  bounds         = getLocalBounds().toFloat();
-    const float centreX        = bounds.getCentreX();
-    const float centreY        = bounds.getCentreY();
-    const float bladeLength    = (juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f - 4.0f) * 0.7f;
-    const float baseHalfHeight = bladeLength * 0.5f;
-    juce::Path  triangle;
-
-    triangle.startNewSubPath(centreX + bladeLength, centreY);
-    triangle.lineTo(centreX, centreY + baseHalfHeight);
-    triangle.lineTo(centreX, centreY - baseHalfHeight);
-    triangle.closeSubPath();
-    triangle.applyTransform(juce::AffineTransform::rotation(incomingAngle + juce::MathConstants<float>::halfPi, centreX, centreY));
-
-    return triangle;
 }

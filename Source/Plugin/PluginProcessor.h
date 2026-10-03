@@ -30,10 +30,10 @@ public:
 #endif
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) noexcept [[clang::nonblocking]] override;
+    void followHostTransport(const int numSamples) noexcept;
     void driveWalk(const AudioSnapshotPublisher::Snapshot& snap, juce::MidiBuffer& midiMessages,
                    const int numSamples, const bool playing, const bool resetHit,
                    const bool replayThisBlock) noexcept;
-    void followHostTransport(const int numSamples) noexcept;
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
@@ -52,11 +52,11 @@ public:
     void changeProgramName (int index, const juce::String& newName) override;
 
     void getStateInformation (juce::MemoryBlock& destData) override;
-    void setStateInformation (const void* data, int sizeInBytes) override;
+    void applyRestoredState();
 
     juce::ValueTree                        pendingRestoreState;
 
-    void applyRestoredState();
+    void setStateInformation (const void* data, int sizeInBytes) override;
 
     std::atomic<bool>   isPlaying       = false;
     std::atomic<bool>   resetRequested  = false;

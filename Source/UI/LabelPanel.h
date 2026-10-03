@@ -27,10 +27,9 @@ public:
     void mouseDrag(const juce::MouseEvent& event) override;
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseUp(const juce::MouseEvent& event) override;
-
     void addFileLabel(juce::String fileName);
-    void removeFileLabel(const FileLabel* label);
     void setSelectedLabel(const FileLabel* label);
+    void removeFileLabel(const FileLabel* label);
     void applyOrder(std::span<const int> fileIds);
 
 private:

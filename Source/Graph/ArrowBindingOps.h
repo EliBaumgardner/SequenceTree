@@ -14,8 +14,8 @@ public:
 
     static void      setArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo,
                                   juce::UndoManager* undoManager);
-    static ArrowInfo getArrowInfo(const juce::ValueTree& arrowTree);
 
+    static ArrowInfo getArrowInfo(const juce::ValueTree& arrowTree);
     void syncPitchBindings  (int nodeId, juce::UndoManager* undoManager);
     void clearArrowDurations(int nodeId, juce::UndoManager* undoManager);
 

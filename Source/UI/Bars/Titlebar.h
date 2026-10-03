@@ -22,13 +22,12 @@ public:
 
 private:
 
+    void configureTransportPane();
+    void resetTraversals();
+    void configureModePane();
+    void configureUndoRedoPane();
     void configureDisplaySelector();
     void configureTempoDisplay();
-    void configureModePane();
-    void configureTransportPane();
-    void configureUndoRedoPane();
-
-    void resetTraversals();
 
     ButtonPane           transportPane;
     ButtonPane           buttonPane;

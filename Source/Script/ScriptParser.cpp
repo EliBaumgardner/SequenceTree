@@ -24,7 +24,32 @@ ClassDeclaration Parser::run()
     return declaration;
 }
 
+void Parser::skipTerminators()
+{
+    while (current().kind == TokenKind::Terminator) {
+        ++position;
+    }
+}
+
 const Token& Parser::current() const { return tokens[position]; }
+
+void Parser::parseImports(ClassDeclaration& declaration)
+{
+    while (match(TokenKind::KeywordImport)) {
+        const Token& library = expect(TokenKind::Identifier, "a library name after 'import', such as 'core'");
+
+        if (library.text != "core") {
+            diagnostics.push_back({ "there is no library '" + library.text + "'; the only library is 'core'",
+                                    library.line, library.column, library.length });
+            throw ParseFailure{};
+        }
+
+        endStatement();
+        skipTerminators();
+
+        declaration.imports.push_back(library.text);
+    }
+}
 
 bool Parser::match(TokenKind kind)
 {
@@ -45,94 +70,15 @@ const Token& Parser::expect(TokenKind kind, const char* description)
     return tokens[position++];
 }
 
-void Parser::skipTerminators()
-{
-    while (current().kind == TokenKind::Terminator) {
-        ++position;
-    }
-}
-
-void Parser::endStatement()
-{
-    expect(TokenKind::Terminator, "';' after a statement");
-}
-
-void Parser::recover()
-{
-    int depth = 0;
-
-    while (current().kind != TokenKind::End) {
-        if (current().kind == TokenKind::LeftBrace) {
-            ++depth;
-        }
-
-        if (current().kind == TokenKind::RightBrace) {
-            if (depth == 0) {
-                return;
-            }
-
-            --depth;
-
-            if (depth == 0) {
-                ++position;
-                return;
-            }
-        }
-
-        if (current().kind == TokenKind::Terminator && depth == 0) {
-            ++position;
-            return;
-        }
-
-        ++position;
-    }
-}
-
-
-
 void Parser::fail(const std::string& message)
 {
     diagnostics.push_back({ message, current().line, current().column, current().length });
     throw ParseFailure{};
 }
 
-ValueType Parser::parseType()
+void Parser::endStatement()
 {
-    if (match(TokenKind::KeywordInt)) {
-        return ValueType::Int;
-    }
-
-    if (match(TokenKind::KeywordFloat)) {
-        return ValueType::Float;
-    }
-
-    if (match(TokenKind::KeywordDouble)) {
-        return ValueType::Double;
-    }
-
-    if (match(TokenKind::KeywordNode)) {
-        return ValueType::Node;
-    }
-
-    fail("expected a type, 'int', 'float', 'double' or 'Node'");
-}
-
-void Parser::parseImports(ClassDeclaration& declaration)
-{
-    while (match(TokenKind::KeywordImport)) {
-        const Token& library = expect(TokenKind::Identifier, "a library name after 'import', such as 'core'");
-
-        if (library.text != "core") {
-            diagnostics.push_back({ "there is no library '" + library.text + "'; the only library is 'core'",
-                                    library.line, library.column, library.length });
-            throw ParseFailure{};
-        }
-
-        endStatement();
-        skipTerminators();
-
-        declaration.imports.push_back(library.text);
-    }
+    expect(TokenKind::Terminator, "';' after a statement");
 }
 
 void Parser::parseClassHeader(ClassDeclaration& declaration)
@@ -218,6 +164,27 @@ void Parser::parseClassMember(ClassDeclaration& declaration)
     declaration.members.push_back({ type, nameToken.text, nameToken.line, nameToken.column, nameToken.length });
 }
 
+ValueType Parser::parseType()
+{
+    if (match(TokenKind::KeywordInt)) {
+        return ValueType::Int;
+    }
+
+    if (match(TokenKind::KeywordFloat)) {
+        return ValueType::Float;
+    }
+
+    if (match(TokenKind::KeywordDouble)) {
+        return ValueType::Double;
+    }
+
+    if (match(TokenKind::KeywordNode)) {
+        return ValueType::Node;
+    }
+
+    fail("expected a type, 'int', 'float', 'double' or 'Node'");
+}
+
 void Parser::parseFunction(ClassDeclaration& declaration, ValueType returnType, const Token& nameToken)
 {
     FunctionDeclaration function;
@@ -251,16 +218,31 @@ void Parser::parseFunction(ClassDeclaration& declaration, ValueType returnType, 
     declaration.functions.push_back(std::move(function));
 }
 
-StatementPtr Parser::makeStatement(StatementKind kind, const Token& token)
+std::vector<StatementPtr> Parser::parseBlock()
 {
-    StatementPtr statement = std::make_unique<Statement>();
+    expect(TokenKind::LeftBrace, "'{'");
 
-    statement->kind   = kind;
-    statement->line   = token.line;
-    statement->column = token.column;
-    statement->length = token.length;
+    std::vector<StatementPtr> body;
 
-    return statement;
+    skipTerminators();
+
+    while (current().kind != TokenKind::RightBrace) {
+        if (current().kind == TokenKind::End) {
+            fail("expected '}'");
+        }
+
+        try {
+            body.push_back(parseStatement());
+        } catch (const ParseFailure&) {
+            recover();
+        }
+
+        skipTerminators();
+    }
+
+    ++position;
+
+    return body;
 }
 
 StatementPtr Parser::parseStatement()
@@ -310,182 +292,16 @@ StatementPtr Parser::parseDeclaration()
     return statement;
 }
 
-StatementPtr Parser::parseAssignOrCall()
+StatementPtr Parser::makeStatement(StatementKind kind, const Token& token)
 {
-    StatementPtr statement = makeStatement(StatementKind::Assign, current());
+    StatementPtr statement = std::make_unique<Statement>();
 
-    ExpressionPtr   target     = parsePostfix();
-    const TokenKind assignKind = current().kind;
-
-    if (assignKind != TokenKind::Assign
-        && assignKind != TokenKind::PlusAssign
-        && assignKind != TokenKind::MinusAssign) {
-        if (target->kind != ExpressionKind::Call) {
-            fail("expected '=', '+=' or '-='");
-        }
-
-        statement->kind  = StatementKind::Call;
-        statement->value = std::move(target);
-
-        endStatement();
-
-        return statement;
-    }
-
-    if (target->kind != ExpressionKind::Name && target->kind != ExpressionKind::Field) {
-        fail("only a variable or a node property can be assigned");
-    }
-
-    statement->op     = assignKind;
-    statement->target = std::move(target);
-    ++position;
-
-    statement->value = parseExpression();
-
-    endStatement();
+    statement->kind   = kind;
+    statement->line   = token.line;
+    statement->column = token.column;
+    statement->length = token.length;
 
     return statement;
-}
-
-StatementPtr Parser::parseIf()
-{
-    StatementPtr statement = makeStatement(StatementKind::If, current());
-    ++position;
-
-    statement->value = parseExpression();
-    statement->body  = parseBlock();
-
-    if (match(TokenKind::KeywordElse)) {
-        statement->hasElse = true;
-
-        if (current().kind == TokenKind::KeywordIf) {
-            statement->elseBody.push_back(parseIf());
-            return statement;
-        }
-
-        statement->elseBody = parseBlock();
-    }
-
-    return statement;
-}
-
-StatementPtr Parser::parseFor()
-{
-    StatementPtr statement = makeStatement(StatementKind::For, current());
-    ++position;
-
-    statement->name = expect(TokenKind::Identifier, "a loop variable name").text;
-
-    expect(TokenKind::KeywordIn, "'in' after a loop variable name");
-
-    ExpressionPtr iterable = parsePostfix();
-
-    if (iterable->kind == ExpressionKind::Field && iterable->name == "children") {
-        statement->target = std::move(iterable->left);
-    }
-    else if (iterable->kind != ExpressionKind::Name || iterable->name != "children") {
-        diagnostics.push_back({ "only children can be iterated, such as 'children' or 'node.children'",
-                                iterable->line, iterable->column, iterable->length });
-        throw ParseFailure{};
-    }
-
-    statement->body = parseBlock();
-
-    return statement;
-}
-
-StatementPtr Parser::parseWhile()
-{
-    StatementPtr statement = makeStatement(StatementKind::While, current());
-    ++position;
-
-    statement->value = parseExpression();
-    statement->body  = parseBlock();
-
-    return statement;
-}
-
-StatementPtr Parser::parseSimple(StatementKind kind)
-{
-    StatementPtr statement = makeStatement(kind, current());
-    ++position;
-
-    endStatement();
-
-    return statement;
-}
-
-StatementPtr Parser::parseReturn()
-{
-    StatementPtr statement = makeStatement(StatementKind::Return, current());
-    ++position;
-
-    if (current().kind != TokenKind::Terminator) {
-        statement->value = parseExpression();
-    }
-
-    endStatement();
-
-    return statement;
-}
-
-std::vector<StatementPtr> Parser::parseBlock()
-{
-    expect(TokenKind::LeftBrace, "'{'");
-
-    std::vector<StatementPtr> body;
-
-    skipTerminators();
-
-    while (current().kind != TokenKind::RightBrace) {
-        if (current().kind == TokenKind::End) {
-            fail("expected '}'");
-        }
-
-        try {
-            body.push_back(parseStatement());
-        } catch (const ParseFailure&) {
-            recover();
-        }
-
-        skipTerminators();
-    }
-
-    ++position;
-
-    return body;
-}
-
-ExpressionPtr Parser::makeExpression(ExpressionKind kind, const Token& token)
-{
-    ExpressionPtr expression = std::make_unique<Expression>();
-
-    expression->kind   = kind;
-    expression->line   = token.line;
-    expression->column = token.column;
-    expression->length = token.length;
-
-    return expression;
-}
-
-int Parser::precedenceOf(TokenKind kind)
-{
-    switch (kind) {
-        case TokenKind::Or:             return 1;
-        case TokenKind::And:            return 2;
-        case TokenKind::EqualEqual:
-        case TokenKind::NotEqual:       return 3;
-        case TokenKind::Less:
-        case TokenKind::LessOrEqual:
-        case TokenKind::Greater:
-        case TokenKind::GreaterOrEqual: return 4;
-        case TokenKind::Plus:
-        case TokenKind::Minus:          return 5;
-        case TokenKind::Star:
-        case TokenKind::Slash:
-        case TokenKind::Percent:        return 6;
-        default:                        return 0;
-    }
 }
 
 ExpressionPtr Parser::parseExpression() { return parseBinary(0); }
@@ -542,6 +358,18 @@ ExpressionPtr Parser::parseUnary()
     }
 
     return parsePostfix();
+}
+
+ExpressionPtr Parser::makeExpression(ExpressionKind kind, const Token& token)
+{
+    ExpressionPtr expression = std::make_unique<Expression>();
+
+    expression->kind   = kind;
+    expression->line   = token.line;
+    expression->column = token.column;
+    expression->length = token.length;
+
+    return expression;
 }
 
 ExpressionPtr Parser::parsePostfix()
@@ -644,4 +472,174 @@ ExpressionPtr Parser::parsePrimary()
     }
 
     fail("expected a value");
+}
+
+int Parser::precedenceOf(TokenKind kind)
+{
+    switch (kind) {
+        case TokenKind::Or:             return 1;
+        case TokenKind::And:            return 2;
+        case TokenKind::EqualEqual:
+        case TokenKind::NotEqual:       return 3;
+        case TokenKind::Less:
+        case TokenKind::LessOrEqual:
+        case TokenKind::Greater:
+        case TokenKind::GreaterOrEqual: return 4;
+        case TokenKind::Plus:
+        case TokenKind::Minus:          return 5;
+        case TokenKind::Star:
+        case TokenKind::Slash:
+        case TokenKind::Percent:        return 6;
+        default:                        return 0;
+    }
+}
+
+StatementPtr Parser::parseIf()
+{
+    StatementPtr statement = makeStatement(StatementKind::If, current());
+    ++position;
+
+    statement->value = parseExpression();
+    statement->body  = parseBlock();
+
+    if (match(TokenKind::KeywordElse)) {
+        statement->hasElse = true;
+
+        if (current().kind == TokenKind::KeywordIf) {
+            statement->elseBody.push_back(parseIf());
+            return statement;
+        }
+
+        statement->elseBody = parseBlock();
+    }
+
+    return statement;
+}
+
+StatementPtr Parser::parseFor()
+{
+    StatementPtr statement = makeStatement(StatementKind::For, current());
+    ++position;
+
+    statement->name = expect(TokenKind::Identifier, "a loop variable name").text;
+
+    expect(TokenKind::KeywordIn, "'in' after a loop variable name");
+
+    ExpressionPtr iterable = parsePostfix();
+
+    if (iterable->kind == ExpressionKind::Field && iterable->name == "children") {
+        statement->target = std::move(iterable->left);
+    }
+    else if (iterable->kind != ExpressionKind::Name || iterable->name != "children") {
+        diagnostics.push_back({ "only children can be iterated, such as 'children' or 'node.children'",
+                                iterable->line, iterable->column, iterable->length });
+        throw ParseFailure{};
+    }
+
+    statement->body = parseBlock();
+
+    return statement;
+}
+
+StatementPtr Parser::parseWhile()
+{
+    StatementPtr statement = makeStatement(StatementKind::While, current());
+    ++position;
+
+    statement->value = parseExpression();
+    statement->body  = parseBlock();
+
+    return statement;
+}
+
+StatementPtr Parser::parseSimple(StatementKind kind)
+{
+    StatementPtr statement = makeStatement(kind, current());
+    ++position;
+
+    endStatement();
+
+    return statement;
+}
+
+StatementPtr Parser::parseReturn()
+{
+    StatementPtr statement = makeStatement(StatementKind::Return, current());
+    ++position;
+
+    if (current().kind != TokenKind::Terminator) {
+        statement->value = parseExpression();
+    }
+
+    endStatement();
+
+    return statement;
+}
+
+StatementPtr Parser::parseAssignOrCall()
+{
+    StatementPtr statement = makeStatement(StatementKind::Assign, current());
+
+    ExpressionPtr   target     = parsePostfix();
+    const TokenKind assignKind = current().kind;
+
+    if (assignKind != TokenKind::Assign
+        && assignKind != TokenKind::PlusAssign
+        && assignKind != TokenKind::MinusAssign) {
+        if (target->kind != ExpressionKind::Call) {
+            fail("expected '=', '+=' or '-='");
+        }
+
+        statement->kind  = StatementKind::Call;
+        statement->value = std::move(target);
+
+        endStatement();
+
+        return statement;
+    }
+
+    if (target->kind != ExpressionKind::Name && target->kind != ExpressionKind::Field) {
+        fail("only a variable or a node property can be assigned");
+    }
+
+    statement->op     = assignKind;
+    statement->target = std::move(target);
+    ++position;
+
+    statement->value = parseExpression();
+
+    endStatement();
+
+    return statement;
+}
+
+void Parser::recover()
+{
+    int depth = 0;
+
+    while (current().kind != TokenKind::End) {
+        if (current().kind == TokenKind::LeftBrace) {
+            ++depth;
+        }
+
+        if (current().kind == TokenKind::RightBrace) {
+            if (depth == 0) {
+                return;
+            }
+
+            --depth;
+
+            if (depth == 0) {
+                ++position;
+                return;
+            }
+        }
+
+        if (current().kind == TokenKind::Terminator && depth == 0) {
+            ++position;
+            return;
+        }
+
+        ++position;
+    }
 }

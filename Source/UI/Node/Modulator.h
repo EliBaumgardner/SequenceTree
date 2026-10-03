@@ -10,12 +10,12 @@ class Modulator : public Node
     public:
 
     explicit Modulator(const ApplicationContext& context);
+
     void  paint(juce::Graphics& graphics) override;
-    bool  hitTest(int x, int y) override;
-    void  bindValueEditorForMode() override;
 
     juce::Rectangle<float> getSquareBounds() const;
-
+    bool  hitTest(int x, int y) override;
+    void  bindValueEditorForMode() override;
     float getBodyExtent(juce::Point<float> approachDirection) const override;
 
     static constexpr int minimumPitchOffset = -48;
