@@ -26,22 +26,20 @@ Titlebar::Titlebar(const ApplicationContext& context)
     configureTempoDisplay();
 }
 
-void Titlebar::paintOverBar(juce::Graphics& graphics)
+Titlebar::~Titlebar()
 {
-    drawSeparator(graphics, (transportPane.getRight() + tempoDisplay.getX()) / 2);
-    drawSeparator(graphics, (tempoDisplay.getRight() + undoRedoPane.getX()) / 2);
-    drawSeparator(graphics, (buttonPane.getRight() + displaySelector.getX()) / 2);
+    applicationContext.undoManager->removeChangeListener(this);
 }
 
 void Titlebar::resized()
 {
     auto bounds = getContentBounds();
 
-    int transportPaneWidth = bounds.getWidth() / 8;
-    int tempoDisplayWidth = bounds.getWidth() / 8;
-    int buttonPaneWidth = bounds.getWidth() / 8;
+    int transportPaneWidth = transportPane.idealWidth(bounds.getHeight());
+    int tempoDisplayWidth = bounds.getWidth() / 9;
+    int buttonPaneWidth = bounds.getWidth() / 4;
     int displaySelectorWidth = bounds.getWidth() / 6;
-    int undoRedoPaneWidth = bounds.getWidth() / 8;
+    int undoRedoPaneWidth = undoRedoPane.idealWidth(bounds.getHeight());
     int spacing = juce::roundToInt(bounds.getWidth() * Theme::contentSpacingRatio);
     float textHeight = CustomLookAndFeel::get(*this).textHeight;
 
@@ -68,13 +66,15 @@ void Titlebar::configureTransportPane()
     playButton = &transportPane.addButton(&CustomLookAndFeel::drawPlayIcon, "Play / Pause",
         [this]() { applyPlaybackState(!applicationContext.canvas->start); });
 
+    playButton->state.look = ButtonState::Look::Accent;
+
     if (applicationContext.processor->wrapperType != juce::AudioProcessor::wrapperType_Standalone) {
         playButton->onClick = nullptr;
 
         playButton->setTooltip("Follows host transport");
     }
 
-    playButton->setSelected(! applicationContext.processor->isPlaying.load());
+    playButton->setSelected(applicationContext.processor->isPlaying.load());
 
     transportPane.addButton(&CustomLookAndFeel::drawResetIcon, "Reset",
         [this]() { resetTraversals(); });
@@ -95,7 +95,7 @@ void Titlebar::configureTransportPane()
 
 void Titlebar::applyPlaybackState(bool shouldPlay)
 {
-    playButton->setSelected(! shouldPlay);
+    playButton->setSelected(shouldPlay);
 
     applicationContext.canvas->setProcessorPlayback(shouldPlay);
 }
@@ -120,22 +120,40 @@ void Titlebar::configureModePane()
     IconButton& nodeButton = buttonPane.addButton(&CustomLookAndFeel::drawNodeModeIcon, "Node Mode",
         [this]() { applicationContext.nodeController->nodeControllerMode = NodeController::NodeControllerMode::Node; });
 
-    buttonPane.addButton(&CustomLookAndFeel::drawModulatorIcon, "Modulator Mode",
+    IconButton& modulatorButton = buttonPane.addButton(&CustomLookAndFeel::drawModulatorIcon, "Modulator Mode",
         [this]() { applicationContext.nodeController->nodeControllerMode = NodeController::NodeControllerMode::Modulator; });
 
-    buttonPane.addButton(&CustomLookAndFeel::drawTraversalFlagIcon, "Traversal Flag Mode",
+    IconButton& flagButton = buttonPane.addButton(&CustomLookAndFeel::drawTraversalFlagIcon, "Traversal Flag Mode",
         [this]() { applicationContext.nodeController->nodeControllerMode = NodeController::NodeControllerMode::TraversalFlag; });
+
+    nodeButton.state.look      = ButtonState::Look::Raised;
+    modulatorButton.state.look = ButtonState::Look::Raised;
+    flagButton.state.look      = ButtonState::Look::Raised;
+
+    nodeButton.setText("Node");
+    modulatorButton.setText("Modulator");
+    flagButton.setText("Flag");
 
     buttonPane.setSelectedButton(&nodeButton);
 }
 
 void Titlebar::configureUndoRedoPane()
 {
-    undoRedoPane.addButton(&CustomLookAndFeel::drawUndoIcon, "Undo",
+    undoButton = &undoRedoPane.addButton(&CustomLookAndFeel::drawUndoIcon, "Undo",
         [this]() { applicationContext.undoManager->undo(); });
 
-    undoRedoPane.addButton(&CustomLookAndFeel::drawRedoIcon, "Redo",
+    redoButton = &undoRedoPane.addButton(&CustomLookAndFeel::drawRedoIcon, "Redo",
         [this]() { applicationContext.undoManager->redo(); });
+
+    applicationContext.undoManager->addChangeListener(this);
+
+    changeListenerCallback(applicationContext.undoManager);
+}
+
+void Titlebar::changeListenerCallback(juce::ChangeBroadcaster*)
+{
+    undoButton->setEnabled(applicationContext.undoManager->canUndo());
+    redoButton->setEnabled(applicationContext.undoManager->canRedo());
 }
 
 void Titlebar::configureDisplaySelector()
@@ -151,6 +169,7 @@ void Titlebar::configureDisplaySelector()
     };
 
     displaySelector.labelEditor.autoFitText = false;
+    displaySelector.leadingIcon             = &CustomLookAndFeel::drawEyeIcon;
 
     addDisplayMode(1, "show pitch",       NodeDisplayMode::Pitch);
     addDisplayMode(2, "show velocity",    NodeDisplayMode::Velocity);

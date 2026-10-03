@@ -28,17 +28,3 @@ juce::Rectangle<int> Bar::getContentBounds() const
 
     return getLocalBounds().reduced(juce::roundToInt(getWidth() * style.contentInsetRatio));
 }
-
-void Bar::drawSeparator(juce::Graphics& graphics, int position)
-{
-    graphics.setColour(CustomLookAndFeel::get(*this).textColour.withAlpha(0.12f));
-
-    if (style.orientation == Orientation::Horizontal) {
-        const float inset = getHeight() * separatorInsetRatio;
-        graphics.drawVerticalLine(position, inset, getHeight() - inset);
-        return;
-    }
-
-    const float inset = getWidth() * separatorInsetRatio;
-    graphics.drawHorizontalLine(position, inset, getWidth() - inset);
-}

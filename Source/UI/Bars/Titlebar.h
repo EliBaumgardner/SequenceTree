@@ -7,13 +7,13 @@
 #include "../Buttons/TempoDisplay.h"
 #include "../../Input/NodeController.h"
 
-class Titlebar : public Bar
+class Titlebar : public Bar, private juce::ChangeListener
 {
 public:
 
     Titlebar(const ApplicationContext& context);
+    ~Titlebar() override;
 
-    void paintOverBar(juce::Graphics& graphics) override;
     void resized() override;
 
     void applyPlaybackState(bool shouldPlay);
@@ -26,6 +26,7 @@ private:
     void resetTraversals();
     void configureModePane();
     void configureUndoRedoPane();
+    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     void configureDisplaySelector();
     void configureTempoDisplay();
 
@@ -37,6 +38,8 @@ private:
 
     IconButton*          playButton = nullptr;
     IconButton*          syncButton = nullptr;
+    IconButton*          undoButton = nullptr;
+    IconButton*          redoButton = nullptr;
 
     std::unique_ptr<juce::ParameterAttachment> tempoAttachment;
     std::unique_ptr<juce::ParameterAttachment> syncAttachment;

@@ -8,7 +8,7 @@ LabelPanel::LabelPanel(const ApplicationContext& context) : context(context)
 
 void LabelPanel::paint(juce::Graphics& graphics)
 {
-    graphics.setColour(CustomLookAndFeel::get(*this).baseDarkColour2);
+    graphics.setColour(CustomLookAndFeel::get(*this).windowColour);
     graphics.fillRect(getLocalBounds());
 }
 

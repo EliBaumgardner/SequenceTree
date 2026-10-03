@@ -112,7 +112,6 @@ private:
     static constexpr float arrowHeadGrabRadius     = 16.0f;
     static constexpr float arrowLabelGrabRadius    = 10.0f;
     static constexpr int   dragThreshold           = 5;
-    static constexpr int   defaultNodeRadius       = 20;
 
     const ApplicationContext& applicationContext;
     NodeCanvas&               canvas;

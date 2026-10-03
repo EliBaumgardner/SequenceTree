@@ -12,7 +12,6 @@
 
 NodeCanvas::NodeCanvas(const ApplicationContext& context) : applicationContext(context)
 {
-    setPaintingIsUnclipped(true);
     setWantsKeyboardFocus(true);
     setLookAndFeel(applicationContext.lookAndFeel);
 }
@@ -34,6 +33,8 @@ void NodeCanvas::paint(juce::Graphics& graphics)
     if (!selectionBounds.isEmpty()) {
         const Theme& theme = CustomLookAndFeel::get(*this);
 
+        graphics.addTransform(viewTransform);
+
         graphics.setColour(theme.selectionBoxColour.withAlpha(0.15f));
         graphics.fillRect(selectionBounds);
 
@@ -49,6 +50,13 @@ void NodeCanvas::clearCanvas()
 
     gridOriginSet = false;
     gridVisible   = false;
+}
+
+void NodeCanvas::childrenChanged()
+{
+    for (juce::Component* child : getChildren()) {
+        child->setTransform(viewTransform);
+    }
 }
 
 void NodeCanvas::enqueueAsyncUpdate(const AsyncUpdate& update)

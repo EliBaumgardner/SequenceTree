@@ -3,7 +3,6 @@
 #include <unordered_set>
 
 #include "../../Graph/RTData.h"
-#include "DynamicPort.h"
 #include "../../Util/NodeInfo.h"
 #include "../../Util/ApplicationContext.h"
 #include "NodeCanvasTreeListener.h"
@@ -59,6 +58,7 @@ public:
     void paint(juce::Graphics& graphics) override;
 
     void clearCanvas();
+    void childrenChanged() override;
     void enqueueAsyncUpdate(const AsyncUpdate& update);
     void setProcessorPlayback(bool isPlaying);
     void rebuildFromNodeMap(const juce::ValueTree& stateTree);
@@ -74,6 +74,9 @@ public:
     const ApplicationContext& applicationContext;
 
     juce::Colour canvasColour = juce::Colours::white;
+
+    juce::AffineTransform viewTransform;
+    juce::AffineTransform modelTransform;
 
     bool       start      = false;
     bool       paintMode  = false;

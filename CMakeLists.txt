@@ -28,6 +28,13 @@ juce_add_plugin(SequenceTree
         PLUGIN_CODE ST01
 )
 
+juce_add_binary_data(SequenceTreeFonts
+        SOURCES
+        Resources/Fonts/Geist-Regular.ttf
+        Resources/Fonts/Geist-SemiBold.ttf
+        Resources/Fonts/GeistMono-Regular.ttf
+)
+
 target_compile_features(SequenceTree PRIVATE cxx_std_20)
 
 if(MSVC)
@@ -140,6 +147,7 @@ target_link_libraries(SequenceTree PRIVATE
         juce::juce_audio_processors
         juce::juce_audio_devices
         juce::juce_audio_utils
+        SequenceTreeFonts
         PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags

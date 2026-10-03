@@ -11,7 +11,8 @@ IconButton::IconButton()
 
 void IconButton::paint(juce::Graphics& graphics)
 {
-    auto iconBounds = getLocalBounds();
+    CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
+    auto               iconBounds  = getLocalBounds();
 
     if (caption.isVisible()) {
         iconBounds.removeFromBottom(captionHeight + captionGap);
@@ -20,7 +21,9 @@ void IconButton::paint(juce::Graphics& graphics)
     }
 
     if (icon != nullptr) {
-        (CustomLookAndFeel::get(*this).*icon)(graphics, iconBounds.toFloat(), state);
+        const juce::Rectangle<float> glyphBounds = lookAndFeel.drawButtonTile(graphics, iconBounds.toFloat(), state);
+
+        (lookAndFeel.*icon)(graphics, glyphBounds, state);
     }
 
     if (painter) {
@@ -38,9 +41,20 @@ void IconButton::resized()
 void IconButton::lookAndFeelChanged()
 {
     if (const auto* theme = dynamic_cast<const Theme*>(&getLookAndFeel())) {
-        caption.setColour(juce::Label::textColourId, theme->textColour);
-        caption.setFont(juce::Font(juce::FontOptions(Theme::labelFontHeight)));
+        caption.setColour(juce::Label::textColourId, theme->captionColour);
+        caption.setFont(theme->font(Theme::FontStyle::Regular, Theme::labelFontHeight));
     }
+}
+
+void IconButton::enablementChanged()
+{
+    float alpha = Theme::disabledButtonAlpha;
+
+    if (isEnabled()) {
+        alpha = 1.0f;
+    }
+
+    setAlpha(alpha);
 }
 
 void IconButton::setText(juce::String newText)

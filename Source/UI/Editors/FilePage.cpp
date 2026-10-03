@@ -10,16 +10,16 @@ FilePage::FilePage(const ApplicationContext& context)
     setNewLineCharacters("\n");
     addListener(this);
 
-    setColour(backgroundColourId,               theme.baseDarkColour2);
-    setColour(defaultTextColourId,              juce::Colours::lightgrey);
-    setColour(highlightColourId,                theme.baseLightColour2.withAlpha(selectionAlpha));
+    setColour(backgroundColourId,               theme.surfaceColour);
+    setColour(defaultTextColourId,              theme.textColour);
+    setColour(highlightColourId,                theme.accentColour.withAlpha(selectionAlpha));
     setColour(lineNumberBackgroundId,           juce::Colours::transparentBlack);
     setColour(lineNumberTextId,                 theme.lineNumberColour);
-    setColour(juce::CaretComponent::caretColourId, juce::Colours::white);
+    setColour(juce::CaretComponent::caretColourId, theme.accentColour);
 
     setLineNumbersShown(true);
     setTabSize(indentSize, true);
-    setFont(juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), baseFontHeight, juce::Font::plain)));
+    setFont(theme.font(Theme::FontStyle::Mono, baseFontHeight));
 }
 
 FilePage::~FilePage()

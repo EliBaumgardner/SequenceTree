@@ -18,6 +18,5 @@ private:
 
     juce::Path buildTrianglePath() const;
 
-    juce::Colour outlineColour = juce::Colours::black;
-    ValueEditor  traversalNumEditor;
+    ValueEditor traversalNumEditor;
 };

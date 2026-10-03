@@ -12,27 +12,44 @@ MenuBar::MenuBar(const ApplicationContext& context)
     nodeIcon     .setLookAndFeel(context.lookAndFeel);
     traversalIcon.setLookAndFeel(context.lookAndFeel);
 
+    treeIcon.setEnabled(false);
+
     addAndMakeVisible(treeIcon);
     addAndMakeVisible(nodeIcon);
     addAndMakeVisible(traversalIcon);
 }
 
+void MenuBar::paintOverBar(juce::Graphics& graphics)
+{
+    const Theme& theme = CustomLookAndFeel::get(*this);
+
+    graphics.setColour(theme.accentColour);
+
+    for (const IconButton* icon : { &nodeIcon, &traversalIcon }) {
+        if (icon->state.isSelected) {
+            const auto iconBounds = icon->getBounds().toFloat();
+            const auto marker     = juce::Rectangle<float>(0.0f, iconBounds.getY(), Theme::selectedMarkerWidth, iconBounds.getHeight())
+                                        .reduced(0.0f, iconBounds.getHeight() * 0.22f);
+
+            graphics.fillRoundedRectangle(marker, Theme::selectedMarkerWidth * 0.5f);
+        }
+    }
+}
+
 void MenuBar::resized()
 {
-    const auto  bounds         = getContentBounds();
-    const float heightPerIcon  = bounds.getHeight() / (iconCount + (iconCount + 1) * Theme::iconGapRatio);
-    const int   iconSize       = juce::jmax(0, juce::jmin(bounds.getWidth(), static_cast<int>(heightPerIcon)));
-    const int   iconGap        = (bounds.getHeight() - iconSize * iconCount) / (iconCount + 1);
-    const int   iconX          = bounds.getX() + (bounds.getWidth() - iconSize) / 2;
-    int         iconY          = bounds.getY() + iconGap;
+    const auto bounds   = getContentBounds();
+    const int  iconSize = bounds.getWidth();
+    const int  iconGap  = juce::roundToInt(iconSize * Theme::iconGapRatio);
+    int        iconY    = bounds.getY();
 
-    treeIcon.setBounds(iconX, iconY, iconSize, iconSize);
+    treeIcon.setBounds(bounds.getX(), iconY, iconSize, iconSize);
 
     iconY += iconSize + iconGap;
 
-    nodeIcon.setBounds(iconX, iconY, iconSize, iconSize);
+    nodeIcon.setBounds(bounds.getX(), iconY, iconSize, iconSize);
 
     iconY += iconSize + iconGap;
 
-    traversalIcon.setBounds(iconX, iconY, iconSize, iconSize);
+    traversalIcon.setBounds(bounds.getX(), iconY, iconSize, iconSize);
 }

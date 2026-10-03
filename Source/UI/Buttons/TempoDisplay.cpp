@@ -1,4 +1,5 @@
 #include "TempoDisplay.h"
+#include "IconButton.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Graph/RTData.h"
 
@@ -14,19 +15,25 @@ TempoDisplay::TempoDisplay(const ApplicationContext& context)
     tempoFormat->suffix = "x";
 
     editor.setFormat(std::move(tempoFormat));
+    editor.setJustification(juce::Justification::centredLeft);
 
     addAndMakeVisible(editor);
 }
 
 void TempoDisplay::paint(juce::Graphics& graphics)
 {
-    const Theme& theme = CustomLookAndFeel::get(*this);
+    CustomLookAndFeel& lookAndFeel   = CustomLookAndFeel::get(*this);
+    const auto         contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * Theme::contentInsetRatio));
 
-    graphics.setColour(theme.buttonBarColour);
-    graphics.fillRoundedRectangle(editor.getBounds().toFloat(), Theme::paneCornerRadius);
+    lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
+    lookAndFeel.drawTempoIcon(graphics, contentBounds.withWidth(contentBounds.getHeight()).toFloat(), ButtonState {});
 }
 
 void TempoDisplay::resized()
 {
-    editor.setBounds(getLocalBounds().reduced(juce::roundToInt(getHeight() * Theme::contentInsetRatio)));
+    auto contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * Theme::contentInsetRatio));
+
+    contentBounds.removeFromLeft(contentBounds.getHeight());
+
+    editor.setBounds(contentBounds);
 }

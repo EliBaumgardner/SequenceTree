@@ -50,10 +50,10 @@ void TraversalRulesWindow::paint(juce::Graphics& graphics)
     const Theme&               theme        = CustomLookAndFeel::get(*this);
     const juce::Rectangle<int> statusBounds = getLocalBounds().removeFromBottom(statusBarHeight);
 
-    graphics.setColour(theme.baseDarkColour2);
+    graphics.setColour(theme.surfaceColour);
     graphics.fillRect(getLocalBounds());
 
-    graphics.setColour(theme.baseDarkColour1);
+    graphics.setColour(theme.raisedColour);
     graphics.fillRect(statusBounds);
 
     if (statusIsError) {
@@ -63,10 +63,10 @@ void TraversalRulesWindow::paint(juce::Graphics& graphics)
         graphics.setColour(theme.scriptOkColour);
     }
 
-    graphics.setFont(juce::Font(juce::FontOptions(Theme::labelFontHeight)));
+    graphics.setFont(theme.font(Theme::FontStyle::Mono, Theme::labelFontHeight));
     graphics.drawText(statusText, statusBounds.reduced(Theme::menuEdgeInset, 0), juce::Justification::centredLeft, true);
 
-    graphics.setColour(juce::Colours::black);
+    graphics.setColour(theme.borderColour);
     graphics.drawRect(getLocalBounds(), 1);
 }
 
@@ -346,7 +346,7 @@ TraversalRulesWindow::RulesTitlebar::RulesTitlebar(const ApplicationContext& con
     playButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
         ButtonState triangleState = state;
 
-        triangleState.isSelected = true;
+        triangleState.isSelected = false;
 
         CustomLookAndFeel::get(*this).drawPlayIcon(graphics, bounds, triangleState);
     };
@@ -361,11 +361,6 @@ TraversalRulesWindow::RulesTitlebar::RulesTitlebar(const ApplicationContext& con
 
     addAndMakeVisible(playButton);
     addAndMakeVisible(undoRedoPane);
-}
-
-void TraversalRulesWindow::RulesTitlebar::paintOverBar(juce::Graphics& graphics)
-{
-    drawSeparator(graphics, (playButton.getRight() + undoRedoPane.getX()) / 2);
 }
 
 void TraversalRulesWindow::RulesTitlebar::resized()
@@ -401,7 +396,7 @@ void TraversalRulesWindow::RulesPanel::paint(juce::Graphics& graphics)
 {
     const Theme& theme = CustomLookAndFeel::get(*this);
 
-    graphics.setColour(theme.baseDarkColour2);
+    graphics.setColour(theme.windowColour);
     graphics.fillRect(getLocalBounds());
 }
 

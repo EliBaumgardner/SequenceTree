@@ -8,11 +8,7 @@ ButtonPane::ButtonPane(const ApplicationContext& context) : applicationContext(c
 
 void ButtonPane::paint(juce::Graphics& graphics)
 {
-    const Theme& theme  = CustomLookAndFeel::get(*this);
-    const auto   bounds = getLocalBounds().reduced(Theme::outerButtonBoundsReduction).toFloat();
-
-    graphics.setColour(theme.buttonBarColour);
-    graphics.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
+    CustomLookAndFeel::get(*this).drawPane(graphics, getLocalBounds().toFloat());
 }
 
 void ButtonPane::resized()
@@ -46,18 +42,15 @@ void ButtonPane::resized()
         return;
     }
 
-    const int   buttonCount    = buttons.size();
-    const auto  bounds         = getLocalBounds().reduced(juce::roundToInt(getHeight() * Theme::contentInsetRatio));
-    const float widthPerButton = bounds.getWidth() / (buttonCount + (buttonCount + 1) * Theme::iconGapRatio);
-    const int   buttonSize     = juce::jmax(0, juce::jmin(bounds.getHeight(), static_cast<int>(widthPerButton)));
-    const float spacing        = (bounds.getWidth() - buttonSize * buttonCount) / static_cast<float>(buttonCount + 1);
-    const int   buttonY        = bounds.getCentreY() - buttonSize / 2;
-    float       buttonX        = bounds.getX() + spacing;
+    const int   buttonCount = buttons.size();
+    const auto  bounds      = getLocalBounds().reduced(juce::roundToInt(getHeight() * Theme::contentInsetRatio));
+    const float buttonWidth = juce::jmax(0.0f, (bounds.getWidth() - Theme::buttonGap * (buttonCount - 1)) / static_cast<float>(buttonCount));
+    float       buttonX     = static_cast<float>(bounds.getX());
 
     for (IconButton* button : buttons) {
-        button->setBounds(juce::roundToInt(buttonX), buttonY, buttonSize, buttonSize);
+        button->setBounds(juce::roundToInt(buttonX), bounds.getY(), juce::roundToInt(buttonWidth), bounds.getHeight());
 
-        buttonX += buttonSize + spacing;
+        buttonX += buttonWidth + Theme::buttonGap;
     }
 }
 
@@ -115,4 +108,12 @@ void ButtonPane::setSelectedButton(const IconButton* selected)
     if (onSelectionChanged) {
         onSelectionChanged(selected);
     }
+}
+
+int ButtonPane::idealWidth(int height) const
+{
+    const int inset       = juce::roundToInt(height * Theme::contentInsetRatio);
+    const int buttonWidth = juce::roundToInt((height - inset * 2) * Theme::buttonAspectRatio);
+
+    return inset * 2 + buttons.size() * buttonWidth + juce::jmax(0, buttons.size() - 1) * Theme::buttonGap;
 }

@@ -35,7 +35,7 @@ void ColourPicker::paint(juce::Graphics& graphics)
     graphics.drawRect(saturationBrightnessArea);
     graphics.drawRect(hueArea);
 
-    graphics.setColour(theme.selectionRingColour);
+    graphics.setColour(theme.dropShadowColour);
     graphics.drawEllipse(saturationBrightnessCursor.expanded(cursorRingWidth), cursorRingWidth);
     graphics.drawEllipse(hueCursor.expanded(cursorRingWidth), cursorRingWidth);
 
@@ -50,7 +50,7 @@ void ColourPicker::paint(juce::Graphics& graphics)
     graphics.fillRect(currentArea);
 
     graphics.setColour(currentColour.contrasting());
-    graphics.setFont(juce::FontOptions(currentArea.getHeight() * hexTextHeightRatio));
+    graphics.setFont(theme.font(Theme::FontStyle::Mono, currentArea.getHeight() * hexTextHeightRatio));
     graphics.drawText("#" + currentColour.toDisplayString(false), currentArea, juce::Justification::centred);
 
     graphics.setColour(theme.popupMenuBorderColour);
@@ -69,7 +69,7 @@ void ColourPicker::paint(juce::Graphics& graphics)
             graphics.fillRoundedRectangle(slot, Theme::paneCornerRadius);
         }
         else {
-            graphics.setColour(theme.baseDarkColour2);
+            graphics.setColour(theme.raisedColour);
             graphics.fillRoundedRectangle(slot, Theme::paneCornerRadius);
 
             graphics.setColour(theme.captionColour);
@@ -252,11 +252,13 @@ void ColourSelector::paint(juce::Graphics& graphics)
 {
     const Theme& theme   = CustomLookAndFeel::get(*this);
     const auto   bounds  = getLocalBounds().toFloat().reduced(Theme::popupMenuBorderThickness);
+    const float  side    = juce::jmin(bounds.getWidth(), bounds.getHeight());
+    const auto   disc    = bounds.withSizeKeepingCentre(side, side);
     juce::Colour fill    = colour;
-    juce::Colour outline = theme.popupMenuBorderColour;
+    juce::Colour outline = theme.borderStrongColour;
 
     if (! isEnabled()) {
-        fill = theme.buttonBarColour;
+        fill = theme.raisedColour;
     }
 
     if (isEnabled() && isMouseOver()) {
@@ -266,10 +268,10 @@ void ColourSelector::paint(juce::Graphics& graphics)
     switch (shape) {
         case Shape::Circle:
             graphics.setColour(fill);
-            graphics.fillEllipse(bounds);
+            graphics.fillEllipse(disc.reduced(side * 0.22f));
 
             graphics.setColour(outline);
-            graphics.drawEllipse(bounds, Theme::popupMenuBorderThickness);
+            graphics.drawEllipse(disc.reduced(side * 0.12f), Theme::popupMenuBorderThickness);
             break;
 
         case Shape::Square:

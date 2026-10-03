@@ -13,8 +13,7 @@ TraversalMenu::TraversalMenu(const ApplicationContext& context)
       transposeField(context),
       velocityField(context),
       colourSelector(context),
-      applicationContext(context),
-      topBar(context, { Bar::Orientation::Horizontal })
+      applicationContext(context)
 {
     const juce::ValueTree traversalMap     = applicationContext.graphState->traversals.map;
     auto                  transposeFormat  = std::make_unique<NumberFormat>(minimumTraversalTranspose, maximumTraversalTranspose);
@@ -23,7 +22,7 @@ TraversalMenu::TraversalMenu(const ApplicationContext& context)
     setLookAndFeel(context.lookAndFeel);
 
     editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawTextButton(graphics, bounds, state, CustomLookAndFeel::get(*this).textHeight);
+        CustomLookAndFeel::get(*this).drawRulesButton(graphics, bounds, state, CustomLookAndFeel::get(*this).textHeight);
     };
 
     editTraversalRulesButton.setLookAndFeel(context.lookAndFeel);
@@ -55,7 +54,6 @@ TraversalMenu::TraversalMenu(const ApplicationContext& context)
 
     editTraversalRulesButton.onClick = [this]() { traversalRulesLauncher.show(); };
 
-    addAndMakeVisible(topBar);
     addAndMakeVisible(displayMenu);
     addAndMakeVisible(multiplierField);
     addAndMakeVisible(channelField);
@@ -97,10 +95,13 @@ TraversalMenu::~TraversalMenu()
 
 void TraversalMenu::paint(juce::Graphics& graphics)
 {
-    const Theme& theme = CustomLookAndFeel::get(*this);
+    CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
+    const int          barHeight   = static_cast<int>(getHeight() * Theme::barHeightRatio);
 
-    graphics.setColour(theme.baseDarkColour2);
-    graphics.fillRect(getLocalBounds());
+    lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
+
+    graphics.setColour(lookAndFeel.borderColour);
+    graphics.fillRect(0.0f, static_cast<float>(barHeight), static_cast<float>(getWidth()), Theme::borderThickness);
 }
 
 void TraversalMenu::resized()
@@ -109,7 +110,7 @@ void TraversalMenu::resized()
     const int        spacing    = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
     const int        rowHeight  = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
     const float      textHeight = CustomLookAndFeel::get(*this).textHeight;
-    const juce::Font textFont   { juce::FontOptions(textHeight) };
+    const juce::Font textFont   = CustomLookAndFeel::get(*this).font(Theme::FontStyle::Regular, textHeight);
     auto             bounds     = getLocalBounds();
     auto             barArea    = bounds.removeFromTop(barHeight);
 
@@ -119,7 +120,6 @@ void TraversalMenu::resized()
     transposeField.editor.setFontHeight(textHeight);
     velocityField.editor.setFontHeight(textHeight);
 
-    topBar.setBounds(barArea);
     displayMenu.setBounds(barArea.reduced(juce::roundToInt(barHeight * Theme::contentInsetRatio)));
 
     bounds.reduce(spacing, spacing);

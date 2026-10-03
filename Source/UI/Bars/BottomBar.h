@@ -25,7 +25,6 @@ private:
     void showQuaverMenu();
 
     static constexpr float paintPanelWidthRatio    = 0.26f;
-    static constexpr float toolWidthRatio          = 0.03f;
     static constexpr float quaverPaneWidthRatio    = 0.105f;
     static constexpr float quaverButtonWidthRatio  = 0.28f;
     static constexpr float countsLabelWidthRatio   = 0.42f;
@@ -42,10 +41,10 @@ private:
     };
 
     PaintToolSettings paintPanel   { applicationContext };
-    IconButton        arrowButton;
-    IconButton        spanTool;
+    ButtonPane        toolPane     { applicationContext };
     ButtonPane        quaverPane   { applicationContext };
     LabeledEditor     countsField  { applicationContext };
 
     IconButton* quaverTool = nullptr;
+    IconButton* spanTool   = nullptr;
 };

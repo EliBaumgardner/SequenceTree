@@ -15,9 +15,9 @@ static void paintNodeShadow(juce::Graphics& graphics, juce::Rectangle<float> sha
     const auto  shadowCenter = shapeBounds.getCentre() + juce::Point<float>(Theme::nodeShadowOffsetX, Theme::nodeShadowOffsetY);
     const auto  shadowBounds = juce::Rectangle<float>(outerR * 2.0f, outerR * 2.0f).withCentre(shadowCenter);
 
-    juce::ColourGradient gradient(juce::Colours::black.withAlpha(0.15f), shadowCenter.x, shadowCenter.y,
+    juce::ColourGradient gradient(juce::Colours::black.withAlpha(Theme::nodeShadowAlpha), shadowCenter.x, shadowCenter.y,
                                   juce::Colours::black.withAlpha(0.0f), shadowCenter.x + outerR, shadowCenter.y, true);
-    gradient.addColour(innerR / outerR, juce::Colours::black.withAlpha(0.10f));
+    gradient.addColour(innerR / outerR, juce::Colours::black.withAlpha(Theme::nodeShadowAlpha * 0.6f));
 
     graphics.setGradientFill(gradient);
     graphics.fillEllipse(shadowBounds);
@@ -25,15 +25,28 @@ static void paintNodeShadow(juce::Graphics& graphics, juce::Rectangle<float> sha
 
 void CustomLookAndFeel::drawNode(juce::Graphics& graphics, const NodeVisual& visual)
 {
-    auto circleBounds = getNodeCircleBounds(visual.bounds);
-    auto circleFill   = circleBounds.reduced(0.5f);
-    auto circleSelect = circleBounds.expanded(selectionRingGap + selectionRingWidth * 0.5f);
-    auto circleHover  = circleBounds.reduced(0.5f);
+    auto         circleBounds = getNodeCircleBounds(visual.bounds);
+    auto         circleFill   = circleBounds.reduced(0.5f);
+    auto         circleSelect = circleBounds.expanded(selectionRingGap + selectionRingWidth * 0.5f);
+    juce::Colour fill         = visual.colour;
+    juce::Colour outline      = borderStrongColour;
+
+    if (visual.isHovered) {
+        fill    = fill.brighter(hoverFillBrightness);
+        outline = hoverRingColour;
+    }
+
+    if (! visual.highlights.empty()) {
+        fill = fill.interpolatedWith(visual.highlights.begin()->second, highlightTintAmount);
+    }
 
     paintNodeShadow(graphics, circleBounds);
 
-    graphics.setColour(visual.colour);
+    graphics.setColour(fill);
     graphics.fillEllipse(circleFill);
+
+    graphics.setColour(outline);
+    graphics.drawEllipse(circleFill, borderThickness);
 
     if (visual.hasInnerRim) {
         graphics.setColour(visual.colour.brighter(0.35f));
@@ -54,11 +67,6 @@ void CustomLookAndFeel::drawNode(juce::Graphics& graphics, const NodeVisual& vis
         ringInset += highlightRingSpacing;
     }
 
-    if (visual.isHovered) {
-        graphics.setColour(hoverRingColour);
-        graphics.drawEllipse(circleHover, hoverRingWidth);
-    }
-
     if (visual.isSelected) {
         graphics.setColour(selectionRingColour);
         graphics.drawEllipse(circleSelect, selectionRingWidth);
@@ -72,38 +80,52 @@ void CustomLookAndFeel::drawNode(juce::Graphics& graphics, const NodeVisual& vis
 
 void CustomLookAndFeel::drawModulatorNode(juce::Graphics& graphics, const NodeVisual& visual)
 {
-    auto squareBounds = visual.bounds;
-    auto squareFill   = squareBounds.reduced(0.5f);
-    auto squareHover  = squareBounds.reduced(0.5f).expanded(hoverRingWidth * 0.5f);
-    auto squareRim    = squareBounds.reduced(selectionRimWidth * 0.5f);
+    auto         squareBounds = visual.bounds;
+    auto         squareFill   = squareBounds.reduced(0.5f);
+    auto         squareSelect = squareBounds.expanded(selectionRingGap + selectionRingWidth * 0.5f);
+    const float  cornerRadius = squareBounds.getWidth() * modulatorCornerRatio;
+    juce::Colour fill         = visual.colour;
+    juce::Colour outline      = borderStrongColour;
+
+    if (visual.isHovered) {
+        fill    = fill.brighter(hoverFillBrightness);
+        outline = hoverRingColour;
+    }
+
+    if (! visual.highlights.empty()) {
+        fill = fill.interpolatedWith(visual.highlights.begin()->second, highlightTintAmount);
+    }
 
     paintNodeShadow(graphics, squareBounds);
 
-    graphics.setColour(visual.colour);
-    graphics.fillRect(squareFill);
+    graphics.setColour(fill);
+    graphics.fillRoundedRectangle(squareFill, cornerRadius);
+
+    graphics.setColour(outline);
+    graphics.drawRoundedRectangle(squareFill, cornerRadius, borderThickness);
 
     float ringInset = highlightRingWidth * 0.5f;
 
     for (const auto& highlight : visual.highlights) {
         graphics.setColour(highlight.second);
-        graphics.drawRect(squareFill.reduced(ringInset), highlightRingWidth);
+        graphics.drawRoundedRectangle(squareFill.reduced(ringInset), juce::jmax(0.0f, cornerRadius - ringInset), highlightRingWidth);
 
         ringInset += highlightRingSpacing;
     }
 
-    if (visual.isHovered) {
-        graphics.setColour(hoverRingColour);
-        graphics.drawRect(squareHover, hoverRingWidth);
-    }
-
     if (visual.isSelected) {
         graphics.setColour(selectionRingColour);
-        graphics.drawRect(squareRim, selectionRimWidth);
+        graphics.drawRoundedRectangle(squareSelect, cornerRadius + selectionRingGap, selectionRingWidth);
     }
 }
 
 void CustomLookAndFeel::drawRootRectangle(juce::Graphics& graphics, juce::Rectangle<float> bounds)
 {
-    graphics.setColour(baseDarkColour2.darker());
-    graphics.fillRect(bounds);
+    const auto area = bounds.reduced(borderThickness * 0.5f);
+
+    graphics.setColour(raisedColour);
+    graphics.fillRoundedRectangle(area, paneCornerRadius);
+
+    graphics.setColour(borderStrongColour);
+    graphics.drawRoundedRectangle(area, paneCornerRadius, borderThickness);
 }

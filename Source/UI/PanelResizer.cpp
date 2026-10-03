@@ -17,26 +17,19 @@ PanelResizer::~PanelResizer()
 void PanelResizer::paint(juce::Graphics& graphics)
 {
     const Theme& theme      = CustomLookAndFeel::get(*this);
-    const auto   bounds     = getLocalBounds();
-    const auto   gripBounds = bounds.toFloat().reduced(bounds.getWidth() * 0.3f, bounds.getHeight() * 0.35f);
-    const float  dotSpacing = 4.0f;
-    juce::Colour fill       = theme.barColour.brighter(restingBrightness);
+    const auto   bounds     = getLocalBounds().toFloat();
+    const auto   gripBounds = bounds.withSizeKeepingCentre(Theme::resizerGripWidth, bounds.getHeight() * Theme::resizerGripHeightRatio);
+    juce::Colour fill       = theme.borderStrongColour;
 
     if (isDragging) {
-        fill = theme.baseLightColour2;
+        fill = theme.accentColour;
     }
     else if (isHovered) {
-        fill = theme.barColour.brighter(hoveredBrightness);
+        fill = theme.mutedTextColour;
     }
 
     graphics.setColour(fill);
-    graphics.fillRect(bounds);
-
-    graphics.setColour(theme.baseLightColour1.withAlpha(0.5f));
-
-    for (float gripY = gripBounds.getY(); gripY < gripBounds.getBottom(); gripY += dotSpacing) {
-        graphics.fillRect(gripBounds.getX(), gripY, gripBounds.getWidth(), 1.0f);
-    }
+    graphics.fillRoundedRectangle(gripBounds, Theme::resizerGripWidth * 0.5f);
 }
 
 void PanelResizer::mouseDown(const juce::MouseEvent&)

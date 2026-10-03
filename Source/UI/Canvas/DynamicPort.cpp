@@ -1,34 +1,65 @@
 #include "DynamicPort.h"
+#include "NodeCanvas.h"
+#include "../Theme/CustomLookAndFeel.h"
 
-DynamicPort::DynamicPort(juce::Component* content)
-    : component(content)
+DynamicPort::DynamicPort(NodeCanvas& content)
+    : canvas(content)
 {
     setOpaque(false);
 
-    component->setSize(canvasSize, canvasSize);
-
-    addAndMakeVisible(component);
+    addAndMakeVisible(canvas);
 }
 
 void DynamicPort::resized()
 {
-    if (centeredOnce || getWidth() <= 0 || getHeight() <= 0 || component == nullptr) {
+    canvas.setBounds(getLocalBounds());
+
+    if (getWidth() <= 0 || getHeight() <= 0) {
         return;
     }
 
-    centeredOnce = true;
-
-    translateX = (static_cast<float>(getWidth())  - static_cast<float>(component->getWidth())  * zoom) * 0.5f;
-    translateY = (static_cast<float>(getHeight()) - static_cast<float>(component->getHeight()) * zoom) * 0.5f;
+    if (!centeredOnce) {
+        centeredOnce = true;
+        translateX   = static_cast<float>(getWidth())  * 0.5f - initialViewCentre * zoom;
+        translateY   = static_cast<float>(getHeight()) * 0.5f - initialViewCentre * zoom;
+    }
 
     applyTransform();
 }
 
 void DynamicPort::applyTransform()
 {
-    if (component != nullptr) {
-        component->setTransform(juce::AffineTransform::scale(zoom).translated(translateX, translateY));
+    canvas.viewTransform       = juce::AffineTransform::scale(zoom).translated(translateX, translateY);
+    canvas.modelTransform      = canvas.viewTransform.inverted();
+    canvas.valueField.viewZoom = zoom;
+
+    for (juce::Component* child : canvas.getChildren()) {
+        child->setTransform(canvas.viewTransform);
     }
+
+    canvas.valueField.updateBrushCursor();
+
+    canvas.valueField.refresh();
+
+    canvas.repaint();
+}
+
+void DynamicPort::paintOverChildren(juce::Graphics& graphics)
+{
+    const Theme& theme  = CustomLookAndFeel::get(*this);
+    const auto   bounds = getLocalBounds().toFloat();
+    const auto   frame  = bounds.reduced(Theme::borderThickness * 0.5f);
+    juce::Path   corners;
+
+    corners.addRectangle(bounds);
+    corners.addRoundedRectangle(frame, Theme::canvasCornerRadius);
+    corners.setUsingNonZeroWinding(false);
+
+    graphics.setColour(theme.windowColour);
+    graphics.fillPath(corners);
+
+    graphics.setColour(theme.borderColour);
+    graphics.drawRoundedRectangle(frame, Theme::canvasCornerRadius, Theme::borderThickness);
 }
 
 void DynamicPort::mouseDown(const juce::MouseEvent& event)
@@ -76,10 +107,6 @@ void DynamicPort::mouseWheelMove(const juce::MouseEvent& event, const juce::Mous
 
 void DynamicPort::setZoom(float newZoom, juce::Point<float> pivot)
 {
-    if (component == nullptr) {
-        return;
-    }
-
     const float canvasPivotX = (pivot.x - translateX) / zoom;
     const float canvasPivotY = (pivot.y - translateY) / zoom;
 
@@ -88,10 +115,6 @@ void DynamicPort::setZoom(float newZoom, juce::Point<float> pivot)
     translateY = pivot.y - canvasPivotY * zoom;
 
     applyTransform();
-
-    if (onZoomChanged) {
-        onZoomChanged(zoom);
-    }
 }
 
 void DynamicPort::mouseMagnify(const juce::MouseEvent& event, float scaleFactor)

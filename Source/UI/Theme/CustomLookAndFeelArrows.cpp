@@ -3,25 +3,14 @@
 
 static void strokeArrowShaft(juce::Graphics& graphics, const juce::Path& shaft, bool emphasised, float alpha, juce::Colour colour)
 {
-    juce::Path shadowPath    = shaft;
-    juce::Path highlightPath = shaft;
-    shadowPath.applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
-    highlightPath.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
-
-    float strokeWidth = 1.25f;
+    float strokeWidth = Theme::arrowShaftThickness;
 
     if (emphasised) {
-        strokeWidth = 2.0f;
+        strokeWidth = Theme::arrowShaftHoverThickness;
     }
 
-    const juce::PathStrokeType stroke(strokeWidth);
-
-    graphics.setColour(colour.darker(0.4f).withAlpha(0.35f * alpha));
-    graphics.strokePath(shadowPath, stroke);
-    graphics.setColour(colour.brighter(0.4f).withAlpha(0.18f * alpha));
-    graphics.strokePath(highlightPath, stroke);
     graphics.setColour(colour.withAlpha(alpha));
-    graphics.strokePath(shaft, stroke);
+    graphics.strokePath(shaft, juce::PathStrokeType(strokeWidth, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
 static juce::Path trimPathToFraction(const juce::Path& source, float fraction)
@@ -87,8 +76,8 @@ static juce::Path trimPathToFraction(const juce::Path& source, float fraction)
 
 static void drawArrowProgress(juce::Graphics& graphics, const Arrow& arrow, const juce::Path& shaft, juce::Point<float> chord)
 {
-    static constexpr float baseOffset   = 2.0f;
-    static constexpr float trailSpacing = 1.75f;
+    static constexpr float baseOffset   = 0.0f;
+    static constexpr float trailSpacing = Theme::arrowTrailThickness;
 
     int drawnCount = 0;
 
@@ -106,7 +95,7 @@ static void drawArrowProgress(juce::Graphics& graphics, const Arrow& arrow, cons
 
         juce::Path progressPath = trimPathToFraction(offsetLine, trail.progress);
         if (! progressPath.isEmpty()) {
-            const juce::PathStrokeType progressStroke(0.75f, juce::PathStrokeType::curved, juce::PathStrokeType::butt);
+            const juce::PathStrokeType progressStroke(Theme::arrowTrailThickness, juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
 
             graphics.setColour(trail.colour);
 
@@ -138,38 +127,21 @@ static juce::Path buildArrowHeadPath(juce::Point<float> tip, juce::Point<float> 
     return head;
 }
 
-static void strokeArrowHead(juce::Graphics& graphics, juce::Point<float> tip, juce::Point<float> direction,
-                     float headLength, float headWidth, float alpha, juce::Colour colour,
-                     float thickness)
+static void drawArrowHead(juce::Graphics& graphics, juce::Point<float> tip, juce::Point<float> direction,
+                          float headLength, float headWidth, float alpha, juce::Colour colour,
+                          float thickness, juce::Colour fillColour)
 {
     const juce::Path head = buildArrowHeadPath(tip, direction, headLength, headWidth);
+
+    graphics.setColour(fillColour.withAlpha(alpha));
+    graphics.fillPath(head);
 
     graphics.setColour(colour.withAlpha(alpha));
     graphics.strokePath(head, juce::PathStrokeType(thickness, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
-static void drawArrowHead(juce::Graphics& graphics, juce::Point<float> tip, juce::Point<float> direction,
-                   float headLength, float headWidth, float alpha, juce::Colour colour)
-{
-    const juce::Path head = buildArrowHeadPath(tip, direction, headLength, headWidth);
-
-    graphics.setColour(colour.withAlpha(alpha));
-    graphics.fillPath(head);
-
-    juce::Path headShadow    = head;
-    juce::Path headHighlight = head;
-    headShadow.applyTransform(juce::AffineTransform::translation( 0.5f,  0.5f));
-    headHighlight.applyTransform(juce::AffineTransform::translation(-0.5f, -0.5f));
-
-    const juce::PathStrokeType headStroke(0.5f);
-    graphics.setColour(colour.darker(0.3f).withAlpha(0.2f));
-    graphics.strokePath(headShadow, headStroke);
-    graphics.setColour(colour.brighter(0.3f).withAlpha(0.1f));
-    graphics.strokePath(headHighlight, headStroke);
-}
-
 static void drawArrowLabel(juce::Graphics& graphics, const Arrow& arrow, const ArrowGeometry& geometry,
-                    float headLength, juce::Point<float> origin)
+                    float headLength, juce::Point<float> origin, const Theme& theme)
 {
     const juce::String labelText = arrow.getDurationLabel();
 
@@ -186,8 +158,8 @@ static void drawArrowLabel(juce::Graphics& graphics, const Arrow& arrow, const A
 
     graphics.addTransform(juce::AffineTransform::rotation(label.angle).translated(mid.x, mid.y));
 
-    graphics.setFont(juce::Font(8.5f));
-    graphics.setColour(juce::Colours::darkgrey);
+    graphics.setFont(theme.font(Theme::FontStyle::Mono, 9.5f));
+    graphics.setColour(theme.mutedTextColour);
 
     static constexpr float textW = 60.0f;
     static constexpr float textH = 12.0f;
@@ -222,8 +194,8 @@ void CustomLookAndFeel::drawArrow(juce::Graphics& graphics, const Arrow& arrow)
     juce::Path shaft = arrow.buildShaftPath(geometry, headLength, origin);
 
     if (arrow.isDashed()) {
-        juce::PathStrokeType dashStroke(1.25f);
-        float dashLengths[] = { 6.0f, 10.0f };
+        juce::PathStrokeType dashStroke(arrowShaftThickness);
+        float dashLengths[] = { 6.0f, 7.0f };
         dashStroke.createDashedStroke(shaft, shaft, dashLengths, 2);
     }
 
@@ -235,12 +207,12 @@ void CustomLookAndFeel::drawArrow(juce::Graphics& graphics, const Arrow& arrow)
 
     if (geometry.drawHead) {
         if (arrow.isTraversalArrow()) {
-            strokeArrowHead(graphics, geometry.tip - origin, geometry.direction, headLength, headWidth, alpha, arrowHeadColour, arrowHeadOutlineThickness);
+            drawArrowHead(graphics, geometry.tip - origin, geometry.direction, headLength, headWidth, alpha, arrowHeadColour, arrowHeadOutlineThickness, canvasColour);
         }
         else {
-            drawArrowHead(graphics, geometry.tip - origin, geometry.direction, headLength, headWidth, alpha, arrowHeadColour);
+            drawArrowHead(graphics, geometry.tip - origin, geometry.direction, headLength, headWidth, alpha, arrowHeadColour, arrowShaftThickness * 0.5f, arrowHeadColour);
         }
     }
 
-    drawArrowLabel(graphics, arrow, geometry, headLength, origin);
+    drawArrowLabel(graphics, arrow, geometry, headLength, origin, *this);
 }

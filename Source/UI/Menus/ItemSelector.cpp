@@ -14,9 +14,11 @@ ItemSelector::ItemSelector(const ApplicationContext& context)
 
     labelEditor.autoFitText = true;
     labelEditor.editable    = false;
+    labelEditor.fontStyle   = Theme::FontStyle::Regular;
 
     labelEditor.setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength, TextFormat::labelCharacters));
     labelEditor.setInterceptsMouseClicks(false, false);
+    labelEditor.setJustification(juce::Justification::centredLeft);
 
     button.setTooltip("Display Options");
 
@@ -28,22 +30,28 @@ ItemSelector::ItemSelector(const ApplicationContext& context)
 
 void ItemSelector::paint(juce::Graphics& graphics)
 {
-    const Theme& theme  = CustomLookAndFeel::get(*this);
-    const auto   bounds = getLocalBounds().toFloat().reduced(Theme::outerButtonBoundsReduction);
+    CustomLookAndFeel& lookAndFeel   = CustomLookAndFeel::get(*this);
+    const auto         contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * selectorInsetRatio));
 
-    graphics.setColour(theme.buttonBarColour);
-    graphics.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
+    lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
+
+    if (leadingIcon != nullptr) {
+        (lookAndFeel.*leadingIcon)(graphics, contentBounds.withWidth(contentBounds.getHeight()).toFloat(), ButtonState {});
+    }
 }
 
 void ItemSelector::resized()
 {
-    auto       contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * selectorInsetRatio));
-    const auto displayWidth  = juce::roundToInt(contentBounds.getWidth() * labelWidthRatio);
+    auto contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * selectorInsetRatio));
 
-    labelEditor.setBounds(contentBounds.removeFromLeft(displayWidth));
+    if (leadingIcon != nullptr) {
+        contentBounds.removeFromLeft(contentBounds.getHeight());
+    }
+
+    button.setBounds(contentBounds.removeFromRight(contentBounds.getHeight()));
+
+    labelEditor.setBounds(contentBounds);
     labelEditor.commitText(selectedLabel);
-
-    button.setBounds(contentBounds);
 }
 
 void ItemSelector::showMenu()

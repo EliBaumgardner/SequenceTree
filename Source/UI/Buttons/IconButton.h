@@ -7,6 +7,10 @@ class CustomLookAndFeel;
 
 struct ButtonState
 {
+    enum class Look { Tinted, Accent, Raised };
+
+    Look look = Look::Tinted;
+
     bool isHovered  = false;
     bool isDown     = false;
     bool isSelected = false;
@@ -38,6 +42,7 @@ public:
     void resized() override;
 
     void lookAndFeelChanged() override;
+    void enablementChanged() override;
     void setText(juce::String newText);
     void setCaption(const juce::String& newCaption);
     void setSelected(bool shouldBeSelected);
