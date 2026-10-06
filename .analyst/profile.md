@@ -42,6 +42,5 @@ Compare SequenceTree against other graph/node sequencers and patchers (Pure Data
 
 Several items in the earlier reports have since been fixed (for example, the UI no longer drives `makeRTGraph` — `RTGraphBuilder` now owns its own `ValueTree::Listener` at processor level). Mark stale items as resolved rather than repeating them.
 
-- `Unreviewed/ProgramAudits/`: `tracker.md` (the tracker), `sequence_tree_deep_dive_audit.md`, `systemic_architecture_cpp20_and_juce8_critique.md`
+- `Unreviewed/ProgramAudits/`: `sequence_tree_deep_dive_audit.md`, `systemic_architecture_cpp20_and_juce8_critique.md`
 - `Unreviewed/ResearchReports/`: `data_oriented_design_and_modern_cpp_juce_research.md`, `foundational_architecture_cross_engine_comparative_treatise.md`, `advanced_cross_engine_systems_treatise_and_architectural_scrutiny.md`
-- `Reviewed/ProgramAudits/`: `software_architecture.md`

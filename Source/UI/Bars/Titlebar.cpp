@@ -5,7 +5,7 @@
 #include "Titlebar.h"
 
 Titlebar::Titlebar(const ApplicationContext& context)
-    : Bar(context, { Orientation::Horizontal }),
+    : Bar(context, { Orientation::Horizontal, Theme::contentInsetRatio, Surface::Frosted }),
       transportPane(context),
       buttonPane(context),
       displaySelector(context),

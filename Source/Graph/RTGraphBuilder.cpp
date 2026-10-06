@@ -415,19 +415,6 @@ void RTGraphBuilder::fillEncapsulation(const juce::ValueTree& nodeValueTree, RTN
     }
 
     rtNode.encapsulationEntryId = memberNodeIds.front();
-
-    if (rtNode.encapsulationEntryId != rtNode.nodeID) {
-        return;
-    }
-
-    const int encapsulationSubLoopLimit = encapsulator.getProperty(ValueTreeIdentifiers::SubLoopCountLimit, GraphState::defaultSubLoopCountLimit);
-
-    const bool encapsulationOverridesEntrySubLoop =
-        (encapsulationSubLoopLimit != GraphState::defaultSubLoopCountLimit);
-
-    if (encapsulationOverridesEntrySubLoop) {
-        rtNode.subLoopCountLimit = encapsulationSubLoopLimit;
-    }
 }
 
 RTNode::NodeType RTGraphBuilder::rtNodeTypeFor(const juce::Identifier& valueTreeType)

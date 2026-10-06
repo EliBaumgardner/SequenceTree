@@ -7,7 +7,7 @@ CustomLookAndFeel::CustomLookAndFeel()
     semiBoldTypeface = juce::Typeface::createSystemTypefaceFor(BinaryData::GeistSemiBold_ttf, BinaryData::GeistSemiBold_ttfSize);
     monoTypeface     = juce::Typeface::createSystemTypefaceFor(BinaryData::GeistMonoRegular_ttf, BinaryData::GeistMonoRegular_ttfSize);
 
-    setColour(juce::PopupMenu::backgroundColourId,            popupMenuColour);
+    setColour(juce::PopupMenu::backgroundColourId,            juce::Colours::transparentBlack);
     setColour(juce::PopupMenu::textColourId,                  popupMenuTextColour);
     setColour(juce::PopupMenu::headerTextColourId,            popupMenuTextColour);
     setColour(juce::PopupMenu::highlightedBackgroundColourId, popupMenuHighlightColour);
@@ -17,20 +17,16 @@ CustomLookAndFeel::CustomLookAndFeel()
     setColour(juce::TextEditor::highlightedTextColourId,      textColour);
     setColour(juce::TooltipWindow::backgroundColourId,        raisedColour);
     setColour(juce::TooltipWindow::textColourId,              textColour);
-    setColour(juce::TooltipWindow::outlineColourId,           borderStrongColour);
+    setColour(juce::TooltipWindow::outlineColourId,           juce::Colours::transparentBlack);
 }
 
 void CustomLookAndFeel::drawPopupMenuBackgroundWithOptions(juce::Graphics& graphics, int width, int height,
                                                            const juce::PopupMenu::Options&)
 {
-    const auto bounds = juce::Rectangle<float>(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height))
-                            .reduced(popupMenuBorderThickness * 0.5f);
+    const auto bounds = juce::Rectangle<float>(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
 
     graphics.setColour(popupMenuColour);
     graphics.fillRoundedRectangle(bounds, paneCornerRadius);
-
-    graphics.setColour(popupMenuBorderColour);
-    graphics.drawRoundedRectangle(bounds, paneCornerRadius, popupMenuBorderThickness);
 }
 
 void CustomLookAndFeel::drawPopupMenuItem(juce::Graphics& graphics, const juce::Rectangle<int>& area,
@@ -48,7 +44,7 @@ void CustomLookAndFeel::drawPopupMenuItem(juce::Graphics& graphics, const juce::
         return;
     }
 
-    const auto itemBounds = area.toFloat().reduced(popupMenuItemInset, 1.0f);
+    const auto itemBounds = area.toFloat().reduced(popupMenuItemInset, popupMenuItemGap);
 
     juce::Colour itemTextColour = popupMenuTextColour;
 

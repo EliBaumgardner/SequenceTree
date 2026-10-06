@@ -32,6 +32,8 @@ private:
 
     Bar topBar;
 
+    const ApplicationContext& applicationContext;
+
     std::unique_ptr<MenuBar>       menuBar;
     std::unique_ptr<TraversalMenu> traversalMenu;
     std::unique_ptr<NodeMenu>      nodeMenu;

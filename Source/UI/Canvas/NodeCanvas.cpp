@@ -59,12 +59,6 @@ void NodeCanvas::childrenChanged()
     }
 }
 
-void NodeCanvas::enqueueAsyncUpdate(const AsyncUpdate& update)
-{
-    asyncUpdates.push_back(update);
-    triggerAsyncUpdate();
-}
-
 void NodeCanvas::setProcessorPlayback(bool isPlaying)
 {
     start = isPlaying;
@@ -85,7 +79,6 @@ void NodeCanvas::setProcessorPlayback(bool isPlaying)
 void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
 {
     asyncUpdates.clear();
-    cancelPendingUpdate();
 
     clearCanvas();
 

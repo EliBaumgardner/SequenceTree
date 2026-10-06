@@ -46,21 +46,22 @@ Node::Node(const ApplicationContext& context)
     subLoopLimitEditor.setTooltip("Sub Loop Count Limit");
     switchCountEditor.setTooltip("Switch Count Limit");
 
-    upButton.setInterceptsMouseClicks(true, false);
-    downButton.setInterceptsMouseClicks(true, false);
-    nodeValueEditor.setInterceptsMouseClicks(false, false);
-    countEditor.setInterceptsMouseClicks(true, false);
-    switchCountEditor.setInterceptsMouseClicks(true, false);
+    upButton.setInterceptsMouseClicks(false, false);
+    downButton.setInterceptsMouseClicks(false, false);
+    nodeValueEditor.setInterceptsMouseClicks(false, true);
+    countEditor.setInterceptsMouseClicks(false, true);
+    switchCountEditor.setInterceptsMouseClicks(false, true);
+    subLoopLimitEditor.setInterceptsMouseClicks(false, true);
 
-    upButton.onClick   = [this]() { incrementNodeValue(1); };
-    downButton.onClick = [this]() { incrementNodeValue(-1); };
+    addChildComponent(upButton);
+    addChildComponent(downButton);
 
-    addAndMakeVisible(upButton);
-    addAndMakeVisible(downButton);
     addAndMakeVisible(nodeValueEditor);
     addAndMakeVisible(switchCountEditor);
     addAndMakeVisible(countEditor);
     addAndMakeVisible(subLoopLimitEditor);
+
+    addMouseListener(this, true);
 }
 
 void Node::paint(juce::Graphics& graphics)
@@ -89,6 +90,12 @@ void Node::resized()
     subLoopLimitEditor.setBounds(nodeSquare.getX(), nodeSquare.getBottom() - editorHeight, editorWidth, editorHeight);
 }
 
+NodeVisual Node::getNodeVisual(juce::Rectangle<float> bounds) const
+{
+    return { bounds, nodeColour, activeHighlights, isHovered, isSelected, isOutlined,
+             isEncapsulationRinged, hasInnerRim, encapsulationRingColour };
+}
+
 void Node::incrementNodeValue(int incrementValue)
 {
     const double currentValue = static_cast<double>(nodeValueEditor.boundValue.getValue());
@@ -106,12 +113,6 @@ void Node::refreshValueDisplay()
 {
     nodeValueEditor.repaint();
     repaint();
-}
-
-NodeVisual Node::getNodeVisual(juce::Rectangle<float> bounds) const
-{
-    return { bounds, nodeColour, activeHighlights, isHovered, isSelected, isOutlined,
-             isEncapsulationRinged, hasInnerRim, encapsulationRingColour };
 }
 
 void Node::setHoverVisual(bool isHovered)
@@ -276,8 +277,6 @@ void Node::bindValueEditorForMode()
         case NodeDisplayMode::Pitch:
             nodeValueEditor.setFormat(std::make_unique<PitchFormat>());
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
-
-            nodeValueEditor.editable = false;
             break;
 
         case NodeDisplayMode::Velocity:
@@ -330,4 +329,44 @@ void Node::setDisplayMode(NodeDisplayMode newMode)
 
     nodeValueEditor.repaint();
     repaint();
+}
+
+void Node::mouseMove(const juce::MouseEvent& event)
+{
+    const bool showIncrementButtons = nodeValueEditor.isVisible() && contains(event.getEventRelativeTo(this).getPosition()) && ! event.mods.isShiftDown();
+
+    upButton.setVisible(showIncrementButtons);
+    downButton.setVisible(showIncrementButtons);
+}
+
+void Node::mouseExit(const juce::MouseEvent& event)
+{
+    const bool showIncrementButtons = nodeValueEditor.isVisible() && contains(event.getEventRelativeTo(this).getPosition()) && ! event.mods.isShiftDown();
+
+    upButton.setVisible(showIncrementButtons);
+    downButton.setVisible(showIncrementButtons);
+}
+
+void Node::respondToClick(juce::Point<int> localPoint)
+{
+    for (ValueEditor* badge : { &countEditor, &switchCountEditor, &subLoopLimitEditor }) {
+        if (badge->isVisible() && badge->getBounds().contains(localPoint)) {
+            badge->beginEditing();
+            return;
+        }
+    }
+
+    if (upButton.isVisible() && upButton.getBounds().contains(localPoint)) {
+        incrementNodeValue(1);
+        return;
+    }
+
+    if (downButton.isVisible() && downButton.getBounds().contains(localPoint)) {
+        incrementNodeValue(-1);
+        return;
+    }
+
+    if (nodeValueEditor.isVisible() && nodeValueEditor.getBounds().contains(localPoint)) {
+        nodeValueEditor.beginEditing();
+    }
 }

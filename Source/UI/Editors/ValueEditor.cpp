@@ -311,7 +311,7 @@ void ValueEditor::setJustification(juce::Justification newJustification)
 
 void ValueEditor::commitText(const juce::String& enteredText)
 {
-    const ParsedValue parsed = format->parse(enteredText);
+    const ParsedValue parsed = format->parse(binding, enteredText);
 
     if (boundTree.isValid() && applicationContext.undoManager != nullptr) {
         applicationContext.undoManager->beginNewTransaction();
@@ -345,7 +345,7 @@ void ValueEditor::commitValue()
     }
 
     if (entered != format->text(binding, TextPurpose::Editing)) {
-        const ParsedValue parsed = format->parse(entered);
+        const ParsedValue parsed = format->parse(binding, entered);
 
         if (boundTree.isValid() && applicationContext.undoManager != nullptr) {
             applicationContext.undoManager->beginNewTransaction();

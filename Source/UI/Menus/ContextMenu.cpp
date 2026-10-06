@@ -13,6 +13,11 @@ void ContextMenu::addItem(juce::String label, ItemKind kind, std::function<void(
     items.push_back({ std::move(label), kind, std::move(action), isEnabled, isOn });
 }
 
+void ContextMenu::addComponent(juce::Component& component, int idealWidth, int idealHeight)
+{
+    items.push_back({ {}, ItemKind::Component, nullptr, true, false, &component, idealWidth, idealHeight });
+}
+
 void ContextMenu::show(juce::Component& target)
 {
     juce::PopupMenu                               menu;
@@ -29,6 +34,10 @@ void ContextMenu::show(juce::Component& target)
             }
             case ItemKind::Toggle: {
                 menu.addItem(itemId, item.label, item.isEnabled, item.isOn);
+                break;
+            }
+            case ItemKind::Component: {
+                menu.addCustomItem(itemId, *item.component, item.idealWidth, item.idealHeight, false);
                 break;
             }
         }

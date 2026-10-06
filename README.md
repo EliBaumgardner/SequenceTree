@@ -4,6 +4,8 @@ An audio plugin (AU / VST3 / Standalone) that generates MIDI by traversing a use
 
 You place nodes on a canvas, give each one MIDI note data and a count limit, and connect them with arrows. During playback the plugin walks the graph: each time a node is visited its counter advances, and when the counter reaches the node's limit, traversal moves on to its matching children. Arrow length encodes note duration, so the shape of the graph is the shape of the sequence.
 
+How the walk moves and what it plays can be rewritten with a traversal script — see the [scripting language guide](documentation/ScriptingLanguage.md).
+
 
 ## Building
 

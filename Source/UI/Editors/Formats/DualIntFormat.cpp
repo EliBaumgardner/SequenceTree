@@ -33,7 +33,7 @@ juce::String DualIntFormat::text(const ValueBinding& binding, TextPurpose purpos
     return juce::String(primaryValue) + ":" + juce::String(secondaryValue);
 }
 
-ParsedValue DualIntFormat::parse(const juce::String& enteredText) const
+ParsedValue DualIntFormat::parse(const ValueBinding& binding, const juce::String& enteredText) const
 {
     const int separatorIndex = enteredText.indexOfChar(':');
 

@@ -4,6 +4,8 @@ PopupWindow::PopupWindow(const juce::String& title, std::unique_ptr<juce::Compon
                          juce::Colour backgroundColour)
     : juce::DocumentWindow(title, backgroundColour, juce::DocumentWindow::closeButton, true)
 {
+    setUsingNativeTitleBar(true);
+
     setContentOwned(content.release(), true);
     setResizable(true, true);
 

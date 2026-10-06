@@ -12,7 +12,7 @@ class NodeCreationDispatcher
 public:
 
     static juce::ValueTree create(NodeCreationMode         mode,
-                                  GraphState&          state,
+                                  GraphState&              state,
                                   int                      parentNodeId,
                                   const juce::Identifier&  parentType,
                                   bool                     makeAlternative,

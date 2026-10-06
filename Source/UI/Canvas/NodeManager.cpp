@@ -132,12 +132,10 @@ void NodeManager::setPosition(int nodeId)
         node->setTopLeftPosition(xPosition - radius - loopLimitWidth, yPosition - radius);
     }
     else if (node->nodeType == NodeType::TraversalFlag) {
-        node->setSize(radius * 4, radius * 4);
-        node->setCentrePosition(xPosition, yPosition);
+        node->setBounds(juce::Rectangle<int>(radius * 4, radius * 4).withCentre({ xPosition, yPosition }));
     }
     else {
-        node->setSize(radius * 2, radius * 2);
-        node->setCentrePosition(xPosition, yPosition);
+        node->setBounds(juce::Rectangle<int>(radius * 2, radius * 2).withCentre({ xPosition, yPosition }));
     }
 
     canvas.arrowManager.refreshFor(node);

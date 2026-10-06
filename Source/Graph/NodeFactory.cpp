@@ -131,14 +131,12 @@ juce::ValueTree NodeFactory::createModulatorRoot(GraphState& state, int parentNo
     return modulatorRootValueTree;
 }
 
-juce::ValueTree NodeFactory::createEncapsulator(GraphState& state, std::span<const int> memberNodeIds,
-                                                int subLoopCountLimit, juce::UndoManager* undoManager)
+juce::ValueTree NodeFactory::createEncapsulator(GraphState& state, std::span<const int> memberNodeIds, juce::UndoManager* undoManager)
 {
     const int       encapsulatorLabel     = state.encapsulation.unusedLabel();
     juce::ValueTree encapsulatorValueTree = state.encapsulation.create(memberNodeIds, undoManager);
 
     encapsulatorValueTree.setProperty(ValueTreeIdentifiers::EncapsulatorLabel, encapsulatorLabel, undoManager);
-    encapsulatorValueTree.setProperty(ValueTreeIdentifiers::SubLoopCountLimit, subLoopCountLimit, undoManager);
 
     state.setNodePosition(encapsulatorValueTree, state.getNodePosition(memberNodeIds.front()), undoManager);
 

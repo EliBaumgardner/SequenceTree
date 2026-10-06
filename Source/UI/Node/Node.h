@@ -44,9 +44,9 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
+    NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const;
     void incrementNodeValue(int incrementValue);
     void refreshValueDisplay();
-    NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const;
     void setHoverVisual(bool isHovered);
     void setSelectVisual(bool isSelected);
     void setSelectVisual();
@@ -58,6 +58,9 @@ public:
     virtual void bindToTree();
     virtual void bindValueEditorForMode();
     void setDisplayMode(NodeDisplayMode mode);
+    void mouseMove(const juce::MouseEvent& event) override;
+    void mouseExit(const juce::MouseEvent& event) override;
+    virtual void respondToClick(juce::Point<int> localPoint);
 
     std::function<void(Node*, bool)> onSelected;
 

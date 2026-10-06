@@ -45,7 +45,7 @@ juce::String TraversalFlagFormat::text(const ValueBinding& binding, TextPurpose 
     return "-" + juce::String(-value) + instanceText;
 }
 
-ParsedValue TraversalFlagFormat::parse(const juce::String& enteredText) const
+ParsedValue TraversalFlagFormat::parse(const ValueBinding& binding, const juce::String& enteredText) const
 {
     const juce::String trimmed = enteredText.trim();
     const bool         spawns  = trimmed.startsWithChar('+');

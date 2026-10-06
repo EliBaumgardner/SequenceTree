@@ -9,6 +9,8 @@ class Arrow;
 
 class FileLabel;
 
+class ValueSlider;
+
 struct ButtonState;
 struct NodeVisual;
 
@@ -52,6 +54,7 @@ public:
     juce::CaretComponent* createCaretComponent(juce::Component* keyFocusOwner) override;
     void drawCanvas         (juce::Graphics& graphics, const NodeCanvas& canvas);
     void drawPane           (juce::Graphics& graphics, juce::Rectangle<float> bounds);
+    void drawFrostedGlass   (juce::Graphics& graphics, juce::Component& surface, juce::Component& backdrop, juce::Rectangle<int> area);
     juce::Rectangle<float> drawButtonTile(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     juce::Colour pressableButtonColour(const ButtonState& state) const;
     void drawNodeIcon      (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
@@ -81,11 +84,9 @@ public:
     void drawResetIcon      (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawSyncIcon       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawPaintToolIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawArrowToolIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawSpanToolIcon   (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawQuaverToolIcon (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawNodeArrowIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawPolyphonicArrowIcon (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawTraversalArrowIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawAxisButton       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawValueSlider      (juce::Graphics& graphics, const ValueSlider& slider);
     void drawFileLabel(juce::Graphics& graphics, const FileLabel& fileLabel);
 };

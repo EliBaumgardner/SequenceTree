@@ -9,11 +9,13 @@ class Bar : public juce::Component
 public:
 
     enum class Orientation { Horizontal, Vertical };
+    enum class Surface     { Solid, Frosted };
 
     struct Style
     {
         Orientation orientation       = Orientation::Horizontal;
         float       contentInsetRatio = Theme::contentInsetRatio;
+        Surface     surface           = Surface::Solid;
     };
 
     Bar(const ApplicationContext& context, Style style);

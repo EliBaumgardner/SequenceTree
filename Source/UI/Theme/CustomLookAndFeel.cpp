@@ -84,3 +84,22 @@ void CustomLookAndFeel::drawPane(juce::Graphics& graphics, juce::Rectangle<float
     graphics.setColour(borderColour);
     graphics.drawRoundedRectangle(area, groupCornerRadius, borderThickness);
 }
+
+void CustomLookAndFeel::drawFrostedGlass(juce::Graphics& graphics, juce::Component& surface, juce::Component& backdrop, juce::Rectangle<int> area)
+{
+    const int                       margin       = juce::roundToInt(static_cast<float>(frostKernelSize) / frostScale);
+    const auto                      backdropArea = backdrop.getLocalArea(&surface, area).expanded(margin);
+    juce::Image                     frosted      = backdrop.createComponentSnapshot(backdropArea, false, frostScale);
+    juce::ImageConvolutionKernel    kernel(frostKernelSize);
+    juce::Graphics::ScopedSaveState savedState(graphics);
+
+    kernel.createGaussianBlur(frostBlurRadius);
+    kernel.applyToImage(frosted, frosted, frosted.getBounds());
+
+    graphics.reduceClipRegion(area);
+    graphics.setImageResamplingQuality(juce::Graphics::highResamplingQuality);
+    graphics.drawImage(frosted, area.expanded(margin).toFloat());
+
+    graphics.setColour(barColour);
+    graphics.fillRect(area);
+}

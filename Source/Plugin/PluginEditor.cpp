@@ -21,6 +21,8 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     setLookAndFeel(&lookAndFeel);
 
+    tooltipWindow.setOpaque(false);
+
     canvas = std::make_unique<NodeCanvas>(applicationContext);
     applicationContext.canvas = canvas.get();
 
@@ -67,7 +69,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
             titleBar->applyPlaybackState(audioProcessor.isPlaying.load());
         }
 
-        if (audioProcessor.eventManager.bridge.hasPendingCommands()) {
+        if (audioProcessor.eventManager.bridge.hasPendingCommands() || ! canvas->asyncUpdates.empty()) {
             canvas->handleAsyncUpdate();
         }
     });
@@ -94,22 +96,51 @@ void SequenceTreeAudioProcessorEditor::paint (juce::Graphics& g) { g.fillAll(loo
 
 void SequenceTreeAudioProcessorEditor::resized()
 {
-    auto bounds = getLocalBounds().reduced(Theme::windowGutter);
+    const auto windowArea = getLocalBounds().reduced(Theme::windowGutter);
+    auto       bounds     = windowArea;
 
     auto barHeight = static_cast<int>(bounds.getHeight() * Theme::barHeightRatio);
     auto minMenuWidth = juce::roundToInt(barHeight * (MenuArea::menuBarWidthRatio + MenuArea::resizerWidthRatio));
     auto menuAreaWidth = juce::jmax(minMenuWidth, static_cast<int>(bounds.getWidth() * menuAreaWidthRatio));
 
     auto menuAreaBounds   = bounds.removeFromLeft(menuAreaWidth + Theme::windowGutter).withTrimmedRight(Theme::windowGutter);
-    auto titleArea        = bounds.removeFromTop(barHeight);
-    auto bottomArea       = bounds.removeFromBottom(barHeight);
+    auto titleArea        = bounds.removeFromTop(barHeight + Theme::windowGutter).withTrimmedBottom(Theme::windowGutter);
+    auto bottomArea       = bounds.removeFromBottom(barHeight + Theme::windowGutter).withTrimmedTop(Theme::windowGutter);
+
+    canvasFrame = bounds;
 
     lookAndFeel.textHeight = juce::jmin(barHeight * Theme::textHeightRatio, bounds.getWidth() * Theme::textWidthRatio);
 
     menuArea ->setBounds(menuAreaBounds);
     titleBar ->setBounds(titleArea);
     bottomBar->setBounds(bottomArea);
-    port->setBounds(bounds);
+    port->setBounds(windowArea);
+}
+
+void SequenceTreeAudioProcessorEditor::paintOverChildren (juce::Graphics& graphics)
+{
+    const auto frame = canvasFrame.toFloat().reduced(Theme::borderThickness * 0.5f);
+    juce::Path surround;
+
+    surround.addRectangle(port->getBounds().toFloat());
+    surround.addRoundedRectangle(frame, Theme::canvasCornerRadius);
+    surround.setUsingNonZeroWinding(false);
+
+    graphics.saveState();
+
+    graphics.excludeClipRegion(menuArea->getBounds());
+    graphics.excludeClipRegion(titleBar->getBounds());
+    graphics.excludeClipRegion(bottomBar->getBounds());
+    graphics.reduceClipRegion(surround);
+
+    if (! graphics.isClipEmpty()) {
+        lookAndFeel.drawFrostedGlass(graphics, *this, *port, graphics.getClipBounds());
+    }
+
+    graphics.restoreState();
+
+    graphics.setColour(lookAndFeel.borderColour);
+    graphics.drawRoundedRectangle(frame, Theme::canvasCornerRadius, Theme::borderThickness);
 }
 
 bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, juce::Component*)

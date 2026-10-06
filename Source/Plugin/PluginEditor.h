@@ -39,6 +39,7 @@ public:
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
+    void paintOverChildren (juce::Graphics& graphics) override;
     void setManualMenuBounds (juce::Rectangle<int> b);
 
     bool keyPressed (const juce::KeyPress& key, juce::Component* originatingComponent) override;
@@ -64,6 +65,8 @@ private:
     std::unique_ptr<BottomBar>      bottomBar      = nullptr;
     std::unique_ptr<DynamicPort>    port           = nullptr;
     std::unique_ptr<MenuArea>       menuArea       = nullptr;
+
+    juce::Rectangle<int> canvasFrame;
 
     float menuAreaWidthRatio = 0.0f;
     float menuHeightRatio = 0.25f;

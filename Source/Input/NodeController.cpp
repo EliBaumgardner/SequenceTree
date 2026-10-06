@@ -453,6 +453,10 @@ void NodeController::setDraggedNodeVisible(bool shouldBeVisible)
 
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
+    Node* const clickedNode  = dynamic_cast<Node*>(e.eventComponent);
+    const bool  isPlainClick = clickedNode != nullptr && dragState == DragState::Idle && e.mods.isLeftButtonDown() && ! e.mods.isAnyModifierKeyDown()
+                            && e.getDistanceFromDragStart() < dragThreshold && ! canvas.spanMode && canvas.quaverMode == NodeCanvas::QuaverMode::Off;
+
     if (dragState == DragState::MovingArrowHead) {
         finishArrowHeadDrag();
         return;
@@ -499,6 +503,10 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
     }
 
     endDrag();
+
+    if (isPlainClick) {
+        clickedNode->respondToClick(e.getEventRelativeTo(clickedNode).getPosition());
+    }
 }
 
 void NodeController::finishArrowHeadDrag()
@@ -767,7 +775,7 @@ void NodeController::selectSpanNode(Node& node)
     canvas.nodeManager.clearOutlines();
 
     undoManager->beginNewTransaction();
-    NodeFactory::createEncapsulator(graphState, spanNodeIds, GraphState::defaultSubLoopCountLimit, undoManager);
+    NodeFactory::createEncapsulator(graphState, spanNodeIds, undoManager);
 }
 
 void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
@@ -925,17 +933,13 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
 
     dragParentCenter = node.getNodeCentre().toFloat();
 
-    if (node.nodeValueEditor.isVisible()) {
-        auto localPosition = e.getEventRelativeTo(&node.nodeValueEditor).getPosition();
+    if (node.nodeValueEditor.isVisible() && e.mods.isCtrlDown() && e.mods.isShiftDown()) {
+        undoManager->beginNewTransaction();
 
-        if (node.nodeValueEditor.getLocalBounds().contains(localPosition)) {
-            undoManager->beginNewTransaction();
-
-            dragState         = DragState::EditingValue;
-            dragStartValue    = static_cast<double>(node.nodeValueEditor.boundValue.getValue());
-            draggingValueNode = &node;
-            return;
-        }
+        dragState         = DragState::EditingValue;
+        dragStartValue    = static_cast<double>(node.nodeValueEditor.boundValue.getValue());
+        draggingValueNode = &node;
+        return;
     }
 
     if (e.mods.isRightButtonDown() && ! e.mods.isShiftDown() && toggleEncapsulationExpansion(node)) {

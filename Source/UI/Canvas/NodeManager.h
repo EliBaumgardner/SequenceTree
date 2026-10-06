@@ -28,12 +28,14 @@ public:
     }
 
     Node* instantiateFromTree(const juce::ValueTree& nodeValueTree);
+
     void setPosition(int nodeId);
     void add(int nodeId);
     void remove(int nodeId);
-    void clear();
     void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY);
     void setDisplayMode(NodeDisplayMode mode);
+
+    void clear();
     void clearHighlights();
     void clearOutlines();
     void equipRootTraversals();

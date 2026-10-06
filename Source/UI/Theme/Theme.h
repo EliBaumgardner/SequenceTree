@@ -25,7 +25,7 @@ struct Theme
     juce::Colour canvasColour = juce::Colour::fromRGB(16, 19, 24);
 
     juce::Colour gridColour        = juce::Colour::fromRGB(200, 215, 255).withAlpha(0.10f);
-    juce::Colour barColour         = windowColour;
+    juce::Colour barColour         = windowColour.withAlpha(0.6f);
     juce::Colour captionColour     = mutedTextColour;
     juce::Colour lineNumberColour  = dimTextColour;
 
@@ -117,6 +117,8 @@ struct Theme
 
     static constexpr float gridDotDiameter = 2.0f;
 
+    static constexpr float valueSliderHandleWidth = 2.0f;
+
     static constexpr float fileLabelMarkerWidth = 2.0f;
     static constexpr float selectedMarkerWidth  = 3.0f;
     static constexpr float fieldTextInset       = 6.0f;
@@ -128,6 +130,10 @@ struct Theme
 
     static constexpr int menuEdgeInset = 6;
     static constexpr int windowGutter  = 8;
+
+    static constexpr float frostScale      = 0.2f;
+    static constexpr float frostBlurRadius = 3.0f;
+    static constexpr int   frostKernelSize = 9;
 
     static constexpr float barHeightRatio        = 0.05f;
     static constexpr float textHeightRatio       = 0.376f;
@@ -141,6 +147,7 @@ struct Theme
 
     static constexpr float popupMenuBorderThickness = 1.0f;
     static constexpr float popupMenuItemInset       = 2.0f;
+    static constexpr float popupMenuItemGap         = 1.0f;
     static constexpr float popupMenuTextInset       = 6.0f;
     static constexpr int   scrollBarThickness      = 8;
     static constexpr float scrollBarThumbInset     = 1.5f;

@@ -5,7 +5,7 @@
 #include "../../Util/NodeInfo.h"
 
 BottomBar::BottomBar(const ApplicationContext& context)
-    : Bar(context, { Orientation::Horizontal })
+    : Bar(context, { Orientation::Horizontal, Theme::contentInsetRatio, Surface::Frosted })
 {
     quaverTool = &quaverPane.addButton(&CustomLookAndFeel::drawQuaverToolIcon, "Note",
         [this]() {
@@ -26,8 +26,8 @@ BottomBar::BottomBar(const ApplicationContext& context)
             applicationContext.canvas->setSpanMode(spanTool->state.isSelected);
         });
 
-    toolPane.addButton(&CustomLookAndFeel::drawArrowToolIcon, "Arrow Types",
-        [this]() { arrowWindowLauncher.show(); });
+    configureAxis(xAxis, "X");
+    configureAxis(yAxis, "Y");
 
     countsField.editor.setTooltip("Counts");
 
@@ -46,6 +46,7 @@ BottomBar::BottomBar(const ApplicationContext& context)
     addAndMakeVisible(paintPanel);
     addAndMakeVisible(toolPane);
     addAndMakeVisible(quaverPane);
+    addAndMakeVisible(bindPane);
     addAndMakeVisible(countsField);
 }
 
@@ -56,13 +57,13 @@ void BottomBar::resized()
     const int            height          = bounds.getHeight();
     const int            spacing         = juce::roundToInt(width * Theme::contentSpacingRatio);
     const int            toolPaneWidth   = toolPane.idealWidth(height);
+    const int            bindPaneWidth   = bindPane.idealWidth(height);
     const int            paneWidth       = juce::roundToInt(width * quaverPaneWidthRatio);
     const int            paneInset       = juce::roundToInt(height * Theme::contentInsetRatio);
     const int            innerHeight     = juce::jmax(0, height - paneInset * 2);
     const int            buttonSlotWidth = juce::roundToInt(paneWidth * quaverButtonWidthRatio);
     const int            buttonWidth     = juce::jlimit(0, innerHeight, buttonSlotWidth - paneInset * 2);
     const int            labelWidth      = juce::roundToInt(paneWidth * countsLabelWidthRatio);
-    const int            editorWidth     = juce::roundToInt(paneWidth * countsEditorWidthRatio);
     const float          textHeight      = CustomLookAndFeel::get(*this).textHeight;
     const juce::Font     textFont        = CustomLookAndFeel::get(*this).font(Theme::FontStyle::Regular, textHeight);
     juce::Rectangle<int> quaverPaneBounds;
@@ -77,6 +78,9 @@ void BottomBar::resized()
 
     paintPanel.setBounds(bounds.removeFromLeft(juce::roundToInt(width * paintPanelWidthRatio)));
 
+    bindPane.setBounds(bounds.removeFromRight(bindPaneWidth));
+    bounds.removeFromRight(spacing);
+
     toolPane.setBounds(bounds.removeFromRight(toolPaneWidth));
     bounds.removeFromRight(spacing);
 
@@ -86,14 +90,78 @@ void BottomBar::resized()
     quaverPane.setBounds(quaverPaneBounds);
     quaverPane.resized();
 
-    quaverPaneBounds = quaverPaneBounds.reduced(0, paneInset);
+    quaverPaneBounds = quaverPaneBounds.reduced(0, paneInset).withTrimmedRight(paneInset);
 
     quaverPaneBounds.removeFromLeft(buttonSlotWidth);
 
     countsField.labelWidth = labelWidth;
     countsField.gap        = paneInset;
 
-    countsField.setBounds(quaverPaneBounds.removeFromLeft(labelWidth + editorWidth));
+    countsField.setBounds(quaverPaneBounds);
+}
+
+void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
+{
+    const ArrowInfo& arrowInfo = applicationContext.canvas->arrowManager.currentArrowInfo;
+
+    axis.button = &bindPane.addButton(nullptr, text + " Binding", [this, &axis]() { toggleAxis(axis); });
+
+    axis.button->onRightClick = [this, &axis]() { showAxisMenu(axis); };
+
+    axis.button->painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
+        CustomLookAndFeel::get(*this).drawAxisButton(graphics, bounds, state);
+    };
+
+    axis.button->setText(text);
+
+    if (arrowInfo.*axis.binding != ArrowBinding::NoBind) {
+        axis.target = arrowInfo.*axis.binding;
+    }
+
+    axis.multiplierSlider.range  = { minimumBindMultiplier, maximumBindMultiplier, bindMultiplierInterval };
+    axis.multiplierSlider.label  = "multiplier";
+    axis.multiplierSlider.suffix = "x";
+
+    axis.multiplierSlider.boundValue.setValue(arrowInfo.*axis.multiplier);
+
+    axis.multiplierSlider.onValueChange = [this, &axis]() {
+        applicationContext.canvas->arrowManager.currentArrowInfo.*axis.multiplier = static_cast<double>(axis.multiplierSlider.boundValue.getValue());
+    };
+
+    axis.button->setSelected(arrowInfo.*axis.binding != ArrowBinding::NoBind);
+}
+
+void BottomBar::toggleAxis(BindAxis& axis)
+{
+    ArrowInfo& arrowInfo = applicationContext.canvas->arrowManager.currentArrowInfo;
+
+    if (arrowInfo.*axis.binding == ArrowBinding::NoBind) {
+        arrowInfo.*axis.binding = axis.target;
+    }
+    else {
+        arrowInfo.*axis.binding = ArrowBinding::NoBind;
+    }
+
+    axis.button->setSelected(arrowInfo.*axis.binding != ArrowBinding::NoBind);
+}
+
+void BottomBar::showAxisMenu(BindAxis& axis)
+{
+    const ArrowBinding binding = applicationContext.canvas->arrowManager.currentArrowInfo.*axis.binding;
+    ContextMenu        menu(applicationContext);
+
+    for (const BindTarget& target : bindTargets) {
+        menu.addItem(target.label, ContextMenu::ItemKind::Toggle, [this, &axis, bound = target.binding]() {
+            axis.target                                                            = bound;
+            applicationContext.canvas->arrowManager.currentArrowInfo.*axis.binding = bound;
+
+            axis.button->setSelected(true);
+        }, true, binding == target.binding);
+    }
+
+    menu.addComponent(axis.multiplierSlider, multiplierSliderWidth, Theme::popupMenuItemHeight);
+
+    menu.show(*axis.button);
 }
 
 void BottomBar::showQuaverMenu()
