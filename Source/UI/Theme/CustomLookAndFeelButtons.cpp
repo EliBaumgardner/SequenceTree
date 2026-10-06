@@ -1,6 +1,7 @@
 #include "CustomLookAndFeel.h"
 #include "../Buttons/IconButton.h"
 #include "../Editors/FileLabel.h"
+#include "../Buttons/ValueSlider.h"
 
 enum class GlyphPaint { Stroked, Dashed, Filled, Tinted };
 
@@ -36,11 +37,17 @@ juce::Rectangle<float> CustomLookAndFeel::drawButtonTile(juce::Graphics& graphic
         return bounds;
     }
 
-    graphics.setColour(pressableButtonColour(state));
-    graphics.setFont(font(FontStyle::Regular, textHeight));
-    graphics.drawFittedText(state.text, bounds.withTrimmedLeft(bounds.getHeight() * 0.85f).toNearestInt(), juce::Justification::centredLeft, 1);
+    const juce::Font labelFont   = font(FontStyle::Regular, textHeight);
+    const float      glyphInset  = bounds.getHeight() * (1.0f - Theme::glyphSizeRatio) * 0.5f;
+    const float      labelIndent = bounds.getHeight() * 0.85f - glyphInset;
+    const float      groupWidth  = labelIndent + juce::GlyphArrangement::getStringWidth(labelFont, state.text);
+    const auto       content     = bounds.withSizeKeepingCentre(juce::jmin(groupWidth, bounds.getWidth()), bounds.getHeight());
 
-    return bounds.withWidth(bounds.getHeight());
+    graphics.setColour(pressableButtonColour(state));
+    graphics.setFont(labelFont);
+    graphics.drawFittedText(state.text, content.withTrimmedLeft(labelIndent).toNearestInt(), juce::Justification::centredLeft, 1);
+
+    return content.withWidth(bounds.getHeight()).translated(-glyphInset, 0.0f);
 }
 
 juce::Colour CustomLookAndFeel::pressableButtonColour(const ButtonState& state) const
@@ -294,14 +301,6 @@ void CustomLookAndFeel::drawPaintToolIcon(juce::Graphics& graphics, juce::Rectan
     drawGlyph(graphics, bounds, "M9.3 14.7 19.2 4.8a1.7 1.7 0 0 1 2.4 2.4l-9.9 9.9" + tip, GlyphPaint::Stroked);
 }
 
-void CustomLookAndFeel::drawArrowToolIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state)
-{
-    graphics.setColour(pressableButtonColour(state));
-
-    drawGlyph(graphics, bounds, "M2.7 17a2.3 2.3 0 1 0 4.6 0a2.3 2.3 0 1 0-4.6 0z", GlyphPaint::Filled);
-    drawGlyph(graphics, bounds, "M7 15 18 5M11.5 5H18v6.5", GlyphPaint::Stroked);
-}
-
 void CustomLookAndFeel::drawSpanToolIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state)
 {
     graphics.setColour(pressableButtonColour(state));
@@ -319,28 +318,56 @@ void CustomLookAndFeel::drawQuaverToolIcon(juce::Graphics& graphics, juce::Recta
     drawGlyph(graphics, bounds, "M11.5 17V3.5c1.2 2.6 5.8 3.4 5.8 7.6", GlyphPaint::Stroked);
 }
 
-void CustomLookAndFeel::drawNodeArrowIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state)
+void CustomLookAndFeel::drawAxisButton(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state)
 {
-    graphics.setColour(pressableButtonColour(state));
+    ButtonState tileState = state;
 
-    drawGlyph(graphics, bounds, "M2.1 12a2.4 2.4 0 1 0 4.8 0a2.4 2.4 0 1 0-4.8 0zM15 7.5 21 12l-6 4.5z", GlyphPaint::Filled);
-    drawGlyph(graphics, bounds, "M7.5 12h8M15 7.5 21 12l-6 4.5z", GlyphPaint::Stroked);
+    tileState.text = {};
+
+    drawButtonTile(graphics, bounds, tileState);
+
+    graphics.setColour(pressableButtonColour(state));
+    graphics.setFont(font(FontStyle::SemiBold, textHeight));
+    graphics.drawFittedText(state.text, bounds.toNearestInt(), juce::Justification::centred, 1);
 }
 
-void CustomLookAndFeel::drawPolyphonicArrowIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state)
+void CustomLookAndFeel::drawValueSlider(juce::Graphics& graphics, const ValueSlider& slider)
 {
-    graphics.setColour(pressableButtonColour(state));
+    const auto   track      = slider.getLocalBounds().toFloat().reduced(popupMenuItemInset, popupMenuItemGap);
+    const double value      = slider.range.snapToLegalValue(static_cast<double>(slider.boundValue.getValue()));
+    const float  proportion = static_cast<float>(slider.range.convertTo0to1(value));
+    const float  handleX    = track.getX() + track.getWidth() * proportion;
+    const auto   textArea   = track.reduced(popupMenuTextInset, 0.0f).toNearestInt();
+    juce::Colour border     = borderColour;
+    juce::Path   trackShape;
 
-    drawGlyph(graphics, bounds, "M2.1 12a2.4 2.4 0 1 0 4.8 0a2.4 2.4 0 1 0-4.8 0z", GlyphPaint::Filled);
-    drawGlyph(graphics, bounds, "M7.5 12h9m-5-4.5 4.5 4.5-4.5 4.5M16 7.5l4.5 4.5-4.5 4.5", GlyphPaint::Stroked);
-}
+    if (slider.isMouseOverOrDragging()) {
+        border = borderStrongColour;
+    }
 
-void CustomLookAndFeel::drawTraversalArrowIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state)
-{
-    graphics.setColour(pressableButtonColour(state));
+    trackShape.addRoundedRectangle(track, paneCornerRadius);
 
-    drawGlyph(graphics, bounds, "M2.1 12a2.4 2.4 0 1 0 4.8 0a2.4 2.4 0 1 0-4.8 0z", GlyphPaint::Filled);
-    drawGlyph(graphics, bounds, "M7.5 12h7.5M15 7.5 21 12l-6 4.5z", GlyphPaint::Stroked);
+    graphics.setColour(surfaceColour);
+    graphics.fillPath(trackShape);
+
+    {
+        const juce::Graphics::ScopedSaveState savedState(graphics);
+
+        graphics.reduceClipRegion(trackShape);
+        graphics.setColour(accentSoftColour);
+        graphics.fillRect(track.withRight(handleX));
+        graphics.setColour(accentColour);
+        graphics.fillRect(juce::Rectangle<float>(valueSliderHandleWidth, track.getHeight()).withCentre({ handleX, track.getCentreY() }));
+    }
+
+    graphics.setColour(border);
+    graphics.strokePath(trackShape, juce::PathStrokeType(borderThickness));
+
+    graphics.setFont(getPopupMenuFont());
+    graphics.setColour(captionColour);
+    graphics.drawFittedText(slider.label, textArea, juce::Justification::centredLeft, 1);
+    graphics.setColour(textColour);
+    graphics.drawFittedText(juce::String(value, 2) + slider.suffix, textArea, juce::Justification::centredRight, 1);
 }
 
 void CustomLookAndFeel::drawFileLabel(juce::Graphics& graphics, const FileLabel& fileLabel)

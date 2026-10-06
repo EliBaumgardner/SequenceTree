@@ -13,6 +13,7 @@ public:
 
     bool hitTest(int x, int y) override;
     void bindToTree() override;
+    void respondToClick(juce::Point<int> localPoint) override;
 
 private:
 

@@ -649,34 +649,28 @@ void SelectionOps::restoreDanglingArrows(const PasteLayout& layout) const
 
 void SelectionOps::selectPastedNodes(const PasteLayout& layout, std::span<const int> encapsulatorIds) const
 {
+    NodeCanvas&      canvas = *applicationContext.canvas;
     std::vector<int> pastedIds(encapsulatorIds.begin(), encapsulatorIds.end());
 
     for (const auto& [originalId, newId] : layout.idMap) {
         pastedIds.push_back(newId);
     }
 
-    juce::Component::SafePointer<NodeCanvas> canvas { applicationContext.canvas };
+    canvas.handleAsyncUpdate();
 
-    juce::MessageManager::callAsync([canvas, pastedIds]()
-    {
-        if (canvas == nullptr) {
-            return;
+    for (auto& [nodeId, node] : canvas.nodeManager.all()) {
+        if (node->isSelected) {
+            node->setSelectVisual(false);
         }
+    }
 
-        for (auto& [nodeId, node] : canvas->nodeManager.all()) {
-            if (node->isSelected) {
-                node->setSelectVisual(false);
-            }
+    for (const int nodeId : pastedIds) {
+        Node* const node = canvas.nodeManager.find(nodeId);
+
+        if (node != nullptr && node->isVisible()) {
+            node->setSelectVisual(true);
         }
-
-        for (const int nodeId : pastedIds) {
-            Node* const node = canvas->nodeManager.find(nodeId);
-
-            if (node != nullptr && node->isVisible()) {
-                node->setSelectVisual(true);
-            }
-        }
-    });
+    }
 }
 
 std::vector<int> SelectionOps::createPastedEncapsulators(const PasteLayout& layout) const
@@ -713,10 +707,7 @@ std::vector<int> SelectionOps::createPastedEncapsulators(const PasteLayout& layo
             continue;
         }
 
-        const int subLoopCountLimit = source.getProperty(ValueTreeIdentifiers::SubLoopCountLimit, GraphState::defaultSubLoopCountLimit);
-
-        const juce::ValueTree encapsulator =
-            NodeFactory::createEncapsulator(state, pastedMemberIds, subLoopCountLimit, undoManager);
+        const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(state, pastedMemberIds, undoManager);
 
         encapsulatorIds.push_back(encapsulator.getProperty(ValueTreeIdentifiers::Id));
     }

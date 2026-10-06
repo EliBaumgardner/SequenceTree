@@ -43,23 +43,27 @@ public:
     NodeControllerMode nodeControllerMode = NodeControllerMode::Node;
     SelectionOps       selectionOps;
 
-    NodeController(const ApplicationContext& context, NodeCanvas& canvas);
+    NodeController (const ApplicationContext& context, NodeCanvas& canvas);
     ~NodeController() override;
 
+    void mouseDown           (const juce::MouseEvent& e) override;
+    void mouseUp             (const juce::MouseEvent& e) override;
     void mouseEnter          (const juce::MouseEvent& e) override;
     void mouseExit           (const juce::MouseEvent& e) override;
     void mouseMove           (const juce::MouseEvent& e) override;
     void mouseDrag           (const juce::MouseEvent& e) override;
+
     void handleNodeDrag      (juce::UndoManager *undoManager, int nodeId, NodePosition newPosition);
-    void snapToGrid          (juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree);
-    void updateConnectionPreview (Node *node, const NodePosition& newPosition, bool dashed);
     void handleNodeDragStart (juce::UndoManager *undoManager, Node *node, int nodeId, NodePosition newPosition, const juce::ModifierKeys& mods);
+
     void checkRootNodeSnap   (juce::Point<int> canvasPoint);
-    void mouseUp             (const juce::MouseEvent& e) override;
-    void  commitFlagConnection (int sourceNodeId, Node* target);
-    void mouseDown           (const juce::MouseEvent& e) override;
-    void   showArrowContextMenu (Arrow* arrow);
-    void setArrowMode (bool enabled);
+    void snapToGrid          (juce::UndoManager *undoManager, NodePosition &newPosition, juce::ValueTree draggedNodeTree);
+
+    void updateConnectionPreview (Node *node, const NodePosition& newPosition, bool dashed);
+    void commitFlagConnection    (int sourceNodeId, Node* target);
+
+    void showArrowContextMenu    (Arrow* arrow);
+    void setArrowMode            (bool enabled);
 
 private:
 
@@ -74,36 +78,45 @@ private:
         BoxSelecting
     };
 
-    void updateArrowHover  (juce::Point<float> cursor);
-    void dragValue         (const juce::MouseEvent& e);
-    void dragDanglingTip   (const juce::MouseEvent& e);
-    juce::Point<int> danglingTipFor (const Node* startNode, juce::Point<int> cursor);
-    Node* findDanglingSnapTarget   (const Node* startNode, juce::Point<int> tip) const;
-    void handleCanvasMouseDrag (const juce::MouseEvent& e);
-    void updateBoxSelection (const juce::MouseEvent& e);
-    void handleNodeMouseDrag   (const juce::MouseEvent& e, Node& node);
-    bool isArrowMode () const { return arrowMode; }
-    void dragFlagConnection(const juce::MouseEvent& e, Node& node, const NodePosition& newPosition);
-    void setDraggedNodeVisible    (bool shouldBeVisible);
-    void finishArrowHeadDrag         ();
-    void finishBoxSelection ();
-    void finishDanglingTipDrag       ();
-    void  connectDanglingToTarget  (const Node* startNode);
 
-    void connectWithSnapAnimation (int parentNodeId, int childNodeId,
-                                   ArrowType rootConnectionType);
+    juce::Point<int> danglingTipFor (const Node* startNode, juce::Point<int> cursor);
+    Node* findDanglingSnapTarget    (const Node* startNode, juce::Point<int> tip) const;
+
+    void updateArrowHover  (juce::Point<float> cursor);
+
+    void dragValue             (const juce::MouseEvent& e);
+    void dragDanglingTip       (const juce::MouseEvent& e);
+    void dragFlagConnection    (const juce::MouseEvent& e, Node& node, const NodePosition& newPosition);
+    void endDrag ();
+
+    void handleCanvasMouseDrag (const juce::MouseEvent& e);
+    void handleNodeMouseDrag   (const juce::MouseEvent& e, Node& node);
+    void handleNodeMouseDown   (const juce::MouseEvent& e, Node& node);
+    void handleCanvasMouseDown (const juce::MouseEvent& e);
+
+    void beginBoxSelection   (const juce::Point<int>& clickPoint);
+    void updateBoxSelection  (const juce::MouseEvent& e);
+    void setDraggedNodeVisible    (bool shouldBeVisible);
+
+    void connectDanglingToTarget  (const Node* startNode);
+    void connectWithSnapAnimation (int parentNodeId, int childNodeId, ArrowType rootConnectionType);
+    void connectDraggedNodeToRoot ();
 
     void finishFlagConnection        ();
     void finishDanglingArrowCreation ();
-    void connectDraggedNodeToRoot    ();
-    void endDrag  ();
+    void finishArrowHeadDrag         ();
+    void finishBoxSelection          ();
+    void finishDanglingTipDrag       ();
+
     void selectSpanNode        (Node& node);
-    void handleCanvasMouseDown (const juce::MouseEvent& e);
     void showSelectionMenu(juce::Point<int> canvasPoint);
-    bool isNodeCreationModeActive () const;
-    void beginBoxSelection  (const juce::Point<int>& clickPoint);
-    void handleNodeMouseDown   (const juce::MouseEvent& e, Node& node);
+
+    bool isNodeCreationModeActive     () const;
+    bool isArrowMode                  () const { return arrowMode; }
     bool toggleEncapsulationExpansion (Node& node);
+
+
+private:
 
     static constexpr float rootSnapThreshold       = 20.0f;
     static constexpr float danglingArrowGrabRadius = 14.0f;
@@ -115,35 +128,30 @@ private:
 
     const ApplicationContext& applicationContext;
     NodeCanvas&               canvas;
+    PopupWindowLauncher       allowedTraversalsLauncher { "Allowed Traversals" };
 
     ConnectionOps connectionOps { applicationContext };
 
     DragState dragState = DragState::Idle;
 
-    bool arrowMode = false;
-
     juce::Component::SafePointer<Arrow> draggingDanglingArrow;
-    juce::Component::SafePointer<Node> danglingSnapTarget;
-    juce::Component::SafePointer<Node> danglingSourceNode;
-
-    PopupWindowLauncher allowedTraversalsLauncher { "Allowed Traversals" };
-
-    juce::Component::SafePointer<Node> snapTargetRoot;
-    juce::Component::SafePointer<Node> draggingArrowHeadNode;
-
-    int   flagConnectionSourceId   = -1;
+    juce::Component::SafePointer<Node>  danglingSnapTarget;
+    juce::Component::SafePointer<Node>  danglingSourceNode;
+    juce::Component::SafePointer<Node>  snapTargetRoot;
+    juce::Component::SafePointer<Node>  draggingArrowHeadNode;
+    juce::Component::SafePointer<Node>  draggingValueNode;
     juce::Component::SafePointer<Node> flagConnectionTarget;
 
-    bool isDragStart               = true;
-
-    double dragStartValue          = 0.0;
-    juce::Component::SafePointer<Node> draggingValueNode;
+    double dragStartValue = 0.0;
 
     juce::Point<float> dragParentCenter;
-
-    juce::Point<int> selectionAnchor;
+    juce::Point<int>  selectionAnchor;
 
     juce::ValueTree draggedNodeTree;
 
     int snapSourceNodeId = -1;
+    int flagConnectionSourceId   = -1;
+
+    bool isDragStart = true;
+    bool arrowMode   = false;
 };

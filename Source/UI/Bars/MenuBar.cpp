@@ -2,7 +2,7 @@
 #include "../Theme/CustomLookAndFeel.h"
 
 MenuBar::MenuBar(const ApplicationContext& context)
-    : Bar(context, { Orientation::Vertical, iconInsetRatio })
+    : Bar(context, { Orientation::Vertical, iconInsetRatio, Surface::Frosted })
 {
     treeIcon.icon      = &CustomLookAndFeel::drawTreeIcon;
     nodeIcon.icon      = &CustomLookAndFeel::drawNodeIcon;

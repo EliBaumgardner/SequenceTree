@@ -12,7 +12,8 @@ public:
 
     enum class ItemKind {
         Action,
-        Toggle
+        Toggle,
+        Component
     };
 
     explicit ContextMenu(const ApplicationContext& context);
@@ -20,6 +21,7 @@ public:
     void addItem(juce::String label, ItemKind kind, std::function<void()> action,
                  bool isEnabled = true, bool isOn = false);
 
+    void addComponent(juce::Component& component, int idealWidth, int idealHeight);
     void show(juce::Component& target);
 
     std::function<void()> onDismissed;
@@ -33,6 +35,9 @@ private:
         std::function<void()> action;
         bool                  isEnabled;
         bool                  isOn;
+        juce::Component*      component   = nullptr;
+        int                   idealWidth  = 0;
+        int                   idealHeight = 0;
     };
 
     const ApplicationContext& applicationContext;

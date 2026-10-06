@@ -27,8 +27,7 @@ public:
     static juce::ValueTree createModulatorRoot(GraphState& state, int parentNodeId, const NodePosition& nodePosition,
                                                juce::UndoManager* undoManager);
 
-    static juce::ValueTree createEncapsulator(GraphState& state, std::span<const int> memberNodeIds,
-                                              int subLoopCountLimit, juce::UndoManager* undoManager);
+    static juce::ValueTree createEncapsulator(GraphState& state, std::span<const int> memberNodeIds, juce::UndoManager* undoManager);
 
     static void createDanglingArrow(GraphState& state, juce::ValueTree nodeTree, const juce::Point<int>& tipOffset,
                                     const ArrowInfo& arrowInfo, juce::UndoManager* undoManager);

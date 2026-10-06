@@ -114,10 +114,9 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Buttons/RootRectangle.cpp
         Source/UI/Buttons/IconButton.cpp
         Source/UI/Buttons/ButtonPane.cpp
+        Source/UI/Buttons/ValueSlider.cpp
         Source/UI/Buttons/TempoDisplay.cpp
         Source/UI/Buttons/PaintToolSettings.cpp
-        Source/UI/Menus/ArrowWindow.cpp
-        Source/UI/Bars/ArrowBindBar.cpp
         Source/UI/Menus/ItemSelector.cpp
         Source/UI/Menus/ContextMenu.cpp
         Source/UI/Menus/TraversalMenu.cpp

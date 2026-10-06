@@ -449,7 +449,7 @@ TEST_CASE("removing an encapsulator removes its members and every link to them",
     const int afterId = createChild(graph, lastId, 300, 0);
 
     const std::vector<int> memberIds { firstId, lastId };
-    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, 1, nullptr);
+    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, nullptr);
     const int encapsulatorId = encapsulator.getProperty(ValueTreeIdentifiers::Id);
 
     graph.removeNode(encapsulatorId, nullptr);
@@ -480,7 +480,7 @@ TEST_CASE("dissolving an encapsulator keeps its members and their arrows", "[gra
     const int lastId  = createChild(graph, firstId, 200, 0);
 
     const std::vector<int> memberIds { firstId, lastId };
-    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, 2, nullptr);
+    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, nullptr);
     const int encapsulatorId = encapsulator.getProperty(ValueTreeIdentifiers::Id);
 
     CHECK(graph.encapsulation.memberIds(encapsulatorId) == std::vector<int> { firstId, lastId });
@@ -509,7 +509,7 @@ TEST_CASE("removing an encapsulator's last member dissolves it", "[graph][encaps
     const int memberId = createChild(graph, rootId, 100, 0);
 
     const std::vector<int> memberIds { memberId };
-    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, 1, nullptr);
+    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, nullptr);
     const int encapsulatorId = encapsulator.getProperty(ValueTreeIdentifiers::Id);
 
     graph.removeNode(memberId, nullptr);

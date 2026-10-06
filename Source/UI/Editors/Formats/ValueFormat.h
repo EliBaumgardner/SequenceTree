@@ -34,7 +34,7 @@ public:
 
     virtual InputRestrictions restrictions() const = 0;
     virtual juce::String      text (const ValueBinding& binding, TextPurpose purpose) const = 0;
-    virtual ParsedValue       parse(const juce::String& enteredText) const = 0;
+    virtual ParsedValue       parse(const ValueBinding& binding, const juce::String& enteredText) const = 0;
 
     static constexpr int editableDecimalPlaces = 2;
 
@@ -53,7 +53,7 @@ public:
 
     InputRestrictions restrictions() const override;
     juce::String      text (const ValueBinding& binding, TextPurpose purpose) const override;
-    ParsedValue       parse(const juce::String& enteredText) const override;
+    ParsedValue       parse(const ValueBinding& binding, const juce::String& enteredText) const override;
 
     juce::String prefix;
     juce::String suffix;
@@ -68,7 +68,9 @@ public:
 
     PitchFormat();
 
-    juce::String text(const ValueBinding& binding, TextPurpose purpose) const override;
+    InputRestrictions restrictions() const override;
+    juce::String      text (const ValueBinding& binding, TextPurpose purpose) const override;
+    ParsedValue       parse(const ValueBinding& binding, const juce::String& enteredText) const override;
 };
 
 class GreekLetterFormat : public NumberFormat
@@ -88,7 +90,7 @@ public:
 
     InputRestrictions restrictions() const override;
     juce::String      text (const ValueBinding& binding, TextPurpose purpose) const override;
-    ParsedValue       parse(const juce::String& enteredText) const override;
+    ParsedValue       parse(const ValueBinding& binding, const juce::String& enteredText) const override;
 };
 
 class TraversalFlagFormat : public NumberFormat
@@ -99,7 +101,7 @@ public:
 
     InputRestrictions restrictions() const override;
     juce::String      text (const ValueBinding& binding, TextPurpose purpose) const override;
-    ParsedValue       parse(const juce::String& enteredText) const override;
+    ParsedValue       parse(const ValueBinding& binding, const juce::String& enteredText) const override;
     static std::vector<TraversalKey> parseKeys(const juce::String& text);
     static juce::String              describe (const TraversalKey& key);
 
@@ -114,7 +116,7 @@ public:
 
     InputRestrictions restrictions() const override;
     juce::String      text (const ValueBinding& binding, TextPurpose purpose) const override;
-    ParsedValue       parse(const juce::String& enteredText) const override;
+    ParsedValue       parse(const ValueBinding& binding, const juce::String& enteredText) const override;
 
     static constexpr int      labelTextLength = 64;
     static const juce::String labelCharacters;

@@ -1,5 +1,6 @@
 #include "Bar.h"
 #include "../Theme/CustomLookAndFeel.h"
+#include "../Canvas/NodeCanvas.h"
 
 Bar::Bar(const ApplicationContext& context, Style style)
     : applicationContext(context), style(style)
@@ -14,8 +15,15 @@ Bar::~Bar()
 
 void Bar::paint(juce::Graphics& graphics)
 {
-    graphics.setColour(CustomLookAndFeel::get(*this).barColour);
-    graphics.fillRect(getLocalBounds());
+    CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
+
+    if (style.surface == Surface::Frosted) {
+        lookAndFeel.drawFrostedGlass(graphics, *this, *applicationContext.canvas->getParentComponent(), getLocalBounds());
+    }
+    else {
+        graphics.setColour(lookAndFeel.barColour);
+        graphics.fillRect(getLocalBounds());
+    }
 
     paintOverBar(graphics);
 }

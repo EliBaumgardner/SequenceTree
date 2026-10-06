@@ -1,6 +1,5 @@
 #include "DynamicPort.h"
 #include "NodeCanvas.h"
-#include "../Theme/CustomLookAndFeel.h"
 
 DynamicPort::DynamicPort(NodeCanvas& content)
     : canvas(content)
@@ -42,24 +41,6 @@ void DynamicPort::applyTransform()
     canvas.valueField.refresh();
 
     canvas.repaint();
-}
-
-void DynamicPort::paintOverChildren(juce::Graphics& graphics)
-{
-    const Theme& theme  = CustomLookAndFeel::get(*this);
-    const auto   bounds = getLocalBounds().toFloat();
-    const auto   frame  = bounds.reduced(Theme::borderThickness * 0.5f);
-    juce::Path   corners;
-
-    corners.addRectangle(bounds);
-    corners.addRoundedRectangle(frame, Theme::canvasCornerRadius);
-    corners.setUsingNonZeroWinding(false);
-
-    graphics.setColour(theme.windowColour);
-    graphics.fillPath(corners);
-
-    graphics.setColour(theme.borderColour);
-    graphics.drawRoundedRectangle(frame, Theme::canvasCornerRadius, Theme::borderThickness);
 }
 
 void DynamicPort::mouseDown(const juce::MouseEvent& event)

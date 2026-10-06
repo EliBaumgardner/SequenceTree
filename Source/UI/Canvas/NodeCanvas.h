@@ -18,7 +18,7 @@ class Node;
 class RootNode;
 class Arrow;
 
-class NodeCanvas : public juce::Component, public juce::AsyncUpdater
+class NodeCanvas : public juce::Component
 {
 public:
 
@@ -59,10 +59,9 @@ public:
 
     void clearCanvas();
     void childrenChanged() override;
-    void enqueueAsyncUpdate(const AsyncUpdate& update);
     void setProcessorPlayback(bool isPlaying);
     void rebuildFromNodeMap(const juce::ValueTree& stateTree);
-    void handleAsyncUpdate() override;
+    void handleAsyncUpdate();
     void setPaintMode(bool enabled);
     void setSpanMode(bool enabled);
     void setQuaverMode(QuaverMode mode);

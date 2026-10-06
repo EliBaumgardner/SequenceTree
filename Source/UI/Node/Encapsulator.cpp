@@ -29,24 +29,33 @@ void Encapsulator::bindToTree()
         firstMemberValueTree = applicationContext.graphState->getNode(memberNodeIds.front());
     }
 
-    subLoopLimitEditor.setVisible(true);
-    subLoopLimitEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::SubLoopCountLimit);
-    subLoopLimitEditor.repaint();
+    const bool             hasFirstMember  = firstMemberValueTree.isValid();
+    const juce::Identifier firstMemberType = firstMemberValueTree.getType();
 
-    const bool hasFirstMember = firstMemberValueTree.isValid();
+    const bool firstMemberIsAlternative = (firstMemberType == ValueTreeIdentifiers::AlternativeNodeData
+                                        || firstMemberType == ValueTreeIdentifiers::AlternativeModulatorData);
+
+    juce::Identifier subLoopProperty = ValueTreeIdentifiers::SubLoopCountLimit;
 
     countEditor.setVisible(hasFirstMember);
     switchCountEditor.setVisible(hasFirstMember);
+    subLoopLimitEditor.setVisible(hasFirstMember && ! firstMemberIsAlternative);
 
     if (! hasFirstMember) {
         return;
     }
 
+    if (firstMemberType == ValueTreeIdentifiers::RootNodeData) {
+        subLoopProperty = ValueTreeIdentifiers::LoopLimit;
+    }
+
     countEditor.bindEditor(firstMemberValueTree, ValueTreeIdentifiers::CountLimit);
     switchCountEditor.bindEditor(firstMemberValueTree, ValueTreeIdentifiers::SwitchCountLimit);
+    subLoopLimitEditor.bindEditor(firstMemberValueTree, subLoopProperty);
 
     countEditor.repaint();
     switchCountEditor.repaint();
+    subLoopLimitEditor.repaint();
 }
 
 void Encapsulator::bindValueEditorForMode()

@@ -13,7 +13,7 @@ TraversalFlagNode::TraversalFlagNode(const ApplicationContext& context)
     nodeType = NodeType::TraversalFlag;
 
     traversalNumEditor.setFormat(std::make_unique<TraversalFlagFormat>());
-    traversalNumEditor.setInterceptsMouseClicks(true, false);
+    traversalNumEditor.setInterceptsMouseClicks(false, true);
     traversalNumEditor.setTooltip("Type +N to spawn traversal N, -N to remove it; +Na targets instance a");
 
     traversalNumEditor.boundValue.setValue(0);
@@ -29,8 +29,6 @@ TraversalFlagNode::TraversalFlagNode(const ApplicationContext& context)
     countEditor.setVisible(true);
     switchCountEditor.setVisible(true);
     subLoopLimitEditor.setVisible(false);
-    upButton.setVisible(false);
-    downButton.setVisible(false);
     nodeValueEditor.setVisible(false);
 
     addAndMakeVisible(traversalNumEditor);
@@ -127,4 +125,14 @@ void TraversalFlagNode::bindToTree()
     if (nodeValueTree.isValid()) {
         traversalNumEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::TraversalFlagValue);
     }
+}
+
+void TraversalFlagNode::respondToClick(juce::Point<int> localPoint)
+{
+    if (traversalNumEditor.getBounds().contains(localPoint)) {
+        traversalNumEditor.beginEditing();
+        return;
+    }
+
+    Node::respondToClick(localPoint);
 }

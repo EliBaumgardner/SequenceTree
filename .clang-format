@@ -27,6 +27,7 @@ BraceWrapping:
   SplitEmptyFunction: false
   SplitEmptyRecord: false
 BreakConstructorInitializers: BeforeColon
+Cpp11BracedListStyle: false
 ColumnLimit: 0
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4

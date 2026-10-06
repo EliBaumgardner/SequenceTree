@@ -54,7 +54,7 @@ juce::String NumberFormat::text(const ValueBinding& binding, TextPurpose purpose
     return prefix + number + suffix;
 }
 
-ParsedValue NumberFormat::parse(const juce::String& enteredText) const
+ParsedValue NumberFormat::parse(const ValueBinding& binding, const juce::String& enteredText) const
 {
     const double entered = enteredText.getDoubleValue() * displayDivisor;
     const double clamped = juce::jlimit(minimum, maximum, entered);

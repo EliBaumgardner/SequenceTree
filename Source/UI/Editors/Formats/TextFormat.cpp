@@ -30,7 +30,7 @@ juce::String TextFormat::text(const ValueBinding& binding, TextPurpose purpose) 
     return stored.toString();
 }
 
-ParsedValue TextFormat::parse(const juce::String& enteredText) const
+ParsedValue TextFormat::parse(const ValueBinding& binding, const juce::String& enteredText) const
 {
     if (trimsWhitespace) {
         return { enteredText.trim(), {} };
