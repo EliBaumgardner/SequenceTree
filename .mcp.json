@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "treejev": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "treejev",
+        "mcp"
+      ],
+      "env": {
+        "TREEJEV_PROJECT_DIR": "."
+      }
+    }
+  }
+}

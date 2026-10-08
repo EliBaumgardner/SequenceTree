@@ -37,9 +37,11 @@ public:
 
     const Snapshot* getPublished() const { return publishedSnapshot.get(); }
     std::shared_ptr<Snapshot> beginEdit() const;
-    void publish(std::shared_ptr<Snapshot> snapshot);
-    void publishGraph (int graphId, NodeMap graphNodes);
+
+    void publish      (std::shared_ptr<Snapshot> snapshot);
     void publishScript(std::shared_ptr<RTScript> script);
+    void publishGraph (int graphId, NodeMap graphNodes);
+
     ScriptCompileResult publishActiveTraversalRule();
     void releaseRetiredSnapshots();
 

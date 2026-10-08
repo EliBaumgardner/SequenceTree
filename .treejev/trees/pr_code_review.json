@@ -1,0 +1,170 @@
+{
+  "rootId": "node-root-review",
+  "nodes": {
+    "node-root-review": {
+      "id": "node-root-review",
+      "label": "Security or Auth Touched?",
+      "isRoot": true,
+      "position": {
+        "x": 695,
+        "y": 60
+      },
+      "config": {
+        "kind": "noul",
+        "statement": "The proposed code changes modify authentication, authorization, cryptography, secrets, or database schemas",
+        "threshold": 0.7,
+        "trueChildId": "node-1791418217511-qqmvsel",
+        "falseChildId": "node-1791418217511-1i42y2q"
+      }
+    },
+    "node-1791418217511-qqmvsel": {
+      "id": "node-1791418217511-qqmvsel",
+      "label": "Risk: Breaking Changes or Missing Tests?",
+      "parentId": "node-root-review",
+      "position": {
+        "x": 385,
+        "y": 340
+      },
+      "config": {
+        "kind": "noul",
+        "statement": "The pull request contains breaking changes, failing tests, or unvalidated user inputs",
+        "threshold": 0.5,
+        "trueChildId": "node-1791418217511-c11akxu",
+        "falseChildId": "node-1791418217511-o3xjgyi"
+      }
+    },
+    "node-1791418217511-c11akxu": {
+      "id": "node-1791418217511-c11akxu",
+      "label": "Block PR: Require Senior Security Review & Regression Tests",
+      "parentId": "node-1791418217511-qqmvsel",
+      "position": {
+        "x": 230,
+        "y": 620
+      },
+      "config": {
+        "kind": "action",
+        "description": "Block PR: Require Senior Security Review & Regression Tests",
+        "directive": "Security policy violation: PR modifies security/auth code with elevated risk. Post a blocking PR review comment citing security checklist, assign @sec-lead, and do not merge until additional regression test suites pass."
+      }
+    },
+    "node-1791418217511-o3xjgyi": {
+      "id": "node-1791418217511-o3xjgyi",
+      "label": "Approve with Standard Security Audit Checklist",
+      "parentId": "node-1791418217511-qqmvsel",
+      "position": {
+        "x": 540,
+        "y": 620
+      },
+      "config": {
+        "kind": "action",
+        "description": "Approve with Standard Security Audit Checklist",
+        "directive": "Security-related changes verified low risk. Post an approval review comment verifying secrets are externalized and automated security scans passed."
+      }
+    },
+    "node-1791418217511-1i42y2q": {
+      "id": "node-1791418217511-1i42y2q",
+      "label": "Review Routing",
+      "parentId": "node-root-review",
+      "position": {
+        "x": 1005,
+        "y": 340
+      },
+      "config": {
+        "kind": "choice",
+        "instructions": "Classify whether this is a minor fix or standard feature implementation",
+        "options": [
+          {
+            "id": "opt-minor",
+            "label": "Minor / Doc Fix",
+            "childId": "node-1791418217511-yu2ve5k"
+          },
+          {
+            "id": "opt-feature",
+            "label": "Feature / Refactor",
+            "childId": "node-1791418217511-blek965"
+          }
+        ]
+      }
+    },
+    "node-1791418217511-yu2ve5k": {
+      "id": "node-1791418217511-yu2ve5k",
+      "label": "Fast-track: Auto-merge upon CI Green",
+      "parentId": "node-1791418217511-1i42y2q",
+      "position": {
+        "x": 850,
+        "y": 620
+      },
+      "config": {
+        "kind": "action",
+        "description": "Fast-track: Auto-merge upon CI Green",
+        "directive": "Low-risk routine documentation or minor patch. Auto-approve PR and squash-merge once CI checks pass."
+      }
+    },
+    "node-1791418217511-blek965": {
+      "id": "node-1791418217511-blek965",
+      "label": "Require 1 Peer Review Approval",
+      "parentId": "node-1791418217511-1i42y2q",
+      "position": {
+        "x": 1160,
+        "y": 620
+      },
+      "config": {
+        "kind": "action",
+        "description": "Require 1 Peer Review Approval",
+        "directive": "Standard feature implementation. Request review from 1 peer code owner and ensure integration tests pass before merge."
+      }
+    }
+  },
+  "edges": {
+    "edge-node-root-review-true-node-1791418217511-qqmvsel": {
+      "id": "edge-node-root-review-true-node-1791418217511-qqmvsel",
+      "sourceId": "node-root-review",
+      "targetId": "node-1791418217511-qqmvsel",
+      "branchKey": "true",
+      "label": "Security Touched (≥ 0.7)"
+    },
+    "edge-node-1791418217511-qqmvsel-true-node-1791418217511-c11akxu": {
+      "id": "edge-node-1791418217511-qqmvsel-true-node-1791418217511-c11akxu",
+      "sourceId": "node-1791418217511-qqmvsel",
+      "targetId": "node-1791418217511-c11akxu",
+      "branchKey": "true",
+      "label": "High Risk (≥ 0.5)"
+    },
+    "edge-node-1791418217511-qqmvsel-false-node-1791418217511-o3xjgyi": {
+      "id": "edge-node-1791418217511-qqmvsel-false-node-1791418217511-o3xjgyi",
+      "sourceId": "node-1791418217511-qqmvsel",
+      "targetId": "node-1791418217511-o3xjgyi",
+      "branchKey": "false",
+      "label": "Low Risk (< 0.5)"
+    },
+    "edge-node-root-review-false-node-1791418217511-1i42y2q": {
+      "id": "edge-node-root-review-false-node-1791418217511-1i42y2q",
+      "sourceId": "node-root-review",
+      "targetId": "node-1791418217511-1i42y2q",
+      "branchKey": "false",
+      "label": "Standard Code (< 0.7)"
+    },
+    "edge-node-1791418217511-1i42y2q-opt-minor-node-1791418217511-yu2ve5k": {
+      "id": "edge-node-1791418217511-1i42y2q-opt-minor-node-1791418217511-yu2ve5k",
+      "sourceId": "node-1791418217511-1i42y2q",
+      "targetId": "node-1791418217511-yu2ve5k",
+      "branchKey": "opt-minor",
+      "label": "Minor Fix"
+    },
+    "edge-node-1791418217511-1i42y2q-opt-feature-node-1791418217511-blek965": {
+      "id": "edge-node-1791418217511-1i42y2q-opt-feature-node-1791418217511-blek965",
+      "sourceId": "node-1791418217511-1i42y2q",
+      "targetId": "node-1791418217511-blek965",
+      "branchKey": "opt-feature",
+      "label": "Feature"
+    }
+  },
+  "globalState": {
+    "pr_title": "Update session authentication",
+    "changed_files": [
+      "src/auth/jwt.ts"
+    ],
+    "tests_passed": true,
+    "has_breaking_changes": false
+  }
+}

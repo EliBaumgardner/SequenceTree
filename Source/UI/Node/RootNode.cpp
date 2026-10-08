@@ -3,15 +3,15 @@
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Editors/Formats/ValueFormat.h"
-#include "../../Util/ApplicationContext.h"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
-RootNode::RootNode(const ApplicationContext& context)
-    : Node(context),
-      rootRectangle(context)
+RootNode::RootNode(juce::UndoManager& undoManager, GraphState& graphState)
+    : Node(undoManager),
+      rootRectangle(undoManager),
+      graphState(graphState)
 {
     nodeType          = NodeType::Root;
     interiorLeftInset = loopLimitRectangleWidth;
@@ -63,7 +63,7 @@ void RootNode::equipTraversals()
     }
 
     for (const TraversalKey& key : keys) {
-        applicationContext.graphState->traversals.addTraversalData(key.typeId, nullptr);
+        graphState.traversals.addTraversalData(key.typeId, nullptr);
 
         if (TraversalState::findReference(traversalChildrenIds, key).isValid()) {
             continue;

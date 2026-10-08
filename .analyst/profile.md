@@ -4,7 +4,14 @@ The project profile the analysis agent gets beside the research suite's generic 
 
 ## The Project
 
-SequenceTree is a JUCE MIDI-generating plugin that walks a user-drawn directed graph. It is a solo-developer project: size recommendations for one person, and don't recommend enterprise patterns without a concrete, present problem.
+SequenceTree is a JUCE MIDI-generating plugin that walks a user-drawn directed graph. It is a solo-developer project: size recommendations for one person, and don't recommend enterprise patterns without a concrete problem.
+
+### Feature Gates
+
+`NodeController` and `NodeCanvas` are this project's feature gates, in the sense of the Key Design Rule on feature gates. Every canvas gesture enters through `NodeController`'s `mouseDown` / `mouseDrag` / `mouseUp`, and every canvas feature is mounted on `NodeCanvas`. New features keep arriving along both axes, so judge both by what the next feature costs them, not by whether they work today.
+
+- `NodeCanvas` is the shape to aim for. Its features are parts it owns (`NodeManager`, `ArrowManager`, `AudioCommandDrainer`, `CanvasHitTester`, `EncapsulationView`, `ValueField`), and the canvas routes to them. Its remaining dispatch, `AsyncUpdateType` and `handleAsyncUpdate`, is where to watch it grow.
+- `NodeController` is the counter-example. Hover, value dragging, dangling arrows, arrow-head moves, flag connections, child creation, root snapping, box selection, span selection, encapsulation expansion and the context menus each live in it as their own `DragState` values, branches and handlers, so every new gesture-borne feature grows the one class. An earlier unreviewed report (`node_controller_decomposition_analysis.md`) concluded it should not be decomposed because it is cohesive and its state is shared. Under the feature-gate rule, those are not reasons, and its growth test was never run.
 
 ## Frameworks, Versions and Tooling
 

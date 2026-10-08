@@ -2,20 +2,13 @@
 
 #include "../Theme/CustomLookAndFeel.h"
 
-FilePage::FilePage(const ApplicationContext& context)
+FilePage::FilePage(const Theme& theme)
     : juce::CodeEditorComponent(*this, nullptr)
 {
-    const Theme& theme = *context.lookAndFeel;
-
     setNewLineCharacters("\n");
     addListener(this);
 
-    setColour(backgroundColourId,               theme.surfaceColour);
-    setColour(defaultTextColourId,              theme.textColour);
-    setColour(highlightColourId,                theme.accentColour.withAlpha(selectionAlpha));
-    setColour(lineNumberBackgroundId,           juce::Colours::transparentBlack);
-    setColour(lineNumberTextId,                 theme.lineNumberColour);
-    setColour(juce::CaretComponent::caretColourId, theme.accentColour);
+    setColour(lineNumberBackgroundId, juce::Colours::transparentBlack);
 
     setLineNumbersShown(true);
     setTabSize(indentSize, true);

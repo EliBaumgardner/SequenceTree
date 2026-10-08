@@ -1,7 +1,6 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../../Util/ApplicationContext.h"
 #include "ArrowAnimation.h"
 #include "../Editors/ValueEditor.h"
 #include "../../Util/ArrowInfo.h"
@@ -34,8 +33,8 @@ class Arrow : public juce::Component
 {
 public:
 
-    Arrow(Node* startNode, Node* endNode, const ApplicationContext& context);
-    Arrow(Node* startNode, juce::Point<int> tipOffset, const ApplicationContext& context);
+    Arrow(Node* startNode, Node* endNode, juce::UndoManager& undoManager);
+    Arrow(Node* startNode, juce::Point<int> tipOffset, juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;

@@ -41,7 +41,6 @@ void IconButton::resized()
 void IconButton::lookAndFeelChanged()
 {
     if (const auto* theme = dynamic_cast<const Theme*>(&getLookAndFeel())) {
-        caption.setColour(juce::Label::textColourId, theme->captionColour);
         caption.setFont(theme->font(Theme::FontStyle::Regular, Theme::labelFontHeight));
     }
 }

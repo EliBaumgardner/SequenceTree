@@ -1,17 +1,10 @@
 #include "PanelResizer.h"
 
-#include "../Util/ApplicationContext.h"
 #include "Theme/CustomLookAndFeel.h"
 
-PanelResizer::PanelResizer(const ApplicationContext& context, Edge edge) : edge(edge)
+PanelResizer::PanelResizer(Edge edge) : edge(edge)
 {
-    setLookAndFeel(context.lookAndFeel);
     setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
-}
-
-PanelResizer::~PanelResizer()
-{
-    setLookAndFeel(nullptr);
 }
 
 void PanelResizer::paint(juce::Graphics& graphics)

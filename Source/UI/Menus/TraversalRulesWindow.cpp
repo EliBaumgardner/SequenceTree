@@ -2,15 +2,16 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Graph/TraversalRuleState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../../Plugin/PluginProcessor.h"
+#include "../../Plugin/AudioSnapshotPublisher.h"
 #include "../../Script/ScriptCompiler.h"
 
-TraversalRulesWindow::TraversalRulesWindow(const ApplicationContext& context)
-    : titlebar(context),
-      rulesPanel(context),
-      context(context)
+TraversalRulesWindow::TraversalRulesWindow(CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
+                                           juce::UndoManager& undoManager)
+    : rulesPanel(undoManager),
+      traversalRuleState(traversalRuleState),
+      snapshots(snapshots)
 {
-    setLookAndFeel(context.lookAndFeel);
+    setLookAndFeel(&lookAndFeel);
 
     rulesPanel.resizer.onWidthDragged          = [this](int newWidth) { setPanelWidth(newWidth); };
     rulesPanel.labelPanel.onLabelClicked       = [this](FileLabel* label) { setActivePage(label->fileId); };
@@ -18,7 +19,7 @@ TraversalRulesWindow::TraversalRulesWindow(const ApplicationContext& context)
     titlebar.playButton.onClick                = [this] { makeViewedRuleActive(); };
 
     rulesPanel.labelPanel.onLabelsReordered = [this](std::vector<int> fileIds) {
-        this->context.traversalRuleState->reorderRules(fileIds, nullptr);
+        this->traversalRuleState.reorderRules(fileIds, nullptr);
     };
 
     rulesPanel.labelPanel.onLabelRemoved = [this](int fileId) {
@@ -33,14 +34,14 @@ TraversalRulesWindow::TraversalRulesWindow(const ApplicationContext& context)
     addAndMakeVisible(titlebar);
     addAndMakeVisible(rulesPanel);
 
-    context.traversalRuleState->rules.addListener(this);
+    traversalRuleState.rules.addListener(this);
 
     syncWithRuleState();
 }
 
 TraversalRulesWindow::~TraversalRulesWindow()
 {
-    context.traversalRuleState->rules.removeListener(this);
+    traversalRuleState.rules.removeListener(this);
 
     setLookAndFeel(nullptr);
 }
@@ -145,7 +146,7 @@ void TraversalRulesWindow::compileViewedPage()
         return;
     }
 
-    TraversalRuleState& state            = *context.traversalRuleState;
+    TraversalRuleState& state            = traversalRuleState;
     const juce::String  source           = activePage->getDocument().getAllContent();
     ScriptCompileResult result           = compileTraversalScript(source.toStdString());
     const bool          isLiveRule       = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == viewedRuleId;
@@ -175,7 +176,7 @@ void TraversalRulesWindow::compileViewedPage()
         return;
     }
 
-    context.processor->snapshots.publishScript(std::make_shared<RTScript>(std::move(result.script)));
+    snapshots.publishScript(std::make_shared<RTScript>(std::move(result.script)));
 
     setStatus(instructionCount + " instructions - live", false);
 }
@@ -194,7 +195,7 @@ void TraversalRulesWindow::setStatus(const juce::String& text, bool isError)
 
 void TraversalRulesWindow::addRule()
 {
-    const juce::ValueTree rule = context.traversalRuleState->addRule(nullptr);
+    const juce::ValueTree rule = traversalRuleState.addRule(nullptr);
 
     syncWithRuleState();
 
@@ -203,7 +204,7 @@ void TraversalRulesWindow::addRule()
 
 void TraversalRulesWindow::syncWithRuleState()
 {
-    TraversalRuleState& state = *context.traversalRuleState;
+    TraversalRuleState& state = traversalRuleState;
     std::vector<int>    ruleOrder;
 
     state.ensureDefaultRule();
@@ -262,13 +263,13 @@ void TraversalRulesWindow::syncWithRuleState()
 
 void TraversalRulesWindow::createPage(int ruleId, const juce::String& source)
 {
-    auto      page        = std::make_unique<FilePage>(context);
+    auto      page        = std::make_unique<FilePage>(CustomLookAndFeel::get(*this));
     FilePage* createdPage = page.get();
 
     page->loadContent(source);
 
     page->onTextChanged = [this, ruleId, createdPage] {
-        context.traversalRuleState->setRuleSource(ruleId, createdPage->getDocument().getAllContent(), nullptr);
+        traversalRuleState.setRuleSource(ruleId, createdPage->getDocument().getAllContent(), nullptr);
 
         startTimer(compileDelayMs);
     };
@@ -282,14 +283,14 @@ void TraversalRulesWindow::makeViewedRuleActive()
         return;
     }
 
-    context.traversalRuleState->rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
+    traversalRuleState.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
 
     compileViewedPage();
 }
 
 void TraversalRulesWindow::removeRule(int ruleId)
 {
-    TraversalRuleState& state       = *context.traversalRuleState;
+    TraversalRuleState& state       = traversalRuleState;
     const bool          wasLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == ruleId;
 
     state.removeRule(ruleId, nullptr);
@@ -304,7 +305,7 @@ void TraversalRulesWindow::removeRule(int ruleId)
     }
 
     if (wasLiveRule) {
-        context.processor->snapshots.publishActiveTraversalRule();
+        snapshots.publishActiveTraversalRule();
     }
 
     compileViewedPage();
@@ -339,9 +340,8 @@ void TraversalRulesWindow::handleAsyncUpdate()
     syncWithRuleState();
 }
 
-TraversalRulesWindow::RulesTitlebar::RulesTitlebar(const ApplicationContext& context)
-    : Bar(context, { Orientation::Horizontal, titlebarInsetRatio }),
-      undoRedoPane(context)
+TraversalRulesWindow::RulesTitlebar::RulesTitlebar()
+    : Bar(Orientation::Horizontal, titlebarInsetRatio)
 {
     playButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
         ButtonState triangleState = state;
@@ -350,8 +350,6 @@ TraversalRulesWindow::RulesTitlebar::RulesTitlebar(const ApplicationContext& con
 
         CustomLookAndFeel::get(*this).drawPlayIcon(graphics, bounds, triangleState);
     };
-
-    playButton.setLookAndFeel(context.lookAndFeel);
 
     undoRedoPane.addButton(&CustomLookAndFeel::drawUndoIcon, "Undo");
 
@@ -375,21 +373,13 @@ void TraversalRulesWindow::RulesTitlebar::resized()
     undoRedoPane.setBounds(bounds.removeFromLeft(buttonSize * 3));
 }
 
-TraversalRulesWindow::RulesPanel::RulesPanel(const ApplicationContext& context)
-    : resizer(context, PanelResizer::Edge::Right),
-      labelPanel(context),
-      panelTitlebar(context)
+TraversalRulesWindow::RulesPanel::RulesPanel(juce::UndoManager& undoManager)
+    : resizer(PanelResizer::Edge::Right),
+      labelPanel(undoManager)
 {
-    setLookAndFeel(context.lookAndFeel);
-
     addAndMakeVisible(panelTitlebar);
     addAndMakeVisible(labelPanel);
     addAndMakeVisible(resizer);
-}
-
-TraversalRulesWindow::RulesPanel::~RulesPanel()
-{
-    setLookAndFeel(nullptr);
 }
 
 void TraversalRulesWindow::RulesPanel::paint(juce::Graphics& graphics)
@@ -438,12 +428,10 @@ void TraversalRulesWindow::RulesPanel::selectLabel(int fileId)
     }
 }
 
-TraversalRulesWindow::RulesPanel::PanelTitlebar::PanelTitlebar(const ApplicationContext& context)
-    : Bar(context, { Orientation::Horizontal, RulesTitlebar::titlebarInsetRatio })
+TraversalRulesWindow::RulesPanel::PanelTitlebar::PanelTitlebar()
+    : Bar(Orientation::Horizontal, RulesTitlebar::titlebarInsetRatio)
 {
     addButton.icon = &CustomLookAndFeel::drawAddIcon;
-
-    addButton.setLookAndFeel(context.lookAndFeel);
 
     addButton.setTooltip("Add Rule");
 

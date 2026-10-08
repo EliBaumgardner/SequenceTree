@@ -1,0 +1,159 @@
+{
+  "id": "sequence_tree_turn",
+  "name": "SequenceTree Turn Mode",
+  "description": "Decides per prompt which research-suite hooks and gates run: skip, light, research, code or deep",
+  "rootId": "classify",
+  "globalState": {
+    "prompt": "the user's prompt"
+  },
+  "nodes": {
+    "classify": {
+      "id": "classify",
+      "label": "What kind of turn is this?",
+      "isRoot": true,
+      "position": {
+        "x": 600,
+        "y": 80
+      },
+      "config": {
+        "kind": "choice",
+        "instructions": "Classify the user's prompt (state.prompt) in a coding session on SequenceTree, a C++ JUCE plugin. Pick the one option that describes what the user is asking for in this message. A prompt that asks for code to be written or changed is code or deep even if it also asks a question. A prompt that only asks about code, research, or a plan is research. Short replies and conversational steering are control.",
+        "options": [
+          {
+            "id": "control",
+            "label": "A control command that steers the conversation without asking for new work: stop, wait, hurry up, move on, continue, go ahead, yes, no, or a short reply to a question",
+            "childId": "skip"
+          },
+          {
+            "id": "simple",
+            "label": "A simple question or basic command that can be answered directly, without reading through or changing code",
+            "childId": "light"
+          },
+          {
+            "id": "research",
+            "label": "A research, analysis, explanation, review or planning question: understanding how code works, comparing approaches, looking something up, or writing a plan, with no code being written or changed",
+            "childId": "research"
+          },
+          {
+            "id": "code",
+            "label": "A routine request to write, generate, change, fix, rename, refactor or delete code",
+            "childId": "change"
+          },
+          {
+            "id": "deep",
+            "label": "An in-depth coding request: a new feature, a change across several files or classes, an audio-thread or traversal change, or a design question about how code should be structured",
+            "childId": "deep"
+          }
+        ]
+      }
+    },
+    "skip": {
+      "id": "skip",
+      "label": "skip",
+      "parentId": "classify",
+      "position": {
+        "x": 120,
+        "y": 320
+      },
+      "config": {
+        "kind": "action",
+        "description": "No gates and no extra checks for this turn.",
+        "directive": "Do what the command says. Run no design-rule, readability or systematic checks."
+      }
+    },
+    "light": {
+      "id": "light",
+      "label": "light",
+      "parentId": "classify",
+      "position": {
+        "x": 360,
+        "y": 320
+      },
+      "config": {
+        "kind": "action",
+        "description": "Answer directly; no gates.",
+        "directive": "Answer directly. No rule recitation, no audit and no gates; the Key Design Rules still bind any code written."
+      }
+    },
+    "research": {
+      "id": "research",
+      "label": "research",
+      "parentId": "classify",
+      "position": {
+        "x": 600,
+        "y": 320
+      },
+      "config": {
+        "kind": "action",
+        "description": "Analysis without code gates.",
+        "directive": "Answer from the real code: name the actual functions, files and call sites. Do not run the design-rule or readability gates; no code is being changed."
+      }
+    },
+    "deep": {
+      "id": "deep",
+      "label": "deep",
+      "parentId": "classify",
+      "position": {
+        "x": 1080,
+        "y": 320
+      },
+      "config": {
+        "kind": "action",
+        "description": "Full protocol: gates plus the systematic pass.",
+        "directive": "Run the full verification protocol: front-load api-surface, structure and data-flow before editing, and end with the SYSTEMATIC PASS block."
+      }
+    },
+    "change": {
+      "id": "change",
+      "label": "Code change",
+      "parentId": "classify",
+      "position": {
+        "x": 840,
+        "y": 320
+      },
+      "config": {
+        "kind": "encapsulator",
+        "treeRef": "sequence_tree_change",
+        "patchName": "Change"
+      }
+    }
+  },
+  "edges": {
+    "edge-skip": {
+      "id": "edge-skip",
+      "sourceId": "classify",
+      "targetId": "skip",
+      "branchKey": "control",
+      "label": "control"
+    },
+    "edge-light": {
+      "id": "edge-light",
+      "sourceId": "classify",
+      "targetId": "light",
+      "branchKey": "simple",
+      "label": "simple"
+    },
+    "edge-research": {
+      "id": "edge-research",
+      "sourceId": "classify",
+      "targetId": "research",
+      "branchKey": "research",
+      "label": "research"
+    },
+    "edge-code": {
+      "id": "edge-code",
+      "sourceId": "classify",
+      "targetId": "change",
+      "branchKey": "code",
+      "label": "code"
+    },
+    "edge-deep": {
+      "id": "edge-deep",
+      "sourceId": "classify",
+      "targetId": "deep",
+      "branchKey": "deep",
+      "label": "deep"
+    }
+  },
+  "updatedAt": "2026-10-08T00:10:17.234563Z"
+}

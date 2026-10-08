@@ -8,6 +8,8 @@ build_target = "SequenceTree_Standalone"
 Tests = ["SequenceTree_Tests", "SequenceTree_GraphTests"]
 
 [gates]
+turn_tree = "sequence_tree_turn"
+turn_confidence_floor = 0.5
 pointer_level = "owning"
 core_purpose_api = [
     "Source/Audio/AudioUIBridge.h:highlightNode",
@@ -58,3 +60,7 @@ pattern = 'juce::ValueTree|GraphState|ValueTreeIdentifiers'
 rule = "ApplicationContext is not valid at static init time"
 label = "static-init ApplicationContext"
 pattern = '^[[:space:]]*(static|extern)?[[:space:]]*[A-Za-z_][A-Za-z0-9_:<>]*[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[^=]*ApplicationContext'
+
+[gates.route_checks]
+repeat = { event = "post-tool", command = "repeat-check.sh --hook post-tool" }
+tests = { event = "stop", command = "cmake --build cmake-build-debug --target SequenceTree_Tests SequenceTree_GraphTests && cd cmake-build-debug && ctest --output-on-failure" }

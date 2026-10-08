@@ -23,7 +23,7 @@ public:
     static constexpr float glowRadius       = 330.0f;
     static constexpr float maximumMidiValue = 127.0f;
 
-    explicit ValueField(NodeCanvas& owner);
+    explicit ValueField(NodeCanvas& nodeCanvas);
     ~ValueField() override;
 
     void setActivePaintLayer(PaintLayer layer);
@@ -54,7 +54,7 @@ private:
     std::optional<float> densityUnderNode(const Node& node) const;
     void timerCallback() override;
 
-    NodeCanvas& owner;
+    NodeCanvas& nodeCanvas;
 
     std::vector<float> fieldWeightedSum;
     std::vector<float> fieldTotalWeight;

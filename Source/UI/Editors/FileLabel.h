@@ -2,7 +2,6 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ValueEditor.h"
-#include "../../Util/ApplicationContext.h"
 #include "../Buttons/IconButton.h"
 
 class FileLabel : public juce::Component
@@ -24,7 +23,7 @@ public:
     ValueEditor fileText;
     IconButton  removeButton;
 
-    explicit FileLabel(const ApplicationContext& context);
+    explicit FileLabel(juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;

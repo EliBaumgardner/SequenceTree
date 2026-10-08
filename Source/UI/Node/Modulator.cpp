@@ -5,7 +5,7 @@
 #include <cmath>
 #include <limits>
 
-Modulator::Modulator(const ApplicationContext& context) : Node(context)
+Modulator::Modulator(juce::UndoManager& undoManager) : Node(undoManager)
 {
     nodeType = NodeType::Modulator;
 }

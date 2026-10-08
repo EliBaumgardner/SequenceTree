@@ -3,16 +3,13 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <functional>
 
-struct ApplicationContext;
-
 class PanelResizer : public juce::Component
 {
 public:
 
     enum class Edge { Left, Right };
 
-    PanelResizer(const ApplicationContext& context, Edge edge);
-    ~PanelResizer() override;
+    explicit PanelResizer(Edge edge);
 
     void paint(juce::Graphics& graphics) override;
 

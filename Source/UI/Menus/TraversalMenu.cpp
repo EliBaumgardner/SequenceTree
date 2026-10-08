@@ -1,31 +1,31 @@
 #include "TraversalMenu.h"
-#include "../../Util/ApplicationContext.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Util/NodeInfo.h"
 #include "../Canvas/NodeCanvas.h"
 
-TraversalMenu::TraversalMenu(const ApplicationContext& context)
-    : displayMenu(context),
-      multiplierField(context),
-      channelField(context),
-      transposeField(context),
-      velocityField(context),
-      colourSelector(context),
-      applicationContext(context)
+TraversalMenu::TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
+                             juce::ValueTree colourPresets, juce::UndoManager& undoManager)
+    : displayMenu(undoManager),
+      multiplierField(undoManager),
+      channelField(undoManager),
+      transposeField(undoManager),
+      velocityField(undoManager),
+      colourSelector(colourPresets, undoManager),
+      nodeCanvas(nodeCanvas),
+      graphState(graphState),
+      traversalRuleState(traversalRuleState),
+      snapshots(snapshots),
+      undoManager(undoManager)
 {
-    const juce::ValueTree traversalMap     = applicationContext.graphState->traversals.map;
+    const juce::ValueTree traversalMap     = graphState.traversals.map;
     auto                  transposeFormat  = std::make_unique<NumberFormat>(minimumTraversalTranspose, maximumTraversalTranspose);
     int                   firstTraversalId = -1;
-
-    setLookAndFeel(context.lookAndFeel);
 
     editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
         CustomLookAndFeel::get(*this).drawRulesButton(graphics, bounds, state, CustomLookAndFeel::get(*this).textHeight);
     };
-
-    editTraversalRulesButton.setLookAndFeel(context.lookAndFeel);
 
     displayMenu.labelEditor.autoFitText = false;
     transposeFormat->showsPositiveSign  = true;
@@ -63,7 +63,7 @@ TraversalMenu::TraversalMenu(const ApplicationContext& context)
     addAndMakeVisible(colourSelector);
     addAndMakeVisible(editTraversalRulesButton);
 
-    applicationContext.graphState->traversals.map.addListener(this);
+    graphState.traversals.map.addListener(this);
 
     for (int traversalIndex = 0; traversalIndex < traversalMap.getNumChildren(); ++traversalIndex) {
         const juce::ValueTree traversalData = traversalMap.getChild(traversalIndex);
@@ -88,9 +88,7 @@ TraversalMenu::TraversalMenu(const ApplicationContext& context)
 
 TraversalMenu::~TraversalMenu()
 {
-    applicationContext.graphState->traversals.map.removeListener(this);
-
-    setLookAndFeel(nullptr);
+    graphState.traversals.map.removeListener(this);
 }
 
 void TraversalMenu::paint(juce::Graphics& graphics)
@@ -148,7 +146,7 @@ void TraversalMenu::resized()
 
 void TraversalMenu::selectTraversal(int traversalId)
 {
-    juce::ValueTree    traversalData = applicationContext.graphState->traversals.map.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
+    juce::ValueTree    traversalData = graphState.traversals.map.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
     const juce::String colourString  = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
 
     const auto bindWithDefault = [&traversalData](ValueEditor& editor, const juce::Identifier& propertyId,
@@ -164,8 +162,8 @@ void TraversalMenu::selectTraversal(int traversalId)
         return;
     }
 
-    currentTraversalData                         = traversalData;
-    applicationContext.canvas->quaverTraversalId = traversalId;
+    currentTraversalData     = traversalData;
+    nodeCanvas.quaverTraversalId = traversalId;
 
     multiplierField.editor.bindEditor(traversalData, ValueTreeIdentifiers::TempoMultiplier);
 

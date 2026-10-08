@@ -1,16 +1,10 @@
 #include "ItemSelector.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "../../Util/ApplicationContext.h"
 
-ItemSelector::ItemSelector(const ApplicationContext& context)
-    : labelEditor(context),
-      applicationContext(context)
+ItemSelector::ItemSelector(juce::UndoManager& undoManager)
+    : labelEditor(undoManager)
 {
-    setLookAndFeel(applicationContext.lookAndFeel);
-
     button.icon = &CustomLookAndFeel::drawDisplayArrowIcon;
-
-    button.setLookAndFeel(context.lookAndFeel);
 
     labelEditor.autoFitText = true;
     labelEditor.editable    = false;
@@ -56,7 +50,7 @@ void ItemSelector::resized()
 
 void ItemSelector::showMenu()
 {
-    ContextMenu menu(applicationContext);
+    ContextMenu menu;
 
     button.setSelected(true);
 

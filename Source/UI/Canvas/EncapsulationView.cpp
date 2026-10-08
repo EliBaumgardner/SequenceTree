@@ -7,12 +7,11 @@
 #include "../Node/Encapsulator.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../../Util/ApplicationContext.h"
 
 #include <unordered_set>
 
-EncapsulationView::EncapsulationView(NodeCanvas& canvas, const ApplicationContext& context)
-    : canvas(canvas), applicationContext(context)
+EncapsulationView::EncapsulationView(NodeCanvas& nodeCanvas, GraphState& graphState)
+    : nodeCanvas(nodeCanvas), graphState(graphState)
 {
 }
 
@@ -24,12 +23,12 @@ void EncapsulationView::collapse(int encapsulatorId) const
 
     repositionAll();
 
-    canvas.arrowManager.refreshEncapsulatedArrows();
+    nodeCanvas.arrowManager.refreshEncapsulatedArrows();
 }
 
 bool EncapsulationView::applyCollapsedState(int encapsulatorId) const
 {
-    auto* const encapsulator = dynamic_cast<Encapsulator*>(canvas.nodeManager.find(encapsulatorId));
+    auto* const encapsulator = dynamic_cast<Encapsulator*>(nodeCanvas.nodeManager.find(encapsulatorId));
 
     if (encapsulator == nullptr) {
         return false;
@@ -40,10 +39,10 @@ bool EncapsulationView::applyCollapsedState(int encapsulatorId) const
     encapsulator->bindToTree();
 
     encapsulator->setVisible(true);
-    encapsulator->setInterceptsMouseClicks(!canvas.paintMode, !canvas.paintMode && !canvas.spanMode);
+    encapsulator->setInterceptsMouseClicks(!nodeCanvas.paintMode, !nodeCanvas.paintMode && !nodeCanvas.spanMode);
 
     for (const int memberNodeId : encapsulator->memberNodeIds) {
-        Node* const member = canvas.nodeManager.find(memberNodeId);
+        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
 
         if (member == nullptr) {
             continue;
@@ -67,14 +66,14 @@ bool EncapsulationView::applyCollapsedState(int encapsulatorId) const
 
 void EncapsulationView::repositionAll() const
 {
-    for (const auto& [nodeId, node] : canvas.nodeManager.all()) {
-        canvas.nodeManager.setPosition(nodeId);
+    for (const auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
+        nodeCanvas.nodeManager.setPosition(nodeId);
     }
 }
 
 void EncapsulationView::expand(int encapsulatorId) const
 {
-    auto* const encapsulator = dynamic_cast<Encapsulator*>(canvas.nodeManager.find(encapsulatorId));
+    auto* const encapsulator = dynamic_cast<Encapsulator*>(nodeCanvas.nodeManager.find(encapsulatorId));
 
     if (encapsulator == nullptr || encapsulator->memberNodeIds.empty()) {
         return;
@@ -93,7 +92,7 @@ void EncapsulationView::expand(int encapsulatorId) const
 void EncapsulationView::showMembers(std::span<const int> memberNodeIds) const
 {
     for (const int memberNodeId : memberNodeIds) {
-        Node* const member = canvas.nodeManager.find(memberNodeId);
+        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
 
         if (member == nullptr) {
             continue;
@@ -105,17 +104,17 @@ void EncapsulationView::showMembers(std::span<const int> memberNodeIds) const
         member->hasInnerRim           = false;
 
         member->setVisible(true);
-        member->setInterceptsMouseClicks(!canvas.paintMode, !canvas.paintMode && !canvas.spanMode);
+        member->setInterceptsMouseClicks(!nodeCanvas.paintMode, !nodeCanvas.paintMode && !nodeCanvas.spanMode);
     }
 
     repositionAll();
 
-    canvas.arrowManager.refreshEncapsulatedArrows();
+    nodeCanvas.arrowManager.refreshEncapsulatedArrows();
 }
 
 void EncapsulationView::refreshMembership(int encapsulatorId) const
 {
-    auto* const encapsulator = dynamic_cast<Encapsulator*>(canvas.nodeManager.find(encapsulatorId));
+    auto* const encapsulator = dynamic_cast<Encapsulator*>(nodeCanvas.nodeManager.find(encapsulatorId));
 
     if (encapsulator == nullptr) {
         return;
@@ -128,7 +127,7 @@ void EncapsulationView::refreshMembership(int encapsulatorId) const
     }
 
     for (const int memberNodeId : encapsulator->memberNodeIds) {
-        Node* const member = canvas.nodeManager.find(memberNodeId);
+        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
 
         if (member == nullptr) {
             continue;
@@ -144,7 +143,7 @@ void EncapsulationView::refreshMembership(int encapsulatorId) const
 
 void EncapsulationView::collapseAll() const
 {
-    const juce::ValueTree nodeMap = applicationContext.graphState->nodeMap;
+    const juce::ValueTree nodeMap = graphState.nodeMap;
 
     for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
         const juce::ValueTree nodeValueTree = nodeMap.getChild(i);
@@ -156,13 +155,11 @@ void EncapsulationView::collapseAll() const
 
     repositionAll();
 
-    canvas.arrowManager.refreshEncapsulatedArrows();
+    nodeCanvas.arrowManager.refreshEncapsulatedArrows();
 }
 
 juce::Point<int> EncapsulationView::collapsedSpanShift(int nodeId) const
 {
-    const GraphState& graphState = *applicationContext.graphState;
-
     const juce::ValueTree node = graphState.getNode(nodeId);
 
     int walkStartId       = nodeId;
@@ -216,7 +213,7 @@ juce::Point<int> EncapsulationView::collapsedSpanShift(int nodeId) const
                 }
 
                 auto* const encapsulatorNode =
-                    dynamic_cast<Encapsulator*>(canvas.nodeManager.find(encapsulatorId));
+                    dynamic_cast<Encapsulator*>(nodeCanvas.nodeManager.find(encapsulatorId));
 
                 if (encapsulatorNode != nullptr && encapsulatorNode->isExpanded) {
                     continue;
@@ -238,7 +235,7 @@ juce::Point<int> EncapsulationView::collapsedSpanShift(int nodeId) const
 
 void EncapsulationView::syncHighlights() const
 {
-    for (auto& [nodeId, node] : canvas.nodeManager.all()) {
+    for (auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
         if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node.get())) {
             encapsulator->syncHighlightsFromMembers();
         }
@@ -248,7 +245,7 @@ void EncapsulationView::syncHighlights() const
 void EncapsulationView::recolourGroup(const Encapsulator& encapsulator) const
 {
     for (const int memberNodeId : encapsulator.memberNodeIds) {
-        Node* const member = canvas.nodeManager.find(memberNodeId);
+        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
 
         if (member == nullptr) {
             continue;

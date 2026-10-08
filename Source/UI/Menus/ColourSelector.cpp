@@ -1,24 +1,17 @@
 #include "ColourSelector.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../../Plugin/PluginProcessor.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-ColourPicker::ColourPicker(const ApplicationContext& context)
-    : applicationContext(context)
+ColourPicker::ColourPicker(juce::ValueTree colourPresets, juce::UndoManager& undoManager)
+    : colourPresets(colourPresets), undoManager(undoManager)
 {
-    setLookAndFeel(context.lookAndFeel);
-}
-
-ColourPicker::~ColourPicker()
-{
-    setLookAndFeel(nullptr);
 }
 
 void ColourPicker::paint(juce::Graphics& graphics)
 {
     const Theme&             theme                      = CustomLookAndFeel::get(*this);
     const juce::Colour       currentColour              = juce::Colour::fromHSV(hue, saturation, brightness, 1.0f);
-    const juce::ValueTree    presets                    = applicationContext.processor->colourPresets;
+    const juce::ValueTree    presets                    = colourPresets;
     const float              cursorDiameter             = getWidth() * cursorRadiusRatio * 2.0f;
     const float              presetGap                  = getWidth() * presetGapRatio;
     const float              presetWidth                = (presetArea.getWidth() - presetGap * (presetCount - 1)) / presetCount;
@@ -132,10 +125,10 @@ void ColourPicker::mouseDown(const juce::MouseEvent& event)
 {
     const juce::Point<int> position      = event.getPosition();
     const juce::Colour     currentColour = juce::Colour::fromHSV(hue, saturation, brightness, 1.0f);
-    juce::ValueTree        presets       = applicationContext.processor->colourPresets;
+    juce::ValueTree        presets       = colourPresets;
     juce::Colour           chosenColour  = originalColour;
 
-    applicationContext.undoManager->beginNewTransaction();
+    undoManager.beginNewTransaction();
 
     if (saturationBrightnessArea.contains(position)) {
         dragTarget = DragTarget::SaturationBrightness;
@@ -218,7 +211,7 @@ void ColourPicker::mouseUp(const juce::MouseEvent&)
 
 void ColourPicker::showColour(juce::Colour colour)
 {
-    juce::ValueTree presets = applicationContext.processor->colourPresets;
+    juce::ValueTree presets = colourPresets;
 
     originalColour = colour;
 
@@ -232,8 +225,8 @@ void ColourPicker::showColour(juce::Colour colour)
     repaint();
 }
 
-ColourSelector::ColourSelector(const ApplicationContext& context)
-    : picker(context)
+ColourSelector::ColourSelector(juce::ValueTree colourPresets, juce::UndoManager& undoManager)
+    : picker(colourPresets, undoManager)
 {
     setRepaintsOnMouseActivity(true);
 

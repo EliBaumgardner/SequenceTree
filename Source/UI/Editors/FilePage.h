@@ -2,7 +2,7 @@
 
 #include <juce_gui_extra/juce_gui_extra.h>
 
-#include "../../Util/ApplicationContext.h"
+#include "../Theme/Theme.h"
 
 class FilePage : private juce::CodeDocument,
                  public juce::CodeEditorComponent,
@@ -10,7 +10,7 @@ class FilePage : private juce::CodeDocument,
 {
 public:
 
-    explicit FilePage(const ApplicationContext& context);
+    explicit FilePage(const Theme& theme);
     ~FilePage() override;
 
     void paintOverChildren(juce::Graphics& graphics) override;
@@ -36,7 +36,6 @@ private:
     static constexpr float baseFontHeight = 12.0f;
     static constexpr int   indentSize     = 4;
     static constexpr float errorLineAlpha = 0.14f;
-    static constexpr float selectionAlpha = 0.35f;
 
     float zoom = 1.0f;
 };

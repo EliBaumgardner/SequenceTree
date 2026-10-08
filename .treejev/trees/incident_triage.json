@@ -1,0 +1,171 @@
+{
+  "rootId": "node-root",
+  "nodes": {
+    "node-root": {
+      "id": "node-root",
+      "label": "Root: Urgent Inquiry?",
+      "isRoot": true,
+      "position": {
+        "x": 695,
+        "y": 60
+      },
+      "config": {
+        "kind": "noul",
+        "statement": "The incoming customer message expresses critical urgency or system outage",
+        "threshold": 0.6,
+        "trueChildId": "node-1791418217509-vczqxq1",
+        "falseChildId": "node-1791418217510-f4cu13o"
+      }
+    },
+    "node-1791418217509-vczqxq1": {
+      "id": "node-1791418217509-vczqxq1",
+      "label": "Triage: Select Department",
+      "parentId": "node-root",
+      "position": {
+        "x": 540,
+        "y": 340
+      },
+      "config": {
+        "kind": "choice",
+        "instructions": "Categorize the urgent issue into Billing or Technical infrastructure",
+        "options": [
+          {
+            "id": "opt-tech",
+            "label": "Technical",
+            "childId": "node-1791418217510-afmw2jw"
+          },
+          {
+            "id": "opt-billing",
+            "label": "Billing",
+            "childId": "node-1791418217510-g4cdxda"
+          },
+          {
+            "id": "opt-other",
+            "label": "Other"
+          }
+        ]
+      }
+    },
+    "node-1791418217510-afmw2jw": {
+      "id": "node-1791418217510-afmw2jw",
+      "label": "Data Loss Risk?",
+      "parentId": "node-1791418217509-vczqxq1",
+      "position": {
+        "x": 385,
+        "y": 620
+      },
+      "config": {
+        "kind": "noul",
+        "statement": "There is imminent risk of customer data loss or corruption",
+        "threshold": 0.5,
+        "trueChildId": "node-1791418217510-yi6heuc",
+        "falseChildId": "node-1791418217510-hihrved"
+      }
+    },
+    "node-1791418217510-yi6heuc": {
+      "id": "node-1791418217510-yi6heuc",
+      "label": "Page Incident Commander",
+      "parentId": "node-1791418217510-afmw2jw",
+      "position": {
+        "x": 230,
+        "y": 900
+      },
+      "config": {
+        "kind": "action",
+        "description": "Page Incident Commander",
+        "directive": "Critical data loss risk detected for {{ user_tier }} customer (alert: {{ message }}). Page the on-call incident commander immediately via PagerDuty and open a dedicated war-room bridge."
+      }
+    },
+    "node-1791418217510-hihrved": {
+      "id": "node-1791418217510-hihrved",
+      "label": "Open P1 Engineering Ticket",
+      "parentId": "node-1791418217510-afmw2jw",
+      "position": {
+        "x": 540,
+        "y": 900
+      },
+      "config": {
+        "kind": "action",
+        "description": "Open P1 Engineering Ticket",
+        "directive": "High-severity technical issue without imminent data loss. File a P1 Jira ticket tagged with customer tier {{ user_tier }}, assign to platform on-call, and post an incident link in #engineering-alerts."
+      }
+    },
+    "node-1791418217510-g4cdxda": {
+      "id": "node-1791418217510-g4cdxda",
+      "label": "Route to Priority Accounts",
+      "parentId": "node-1791418217509-vczqxq1",
+      "position": {
+        "x": 850,
+        "y": 620
+      },
+      "config": {
+        "kind": "action",
+        "description": "Route to Priority Accounts",
+        "directive": "Billing escalation for {{ user_tier }} customer. Create a priority Zendesk ticket for the billing operations lead and alert the account executive."
+      }
+    },
+    "node-1791418217510-f4cu13o": {
+      "id": "node-1791418217510-f4cu13o",
+      "label": "Standard Support Queue",
+      "parentId": "node-root",
+      "position": {
+        "x": 1160,
+        "y": 340
+      },
+      "config": {
+        "kind": "action",
+        "description": "Standard Support Queue",
+        "directive": "Non-critical inquiry. Route to standard tier-1 support queue with 24h SLA and send standard automated acknowledgment."
+      }
+    }
+  },
+  "edges": {
+    "edge-node-root-true-node-1791418217509-vczqxq1": {
+      "id": "edge-node-root-true-node-1791418217509-vczqxq1",
+      "sourceId": "node-root",
+      "targetId": "node-1791418217509-vczqxq1",
+      "branchKey": "true",
+      "label": "True (≥ 0.6)"
+    },
+    "edge-node-1791418217509-vczqxq1-opt-tech-node-1791418217510-afmw2jw": {
+      "id": "edge-node-1791418217509-vczqxq1-opt-tech-node-1791418217510-afmw2jw",
+      "sourceId": "node-1791418217509-vczqxq1",
+      "targetId": "node-1791418217510-afmw2jw",
+      "branchKey": "opt-tech",
+      "label": "Technical"
+    },
+    "edge-node-1791418217510-afmw2jw-true-node-1791418217510-yi6heuc": {
+      "id": "edge-node-1791418217510-afmw2jw-true-node-1791418217510-yi6heuc",
+      "sourceId": "node-1791418217510-afmw2jw",
+      "targetId": "node-1791418217510-yi6heuc",
+      "branchKey": "true",
+      "label": "True (≥ 0.5)"
+    },
+    "edge-node-1791418217510-afmw2jw-false-node-1791418217510-hihrved": {
+      "id": "edge-node-1791418217510-afmw2jw-false-node-1791418217510-hihrved",
+      "sourceId": "node-1791418217510-afmw2jw",
+      "targetId": "node-1791418217510-hihrved",
+      "branchKey": "false",
+      "label": "False (< 0.5)"
+    },
+    "edge-node-1791418217509-vczqxq1-opt-billing-node-1791418217510-g4cdxda": {
+      "id": "edge-node-1791418217509-vczqxq1-opt-billing-node-1791418217510-g4cdxda",
+      "sourceId": "node-1791418217509-vczqxq1",
+      "targetId": "node-1791418217510-g4cdxda",
+      "branchKey": "opt-billing",
+      "label": "Billing"
+    },
+    "edge-node-root-false-node-1791418217510-f4cu13o": {
+      "id": "edge-node-root-false-node-1791418217510-f4cu13o",
+      "sourceId": "node-root",
+      "targetId": "node-1791418217510-f4cu13o",
+      "branchKey": "false",
+      "label": "False (< 0.6)"
+    }
+  },
+  "globalState": {
+    "user_tier": "enterprise",
+    "message": "Server down: database connections timing out across all regions",
+    "sentiment": "frustrated"
+  }
+}

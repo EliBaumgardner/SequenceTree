@@ -4,15 +4,17 @@
 #include <memory>
 #include <vector>
 
-#include "../../Util/ApplicationContext.h"
 #include "../../Graph/RTData.h"
 #include "../Editors/LabeledEditor.h"
+
+class CustomLookAndFeel;
+class GraphState;
 
 class AllowedTraversalsMenu : public juce::Component
 {
 public:
 
-    AllowedTraversalsMenu(const ApplicationContext& context, juce::ValueTree connection);
+    AllowedTraversalsMenu(CustomLookAndFeel& lookAndFeel, GraphState& graphState, juce::UndoManager& undoManager, juce::ValueTree connection);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
@@ -48,8 +50,8 @@ private:
         std::unique_ptr<ToggleButton> toggle;
     };
 
-    const ApplicationContext& applicationContext;
-    juce::ValueTree           connection;
+    juce::UndoManager& undoManager;
+    juce::ValueTree    connection;
 
     std::vector<TraversalRow> rows;
 };

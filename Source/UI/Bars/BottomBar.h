@@ -12,11 +12,12 @@
 
 #include <array>
 
+class TraversalSession;
+
 class BottomBar : public Bar
 {
 public:
-
-    explicit BottomBar(const ApplicationContext& context);
+    BottomBar(NodeCanvas& nodeCanvas, TraversalSession& traversalSession, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
     void resized() override;
 
@@ -60,11 +61,14 @@ private:
 
     static constexpr int multiplierSliderWidth = 150;
 
-    PaintToolSettings paintPanel   { applicationContext };
-    ButtonPane        toolPane     { applicationContext };
-    ButtonPane        quaverPane   { applicationContext };
-    ButtonPane        bindPane     { applicationContext };
-    LabeledEditor     countsField  { applicationContext };
+    NodeCanvas&       nodeCanvas;
+    TraversalSession& traversalSession;
+
+    PaintToolSettings paintPanel;
+    ButtonPane        toolPane;
+    ButtonPane        quaverPane;
+    ButtonPane        bindPane;
+    LabeledEditor     countsField;
 
     IconButton* quaverTool = nullptr;
     IconButton* spanTool   = nullptr;

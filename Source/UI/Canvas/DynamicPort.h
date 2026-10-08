@@ -14,7 +14,7 @@ public:
     static constexpr float wheelZoomStep       = 0.15f;
     static constexpr float wheelScrollDistance = 100.0f;
 
-    explicit DynamicPort(NodeCanvas& content);
+    explicit DynamicPort(NodeCanvas& nodeCanvas);
 
     void resized() override;
 
@@ -28,7 +28,7 @@ private:
 
     void applyTransform();
 
-    NodeCanvas& canvas;
+    NodeCanvas& nodeCanvas;
     float       zoom         = 1.0f;
     float       translateX   = 0.0f;
     float       translateY   = 0.0f;

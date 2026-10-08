@@ -11,13 +11,12 @@
 
 class NodeCanvas;
 class Node;
-struct ApplicationContext;
+class GraphState;
 
 class NodeManager
 {
 public:
-
-    NodeManager(NodeCanvas& canvas, const ApplicationContext& context);
+    NodeManager(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager);
     ~NodeManager();
 
     Node* find(int nodeId) const;
@@ -54,8 +53,9 @@ private:
     void moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY,
                          std::unordered_set<int>& visited, int draggedNodeId);
 
-    NodeCanvas&               canvas;
-    const ApplicationContext& applicationContext;
+    NodeCanvas&        nodeCanvas;
+    GraphState&        graphState;
+    juce::UndoManager& undoManager;
 
     std::unordered_map<int, std::unique_ptr<Node>> nodes;
 };

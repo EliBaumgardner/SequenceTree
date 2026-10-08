@@ -1,16 +1,12 @@
 #include "MenuBar.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-MenuBar::MenuBar(const ApplicationContext& context)
-    : Bar(context, { Orientation::Vertical, iconInsetRatio, Surface::Frosted })
+MenuBar::MenuBar(NodeCanvas& nodeCanvas)
+    : Bar(nodeCanvas, Orientation::Vertical, iconInsetRatio)
 {
     treeIcon.icon      = &CustomLookAndFeel::drawTreeIcon;
     nodeIcon.icon      = &CustomLookAndFeel::drawNodeIcon;
     traversalIcon.icon = &CustomLookAndFeel::drawTraversalIcon;
-
-    treeIcon     .setLookAndFeel(context.lookAndFeel);
-    nodeIcon     .setLookAndFeel(context.lookAndFeel);
-    traversalIcon.setLookAndFeel(context.lookAndFeel);
 
     treeIcon.setEnabled(false);
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../Util/ApplicationContext.h"
 #include "Editors/FileLabel.h"
 
 #include <span>
@@ -19,7 +18,7 @@ public:
     std::function<void(int)>              onLabelRemoved;
     std::function<void(std::vector<int>)> onLabelsReordered;
 
-    explicit LabelPanel(const ApplicationContext& context);
+    explicit LabelPanel(juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
@@ -41,5 +40,5 @@ private:
     int  draggedIndex = -1;
     bool orderChanged = false;
 
-    const ApplicationContext& context;
+    juce::UndoManager& undoManager;
 };

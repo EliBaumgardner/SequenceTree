@@ -2,7 +2,6 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Formats/ValueFormat.h"
-#include "../../Util/ApplicationContext.h"
 #include "../Theme/Theme.h"
 
 class ValueEditor : public juce::Component,
@@ -12,7 +11,7 @@ class ValueEditor : public juce::Component,
 {
 public:
 
-    explicit ValueEditor(const ApplicationContext& context);
+    explicit ValueEditor(juce::UndoManager& undoManager);
     ~ValueEditor() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -34,9 +33,24 @@ public:
     enum class WheelResponse { PassToParent, StepValue };
     enum class Backdrop      { None, Badge, Field, Gauge };
 
+    struct TextOutlineKey
+    {
+        juce::String         text;
+        juce::Rectangle<int> bounds;
+        float                fontHeight        = 0.0f;
+        float                autoFitInsetRatio = 0.0f;
+        juce::Justification  justification { juce::Justification::centred };
+        Theme::FontStyle     fontStyle   = Theme::FontStyle::Mono;
+        bool                 autoFitText = false;
+
+        bool operator==(const TextOutlineKey&) const = default;
+    };
+
     static constexpr float  defaultAutoFitInsetRatio = 0.25f;
     static constexpr float  baseFontHeight           = 9.0f;
     static constexpr double wheelRangeFraction       = 1.0;
+    static constexpr float  fontSmoothingPerPixel    = 0.028f;
+    static constexpr float  fontSmoothingLimit       = 0.8f;
 
     std::function<void()> onValueChange;
     std::function<void()> onEditFinished;
@@ -68,7 +82,7 @@ private:
 
     void bindSecondaryProperties();
 
-    const ApplicationContext& applicationContext;
+    juce::UndoManager& undoManager;
 
     juce::ValueTree  boundTree;
     juce::Identifier boundIdentifier;
@@ -76,6 +90,10 @@ private:
     std::vector<juce::Value> secondaryValues;
 
     ValueBinding binding { boundValue, secondaryValues };
+
+    TextOutlineKey textOutlineKey;
+    juce::Path     textOutline;
+    float          textOutlineHeight = 0.0f;
 
     bool isEditing        = false;
     bool persistentEditor = false;

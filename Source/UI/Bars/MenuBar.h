@@ -11,7 +11,7 @@ public:
     IconButton nodeIcon;
     IconButton traversalIcon;
 
-    explicit MenuBar(const ApplicationContext& context);
+    explicit MenuBar(NodeCanvas& nodeCanvas);
 
 private:
 

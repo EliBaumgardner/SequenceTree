@@ -411,7 +411,7 @@ void SequenceTreeAudioProcessor::applyRestoredState()
     pendingRestoreState = juce::ValueTree();
 
     if (auto* editor = dynamic_cast<SequenceTreeAudioProcessorEditor*>(getActiveEditor())) {
-        editor->canvas->rebuildFromNodeMap(graphState.nodeMap);
+        editor->nodeCanvas->rebuildFromNodeMap(graphState.nodeMap);
     }
 }
 

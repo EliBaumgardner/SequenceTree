@@ -4,8 +4,6 @@
 #include <functional>
 #include <vector>
 
-struct ApplicationContext;
-
 class ContextMenu
 {
 public:
@@ -15,8 +13,6 @@ public:
         Toggle,
         Component
     };
-
-    explicit ContextMenu(const ApplicationContext& context);
 
     void addItem(juce::String label, ItemKind kind, std::function<void()> action,
                  bool isEnabled = true, bool isOn = false);
@@ -39,8 +35,6 @@ private:
         int                   idealWidth  = 0;
         int                   idealHeight = 0;
     };
-
-    const ApplicationContext& applicationContext;
 
     std::vector<Item> items;
 };

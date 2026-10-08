@@ -1,8 +1,9 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../../Util/ApplicationContext.h"
 #include "../Theme/Theme.h"
+
+class NodeCanvas;
 
 class Bar : public juce::Component
 {
@@ -11,15 +12,8 @@ public:
     enum class Orientation { Horizontal, Vertical };
     enum class Surface     { Solid, Frosted };
 
-    struct Style
-    {
-        Orientation orientation       = Orientation::Horizontal;
-        float       contentInsetRatio = Theme::contentInsetRatio;
-        Surface     surface           = Surface::Solid;
-    };
-
-    Bar(const ApplicationContext& context, Style style);
-    ~Bar() override;
+    Bar(Orientation orientation, float contentInsetRatio);
+    Bar(NodeCanvas& nodeCanvas, Orientation orientation, float contentInsetRatio);
 
     void paint(juce::Graphics& graphics) final;
 
@@ -33,9 +27,10 @@ protected:
 
     static constexpr int contentSpacing = 12;
 
-    const ApplicationContext& applicationContext;
-
 private:
 
-    Style style;
+    Orientation orientation;
+    float       contentInsetRatio;
+    Surface     surface  = Surface::Solid;
+    NodeCanvas* nodeCanvas = nullptr;
 };

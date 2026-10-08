@@ -7,11 +7,12 @@
 #include "../Buttons/TempoDisplay.h"
 #include "../../Input/NodeController.h"
 
+class SequenceTreeAudioProcessor;
+
 class Titlebar : public Bar, private juce::ChangeListener
 {
 public:
-
-    Titlebar(const ApplicationContext& context);
+    Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas, NodeController& nodeController, juce::UndoManager& undoManager);
     ~Titlebar() override;
 
     void resized() override;
@@ -29,6 +30,11 @@ private:
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     void configureDisplaySelector();
     void configureTempoDisplay();
+
+    SequenceTreeAudioProcessor& processor;
+    NodeCanvas&                 nodeCanvas;
+    NodeController&             nodeController;
+    juce::UndoManager&          undoManager;
 
     ButtonPane           transportPane;
     ButtonPane           buttonPane;

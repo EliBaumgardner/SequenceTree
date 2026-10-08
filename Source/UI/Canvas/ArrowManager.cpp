@@ -8,10 +8,9 @@
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
 #include "../../Graph/NodeFactory.h"
-#include "../../Util/ApplicationContext.h"
 
-ArrowManager::ArrowManager(NodeCanvas& canvas, const ApplicationContext& context)
-    : canvas(canvas), applicationContext(context)
+ArrowManager::ArrowManager(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager)
+    : nodeCanvas(nodeCanvas), graphState(graphState), undoManager(undoManager)
 {
 }
 
@@ -38,7 +37,7 @@ Arrow* ArrowManager::find(int parentNodeId, int childNodeId) const
 
 Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
 {
-    auto         arrow        = std::make_unique<Arrow>(parentNode, childNode, applicationContext);
+    auto         arrow        = std::make_unique<Arrow>(parentNode, childNode, undoManager);
     Arrow* const createdArrow = arrow.get();
 
     createdArrow->arrowTree = connectionTreeFor(parentNode->nodeId, childNode->nodeId);
@@ -49,7 +48,7 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
         createdArrow->initHoverState(parentNode->isHovered);
     }
 
-    canvas.addAndMakeVisible(*createdArrow);
+    nodeCanvas.addAndMakeVisible(*createdArrow);
 
     createdArrow->toBack();
     createdArrow->setInterceptsMouseClicks(false, true);
@@ -61,14 +60,13 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
 
 juce::ValueTree ArrowManager::connectionTreeFor(int startNodeId, int endNodeId) const
 {
-    GraphState&           state      = *applicationContext.graphState;
-    const juce::ValueTree connection = state.getConnection(startNodeId, endNodeId);
+    const juce::ValueTree connection = graphState.getConnection(startNodeId, endNodeId);
 
     if (connection.isValid()) {
         return connection;
     }
 
-    return state.getConnection(endNodeId, startNodeId);
+    return graphState.getConnection(endNodeId, startNodeId);
 }
 
 void ArrowManager::adopt(std::unique_ptr<Arrow> arrow)
@@ -162,7 +160,7 @@ void ArrowManager::detach(Arrow* arrow)
         }
     }
 
-    canvas.removeChildComponent(arrow);
+    nodeCanvas.removeChildComponent(arrow);
 }
 
 void ArrowManager::removeForNode(const Node* node)
@@ -184,7 +182,7 @@ void ArrowManager::removeForNode(const Node* node)
 void ArrowManager::hideSnapGhost()
 {
     if (snapGhostArrow != nullptr) {
-        canvas.removeChildComponent(snapGhostArrow.get());
+        nodeCanvas.removeChildComponent(snapGhostArrow.get());
 
         snapGhostArrow.reset();
     }
@@ -217,9 +215,9 @@ void ArrowManager::updatePreview(Node* node, juce::Point<int> tipOffset, bool da
     }
 
     if (preview == nullptr || preview->startNode != node) {
-        preview = std::make_unique<Arrow>(node, tipOffset, applicationContext);
+        preview = std::make_unique<Arrow>(node, tipOffset, undoManager);
 
-        canvas.addAndMakeVisible(*preview);
+        nodeCanvas.addAndMakeVisible(*preview);
 
         preview->toBack();
     }
@@ -247,14 +245,14 @@ void ArrowManager::commitPreview()
     ArrowInfo arrowInfo = currentArrowInfo;
     const int nodeId    = node->nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
-    applicationContext.graphState->arrows.applyNodeBinding(arrowInfo, nodeId);
+    graphState.arrows.applyNodeBinding(arrowInfo, nodeId);
 
-    NodeFactory::createDanglingArrow(*applicationContext.graphState, node->nodeValueTree, tipOffset, arrowInfo, applicationContext.undoManager);
+    NodeFactory::createDanglingArrow(graphState, node->nodeValueTree, tipOffset, arrowInfo, &undoManager);
 }
 
 void ArrowManager::rebuildDanglingForNode(int nodeId)
 {
-    Node* const node = canvas.nodeManager.find(nodeId);
+    Node* const node = nodeCanvas.nodeManager.find(nodeId);
 
     removeMatching([node](Arrow* arrow) {
         return arrow->isDangling() && arrow->startNode == node;
@@ -274,14 +272,14 @@ void ArrowManager::rebuildDanglingForNode(int nodeId)
         const juce::ValueTree  arrowTree = arrowList.getChild(danglingIndex);
         const juce::Point<int> tipOffset { static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
                                            static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)) };
-        auto                   arrow     = std::make_unique<Arrow>(node, tipOffset, applicationContext);
+        auto                   arrow     = std::make_unique<Arrow>(node, tipOffset, undoManager);
 
         arrow->arrowTree     = arrowTree;
         arrow->danglingIndex = danglingIndex;
 
         arrow->valueEditor->bindEditor(arrowTree, ValueTreeIdentifiers::CountLimit);
 
-        canvas.addAndMakeVisible(*arrow);
+        nodeCanvas.addAndMakeVisible(*arrow);
 
         arrow->toBack();
         arrow->setVisible(! node->isEncapsulated || node->isEncapsulationExit);
@@ -310,8 +308,8 @@ void ArrowManager::refreshEncapsulatedArrows()
 
 void ArrowManager::handleArrowAdded(int parentNodeId, int childNodeId)
 {
-    Node* const parentNode = canvas.nodeManager.find(parentNodeId);
-    Node* const childNode  = canvas.nodeManager.find(childNodeId);
+    Node* const parentNode = nodeCanvas.nodeManager.find(parentNodeId);
+    Node* const childNode  = nodeCanvas.nodeManager.find(childNodeId);
 
     if (parentNode == nullptr || childNode == nullptr) {
         return;
@@ -396,7 +394,7 @@ void ArrowManager::resetTrail(int trailId)
 
 void ArrowManager::triggerSnapForNode(int nodeId)
 {
-    Node* const node = canvas.nodeManager.find(nodeId);
+    Node* const node = nodeCanvas.nodeManager.find(nodeId);
 
     if (node == nullptr) {
         return;
@@ -419,11 +417,11 @@ void ArrowManager::showSnapGhost(Node* from, Node* to)
 
     hideSnapGhost();
 
-    snapGhostArrow = std::make_unique<Arrow>(from, to, applicationContext);
+    snapGhostArrow = std::make_unique<Arrow>(from, to, undoManager);
 
     snapGhostArrow->isGhost = true;
 
-    canvas.addAndMakeVisible(*snapGhostArrow);
+    nodeCanvas.addAndMakeVisible(*snapGhostArrow);
 
     snapGhostArrow->toBack();
     snapGhostArrow->setInterceptsMouseClicks(false, false);

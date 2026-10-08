@@ -20,7 +20,6 @@
 #include "../UI/Theme/CustomLookAndFeel.h"
 #include "../Graph/GraphState.h"
 #include "../UI/Menus/MenuArea.h"
-#include "../Util/ApplicationContext.h"
 
 
 //==============================================================================
@@ -53,11 +52,11 @@ private:
 
     SequenceTreeAudioProcessor& audioProcessor;
     CustomLookAndFeel lookAndFeel;
-    ApplicationContext applicationContext;
+    std::unique_ptr<juce::PropertiesFile> interfaceSettings;
     juce::TooltipWindow tooltipWindow { this, 400 };
 
 public:
-    std::unique_ptr<NodeCanvas>     canvas         = nullptr;
+    std::unique_ptr<NodeCanvas>     nodeCanvas     = nullptr;
     std::unique_ptr<Titlebar>       titleBar       = nullptr;
 
 private:

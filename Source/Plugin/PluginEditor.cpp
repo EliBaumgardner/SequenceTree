@@ -12,27 +12,29 @@
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
 : AudioProcessorEditor(p), audioProcessor(p)
 {
-    applicationContext.processor          = &p;
-    applicationContext.undoManager        = &p.undoManager;
-    applicationContext.lookAndFeel        = &lookAndFeel;
-    applicationContext.graphState         = &p.graphState;
-    applicationContext.traversalRuleState = &p.traversalRuleState;
-    applicationContext.rtGraphBuilder     = &p.rtGraphBuilder;
+    juce::PropertiesFile::Options interfaceSettingsOptions;
+
+    interfaceSettingsOptions.applicationName     = "Interface";
+    interfaceSettingsOptions.filenameSuffix      = ".settings";
+    interfaceSettingsOptions.folderName          = JucePlugin_Name;
+    interfaceSettingsOptions.osxLibrarySubFolder = "Application Support";
+
+    interfaceSettings = std::make_unique<juce::PropertiesFile>(interfaceSettingsOptions);
+
+    if (interfaceSettings->containsKey(ValueTreeIdentifiers::ThemeColour.toString())) {
+        lookAndFeel.applyThemeColour(juce::Colour::fromString(interfaceSettings->getValue(ValueTreeIdentifiers::ThemeColour.toString())));
+    }
 
     setLookAndFeel(&lookAndFeel);
 
     tooltipWindow.setOpaque(false);
 
-    canvas = std::make_unique<NodeCanvas>(applicationContext);
-    applicationContext.canvas = canvas.get();
-
-    nodeController = std::make_unique<NodeController>(applicationContext, *canvas);
-    applicationContext.nodeController = nodeController.get();
-
-    port      = std::make_unique<DynamicPort>(*canvas);
-    menuArea  = std::make_unique<MenuArea>(applicationContext);
-    titleBar  = std::make_unique<Titlebar>(applicationContext);
-    bottomBar = std::make_unique<BottomBar>(applicationContext);
+    nodeCanvas     = std::make_unique<NodeCanvas>(p, p.graphState, p.rtGraphBuilder, p.undoManager, lookAndFeel);
+    nodeController = std::make_unique<NodeController>(*nodeCanvas, p.graphState, p.undoManager, p.traversalSession, p.rtGraphBuilder);
+    port           = std::make_unique<DynamicPort>(*nodeCanvas);
+    menuArea       = std::make_unique<MenuArea>(*nodeCanvas, p.graphState, p.traversalRuleState, p.snapshots, *interfaceSettings, p.colourPresets, p.undoManager);
+    titleBar       = std::make_unique<Titlebar>(p, *nodeCanvas, *nodeController, p.undoManager);
+    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, p.traversalSession, p.colourPresets, p.undoManager);
 
     titleBar->onDisplayModeChanged = [this](NodeDisplayMode mode) { bottomBar->applyDisplayMode(mode); };
 
@@ -41,19 +43,21 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
         if (total <= 0) return;
         menuAreaWidthRatio = juce::jlimit(0.01f, 0.9f, static_cast<float>(newWidth) / static_cast<float>(total));
         resized();
+
+        repaint();
     };
 
     if (audioProcessor.pendingRestoreState.isValid()) {
         audioProcessor.applyRestoredState();
     }
 
-    canvas->rebuildFromNodeMap(applicationContext.graphState->nodeMap);
+    nodeCanvas->rebuildFromNodeMap(audioProcessor.graphState.nodeMap);
 
     titleBar->applyPlaybackState(audioProcessor.isPlaying.load());
 
-    canvas->addMouseListener(nodeController.get(),true);
+    nodeCanvas->addMouseListener(nodeController.get(), true);
 
-    applicationContext.graphState->nodeMap.addListener(&canvas->treeListener);
+    audioProcessor.graphState.nodeMap.addListener(&nodeCanvas->treeListener);
 
     addAndMakeVisible(port.get());
     addAndMakeVisible(menuArea.get());
@@ -65,12 +69,14 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     setSize (700, 500);
 
     audioCommandFrames = juce::VBlankAttachment(this, [this](double) {
+        lookAndFeel.frostedBackdropStale = true;
+
         if (audioProcessor.playbackStateChanged.exchange(false)) {
             titleBar->applyPlaybackState(audioProcessor.isPlaying.load());
         }
 
-        if (audioProcessor.eventManager.bridge.hasPendingCommands() || ! canvas->asyncUpdates.empty()) {
-            canvas->handleAsyncUpdate();
+        if (audioProcessor.eventManager.bridge.hasPendingCommands() || !nodeCanvas->asyncUpdates.empty()) {
+            nodeCanvas->handleAsyncUpdate();
         }
     });
 }
@@ -87,7 +93,7 @@ SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
         desktop.setKioskModeComponent(nullptr);
     }
 
-    applicationContext.graphState->nodeMap.removeListener(&canvas->treeListener);
+    audioProcessor.graphState.nodeMap.removeListener(&nodeCanvas->treeListener);
 
     setLookAndFeel(nullptr);
 }
@@ -115,6 +121,8 @@ void SequenceTreeAudioProcessorEditor::resized()
     titleBar ->setBounds(titleArea);
     bottomBar->setBounds(bottomArea);
     port->setBounds(windowArea);
+
+    lookAndFeel.unfrostedArea = nodeCanvas->getLocalArea(this, canvasFrame);
 }
 
 void SequenceTreeAudioProcessorEditor::paintOverChildren (juce::Graphics& graphics)
@@ -134,7 +142,7 @@ void SequenceTreeAudioProcessorEditor::paintOverChildren (juce::Graphics& graphi
     graphics.reduceClipRegion(surround);
 
     if (! graphics.isClipEmpty()) {
-        lookAndFeel.drawFrostedGlass(graphics, *this, *port, graphics.getClipBounds());
+        lookAndFeel.drawFrostedGlass(graphics, *this, *nodeCanvas, graphics.getClipBounds());
     }
 
     graphics.restoreState();
@@ -167,10 +175,10 @@ bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, ju
     const juce::ModifierKeys commandShift = juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier;
 
     SelectionOps&      selectionOps = nodeController->selectionOps;
-    juce::UndoManager& undoManager  = *applicationContext.undoManager;
+    juce::UndoManager& undoManager  = audioProcessor.undoManager;
 
     if (key == juce::KeyPress::spaceKey) {
-        titleBar->applyPlaybackState(!applicationContext.canvas->start);
+        titleBar->applyPlaybackState(!nodeCanvas->start);
         return true;
     }
 
@@ -195,13 +203,13 @@ bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, ju
     }
 
     if (key == juce::KeyPress('v', command, 0)) {
-        juce::Point<float> pastePoint = canvas->getLocalPoint(port.get(), port->getLocalBounds().getCentre()).toFloat();
+        juce::Point<float> pastePoint = nodeCanvas->getLocalPoint(port.get(), port->getLocalBounds().getCentre()).toFloat();
 
         if (port->getLocalBounds().contains(port->getMouseXYRelative())) {
-            pastePoint = canvas->getMouseXYRelative().toFloat();
+            pastePoint = nodeCanvas->getMouseXYRelative().toFloat();
         }
 
-        selectionOps.pasteAt(pastePoint.transformedBy(canvas->modelTransform).roundToInt());
+        selectionOps.pasteAt(pastePoint.transformedBy(nodeCanvas->modelTransform).roundToInt());
         return true;
     }
 

@@ -1,9 +1,8 @@
 #include "LabelPanel.h"
 #include "Theme/CustomLookAndFeel.h"
 
-LabelPanel::LabelPanel(const ApplicationContext& context) : context(context)
+LabelPanel::LabelPanel(juce::UndoManager& undoManager) : undoManager(undoManager)
 {
-    setLookAndFeel(context.lookAndFeel);
 }
 
 void LabelPanel::paint(juce::Graphics& graphics)
@@ -88,7 +87,7 @@ void LabelPanel::mouseUp(const juce::MouseEvent &)
 
 void LabelPanel::addFileLabel(juce::String fileName)
 {
-    auto                                           fileLabel = std::make_unique<FileLabel>(context);
+    auto                                           fileLabel = std::make_unique<FileLabel>(undoManager);
     const juce::Component::SafePointer<FileLabel>  addedLabel(fileLabel.get());
     const juce::Component::SafePointer<LabelPanel> panel(this);
 

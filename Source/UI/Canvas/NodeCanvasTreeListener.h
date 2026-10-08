@@ -7,8 +7,7 @@ class NodeCanvas;
 class NodeCanvasTreeListener : public juce::ValueTree::Listener
 {
 public:
-
-    explicit NodeCanvasTreeListener(NodeCanvas& canvas);
+    explicit NodeCanvasTreeListener(NodeCanvas& nodeCanvas);
 
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
     void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
@@ -18,5 +17,5 @@ private:
 
     void enqueueDanglingArrowsChanged(const juce::ValueTree& nodeTree) const;
 
-    NodeCanvas& canvas;
+    NodeCanvas& nodeCanvas;
 };

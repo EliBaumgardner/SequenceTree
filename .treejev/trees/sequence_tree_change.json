@@ -1,0 +1,246 @@
+{
+  "id": "sequence_tree_change",
+  "name": "Change",
+  "description": "Sorts a code turn by kind of change and gives each route its context and route checks; every leaf is one of the hook's five labels",
+  "rootId": "kind",
+  "globalState": {},
+  "nodes": {
+    "kind": {
+      "id": "kind",
+      "label": "What kind of code change is this?",
+      "position": {
+        "x": 600,
+        "y": 80
+      },
+      "config": {
+        "kind": "choice",
+        "instructions": "The user's prompt (state.prompt) asks for a code change in SequenceTree, a C++ JUCE plugin. What kind of code change does state.prompt ask for?",
+        "options": [
+          {
+            "id": "refactor",
+            "label": "Restructure existing code without changing what it does: extract, inline, rename, move, reorder, split or merge functions or classes",
+            "childId": "scope"
+          },
+          {
+            "id": "style",
+            "label": "Change only layout, naming, ordering, grouping or formatting",
+            "childId": "style"
+          },
+          {
+            "id": "behaviour",
+            "label": "Fix a bug, or add or change what the code does",
+            "childId": "audio"
+          }
+        ]
+      },
+      "isRoot": true
+    },
+    "scope": {
+      "id": "scope",
+      "label": "How far does the refactor reach?",
+      "position": {
+        "x": 240,
+        "y": 320
+      },
+      "config": {
+        "kind": "choice",
+        "instructions": "How far does the refactor state.prompt asks for reach?",
+        "options": [
+          {
+            "id": "function",
+            "label": "Inside one or a few functions",
+            "childId": "refactorFunction"
+          },
+          {
+            "id": "class",
+            "label": "Across a class or several classes: members moved, a class split or merged, ownership changed",
+            "childId": "refactorClass"
+          },
+          {
+            "id": "traversal",
+            "label": "Anything the audio thread, processBlock, TraversalLogic or the modulator walk reaches",
+            "childId": "refactorTraversal"
+          }
+        ]
+      },
+      "parentId": "kind"
+    },
+    "audio": {
+      "id": "audio",
+      "label": "Does it touch the audio thread?",
+      "position": {
+        "x": 960,
+        "y": 320
+      },
+      "config": {
+        "kind": "noul",
+        "statement": "The change state.prompt asks for touches the audio thread, the traversal, MIDI timing, or anything processBlock calls.",
+        "threshold": 0.3,
+        "trueChildId": "behaviourAudio",
+        "falseChildId": "behaviourPlain"
+      },
+      "parentId": "kind"
+    },
+    "refactorFunction": {
+      "id": "refactorFunction",
+      "label": "code",
+      "position": {
+        "x": 0,
+        "y": 560
+      },
+      "config": {
+        "kind": "action",
+        "description": "Code change with the design-rule and readability gates.",
+        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends.",
+        "checks": [
+          "repeat"
+        ],
+        "context": "Refactor turn. Extracts, inlines and renames go through `refactor.encap`, `refactor.decap` and `refactor.replace`, and multi-site rewrites through `refactor.rewrite`; read the command's section of ~/Documents/GitHub/research-suite/REFACTORING.md before using it."
+      },
+      "parentId": "scope"
+    },
+    "refactorClass": {
+      "id": "refactorClass",
+      "label": "code",
+      "position": {
+        "x": 240,
+        "y": 560
+      },
+      "config": {
+        "kind": "action",
+        "description": "Code change with the design-rule and readability gates.",
+        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends.",
+        "checks": [
+          "repeat"
+        ],
+        "context": "Refactor turn. Extracts, inlines and renames go through `refactor.encap`, `refactor.decap` and `refactor.replace`, and multi-site rewrites through `refactor.rewrite`; read the command's section of ~/Documents/GitHub/research-suite/REFACTORING.md before using it. Run `refactor.order` on every file whose definitions moved, and `refactor.smell` on the directories touched."
+      },
+      "parentId": "scope"
+    },
+    "refactorTraversal": {
+      "id": "refactorTraversal",
+      "label": "deep",
+      "position": {
+        "x": 480,
+        "y": 560
+      },
+      "config": {
+        "kind": "action",
+        "description": "Full protocol: gates plus the systematic pass.",
+        "directive": "Run the full verification protocol: front-load api-surface, structure and data-flow before editing, and end with the SYSTEMATIC PASS block.",
+        "checks": [
+          "tests"
+        ],
+        "context": "Traversal refactor. Every walk is the same traversal: run the walk-parity shapes in Tests/TraversalTests.cpp, and add one for any mechanic the change touches."
+      },
+      "parentId": "scope"
+    },
+    "style": {
+      "id": "style",
+      "label": "code",
+      "position": {
+        "x": 600,
+        "y": 320
+      },
+      "config": {
+        "kind": "action",
+        "description": "Code change with the design-rule and readability gates.",
+        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends.",
+        "checks": [],
+        "context": "Style turn. The grouping, initializer-list, argument-wrapping and hierarchy-order rules are the Project Design Rules; run `readability.sh --file` on each file you change."
+      },
+      "parentId": "kind"
+    },
+    "behaviourAudio": {
+      "id": "behaviourAudio",
+      "label": "deep",
+      "position": {
+        "x": 840,
+        "y": 560
+      },
+      "config": {
+        "kind": "action",
+        "description": "Full protocol: gates plus the systematic pass.",
+        "directive": "Run the full verification protocol: front-load api-surface, structure and data-flow before editing, and end with the SYSTEMATIC PASS block.",
+        "checks": [
+          "tests"
+        ],
+        "context": "Audio-thread change: no allocation, lock or message post is reachable from processBlock; verify with SequenceTree_RealtimeTests if the change reaches it."
+      },
+      "parentId": "audio"
+    },
+    "behaviourPlain": {
+      "id": "behaviourPlain",
+      "label": "code",
+      "position": {
+        "x": 1080,
+        "y": 560
+      },
+      "config": {
+        "kind": "action",
+        "description": "Code change with the design-rule and readability gates.",
+        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends.",
+        "checks": []
+      },
+      "parentId": "audio"
+    }
+  },
+  "edges": {
+    "edge-kind-scope": {
+      "id": "edge-kind-scope",
+      "sourceId": "kind",
+      "targetId": "scope",
+      "branchKey": "refactor",
+      "label": "refactor"
+    },
+    "edge-kind-style": {
+      "id": "edge-kind-style",
+      "sourceId": "kind",
+      "targetId": "style",
+      "branchKey": "style",
+      "label": "style"
+    },
+    "edge-kind-audio": {
+      "id": "edge-kind-audio",
+      "sourceId": "kind",
+      "targetId": "audio",
+      "branchKey": "behaviour",
+      "label": "behaviour"
+    },
+    "edge-scope-refactorFunction": {
+      "id": "edge-scope-refactorFunction",
+      "sourceId": "scope",
+      "targetId": "refactorFunction",
+      "branchKey": "function",
+      "label": "function"
+    },
+    "edge-scope-refactorClass": {
+      "id": "edge-scope-refactorClass",
+      "sourceId": "scope",
+      "targetId": "refactorClass",
+      "branchKey": "class",
+      "label": "class"
+    },
+    "edge-scope-refactorTraversal": {
+      "id": "edge-scope-refactorTraversal",
+      "sourceId": "scope",
+      "targetId": "refactorTraversal",
+      "branchKey": "traversal",
+      "label": "traversal"
+    },
+    "edge-audio-behaviourAudio": {
+      "id": "edge-audio-behaviourAudio",
+      "sourceId": "audio",
+      "targetId": "behaviourAudio",
+      "branchKey": "true",
+      "label": "True"
+    },
+    "edge-audio-behaviourPlain": {
+      "id": "edge-audio-behaviourPlain",
+      "sourceId": "audio",
+      "targetId": "behaviourPlain",
+      "branchKey": "false",
+      "label": "False"
+    }
+  }
+}

@@ -93,6 +93,8 @@ public:
     static const juce::Identifier ColourPresets;
     static const juce::Identifier ColourPreset;
     static const juce::Identifier PresetColour;
+
+    static const juce::Identifier ThemeColour;
 };
 
 #endif //SEQUENCETREE_VALUETREEIDENTIFIERS_H

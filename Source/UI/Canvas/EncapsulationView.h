@@ -5,13 +5,12 @@
 
 class NodeCanvas;
 class Encapsulator;
-struct ApplicationContext;
+class GraphState;
 
 class EncapsulationView
 {
 public:
-
-    EncapsulationView(NodeCanvas& canvas, const ApplicationContext& context);
+    EncapsulationView(NodeCanvas& nodeCanvas, GraphState& graphState);
 
     void collapse   (int encapsulatorId) const;
     void expand     (int encapsulatorId) const;
@@ -27,6 +26,6 @@ private:
     bool applyCollapsedState(int encapsulatorId) const;
     void repositionAll() const;
 
-    NodeCanvas&         canvas;
-    const ApplicationContext& applicationContext;
+    NodeCanvas& nodeCanvas;
+    GraphState& graphState;
 };

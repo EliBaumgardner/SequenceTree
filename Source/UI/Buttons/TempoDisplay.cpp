@@ -3,13 +3,12 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Graph/RTData.h"
 
-TempoDisplay::TempoDisplay(const ApplicationContext& context)
-    : editor(context)
+TempoDisplay::TempoDisplay(juce::UndoManager& undoManager)
+    : editor(undoManager)
 {
     auto tempoFormat = std::make_unique<NumberFormat>(RTtraversal::minimumTempoMultiplier, RTtraversal::maximumTempoMultiplier,
                                                       ValueFormat::editableDecimalPlaces);
 
-    setLookAndFeel(context.lookAndFeel);
     setTooltip("Tempo Multiplier");
 
     tempoFormat->suffix = "x";

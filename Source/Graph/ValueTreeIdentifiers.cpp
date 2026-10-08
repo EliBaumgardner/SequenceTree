@@ -84,3 +84,5 @@ const juce::Identifier ValueTreeIdentifiers::ActiveRuleId         {"ActiveRuleId
 const juce::Identifier ValueTreeIdentifiers::ColourPresets        {"ColourPresets"};
 const juce::Identifier ValueTreeIdentifiers::ColourPreset         {"ColourPreset"};
 const juce::Identifier ValueTreeIdentifiers::PresetColour         {"PresetColour"};
+
+const juce::Identifier ValueTreeIdentifiers::ThemeColour          {"ThemeColour"};

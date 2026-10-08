@@ -127,6 +127,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Menus/TraversalRulesWindow.cpp
         Source/UI/PopupWindow.cpp
         Source/UI/Menus/ColourSelector.cpp
+        Source/UI/Menus/SettingsMenu.cpp
         Source/UI/Bars/Bar.cpp
         Source/UI/Bars/Titlebar.cpp
         Source/UI/Bars/BottomBar.cpp

@@ -6,12 +6,8 @@
 
 #include <cmath>
 
-ValueEditor::ValueEditor(const ApplicationContext& context) : applicationContext(context)
+ValueEditor::ValueEditor(juce::UndoManager& undoManager) : undoManager(undoManager)
 {
-    const Theme& theme = *applicationContext.lookAndFeel;
-
-    setLookAndFeel(applicationContext.lookAndFeel);
-
     textEditor = std::make_unique<juce::TextEditor>();
 
     textEditor->addListener(this);
@@ -27,9 +23,7 @@ ValueEditor::ValueEditor(const ApplicationContext& context) : applicationContext
     textEditor->setColour(juce::TextEditor::backgroundColourId,     juce::Colours::transparentBlack);
     textEditor->setColour(juce::TextEditor::outlineColourId,        juce::Colours::transparentBlack);
     textEditor->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::transparentBlack);
-    textEditor->setColour(juce::TextEditor::textColourId,           theme.textColour);
 
-    textEditor->setFont(theme.font(fontStyle, baseFontHeight));
     textEditor->setVisible(false);
 
     addChildComponent(textEditor.get());
@@ -46,8 +40,6 @@ ValueEditor::~ValueEditor()
     for (auto& value : secondaryValues) {
         value.removeListener(this);
     }
-
-    setLookAndFeel(nullptr);
 }
 
 void ValueEditor::paint(juce::Graphics& graphics)
@@ -89,12 +81,33 @@ void ValueEditor::paint(juce::Graphics& graphics)
     }
 
     if (! isEditing && ! persistentEditor) {
-        const juce::String displayed = format->text(binding, TextPurpose::Display);
+        const juce::String   displayed  = format->text(binding, TextPurpose::Display);
+        const TextOutlineKey key { displayed, textBounds, fontHeight, autoFitInsetRatio, justification, fontStyle, autoFitText };
+        const float          pixelScale = graphics.getInternalContext().getPhysicalPixelScaleFactor();
 
-        graphics.setFont(displayFont(displayed));
+        if (key != textOutlineKey) {
+            const juce::Font       font = displayFont(displayed);
+            juce::GlyphArrangement arrangement;
+
+            textOutlineHeight = font.getHeight();
+
+            arrangement.addCurtailedLineOfText(font, displayed, 0.0f, 0.0f, static_cast<float>(textBounds.getWidth()), false);
+            arrangement.justifyGlyphs(0, arrangement.getNumGlyphs(), 0.0f, 0.0f, static_cast<float>(textBounds.getWidth()), static_cast<float>(textBounds.getHeight()), justification);
+
+            textOutline.clear();
+
+            arrangement.createPath(textOutline);
+
+            textOutline.applyTransform(juce::AffineTransform::translation(textBounds.toFloat().getPosition()));
+
+            textOutlineKey = key;
+        }
+
+        const float smoothingWidth = juce::jmin(fontSmoothingPerPixel * textOutlineHeight * pixelScale, fontSmoothingLimit) / pixelScale;
+
         graphics.setColour(inkColour);
-
-        graphics.drawText(displayed, textBounds, justification, false);
+        graphics.fillPath(textOutline);
+        graphics.strokePath(textOutline, juce::PathStrokeType(smoothingWidth));
     }
 }
 
@@ -135,7 +148,7 @@ void ValueEditor::bindSecondaryProperties()
     secondaryValues.reserve(format->extraProperties.size());
 
     for (const auto& identifier : format->extraProperties) {
-        secondaryValues.push_back(boundTree.getPropertyAsValue(identifier, applicationContext.undoManager));
+        secondaryValues.push_back(boundTree.getPropertyAsValue(identifier, &undoManager));
     }
 
     for (auto& value : secondaryValues) {
@@ -145,7 +158,7 @@ void ValueEditor::bindSecondaryProperties()
 
 juce::Font ValueEditor::displayFont(const juce::String& text) const
 {
-    juce::Font font = applicationContext.lookAndFeel->font(fontStyle, fontHeight);
+    juce::Font font = CustomLookAndFeel::get(*this).font(fontStyle, fontHeight);
 
     if (! autoFitText) {
         return font;
@@ -227,8 +240,8 @@ void ValueEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::Mous
         step = std::copysign(smallestStep, wheelDelta);
     }
 
-    if (boundTree.isValid() && applicationContext.undoManager != nullptr) {
-        applicationContext.undoManager->beginNewTransaction();
+    if (boundTree.isValid()) {
+        undoManager.beginNewTransaction();
     }
 
     setNumericValue(static_cast<double>(boundValue.getValue()) + step);
@@ -275,7 +288,7 @@ void ValueEditor::bindEditor(juce::ValueTree tree, const juce::Identifier& prope
     boundTree       = tree;
     boundIdentifier = propertyID;
 
-    boundValue.referTo(tree.getPropertyAsValue(propertyID, applicationContext.undoManager));
+    boundValue.referTo(tree.getPropertyAsValue(propertyID, &undoManager));
 
     boundValue.addListener(this);
 
@@ -313,8 +326,8 @@ void ValueEditor::commitText(const juce::String& enteredText)
 {
     const ParsedValue parsed = format->parse(binding, enteredText);
 
-    if (boundTree.isValid() && applicationContext.undoManager != nullptr) {
-        applicationContext.undoManager->beginNewTransaction();
+    if (boundTree.isValid()) {
+        undoManager.beginNewTransaction();
     }
 
     boundValue.setValue(parsed.primary);
@@ -347,8 +360,8 @@ void ValueEditor::commitValue()
     if (entered != format->text(binding, TextPurpose::Editing)) {
         const ParsedValue parsed = format->parse(binding, entered);
 
-        if (boundTree.isValid() && applicationContext.undoManager != nullptr) {
-            applicationContext.undoManager->beginNewTransaction();
+        if (boundTree.isValid()) {
+            undoManager.beginNewTransaction();
         }
 
         boundValue.setValue(parsed.primary);

@@ -1,11 +1,6 @@
 #include "ButtonPane.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-ButtonPane::ButtonPane(const ApplicationContext& context) : applicationContext(context)
-{
-    setLookAndFeel(applicationContext.lookAndFeel);
-}
-
 void ButtonPane::paint(juce::Graphics& graphics)
 {
     CustomLookAndFeel::get(*this).drawPane(graphics, getLocalBounds().toFloat());
@@ -59,8 +54,6 @@ IconButton& ButtonPane::addButton(IconButton::Icon icon, const juce::String& too
     auto* const button = buttons.add(new IconButton());
 
     button->icon = icon;
-
-    button->setLookAndFeel(applicationContext.lookAndFeel);
 
     button->setTooltip(tooltip);
 

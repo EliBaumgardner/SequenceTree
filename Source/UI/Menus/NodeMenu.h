@@ -2,7 +2,6 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <array>
-#include "../../Util/ApplicationContext.h"
 #include "../Editors/LabeledEditor.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Util/NodeInfo.h"
@@ -10,15 +9,19 @@
 #include "../Buttons/IconButton.h"
 #include "TraversalRulesWindow.h"
 #include "../PopupWindow.h"
+#include "../Theme/CustomLookAndFeel.h"
 
 class Node;
+class NodeCanvas;
+class GraphState;
+class TraversalRuleState;
+class AudioSnapshotPublisher;
 
 class NodeMenu : public juce::Component
 {
 public:
-
-    explicit NodeMenu(const ApplicationContext& context);
-    ~NodeMenu() override;
+    NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
+             juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
@@ -42,21 +45,24 @@ private:
 
     void bindToNode(const Node* node);
 
-    const ApplicationContext& applicationContext;
+    GraphState&             graphState;
+    TraversalRuleState&     traversalRuleState;
+    AudioSnapshotPublisher& snapshots;
+    juce::UndoManager&      undoManager;
 
-    ColourSelector colourSelector { applicationContext };
+    ColourSelector colourSelector;
     CaptionLabel   colourLabel;
 
     int selectedNodeId = -1;
 
-    LabeledEditor countLimitField        { applicationContext };
-    LabeledEditor repeatField            { applicationContext };
-    LabeledEditor switchCountLimitField  { applicationContext };
-    LabeledEditor subLoopCountLimitField { applicationContext };
-    LabeledEditor probabilityField       { applicationContext };
-    LabeledEditor velocityField          { applicationContext };
-    LabeledEditor pitchField             { applicationContext };
-    LabeledEditor channelField           { applicationContext };
+    LabeledEditor countLimitField        { undoManager };
+    LabeledEditor repeatField            { undoManager };
+    LabeledEditor switchCountLimitField  { undoManager };
+    LabeledEditor subLoopCountLimitField { undoManager };
+    LabeledEditor probabilityField       { undoManager };
+    LabeledEditor velocityField          { undoManager };
+    LabeledEditor pitchField             { undoManager };
+    LabeledEditor channelField           { undoManager };
 
     std::array<LabeledRow, 8> labeledRows {{
         { countLimitField,        "CNT", "Count Limit",          ValueTreeIdentifiers::CountLimit,        RowSource::NodeTree, minimumCountLimit,   maximumCountLimit,   "",  ""  },
@@ -74,7 +80,7 @@ private:
     PopupWindowLauncher traversalRulesLauncher {
         "Traversal Rules",
         [this]() {
-            auto content = std::make_unique<TraversalRulesWindow>(applicationContext);
+            auto content = std::make_unique<TraversalRulesWindow>(CustomLookAndFeel::get(*this), traversalRuleState, snapshots, undoManager);
 
             content->setSize(TraversalRulesWindow::defaultWidth, TraversalRulesWindow::defaultHeight);
 

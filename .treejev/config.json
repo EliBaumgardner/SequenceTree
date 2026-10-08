@@ -1,0 +1,10 @@
+{
+  "projectName": "SequenceTree",
+  "activeTree": "sequence_tree_turn",
+  "evaluationMode": "live",
+  "configuredAgents": [
+    "claude"
+  ],
+  "hooksEnabled": true,
+  "createdAt": "2026-10-08T00:09:56.250Z"
+}

@@ -4,10 +4,8 @@
 
 static constexpr int traversalRefListLength = 24;
 
-RootRectangle::RootRectangle(const ApplicationContext& context) : traversalEditor(context)
+RootRectangle::RootRectangle(juce::UndoManager& undoManager) : traversalEditor(undoManager)
 {
-    setLookAndFeel(context.lookAndFeel);
-
     auto traversalFormat = std::make_unique<TextFormat>(traversalRefListLength, "0123456789 ," + TraversalFlagFormat::instanceLetters);
     traversalFormat->trimsWhitespace = false;
 

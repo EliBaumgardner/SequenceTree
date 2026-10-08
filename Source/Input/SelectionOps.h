@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Util/ApplicationContext.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 
 #include <map>
 #include <set>
@@ -8,12 +8,15 @@
 #include <vector>
 
 class Node;
+class NodeCanvas;
+class GraphState;
 
 class SelectionOps
 {
 public:
-
-    explicit SelectionOps(const ApplicationContext& context) : applicationContext(context) {}
+    SelectionOps(GraphState& graphState, juce::UndoManager& undoManager, NodeCanvas& nodeCanvas)
+        : graphState(graphState), undoManager(undoManager), nodeCanvas(nodeCanvas)
+    {}
 
     void copySelection   ();
     void deleteSelection ();
@@ -60,7 +63,9 @@ private:
     void selectPastedNodes (const PasteLayout& layout, std::span<const int> encapsulatorIds) const;
     std::vector<int> createPastedEncapsulators (const PasteLayout& layout) const;
 
-    const ApplicationContext& applicationContext;
+    GraphState&        graphState;
+    juce::UndoManager& undoManager;
+    NodeCanvas&        nodeCanvas;
 
     juce::ValueTree clipboard;
 

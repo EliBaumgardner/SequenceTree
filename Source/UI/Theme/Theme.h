@@ -22,7 +22,7 @@ struct Theme
     juce::Colour onAccentColour     = juce::Colour::fromRGB(11, 18, 32);
     juce::Colour accentSoftColour   = accentColour.withAlpha(0.16f);
 
-    juce::Colour canvasColour = juce::Colour::fromRGB(16, 19, 24);
+    juce::Colour canvasColour = juce::Colour::fromRGB(22, 26, 32);
 
     juce::Colour gridColour        = juce::Colour::fromRGB(200, 215, 255).withAlpha(0.10f);
     juce::Colour barColour         = windowColour.withAlpha(0.6f);
@@ -52,6 +52,8 @@ struct Theme
     juce::Colour arrowColour     = juce::Colour::fromRGB(93, 102, 117);
     juce::Colour arrowHeadColour = arrowColour;
 
+    juce::Colour defaultNodeColour = juce::Colour::fromRGB(31, 36, 44);
+
     juce::Typeface::Ptr regularTypeface;
     juce::Typeface::Ptr semiBoldTypeface;
     juce::Typeface::Ptr monoTypeface;
@@ -67,6 +69,60 @@ struct Theme
         }
 
         return juce::Font(juce::FontOptions(typeface).withHeight(height));
+    }
+
+    void recolour(juce::Colour themeColour)
+    {
+        const Theme base;
+        const float hueShift        = themeColour.getHue() - base.accentColour.getHue();
+        const float saturationRatio = themeColour.getSaturation() / base.accentColour.getSaturation();
+
+        const auto shifted = [hueShift, saturationRatio](juce::Colour colour) {
+            const float hue        = colour.getHue() + hueShift + 1.0f;
+            const float saturation = juce::jlimit(0.0f, 1.0f, colour.getSaturation() * saturationRatio);
+
+            return juce::Colour::fromHSV(hue - std::floor(hue), saturation, colour.getBrightness(), colour.getFloatAlpha());
+        };
+
+        windowColour                 = shifted(base.windowColour);
+        surfaceColour                = shifted(base.surfaceColour);
+        raisedColour                 = shifted(base.raisedColour);
+        selectedColour               = shifted(base.selectedColour);
+        hoverColour                  = shifted(base.hoverColour);
+        borderColour                 = shifted(base.borderColour);
+        borderStrongColour           = shifted(base.borderStrongColour);
+        textColour                   = shifted(base.textColour);
+        softTextColour               = shifted(base.softTextColour);
+        mutedTextColour              = shifted(base.mutedTextColour);
+        dimTextColour                = shifted(base.dimTextColour);
+        onAccentColour               = shifted(base.onAccentColour);
+        canvasColour                 = shifted(base.canvasColour);
+        gridColour                   = shifted(base.gridColour);
+        barColour                    = shifted(base.barColour);
+        captionColour                = shifted(base.captionColour);
+        lineNumberColour             = shifted(base.lineNumberColour);
+        hoverRingColour              = shifted(base.hoverRingColour);
+        spanOutlineColour            = shifted(base.spanOutlineColour);
+        popupMenuColour              = shifted(base.popupMenuColour);
+        popupMenuBorderColour        = shifted(base.popupMenuBorderColour);
+        popupMenuTextColour          = shifted(base.popupMenuTextColour);
+        popupMenuHighlightColour     = shifted(base.popupMenuHighlightColour);
+        popupMenuHighlightTextColour = shifted(base.popupMenuHighlightTextColour);
+        scrollBarTrackColour         = shifted(base.scrollBarTrackColour);
+        scrollBarThumbColour         = shifted(base.scrollBarThumbColour);
+        scrollBarThumbHoverColour    = shifted(base.scrollBarThumbHoverColour);
+        arrowColour                  = shifted(base.arrowColour);
+        arrowHeadColour              = shifted(base.arrowHeadColour);
+        defaultNodeColour            = shifted(base.defaultNodeColour);
+
+        accentColour        = themeColour.withAlpha(1.0f);
+        accentSoftColour    = accentColour.withAlpha(base.accentSoftColour.getFloatAlpha());
+        selectionBoxColour  = accentColour;
+        selectionRingColour = accentColour;
+
+        if (accentColour.getPerceivedBrightness() < onAccentBrightnessThreshold) {
+            onAccentColour = textColour;
+        }
     }
 
     static constexpr float arrowHeadOutlineThickness = 1.3f;
@@ -155,6 +211,9 @@ struct Theme
 
     static constexpr int   popupMenuItemHeight      = 18;
     static constexpr int   popupMenuPadding         = 4;
+
+    static constexpr float onAccentBrightnessThreshold = 0.5f;
+    static constexpr float codeSelectionAlpha          = 0.35f;
 
     static constexpr float callOutShadowAlpha  = 0.6f;
     static constexpr int   callOutShadowRadius = 8;
