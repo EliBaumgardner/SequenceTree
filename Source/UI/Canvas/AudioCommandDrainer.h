@@ -2,15 +2,14 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-struct ApplicationContext;
-
 class NodeCanvas;
+class AudioUIBridge;
+class GraphState;
 
 class AudioCommandDrainer
 {
 public:
-
-    AudioCommandDrainer(NodeCanvas& canvas, const ApplicationContext& context);
+    AudioCommandDrainer(NodeCanvas& nodeCanvas, AudioUIBridge& bridge, GraphState& graphState);
 
     void drainAll();
 
@@ -21,6 +20,7 @@ private:
     void drainArrows();
     void drainCounts();
 
-    NodeCanvas&         canvas;
-    const ApplicationContext& applicationContext;
+    NodeCanvas&    nodeCanvas;
+    AudioUIBridge& bridge;
+    GraphState&    graphState;
 };

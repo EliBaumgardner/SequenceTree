@@ -1,11 +1,12 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../../Util/ApplicationContext.h"
 #include "../Menus/ColourSelector.h"
 #include "../Editors/LabeledEditor.h"
 #include "../Canvas/ValueField.h"
 #include "IconButton.h"
+
+class NodeCanvas;
 
 class PaintToolSettings : public juce::Component
 {
@@ -20,7 +21,7 @@ public:
     static constexpr float cellWidthRatio  = 0.09f;
     static constexpr float labelWidthRatio = 0.144f;
 
-    const ApplicationContext& context;
+    NodeCanvas& nodeCanvas;
 
     juce::Colour pitchColour    = juce::Colours::red;
     juce::Colour velocityColour = juce::Colours::green;
@@ -29,11 +30,11 @@ public:
     ValueField::PaintLayer paintLayer = ValueField::PaintLayer::Pitch;
 
     IconButton     paintTool;
-    ColourSelector colourSelector { context };
-    LabeledEditor  sizeField      { context };
-    LabeledEditor  flowField      { context };
+    ColourSelector colourSelector;
+    LabeledEditor  sizeField;
+    LabeledEditor  flowField;
 
-    explicit PaintToolSettings(const ApplicationContext& context);
+    PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;

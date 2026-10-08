@@ -20,7 +20,9 @@ public:
 
     CustomLookAndFeel();
 
-    static CustomLookAndFeel& get(juce::Component& component)
+    void applyThemeColour(juce::Colour themeColour);
+
+    static CustomLookAndFeel& get(const juce::Component& component)
     {
         return static_cast<CustomLookAndFeel&>(component.getLookAndFeel());
     }
@@ -52,14 +54,16 @@ public:
                         bool isMouseOver, bool isMouseDown) override;
 
     juce::CaretComponent* createCaretComponent(juce::Component* keyFocusOwner) override;
-    void drawCanvas         (juce::Graphics& graphics, const NodeCanvas& canvas);
+    void                          drawCanvas(juce::Graphics& graphics, const NodeCanvas& nodeCanvas);
     void drawPane           (juce::Graphics& graphics, juce::Rectangle<float> bounds);
-    void drawFrostedGlass   (juce::Graphics& graphics, juce::Component& surface, juce::Component& backdrop, juce::Rectangle<int> area);
+    void                          drawFrostedGlass(juce::Graphics& graphics, juce::Component& surface, NodeCanvas& nodeCanvas, juce::Rectangle<int> area);
+    void blurFrostedImage   (juce::Image& frosted);
     juce::Rectangle<float> drawButtonTile(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     juce::Colour pressableButtonColour(const ButtonState& state) const;
     void drawNodeIcon      (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawTreeIcon       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawTraversalIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawSettingsIcon   (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     static juce::Rectangle<float> getNodeCircleBounds(juce::Rectangle<float> componentBounds);
     void drawNode          (juce::Graphics& graphics, const NodeVisual& visual);
     void drawModulatorNode (juce::Graphics& graphics, const NodeVisual& visual);
@@ -89,4 +93,11 @@ public:
     void drawAxisButton       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawValueSlider      (juce::Graphics& graphics, const ValueSlider& slider);
     void drawFileLabel(juce::Graphics& graphics, const FileLabel& fileLabel);
+
+    juce::Rectangle<int> unfrostedArea;
+    bool                 frostedBackdropStale = true;
+
+private:
+
+    juce::Image frostedBackdrop;
 };

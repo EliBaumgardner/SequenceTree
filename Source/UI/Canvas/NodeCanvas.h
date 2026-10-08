@@ -4,7 +4,6 @@
 
 #include "../../Graph/RTData.h"
 #include "../../Util/NodeInfo.h"
-#include "../../Util/ApplicationContext.h"
 #include "NodeCanvasTreeListener.h"
 #include "ValueField.h"
 #include "AudioCommandDrainer.h"
@@ -17,6 +16,10 @@
 class Node;
 class RootNode;
 class Arrow;
+class SequenceTreeAudioProcessor;
+class GraphState;
+class RTGraphBuilder;
+class CustomLookAndFeel;
 
 class NodeCanvas : public juce::Component
 {
@@ -52,7 +55,8 @@ public:
         int childNodeId;
     };
 
-    explicit NodeCanvas(const ApplicationContext& context);
+    NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, RTGraphBuilder& rtGraphBuilder, juce::UndoManager& undoManager,
+               CustomLookAndFeel& lookAndFeel);
     ~NodeCanvas() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -70,7 +74,9 @@ public:
     juce::Point<int> snapPointToGrid(juce::Point<int> point) const;
     void cancelPendingUpdatesFor(int nodeId);
 
-    const ApplicationContext& applicationContext;
+    SequenceTreeAudioProcessor& processor;
+    GraphState&                 graphState;
+    RTGraphBuilder&             rtGraphBuilder;
 
     juce::Colour canvasColour = juce::Colours::white;
 
@@ -104,9 +110,9 @@ public:
 
     ValueField valueField { *this };
 
-    NodeManager         nodeManager       { *this, applicationContext };
-    ArrowManager        arrowManager      { *this, applicationContext };
-    AudioCommandDrainer drainer           { *this, applicationContext };
-    CanvasHitTester     hitTester         { *this };
-    EncapsulationView   encapsulationView { *this, applicationContext };
+    NodeManager         nodeManager;
+    ArrowManager        arrowManager;
+    AudioCommandDrainer drainer;
+    CanvasHitTester     hitTester { *this };
+    EncapsulationView   encapsulationView;
 };

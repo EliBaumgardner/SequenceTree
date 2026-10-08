@@ -2,17 +2,13 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
 
-PaintToolSettings::PaintToolSettings(const ApplicationContext& context)
-    : context(context)
+PaintToolSettings::PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree colourPresets, juce::UndoManager& undoManager)
+    : nodeCanvas(nodeCanvas), colourSelector(colourPresets, undoManager), sizeField(undoManager), flowField(undoManager)
 {
-    ValueField& valueField = context.canvas->valueField;
+    ValueField& valueField = nodeCanvas.valueField;
     const float brushFlow  = juce::jlimit(minBrushFlow, maxBrushFlow, valueField.brushFlow);
 
-    setLookAndFeel(context.lookAndFeel);
-
     paintTool.icon = &CustomLookAndFeel::drawPaintToolIcon;
-
-    paintTool.setLookAndFeel(context.lookAndFeel);
 
     colourSelector.shape = ColourSelector::Shape::Circle;
 
@@ -92,7 +88,7 @@ void PaintToolSettings::componentCallBack() {
 
         paintTool.setSelected(paintModeEnabled);
 
-        this->context.canvas->setPaintMode(paintModeEnabled);
+        nodeCanvas.setPaintMode(paintModeEnabled);
 
         if (paintModeEnabled) {
             setPaintMode(paintLayer);
@@ -102,14 +98,14 @@ void PaintToolSettings::componentCallBack() {
     colourSelector.onColourPicked = [this](juce::Colour colour) {
         paintLayerColour() = colour;
 
-        this->context.canvas->valueField.brushColour = colour;
+        nodeCanvas.valueField.brushColour = colour;
 
-        this->context.canvas->valueField.refresh();
+        nodeCanvas.valueField.refresh();
     };
 
     sizeField.editor.onValueChange = [this] {
         const float sliderValue = static_cast<float>(sizeField.editor.boundValue.getValue());
-        ValueField& valueField  = this->context.canvas->valueField;
+        ValueField& valueField  = nodeCanvas.valueField;
 
         valueField.brushRadius = juce::jmap(sliderValue, 0.0f, 1.0f, minBrushRadius, maxBrushRadius);
 
@@ -119,7 +115,7 @@ void PaintToolSettings::componentCallBack() {
     flowField.editor.onValueChange = [this] {
         const float sliderValue = static_cast<float>(flowField.editor.boundValue.getValue());
 
-        this->context.canvas->valueField.brushFlow = juce::jmap(sliderValue, 0.0f, 1.0f, minBrushFlow, maxBrushFlow);
+        nodeCanvas.valueField.brushFlow = juce::jmap(sliderValue, 0.0f, 1.0f, minBrushFlow, maxBrushFlow);
     };
 }
 
@@ -133,9 +129,9 @@ void PaintToolSettings::setPaintMode(ValueField::PaintLayer layer)
 
     colourSelector.repaint();
 
-    context.canvas->valueField.brushColour = savedColour;
+    nodeCanvas.valueField.brushColour = savedColour;
 
-    context.canvas->valueField.setActivePaintLayer(layer);
+    nodeCanvas.valueField.setActivePaintLayer(layer);
 }
 
 juce::Colour& PaintToolSettings::paintLayerColour()

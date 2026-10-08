@@ -7,15 +7,13 @@
 #include "../Buttons/IconButton.h"
 #include "ContextMenu.h"
 
-struct ApplicationContext;
-
 class ItemSelector : public juce::Component, public juce::SettableTooltipClient
 {
 public:
 
     using Action = std::function<void()>;
 
-    explicit ItemSelector(const ApplicationContext& context);
+    explicit ItemSelector(juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
@@ -47,8 +45,6 @@ private:
     void showMenu();
     void handleResult(int itemId);
     const Item* findItem(int itemId) const;
-
-    const ApplicationContext& applicationContext;
 
     IconButton button;
 

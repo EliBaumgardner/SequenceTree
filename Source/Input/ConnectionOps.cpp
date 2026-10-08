@@ -1,5 +1,4 @@
 #include "ConnectionOps.h"
-#include "../UI/Canvas/NodeCanvas.h"
 #include "../UI/Node/Arrow.h"
 #include "../UI/Node/Node.h"
 #include "../Graph/ValueTreeIdentifiers.h"
@@ -13,17 +12,14 @@ void ConnectionOps::disconnect(const Arrow* arrow)
 
     const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
 
-    GraphState& state = *applicationContext.graphState;
+    undoManager.beginNewTransaction();
 
-    juce::UndoManager* undoManager = applicationContext.undoManager;
-    undoManager->beginNewTransaction();
-
-    if (state.getNode(childNodeId).getType() == ValueTreeIdentifiers::TraversalFlagData) {
-        state.removeNode(childNodeId, undoManager);
+    if (graphState.getNode(childNodeId).getType() == ValueTreeIdentifiers::TraversalFlagData) {
+        graphState.removeNode(childNodeId, &undoManager);
         return;
     }
 
-    state.disconnectNodes(ownerNodeId, childNodeId, undoManager);
+    graphState.disconnectNodes(ownerNodeId, childNodeId, &undoManager);
 }
 
 ConnectionOps::ArrowOwnership ConnectionOps::resolveOwnership(const Arrow* arrow) const
@@ -31,7 +27,7 @@ ConnectionOps::ArrowOwnership ConnectionOps::resolveOwnership(const Arrow* arrow
     const int startId = arrow->startNode->nodeId;
     const int endId   = arrow->endNode->nodeId;
 
-    juce::ValueTree startTree     = applicationContext.graphState->getNode(startId);
+    juce::ValueTree startTree     = graphState.getNode(startId);
     juce::ValueTree startChildren = startTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
     bool startOwnsEnd = startChildren.getChildWithProperty(ValueTreeIdentifiers::Id, endId).isValid();
 
@@ -54,7 +50,7 @@ juce::ValueTree ConnectionOps::connectionTreeFor(const Arrow* arrow) const
 
     const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
 
-    juce::ValueTree ownerTree     = applicationContext.graphState->getNode(ownerNodeId);
+    juce::ValueTree ownerTree     = graphState.getNode(ownerNodeId);
     juce::ValueTree ownerChildren = ownerTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
 
     return ownerChildren.getChildWithProperty(ValueTreeIdentifiers::Id, childNodeId);
@@ -62,19 +58,15 @@ juce::ValueTree ConnectionOps::connectionTreeFor(const Arrow* arrow) const
 
 void ConnectionOps::connect(int parentNodeId, int childNodeId, ArrowType rootConnectionType)
 {
-    juce::UndoManager* undoManager = applicationContext.undoManager;
-
-    undoManager->beginNewTransaction();
-    applicationContext.graphState->connectNodes(parentNodeId, childNodeId, undoManager);
+    undoManager.beginNewTransaction();
+    graphState.connectNodes(parentNodeId, childNodeId, &undoManager);
     applySelectedArrowInfo(parentNodeId, childNodeId, rootConnectionType);
 }
 
 void ConnectionOps::applySelectedArrowInfo(int parentNodeId, int childNodeId,
                                            ArrowType rootConnectionType)
 {
-    GraphState& state = *applicationContext.graphState;
-
-    ArrowInfo arrowInfo = applicationContext.canvas->arrowManager.currentArrowInfo;
+    ArrowInfo arrowInfo = currentArrowInfo;
 
     const bool connectsToOtherRoot = connectsToOtherTreeRoot(parentNodeId, childNodeId);
 
@@ -82,30 +74,30 @@ void ConnectionOps::applySelectedArrowInfo(int parentNodeId, int childNodeId,
         arrowInfo.type = ArrowType::Node;
     }
 
-    const bool ownedByTraversalFlag = state.getNode(parentNodeId).getType() == ValueTreeIdentifiers::TraversalFlagData;
+    const bool ownedByTraversalFlag = graphState.getNode(parentNodeId).getType() == ValueTreeIdentifiers::TraversalFlagData;
 
     if (connectsToOtherRoot && ! ownedByTraversalFlag && arrowInfo.type != ArrowType::Traversal) {
         arrowInfo.type = rootConnectionType;
     }
 
-    const juce::ValueTree connection = state.getConnection(parentNodeId, childNodeId);
+    const juce::ValueTree connection = graphState.getConnection(parentNodeId, childNodeId);
 
-    state.arrows.applyNodeBinding(arrowInfo, parentNodeId, connection);
+    graphState.arrows.applyNodeBinding(arrowInfo, parentNodeId, connection);
 
-    ArrowBindingOps::setArrowInfo(connection, arrowInfo, applicationContext.undoManager);
+    ArrowBindingOps::setArrowInfo(connection, arrowInfo, &undoManager);
 
-    applicationContext.graphState->arrows.syncPitchBindings(childNodeId, applicationContext.undoManager);
+    graphState.arrows.syncPitchBindings(childNodeId, &undoManager);
 }
 
 bool ConnectionOps::connectsToOtherTreeRoot(int parentNodeId, int childNodeId) const
 {
-    const juce::ValueTree childTree = applicationContext.graphState->getNode(childNodeId);
+    const juce::ValueTree childTree = graphState.getNode(childNodeId);
 
     if (childTree.getType() != ValueTreeIdentifiers::RootNodeData) {
         return false;
     }
 
-    const juce::ValueTree parentTree = applicationContext.graphState->getNode(parentNodeId);
+    const juce::ValueTree parentTree = graphState.getNode(parentNodeId);
 
     if (parentTree.getType() == ValueTreeIdentifiers::ModulatorData
         || parentTree.getType() == ValueTreeIdentifiers::ModulatorRootData
@@ -135,17 +127,13 @@ void ConnectionOps::setArrowType(const Arrow* arrow, ArrowType arrowType)
 
     const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
 
-    juce::UndoManager* undoManager = applicationContext.undoManager;
-
-    GraphState& state = *applicationContext.graphState;
-
-    const juce::ValueTree connection = state.getConnection(ownerNodeId, childNodeId);
+    const juce::ValueTree connection = graphState.getConnection(ownerNodeId, childNodeId);
 
     ArrowInfo arrowInfo = ArrowBindingOps::getArrowInfo(connection);
     arrowInfo.type      = arrowType;
 
-    undoManager->beginNewTransaction();
-    ArrowBindingOps::setArrowInfo(connection, arrowInfo, undoManager);
+    undoManager.beginNewTransaction();
+    ArrowBindingOps::setArrowInfo(connection, arrowInfo, &undoManager);
 }
 
 bool ConnectionOps::connectsToModulatorRoot(const Arrow* arrow) const
@@ -156,7 +144,7 @@ bool ConnectionOps::connectsToModulatorRoot(const Arrow* arrow) const
 
     const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
 
-    const juce::ValueTree childTree = applicationContext.graphState->getNode(childNodeId);
+    const juce::ValueTree childTree = graphState.getNode(childNodeId);
 
     return childTree.getType() == ValueTreeIdentifiers::ModulatorRootData;
 }
@@ -169,15 +157,11 @@ void ConnectionOps::setArrowSync(const Arrow* arrow, bool shouldSync)
 
     const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
 
-    juce::UndoManager* undoManager = applicationContext.undoManager;
-
-    GraphState& state = *applicationContext.graphState;
-
-    const juce::ValueTree connection = state.getConnection(ownerNodeId, childNodeId);
+    const juce::ValueTree connection = graphState.getConnection(ownerNodeId, childNodeId);
 
     ArrowInfo arrowInfo = ArrowBindingOps::getArrowInfo(connection);
     arrowInfo.isSynced  = shouldSync;
 
-    undoManager->beginNewTransaction();
-    ArrowBindingOps::setArrowInfo(connection, arrowInfo, undoManager);
+    undoManager.beginNewTransaction();
+    ArrowBindingOps::setArrowInfo(connection, arrowInfo, &undoManager);
 }

@@ -6,7 +6,6 @@
 #include <unordered_map>
 
 #include "../../Util/NodeInfo.h"
-#include "../../Util/ApplicationContext.h"
 #include "../Buttons/IconButton.h"
 #include "../Editors/ValueEditor.h"
 
@@ -37,9 +36,7 @@ public:
     static constexpr float incrementButtonHeightFactor = 0.25f;
     static constexpr float nodeValueTextInsetRatio     = 0.167f;
 
-    static const juce::Colour defaultNodeColour;
-
-    explicit Node(const ApplicationContext& context);
+    explicit Node(juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
@@ -60,6 +57,7 @@ public:
     void setDisplayMode(NodeDisplayMode mode);
     void mouseMove(const juce::MouseEvent& event) override;
     void mouseExit(const juce::MouseEvent& event) override;
+    void lookAndFeelChanged() override;
     virtual void respondToClick(juce::Point<int> localPoint);
 
     std::function<void(Node*, bool)> onSelected;
@@ -78,8 +76,8 @@ public:
     ValueEditor switchCountEditor;
     ValueEditor subLoopLimitEditor;
 
-    juce::Colour nodeColour              = defaultNodeColour;
-    juce::Colour encapsulationRingColour = defaultNodeColour;
+    juce::Colour nodeColour;
+    juce::Colour encapsulationRingColour;
 
     int      nodeId        = -1;
     NodeType nodeType      = NodeType::Node;
@@ -108,5 +106,5 @@ public:
 
 protected:
 
-    const ApplicationContext& applicationContext;
+    juce::UndoManager& undoManager;
 };

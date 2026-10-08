@@ -5,16 +5,17 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Node/Node.h"
 
-NodeMenu::NodeMenu(const ApplicationContext& context)
-    : applicationContext(context)
+NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
+                   juce::ValueTree colourPresets, juce::UndoManager& undoManager)
+    : graphState(graphState),
+      traversalRuleState(traversalRuleState),
+      snapshots(snapshots),
+      undoManager(undoManager),
+      colourSelector(colourPresets, undoManager)
 {
-    setLookAndFeel(applicationContext.lookAndFeel);
-
     editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
         CustomLookAndFeel::get(*this).drawRulesButton(graphics, bounds, state, CustomLookAndFeel::get(*this).textHeight);
     };
-
-    editTraversalRulesButton.setLookAndFeel(context.lookAndFeel);
 
     colourLabel.setText("COL", juce::dontSendNotification);
 
@@ -43,14 +44,14 @@ NodeMenu::NodeMenu(const ApplicationContext& context)
             return;
         }
 
-        applicationContext.graphState->setNodeColour(selectedNodeId, pickedColour.toString(), applicationContext.undoManager);
+        this->graphState.setNodeColour(selectedNodeId, pickedColour.toString(), &this->undoManager);
     };
 
     addAndMakeVisible(colourLabel);
     addAndMakeVisible(colourSelector);
     addAndMakeVisible(editTraversalRulesButton);
 
-    applicationContext.canvas->nodeManager.nodeSelectedListeners.push_back([this](Node* node, bool selected) {
+    nodeCanvas.nodeManager.nodeSelectedListeners.push_back([this](Node* node, bool selected) {
         if (selected && node != nullptr) {
             selectedNodeId        = node->nodeId;
             colourSelector.colour = node->nodeColour;
@@ -72,11 +73,6 @@ NodeMenu::NodeMenu(const ApplicationContext& context)
         resized();
         repaint();
     });
-}
-
-NodeMenu::~NodeMenu()
-{
-    setLookAndFeel(nullptr);
 }
 
 void NodeMenu::paint(juce::Graphics& graphics)

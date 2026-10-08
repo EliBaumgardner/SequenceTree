@@ -1,7 +1,6 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../../Util/ApplicationContext.h"
 
 class ColourPicker : public juce::Component
 {
@@ -9,8 +8,7 @@ public:
 
     enum class DragTarget { None, SaturationBrightness, Hue };
 
-    explicit ColourPicker(const ApplicationContext& context);
-    ~ColourPicker() override;
+    ColourPicker(juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
@@ -55,7 +53,8 @@ public:
 
 private:
 
-    const ApplicationContext& applicationContext;
+    juce::ValueTree    colourPresets;
+    juce::UndoManager& undoManager;
 };
 
 class ColourSelector : public juce::Component, public juce::SettableTooltipClient
@@ -64,18 +63,17 @@ public:
 
     enum class Shape { Square, Circle };
 
-    explicit ColourSelector(const ApplicationContext& context);
+    ColourSelector(juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
 
     void mouseDown(const juce::MouseEvent& event) override;
 
-    static constexpr float pickerWidthRatio = 0.3f;
-
     std::function<void(juce::Colour)> onColourPicked;
 
-    juce::Colour colour = juce::Colours::white;
-    Shape        shape  = Shape::Square;
+    juce::Colour colour           = juce::Colours::white;
+    Shape        shape            = Shape::Square;
+    float        pickerWidthRatio = 0.3f;
 
     ColourPicker                      picker;
     std::unique_ptr<juce::CallOutBox> pickerBox;

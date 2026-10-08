@@ -2,11 +2,13 @@
 
 #include "Node.h"
 
+class GraphState;
+
 class TraversalFlagNode : public Node
 {
 public:
 
-    explicit TraversalFlagNode(const ApplicationContext& context);
+    TraversalFlagNode(juce::UndoManager& undoManager, GraphState& graphState);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
@@ -20,4 +22,5 @@ private:
     juce::Path buildTrianglePath() const;
 
     ValueEditor traversalNumEditor;
+    GraphState& graphState;
 };

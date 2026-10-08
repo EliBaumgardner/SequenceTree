@@ -1,14 +1,14 @@
 #include "TraversalFlagNode.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../../Util/ApplicationContext.h"
 #include "../Theme/CustomLookAndFeel.h"
 
 #include <cmath>
 
-TraversalFlagNode::TraversalFlagNode(const ApplicationContext& context)
-    : Node(context),
-      traversalNumEditor(context)
+TraversalFlagNode::TraversalFlagNode(juce::UndoManager& undoManager, GraphState& graphState)
+    : Node(undoManager),
+      traversalNumEditor(undoManager),
+      graphState(graphState)
 {
     nodeType = NodeType::TraversalFlag;
 
@@ -22,7 +22,7 @@ TraversalFlagNode::TraversalFlagNode(const ApplicationContext& context)
         const int typeId = std::abs(static_cast<int>(traversalNumEditor.boundValue.getValue()));
 
         if (typeId > 0) {
-            applicationContext.graphState->traversals.addTraversalData(typeId, nullptr);
+            this->graphState.traversals.addTraversalData(typeId, nullptr);
         }
     };
 

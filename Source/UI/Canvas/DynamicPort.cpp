@@ -1,17 +1,17 @@
 #include "DynamicPort.h"
 #include "NodeCanvas.h"
 
-DynamicPort::DynamicPort(NodeCanvas& content)
-    : canvas(content)
+DynamicPort::DynamicPort(NodeCanvas& nodeCanvas)
+    : nodeCanvas(nodeCanvas)
 {
     setOpaque(false);
 
-    addAndMakeVisible(canvas);
+    addAndMakeVisible(nodeCanvas);
 }
 
 void DynamicPort::resized()
 {
-    canvas.setBounds(getLocalBounds());
+    nodeCanvas.setBounds(getLocalBounds());
 
     if (getWidth() <= 0 || getHeight() <= 0) {
         return;
@@ -28,19 +28,19 @@ void DynamicPort::resized()
 
 void DynamicPort::applyTransform()
 {
-    canvas.viewTransform       = juce::AffineTransform::scale(zoom).translated(translateX, translateY);
-    canvas.modelTransform      = canvas.viewTransform.inverted();
-    canvas.valueField.viewZoom = zoom;
+    nodeCanvas.viewTransform       = juce::AffineTransform::scale(zoom).translated(translateX, translateY);
+    nodeCanvas.modelTransform      = nodeCanvas.viewTransform.inverted();
+    nodeCanvas.valueField.viewZoom = zoom;
 
-    for (juce::Component* child : canvas.getChildren()) {
-        child->setTransform(canvas.viewTransform);
+    for (juce::Component* child : nodeCanvas.getChildren()) {
+        child->setTransform(nodeCanvas.viewTransform);
     }
 
-    canvas.valueField.updateBrushCursor();
+    nodeCanvas.valueField.updateBrushCursor();
 
-    canvas.valueField.refresh();
+    nodeCanvas.valueField.refresh();
 
-    canvas.repaint();
+    nodeCanvas.repaint();
 }
 
 void DynamicPort::mouseDown(const juce::MouseEvent& event)

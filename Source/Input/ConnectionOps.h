@@ -1,22 +1,26 @@
 #pragma once
 
-#include "../Util/ApplicationContext.h"
+#include <juce_data_structures/juce_data_structures.h>
 #include "../Util/ArrowInfo.h"
 
 class Arrow;
+class GraphState;
 
 class ConnectionOps
 {
 public:
 
-    explicit ConnectionOps(const ApplicationContext& context) : applicationContext(context) {}
+    ConnectionOps(GraphState& graphState, juce::UndoManager& undoManager, const ArrowInfo& currentArrowInfo)
+        : graphState(graphState), undoManager(undoManager), currentArrowInfo(currentArrowInfo) {}
 
     void            disconnect        (const Arrow* arrow);
     juce::ValueTree connectionTreeFor (const Arrow* arrow) const;
     void            connect           (int parentNodeId, int childNodeId, ArrowType rootConnectionType);
-    void applySelectedArrowInfo(int parentNodeId, int childNodeId, ArrowType rootConnectionType);
+    void            applySelectedArrowInfo(int parentNodeId, int childNodeId, ArrowType rootConnectionType);
+
     bool connectsToOtherTreeRoot(int parentNodeId, int childNodeId) const;
     bool canBeTraversalArrow(const Arrow* arrow) const;
+
     void setArrowType       (const Arrow* arrow, ArrowType arrowType);
     bool connectsToModulatorRoot(const Arrow* arrow) const;
     void setArrowSync           (const Arrow* arrow, bool shouldSync);
@@ -31,5 +35,7 @@ private:
 
     ArrowOwnership resolveOwnership(const Arrow* arrow) const;
 
-    const ApplicationContext& applicationContext;
+    GraphState&        graphState;
+    juce::UndoManager& undoManager;
+    const ArrowInfo&   currentArrowInfo;
 };

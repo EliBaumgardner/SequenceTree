@@ -50,10 +50,12 @@ public:
     void prepare();
     static int defaultValue(NodeStateSlot slot);
     void clear();
-    int  get      (NodeStateSlot slot, int nodeId) const;
-    void set      (NodeStateSlot slot, int nodeId, int value);
+
     int  increment(NodeStateSlot slot, int nodeId);
+    int  get      (NodeStateSlot slot, int nodeId) const;
     int& ref      (NodeStateSlot slot, int nodeId);
+
+    void set      (NodeStateSlot slot, int nodeId, int value);
 
 private:
 

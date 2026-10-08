@@ -10,10 +10,18 @@
 
 #include <cmath>
 
-NodeCanvas::NodeCanvas(const ApplicationContext& context) : applicationContext(context)
+NodeCanvas::NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, RTGraphBuilder& rtGraphBuilder, juce::UndoManager& undoManager,
+                       CustomLookAndFeel& lookAndFeel)
+    : processor(processor),
+      graphState(graphState),
+      rtGraphBuilder(rtGraphBuilder),
+      nodeManager(*this, graphState, undoManager),
+      arrowManager(*this, graphState, undoManager),
+      drainer(*this, processor.eventManager.bridge, graphState),
+      encapsulationView(*this, graphState)
 {
     setWantsKeyboardFocus(true);
-    setLookAndFeel(applicationContext.lookAndFeel);
+    setLookAndFeel(&lookAndFeel);
 }
 
 NodeCanvas::~NodeCanvas()
@@ -46,7 +54,7 @@ void NodeCanvas::paint(juce::Graphics& graphics)
 void NodeCanvas::clearCanvas()
 {
     arrowManager.clear();
-    nodeManager.clear();
+    nodeManager .clear();
 
     gridOriginSet = false;
     gridVisible   = false;
@@ -63,7 +71,7 @@ void NodeCanvas::setProcessorPlayback(bool isPlaying)
 {
     start = isPlaying;
 
-    applicationContext.processor->isPlaying.store(start);
+    processor.isPlaying.store(start);
 
     if (isPlaying) {
         nodeManager.equipRootTraversals();
@@ -73,7 +81,7 @@ void NodeCanvas::setProcessorPlayback(bool isPlaying)
         arrowManager.pauseAllProgress();
     }
 
-    applicationContext.rtGraphBuilder->handleUpdateNowIfNeeded();
+    rtGraphBuilder.handleUpdateNowIfNeeded();
 }
 
 void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
@@ -132,7 +140,7 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
     encapsulationView.collapseAll();
 
     if (!gridOriginSet && !rootNodeMap.empty()) {
-        const NodePosition rootPosition = applicationContext.graphState->getNodePosition(rootNodeMap.begin()->first);
+        const NodePosition rootPosition = graphState.getNodePosition(rootNodeMap.begin()->first);
 
         gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
         gridSpacing   = ArrowInfo::pixelsPerGridSpace;
@@ -155,33 +163,42 @@ void NodeCanvas::handleAsyncUpdate()
             case AsyncUpdateType::NodeAdded:
                 nodeManager.add(nodeId);
                 break;
+
             case AsyncUpdateType::NodeRemoved:
                 nodeManager.remove(nodeId);
                 break;
+
             case AsyncUpdateType::NodeMoved:
                 nodeManager.setPosition(nodeId);
                 break;
+
             case AsyncUpdateType::ValueChanged:
+
             case AsyncUpdateType::ArrowDurationChanged:
                 if (Node* const changedNode = nodeManager.find(nodeId)) {
                     arrowManager.refreshFor(changedNode);
                 }
                 break;
+
             case AsyncUpdateType::DanglingArrowsChanged:
                 arrowManager.rebuildDanglingForNode(nodeId);
                 break;
+
             case AsyncUpdateType::ArrowAdded:
                 arrowManager.handleArrowAdded(nodeId, asyncUpdate.rootNodeId);
                 break;
+
             case AsyncUpdateType::ArrowRemoved:
                 arrowManager.remove(arrowManager.find(nodeId, asyncUpdate.rootNodeId));
                 break;
+
             case AsyncUpdateType::ArrowInfoChanged:
                 arrowManager.handleArrowInfoChanged(nodeId, asyncUpdate.rootNodeId);
                 break;
+
             case AsyncUpdateType::NodeColourChanged:
                 if (Node* const recolouredNode = nodeManager.find(nodeId)) {
-                    const juce::var colourText = recolouredNode->nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, Node::defaultNodeColour.toString());
+                    const juce::var colourText = recolouredNode->nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, CustomLookAndFeel::get(*this).defaultNodeColour.toString());
 
                     recolouredNode->nodeColour = juce::Colour::fromString(colourText.toString());
 
@@ -192,6 +209,7 @@ void NodeCanvas::handleAsyncUpdate()
                     }
                 }
                 break;
+
             case AsyncUpdateType::None:
                 break;
         }
@@ -245,7 +263,7 @@ void NodeCanvas::setQuaverMode(QuaverMode mode)
     quaverMode = mode;
 
     if (mode == QuaverMode::Off) {
-        applicationContext.processor->traversalSession.previewRequests.push({ RTPreviewRequest::Kind::Stop });
+        processor.traversalSession.previewRequests.push({ RTPreviewRequest::Kind::Stop });
         setMouseCursor(juce::MouseCursor::NormalCursor);
         return;
     }

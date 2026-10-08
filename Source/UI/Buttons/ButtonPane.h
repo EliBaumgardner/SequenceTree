@@ -2,7 +2,6 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <optional>
-#include "../../Util/ApplicationContext.h"
 #include "IconButton.h"
 
 class ButtonPane : public juce::Component
@@ -24,8 +23,6 @@ public:
     Selection           selection = Selection::Momentary;
     std::optional<Grid> gridLayout;
 
-    explicit ButtonPane(const ApplicationContext& context);
-
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
@@ -34,8 +31,6 @@ public:
     int  idealWidth(int height) const;
 
 private:
-
-    const ApplicationContext& applicationContext;
 
     juce::OwnedArray<IconButton> buttons;
 

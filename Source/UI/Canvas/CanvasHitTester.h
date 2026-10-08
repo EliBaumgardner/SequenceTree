@@ -9,8 +9,7 @@ class Node;
 class CanvasHitTester
 {
 public:
-
-    explicit CanvasHitTester(NodeCanvas& canvas) : canvas(canvas)
+    explicit CanvasHitTester(NodeCanvas& nodeCanvas) : nodeCanvas(nodeCanvas)
     {
     }
 
@@ -24,6 +23,5 @@ public:
     Node*  nodeContaining (juce::Point<float> point, int excludeId) const;
 
 private:
-
-    NodeCanvas& canvas;
+    NodeCanvas& nodeCanvas;
 };

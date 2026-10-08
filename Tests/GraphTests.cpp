@@ -289,10 +289,8 @@ TEST_CASE("only a note node's arrow into another tree's root is a root connectio
     const juce::ValueTree alternativeModulator = NodeFactory::createAlternativeModulator(graph, modulatorId, NodePosition { 200, 300, 25 }, nullptr);
     const int alternativeModulatorId = alternativeModulator.getProperty(ValueTreeIdentifiers::Id);
 
-    ApplicationContext context;
-    context.graphState = &graph;
-
-    const ConnectionOps connections { context };
+    const ArrowInfo     currentArrowInfo;
+    const ConnectionOps connections { graph, processor.undoManager, currentArrowInfo };
 
     CHECK(connections.connectsToOtherTreeRoot(nodeId, foreignRootId));
     CHECK_FALSE(connections.connectsToOtherTreeRoot(nodeId, rootId));

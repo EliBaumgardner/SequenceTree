@@ -5,7 +5,7 @@
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
-ValueField::ValueField(NodeCanvas& owner) : owner(owner)
+ValueField::ValueField(NodeCanvas& nodeCanvas) : nodeCanvas(nodeCanvas)
 {
 }
 
@@ -18,17 +18,17 @@ void ValueField::setActivePaintLayer(PaintLayer layer)
 {
     activePaintLayer = layer;
 
-    if (owner.paintMode) {
+    if (nodeCanvas.paintMode) {
         render();
     }
 
-    owner.repaint();
+    nodeCanvas.repaint();
 }
 
 void ValueField::render()
 {
-    const int canvasWidth  = owner.getWidth();
-    const int canvasHeight = owner.getHeight();
+    const int canvasWidth  = nodeCanvas.getWidth();
+    const int canvasHeight = nodeCanvas.getHeight();
 
     if (canvasWidth <= 0 || canvasHeight <= 0) {
         return;
@@ -36,7 +36,7 @@ void ValueField::render()
 
     const int          fieldWidth  = juce::jmax(1, canvasWidth / fieldScale);
     const int          fieldHeight = juce::jmax(1, canvasHeight / fieldScale);
-    const juce::Colour background  = CustomLookAndFeel::get(owner).canvasColour.brighter();
+    const juce::Colour background  = CustomLookAndFeel::get(nodeCanvas).canvasColour.brighter();
 
     accumulateNodeGlow(fieldWidth, fieldHeight);
 
@@ -80,19 +80,19 @@ void ValueField::accumulateNodeGlow(int fieldWidth, int fieldHeight)
     fieldTotalWeight.assign(cellCount, 0.0f);
     fieldCoverageProd.assign(cellCount, 1.0f);
 
-    for (auto& [nodeId, node] : owner.nodeManager.all()) {
+    for (auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
         if (node == nullptr) {
             continue;
         }
 
-        const juce::ValueTree note = owner.applicationContext.graphState->getMidiNotes(nodeId).getChild(0);
+        const juce::ValueTree note = nodeCanvas.graphState.getMidiNotes(nodeId).getChild(0);
 
         if (!note.isValid()) {
             continue;
         }
 
         const float valueFactor = juce::jlimit(0.0f, 1.0f, static_cast<int>(note.getProperty(valueId)) / maximumMidiValue);
-        const auto  nodeCentre  = node->getBounds().getCentre().toFloat().transformedBy(owner.viewTransform);
+        const auto  nodeCentre  = node->getBounds().getCentre().toFloat().transformedBy(nodeCanvas.viewTransform);
         const float centreX     = nodeCentre.x / static_cast<float>(fieldScale);
         const float centreY     = nodeCentre.y / static_cast<float>(fieldScale);
         const int   firstColumn = juce::jmax(0,               static_cast<int>(std::floor(centreX - fieldRadius)));
@@ -147,7 +147,7 @@ juce::Colour ValueField::mapFieldColour(float factor) const
 
 void ValueField::updateBrushCursor()
 {
-    if (!owner.paintMode) {
+    if (!nodeCanvas.paintMode) {
         return;
     }
 
@@ -159,18 +159,18 @@ void ValueField::updateBrushCursor()
     cursorGraphics.setColour(juce::Colours::black);
     cursorGraphics.drawEllipse(cursorImage.getBounds().toFloat().reduced(1.0f), 1.0f);
 
-    owner.setMouseCursor(juce::MouseCursor(cursorImage, hotspot, hotspot));
+    nodeCanvas.setMouseCursor(juce::MouseCursor(cursorImage, hotspot, hotspot));
 }
 
 void ValueField::refresh()
 {
-    if (!owner.paintMode) {
+    if (!nodeCanvas.paintMode) {
         return;
     }
 
     render();
 
-    owner.repaint();
+    nodeCanvas.repaint();
 }
 
 void ValueField::paintStroke(juce::Point<float> canvasPosition, bool isStart, bool erase)
@@ -203,7 +203,7 @@ void ValueField::paintStroke(juce::Point<float> canvasPosition, bool isStart, bo
 
 void ValueField::ensurePaintBuffers()
 {
-    const size_t        pixelCount = static_cast<size_t>(owner.getWidth()) * static_cast<size_t>(owner.getHeight());
+    const size_t        pixelCount = static_cast<size_t>(nodeCanvas.getWidth()) * static_cast<size_t>(nodeCanvas.getHeight());
     std::vector<float>& density    = paintDensity[static_cast<size_t>(activePaintLayer)];
 
     if (density.size() != pixelCount) {
@@ -217,8 +217,8 @@ void ValueField::ensurePaintBuffers()
 
 void ValueField::seedStrokeDensityFromNodes()
 {
-    const int canvasWidth  = owner.getWidth();
-    const int canvasHeight = owner.getHeight();
+    const int canvasWidth  = nodeCanvas.getWidth();
+    const int canvasHeight = nodeCanvas.getHeight();
 
     if (canvasWidth <= 0 || canvasHeight <= 0) {
         return;
@@ -227,19 +227,19 @@ void ValueField::seedStrokeDensityFromNodes()
     const juce::Identifier valueId = paintLayerValueId();
     std::vector<float>&    density = paintDensity[static_cast<size_t>(activePaintLayer)];
 
-    for (auto& [nodeId, node] : owner.nodeManager.all()) {
+    for (auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
         if (node == nullptr) {
             continue;
         }
 
-        const juce::ValueTree note = owner.applicationContext.graphState->getMidiNotes(nodeId).getChild(0);
+        const juce::ValueTree note = nodeCanvas.graphState.getMidiNotes(nodeId).getChild(0);
 
         if (!note.isValid()) {
             continue;
         }
 
         const float seedDensity  = juce::jlimit(0.0f, 1.0f, static_cast<int>(note.getProperty(valueId)) / maximumMidiValue);
-        const auto  nodeCentre   = node->getNodeCentre().toFloat().transformedBy(owner.viewTransform);
+        const auto  nodeCentre   = node->getNodeCentre().toFloat().transformedBy(nodeCanvas.viewTransform);
         const float nodeRadius   = node->getVisualRadius() * viewZoom;
         const float radiusSquare = nodeRadius * nodeRadius;
         const int   firstColumn  = juce::jmax(0,                static_cast<int>(std::floor(nodeCentre.x - nodeRadius)));
@@ -265,8 +265,8 @@ void ValueField::seedStrokeDensityFromNodes()
 
 void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to, bool rearm)
 {
-    const int   canvasWidth     = owner.getWidth();
-    const int   canvasHeight    = owner.getHeight();
+    const int   canvasWidth     = nodeCanvas.getWidth();
+    const int   canvasHeight    = nodeCanvas.getHeight();
     const float viewBrushRadius = brushRadius * viewZoom;
 
     if (canvasWidth <= 0 || canvasHeight <= 0) {
@@ -340,10 +340,10 @@ void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to
 
 void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> to)
 {
-    const int canvasWidth  = owner.getWidth();
-    const int canvasHeight = owner.getHeight();
+    const int canvasWidth  = nodeCanvas.getWidth();
+    const int canvasHeight = nodeCanvas.getHeight();
 
-    if (canvasWidth <= 0 || canvasHeight <= 0 || owner.nodeManager.all().empty()) {
+    if (canvasWidth <= 0 || canvasHeight <= 0 || nodeCanvas.nodeManager.all().empty()) {
         return;
     }
 
@@ -356,12 +356,12 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
         return;
     }
 
-    for (auto& [nodeId, node] : owner.nodeManager.all()) {
+    for (auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
         if (node == nullptr) {
             continue;
         }
 
-        const auto  nodeCentre = node->getNodeCentre().toFloat().transformedBy(owner.viewTransform);
+        const auto  nodeCentre = node->getNodeCentre().toFloat().transformedBy(nodeCanvas.viewTransform);
         const float offsetX    = nodeCentre.x - from.x;
         const float offsetY    = nodeCentre.y - from.y;
         const float reach      = (brushRadius + node->getVisualRadius()) * viewZoom;
@@ -387,7 +387,7 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
         }
 
         const int       paintedValue = juce::jlimit(0, 127, static_cast<int>(std::round(*sampled * maximumMidiValue)));
-        juce::ValueTree note         = owner.applicationContext.graphState->getMidiNotes(nodeId).getChild(0);
+        juce::ValueTree note         = nodeCanvas.graphState.getMidiNotes(nodeId).getChild(0);
 
         if (!note.isValid()) {
             continue;
@@ -401,11 +401,11 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
 
 std::optional<float> ValueField::densityUnderNode(const Node& node) const
 {
-    const int                 canvasWidth   = owner.getWidth();
-    const int                 canvasHeight  = owner.getHeight();
+    const int                 canvasWidth   = nodeCanvas.getWidth();
+    const int                 canvasHeight  = nodeCanvas.getHeight();
     const std::vector<float>& density       = paintDensity[static_cast<size_t>(activePaintLayer)];
     const bool                isErasing     = brushStroke == BrushStroke::Erasing;
-    const auto                nodeCentre    = node.getNodeCentre().toFloat().transformedBy(owner.viewTransform);
+    const auto                nodeCentre    = node.getNodeCentre().toFloat().transformedBy(nodeCanvas.viewTransform);
     const float               nodeRadius    = node.getVisualRadius() * viewZoom;
     const float               radiusSquare  = nodeRadius * nodeRadius;
     const int                 firstColumn   = juce::jmax(0,                static_cast<int>(std::floor(nodeCentre.x - nodeRadius)));

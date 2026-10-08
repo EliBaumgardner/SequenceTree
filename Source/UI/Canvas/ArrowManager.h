@@ -9,13 +9,12 @@
 class NodeCanvas;
 class Node;
 class Arrow;
-struct ApplicationContext;
+class GraphState;
 
 class ArrowManager
 {
 public:
-
-    ArrowManager(NodeCanvas& canvas, const ApplicationContext& context);
+    ArrowManager(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager);
     ~ArrowManager();
 
     const juce::OwnedArray<Arrow>& all() const
@@ -57,8 +56,9 @@ private:
     static int arrowKey(const Arrow& arrow);
     void detach(Arrow* arrow);
 
-    NodeCanvas&               canvas;
-    const ApplicationContext& applicationContext;
+    NodeCanvas&        nodeCanvas;
+    GraphState&        graphState;
+    juce::UndoManager& undoManager;
 
     juce::OwnedArray<Arrow> arrows;
     std::unique_ptr<Arrow>  snapGhostArrow;

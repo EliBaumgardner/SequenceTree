@@ -1,11 +1,20 @@
 #include "CustomLookAndFeel.h"
 #include "BinaryData.h"
 
+#include <juce_gui_extra/juce_gui_extra.h>
+
 CustomLookAndFeel::CustomLookAndFeel()
 {
     regularTypeface  = juce::Typeface::createSystemTypefaceFor(BinaryData::GeistRegular_ttf, BinaryData::GeistRegular_ttfSize);
     semiBoldTypeface = juce::Typeface::createSystemTypefaceFor(BinaryData::GeistSemiBold_ttf, BinaryData::GeistSemiBold_ttfSize);
     monoTypeface     = juce::Typeface::createSystemTypefaceFor(BinaryData::GeistMonoRegular_ttf, BinaryData::GeistMonoRegular_ttfSize);
+
+    applyThemeColour(accentColour);
+}
+
+void CustomLookAndFeel::applyThemeColour(juce::Colour themeColour)
+{
+    recolour(themeColour);
 
     setColour(juce::PopupMenu::backgroundColourId,            juce::Colours::transparentBlack);
     setColour(juce::PopupMenu::textColourId,                  popupMenuTextColour);
@@ -18,6 +27,12 @@ CustomLookAndFeel::CustomLookAndFeel()
     setColour(juce::TooltipWindow::backgroundColourId,        raisedColour);
     setColour(juce::TooltipWindow::textColourId,              textColour);
     setColour(juce::TooltipWindow::outlineColourId,           juce::Colours::transparentBlack);
+    setColour(juce::Label::textColourId,                      captionColour);
+    setColour(juce::TextEditor::textColourId,                 textColour);
+    setColour(juce::CodeEditorComponent::backgroundColourId,  surfaceColour);
+    setColour(juce::CodeEditorComponent::defaultTextColourId, textColour);
+    setColour(juce::CodeEditorComponent::highlightColourId,   accentColour.withAlpha(codeSelectionAlpha));
+    setColour(juce::CodeEditorComponent::lineNumberTextId,    lineNumberColour);
 }
 
 void CustomLookAndFeel::drawPopupMenuBackgroundWithOptions(juce::Graphics& graphics, int width, int height,

@@ -3,6 +3,8 @@
 #include "Node.h"
 #include "../Buttons/RootRectangle.h"
 
+class GraphState;
+
 class RootNode : public Node
 {
 public:
@@ -12,7 +14,7 @@ public:
 
     RootRectangle rootRectangle;
 
-    explicit RootNode(const ApplicationContext& context);
+    RootNode(juce::UndoManager& undoManager, GraphState& graphState);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
@@ -21,4 +23,8 @@ public:
     void bindToTree() override;
     juce::Point<int> getNodeCentre() const override;
     float            getBodyExtent(juce::Point<float> approachDirection) const override;
+
+private:
+
+    GraphState& graphState;
 };

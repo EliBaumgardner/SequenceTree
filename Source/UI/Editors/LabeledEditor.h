@@ -14,21 +14,14 @@ public:
         setBorderSize({});
         setMinimumHorizontalScale(1.0f);
     }
-
-    void parentHierarchyChanged() override
-    {
-        if (const auto* theme = dynamic_cast<const Theme*>(&getLookAndFeel())) {
-            setColour(juce::Label::textColourId, theme->captionColour);
-        }
-    }
 };
 
 class LabeledEditor : public juce::Component
 {
 public:
 
-    explicit LabeledEditor(const ApplicationContext& context)
-        : editor(context)
+    explicit LabeledEditor(juce::UndoManager& undoManager)
+        : editor(undoManager)
     {
         editor.backdrop = ValueEditor::Backdrop::Field;
 

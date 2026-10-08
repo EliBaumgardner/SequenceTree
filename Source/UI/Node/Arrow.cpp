@@ -5,12 +5,10 @@
 #include "Node.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-Arrow::Arrow(Node* startNode, Node* endNode, const ApplicationContext& context)
+Arrow::Arrow(Node* startNode, Node* endNode, juce::UndoManager& undoManager)
     : startNode(startNode), endNode(endNode)
 {
-    setLookAndFeel(context.lookAndFeel);
-
-    durationEditor = std::make_unique<ValueEditor>(context);
+    durationEditor = std::make_unique<ValueEditor>(undoManager);
 
     durationEditor->setInterceptsMouseClicks(true, false);
     durationEditor->setTooltip("Arrow Duration");
@@ -25,19 +23,18 @@ Arrow::Arrow(Node* startNode, Node* endNode, const ApplicationContext& context)
     addChildComponent(*durationEditor);
 }
 
-Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, const ApplicationContext& context)
+Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, juce::UndoManager& undoManager)
     : startNode(startNode), tipOffset(tipOffset)
 {
-    setLookAndFeel(context.lookAndFeel);
     setInterceptsMouseClicks(false, true);
 
-    valueEditor = std::make_unique<ValueEditor>(context);
+    valueEditor = std::make_unique<ValueEditor>(undoManager);
 
     valueEditor->setInterceptsMouseClicks(true, false);
     valueEditor->setTooltip("Count Limit");
     addAndMakeVisible(*valueEditor);
 
-    durationEditor = std::make_unique<ValueEditor>(context);
+    durationEditor = std::make_unique<ValueEditor>(undoManager);
 
     durationEditor->setInterceptsMouseClicks(true, false);
     durationEditor->setTooltip("Arrow Duration");

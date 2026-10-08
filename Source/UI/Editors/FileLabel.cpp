@@ -1,14 +1,10 @@
 #include "FileLabel.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-FileLabel::FileLabel(const ApplicationContext& context)
-    : fileText(context)
+FileLabel::FileLabel(juce::UndoManager& undoManager)
+    : fileText(undoManager)
 {
-    setLookAndFeel(context.lookAndFeel);
-
     removeButton.icon = &CustomLookAndFeel::drawRemoveIcon;
-
-    removeButton.setLookAndFeel(context.lookAndFeel);
 
     fileText.autoFitText = true;
     fileText.editable    = false;
@@ -16,8 +12,6 @@ FileLabel::FileLabel(const ApplicationContext& context)
 
     fileText.setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength, TextFormat::labelCharacters));
     fileText.setInterceptsMouseClicks(false, false);
-
-    fileText.textEditor->setColour(juce::CaretComponent::caretColourId, context.lookAndFeel->accentColour);
 
     removeButton.setTooltip("Remove Rule");
 

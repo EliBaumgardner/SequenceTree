@@ -9,7 +9,7 @@ class Modulator : public Node
 {
     public:
 
-    explicit Modulator(const ApplicationContext& context);
+    explicit Modulator(juce::UndoManager& undoManager);
 
     void  paint(juce::Graphics& graphics) override;
 

@@ -7,17 +7,13 @@
 #include <algorithm>
 #include <cmath>
 
-const juce::Colour Node::defaultNodeColour = juce::Colour::fromRGB(31, 36, 44);
-
-Node::Node(const ApplicationContext& context)
-    : nodeValueEditor(context),
-      countEditor(context),
-      switchCountEditor(context),
-      subLoopLimitEditor(context),
-      applicationContext(context)
+Node::Node(juce::UndoManager& undoManager)
+    : nodeValueEditor(undoManager),
+      countEditor(undoManager),
+      switchCountEditor(undoManager),
+      subLoopLimitEditor(undoManager),
+      undoManager(undoManager)
 {
-    setLookAndFeel(applicationContext.lookAndFeel);
-
     upButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState&) {
         CustomLookAndFeel::get(*this).drawIncrementIcon(graphics, bounds, true);
     };
@@ -100,9 +96,7 @@ void Node::incrementNodeValue(int incrementValue)
 {
     const double currentValue = static_cast<double>(nodeValueEditor.boundValue.getValue());
 
-    if (applicationContext.undoManager != nullptr) {
-        applicationContext.undoManager->beginNewTransaction();
-    }
+    undoManager.beginNewTransaction();
 
     nodeValueEditor.setNumericValue(currentValue + incrementValue);
 
@@ -345,6 +339,13 @@ void Node::mouseExit(const juce::MouseEvent& event)
 
     upButton.setVisible(showIncrementButtons);
     downButton.setVisible(showIncrementButtons);
+}
+
+void Node::lookAndFeelChanged()
+{
+    const juce::String defaultColourText = CustomLookAndFeel::get(*this).defaultNodeColour.toString();
+
+    nodeColour = juce::Colour::fromString(nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, defaultColourText).toString());
 }
 
 void Node::respondToClick(juce::Point<int> localPoint)

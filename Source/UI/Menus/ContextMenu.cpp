@@ -1,11 +1,5 @@
 #include "ContextMenu.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "../../Util/ApplicationContext.h"
-
-ContextMenu::ContextMenu(const ApplicationContext& context)
-    : applicationContext(context)
-{
-}
 
 void ContextMenu::addItem(juce::String label, ItemKind kind, std::function<void()> action,
                           bool isEnabled, bool isOn)
@@ -24,7 +18,7 @@ void ContextMenu::show(juce::Component& target)
     juce::Component::SafePointer<juce::Component> safeTarget(&target);
     int                                           itemId = 1;
 
-    menu.setLookAndFeel(applicationContext.lookAndFeel);
+    menu.setLookAndFeel(&target.getLookAndFeel());
 
     for (const Item& item : items) {
         switch (item.kind) {

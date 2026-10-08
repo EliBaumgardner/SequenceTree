@@ -1,29 +1,33 @@
 #include "BottomBar.h"
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
-#include "../../Plugin/PluginProcessor.h"
+#include "../../Audio/TraversalSession.h"
 #include "../../Util/NodeInfo.h"
 
-BottomBar::BottomBar(const ApplicationContext& context)
-    : Bar(context, { Orientation::Horizontal, Theme::contentInsetRatio, Surface::Frosted })
+BottomBar::BottomBar(NodeCanvas& nodeCanvas, TraversalSession& traversalSession, juce::ValueTree colourPresets, juce::UndoManager& undoManager)
+    : Bar(nodeCanvas, Orientation::Horizontal, Theme::contentInsetRatio),
+      nodeCanvas(nodeCanvas),
+      traversalSession(traversalSession),
+      paintPanel(nodeCanvas, colourPresets, undoManager),
+      countsField(undoManager)
 {
     quaverTool = &quaverPane.addButton(&CustomLookAndFeel::drawQuaverToolIcon, "Note",
         [this]() {
             quaverTool->setSelected(! quaverTool->state.isSelected);
 
             if (quaverTool->state.isSelected) {
-                applicationContext.canvas->setQuaverMode(NodeCanvas::QuaverMode::Preview);
+                this->nodeCanvas.setQuaverMode(NodeCanvas::QuaverMode::Preview);
                 return;
             }
 
-            applicationContext.canvas->setQuaverMode(NodeCanvas::QuaverMode::Off);
+            this->nodeCanvas.setQuaverMode(NodeCanvas::QuaverMode::Off);
         });
 
     spanTool = &toolPane.addButton(&CustomLookAndFeel::drawSpanToolIcon, "Node Span",
         [this]() {
             spanTool->setSelected(! spanTool->state.isSelected);
 
-            applicationContext.canvas->setSpanMode(spanTool->state.isSelected);
+            this->nodeCanvas.setSpanMode(spanTool->state.isSelected);
         });
 
     configureAxis(xAxis, "X");
@@ -41,7 +45,7 @@ BottomBar::BottomBar(const ApplicationContext& context)
 
     countsField.editor.wheelResponse = ValueEditor::WheelResponse::StepValue;
 
-    countsField.editor.boundValue.referTo(applicationContext.canvas->quaverCount);
+    countsField.editor.boundValue.referTo(nodeCanvas.quaverCount);
 
     addAndMakeVisible(paintPanel);
     addAndMakeVisible(toolPane);
@@ -102,7 +106,7 @@ void BottomBar::resized()
 
 void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
 {
-    const ArrowInfo& arrowInfo = applicationContext.canvas->arrowManager.currentArrowInfo;
+    const ArrowInfo& arrowInfo = nodeCanvas.arrowManager.currentArrowInfo;
 
     axis.button = &bindPane.addButton(nullptr, text + " Binding", [this, &axis]() { toggleAxis(axis); });
 
@@ -125,7 +129,7 @@ void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
     axis.multiplierSlider.boundValue.setValue(arrowInfo.*axis.multiplier);
 
     axis.multiplierSlider.onValueChange = [this, &axis]() {
-        applicationContext.canvas->arrowManager.currentArrowInfo.*axis.multiplier = static_cast<double>(axis.multiplierSlider.boundValue.getValue());
+        nodeCanvas.arrowManager.currentArrowInfo.*axis.multiplier = static_cast<double>(axis.multiplierSlider.boundValue.getValue());
     };
 
     axis.button->setSelected(arrowInfo.*axis.binding != ArrowBinding::NoBind);
@@ -133,7 +137,7 @@ void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
 
 void BottomBar::toggleAxis(BindAxis& axis)
 {
-    ArrowInfo& arrowInfo = applicationContext.canvas->arrowManager.currentArrowInfo;
+    ArrowInfo& arrowInfo = nodeCanvas.arrowManager.currentArrowInfo;
 
     if (arrowInfo.*axis.binding == ArrowBinding::NoBind) {
         arrowInfo.*axis.binding = axis.target;
@@ -147,13 +151,13 @@ void BottomBar::toggleAxis(BindAxis& axis)
 
 void BottomBar::showAxisMenu(BindAxis& axis)
 {
-    const ArrowBinding binding = applicationContext.canvas->arrowManager.currentArrowInfo.*axis.binding;
-    ContextMenu        menu(applicationContext);
+    const ArrowBinding binding = nodeCanvas.arrowManager.currentArrowInfo.*axis.binding;
+    ContextMenu        menu;
 
     for (const BindTarget& target : bindTargets) {
         menu.addItem(target.label, ContextMenu::ItemKind::Toggle, [this, &axis, bound = target.binding]() {
-            axis.target                                                            = bound;
-            applicationContext.canvas->arrowManager.currentArrowInfo.*axis.binding = bound;
+            axis.target                                        = bound;
+            nodeCanvas.arrowManager.currentArrowInfo.*axis.binding = bound;
 
             axis.button->setSelected(true);
         }, true, binding == target.binding);
@@ -166,16 +170,15 @@ void BottomBar::showAxisMenu(BindAxis& axis)
 
 void BottomBar::showQuaverMenu()
 {
-    ContextMenu menu(applicationContext);
+    ContextMenu menu;
 
     menu.addItem("repeat", ContextMenu::ItemKind::Toggle, [this]() {
-        applicationContext.canvas->quaverRepeat = ! applicationContext.canvas->quaverRepeat;
+        nodeCanvas.quaverRepeat = ! nodeCanvas.quaverRepeat;
 
-        applicationContext.processor->traversalSession.previewRequests.push({
+        traversalSession.previewRequests.push({
             .kind   = RTPreviewRequest::Kind::SetRepeat,
-            .repeat = applicationContext.canvas->quaverRepeat
-        });
-    }, true, applicationContext.canvas->quaverRepeat);
+            .repeat = nodeCanvas.quaverRepeat
+        }); }, true, nodeCanvas.quaverRepeat);
 
     menu.show(*quaverTool);
 }

@@ -5,7 +5,8 @@
 #include "../Canvas/NodeCanvas.h"
 #include "../Theme/CustomLookAndFeel.h"
 
-Encapsulator::Encapsulator(const ApplicationContext& context) : Node(context)
+Encapsulator::Encapsulator(juce::UndoManager& undoManager, GraphState& graphState, NodeCanvas& nodeCanvas)
+    : Node(undoManager), graphState(graphState), nodeCanvas(nodeCanvas)
 {
     nodeType    = NodeType::Encapsulator;
     hasInnerRim = true;
@@ -21,12 +22,10 @@ void Encapsulator::bindToTree()
 
     firstMemberValueTree = {};
 
-    if (applicationContext.graphState != nullptr) {
-        memberNodeIds = applicationContext.graphState->encapsulation.memberIds(nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
-    }
+    memberNodeIds = graphState.encapsulation.memberIds(nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
 
-    if (! memberNodeIds.empty() && applicationContext.graphState != nullptr) {
-        firstMemberValueTree = applicationContext.graphState->getNode(memberNodeIds.front());
+    if (! memberNodeIds.empty()) {
+        firstMemberValueTree = graphState.getNode(memberNodeIds.front());
     }
 
     const bool             hasFirstMember  = firstMemberValueTree.isValid();
@@ -73,7 +72,7 @@ void Encapsulator::syncHighlightsFromMembers()
     std::vector<int>            endedRunIds;
 
     for (const int memberNodeId : memberNodeIds) {
-        Node* const member = applicationContext.canvas->nodeManager.find(memberNodeId);
+        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
 
         if (member == nullptr) {
             continue;
@@ -104,4 +103,11 @@ void Encapsulator::syncHighlightsFromMembers()
 
         setHighlightVisual(highlight.first, true, highlight.second);
     }
+}
+
+void Encapsulator::lookAndFeelChanged()
+{
+    Node::lookAndFeelChanged();
+
+    nodeCanvas.encapsulationView.recolourGroup(*this);
 }

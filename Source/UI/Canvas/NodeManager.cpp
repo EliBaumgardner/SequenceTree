@@ -6,14 +6,14 @@
 #include "../Node/RootNode.h"
 #include "../Node/Modulator.h"
 #include "../Node/TraversalFlagNode.h"
+#include "../Theme/CustomLookAndFeel.h"
 #include "../Node/Encapsulator.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
-#include "../../Util/ApplicationContext.h"
 
-NodeManager::NodeManager(NodeCanvas& canvas, const ApplicationContext& context)
-    : canvas(canvas), applicationContext(context)
+NodeManager::NodeManager(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager)
+    : nodeCanvas(nodeCanvas), graphState(graphState), undoManager(undoManager)
 {
 }
 
@@ -40,28 +40,28 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
     std::unique_ptr<Node>  node;
 
     if (treeType == ValueTreeIdentifiers::RootNodeData) {
-        node = std::make_unique<RootNode>(applicationContext);
+        node = std::make_unique<RootNode>(undoManager, graphState);
     }
     else if (treeType == ValueTreeIdentifiers::NodeData) {
-        node = std::make_unique<Node>(applicationContext);
+        node = std::make_unique<Node>(undoManager);
     }
     else if (treeType == ValueTreeIdentifiers::AlternativeNodeData) {
-        node = std::make_unique<Node>(applicationContext);
+        node = std::make_unique<Node>(undoManager);
         node->isAlternativeNode = true;
     }
     else if (treeType == ValueTreeIdentifiers::TraversalFlagData) {
-        node = std::make_unique<TraversalFlagNode>(applicationContext);
+        node = std::make_unique<TraversalFlagNode>(undoManager, graphState);
     }
     else if (treeType == ValueTreeIdentifiers::ModulatorData
           || treeType == ValueTreeIdentifiers::ModulatorRootData) {
-        node = std::make_unique<Modulator>(applicationContext);
+        node = std::make_unique<Modulator>(undoManager);
     }
     else if (treeType == ValueTreeIdentifiers::AlternativeModulatorData) {
-        node = std::make_unique<Modulator>(applicationContext);
+        node = std::make_unique<Modulator>(undoManager);
         node->isAlternativeNode = true;
     }
     else if (treeType == ValueTreeIdentifiers::EncapsulatorData) {
-        node = std::make_unique<Encapsulator>(applicationContext);
+        node = std::make_unique<Encapsulator>(undoManager, graphState, nodeCanvas);
     }
 
     jassert(node);
@@ -75,7 +75,7 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
     createdNode->nodeId        = nodeId;
     createdNode->nodeValueTree = nodeValueTree;
     createdNode->midiNoteData  = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
-    createdNode->nodeColour    = juce::Colour::fromString(nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, Node::defaultNodeColour.toString()).toString());
+    createdNode->nodeColour    = juce::Colour::fromString(nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, CustomLookAndFeel::get(nodeCanvas).defaultNodeColour.toString()).toString());
 
     createdNode->onSelected = [this](Node* selectedNode, bool isSelected) {
         for (auto& listener : nodeSelectedListeners) {
@@ -85,10 +85,10 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
 
     createdNode->bindToTree();
     createdNode->setDisplayMode(displayMode);
-    createdNode->setInterceptsMouseClicks(!canvas.paintMode, !canvas.paintMode && !canvas.spanMode);
+    createdNode->setInterceptsMouseClicks(!nodeCanvas.paintMode, !nodeCanvas.paintMode && !nodeCanvas.spanMode);
     createdNode->setMouseCursor(juce::MouseCursor::ParentCursor);
 
-    canvas.addAndMakeVisible(createdNode);
+    nodeCanvas.addAndMakeVisible(createdNode);
 
     nodes[nodeId] = std::move(node);
 
@@ -100,18 +100,18 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
 void NodeManager::setPosition(int nodeId)
 {
     Node* const           node          = find(nodeId);
-    const juce::ValueTree nodeValueTree = applicationContext.graphState->getNode(nodeId);
+    const juce::ValueTree nodeValueTree = graphState.getNode(nodeId);
 
     if (node == nullptr || !nodeValueTree.isValid()) {
         return;
     }
 
-    const NodePosition     nodePosition       = applicationContext.graphState->getNodePosition(nodeId);
+    const NodePosition     nodePosition       = graphState.getNodePosition(nodeId);
     const int              radius             = Theme::nodeRadius;
     const int              encapsulatorId     = nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-    const juce::ValueTree  encapsulator       = applicationContext.graphState->getNode(encapsulatorId);
+    const juce::ValueTree  encapsulator       = graphState.getNode(encapsulatorId);
     auto* const            owningEncapsulator = dynamic_cast<Encapsulator*>(find(encapsulatorId));
-    const juce::Point<int> collapseShift      = canvas.encapsulationView.collapsedSpanShift(nodeId);
+    const juce::Point<int> collapseShift      = nodeCanvas.encapsulationView.collapsedSpanShift(nodeId);
     const bool             isDrawnAtOwner     = encapsulator.isValid()
                                              && (owningEncapsulator == nullptr || ! owningEncapsulator->isExpanded);
     int                    xPosition          = nodePosition.xPosition;
@@ -138,12 +138,12 @@ void NodeManager::setPosition(int nodeId)
         node->setBounds(juce::Rectangle<int>(radius * 2, radius * 2).withCentre({ xPosition, yPosition }));
     }
 
-    canvas.arrowManager.refreshFor(node);
+    nodeCanvas.arrowManager.refreshFor(node);
 }
 
 void NodeManager::add(int nodeId)
 {
-    const juce::ValueTree nodeChildTree = applicationContext.graphState->getNode(nodeId);
+    const juce::ValueTree nodeChildTree = graphState.getNode(nodeId);
 
     jassert(nodeChildTree.isValid());
 
@@ -157,32 +157,32 @@ void NodeManager::add(int nodeId)
     connectOutgoingArrows(nodeChildTree, childNode);
 
     if (nodeChildTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-        canvas.encapsulationView.collapse(nodeId);
+        nodeCanvas.encapsulationView.collapse(nodeId);
     }
 
     const int owningEncapsulatorId = nodeChildTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
     if (auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(find(owningEncapsulatorId))) {
         if (owningEncapsulator->isExpanded) {
-            canvas.encapsulationView.refreshMembership(owningEncapsulatorId);
+            nodeCanvas.encapsulationView.refreshMembership(owningEncapsulatorId);
         }
         else {
-            canvas.encapsulationView.collapse(owningEncapsulatorId);
+            nodeCanvas.encapsulationView.collapse(owningEncapsulatorId);
         }
     }
 
-    if (!canvas.gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
-        const NodePosition rootPosition = applicationContext.graphState->getNodePosition(nodeId);
+    if (!nodeCanvas.gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
+        const NodePosition rootPosition = graphState.getNodePosition(nodeId);
 
-        canvas.gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
-        canvas.gridSpacing   = ArrowInfo::pixelsPerGridSpace;
-        canvas.gridOriginSet = true;
+        nodeCanvas.gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
+        nodeCanvas.gridSpacing   = ArrowInfo::pixelsPerGridSpace;
+        nodeCanvas.gridOriginSet = true;
     }
 }
 
 void NodeManager::connectIncomingArrows(int nodeId, Node* node)
 {
-    const juce::ValueTree nodeMapTree = applicationContext.graphState->nodeMap;
+    const juce::ValueTree nodeMapTree = graphState.nodeMap;
 
     for (int parentIndex = 0; parentIndex < nodeMapTree.getNumChildren(); ++parentIndex) {
         const juce::ValueTree parentTree        = nodeMapTree.getChild(parentIndex);
@@ -199,7 +199,7 @@ void NodeManager::connectIncomingArrows(int nodeId, Node* node)
             continue;
         }
 
-        canvas.arrowManager.connectParentToChild(parentNode, node);
+        nodeCanvas.arrowManager.connectParentToChild(parentNode, node);
     }
 }
 
@@ -216,7 +216,7 @@ void NodeManager::connectOutgoingArrows(const juce::ValueTree& nodeValueTree, No
             continue;
         }
 
-        canvas.arrowManager.connectParentToChild(node, childNode);
+        nodeCanvas.arrowManager.connectParentToChild(node, childNode);
     }
 }
 
@@ -229,22 +229,22 @@ void NodeManager::remove(int nodeId)
     }
 
     if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node)) {
-        canvas.encapsulationView.showMembers(encapsulator->memberNodeIds);
+        nodeCanvas.encapsulationView.showMembers(encapsulator->memberNodeIds);
     }
 
     const int encapsulatorId = node->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
-    canvas.arrowManager.removeForNode(node);
-    canvas.removeChildComponent(node);
+    nodeCanvas.arrowManager.removeForNode(node);
+    nodeCanvas.removeChildComponent(node);
     nodes.erase(nodeId);
 
-    canvas.encapsulationView.refreshMembership(encapsulatorId);
+    nodeCanvas.encapsulationView.refreshMembership(encapsulatorId);
 }
 
 void NodeManager::clear()
 {
     for (auto& [nodeId, node] : nodes) {
-        canvas.removeChildComponent(node.get());
+        nodeCanvas.removeChildComponent(node.get());
     }
 
     nodes.clear();
@@ -283,7 +283,7 @@ static std::unordered_set<int> collectAncestorIds(const GraphState& graphState, 
 void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY)
 {
     const int               rootId  = static_cast<int>(nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
-    std::unordered_set<int> visited = collectAncestorIds(*applicationContext.graphState, rootId);
+    std::unordered_set<int> visited = collectAncestorIds(graphState, rootId);
 
     visited.insert(rootId);
 
@@ -294,7 +294,6 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
 
 void NodeManager::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY)
 {
-    GraphState&            graphState     = *applicationContext.graphState;
     const int              encapsulatorId = graphState.getNode(nodeId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
     const juce::ValueTree  encapsulator   = graphState.getNode(encapsulatorId);
     const std::vector<int> memberNodeIds  = graphState.encapsulation.memberIds(encapsulatorId);
@@ -308,7 +307,7 @@ void NodeManager::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId,
     encapsulatorPosition.xPosition += deltaX;
     encapsulatorPosition.yPosition += deltaY;
 
-    graphState.setNodePosition(encapsulator, encapsulatorPosition, applicationContext.undoManager);
+    graphState.setNodePosition(encapsulator, encapsulatorPosition, &undoManager);
 }
 
 void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY,
@@ -329,13 +328,13 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
             continue;
         }
 
-        const juce::ValueTree childNodeTree = applicationContext.graphState->getNode(childId);
-        NodePosition          childPosition = applicationContext.graphState->getNodePosition(childId);
+        const juce::ValueTree childNodeTree = graphState.getNode(childId);
+        NodePosition          childPosition = graphState.getNodePosition(childId);
 
         childPosition.xPosition += deltaX;
         childPosition.yPosition += deltaY;
 
-        applicationContext.graphState->setNodePosition(childNodeTree, childPosition, applicationContext.undoManager);
+        graphState.setNodePosition(childNodeTree, childPosition, &undoManager);
 
         moveEncapsulatorWithEntryMember(childId, draggedNodeId, deltaX, deltaY);
 

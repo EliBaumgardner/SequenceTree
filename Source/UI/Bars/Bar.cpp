@@ -2,23 +2,22 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../Canvas/NodeCanvas.h"
 
-Bar::Bar(const ApplicationContext& context, Style style)
-    : applicationContext(context), style(style)
+Bar::Bar(Orientation orientation, float contentInsetRatio)
+    : orientation(orientation), contentInsetRatio(contentInsetRatio)
 {
-    setLookAndFeel(applicationContext.lookAndFeel);
 }
 
-Bar::~Bar()
+Bar::Bar(NodeCanvas& nodeCanvas, Orientation orientation, float contentInsetRatio)
+    : orientation(orientation), contentInsetRatio(contentInsetRatio), surface(Surface::Frosted), nodeCanvas(&nodeCanvas)
 {
-    setLookAndFeel(nullptr);
 }
 
 void Bar::paint(juce::Graphics& graphics)
 {
     CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
 
-    if (style.surface == Surface::Frosted) {
-        lookAndFeel.drawFrostedGlass(graphics, *this, *applicationContext.canvas->getParentComponent(), getLocalBounds());
+    if (surface == Surface::Frosted) {
+        lookAndFeel.drawFrostedGlass(graphics, *this, *nodeCanvas, getLocalBounds());
     }
     else {
         graphics.setColour(lookAndFeel.barColour);
@@ -30,9 +29,9 @@ void Bar::paint(juce::Graphics& graphics)
 
 juce::Rectangle<int> Bar::getContentBounds() const
 {
-    if (style.orientation == Orientation::Horizontal) {
-        return getLocalBounds().reduced(juce::roundToInt(getHeight() * style.contentInsetRatio));
+    if (orientation == Orientation::Horizontal) {
+        return getLocalBounds().reduced(juce::roundToInt(getHeight() * contentInsetRatio));
     }
 
-    return getLocalBounds().reduced(juce::roundToInt(getWidth() * style.contentInsetRatio));
+    return getLocalBounds().reduced(juce::roundToInt(getWidth() * contentInsetRatio));
 }

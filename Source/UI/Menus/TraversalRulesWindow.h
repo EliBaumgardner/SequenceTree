@@ -2,13 +2,16 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../Util/ApplicationContext.h"
 #include "../Bars/Bar.h"
 #include "../Buttons/ButtonPane.h"
 #include "../Buttons/IconButton.h"
 #include "../PanelResizer.h"
 #include "../LabelPanel.h"
 #include "../Editors/FilePage.h"
+
+class CustomLookAndFeel;
+class TraversalRuleState;
+class AudioSnapshotPublisher;
 
 class TraversalRulesWindow : public juce::Component,
                              private juce::Timer,
@@ -21,7 +24,7 @@ public:
     {
     public:
 
-        explicit RulesTitlebar(const ApplicationContext& context);
+        RulesTitlebar();
 
         static constexpr int   preferredHeight    = 28;
         static constexpr float titlebarInsetRatio = 0.143f;
@@ -35,7 +38,8 @@ public:
         ButtonPane undoRedoPane;
     };
 
-    explicit TraversalRulesWindow(const ApplicationContext& context);
+    TraversalRulesWindow(CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
+                         juce::UndoManager& undoManager);
     ~TraversalRulesWindow() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -57,8 +61,7 @@ private:
     {
     public:
 
-        explicit RulesPanel(const ApplicationContext& context);
-        ~RulesPanel() override;
+        explicit RulesPanel(juce::UndoManager& undoManager);
 
         void paint(juce::Graphics& graphics) override;
         void resized() override;
@@ -75,7 +78,7 @@ private:
         {
         public:
 
-            explicit PanelTitlebar(const ApplicationContext& context);
+            PanelTitlebar();
 
             IconButton addButton;
 
@@ -107,7 +110,8 @@ private:
     RulesTitlebar titlebar;
     RulesPanel    rulesPanel;
 
-    const ApplicationContext& context;
+    TraversalRuleState&     traversalRuleState;
+    AudioSnapshotPublisher& snapshots;
 
     std::unordered_map<int, std::unique_ptr<FilePage>> filePages;
 
