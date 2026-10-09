@@ -4,7 +4,7 @@
 
 **Draw a graph. Hear a sequence.**
 
-A MIDI sequencer plugin where you compose music by drawing graphs of notes that gets traversed instead of filling in a piano roll.
+A MIDI sequencer plugin where you compose music by drawing graphs of notes that gets traversed.
 
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)
 ![JUCE 8](https://img.shields.io/badge/JUCE-8-8DC63F)
