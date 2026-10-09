@@ -140,24 +140,7 @@ About 90 automated tests ([Catch2](https://github.com/catchorg/Catch2)) cover ho
 
 ## AI Integration and Workflow
 
-I designed SequenceTree and wrote its core by hand: the graph model, the audio engine and its real-time safety, the scripting language and the interface. Every architectural decision in this README is mine.
-
-As the project grew, I brought in AI coding agents as a tool, the way I'd use a refactoring IDE or a linter. They help with audits, large refactors and repetitive edits, always inside an architecture and set of rules I had already defined. To keep their output to my standards, I built the tooling that controls them.
-
-**Agent work goes through four stages, each one a folder of plain markdown** (`.claude/context/`):
-
-1. **Analysis.** One agent audits the code or researches a topic and writes a report.
-2. **Review.** A second agent checks each claim in the report against the actual source, like an advisor grading a paper, and keeps only what holds up.
-3. **Proposal.** What survives becomes a step-by-step plan, with open decisions left for me.
-4. **Implementation.** Only a plan I have approved gets built.
-
-**Automatic checks hold every edit to my design rules.** Before an agent can finish, scripts check its changes against the rules I wrote for this codebase and run the tests. A failed check sends it back to fix the problem.
-
-**Tools I built for this workflow:**
-
-- **[research-suite](https://github.com/EliBaumgardner/research-suite)**, a Claude Code plugin that runs the four-stage pipeline, the checks, and a set of C++ refactoring commands.
-- **TreeJev**, which reads each request, decides what kind of work it is (a question, a code change, research) and which checks it owes. Its decision trees are in `treejev/`.
-- **`.claude/CLAUDE.md`**, the project briefing I maintain so every agent works from the same understanding of the architecture.
+I designed SequenceTree and wrote its core by hand. AI agents help with audits and large refactors under tooling I built to hold them to my design rules. See [AI Integration and Workflow](documentation/AIWorkflow.md).
 
 ## Building
 
