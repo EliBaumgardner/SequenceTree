@@ -79,7 +79,10 @@
         "directive": "This changes the walk. Run the same graph shape as a node traversal and as a modulator walk and compare the sequences (TraversalTests.cpp, mirrorAsModulators); add the shape there if it is new.",
         "checks": [
           "tests"
-        ]
+        ],
+        "effects": {
+          "block": "change_area -> walk-changed: This changes the walk. Run the same graph shape as a node traversal and as a modulator walk and compare the sequences (TraversalTests.cpp, mirrorAsModulators); add the shape there if it is new.\nDo what this asks, or say in one line where this turn already did it."
+        }
       },
       "parentId": "walk"
     },
@@ -114,7 +117,10 @@
         "directive": "This touches the audio thread. Confirm nothing reached from processBlock allocates, locks or blocks; the RealtimeSanitizer build in CLAUDE.md's Tests section is the check.",
         "checks": [
           "tests"
-        ]
+        ],
+        "effects": {
+          "block": "change_area -> audio-thread: This touches the audio thread. Confirm nothing reached from processBlock allocates, locks or blocks; the RealtimeSanitizer build in CLAUDE.md's Tests section is the check.\nDo what this asks, or say in one line where this turn already did it."
+        }
       },
       "parentId": "area"
     },
@@ -132,7 +138,10 @@
         "directive": "This changes the graph model. Confirm arrow geometry still sets duration and a pitch-bound arrow only shifts pitch; SequenceTree_GraphTests covers both.",
         "checks": [
           "tests"
-        ]
+        ],
+        "effects": {
+          "block": "change_area -> graph-model: This changes the graph model. Confirm arrow geometry still sets duration and a pitch-bound arrow only shifts pitch; SequenceTree_GraphTests covers both.\nDo what this asks, or say in one line where this turn already did it."
+        }
       },
       "parentId": "area"
     },

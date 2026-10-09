@@ -39,7 +39,10 @@
         "directive": "This turn changed what other classes see. Check that each of these callers still gets what it expects:\n{{callers}}",
         "checks": [
           "tests"
-        ]
+        ],
+        "effects": {
+          "block": "change_surface -> surface-changed: This turn changed what other classes see. Check that each of these callers still gets what it expects:\n{{callers}}\nDo what this asks, or say in one line where this turn already did it."
+        }
       },
       "parentId": "surface"
     },

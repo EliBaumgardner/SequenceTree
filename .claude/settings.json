@@ -1,5 +1,62 @@
 {
   "enabledPlugins": {
     "research-suite@research-suite": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"/Users/elibaumgardner/.treejev/bin/treejev-hook\" || printf '{\"continue\":false,\"stopReason\":\"TreeJev hook script is missing (exit %s). Stopped; this needs you.\"}' \"$?\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"/Users/elibaumgardner/.treejev/bin/treejev-hook\" || printf '{\"continue\":false,\"stopReason\":\"TreeJev hook script is missing (exit %s). Stopped; this needs you.\"}' \"$?\"",
+            "timeout": 600
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"/Users/elibaumgardner/.treejev/bin/treejev-hook\" || printf '{\"continue\":false,\"stopReason\":\"TreeJev hook script is missing (exit %s). Stopped; this needs you.\"}' \"$?\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"/Users/elibaumgardner/.treejev/bin/treejev-hook\" || printf '{\"continue\":false,\"stopReason\":\"TreeJev hook script is missing (exit %s). Stopped; this needs you.\"}' \"$?\"",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"/Users/elibaumgardner/.treejev/bin/treejev-hook\" || printf '{\"continue\":false,\"stopReason\":\"TreeJev hook script is missing (exit %s). Stopped; this needs you.\"}' \"$?\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
   }
 }

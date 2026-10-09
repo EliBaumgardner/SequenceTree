@@ -61,7 +61,12 @@
         "directive": "Do what the command says. Run no design-rule, readability or systematic checks.",
         "checks": [
           "edit-tools"
-        ]
+        ],
+        "effects": {
+          "set": {
+            "mode": "skip"
+          }
+        }
       }
     },
     "light": {
@@ -78,7 +83,13 @@
         "directive": "Answer directly. No rule recitation, no audit and no gates; the Key Design Rules still bind any code written.",
         "checks": [
           "edit-tools"
-        ]
+        ],
+        "effects": {
+          "set": {
+            "mode": "light"
+          }
+        },
+        "context": "Light mode: answer directly. No rule recitation, no audit and no gates this turn. The Key Design Rules still bind any code you write, and an edit under Source still runs the design-rule and readability gates. The user requests the full verification protocol by putting -deep in their prompt."
       }
     },
     "research": {
@@ -95,7 +106,13 @@
         "directive": "Answer from the real code: name the actual functions, files and call sites. Do not run the design-rule or readability gates; no code is being changed.",
         "checks": [
           "edit-tools"
-        ]
+        ],
+        "effects": {
+          "set": {
+            "mode": "research"
+          }
+        },
+        "context": "Research mode: analysis counts as work, so the systematic principles apply to this answer. Name the real functions, files and call sites, and answer readability for the code you read. No design-rule or readability gate runs this turn unless you edit Source. The user requests the full verification protocol by putting -deep in their prompt."
       }
     },
     "deep": {
@@ -112,7 +129,12 @@
         "directive": "Run the full verification protocol: the design-rule audit now, and the change trees on the diff when the turn ends. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.",
         "checks": [
           "edit-tools"
-        ]
+        ],
+        "effects": {
+          "set": {
+            "mode": "deep"
+          }
+        }
       }
     },
     "change": {

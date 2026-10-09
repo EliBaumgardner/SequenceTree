@@ -96,7 +96,12 @@
           "repeat",
           "edit-tools"
         ],
-        "context": "Refactor turn. Extracts, inlines and renames go through `refactor.encap`, `refactor.decap` and `refactor.replace`, and multi-site rewrites through `refactor.rewrite`; read the command's section of ~/Documents/GitHub/research-suite/REFACTORING.md before using it."
+        "context": "Refactor turn. Extracts, inlines and renames go through `refactor.encap`, `refactor.decap` and `refactor.replace`, and multi-site rewrites through `refactor.rewrite`; read the command's section of ~/Documents/GitHub/research-suite/REFACTORING.md before using it.",
+        "effects": {
+          "set": {
+            "mode": "code"
+          }
+        }
       },
       "parentId": "scope"
     },
@@ -115,7 +120,12 @@
           "repeat",
           "edit-tools"
         ],
-        "context": "Refactor turn. Extracts, inlines and renames go through `refactor.encap`, `refactor.decap` and `refactor.replace`, and multi-site rewrites through `refactor.rewrite`; read the command's section of ~/Documents/GitHub/research-suite/REFACTORING.md before using it. Run `refactor.order` on every file whose definitions moved, and `refactor.smell` on the directories touched."
+        "context": "Refactor turn. Extracts, inlines and renames go through `refactor.encap`, `refactor.decap` and `refactor.replace`, and multi-site rewrites through `refactor.rewrite`; read the command's section of ~/Documents/GitHub/research-suite/REFACTORING.md before using it. Run `refactor.order` on every file whose definitions moved, and `refactor.smell` on the directories touched.",
+        "effects": {
+          "set": {
+            "mode": "code"
+          }
+        }
       },
       "parentId": "scope"
     },
@@ -134,7 +144,12 @@
           "tests",
           "edit-tools"
         ],
-        "context": "Traversal refactor. Every walk is the same traversal: run the walk-parity shapes in Tests/TraversalTests.cpp, and add one for any mechanic the change touches."
+        "context": "Traversal refactor. Every walk is the same traversal: run the walk-parity shapes in Tests/TraversalTests.cpp, and add one for any mechanic the change touches.",
+        "effects": {
+          "set": {
+            "mode": "deep"
+          }
+        }
       },
       "parentId": "scope"
     },
@@ -152,7 +167,12 @@
         "checks": [
           "edit-tools"
         ],
-        "context": "Style turn. The grouping, initializer-list, argument-wrapping and hierarchy-order rules are the Project Design Rules; run `readability.sh --file` on each file you change."
+        "context": "Style turn. The grouping, initializer-list, argument-wrapping and hierarchy-order rules are the Project Design Rules; run `readability.sh --file` on each file you change.",
+        "effects": {
+          "set": {
+            "mode": "code"
+          }
+        }
       },
       "parentId": "kind"
     },
@@ -171,7 +191,12 @@
           "tests",
           "edit-tools"
         ],
-        "context": "Audio-thread change: no allocation, lock or message post is reachable from processBlock; verify with SequenceTree_RealtimeTests if the change reaches it."
+        "context": "Audio-thread change: no allocation, lock or message post is reachable from processBlock; verify with SequenceTree_RealtimeTests if the change reaches it.",
+        "effects": {
+          "set": {
+            "mode": "deep"
+          }
+        }
       },
       "parentId": "audio"
     },
@@ -188,7 +213,12 @@
         "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.",
         "checks": [
           "edit-tools"
-        ]
+        ],
+        "effects": {
+          "set": {
+            "mode": "code"
+          }
+        }
       },
       "parentId": "audio"
     }

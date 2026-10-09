@@ -1,0 +1,109 @@
+{
+  "id": "sequence_tree",
+  "name": "SequenceTree turn flow",
+  "description": "The turn tree on every prompt, research-suite's gates and route checks, and the change trees on deep turns",
+  "plugins": ["research-suite"],
+  "reportTrees": true,
+  "injectInstructions": false,
+  "checks": {
+    "edit-tools": {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/edit-tools-check.py\" Source Tests"
+    },
+    "repeat": {
+      "event": "PostToolUse",
+      "matcher": "Edit|Write",
+      "command": "case \"$ROUTE_CHECK_FILE\" in Source/*) \"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/repeat-check.sh\" --hook post-tool ;; esac"
+    },
+    "tests": {
+      "event": "Stop",
+      "command": "[ -n \"$(\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/turn-scope.sh\" --files \"$TREEJEV_SESSION\")\" ] || exit 0; cmake --build cmake-build-debug --target SequenceTree_Tests SequenceTree_GraphTests && cd cmake-build-debug && ctest --output-on-failure"
+    }
+  },
+  "lanes": {
+    "UserPromptSubmit": {
+      "steps": [
+        {
+          "id": "snapshot",
+          "label": "Snapshot Source",
+          "kind": "command",
+          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/turn-scope.sh\" --snapshot \"$TREEJEV_SESSION\""
+        },
+        {
+          "id": "turn",
+          "label": "Turn mode",
+          "kind": "tree",
+          "treeId": "sequence_tree_turn",
+          "input": { "from": "payload" },
+          "overrides": [
+            {
+              "when": { "all": [{ "path": "payload.prompt", "matches": "-[Dd][Ee][Ee][Pp]([^A-Za-z0-9_-]|$)" }] },
+              "action": "deep",
+              "reason": "-deep in the prompt"
+            }
+          ],
+          "confidenceFloor": { "floor": 0.5, "appliesTo": ["skip", "light", "research"], "action": "code" }
+        },
+        {
+          "id": "design-context",
+          "label": "Design-rule context",
+          "kind": "command",
+          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/design-rules.sh\" --turn-context",
+          "when": { "all": [{ "path": "turn.values.mode", "in": ["code", "deep"] }] }
+        }
+      ]
+    },
+    "PreToolUse": {
+      "steps": [{ "id": "owed-pre", "label": "Owed checks", "kind": "owedChecks" }]
+    },
+    "PostToolUse": {
+      "steps": [{ "id": "owed-post", "label": "Owed checks", "kind": "owedChecks" }]
+    },
+    "Stop": {
+      "steps": [
+        {
+          "id": "design-gate",
+          "label": "Design-rule gate",
+          "kind": "command",
+          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/design-rules.sh\" --hook stop"
+        },
+        {
+          "id": "readability-gate",
+          "label": "Readability gate",
+          "kind": "command",
+          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/readability.sh\" --hook stop"
+        },
+        {
+          "id": "source-lines",
+          "label": "Count Source lines",
+          "kind": "command",
+          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/source-lines.sh\""
+        },
+        {
+          "id": "change-surface",
+          "label": "Change surface",
+          "kind": "tree",
+          "treeId": "change_surface",
+          "input": { "from": "command", "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/systematic-check.sh\" --state \"$TREEJEV_SESSION\"" },
+          "when": { "all": [{ "path": "turn.values.mode", "equals": "deep" }, { "path": "payload.stop_hook_active", "equals": false }] }
+        },
+        {
+          "id": "change-area",
+          "label": "Change area",
+          "kind": "tree",
+          "treeId": "change_area",
+          "input": { "from": "command", "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/systematic-check.sh\" --state \"$TREEJEV_SESSION\"" },
+          "when": { "all": [{ "path": "turn.values.mode", "equals": "deep" }, { "path": "payload.stop_hook_active", "equals": false }] }
+        },
+        {
+          "id": "owed-stop",
+          "label": "Owed checks",
+          "kind": "owedChecks",
+          "when": { "all": [{ "path": "payload.stop_hook_active", "equals": false }] }
+        },
+        { "id": "report", "label": "Tree report", "kind": "treeReport" }
+      ]
+    }
+  }
+}
