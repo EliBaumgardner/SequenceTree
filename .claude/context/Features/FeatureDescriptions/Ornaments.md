@@ -1,6 +1,6 @@
 # Ornaments
 
-> Status: Draft — no open questions
+> Status: Confirmed
 > Written 2026-10-09 at 31bccc7. Deployment answers added 2026-10-09.
 
 ## In the Owner's Words

@@ -6,14 +6,16 @@
 
 A MIDI sequencer plugin where you compose music by drawing graphs of notes that gets traversed.
 
-![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)
-![JUCE 8](https://img.shields.io/badge/JUCE-8-8DC63F)
-![Formats](https://img.shields.io/badge/formats-AU%20%7C%20VST3%20%7C%20Standalone-555)
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
+![C++20](https://img.shields.io/badge/C%2B%2B20-1f2328?style=for-the-badge&logo=cplusplus&logoColor=white)
+![JUCE 8](https://img.shields.io/badge/JUCE_8-1f2328?style=for-the-badge&logo=juce&logoColor=white)
+![CMake](https://img.shields.io/badge/CMake-1f2328?style=for-the-badge&logo=cmake&logoColor=white)
+![Catch2](https://img.shields.io/badge/Catch2-1f2328?style=for-the-badge)
+![AU · VST3 · Standalone](https://img.shields.io/badge/AU_·_VST3_·_Standalone-1f2328?style=for-the-badge)
+![MIT License](https://img.shields.io/badge/MIT_License-1f2328?style=for-the-badge)
 
 <img src="documentation/media/demo.gif" alt="SequenceTree playing a graph: nodes light up as the sequence walks through them" width="800">
 
-[Features](#features) · [What's under the hood](#whats-under-the-hood) · [Built with AI agents](#built-with-ai-agents) · [Building](#building) · [Scripting guide](documentation/ScriptingLanguage.md)
+[Features](#features) · [What's under the hood](#whats-under-the-hood) · [AI integration](#ai-integration-and-workflow) · [Building](#building) · [Scripting guide](documentation/ScriptingLanguage.md)
 
 </div>
 
@@ -67,13 +69,24 @@ The main walk, modulators and nested graphs all move through a graph by **the sa
 
 About 90 automated tests ([Catch2](https://github.com/catchorg/Catch2)) cover how the walk moves through a graph, the script language, and how a graph's shape becomes timing and pitch. The core that walks the graph is independent of the plugin framework, so its tests build in seconds.
 
-## Built with AI agents
+## AI Integration and Workflow
 
-This project is also where I develop and test my own tooling for working with AI coding agents. It's included on purpose, and it lives alongside the code:
+SequenceTree is developed with AI coding agents, using tooling I built to keep their work reviewable and held to the project's standards.
 
-- **`.claude/` is the agent's instructions and research trail.** `CLAUDE.md` is the project briefing the agent works from. `context/` holds the pipeline's paper trail: an analysis agent audits the code, a second agent reviews each claim against the real source like an advisor grading a paper, the claims that survive become a written plan, and only an approved plan gets built. Each stage is a folder of plain markdown you can read.
-- **[research-suite](https://github.com/EliBaumgardner/research-suite)**, a plugin I wrote, provides that pipeline, plus a set of C++ refactoring commands and automatic checks. The checks hold every edit to this project's design rules before the agent is allowed to finish.
-- **`treejev/`** holds decision trees from TreeJev, another tool of mine. On every request, a tree decides what kind of task it is (a quick question, a code change, research) and which checks the agent owes before it can stop. `TreeJevAgentProtocol.md` is generated from those trees.
+**Every change goes through four stages, each one a folder of plain markdown** (`.claude/context/`):
+
+1. **Analysis.** One agent audits the code or researches a topic and writes a report.
+2. **Review.** A second agent checks each claim in the report against the actual source, like an advisor grading a paper, and keeps only what holds up.
+3. **Proposal.** What survives becomes a step-by-step plan, with open decisions left for me.
+4. **Implementation.** Only a plan I have approved gets built.
+
+**Automatic checks keep every edit honest.** Before an agent can finish, scripts check its changes against the project's design rules and run the tests. A failed check sends it back to fix the problem.
+
+**The tools behind it:**
+
+- **[research-suite](https://github.com/EliBaumgardner/research-suite)**, a Claude Code plugin I wrote, runs the four-stage pipeline, the checks, and a set of C++ refactoring commands.
+- **TreeJev**, another tool of mine, reads each request and decides what kind of work it is (a question, a code change, research) and which checks it owes. Its decision trees are in `treejev/`.
+- **`.claude/CLAUDE.md`** is the project briefing every agent works from.
 
 Agents do the typing. I make the design decisions, set the rules they're held to, and decide what gets merged.
 
