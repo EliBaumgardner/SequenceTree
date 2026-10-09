@@ -1,0 +1,220 @@
+{
+  "id": "change_area",
+  "name": "Change Area",
+  "description": "data-flow and behavior-delta: which part of the plugin the change is in, and what that part owes.",
+  "rootId": "area",
+  "globalState": {
+    "diff": "this turn's Source diff",
+    "changedFunctions": "Owner::function per changed span",
+    "callers": "references to the changed functions outside their own files"
+  },
+  "nodes": {
+    "area": {
+      "id": "area",
+      "label": "area",
+      "position": {
+        "x": 600,
+        "y": 80
+      },
+      "config": {
+        "kind": "choice",
+        "instructions": "state.diff is a git diff of a C++ JUCE MIDI plugin that walks a user-drawn graph. Which area does the change belong to? Judge by the file paths and what the changed code does.",
+        "options": [
+          {
+            "id": "traversal",
+            "label": "Traversal: how the graph is walked, or the per-traversal state the walk keeps (Source/Audio traversal classes, NodeStateTable, Source/Script)",
+            "childId": "walk"
+          },
+          {
+            "id": "audio",
+            "label": "Audio thread outside the walk: MIDI scheduling, transport, snapshot publication",
+            "childId": "audio-thread"
+          },
+          {
+            "id": "graph",
+            "label": "Graph model: the ValueTree document, node and arrow properties, pitch and duration bindings (Source/Graph)",
+            "childId": "graph-model"
+          },
+          {
+            "id": "input",
+            "label": "Canvas gestures and connection logic (Source/Input)",
+            "childId": "input"
+          },
+          {
+            "id": "ui",
+            "label": "UI components, editors and painting only (Source/UI)",
+            "childId": "ui"
+          }
+        ]
+      },
+      "isRoot": true
+    },
+    "walk": {
+      "id": "walk",
+      "label": "walk",
+      "position": {
+        "x": 120,
+        "y": 320
+      },
+      "config": {
+        "kind": "noul",
+        "threshold": 0.5,
+        "trueChildId": "walk-changed",
+        "falseChildId": "traversal-internal",
+        "statement": "The diff in state.diff changes which node a traversal visits next, or how per-node visit counts and limits are stored or advanced."
+      },
+      "parentId": "area"
+    },
+    "walk-changed": {
+      "id": "walk-changed",
+      "label": "walk-changed",
+      "position": {
+        "x": 0,
+        "y": 560
+      },
+      "config": {
+        "kind": "action",
+        "description": "The walk changed; walk parity is owed.",
+        "outcome": "flag",
+        "directive": "This changes the walk. Run the same graph shape as a node traversal and as a modulator walk and compare the sequences (TraversalTests.cpp, mirrorAsModulators); add the shape there if it is new.",
+        "checks": [
+          "tests"
+        ]
+      },
+      "parentId": "walk"
+    },
+    "traversal-internal": {
+      "id": "traversal-internal",
+      "label": "traversal-internal",
+      "position": {
+        "x": 240,
+        "y": 560
+      },
+      "config": {
+        "kind": "action",
+        "description": "Traversal code changed without changing the walk.",
+        "outcome": "pass",
+        "checks": [
+          "tests"
+        ]
+      },
+      "parentId": "walk"
+    },
+    "audio-thread": {
+      "id": "audio-thread",
+      "label": "audio-thread",
+      "position": {
+        "x": 380,
+        "y": 320
+      },
+      "config": {
+        "kind": "action",
+        "description": "Audio-thread code outside the walk changed.",
+        "outcome": "flag",
+        "directive": "This touches the audio thread. Confirm nothing reached from processBlock allocates, locks or blocks; the RealtimeSanitizer build in CLAUDE.md's Tests section is the check.",
+        "checks": [
+          "tests"
+        ]
+      },
+      "parentId": "area"
+    },
+    "graph-model": {
+      "id": "graph-model",
+      "label": "graph-model",
+      "position": {
+        "x": 620,
+        "y": 320
+      },
+      "config": {
+        "kind": "action",
+        "description": "The graph model changed.",
+        "outcome": "flag",
+        "directive": "This changes the graph model. Confirm arrow geometry still sets duration and a pitch-bound arrow only shifts pitch; SequenceTree_GraphTests covers both.",
+        "checks": [
+          "tests"
+        ]
+      },
+      "parentId": "area"
+    },
+    "input": {
+      "id": "input",
+      "label": "input",
+      "position": {
+        "x": 860,
+        "y": 320
+      },
+      "config": {
+        "kind": "action",
+        "description": "A canvas gesture or connection rule changed; exercise it in a host.",
+        "outcome": "pass"
+      },
+      "parentId": "area"
+    },
+    "ui": {
+      "id": "ui",
+      "label": "ui",
+      "position": {
+        "x": 1100,
+        "y": 320
+      },
+      "config": {
+        "kind": "action",
+        "description": "UI only; look at it in a host.",
+        "outcome": "pass"
+      },
+      "parentId": "area"
+    }
+  },
+  "edges": {
+    "edge-area-walk": {
+      "id": "edge-area-walk",
+      "sourceId": "area",
+      "targetId": "walk",
+      "branchKey": "traversal",
+      "label": "traversal"
+    },
+    "edge-area-audio-thread": {
+      "id": "edge-area-audio-thread",
+      "sourceId": "area",
+      "targetId": "audio-thread",
+      "branchKey": "audio",
+      "label": "audio"
+    },
+    "edge-area-graph-model": {
+      "id": "edge-area-graph-model",
+      "sourceId": "area",
+      "targetId": "graph-model",
+      "branchKey": "graph",
+      "label": "graph"
+    },
+    "edge-area-input": {
+      "id": "edge-area-input",
+      "sourceId": "area",
+      "targetId": "input",
+      "branchKey": "input",
+      "label": "input"
+    },
+    "edge-area-ui": {
+      "id": "edge-area-ui",
+      "sourceId": "area",
+      "targetId": "ui",
+      "branchKey": "ui",
+      "label": "ui"
+    },
+    "edge-walk-walk-changed": {
+      "id": "edge-walk-walk-changed",
+      "sourceId": "walk",
+      "targetId": "walk-changed",
+      "branchKey": "true",
+      "label": "true"
+    },
+    "edge-walk-traversal-internal": {
+      "id": "edge-walk-traversal-internal",
+      "sourceId": "walk",
+      "targetId": "traversal-internal",
+      "branchKey": "false",
+      "label": "false"
+    }
+  },
+  "updatedAt": "2026-10-09T02:47:18.000Z"
+}

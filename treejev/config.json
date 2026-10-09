@@ -6,5 +6,6 @@
     "claude"
   ],
   "hooksEnabled": true,
-  "createdAt": "2026-10-08T00:09:56.250Z"
+  "createdAt": "2026-10-08T00:09:56.250Z",
+  "reportTreesOnStop": true
 }

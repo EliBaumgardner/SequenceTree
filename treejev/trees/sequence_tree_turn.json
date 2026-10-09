@@ -58,7 +58,10 @@
       "config": {
         "kind": "action",
         "description": "No gates and no extra checks for this turn.",
-        "directive": "Do what the command says. Run no design-rule, readability or systematic checks."
+        "directive": "Do what the command says. Run no design-rule, readability or systematic checks.",
+        "checks": [
+          "edit-tools"
+        ]
       }
     },
     "light": {
@@ -72,7 +75,10 @@
       "config": {
         "kind": "action",
         "description": "Answer directly; no gates.",
-        "directive": "Answer directly. No rule recitation, no audit and no gates; the Key Design Rules still bind any code written."
+        "directive": "Answer directly. No rule recitation, no audit and no gates; the Key Design Rules still bind any code written.",
+        "checks": [
+          "edit-tools"
+        ]
       }
     },
     "research": {
@@ -86,7 +92,10 @@
       "config": {
         "kind": "action",
         "description": "Analysis without code gates.",
-        "directive": "Answer from the real code: name the actual functions, files and call sites. Do not run the design-rule or readability gates; no code is being changed."
+        "directive": "Answer from the real code: name the actual functions, files and call sites. Do not run the design-rule or readability gates; no code is being changed.",
+        "checks": [
+          "edit-tools"
+        ]
       }
     },
     "deep": {
@@ -99,8 +108,11 @@
       },
       "config": {
         "kind": "action",
-        "description": "Full protocol: gates plus the systematic pass.",
-        "directive": "Run the full verification protocol: front-load api-surface, structure and data-flow before editing, and end with the SYSTEMATIC PASS block."
+        "description": "Full protocol: gates plus the change trees at Stop.",
+        "directive": "Run the full verification protocol: the design-rule audit now, and the change trees on the diff when the turn ends. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.",
+        "checks": [
+          "edit-tools"
+        ]
       }
     },
     "change": {
@@ -155,5 +167,5 @@
       "label": "deep"
     }
   },
-  "updatedAt": "2026-10-08T00:10:17.234563Z"
+  "updatedAt": "2026-10-09T03:22:11.313070Z"
 }

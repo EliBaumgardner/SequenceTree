@@ -1,0 +1,78 @@
+{
+  "id": "change_surface",
+  "name": "Change Surface",
+  "description": "api-surface and broader-api: does this turn change what other classes can call or read?",
+  "rootId": "surface",
+  "globalState": {
+    "diff": "this turn's Source diff",
+    "changedFunctions": "Owner::function per changed span",
+    "callers": "references to the changed functions outside their own files"
+  },
+  "nodes": {
+    "surface": {
+      "id": "surface",
+      "label": "surface",
+      "position": {
+        "x": 400,
+        "y": 80
+      },
+      "config": {
+        "kind": "noul",
+        "threshold": 0.5,
+        "trueChildId": "surface-changed",
+        "falseChildId": "surface-unchanged",
+        "statement": "The diff in state.diff changes what code outside the changed class can call or read: a public function signature, return type or visibility, a public member variable, or a declaration moved between public and private."
+      },
+      "isRoot": true
+    },
+    "surface-changed": {
+      "id": "surface-changed",
+      "label": "surface-changed",
+      "position": {
+        "x": 200,
+        "y": 320
+      },
+      "config": {
+        "kind": "action",
+        "description": "What other classes see changed; check the callers and run the tests.",
+        "outcome": "flag",
+        "directive": "This turn changed what other classes see. Check that each of these callers still gets what it expects:\n{{callers}}",
+        "checks": [
+          "tests"
+        ]
+      },
+      "parentId": "surface"
+    },
+    "surface-unchanged": {
+      "id": "surface-unchanged",
+      "label": "surface-unchanged",
+      "position": {
+        "x": 600,
+        "y": 320
+      },
+      "config": {
+        "kind": "action",
+        "description": "Only the inside of the changed classes moved.",
+        "outcome": "pass"
+      },
+      "parentId": "surface"
+    }
+  },
+  "edges": {
+    "edge-surface-surface-changed": {
+      "id": "edge-surface-surface-changed",
+      "sourceId": "surface",
+      "targetId": "surface-changed",
+      "branchKey": "true",
+      "label": "true"
+    },
+    "edge-surface-surface-unchanged": {
+      "id": "edge-surface-surface-unchanged",
+      "sourceId": "surface",
+      "targetId": "surface-unchanged",
+      "branchKey": "false",
+      "label": "false"
+    }
+  },
+  "updatedAt": "2026-10-09T02:47:18.000Z"
+}
