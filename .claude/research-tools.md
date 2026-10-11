@@ -18,9 +18,11 @@ Read-only. Run these for evidence rather than reading everything by hand.
 | Long functions | `refactor.find function 'numlines > 80' <path>` |
 | Duplication | `refactor.find repeating 'numlines > 3' <path>` and `refactor.find repeating shape 'numlines > 3' <path>` |
 | Callers and references | clangd, or `refactor.callers` / `refactor.refs` |
+| Look-and-feel read before a parent | `refactor.units 'CustomLookAndFeel::get' Source > "$TMPDIR/units.json"` then `treejev run lookandfeel_before_parent --units-file "$TMPDIR/units.json"` |
 | Command help | `refactor.help`, `refactor.help <command>` |
 
 - Quote every condition, or the shell reads `>` as a redirect.
+- **Unit trees judge meaning at every call site.** `refactor.units` measures the code facts per match (enclosing function, owner, whether a constructor runs it, what the constructors call directly) and a TreeJev tree with a `unitSpec` in `treejev/trees/` asks only what needs judging. Its flagged and uncertain call sites are leads: read each one before reporting it.
 - Duplication questions go to `refactor.find repeating`, both likenesses, before reading files by hand — it reads the whole scope in about half a second and beats grepping for a remembered line.
 - **Start the threshold low and read upward.** `numlines > 3` first; a high threshold silently hides the shorter half of a finding, and there is no indication that it did. `count >= 3` asks the other question — what has been written three times over.
 - **`shape` relaxes spelling, not structure.** `shape_of` in research-suite's `refactor/reporting/find.py` spells every identifier as the one token `name`, so `spawnKey` is one token and `traversal.key` is three, and `obj.f(x)` and `f(x)` differ by a receiver. Both likenesses report *contiguous* runs, so two functions that do the same thing with different expressions plugged in come back as several short islands rather than one long finding. Read adjacent findings in the same pair of files as possibly one duplicate, and go read the sites before reporting a size.

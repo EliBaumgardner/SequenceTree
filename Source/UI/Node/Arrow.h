@@ -32,6 +32,7 @@ struct ArrowLabel
 class Arrow : public juce::Component
 {
 public:
+    enum class ShaftStyle { Solid, Dashed, Ruler };
 
     Arrow(Node* startNode, Node* endNode, juce::UndoManager& undoManager);
     Arrow(Node* startNode, juce::Point<int> tipOffset, juce::UndoManager& undoManager);
@@ -48,7 +49,7 @@ public:
     }
 
     ArrowLabel    getLabel(const ArrowGeometry& geometry, float headLength) const;
-    bool isDashed() const;
+    ShaftStyle         shaftStyle() const;
     bool isTraversalArrow() const;
     bool isSyncArrow() const;
     juce::Point<float> getHeadAnchor() const;
@@ -60,6 +61,7 @@ public:
     void setTipOffset(juce::Point<int> offset);
     void beginDurationEdit();
     void triggerSnapAnimation();
+    void endDrag();
     void advanceAnimation(double frameSec);
     void setHoverFade(bool shouldBeVisible);
     void initHoverState(bool visibleNow);
@@ -104,7 +106,7 @@ public:
     bool editingDuration = false;
 
     bool isGhost  = false;
-    bool dashed   = false;
+    bool dragging = false;
     bool hovered  = false;
     bool selected = false;
 };

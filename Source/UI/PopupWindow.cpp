@@ -1,20 +1,48 @@
 #include "PopupWindow.h"
 
-PopupWindow::PopupWindow(const juce::String& title, std::unique_ptr<juce::Component> content,
+PopupWindow::PopupWindow(const juce::String& title, std::unique_ptr<juce::Component> content, juce::Component& origin, juce::Point<float> openingScale,
                          juce::Colour backgroundColour)
-    : juce::DocumentWindow(title, backgroundColour, juce::DocumentWindow::closeButton, true)
+    : juce::DocumentWindow(title, backgroundColour, juce::DocumentWindow::closeButton, true),
+      content(std::move(content)),
+      scaledView(*this->content, origin.findParentComponentOfClass<ScaledView>()->interfaceSettings)
 {
+    const int                minimumWidth  = this->content->getWidth();
+    const int                minimumHeight = this->content->getHeight();
+    const juce::Point<float> openingZoom   = openingScale * scaledView.zoom;
+
     setUsingNativeTitleBar(true);
 
-    setContentOwned(content.release(), true);
+    scaledView.setSize(juce::roundToInt(minimumWidth * openingZoom.x), juce::roundToInt(minimumHeight * openingZoom.y));
+
+    scaledView.minimumContentSize = { minimumWidth, minimumHeight };
+
+    scaledView.onZoomChanged = [this]() {
+        const float                          zoom        = scaledView.zoom;
+        const juce::Point<int>               minimumSize = scaledView.minimumContentSize;
+        const juce::Displays::Display* const display     = juce::Desktop::getInstance().getDisplays().getDisplayForRect(getScreenBounds());
+        juce::ComponentPeer* const           peer        = getPeer();
+        juce::BorderSize<int>                frame;
+
+        if (peer != nullptr) {
+            frame = peer->getFrameSize();
+        }
+
+        setResizeLimits(juce::roundToInt(minimumSize.x * zoom) + frame.getLeftAndRight(), juce::roundToInt(minimumSize.y * zoom) + frame.getTopAndBottom(),
+                        maximumWindowSide, maximumWindowSide);
+
+        if (display != nullptr) {
+            setBounds(getBounds().constrainedWithin(display->userArea));
+        }
+    };
+
+    setContentNonOwned(&scaledView, true);
     setResizable(true, true);
 
     if (! juce::JUCEApplicationBase::isStandaloneApp()) {
         setAlwaysOnTop(true);
     }
 
-    setResizeLimits(juce::roundToInt(getWidth() * minimumSizeRatio), juce::roundToInt(getHeight() * minimumSizeRatio),
-                    juce::roundToInt(getWidth() * maximumSizeRatio), juce::roundToInt(getHeight() * maximumSizeRatio));
+    scaledView.onZoomChanged();
 }
 
 void PopupWindow::closeButtonPressed()
@@ -36,10 +64,10 @@ PopupWindowLauncher::PopupWindowLauncher(juce::String title, juce::Colour backgr
 {
 }
 
-void PopupWindowLauncher::show()
+void PopupWindowLauncher::show(juce::Component& origin)
 {
     if (window == nullptr) {
-        window = std::make_unique<PopupWindow>(windowTitle, contentFactory(), windowBackgroundColour);
+        window = std::make_unique<PopupWindow>(windowTitle, contentFactory(), origin, openingScale, windowBackgroundColour);
     }
 
     presentWindow();
@@ -52,9 +80,9 @@ void PopupWindowLauncher::presentWindow()
     window->toFront(true);
 }
 
-void PopupWindowLauncher::show(const ContentFactory& factory)
+void PopupWindowLauncher::show(juce::Component& origin, const ContentFactory& factory)
 {
-    window = std::make_unique<PopupWindow>(windowTitle, factory(), windowBackgroundColour);
+    window = std::make_unique<PopupWindow>(windowTitle, factory(), origin, openingScale, windowBackgroundColour);
 
     presentWindow();
 }

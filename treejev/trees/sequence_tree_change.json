@@ -91,10 +91,9 @@
       "config": {
         "kind": "action",
         "description": "Code change with the design-rule and readability gates.",
-        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.",
+        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends.",
         "checks": [
-          "repeat",
-          "edit-tools"
+          "repeat"
         ],
         "context": "Refactor turn. Extracts, inlines and renames go through `refactor.encap`, `refactor.decap` and `refactor.replace`, and multi-site rewrites through `refactor.rewrite`; read the command's section of ~/Documents/GitHub/research-suite/REFACTORING.md before using it.",
         "effects": {
@@ -115,12 +114,11 @@
       "config": {
         "kind": "action",
         "description": "Code change with the design-rule and readability gates.",
-        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.",
+        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends.",
         "checks": [
-          "repeat",
-          "edit-tools"
+          "repeat"
         ],
-        "context": "Refactor turn. Extracts, inlines and renames go through `refactor.encap`, `refactor.decap` and `refactor.replace`, and multi-site rewrites through `refactor.rewrite`; read the command's section of ~/Documents/GitHub/research-suite/REFACTORING.md before using it. Run `refactor.order` on every file whose definitions moved, and `refactor.smell` on the directories touched.",
+        "context": "Refactor turn. Extracts, inlines and renames go through `refactor.encap`, `refactor.decap` and `refactor.replace`, and multi-site rewrites through `refactor.rewrite`; read the command's section of ~/Documents/GitHub/research-suite/REFACTORING.md before using it. Run `refactor.order` (without --check) on every file whose definitions moved; the Stop gates check order and wrappers.",
         "effects": {
           "set": {
             "mode": "code"
@@ -139,10 +137,9 @@
       "config": {
         "kind": "action",
         "description": "Full protocol: gates plus the systematic pass.",
-        "directive": "Run the full verification protocol: front-load api-surface, structure and data-flow before editing, and end with the SYSTEMATIC PASS block. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.",
+        "directive": "Run the full verification protocol: front-load api-surface, structure and data-flow before editing; the gates and change trees check the diff when the turn ends.",
         "checks": [
-          "tests",
-          "edit-tools"
+          "tests"
         ],
         "context": "Traversal refactor. Every walk is the same traversal: run the walk-parity shapes in Tests/TraversalTests.cpp, and add one for any mechanic the change touches.",
         "effects": {
@@ -163,11 +160,8 @@
       "config": {
         "kind": "action",
         "description": "Code change with the design-rule and readability gates.",
-        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.",
-        "checks": [
-          "edit-tools"
-        ],
-        "context": "Style turn. The grouping, initializer-list, argument-wrapping and hierarchy-order rules are the Project Design Rules; run `readability.sh --file` on each file you change.",
+        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends.",
+        "context": "Style turn. The grouping, initializer-list, argument-wrapping and hierarchy-order rules are the Project Design Rules; the readability gate checks each file you change when the turn ends.",
         "effects": {
           "set": {
             "mode": "code"
@@ -186,10 +180,9 @@
       "config": {
         "kind": "action",
         "description": "Full protocol: gates plus the systematic pass.",
-        "directive": "Run the full verification protocol: front-load api-surface, structure and data-flow before editing, and end with the SYSTEMATIC PASS block. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.",
+        "directive": "Run the full verification protocol: front-load api-surface, structure and data-flow before editing; the gates and change trees check the diff when the turn ends.",
         "checks": [
-          "tests",
-          "edit-tools"
+          "tests"
         ],
         "context": "Audio-thread change: no allocation, lock or message post is reachable from processBlock; verify with SequenceTree_RealtimeTests if the change reaches it.",
         "effects": {
@@ -210,10 +203,7 @@
       "config": {
         "kind": "action",
         "description": "Code change with the design-rule and readability gates.",
-        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.",
-        "checks": [
-          "edit-tools"
-        ],
+        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends.",
         "effects": {
           "set": {
             "mode": "code"

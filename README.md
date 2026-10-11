@@ -57,7 +57,7 @@ There are three kinds of node, chosen from the bottom bar before you drag out a 
 
 The notes themselves. A **root** starts a tree and carries the traversal that plays it, its loop limit and its tempo multiplier. Every **child** holds a pitch, velocity and MIDI channel, and new children inherit their parent's notes and limits so a branch can be sketched quickly.
 
-**Alternative nodes** are variations on a note. Ctrl-drag from a node to hang an alternative off it. Each time the walk lands on the node, its alternatives are chosen by count limit exactly as children are, and the chosen one replaces the node's pitch, velocity, length and repeat for that visit. When none qualifies, the node plays itself. Alternatives can have alternatives of their own, so a single position in the tree can cycle through a set of voicings.
+**Alternative nodes** are variations on a note. Ctrl+Shift-drag from a node to hang an alternative off it. Each time the walk lands on the node, its alternatives are chosen by count limit exactly as children are, and the chosen one replaces the node's pitch, velocity, length and repeat for that visit. When none qualifies, the node plays itself. Alternatives can have alternatives of their own, so a single position in the tree can cycle through a set of voicings.
 
 ### Modulators
 
@@ -144,7 +144,7 @@ I designed SequenceTree and wrote its core by hand. AI agents help with audits a
 
 ## Building
 
-**Requirements:** CMake 3.22+, a C++20 compiler (Xcode on macOS), and Git.
+**Requirements:** CMake 3.22+, a C++20 compiler, and Git.
 
 ```bash
 git clone https://github.com/EliBaumgardner/SequenceTree.git

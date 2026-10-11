@@ -4,7 +4,8 @@
   "description": "Decides per prompt which research-suite hooks and gates run: skip, light, research, code or deep",
   "rootId": "classify",
   "globalState": {
-    "prompt": "the user's prompt"
+    "prompt": "the user's prompt",
+    "previousMode": "the mode the previous turn ran in, or none"
   },
   "nodes": {
     "classify": {
@@ -17,12 +18,12 @@
       },
       "config": {
         "kind": "choice",
-        "instructions": "Classify the user's prompt (state.prompt) in a coding session on SequenceTree, a C++ JUCE plugin. Pick the one option that describes what the user is asking for in this message. A prompt that asks for code to be written or changed is code or deep even if it also asks a question. A prompt that only asks about code, research, or a plan is research. Short replies and conversational steering are control.",
+        "instructions": "Classify the user's prompt (state.prompt) in a coding session on SequenceTree, a C++ JUCE plugin. Pick the one option that describes what the user is asking for in this message. A prompt that asks for code to be written or changed is code or deep even if it also asks a question. A prompt that only asks about code, research, a plan or how code should be designed is research. Short replies and conversational steering are control.",
         "options": [
           {
             "id": "control",
             "label": "A control command that steers the conversation without asking for new work: stop, wait, hurry up, move on, continue, go ahead, yes, no, or a short reply to a question",
-            "childId": "skip"
+            "childId": "reply"
           },
           {
             "id": "simple",
@@ -31,37 +32,83 @@
           },
           {
             "id": "research",
-            "label": "A research, analysis, explanation, review or planning question: understanding how code works, comparing approaches, looking something up, or writing a plan, with no code being written or changed",
+            "label": "A research, analysis, explanation, review, design or planning question: understanding how code works, comparing approaches, how code should be structured, looking something up, or writing a plan, with no code being written or changed",
             "childId": "research"
           },
           {
             "id": "code",
-            "label": "A routine request to write, generate, change, fix, rename, refactor or delete code",
+            "label": "A routine request to write, generate, change, fix, rename, refactor or delete code, including any change to the audio thread or the traversal",
             "childId": "change"
           },
           {
             "id": "deep",
-            "label": "An in-depth coding request: a new feature, a change across several files or classes, an audio-thread or traversal change, or a design question about how code should be structured",
+            "label": "An in-depth coding request: a new feature, or a change across several files or classes",
             "childId": "deep"
           }
         ]
       }
     },
-    "skip": {
-      "id": "skip",
-      "label": "skip",
+    "reply": {
+      "id": "reply",
+      "label": "Does the reply carry on the previous turn's work?",
       "parentId": "classify",
       "position": {
         "x": 120,
         "y": 320
       },
       "config": {
+        "kind": "choice",
+        "instructions": "state.prompt is a short reply or steering command. state.previousMode is the mode the previous turn ran in (skip, light, research, code, deep, or none for the first turn). Decide whether the reply approves or continues code work - yes, go ahead, do it, continue, keep going - or only steers or answers without asking for code work.",
+        "options": [
+          {
+            "id": "steer",
+            "label": "Steers or answers without asking for code work, or state.previousMode is skip, light or none",
+            "childId": "skip"
+          },
+          {
+            "id": "carryCode",
+            "label": "Approves or continues code work, and state.previousMode is research or code",
+            "childId": "code"
+          },
+          {
+            "id": "carryDeep",
+            "label": "Approves or continues code work, and state.previousMode is deep",
+            "childId": "deep"
+          }
+        ]
+      }
+    },
+    "code": {
+      "id": "code",
+      "label": "code",
+      "parentId": "reply",
+      "position": {
+        "x": 0,
+        "y": 560
+      },
+      "config": {
+        "kind": "action",
+        "description": "Code change with the design-rule and readability gates, with no route of its own.",
+        "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends.",
+        "effects": {
+          "set": {
+            "mode": "code"
+          }
+        }
+      }
+    },
+    "skip": {
+      "id": "skip",
+      "label": "skip",
+      "parentId": "reply",
+      "position": {
+        "x": 240,
+        "y": 560
+      },
+      "config": {
         "kind": "action",
         "description": "No gates and no extra checks for this turn.",
         "directive": "Do what the command says. Run no design-rule, readability or systematic checks.",
-        "checks": [
-          "edit-tools"
-        ],
         "effects": {
           "set": {
             "mode": "skip"
@@ -81,9 +128,6 @@
         "kind": "action",
         "description": "Answer directly; no gates.",
         "directive": "Answer directly. No rule recitation, no audit and no gates; the Key Design Rules still bind any code written.",
-        "checks": [
-          "edit-tools"
-        ],
         "effects": {
           "set": {
             "mode": "light"
@@ -104,9 +148,6 @@
         "kind": "action",
         "description": "Analysis without code gates.",
         "directive": "Answer from the real code: name the actual functions, files and call sites. Do not run the design-rule or readability gates; no code is being changed.",
-        "checks": [
-          "edit-tools"
-        ],
         "effects": {
           "set": {
             "mode": "research"
@@ -126,10 +167,7 @@
       "config": {
         "kind": "action",
         "description": "Full protocol: gates plus the change trees at Stop.",
-        "directive": "Run the full verification protocol: the design-rule audit now, and the change trees on the diff when the turn ends. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.",
-        "checks": [
-          "edit-tools"
-        ],
+        "directive": "Run the full verification protocol: the prompt step has already run the design-rule audit on the diff, and the design-rule, readability and change trees check it again when the turn ends.",
         "effects": {
           "set": {
             "mode": "deep"
@@ -156,7 +194,7 @@
     "edge-skip": {
       "id": "edge-skip",
       "sourceId": "classify",
-      "targetId": "skip",
+      "targetId": "reply",
       "branchKey": "control",
       "label": "control"
     },
@@ -187,6 +225,27 @@
       "targetId": "deep",
       "branchKey": "deep",
       "label": "deep"
+    },
+    "edge-reply-skip": {
+      "id": "edge-reply-skip",
+      "sourceId": "reply",
+      "targetId": "skip",
+      "branchKey": "steer",
+      "label": "steer"
+    },
+    "edge-reply-code": {
+      "id": "edge-reply-code",
+      "sourceId": "reply",
+      "targetId": "code",
+      "branchKey": "carryCode",
+      "label": "carry code"
+    },
+    "edge-reply-deep": {
+      "id": "edge-reply-deep",
+      "sourceId": "reply",
+      "targetId": "deep",
+      "branchKey": "carryDeep",
+      "label": "carry deep"
     }
   },
   "updatedAt": "2026-10-09T03:22:11.313070Z"

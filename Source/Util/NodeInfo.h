@@ -46,5 +46,6 @@ inline constexpr int maximumGlobalTranspose =  48;
 
 enum class NodeType        { Node, Root, Modulator, TraversalFlag, Encapsulator};
 enum class NodeDisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue, Probability};
+enum class OrnamentMark    { None, Symbol, Missing };
 
 #endif //SEQUENCETREE_NODEPOSITION_H

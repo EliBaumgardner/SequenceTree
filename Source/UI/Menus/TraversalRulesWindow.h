@@ -30,16 +30,16 @@ public:
         static constexpr float titlebarInsetRatio = 0.143f;
 
         IconButton playButton;
+        ButtonPane undoRedoPane;
 
     private:
 
         void resized() override;
-
-        ButtonPane undoRedoPane;
     };
 
     TraversalRulesWindow(CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
                          juce::UndoManager& undoManager);
+
     ~TraversalRulesWindow() override;
 
     void paint(juce::Graphics& graphics) override;

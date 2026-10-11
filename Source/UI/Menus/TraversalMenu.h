@@ -20,12 +20,14 @@ class TraversalMenu : public juce::Component, private juce::ValueTree::Listener
 public:
     TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
                   juce::ValueTree colourPresets, juce::UndoManager& undoManager);
+
     ~TraversalMenu() override;
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
     void selectTraversal(int traversalId);
+    int  narrowestHeight() const;
 
     ItemSelector displayMenu;
 

@@ -1,7 +1,7 @@
 {
   "id": "sequence_tree",
   "name": "SequenceTree turn flow",
-  "description": "The turn tree on every prompt, research-suite's gates and route checks, and the change trees on deep turns",
+  "description": "The turn tree on every prompt, research-suite gates and route checks, the change-size tree on every stop, and the change trees on deep turns and large changes",
   "plugins": ["research-suite"],
   "reportTrees": true,
   "injectInstructions": false,
@@ -35,7 +35,7 @@
           "label": "Turn mode",
           "kind": "tree",
           "treeId": "sequence_tree_turn",
-          "input": { "from": "payload" },
+          "input": { "from": "command", "command": "history=$(ls \"$(dirname \"$TREEJEV_TURN_FILE\")\"/history/*.json 2>/dev/null | tail -1); previous=none; if [ -n \"$history\" ]; then previous=$(jq -r '.values.mode // \"none\"' \"$history\"); fi; jq -c --arg previousMode \"$previous\" --arg sessionId \"$TREEJEV_SESSION\" --arg cwd \"$PWD\" '{prompt: (.prompt // \"\"), previousMode: $previousMode, sessionId: $sessionId, cwd: $cwd}'" },
           "overrides": [
             {
               "when": { "all": [{ "path": "payload.prompt", "matches": "-[Dd][Ee][Ee][Pp]([^A-Za-z0-9_-]|$)" }] },
@@ -51,11 +51,27 @@
           "kind": "command",
           "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/design-rules.sh\" --turn-context",
           "when": { "all": [{ "path": "turn.values.mode", "in": ["code", "deep"] }] }
+        },
+        {
+          "id": "code-protocol",
+          "label": "Code-turn protocol",
+          "kind": "command",
+          "command": "cat <<'EOF'\nCode-turn protocol. Do not run design-rules.sh, readability.sh, refactor.order --check or refactor.smell yourself mid-turn: the prompt step and the Stop gates run them on the turn's diff, and a run of your own repeats that work. Build once when the edits are done and run the tests once; refactor.* commands skip the build with --no-build and run no gates unless given --gates. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.\nEOF",
+          "when": { "all": [{ "path": "turn.values.mode", "in": ["code", "deep"] }] }
         }
       ]
     },
     "PreToolUse": {
-      "steps": [{ "id": "owed-pre", "label": "Owed checks", "kind": "owedChecks" }]
+      "steps": [
+        {
+          "id": "edit-tools",
+          "label": "Edit tools",
+          "kind": "command",
+          "matcher": "Bash",
+          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/edit-tools-check.py\" Source Tests"
+        },
+        { "id": "owed-pre", "label": "Owed checks", "kind": "owedChecks" }
+      ]
     },
     "PostToolUse": {
       "steps": [{ "id": "owed-post", "label": "Owed checks", "kind": "owedChecks" }]
@@ -63,16 +79,26 @@
     "Stop": {
       "steps": [
         {
+          "id": "change-size",
+          "label": "Change size",
+          "kind": "tree",
+          "treeId": "change_size",
+          "input": { "from": "command", "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/turn-scope.sh\" --stats \"$TREEJEV_SESSION\"" },
+          "when": { "all": [{ "path": "payload.stop_hook_active", "equals": false }] }
+        },
+        {
           "id": "design-gate",
           "label": "Design-rule gate",
           "kind": "command",
-          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/design-rules.sh\" --hook stop"
+          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/design-rules.sh\" --hook stop",
+          "when": { "all": [{ "path": "turn.values.size", "in": ["small", "large"] }] }
         },
         {
           "id": "readability-gate",
           "label": "Readability gate",
           "kind": "command",
-          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/readability.sh\" --hook stop"
+          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/readability.sh\" --hook stop",
+          "when": { "all": [{ "path": "turn.values.size", "in": ["small", "large"] }] }
         },
         {
           "id": "source-lines",
@@ -86,7 +112,7 @@
           "kind": "tree",
           "treeId": "change_surface",
           "input": { "from": "command", "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/systematic-check.sh\" --state \"$TREEJEV_SESSION\"" },
-          "when": { "all": [{ "path": "turn.values.mode", "equals": "deep" }, { "path": "payload.stop_hook_active", "equals": false }] }
+          "when": { "all": [{ "path": "payload.stop_hook_active", "equals": false }], "any": [{ "path": "turn.values.mode", "equals": "deep" }, { "path": "turn.values.size", "equals": "large" }] }
         },
         {
           "id": "change-area",
@@ -94,7 +120,14 @@
           "kind": "tree",
           "treeId": "change_area",
           "input": { "from": "command", "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/systematic-check.sh\" --state \"$TREEJEV_SESSION\"" },
-          "when": { "all": [{ "path": "turn.values.mode", "equals": "deep" }, { "path": "payload.stop_hook_active", "equals": false }] }
+          "when": { "all": [{ "path": "payload.stop_hook_active", "equals": false }], "any": [{ "path": "turn.values.mode", "equals": "deep" }, { "path": "turn.values.size", "equals": "large" }] }
+        },
+        {
+          "id": "lookandfeel-units",
+          "label": "Look-and-feel call sites",
+          "kind": "command",
+          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/unit-check.sh\" lookandfeel_before_parent 'CustomLookAndFeel::get' Source",
+          "when": { "all": [{ "path": "payload.stop_hook_active", "equals": false }, { "path": "turn.values.size", "in": ["small", "large"] }] }
         },
         {
           "id": "owed-stop",

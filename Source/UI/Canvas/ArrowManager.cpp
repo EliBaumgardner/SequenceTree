@@ -128,7 +128,20 @@ void ArrowManager::refreshFor(const Node* movedNode)
             childNode->refreshValueDisplay();
         }
 
+        arrow->dragging = nodesDragging;
+
         arrow->setArrowBounds();
+    }
+}
+
+void ArrowManager::endNodeDrag()
+{
+    nodesDragging = false;
+
+    for (Arrow* const arrow : arrows) {
+        if (arrow->dragging) {
+            arrow->endDrag();
+        }
     }
 }
 
@@ -208,7 +221,7 @@ void ArrowManager::clear()
     arrows.clear();
 }
 
-void ArrowManager::updatePreview(Node* node, juce::Point<int> tipOffset, bool dashed)
+void ArrowManager::updatePreview(Node* node, juce::Point<int> tipOffset)
 {
     if (node == nullptr) {
         return;
@@ -217,12 +230,12 @@ void ArrowManager::updatePreview(Node* node, juce::Point<int> tipOffset, bool da
     if (preview == nullptr || preview->startNode != node) {
         preview = std::make_unique<Arrow>(node, tipOffset, undoManager);
 
+        preview->dragging = true;
+
         nodeCanvas.addAndMakeVisible(*preview);
 
         preview->toBack();
     }
-
-    preview->dashed = dashed;
 
     preview->setTipOffset(tipOffset);
 }

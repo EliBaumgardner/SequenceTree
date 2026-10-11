@@ -92,6 +92,7 @@ NodeVisual Node::getNodeVisual(juce::Rectangle<float> bounds) const
              isEncapsulationRinged, hasInnerRim, encapsulationRingColour };
 }
 
+
 void Node::incrementNodeValue(int incrementValue)
 {
     const double currentValue = static_cast<double>(nodeValueEditor.boundValue.getValue());

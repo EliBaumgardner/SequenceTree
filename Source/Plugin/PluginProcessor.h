@@ -8,6 +8,7 @@
 #include <functional>
 #include "../Graph/GraphState.h"
 #include "../Graph/TraversalRuleState.h"
+#include "../Graph/OrnamentLibraries.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "../Graph/RTGraphBuilder.h"
 #include "../Audio/EventManager.h"
@@ -83,6 +84,13 @@ public:
     TraversalRuleState traversalRuleState;
 
     juce::ValueTree colourPresets { ValueTreeIdentifiers::ColourPresets };
+
+    juce::File userFolder  { juce::File::getSpecialLocation(juce::File::userMusicDirectory).getChildFile(JucePlugin_Name) };
+    juce::File patchFolder { userFolder.getChildFile("Patches") };
+
+    juce::UndoManager ornamentUndoManager;
+
+    OrnamentLibraries ornamentLibraries;
 
     AudioSnapshotPublisher snapshots { traversalRuleState };
 

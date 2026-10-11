@@ -23,12 +23,14 @@ RTGraphBuilder::RTGraphBuilder(SequenceTreeAudioProcessor& processorRef, GraphSt
 {
     graphState.nodeMap.addListener(this);
     graphState.traversals.map.addListener(this);
+    processor.ornamentLibraries.libraries.addListener(this);
 }
 
 RTGraphBuilder::~RTGraphBuilder()
 {
     graphState.nodeMap.removeListener(this);
     graphState.traversals.map.removeListener(this);
+    processor.ornamentLibraries.libraries.removeListener(this);
 }
 
 void RTGraphBuilder::makeRTGraph(const juce::ValueTree& nodeValueTree)
@@ -121,7 +123,9 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
         juce::ValueTree nodeValueTreeChildren = currentValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
         juce::ValueTree nodeValueTreeTraversals = currentValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
 
-        juce::ValueTree nodeMidiNotes = currentValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
+        juce::ValueTree nodeMidiNotes   = currentValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
+        juce::ValueTree publishedFigure = processor.ornamentLibraries.findOrnament(currentValueTree.getProperty(ValueTreeIdentifiers::OrnamentUid).toString())
+                                                                     .getChildWithName(ValueTreeIdentifiers::PublishedFigure);
 
         juce::Identifier nodeType = currentValueTree.getType();
 
@@ -262,6 +266,8 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
                 rtNote.midiChannel = juce::jlimit(1, 16, midiChannel);
                 rtNode.notes.push_back(std::move(rtNote));
             }
+
+            rtNode.ornament = processor.ornamentLibraries.figureSteps(publishedFigure);
 
             builtNodes[nodeId] = std::move(rtNode);
         }
@@ -610,6 +616,18 @@ void RTGraphBuilder::rememberStructureChange(const juce::ValueTree& parent, cons
     juce::ValueTree graphOwner;
     juce::ValueTree reshapedNode;
 
+    if (parent.getRoot() == processor.ornamentLibraries.libraries) {
+        if (child.getType() == ValueTreeIdentifiers::OrnamentLibrary
+            || child.getType() == ValueTreeIdentifiers::OrnamentData
+            || child.getType() == ValueTreeIdentifiers::PublishedFigure) {
+            pending.ornamentsChanged = true;
+
+            triggerAsyncUpdate();
+        }
+
+        return;
+    }
+
     if (parent.getType() == ValueTreeIdentifiers::NodeChildrenIds) {
         graphOwner = parent.getParent();
     }
@@ -665,6 +683,10 @@ void RTGraphBuilder::valueTreePropertyChanged(juce::ValueTree& tree, const juce:
     juce::ValueTree graphOwner;
     juce::ValueTree reshapedNode;
 
+    if (tree.getRoot() == processor.ornamentLibraries.libraries) {
+        return;
+    }
+
     if (propertyIdentifier == ValueTreeIdentifiers::XPosition
         || propertyIdentifier == ValueTreeIdentifiers::YPosition
         || propertyIdentifier == ValueTreeIdentifiers::Radius) {
@@ -688,7 +710,8 @@ void RTGraphBuilder::valueTreePropertyChanged(juce::ValueTree& tree, const juce:
         || propertyIdentifier == ValueTreeIdentifiers::Probability
         || propertyIdentifier == ValueTreeIdentifiers::ModAmount
         || propertyIdentifier == ValueTreeIdentifiers::TraversalFlagValue
-        || propertyIdentifier == ValueTreeIdentifiers::EncapsulatorId) {
+        || propertyIdentifier == ValueTreeIdentifiers::EncapsulatorId
+        || propertyIdentifier == ValueTreeIdentifiers::OrnamentUid) {
         graphOwner = tree;
     }
     else if (tree.getType() == ValueTreeIdentifiers::TraversalData
@@ -760,4 +783,8 @@ void RTGraphBuilder::handleAsyncUpdate()
     }
 
     updateDurationMaps(changes.durationRefreshNodeIds);
+
+    if (changes.ornamentsChanged) {
+        rebuildAllGraphs();
+    }
 }

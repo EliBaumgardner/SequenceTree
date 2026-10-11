@@ -40,6 +40,8 @@ public:
 
     std::vector<juce::Identifier> extraProperties;
 
+    juce::String suffix;
+
     double minimum       = 0.0;
     double maximum       = static_cast<double>(std::numeric_limits<int>::max());
     int    decimalPlaces = 0;
@@ -56,7 +58,6 @@ public:
     ParsedValue       parse(const ValueBinding& binding, const juce::String& enteredText) const override;
 
     juce::String prefix;
-    juce::String suffix;
 
     double displayDivisor    = 1.0;
     bool   showsPositiveSign = false;

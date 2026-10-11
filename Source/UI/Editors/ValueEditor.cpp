@@ -12,6 +12,8 @@ ValueEditor::ValueEditor(juce::UndoManager& undoManager) : undoManager(undoManag
 
     textEditor->addListener(this);
 
+    textEditor->onTextChange = [this] { repaint(); };
+
     textEditor->setMultiLine(false);
     textEditor->setReturnKeyStartsNewLine(false);
 
@@ -109,15 +111,26 @@ void ValueEditor::paint(juce::Graphics& graphics)
         graphics.fillPath(textOutline);
         graphics.strokePath(textOutline, juce::PathStrokeType(smoothingWidth));
     }
+
+    if (isEditing && format->suffix.isNotEmpty()) {
+        const auto textEnd = textEditor->getCaretRectangleForCharIndex(textEditor->getTotalNumChars()) + textEditor->getPosition();
+
+        graphics.setColour(textEditor->findColour(juce::TextEditor::textColourId));
+        graphics.setFont(textEditor->getFont());
+        graphics.drawText(format->suffix, textEnd.withRight(getWidth()), juce::Justification::centredLeft, false);
+    }
 }
 
 void ValueEditor::resized()
 {
-    auto textBounds = getLocalBounds();
+    const float suffixWidth = textEditor->getFont().getStringWidthFloat(format->suffix);
+    auto        textBounds  = getLocalBounds();
 
     if (backdrop == Backdrop::Field || backdrop == Backdrop::Gauge) {
         textBounds = textBounds.reduced(juce::roundToInt(Theme::fieldTextInset), 0);
     }
+
+    textBounds.removeFromRight(static_cast<int>(std::ceil(suffixWidth)));
 
     textEditor->setBounds(textBounds);
 }
@@ -188,8 +201,18 @@ juce::Font ValueEditor::displayFont(const juce::String& text) const
     return font;
 }
 
-void ValueEditor::mouseDown(const juce::MouseEvent&)
+void ValueEditor::mouseDown(const juce::MouseEvent& event)
 {
+    if (event.mods.isCtrlDown() && ! event.mods.isShiftDown()) {
+        scrubStartValue = static_cast<double>(boundValue.getValue());
+
+        if (boundTree.isValid()) {
+            undoManager.beginNewTransaction();
+        }
+
+        return;
+    }
+
     beginEditing();
 }
 
@@ -205,6 +228,8 @@ void ValueEditor::beginEditing(bool selectAllText)
 
     textEditor->setFont(font);
     textEditor->applyFontToAllText(font);
+
+    resized();
 
     textEditor->setVisible(true);
     textEditor->setText(format->text(binding, TextPurpose::Editing), juce::dontSendNotification);
@@ -260,6 +285,18 @@ void ValueEditor::setNumericValue(double newValue)
     }
 
     boundValue.setValue(juce::roundToInt(clamped));
+}
+
+void ValueEditor::mouseDrag(const juce::MouseEvent& event)
+{
+    if (! editable || isEditing || ! event.mods.isCtrlDown() || event.mods.isShiftDown()) {
+        return;
+    }
+
+    const double smallestStep = std::pow(10.0, -format->decimalPlaces);
+    const int    scrubSteps   = -event.getOffsetFromDragStart().y / pixelsPerScrubStep;
+
+    setNumericValue(scrubStartValue + scrubSteps * smallestStep);
 }
 
 void ValueEditor::setPersistentEditor(bool shouldStayVisible)

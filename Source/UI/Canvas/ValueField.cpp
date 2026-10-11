@@ -1,7 +1,6 @@
 #include "ValueField.h"
 #include "NodeCanvas.h"
 #include "../Node/Node.h"
-#include "../Theme/CustomLookAndFeel.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
@@ -34,9 +33,8 @@ void ValueField::render()
         return;
     }
 
-    const int          fieldWidth  = juce::jmax(1, canvasWidth / fieldScale);
-    const int          fieldHeight = juce::jmax(1, canvasHeight / fieldScale);
-    const juce::Colour background  = CustomLookAndFeel::get(nodeCanvas).canvasColour.brighter();
+    const int fieldWidth  = juce::jmax(1, canvasWidth / fieldScale);
+    const int fieldHeight = juce::jmax(1, canvasHeight / fieldScale);
 
     accumulateNodeGlow(fieldWidth, fieldHeight);
 
@@ -54,17 +52,17 @@ void ValueField::render()
         juce::uint8* line         = pixels.getLinePointer(row);
 
         for (int column = 0; column < fieldWidth; ++column) {
-            juce::Colour     pixelColour = background;
+            juce::Colour     pixelColour = juce::Colours::transparentBlack;
             juce::PixelARGB* pixel       = reinterpret_cast<juce::PixelARGB*>(line + column * pixels.pixelStride);
 
             if (totalWeight[column] > 0.0f) {
                 const float fieldFactor = weightedSum[column] / totalWeight[column];
                 const float coverage    = juce::jlimit(0.0f, 1.0f, 1.0f - coverageProd[column]);
 
-                pixelColour = background.interpolatedWith(mapFieldColour(fieldFactor), coverage);
+                pixelColour = mapFieldColour(fieldFactor).withMultipliedAlpha(coverage);
             }
 
-            pixel->setARGB(pixelColour.getAlpha(), pixelColour.getRed(), pixelColour.getGreen(), pixelColour.getBlue());
+            pixel->set(pixelColour.getPixelARGB());
         }
     }
 }

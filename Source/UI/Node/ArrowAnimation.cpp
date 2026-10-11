@@ -62,8 +62,12 @@ bool ArrowAnimation::advance(double frameSec)
 
 bool ArrowAnimation::advanceSnap(float elapsedSec)
 {
+    if (1.0f - snapProgress < rulerFadeStartGap) {
+        rulerFade = juce::jmax(0.0f, rulerFade - elapsedSec * rulerFadePerSecond);
+    }
+
     if (snapSettled()) {
-        return false;
+        return rulerFade > 0.0f;
     }
 
     const float springTicks = elapsedSec * snapSpringRateHz;
@@ -75,7 +79,7 @@ bool ArrowAnimation::advanceSnap(float elapsedSec)
     if (snapSettled()) {
         snapProgress = 1.0f;
         snapVelocity = 0.0f;
-        return false;
+        return rulerFade > 0.0f;
     }
 
     return true;

@@ -14,12 +14,10 @@ NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRule
       colourSelector(colourPresets, undoManager)
 {
     editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawRulesButton(graphics, bounds, state, CustomLookAndFeel::get(*this).textHeight);
+        CustomLookAndFeel::get(*this).drawRulesButton(graphics, bounds, state, Theme::textHeight);
     };
 
     colourLabel.setText("COL", juce::dontSendNotification);
-
-    colourSelector.setEnabled(false);
 
     for (const LabeledRow& row : labeledRows) {
         auto format = std::make_unique<NumberFormat>(row.minimum, row.maximum);
@@ -37,7 +35,7 @@ NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRule
 
     editTraversalRulesButton.setText("edit traversal rules");
 
-    editTraversalRulesButton.onClick = [this]() { traversalRulesLauncher.show(); };
+    editTraversalRulesButton.onClick = [this]() { traversalRulesLauncher.show(*this); };
 
     colourSelector.onColourPicked = [this](juce::Colour pickedColour) {
         if (selectedNodeId < 0) {
@@ -47,23 +45,27 @@ NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRule
         this->graphState.setNodeColour(selectedNodeId, pickedColour.toString(), &this->undoManager);
     };
 
-    addAndMakeVisible(colourLabel);
-    addAndMakeVisible(colourSelector);
-    addAndMakeVisible(editTraversalRulesButton);
+    addChildComponent(colourLabel);
+    addChildComponent(colourSelector);
+    addChildComponent(editTraversalRulesButton);
 
     nodeCanvas.nodeManager.nodeSelectedListeners.push_back([this](Node* node, bool selected) {
         if (selected && node != nullptr) {
             selectedNodeId        = node->nodeId;
             colourSelector.colour = node->nodeColour;
 
-            colourSelector.setEnabled(true);
+            colourLabel.setVisible(true);
+            colourSelector.setVisible(true);
+            editTraversalRulesButton.setVisible(true);
 
             bindToNode(node);
         }
         else {
             selectedNodeId = -1;
 
-            colourSelector.setEnabled(false);
+            colourLabel.setVisible(false);
+            colourSelector.setVisible(false);
+            editTraversalRulesButton.setVisible(false);
 
             for (const LabeledRow& row : labeledRows) {
                 row.field.setVisible(false);
@@ -77,17 +79,28 @@ NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRule
 
 void NodeMenu::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawPane(graphics, getLocalBounds().toFloat());
+    CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
+    const int          spacing     = juce::roundToInt(Theme::barHeight * Theme::menuSpacingRatio);
+
+    if (selectedNodeId >= 0) {
+        lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
+
+        return;
+    }
+
+    graphics.setColour(lookAndFeel.mutedTextColour);
+    graphics.setFont(lookAndFeel.font(Theme::FontStyle::Regular, Theme::textHeight));
+    graphics.drawFittedText("Left click a node to edit it", getLocalBounds().reduced(spacing), juce::Justification::centred, 2);
 }
 
 void NodeMenu::resized()
 {
-    const int        barHeight       = static_cast<int>(getHeight() * Theme::barHeightRatio);
+    const int        barHeight       = Theme::barHeight;
     const int        spacing         = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
     const int        rowHeight       = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
-    const float      textHeight      = CustomLookAndFeel::get(*this).textHeight;
+    const float      textHeight      = Theme::textHeight;
     const juce::Font textFont        = CustomLookAndFeel::get(*this).font(Theme::FontStyle::Regular, textHeight);
-    auto             bounds          = getLocalBounds().reduced(spacing);
+    auto             bounds          = getLocalBounds().reduced(spacing).withWidth(Theme::menuContentWidth);
 
     editTraversalRulesButton.setBounds(bounds.removeFromBottom(juce::roundToInt(barHeight * Theme::menuButtonHeightRatio)));
 
@@ -142,4 +155,15 @@ void NodeMenu::bindToNode(const Node* node)
 
         row.field.setVisible(isShown);
     }
+}
+
+int NodeMenu::narrowestHeight() const
+{
+    const int barHeight    = Theme::barHeight;
+    const int spacing      = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
+    const int rowHeight    = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
+    const int buttonHeight = juce::roundToInt(barHeight * Theme::menuButtonHeightRatio);
+    const int rowCount     = static_cast<int>(labeledRows.size());
+
+    return spacing * 2 + buttonHeight + rowHeight + rowCount * (spacing + rowHeight);
 }

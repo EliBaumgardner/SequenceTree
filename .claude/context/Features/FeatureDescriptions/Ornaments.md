@@ -1,7 +1,7 @@
 # Ornaments
 
 > Status: Confirmed
-> Written 2026-10-09 at 31bccc7. Deployment answers added 2026-10-09.
+> Written 2026-10-09 at 31bccc7. Deployment answers added 2026-10-09. Host designation revised 2026-10-09.
 
 ## In the Owner's Words
 
@@ -15,13 +15,15 @@
 
 > The ornament button should be in the bottom bar. Right click the node should bring up a context menu with the option to delete the ornament, or shift right click. [A note retimed while its figure plays:] yes it should stretch.
 
+> The host node will actually work like this: the user will not actually add the "host node" on to the canvas, they will just designate which node is the host. With a separate button, no longer in a button pane with the button for adding ornaments. When they press the button, the cursor becomes a circle, and when they click on a node with that, it changes appearance and becomes the "host". If another node is already host, then it simply moves to that node instead. [The circle cursor] turns off when clicked. [Clicking empty canvas or Escape] cancels the mode. [Clicking the current host unmarks it:] yes, but [it] can't be published. [Deleting the host node leaves no host:] yes.
+
 ## Summary
 
-An ornament is a short, reusable figure (a trill, a mordent, a grace note, a turn) that decorates one node's note without the user having to build it into the tree. The user designs each ornament once in the ornament builder, which holds a small one-path graph of ornament nodes around a single host node, plus a freehand-drawn symbol that tells ornaments apart on the canvas, as notation does. One ornament button does both jobs: clicking it opens the builder, and dragging from it onto a node applies the ornament it shows. When an ornament is applied to a node, it replaces that node's single note with the ornament's figure. Every pitch is relative to the node's own pitch, and every duration is a share of the node's own duration.
+An ornament is a short, reusable figure (a trill, a mordent, a grace note, a turn) that decorates one node's note without the user having to build it into the tree. The user designs each ornament once in the ornament builder, which holds a small one-path graph of ornament nodes, one of which the user marks as the host, plus a freehand-drawn symbol that tells ornaments apart on the canvas, as notation does. One ornament button does both jobs: clicking it opens the builder, and dragging from it onto a node applies the ornament it shows. When an ornament is applied to a node, it replaces that node's single note with the ornament's figure. Every pitch is relative to the node's own pitch, and every duration is a share of the node's own duration.
 
 ## Parts
 
-- **Creation.** Designing an ornament in the builder: its figure (the mini graph) and its symbol (the freehand drawing), then publishing it once it has a connected host node.
+- **Creation.** Designing an ornament in the builder: its figure (the mini graph) and its symbol (the freehand drawing), then publishing it once one of its nodes is marked as the host.
 - **Deployment.** Choosing the active ornament in the builder, dragging it from the ornament button onto a node, and how an ornamented node then plays and looks.
 
 Creation is built first.
@@ -34,13 +36,13 @@ Building a lower-neighbour figure before the main note:
 
 1. The user clicks the ornament button, and the ornament window opens.
 2. The window has two panels. On the left is the build panel, where an ornament is assembled. On the right is the selection panel: every ornament in the user's library, each shown as its symbol with a small name tag under it. The user creates a new ornament and names it "Lower grace", and it opens in the build panel.
-3. A small button pane along the build panel's top, like the one in the title bar, offers the node kinds: a regular ornament node and the host node.
-4. With "regular node" chosen, the user places a node and sets its offset to −1 semitone and its velocity to 70%, so it is softer than the main note.
-5. The user switches to "host node" and places the host to the right, connecting the first node to it. The host's offset stays 0, so it plays the ornamented node's own pitch.
+3. The user places a node and sets its offset to −1 semitone and its velocity to 70%, so it is softer than the main note.
+4. The user places a second node to the right, connecting the first node to it. Its offset stays 0.
+5. The user presses the Host button on the build panel's top bar, a button of its own. The cursor becomes a circle. The user clicks the second node: it changes appearance to show it is the host, and the cursor goes back to normal. The host plays the ornamented node's own pitch.
 6. The user drags the two nodes, and the arrow lengths set how the note's time is split between them. The first node is drawn with half the host's length, so it takes a third of the note and the host takes two thirds.
 7. The user presses a small button at the side of the build panel, which switches the build panel to the symbol editor. They sketch the ornament's symbol freehand and save it.
-8. The "Publish" button, greyed out until a host node is connected, is now enabled. The user publishes the ornament, and "Lower grace" appears in the selection panel with its symbol and name tag.
-9. Later the user selects "Lower grace" in the selection panel, which opens it in the build panel, and changes the first node's offset to +1. Every node that already carries this ornament picks up the change.
+8. The "Publish" button, greyed out until a node is marked as the host, is now enabled. The user publishes the ornament, and "Lower grace" appears in the selection panel with its symbol and name tag.
+9. Later the user selects "Lower grace" in the selection panel, which opens it in the build panel, and changes the first node's offset to +1, either by typing it or by dragging the node up two grid spaces. The change is not live yet: the user presses Publish again, and every node that already carries this ornament picks it up.
 
 Applied to a node playing C4 for 1000: at velocity 100, the first node plays B3 for 333 at velocity 70, then the host plays C4 for 666.
 
@@ -66,17 +68,23 @@ A project uses "Lower grace", and is opened where the library has no ornament of
 ## Behaviour
 
 - **One path, no branching.** An ornament's graph is a single chain, played straight through, the same way every time.
-- **Exactly one host node.** The host button is unavailable once the ornament has a host. The host marks where the node's own note falls inside the figure, so ornament nodes can come before it, after it, or both.
+- **The host is a mark, not a kind of node.** The user places only ornament nodes, then marks one of them as the host. The host marks where the node's own note falls inside the figure, so ornament nodes can come before it, after it, or both.
+- **Choosing the host.** Pressing the Host button turns the cursor into a circle. Clicking a node with it makes that node the host, and the host is drawn with an inner ring. If another node was the host, the mark moves to the clicked node, so there is never more than one. Clicking the current host unmarks it, leaving the ornament with no host. Any click ends the mode and the cursor goes back to normal. Clicking empty canvas, pressing Escape or pressing the Host button again cancels it without changing anything. Deleting the host node leaves the ornament with no host, and undo brings the mark back.
 - **Pitch is an offset from the host's actual pitch.** Every ornament node, the host included, holds a semitone offset rather than a pitch. On a node playing C4, an ornament node at −1 plays B3. The host's offset is normally 0 (it plays the node's own note) but can be changed.
 - **Velocity is a percentage of the ornamented node's velocity.** Each ornament node carries one, so a grace note at 70% on a note at velocity 100 plays at 70, and stays proportionally softer when the note is quieter.
 - **Duration is a proportion, set by arrow length.** As on the main canvas, an ornament node's duration comes from the length of its arrow, so dragging nodes reshapes the figure's rhythm. The last node in the chain, often the host, gets its length from a dangling arrow, as a node at the end of a path does on the main canvas. When the ornament plays, each node gets *its duration ÷ the sum of the ornament's durations* of the ornamented node's actual duration. Designed as 500 then 1000 and applied to a note of 1000, that gives 333 and 666. The figure always fills exactly the ornamented note: never longer, never shorter.
-- **Publishing.** An ornament can be published only once its host node is connected into the chain. Until then the builder can save it but nothing can use it.
-- **Editing a published ornament** updates every node that carries it.
+- **Publishing.** An ornament can be published only while one of its nodes is marked as the host. Until then the builder can save it but nothing can use it.
+- **Editing a published ornament** changes nothing until the user publishes again; then every node that carries it updates. A change that leaves the figure without a host cannot be published, so nodes keep playing the last published version.
+- **Height sets the offset.** Moving a figure node up one grid space raises its offset by one semitone, and down lowers it, on top of whatever was typed. Only the moved node changes.
+- **Velocity can exceed 100%,** up to 200%, clamped to MIDI 127 when played.
+- **Removing a node from the middle of the chain** joins its neighbours, so the figure stays one chain.
+- **Growing the chain** gives the new last node the length of the arrow that reached it.
 - **One button, two gestures.** A click on the ornament button opens the builder; a drag from it onto a node applies the active ornament. The button always shows the active ornament's symbol.
 - **The active ornament is chosen in the selection panel.** Selecting an ornament there both opens it in the build panel for editing and makes it the one the button applies.
 - **The symbol sits at the top of the node's area** on the main canvas.
-- **A library across projects.** Ornaments are saved in the user's own library, not in a project, so every ornament is available in every project. Each has a name, shown as a tag under its symbol in the selection panel, where ornaments are chosen, created, renamed, duplicated and deleted.
-- **Sharing.** To give someone your ornaments, you share your ornament library with them.
+- **Libraries across projects.** Ornaments are saved in the user's libraries, not in a project, so every ornament is available in every project. Each has a name, shown as a tag under its symbol in the selection panel, where ornaments are chosen, created, renamed, duplicated and deleted.
+- **Several libraries.** A user can have any number of ornament libraries. Every library they have shows up in the selection panel, each as its own section, and all of their ornaments can be used.
+- **Sharing.** To give someone your ornaments, you send them a library. Adding it gives them one more library alongside their own; it never replaces anything.
 - **Its own window.** The ornament button opens one window holding both panels: the build panel and the selection panel.
 - **The ornament button is in the bottom bar.**
 - **One ornament per node.** Dropping an ornament on a node that already has one replaces it. Right-clicking the node offers "Delete ornament" in its context menu, and Shift+Right-Click on the ornament's symbol removes it directly; on the node body, Shift+Right-Click still deletes the node.
@@ -94,13 +102,21 @@ A project uses "Lower grace", and is opened where the library has no ornament of
 
 | Question | Answer |
 |---|---|
-| How does the user design what an ornament plays? | A mini graph of regular nodes and one host node, with a button pane like the title bar's for choosing the node kind. |
+| How does the user design what an ornament plays? | A mini graph of ornament nodes, one of which is marked as the host. |
 | Can the ornament graph branch? | Not for now: one chain only. |
 | Where does an ornament node's duration come from? | Arrow length, as on the main canvas. |
 | How are pitches held? | As semitone offsets from the ornamented node's actual pitch, on every ornament node including the host. |
 | How do durations apply? | As proportions of the ornamented node's actual duration. |
-| How many host nodes? | Exactly one. |
-| How is it published? | A Publish button, disabled until a host node is connected. A published ornament can still be edited, and every node using it updates. |
+| How many host nodes? | At most one. The host is a mark on one ornament node, not a node kind. |
+| How is the host chosen? | A Host button of its own turns the cursor into a circle. Clicking a node makes it the host, or moves the mark there from the old host. Any click ends the mode; empty canvas or Escape cancels it. |
+| Can the host be unmarked? | Yes, by clicking the current host. The ornament then can't be published. |
+| What if the host node is deleted? | The ornament has no host until another node is marked. |
+| How is it published? | A Publish button, disabled until a node is marked as the host. A published ornament can still be edited; its nodes update when it is published again. |
+| What if an edit removes the host? | The change cannot be published; nodes keep the last published version. |
+| Does height set the offset? | Yes: one grid space up is one semitone up, on top of the typed value. |
+| Removing a middle node? | Its neighbours join up. |
+| Velocity above 100%? | Yes, up to 200%. |
+| Length of a new last node? | The length of the arrow that reached it. |
 | How is the builder opened? | By clicking the ornament button, which opens the ornament window. |
 | Is it a window or a panel? | Its own window, holding the build panel and the selection panel. |
 | How is the builder laid out? | Build panel on the left; selection panel of every ornament on the right, each a symbol with a name tag under it. Selecting one opens it in the build panel. |
@@ -108,13 +124,13 @@ A project uses "Lower grace", and is opened where the library has no ornament of
 | What else can an ornament node set? | Velocity. |
 | How does the last node get its length? | From a dangling arrow, as on the main canvas. |
 | Is velocity fixed or relative? | A percentage of the ornamented node's velocity, for now. |
-| Where are ornaments saved? | In a library available to every project. |
+| Where are ornaments saved? | In libraries available to every project. A user can have several, and all of them show in the selection panel. |
 | Are ornaments named and managed? | Yes: named, with the selection panel for choosing, creating, renaming, duplicating and deleting. |
 | How is the active ornament chosen? | By selecting it in the selection panel; the ornament button then shows it. |
 | How is an ornament applied? | By dragging from the ornament button onto a node. |
 | Where does an applied ornament's symbol appear? | At the top of the node's area. |
 | What does deleting an ornament do? | Asks the user to confirm; nodes that carried it play plain again. |
-| How do ornaments reach another user? | The user shares their ornament library. |
+| How do ornaments reach another user? | The user sends a library; the receiver adds it as one more library, replacing nothing. |
 | Dropping onto an ornamented node? | Replaces its ornament. One ornament per node. |
 | What lights up while a figure plays? | The node, as now. Inner notes are not shown. |
 | Chords? | Ornamented note by note; dropping on the chord's first node ornaments only that note. |

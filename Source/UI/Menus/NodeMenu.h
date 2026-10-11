@@ -26,6 +26,8 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
+    int narrowestHeight() const;
+
 private:
 
     enum class RowSource { NodeTree, SubLoop, MidiNote };

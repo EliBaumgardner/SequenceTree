@@ -24,8 +24,9 @@
 #include "../Plugin/PluginProcessor.h"
 
 NodeController::NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager, TraversalSession& traversalSession,
-                               RTGraphBuilder& rtGraphBuilder)
+                               RTGraphBuilder& rtGraphBuilder, OrnamentLibraries& ornamentLibraries)
     : selectionOps(graphState, undoManager, nodeCanvas),
+      ornamentApplier(nodeCanvas, ornamentLibraries, undoManager),
       graphState(graphState),
       undoManager(undoManager),
       traversalSession(traversalSession),
@@ -165,6 +166,8 @@ void NodeController::dragArrowTip(juce::Point<int> cursor)
     }
 
     if (dragState == DragState::MovingDanglingTip) {
+        draggingDanglingArrow->dragging = true;
+
         draggingDanglingArrow->setTipOffset({ tip.x - centre.x, tip.y - centre.y });
         return;
     }
@@ -173,7 +176,7 @@ void NodeController::dragArrowTip(juce::Point<int> cursor)
         nodeCanvas.showGrid();
     }
 
-    nodeCanvas.arrowManager.updatePreview(sourceNode, { tip.x - centre.x, tip.y - centre.y }, dragState == DragState::ConnectingFlag);
+    nodeCanvas.arrowManager.updatePreview(sourceNode, { tip.x - centre.x, tip.y - centre.y });
 }
 
 Node* NodeController::findTipSnapTarget(const Node& startNode, juce::Point<int> tip) const
@@ -243,8 +246,11 @@ void NodeController::handleCanvasMouseDrag(const juce::MouseEvent& e)
 void NodeController::handleNodeDrag(int nodeId, NodePosition newPosition)
 {
     if (isDragStart) {
-        isDragStart = false;
+        isDragStart                           = false;
+        nodeCanvas.arrowManager.nodesDragging = true;
+
         undoManager.beginNewTransaction();
+
         nodeCanvas.showGrid();
     }
 
@@ -299,7 +305,7 @@ void NodeController::handleNodeMouseDrag(const juce::MouseEvent& e, Node& node)
         return;
     }
 
-    if (!e.mods.isShiftDown() && !e.mods.isCtrlDown() && !draggedNodeTree.isValid()) {
+    if (!e.mods.isShiftDown() && !draggedNodeTree.isValid()) {
         handleNodeDrag(nodeId, newPosition);
         return;
     }
@@ -340,7 +346,8 @@ void NodeController::handleNodeDragStart(Node *node, int nodeId, NodePosition ne
 
     nodeCanvas.showGrid();
 
-    snapSourceNodeId = parentNodeId;
+    snapSourceNodeId                      = parentNodeId;
+    nodeCanvas.arrowManager.nodesDragging = true;
 
     const NodePosition     parentPosition = graphState.getNodePosition(parentNodeId);
     const juce::Point<int> parentCentre   = parentNode->getNodeCentre();
@@ -348,7 +355,7 @@ void NodeController::handleNodeDragStart(Node *node, int nodeId, NodePosition ne
     newPosition.xPosition += parentPosition.xPosition - parentCentre.x;
     newPosition.yPosition += parentPosition.yPosition - parentCentre.y;
 
-    draggedNodeTree = NodeCreationDispatcher::create(nodeControllerMode, graphState, parentNodeId, nodeType, mods.isCtrlDown(), newPosition, &undoManager);
+    draggedNodeTree = NodeCreationDispatcher::create(nodeControllerMode, graphState, parentNodeId, nodeType, mods.isCtrlDown() && mods.isShiftDown(), newPosition, &undoManager);
 
     if (! draggedNodeTree.isValid()) {
         return;
@@ -434,7 +441,9 @@ void NodeController::setDraggedNodeVisible(bool shouldBeVisible)
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
     Node* const clickedNode  = dynamic_cast<Node*>(e.eventComponent);
-    const bool  isPlainClick = clickedNode != nullptr && dragState == DragState::Idle && e.mods.isLeftButtonDown() && !e.mods.isAnyModifierKeyDown() && e.getDistanceFromDragStart() < dragThreshold && !nodeCanvas.spanMode && nodeCanvas.quaverMode == NodeCanvas::QuaverMode::Off;
+    const bool  isPlainClick = clickedNode != nullptr && dragState == DragState::Idle && e.mods.isLeftButtonDown() && !e.mods.isAnyModifierKeyDown()
+                               && e.getDistanceFromDragStart() < dragThreshold && !nodeCanvas.spanMode
+                               && nodeCanvas.quaverMode == NodeCanvas::QuaverMode::Off && !ornamentApplier.isActive;
 
     if (dragState == DragState::MovingArrowHead) {
         finishArrowHeadDrag();
@@ -491,6 +500,8 @@ void NodeController::finishArrowHeadDrag()
     dragState             = DragState::Idle;
     isDragStart           = true;
 
+    nodeCanvas.arrowManager.endNodeDrag();
+
     if (headNode == nullptr) {
         return;
     }
@@ -538,6 +549,8 @@ void NodeController::finishArrowTip()
 
     Node* const sourceNode = draggedArrow->startNode;
 
+    draggedArrow->endDrag();
+
     if (targetNode == nullptr && tipGesture == DragState::MovingDanglingTip) {
         undoManager.beginNewTransaction();
         NodeFactory::setDanglingArrowTip(graphState, draggedArrow->arrowTree, draggedArrow->tipOffset, &undoManager);
@@ -561,8 +574,7 @@ void NodeController::finishArrowTip()
     }
 }
 
-void NodeController::connectWithSnapAnimation(int parentNodeId, int childNodeId,
-                                              ArrowType rootConnectionType)
+void NodeController::connectWithSnapAnimation(int parentNodeId, int childNodeId, ArrowType rootConnectionType)
 {
     Node* parentNode = nodeCanvas.nodeManager.find(parentNodeId);
     Node* childNode  = nodeCanvas.nodeManager.find(childNodeId);
@@ -577,6 +589,7 @@ void NodeController::connectWithSnapAnimation(int parentNodeId, int childNodeId,
     nodeCanvas.arrowManager.refreshFor(parentNode);
 
     auto arrowIterator = parentNode->nodeArrows.find(childNodeId);
+
     if (arrowIterator != parentNode->nodeArrows.end()) {
         arrowIterator->second->triggerSnapAnimation();
     }
@@ -610,6 +623,8 @@ void NodeController::endDrag()
     tipSnapTarget    = nullptr;
 
     nodeCanvas.hideGrid();
+
+    nodeCanvas.arrowManager.endNodeDrag();
 }
 
 void NodeController::mouseDown(const juce::MouseEvent& e)
@@ -645,6 +660,16 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
                                                     rtGraphBuilder.buildRTtraversal({ nodeCanvas.quaverTraversalId, 0 }),
                                                     nodeCanvas.quaverRepeat });
         }
+        return;
+    }
+
+    if (auto* const markView = dynamic_cast<OrnamentMarkView*>(e.eventComponent)) {
+        ornamentApplier.respondToMarkClick(e, *markView);
+        return;
+    }
+
+    if (ornamentApplier.isActive && e.mods.isLeftButtonDown() && ! e.mods.isAnyModifierKeyDown()) {
+        ornamentApplier.respondToClick(e.eventComponent);
         return;
     }
 
@@ -796,7 +821,7 @@ void NodeController::showArrowContextMenu(Arrow* arrow)
             return;
         }
 
-        allowedTraversalsLauncher.show([this, connection]() {
+        allowedTraversalsLauncher.show(nodeCanvas, [this, connection]() {
             auto content = std::make_unique<AllowedTraversalsMenu>(CustomLookAndFeel::get(nodeCanvas), graphState, undoManager, connection);
             content->setSize(AllowedTraversalsMenu::defaultWidth, content->getIdealHeight());
 
@@ -853,7 +878,7 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
 {
     dragParentCenter = node.getNodeCentre().toFloat();
 
-    if (node.nodeValueEditor.isVisible() && e.mods.isCtrlDown() && e.mods.isShiftDown()) {
+    if (node.nodeValueEditor.isVisible() && e.mods.isCtrlDown() && ! e.mods.isShiftDown()) {
         undoManager.beginNewTransaction();
 
         dragState         = DragState::EditingValue;

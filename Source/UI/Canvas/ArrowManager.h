@@ -27,12 +27,13 @@ public:
     void   adopt(std::unique_ptr<Arrow> arrow);
     Arrow* connectParentToChild(Node* parentNode, Node* childNode);
     void refreshFor(const Node* movedNode);
+    void endNodeDrag();
     void remove(Arrow* arrow);
     void removeForNode(const Node* node);
     void hideSnapGhost();
     void removeMatching(const std::function<bool(Arrow*)>& predicate);
     void clear();
-    void updatePreview(Node* node, juce::Point<int> tipOffset, bool dashed = false);
+    void updatePreview(Node* node, juce::Point<int> tipOffset);
     void commitPreview();
     void rebuildDanglingForNode(int nodeId);
     void refreshEncapsulatedArrows();
@@ -49,6 +50,7 @@ public:
 
     ArrowInfo              currentArrowInfo;
     std::unique_ptr<Arrow> preview;
+    bool                   nodesDragging = false;
 
 private:
 

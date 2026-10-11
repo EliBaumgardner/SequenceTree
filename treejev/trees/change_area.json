@@ -155,7 +155,8 @@
       "config": {
         "kind": "action",
         "description": "A canvas gesture or connection rule changed; exercise it in a host.",
-        "outcome": "pass"
+        "outcome": "pass",
+        "directive": "This changes a canvas gesture or connection rule; the tests do not reach it. Exercise the gesture in a host before calling it done."
       },
       "parentId": "area"
     },
@@ -169,7 +170,8 @@
       "config": {
         "kind": "action",
         "description": "UI only; look at it in a host.",
-        "outcome": "pass"
+        "outcome": "pass",
+        "directive": "This changes UI only; the tests do not reach it. Look at it in a host before calling it done."
       },
       "parentId": "area"
     }

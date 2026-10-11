@@ -57,7 +57,7 @@ void ItemSelector::showMenu()
     repaint();
 
     for (const Item& item : items) {
-        menu.addItem(item.label, ContextMenu::ItemKind::Action, [this, itemId = item.id]() { handleResult(itemId); });
+        menu.addItem(item.label, ContextMenu::ItemKind::Action, [this, itemId = item.id]() { handleResult(itemId); }, item.isEnabled);
     }
 
     menu.onDismissed = [this]() {
@@ -102,9 +102,9 @@ const ItemSelector::Item* ItemSelector::findItem(int itemId) const
     return nullptr;
 }
 
-void ItemSelector::addItem(int itemId, juce::String label, Action onChosen)
+void ItemSelector::addItem(int itemId, juce::String label, Action onChosen, bool isEnabled)
 {
-    items.push_back({ itemId, std::move(label), std::move(onChosen) });
+    items.push_back({ itemId, std::move(label), std::move(onChosen), isEnabled });
 }
 
 void ItemSelector::removeItem(int itemId)

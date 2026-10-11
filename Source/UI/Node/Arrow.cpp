@@ -216,27 +216,35 @@ ArrowLabel Arrow::getLabel(const ArrowGeometry& geometry, float headLength) cons
     return label;
 }
 
-bool Arrow::isDashed() const
+Arrow::ShaftStyle Arrow::shaftStyle() const
 {
-    if (dashed || isGhost) {
-        return true;
+    if (dragging) {
+        return ShaftStyle::Ruler;
+    }
+
+    if (isGhost) {
+        return ShaftStyle::Dashed;
     }
 
     if (startNode == nullptr) {
-        return false;
+        return ShaftStyle::Solid;
     }
 
     if (startNode->nodeType == NodeType::TraversalFlag) {
-        return true;
+        return ShaftStyle::Dashed;
     }
 
     if (endNode == nullptr || endNode->nodeType != NodeType::Root || startNode->isAlternativeNode) {
-        return false;
+        return ShaftStyle::Solid;
     }
 
     const ArrowType arrowType = ArrowBindingOps::getArrowInfo(arrowTree).type;
 
-    return arrowType != ArrowType::Traversal && arrowType != ArrowType::StepIntoTree;
+    if (arrowType == ArrowType::Traversal || arrowType == ArrowType::StepIntoTree) {
+        return ShaftStyle::Solid;
+    }
+
+    return ShaftStyle::Dashed;
 }
 
 bool Arrow::isTraversalArrow() const
@@ -424,6 +432,20 @@ void Arrow::triggerSnapAnimation()
 {
     animation.snapProgress = 0.0f;
     animation.snapVelocity = 0.0f;
+
+    if (dragging) {
+        animation.rulerFade = 1.0f;
+    }
+
+    if (animationFrames.isEmpty()) {
+        animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
+    }
+}
+
+void Arrow::endDrag()
+{
+    dragging            = false;
+    animation.rulerFade = 1.0f;
 
     if (animationFrames.isEmpty()) {
         animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });

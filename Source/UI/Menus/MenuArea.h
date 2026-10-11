@@ -15,16 +15,20 @@ class TraversalRuleState;
 class AudioSnapshotPublisher;
 class TraversalMenu;
 class NodeMenu;
+class ScaledView;
 
 class MenuArea : public juce::Component
 {
 public:
     MenuArea(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-             juce::PropertiesFile& interfaceSettings, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
+             juce::PropertiesFile& interfaceSettings, ScaledView& scaledView, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
+
     ~MenuArea() override;
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
+
+    int narrowestHeight() const;
 
     static constexpr float resizerWidthRatio = 0.4f;
     static constexpr float menuBarWidthRatio = 1.12f;
@@ -41,6 +45,7 @@ private:
 
     NodeCanvas&           nodeCanvas;
     juce::PropertiesFile& interfaceSettings;
+    ScaledView&           scaledView;
     juce::ValueTree       colourPresets;
     juce::UndoManager&    undoManager;
 
@@ -49,9 +54,11 @@ private:
     PopupWindowLauncher settingsLauncher {
         "Settings",
         [this]() {
-            auto content = std::make_unique<SettingsMenu>(CustomLookAndFeel::get(*this), interfaceSettings, colourPresets, undoManager);
+            auto content = std::make_unique<SettingsMenu>(CustomLookAndFeel::get(*this), interfaceSettings, scaledView, colourPresets, undoManager);
 
-            content->setSize(SettingsMenu::defaultWidth, SettingsMenu::defaultHeight);
+            const juce::Point<int> size = content->narrowestSize();
+
+            content->setSize(size.x, size.y);
 
             return content;
         }

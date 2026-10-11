@@ -18,7 +18,7 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
-    void addItem(int itemId, juce::String label, Action onChosen = nullptr);
+    void addItem(int itemId, juce::String label, Action onChosen = nullptr, bool isEnabled = true);
     void removeItem(int itemId);
     void clearItems();
     void setSelectedItem(int itemId);
@@ -40,6 +40,7 @@ private:
         int          id;
         juce::String label;
         Action       action;
+        bool         isEnabled;
     };
 
     void showMenu();

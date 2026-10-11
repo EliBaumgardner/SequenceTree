@@ -49,6 +49,7 @@ private:
         std::unordered_set<int> rebuildRootIds;
         std::unordered_set<int> traversalIds;
         std::vector<int>        durationRefreshNodeIds;
+        bool                    ornamentsChanged = false;
     };
 
     void rebuildGraphsForTraversal(int traversalId);

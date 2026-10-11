@@ -20,8 +20,15 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 #endif
 , valueTreeState(*this,nullptr,"STATE",createParameterLayout())
 {
+    const juce::File applicationSupport = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application Support");
+
     traversalRuleState.ensureDefaultRule();
     snapshots.publishActiveTraversalRule();
+
+    patchFolder.createDirectory();
+
+    ornamentLibraries.load(userFolder.getChildFile("Ornament Libraries"));
+    ornamentLibraries.importLegacyLibraries(applicationSupport.getChildFile(JucePlugin_Name).getChildFile("Ornament Libraries"));
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::createParameterLayout()

@@ -24,6 +24,16 @@ struct RTNote {
     int midiChannel = 1;
 };
 
+enum class OrnamentNodeKind { Note, Host };
+
+struct OrnamentStep
+{
+    OrnamentNodeKind kind;
+    int              offset;
+    int              velocityPercent;
+    int              durationWeight;
+};
+
 struct TraversalKey {
 
     static constexpr int maxInstances = 26;
@@ -112,6 +122,7 @@ struct RTNode {
     std::vector<RTNote>       notes;
     std::vector<RTConnection> connections;
     std::vector<DanglingArrow> danglingArrows;
+    std::vector<OrnamentStep>  ornament;
 
     int alternativeArrowDuration = -1;
 

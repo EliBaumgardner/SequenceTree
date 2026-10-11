@@ -22,6 +22,7 @@ public:
     void beginEditing(bool selectAllText = true);
     void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
     void setNumericValue(double newValue);
+    void mouseDrag(const juce::MouseEvent& event) override;
     void setPersistentEditor(bool shouldStayVisible);
     void bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID);
     void setFontHeight(float newFontHeight);
@@ -49,6 +50,7 @@ public:
     static constexpr float  defaultAutoFitInsetRatio = 0.25f;
     static constexpr float  baseFontHeight           = 9.0f;
     static constexpr double wheelRangeFraction       = 1.0;
+    static constexpr int    pixelsPerScrubStep       = 3;
     static constexpr float  fontSmoothingPerPixel    = 0.028f;
     static constexpr float  fontSmoothingLimit       = 0.8f;
 
@@ -94,6 +96,8 @@ private:
     TextOutlineKey textOutlineKey;
     juce::Path     textOutline;
     float          textOutlineHeight = 0.0f;
+
+    double scrubStartValue = 0.0;
 
     bool isEditing        = false;
     bool persistentEditor = false;

@@ -13,11 +13,11 @@ public:
 
     void paint(juce::Graphics& graphics) override;
 
-    void mouseDown(const juce::MouseEvent& event) override;
-    void mouseDrag(const juce::MouseEvent& event) override;
-    void mouseUp(const juce::MouseEvent& event) override;
+    void mouseDown (const juce::MouseEvent& event) override;
+    void mouseDrag (const juce::MouseEvent& event) override;
+    void mouseUp   (const juce::MouseEvent& event) override;
     void mouseEnter(const juce::MouseEvent& event) override;
-    void mouseExit(const juce::MouseEvent& event) override;
+    void mouseExit (const juce::MouseEvent& event) override;
 
     std::function<void(int)> onWidthDragged;
 

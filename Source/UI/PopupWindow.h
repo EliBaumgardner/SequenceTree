@@ -2,6 +2,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "ScaledView.h"
+
 #include <concepts>
 #include <functional>
 #include <memory>
@@ -10,15 +12,18 @@ class PopupWindow : public juce::DocumentWindow
 {
 public:
 
-    PopupWindow(const juce::String& title, std::unique_ptr<juce::Component> content,
+    PopupWindow(const juce::String& title, std::unique_ptr<juce::Component> content, juce::Component& origin, juce::Point<float> openingScale,
                 juce::Colour backgroundColour = juce::Colour::fromRGB(30, 30, 30));
 
     void closeButtonPressed() override;
 
+    std::unique_ptr<juce::Component> content;
+
 private:
 
-    static constexpr float minimumSizeRatio = 0.7f;
-    static constexpr float maximumSizeRatio = 4.0f;
+    ScaledView scaledView;
+
+    static constexpr int maximumWindowSide = 8192;
 };
 
 class PopupWindowLauncher
@@ -33,8 +38,8 @@ public:
     explicit PopupWindowLauncher(juce::String title,
                                  juce::Colour backgroundColour = juce::Colour::fromRGB(30, 30, 30));
 
-    void show();
-    void show(const ContentFactory& factory);
+    void show(juce::Component& origin);
+    void show(juce::Component& origin, const ContentFactory& factory);
     void toFront();
 
     template <std::derived_from<juce::Component> ContentType>
@@ -44,10 +49,12 @@ public:
             return nullptr;
         }
 
-        return dynamic_cast<ContentType*>(window->getContentComponent());
+        return dynamic_cast<ContentType*>(window->content.get());
     }
 
     std::unique_ptr<PopupWindow> window;
+
+    juce::Point<float> openingScale { 1.0f, 1.0f };
 
 private:
 

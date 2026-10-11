@@ -39,7 +39,8 @@ void PanelResizer::mouseDrag(const juce::MouseEvent& event)
         return;
     }
 
-    int delta = event.getScreenPosition().getX() - event.getMouseDownScreenPosition().getX();
+    const float scale = juce::Component::getApproximateScaleFactorForComponent(this);
+    int         delta = juce::roundToInt(static_cast<float>(event.getScreenPosition().getX() - event.getMouseDownScreenPosition().getX()) / scale);
 
     if (edge == Edge::Left) {
         delta = -delta;

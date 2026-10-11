@@ -31,11 +31,14 @@ public:
     static constexpr float snapSettledEpsilon  = 0.001f;
     static constexpr float hoverFadePerSecond  = 4.8f;
     static constexpr float hoverFadeEpsilon    = 0.001f;
+    static constexpr float rulerFadePerSecond  = 8.0f;
+    static constexpr float rulerFadeStartGap   = 0.02f;
 
     float snapProgress = 1.0f;
     float snapVelocity = 0.0f;
     float alpha        = 1.0f;
     float alphaTarget  = 1.0f;
+    float rulerFade    = 0.0f;
 
     double lastFrameSec = 0.0;
 

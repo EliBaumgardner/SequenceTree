@@ -2,6 +2,7 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "../Graph/RTData.h"
+#include <span>
 #include <vector>
 
 class NoteScheduler
@@ -20,16 +21,28 @@ public:
 
     enum class Sound { Audible, Silent };
 
+    struct OrnamentProgress
+    {
+        int    step             = 0;
+        int    basePitch        = 0;
+        int    baseVelocity     = 0;
+        double remainingSamples = 0.0;
+    };
+
     struct ActiveNote
     {
-        MidiEvent        event;
-        NoteRole         role        = NoteRole::Stepping;
-        int              runId       = 0;
+        MidiEvent event;
+        NoteRole  role  = NoteRole::Stepping;
+        int       runId = 0;
+
         double           remainingSamples = 0.0;
         int              nodeId           = 0;
         RTNode::NodeType nodeType         = RTNode::NodeType::Node;
-        bool             isConnectionTrigger = false;
-        Sound            sound               = Sound::Audible;
+
+        bool  isConnectionTrigger = false;
+        Sound sound               = Sound::Audible;
+
+        OrnamentProgress ornament;
     };
 
     struct NoteVoicing
@@ -56,6 +69,11 @@ public:
 
     static bool isNoteSounding(const ActiveNote& note);
     static bool isNodeAudible(RTNode::NodeType nodeType);
+    void continueOrnament(ActiveNote note, const RTNode* node, juce::MidiBuffer& midiMessages, double sample);
     void sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
     void removeNote(int index);
+
+private:
+
+    static void startOrnamentStep(ActiveNote& note, std::span<const OrnamentStep> figure, double sample);
 };
