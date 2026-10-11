@@ -191,15 +191,54 @@ void CustomLookAndFeel::drawArrow(juce::Graphics& graphics, const Arrow& arrow)
 
     const juce::Point<float> origin { static_cast<float>(arrow.getX()), static_cast<float>(arrow.getY()) };
 
-    juce::Path shaft = arrow.buildShaftPath(geometry, headLength, origin);
+    juce::Path              shaft        = arrow.buildShaftPath(geometry, headLength, origin);
+    const Arrow::ShaftStyle shaftStyle   = arrow.shaftStyle();
+    float                   rulerOpacity = arrow.animation.rulerFade;
 
-    if (arrow.isDashed()) {
+    if (shaftStyle == Arrow::ShaftStyle::Ruler) {
+        rulerOpacity = 1.0f;
+    }
+
+    if (rulerOpacity > 0.0f) {
+        const float shaftLength = shaft.getLength();
+        const float tickSpacing = ArrowInfo::pixelsPerGridSpace / static_cast<float>(rulerTicksPerGridSpace);
+        juce::Path  minorTicks;
+        juce::Path  majorTicks;
+
+        for (int tick = 1; static_cast<float>(tick) * tickSpacing <= shaftLength; ++tick) {
+            const float              distance  = static_cast<float>(tick) * tickSpacing;
+            const juce::Point<float> point     = shaft.getPointAlongPath(distance);
+            const juce::Point<float> behind    = shaft.getPointAlongPath(distance - 1.0f);
+            const juce::Point<float> direction = (point - behind) / juce::jmax(point.getDistanceFrom(behind), 0.001f);
+            const juce::Point<float> normal    { -direction.y, direction.x };
+
+            if (tick % rulerTicksPerGridSpace == 0) {
+                majorTicks.startNewSubPath(point + normal * rulerMajorTickHalfLength);
+                majorTicks.lineTo(point - normal * rulerMajorTickHalfLength);
+            }
+            else {
+                minorTicks.startNewSubPath(point + normal * rulerMinorTickHalfLength);
+                minorTicks.lineTo(point - normal * rulerMinorTickHalfLength);
+            }
+        }
+
+        graphics.setColour(arrowColour.withAlpha(alpha * rulerOpacity * rulerSpineAlpha));
+        graphics.strokePath(shaft, juce::PathStrokeType(rulerSpineThickness));
+
+        graphics.setColour(arrowColour.withAlpha(alpha * rulerOpacity));
+        graphics.strokePath(minorTicks, juce::PathStrokeType(rulerMinorTickThickness, juce::PathStrokeType::mitered, juce::PathStrokeType::butt));
+        graphics.strokePath(majorTicks, juce::PathStrokeType(rulerMajorTickThickness, juce::PathStrokeType::mitered, juce::PathStrokeType::butt));
+    }
+
+    if (shaftStyle == Arrow::ShaftStyle::Dashed) {
         juce::PathStrokeType dashStroke(arrowShaftThickness);
         float dashLengths[] = { 6.0f, 7.0f };
         dashStroke.createDashedStroke(shaft, shaft, dashLengths, 2);
     }
 
-    strokeArrowShaft(graphics, shaft, emphasised, alpha, arrowColour);
+    if (shaftStyle != Arrow::ShaftStyle::Ruler) {
+        strokeArrowShaft(graphics, shaft, emphasised, alpha * (1.0f - rulerOpacity), arrowColour);
+    }
 
     if (! arrow.isGhost && ! arrow.animation.trails.empty()) {
         drawArrowProgress(graphics, arrow, shaft, geometry.chord);

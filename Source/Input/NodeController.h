@@ -16,6 +16,7 @@
 #include "NodeCreationDispatcher.h"
 #include "ConnectionOps.h"
 #include "SelectionOps.h"
+#include "OrnamentApplier.h"
 
 
 class NodeCanvas;
@@ -47,9 +48,10 @@ public:
     using NodeControllerMode = NodeCreationMode;
     NodeControllerMode nodeControllerMode = NodeControllerMode::Node;
     SelectionOps       selectionOps;
+    OrnamentApplier    ornamentApplier;
 
     NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager, TraversalSession& traversalSession,
-                   RTGraphBuilder& rtGraphBuilder);
+                   RTGraphBuilder& rtGraphBuilder, OrnamentLibraries& ornamentLibraries);
     ~NodeController() override;
 
     void mouseDown           (const juce::MouseEvent& e) override;
@@ -99,7 +101,7 @@ private:
     void updateBoxSelection    (const juce::MouseEvent& e);
     void setDraggedNodeVisible (bool shouldBeVisible);
 
-    void connectWithSnapAnimation (int parentNodeId, int childNodeId, ArrowType rootConnectionType);
+    void connectWithSnapAnimation(int parentNodeId, int childNodeId, ArrowType rootConnectionType);
     void connectDraggedNodeToRoot ();
 
     void finishArrowTip              ();

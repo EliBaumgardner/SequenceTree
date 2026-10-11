@@ -9,8 +9,10 @@
 #include "Input/ConnectionOps.h"
 #include "Script/ScriptCompiler.h"
 #include "Graph/NodeFactory.h"
+#include "Graph/OrnamentLibraries.h"
 
 #include <memory>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -597,36 +599,17 @@ struct PlayedNote
     bool operator==(const PlayedNote&) const = default;
 };
 
-static std::vector<PlayedNote> playChainWithScript(const char* scriptSource)
+static std::vector<PlayedNote> playProcessor(SequenceTreeAudioProcessor& processor)
 {
     constexpr double sampleRate = 48000.0;
     constexpr int    blockSize  = 512;
     constexpr int    blockCount = 400;
-
-    SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
 
     HostPlayHead             playHead;
     juce::AudioBuffer<float> buffer(2, blockSize);
     juce::MidiBuffer         midi;
     std::vector<PlayedNote>  played;
     double                   ppq = 0.0;
-
-    const int rootId  = createRoot(graph, 0, 0);
-    const int firstId = createChild(graph, rootId, 100, 0);
-
-    createChild(graph, firstId, 220, 0);
-    rebuildAndPublish(processor);
-
-    processor.snapshots.publishScript(nullptr);
-
-    if (scriptSource != nullptr) {
-        ScriptCompileResult compiled = compileTraversalScript(scriptSource);
-
-        REQUIRE(compiled.succeeded());
-
-        processor.snapshots.publishScript(std::make_shared<RTScript>(std::move(compiled.script)));
-    }
 
     playHead.position.setIsPlaying(true);
     playHead.position.setBpm(120.0);
@@ -654,6 +637,30 @@ static std::vector<PlayedNote> playChainWithScript(const char* scriptSource)
     processor.setPlayHead(nullptr);
 
     return played;
+}
+
+static std::vector<PlayedNote> playChainWithScript(const char* scriptSource)
+{
+    SequenceTreeAudioProcessor processor;
+    GraphState& graph = processor.graphState;
+
+    const int rootId  = createRoot(graph, 0, 0);
+    const int firstId = createChild(graph, rootId, 100, 0);
+
+    createChild(graph, firstId, 220, 0);
+    rebuildAndPublish(processor);
+
+    processor.snapshots.publishScript(nullptr);
+
+    if (scriptSource != nullptr) {
+        ScriptCompileResult compiled = compileTraversalScript(scriptSource);
+
+        REQUIRE(compiled.succeeded());
+
+        processor.snapshots.publishScript(std::make_shared<RTScript>(std::move(compiled.script)));
+    }
+
+    return playProcessor(processor);
 }
 
 static std::string traversalWithMain(const std::string& mainBody)
@@ -712,5 +719,88 @@ TEST_CASE("a main that never plays is silent, and the walk still keeps time", "[
 
     for (const PlayedNote& note : played) {
         CHECK(std::ranges::find(builtIn, note) != builtIn.end());
+    }
+}
+
+struct TemporaryLibraryFolder
+{
+    juce::File folder = juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("GraphTestsOrnaments", "", false);
+
+    ~TemporaryLibraryFolder()
+    {
+        folder.deleteRecursively();
+    }
+};
+
+static constexpr int ornamentedPitch = 72;
+
+static std::vector<PlayedNote> playLowerGraceChain(bool ornamentsFirstNode)
+{
+    TemporaryLibraryFolder     temporary;
+    SequenceTreeAudioProcessor processor;
+    GraphState&                graph     = processor.graphState;
+    OrnamentLibraries&         ornaments = processor.ornamentLibraries;
+
+    ornaments.load(temporary.folder);
+
+    const juce::ValueTree library  = ornaments.addLibrary("Graph tests", nullptr);
+    juce::ValueTree       ornament = ornaments.addOrnament(library, nullptr);
+    juce::ValueTree       grace    = ornaments.addFigureNode(ornament, -1, { 0, 0 }, nullptr);
+    const juce::ValueTree host     = ornaments.addFigureNode(ornament, grace.getProperty(ValueTreeIdentifiers::Id), { 100, 0 }, nullptr);
+
+    grace.setProperty(ValueTreeIdentifiers::OrnamentOffset,   -1, nullptr);
+    grace.setProperty(ValueTreeIdentifiers::OrnamentVelocity, 70, nullptr);
+
+    ornaments.toggleHost(ornament, host.getProperty(ValueTreeIdentifiers::Id), nullptr);
+    ornaments.setLastNodeLength(ornament, { 200, 0 }, nullptr);
+    ornaments.publish(ornament, nullptr);
+
+    const int       rootId  = createRoot(graph, 0, 0);
+    const int       firstId = createChild(graph, rootId, 100, 0);
+    juce::ValueTree first   = graph.getNode(firstId);
+
+    createChild(graph, firstId, 220, 0);
+
+    first.getChildWithName(ValueTreeIdentifiers::MidiNotesData).getChild(0).setProperty(ValueTreeIdentifiers::MidiPitch, ornamentedPitch, nullptr);
+
+    if (ornamentsFirstNode) {
+        first.setProperty(ValueTreeIdentifiers::OrnamentUid, ornament.getProperty(ValueTreeIdentifiers::OrnamentUid), nullptr);
+    }
+
+    rebuildAndPublish(processor);
+    processor.snapshots.publishScript(nullptr);
+
+    return playProcessor(processor);
+}
+
+TEST_CASE("an ornamented node plays its figure across its own duration, and the walk keeps its rhythm", "[graph][ornament]")
+{
+    const std::vector<PlayedNote> plain      = playLowerGraceChain(false);
+    const std::vector<PlayedNote> ornamented = playLowerGraceChain(true);
+    std::vector<PlayedNote>       expected;
+
+    REQUIRE(plain.size() > 4);
+    CHECK(std::ranges::count(plain, ornamentedPitch, &PlayedNote::pitch) > 1);
+
+    for (std::size_t index = 0; index + 1 < plain.size(); ++index) {
+        const PlayedNote& note   = plain[index];
+        const int         length = plain[index + 1].sample - note.sample;
+
+        if (note.pitch != ornamentedPitch) {
+            expected.push_back(note);
+            continue;
+        }
+
+        expected.push_back({ note.pitch - 1, juce::roundToInt(note.velocity * 0.7), note.sample });
+        expected.push_back({ note.pitch, note.velocity, note.sample + length / 3 });
+    }
+
+    REQUIRE(ornamented.size() >= expected.size());
+
+    for (std::size_t index = 0; index < expected.size(); ++index) {
+        CAPTURE(index);
+        CHECK(ornamented[index].pitch    == expected[index].pitch);
+        CHECK(ornamented[index].velocity == expected[index].velocity);
+        CHECK(std::abs(ornamented[index].sample - expected[index].sample) <= 1);
     }
 }

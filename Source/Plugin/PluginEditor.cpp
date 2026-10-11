@@ -29,19 +29,22 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     tooltipWindow.setOpaque(false);
 
+    scaledView     = std::make_unique<ScaledView>(workspace, *interfaceSettings);
     nodeCanvas     = std::make_unique<NodeCanvas>(p, p.graphState, p.rtGraphBuilder, p.undoManager, lookAndFeel);
-    nodeController = std::make_unique<NodeController>(*nodeCanvas, p.graphState, p.undoManager, p.traversalSession, p.rtGraphBuilder);
+    nodeController = std::make_unique<NodeController>(*nodeCanvas, p.graphState, p.undoManager, p.traversalSession, p.rtGraphBuilder, p.ornamentLibraries);
     port           = std::make_unique<DynamicPort>(*nodeCanvas);
-    menuArea       = std::make_unique<MenuArea>(*nodeCanvas, p.graphState, p.traversalRuleState, p.snapshots, *interfaceSettings, p.colourPresets, p.undoManager);
+    menuArea       = std::make_unique<MenuArea>(*nodeCanvas, p.graphState, p.traversalRuleState, p.snapshots, *interfaceSettings, *scaledView, p.colourPresets, p.undoManager);
     titleBar       = std::make_unique<Titlebar>(p, *nodeCanvas, *nodeController, p.undoManager);
-    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, p.traversalSession, p.colourPresets, p.undoManager);
+    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, p.traversalSession, p.colourPresets, p.undoManager, p.ornamentLibraries, p.ornamentUndoManager, nodeController->ornamentApplier);
+    canvasFrame    = std::make_unique<CanvasFrame>(*nodeCanvas, *menuArea, *titleBar, *bottomBar);
 
     titleBar->onDisplayModeChanged = [this](NodeDisplayMode mode) { bottomBar->applyDisplayMode(mode); };
 
+    port->onTransformChanged = [this](const juce::AffineTransform& viewTransform, float zoom) { nodeCanvas->applyViewTransform(viewTransform, zoom); };
+
     menuArea->resizer.onWidthDragged = [this](int newWidth) {
-        int total = getWidth();
-        if (total <= 0) return;
-        menuAreaWidthRatio = juce::jlimit(0.01f, 0.9f, static_cast<float>(newWidth) / static_cast<float>(total));
+        menuWidth = newWidth;
+
         resized();
 
         repaint();
@@ -59,14 +62,13 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     audioProcessor.graphState.nodeMap.addListener(&nodeCanvas->treeListener);
 
-    addAndMakeVisible(port.get());
-    addAndMakeVisible(menuArea.get());
-    addAndMakeVisible(titleBar.get());
-    addAndMakeVisible(bottomBar.get());
+    workspace.addAndMakeVisible(port.get());
+    workspace.addAndMakeVisible(canvasFrame.get());
+    workspace.addAndMakeVisible(menuArea.get());
+    workspace.addAndMakeVisible(titleBar.get());
+    workspace.addAndMakeVisible(bottomBar.get());
 
-    setResizable(true,false);
-    setResizeLimits(minimumWindowSide, minimumWindowSide, maximumWindowSide, maximumWindowSide);
-    setSize (700, 500);
+    configureWindowSize();
 
     audioCommandFrames = juce::VBlankAttachment(this, [this](double) {
         lookAndFeel.frostedBackdropStale = true;
@@ -102,53 +104,71 @@ void SequenceTreeAudioProcessorEditor::paint (juce::Graphics& g) { g.fillAll(loo
 
 void SequenceTreeAudioProcessorEditor::resized()
 {
-    const auto windowArea = getLocalBounds().reduced(Theme::windowGutter);
-    auto       bounds     = windowArea;
+    scaledView->setBounds(getLocalBounds());
 
-    auto barHeight = static_cast<int>(bounds.getHeight() * Theme::barHeightRatio);
-    auto minMenuWidth = juce::roundToInt(barHeight * (MenuArea::menuBarWidthRatio + MenuArea::resizerWidthRatio));
-    auto menuAreaWidth = juce::jmax(minMenuWidth, static_cast<int>(bounds.getWidth() * menuAreaWidthRatio));
+    const auto windowArea    = workspace.getLocalBounds().reduced(Theme::windowGutter);
+    auto       bounds        = windowArea;
+    const int  barHeight     = Theme::barHeight;
+    const int  barsWidth     = juce::jmax(titleBar->narrowestWidth(), bottomBar->narrowestWidth());
+    const int  panelSpacing  = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
+    const int  minMenuWidth  = juce::roundToInt(barHeight * (MenuArea::menuBarWidthRatio + MenuArea::resizerWidthRatio));
+    const int  fullMenuWidth = juce::roundToInt(barHeight * MenuArea::menuBarWidthRatio) + juce::roundToInt(barHeight * MenuArea::resizerWidthRatio)
+                               + Theme::menuContentWidth + panelSpacing * 2;
+    const int  maxMenuWidth  = juce::jmin(fullMenuWidth, juce::jmax(minMenuWidth, bounds.getWidth() - Theme::windowGutter - barsWidth));
 
-    auto menuAreaBounds   = bounds.removeFromLeft(menuAreaWidth + Theme::windowGutter).withTrimmedRight(Theme::windowGutter);
+    menuWidth = juce::jlimit(minMenuWidth, maxMenuWidth, menuWidth);
+
+    auto menuAreaBounds   = bounds.removeFromLeft(menuWidth + Theme::windowGutter).withTrimmedRight(Theme::windowGutter);
     auto titleArea        = bounds.removeFromTop(barHeight + Theme::windowGutter).withTrimmedBottom(Theme::windowGutter);
     auto bottomArea       = bounds.removeFromBottom(barHeight + Theme::windowGutter).withTrimmedTop(Theme::windowGutter);
 
-    canvasFrame = bounds;
+    canvasFrame->canvasArea = bounds - windowArea.getPosition();
 
-    lookAndFeel.textHeight = juce::jmin(barHeight * Theme::textHeightRatio, bounds.getWidth() * Theme::textWidthRatio);
+    menuArea   ->setBounds(menuAreaBounds);
+    titleBar   ->setBounds(titleArea);
+    bottomBar  ->setBounds(bottomArea);
+    port       ->setBounds(windowArea);
+    canvasFrame->setBounds(windowArea);
 
-    menuArea ->setBounds(menuAreaBounds);
-    titleBar ->setBounds(titleArea);
-    bottomBar->setBounds(bottomArea);
-    port->setBounds(windowArea);
-
-    lookAndFeel.unfrostedArea = nodeCanvas->getLocalArea(this, canvasFrame);
+    lookAndFeel.unfrostedArea = nodeCanvas->getLocalArea(&workspace, bounds);
 }
 
-void SequenceTreeAudioProcessorEditor::paintOverChildren (juce::Graphics& graphics)
+void SequenceTreeAudioProcessorEditor::configureWindowSize()
 {
-    const auto frame = canvasFrame.toFloat().reduced(Theme::borderThickness * 0.5f);
-    juce::Path surround;
+    const int minMenuWidth = juce::roundToInt(Theme::barHeight * (MenuArea::menuBarWidthRatio + MenuArea::resizerWidthRatio));
 
-    surround.addRectangle(port->getBounds().toFloat());
-    surround.addRoundedRectangle(frame, Theme::canvasCornerRadius);
-    surround.setUsingNonZeroWinding(false);
+    scaledView->onZoomChanged = [this]() {
+        const float                          zoom        = scaledView->zoom;
+        const float                          zoomRatio   = scaledView->previousZoom / zoom;
+        const juce::Point<int>               minimumSize = scaledView->minimumContentSize;
+        juce::Component* const               window      = getTopLevelComponent();
+        const juce::Displays::Display* const display     = juce::Desktop::getInstance().getDisplays().getDisplayForRect(window->getScreenBounds());
 
-    graphics.saveState();
+        menuWidth = juce::roundToInt(static_cast<float>(menuWidth) * zoomRatio);
 
-    graphics.excludeClipRegion(menuArea->getBounds());
-    graphics.excludeClipRegion(titleBar->getBounds());
-    graphics.excludeClipRegion(bottomBar->getBounds());
-    graphics.reduceClipRegion(surround);
+        port->setZoom(port->zoom * zoomRatio, -port->getPosition().toFloat());
 
-    if (! graphics.isClipEmpty()) {
-        lookAndFeel.drawFrostedGlass(graphics, *this, *nodeCanvas, graphics.getClipBounds());
-    }
+        setResizeLimits(juce::roundToInt(minimumSize.x * zoom), juce::roundToInt(minimumSize.y * zoom), maximumWindowSide, maximumWindowSide);
 
-    graphics.restoreState();
+        resized();
 
-    graphics.setColour(lookAndFeel.borderColour);
-    graphics.drawRoundedRectangle(frame, Theme::canvasCornerRadius, Theme::borderThickness);
+        if (audioProcessor.wrapperType == juce::AudioProcessor::wrapperType_Standalone && display != nullptr) {
+            window->setBounds(window->getBounds().constrainedWithin(display->userArea));
+        }
+    };
+
+    addAndMakeVisible(*scaledView);
+
+    setResizable(true, false);
+    setSize(seedWidth, seedHeight);
+
+    const int barsWidth = juce::jmax(titleBar->narrowestWidth(), bottomBar->narrowestWidth());
+
+    scaledView->minimumContentSize = { Theme::windowGutter * 3 + minMenuWidth + barsWidth, Theme::windowGutter * 2 + menuArea->narrowestHeight() };
+
+    scaledView->onZoomChanged();
+
+    setSize(juce::roundToInt(getConstrainer()->getMinimumWidth() * openingScale), juce::roundToInt(getConstrainer()->getMinimumHeight() * openingScale));
 }
 
 bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, juce::Component*)

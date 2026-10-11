@@ -11,12 +11,12 @@ public:
     IconButton nodeIcon;
     IconButton traversalIcon;
 
+    static constexpr float iconInsetRatio = 0.214f;
+
     explicit MenuBar(NodeCanvas& nodeCanvas);
 
 private:
 
     void paintOverBar(juce::Graphics& graphics) override;
     void resized() override;
-
-    static constexpr float iconInsetRatio = 0.214f;
 };

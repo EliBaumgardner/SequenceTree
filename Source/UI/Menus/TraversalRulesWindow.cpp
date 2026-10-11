@@ -18,6 +18,18 @@ TraversalRulesWindow::TraversalRulesWindow(CustomLookAndFeel& lookAndFeel, Trave
     rulesPanel.panelTitlebar.addButton.onClick = [this] { addRule(); };
     titlebar.playButton.onClick                = [this] { makeViewedRuleActive(); };
 
+    titlebar.undoRedoPane.addButton(&CustomLookAndFeel::drawUndoIcon, "Undo", [this] {
+        if (activePage != nullptr) {
+            activePage->juce::CodeEditorComponent::undo();
+        }
+    });
+
+    titlebar.undoRedoPane.addButton(&CustomLookAndFeel::drawRedoIcon, "Redo", [this] {
+        if (activePage != nullptr) {
+            activePage->juce::CodeEditorComponent::redo();
+        }
+    });
+
     rulesPanel.labelPanel.onLabelsReordered = [this](std::vector<int> fileIds) {
         this->traversalRuleState.reorderRules(fileIds, nullptr);
     };
@@ -350,10 +362,6 @@ TraversalRulesWindow::RulesTitlebar::RulesTitlebar()
 
         CustomLookAndFeel::get(*this).drawPlayIcon(graphics, bounds, triangleState);
     };
-
-    undoRedoPane.addButton(&CustomLookAndFeel::drawUndoIcon, "Undo");
-
-    undoRedoPane.addButton(&CustomLookAndFeel::drawRedoIcon, "Redo");
 
     playButton.setTooltip("Make this the live traversal rule");
 

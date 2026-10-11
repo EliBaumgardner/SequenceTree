@@ -6,11 +6,12 @@
 #include "NodeMenu.h"
 
 MenuArea::MenuArea(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-                   juce::PropertiesFile& interfaceSettings, juce::ValueTree colourPresets, juce::UndoManager& undoManager)
+                   juce::PropertiesFile& interfaceSettings, ScaledView& scaledView, juce::ValueTree colourPresets, juce::UndoManager& undoManager)
     : resizer(PanelResizer::Edge::Right),
       topBar(nodeCanvas, Bar::Orientation::Horizontal, Theme::contentInsetRatio),
       nodeCanvas(nodeCanvas),
       interfaceSettings(interfaceSettings),
+      scaledView(scaledView),
       colourPresets(colourPresets),
       undoManager(undoManager)
 {
@@ -18,10 +19,12 @@ MenuArea::MenuArea(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRule
     traversalMenu = std::make_unique<TraversalMenu>(nodeCanvas, graphState, traversalRuleState, snapshots, colourPresets, undoManager);
     nodeMenu      = std::make_unique<NodeMenu>(nodeCanvas, graphState, traversalRuleState, snapshots, colourPresets, undoManager);
 
+    settingsLauncher.openingScale = SettingsMenu::openingScale;
+
     menuBar->traversalIcon.onClick = [this] { togglePanel(ActivePanel::Traversal); };
     menuBar->nodeIcon.onClick      = [this] { togglePanel(ActivePanel::Node); };
 
-    settingsPane.addButton(&CustomLookAndFeel::drawSettingsIcon, "Settings", [this]() { settingsLauncher.show(); });
+    settingsPane.addButton(&CustomLookAndFeel::drawSettingsIcon, "Settings", [this]() { settingsLauncher.show(*this); });
 
     addAndMakeVisible(topBar);
     addAndMakeVisible(settingsPane);
@@ -46,7 +49,7 @@ void MenuArea::paint(juce::Graphics& graphics)
 
 void MenuArea::resized()
 {
-    const int barHeight = static_cast<int>(getHeight() * Theme::barHeightRatio);
+    const int barHeight = Theme::barHeight;
     const int barInset  = juce::roundToInt(barHeight * Theme::contentInsetRatio);
     auto      bounds    = getLocalBounds();
 
@@ -80,4 +83,16 @@ void MenuArea::togglePanel(ActivePanel panel)
     resized();
 
     menuBar->repaint();
+}
+
+int MenuArea::narrowestHeight() const
+{
+    const int barHeight    = Theme::barHeight;
+    const int menuBarWidth = juce::roundToInt(barHeight * menuBarWidthRatio);
+    const int iconInset    = juce::roundToInt(menuBarWidth * MenuBar::iconInsetRatio);
+    const int iconSize     = menuBarWidth - iconInset * 2;
+    const int iconGap      = juce::roundToInt(iconSize * Theme::iconGapRatio);
+    const int columnHeight = barHeight + Theme::windowGutter + iconInset * 2 + iconSize * 3 + iconGap * 2;
+
+    return juce::jmax(columnHeight, traversalMenu->narrowestHeight(), nodeMenu->narrowestHeight());
 }

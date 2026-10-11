@@ -11,6 +11,7 @@
 #include "ArrowManager.h"
 #include "CanvasHitTester.h"
 #include "EncapsulationView.h"
+#include "OrnamentMarks.h"
 #include "../../Util/ArrowInfo.h"
 
 class Node;
@@ -37,7 +38,8 @@ public:
         ArrowRemoved,
         ArrowInfoChanged,
         ArrowDurationChanged,
-        NodeColourChanged
+        NodeColourChanged,
+        OrnamentChanged
     };
 
     enum class QuaverMode { Off, Preview };
@@ -57,12 +59,14 @@ public:
 
     NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, RTGraphBuilder& rtGraphBuilder, juce::UndoManager& undoManager,
                CustomLookAndFeel& lookAndFeel);
+
     ~NodeCanvas() override;
 
     void paint(juce::Graphics& graphics) override;
 
     void clearCanvas();
     void childrenChanged() override;
+    void applyViewTransform(const juce::AffineTransform& newViewTransform, float zoom);
     void setProcessorPlayback(bool isPlaying);
     void rebuildFromNodeMap(const juce::ValueTree& stateTree);
     void handleAsyncUpdate();
@@ -115,4 +119,5 @@ public:
     AudioCommandDrainer drainer;
     CanvasHitTester     hitTester { *this };
     EncapsulationView   encapsulationView;
+    OrnamentMarks       ornamentMarks;
 };

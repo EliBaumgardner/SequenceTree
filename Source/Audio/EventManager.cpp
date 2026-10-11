@@ -12,7 +12,8 @@ void EventManager::followTempo(double tempoMultiplier)
         const double remainingScale = lastTempoMultiplier / tempoMultiplier;
 
         for (auto& note : scheduler.activeNotes) {
-            note.remainingSamples *= remainingScale;
+            note.remainingSamples          *= remainingScale;
+            note.ornament.remainingSamples *= remainingScale;
         }
 
         for (auto& pending : dispatcher.flagScheduler.pendingStarts) {
@@ -62,6 +63,11 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
         const NoteScheduler::ActiveNote expiredNote = activeNotes.back();
         activeNotes.pop_back();
         --orderedNotes;
+
+        if (expiredNote.ornament.remainingSamples > 0.0) {
+            scheduler.continueOrnament(expiredNote, context.nodes.find(expiredNote.nodeId), context.midiMessages, expiryTime);
+            continue;
+        }
 
         if (expiredNote.role == NoteScheduler::NoteRole::ChordVoice) {
             if (NoteScheduler::isNodeAudible(expiredNote.nodeType)) {

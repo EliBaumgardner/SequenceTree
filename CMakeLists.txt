@@ -35,6 +35,49 @@ juce_add_binary_data(SequenceTreeFonts
         Resources/Fonts/GeistMono-Regular.ttf
 )
 
+juce_add_binary_data(SequenceTreeIcons
+        HEADER_NAME IconData.h
+        NAMESPACE IconData
+        SOURCES
+        Resources/Icons/Add.svg
+        Resources/Icons/ChevronDown.svg
+        Resources/Icons/ChevronUp.svg
+        Resources/Icons/DanglingArrow.svg
+        Resources/Icons/Eraser.svg
+        Resources/Icons/Eye.svg
+        Resources/Icons/Host.svg
+        Resources/Icons/Import.svg
+        Resources/Icons/Modulator.svg
+        Resources/Icons/NodeDot.svg
+        Resources/Icons/NodeMode.svg
+        Resources/Icons/NodeRing.svg
+        Resources/Icons/Ornament.svg
+        Resources/Icons/PaintHandle.svg
+        Resources/Icons/PaintTip.svg
+        Resources/Icons/Pause.svg
+        Resources/Icons/Pencil.svg
+        Resources/Icons/Play.svg
+        Resources/Icons/Publish.svg
+        Resources/Icons/QuaverHead.svg
+        Resources/Icons/QuaverStem.svg
+        Resources/Icons/Redo.svg
+        Resources/Icons/Remove.svg
+        Resources/Icons/ResetBar.svg
+        Resources/Icons/ResetPatch.svg
+        Resources/Icons/ResetTriangle.svg
+        Resources/Icons/Rules.svg
+        Resources/Icons/Settings.svg
+        Resources/Icons/SpanBridge.svg
+        Resources/Icons/SpanEnds.svg
+        Resources/Icons/SpanOutline.svg
+        Resources/Icons/Sync.svg
+        Resources/Icons/Tempo.svg
+        Resources/Icons/TraversalFlag.svg
+        Resources/Icons/Traversal.svg
+        Resources/Icons/Tree.svg
+        Resources/Icons/Undo.svg
+)
+
 target_compile_features(SequenceTree PRIVATE cxx_std_20)
 
 if(MSVC)
@@ -76,20 +119,24 @@ target_sources(SequenceTree PRIVATE
         Source/Graph/EncapsulationOps.cpp
         Source/Graph/TraversalState.cpp
         Source/Graph/TraversalRuleState.cpp
+        Source/Graph/OrnamentLibraries.cpp
         Source/Graph/ValueTreeIdentifiers.cpp
         Source/Graph/NodeFactory.cpp
         Source/Input/NodeController.cpp
         Source/UI/Canvas/DynamicPort.cpp
+        Source/UI/Canvas/CanvasFrame.cpp
         Source/UI/Canvas/NodeCanvas.cpp
         Source/UI/Canvas/NodeCanvasTreeListener.cpp
         Source/UI/Canvas/ValueField.cpp
         Source/UI/Canvas/AudioCommandDrainer.cpp
         Source/UI/Canvas/NodeManager.cpp
+        Source/UI/Canvas/OrnamentMarks.cpp
         Source/UI/Canvas/ArrowManager.cpp
         Source/UI/Canvas/CanvasHitTester.cpp
         Source/UI/Canvas/EncapsulationView.cpp
         Source/Input/NodeCreationDispatcher.cpp
         Source/Input/ConnectionOps.cpp
+        Source/Input/OrnamentApplier.cpp
         Source/Input/SelectionOps.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
@@ -109,6 +156,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Theme/CustomLookAndFeelNodes.cpp
         Source/UI/Theme/CustomLookAndFeelArrows.cpp
         Source/UI/Theme/CustomLookAndFeelButtons.cpp
+        Source/UI/Theme/CustomLookAndFeelOrnaments.cpp
         Source/UI/Theme/CustomLookAndFeelMenus.cpp
         Source/UI/Theme/CustomTextCaret.cpp
         Source/UI/Buttons/RootRectangle.cpp
@@ -126,11 +174,22 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Menus/AllowedTraversalsMenu.cpp
         Source/UI/Menus/TraversalRulesWindow.cpp
         Source/UI/PopupWindow.cpp
+        Source/UI/ScaledView.cpp
         Source/UI/Menus/ColourSelector.cpp
         Source/UI/Menus/SettingsMenu.cpp
+        Source/UI/Menus/PatchControls.cpp
         Source/UI/Bars/Bar.cpp
         Source/UI/Bars/Titlebar.cpp
         Source/UI/Bars/BottomBar.cpp
+        Source/UI/Ornaments/OrnamentWindow.cpp
+        Source/UI/Ornaments/OrnamentBuildPanel.cpp
+        Source/UI/Ornaments/OrnamentSelectionPanel.cpp
+        Source/UI/Ornaments/OrnamentLibrarySection.cpp
+        Source/UI/Ornaments/OrnamentTile.cpp
+        Source/UI/Ornaments/OrnamentNode.cpp
+        Source/UI/Ornaments/OrnamentCanvas.cpp
+        Source/UI/Ornaments/OrnamentFigureController.cpp
+        Source/UI/Ornaments/OrnamentSymbolEditor.cpp
         Source/UI/Bars/MenuBar.cpp
         Source/UI/LabelPanel.cpp
         Source/UI/Editors/FileLabel.cpp
@@ -148,6 +207,7 @@ target_link_libraries(SequenceTree PRIVATE
         juce::juce_audio_devices
         juce::juce_audio_utils
         SequenceTreeFonts
+        SequenceTreeIcons
         PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
@@ -180,6 +240,7 @@ catch_discover_tests(SequenceTree_Tests)
 
 add_executable(SequenceTree_GraphTests
         Tests/GraphTests.cpp
+        Tests/OrnamentTests.cpp
 )
 
 target_compile_features(SequenceTree_GraphTests PRIVATE cxx_std_20)

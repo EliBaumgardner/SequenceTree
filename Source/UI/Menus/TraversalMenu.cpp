@@ -24,7 +24,7 @@ TraversalMenu::TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, Tra
     int                   firstTraversalId = -1;
 
     editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawRulesButton(graphics, bounds, state, CustomLookAndFeel::get(*this).textHeight);
+        CustomLookAndFeel::get(*this).drawRulesButton(graphics, bounds, state, Theme::textHeight);
     };
 
     displayMenu.labelEditor.autoFitText = false;
@@ -52,16 +52,16 @@ TraversalMenu::TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, Tra
 
     displayMenu.onItemSelected = [this](int traversalId) { selectTraversal(traversalId); };
 
-    editTraversalRulesButton.onClick = [this]() { traversalRulesLauncher.show(); };
+    editTraversalRulesButton.onClick = [this]() { traversalRulesLauncher.show(*this); };
 
-    addAndMakeVisible(displayMenu);
-    addAndMakeVisible(multiplierField);
-    addAndMakeVisible(channelField);
-    addAndMakeVisible(transposeField);
-    addAndMakeVisible(velocityField);
-    addAndMakeVisible(colourLabel);
-    addAndMakeVisible(colourSelector);
-    addAndMakeVisible(editTraversalRulesButton);
+    addChildComponent(displayMenu);
+    addChildComponent(multiplierField);
+    addChildComponent(channelField);
+    addChildComponent(transposeField);
+    addChildComponent(velocityField);
+    addChildComponent(colourLabel);
+    addChildComponent(colourSelector);
+    addChildComponent(editTraversalRulesButton);
 
     graphState.traversals.map.addListener(this);
 
@@ -94,7 +94,16 @@ TraversalMenu::~TraversalMenu()
 void TraversalMenu::paint(juce::Graphics& graphics)
 {
     CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
-    const int          barHeight   = static_cast<int>(getHeight() * Theme::barHeightRatio);
+    const int          barHeight   = Theme::barHeight;
+    const int          spacing     = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
+
+    if (! currentTraversalData.isValid()) {
+        graphics.setColour(lookAndFeel.mutedTextColour);
+        graphics.setFont(lookAndFeel.font(Theme::FontStyle::Regular, Theme::textHeight));
+        graphics.drawFittedText("Shift + click the canvas to create a node", getLocalBounds().reduced(spacing), juce::Justification::centred, 2);
+
+        return;
+    }
 
     lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
 
@@ -104,10 +113,10 @@ void TraversalMenu::paint(juce::Graphics& graphics)
 
 void TraversalMenu::resized()
 {
-    const int        barHeight  = static_cast<int>(getHeight() * Theme::barHeightRatio);
+    const int        barHeight  = Theme::barHeight;
     const int        spacing    = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
     const int        rowHeight  = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
-    const float      textHeight = CustomLookAndFeel::get(*this).textHeight;
+    const float      textHeight = Theme::textHeight;
     const juce::Font textFont   = CustomLookAndFeel::get(*this).font(Theme::FontStyle::Regular, textHeight);
     auto             bounds     = getLocalBounds();
     auto             barArea    = bounds.removeFromTop(barHeight);
@@ -118,9 +127,9 @@ void TraversalMenu::resized()
     transposeField.editor.setFontHeight(textHeight);
     velocityField.editor.setFontHeight(textHeight);
 
-    displayMenu.setBounds(barArea.reduced(juce::roundToInt(barHeight * Theme::contentInsetRatio)));
+    displayMenu.setBounds(barArea.reduced(juce::roundToInt(barHeight * Theme::contentInsetRatio)).withWidth(Theme::menuContentWidth));
 
-    bounds.reduce(spacing, spacing);
+    bounds = bounds.reduced(spacing).withWidth(Theme::menuContentWidth);
 
     editTraversalRulesButton.setBounds(bounds.removeFromBottom(juce::roundToInt(barHeight * Theme::menuButtonHeightRatio)));
 
@@ -165,6 +174,12 @@ void TraversalMenu::selectTraversal(int traversalId)
     currentTraversalData     = traversalData;
     nodeCanvas.quaverTraversalId = traversalId;
 
+    for (juce::Component* content : getChildren()) {
+        content->setVisible(true);
+    }
+
+    repaint();
+
     multiplierField.editor.bindEditor(traversalData, ValueTreeIdentifiers::TempoMultiplier);
 
     bindWithDefault(channelField.editor,   ValueTreeIdentifiers::TraversalChannel,   TraversalState::defaultChannel);
@@ -181,6 +196,17 @@ void TraversalMenu::selectTraversal(int traversalId)
     colourSelector.repaint();
 
     displayMenu.setSelectedItem(traversalId);
+}
+
+int TraversalMenu::narrowestHeight() const
+{
+    const int barHeight     = Theme::barHeight;
+    const int spacing       = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
+    const int rowHeight     = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
+    const int buttonHeight  = juce::roundToInt(barHeight * Theme::menuButtonHeightRatio);
+    const int fieldRowCount = 4;
+
+    return barHeight + spacing * 2 + buttonHeight + fieldRowCount * (rowHeight + spacing) + rowHeight;
 }
 
 void TraversalMenu::valueTreeChildAdded(juce::ValueTree&, juce::ValueTree& child)
@@ -200,7 +226,29 @@ void TraversalMenu::valueTreeChildAdded(juce::ValueTree&, juce::ValueTree& child
 
 void TraversalMenu::valueTreeChildRemoved(juce::ValueTree&, juce::ValueTree& child, int)
 {
-    if (child.getType() == ValueTreeIdentifiers::TraversalData) {
-        displayMenu.removeItem(child.getProperty(ValueTreeIdentifiers::TraversalId));
+    const juce::ValueTree remainingTraversal = graphState.traversals.map.getChildWithName(ValueTreeIdentifiers::TraversalData);
+
+    if (child.getType() != ValueTreeIdentifiers::TraversalData) {
+        return;
     }
+
+    displayMenu.removeItem(child.getProperty(ValueTreeIdentifiers::TraversalId));
+
+    if (child != currentTraversalData) {
+        return;
+    }
+
+    if (remainingTraversal.isValid()) {
+        selectTraversal(remainingTraversal.getProperty(ValueTreeIdentifiers::TraversalId));
+
+        return;
+    }
+
+    currentTraversalData = juce::ValueTree();
+
+    for (juce::Component* content : getChildren()) {
+        content->setVisible(false);
+    }
+
+    repaint();
 }

@@ -18,7 +18,8 @@ NodeCanvas::NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphS
       nodeManager(*this, graphState, undoManager),
       arrowManager(*this, graphState, undoManager),
       drainer(*this, processor.eventManager.bridge, graphState),
-      encapsulationView(*this, graphState)
+      encapsulationView(*this, graphState),
+      ornamentMarks(*this, processor.ornamentLibraries)
 {
     setWantsKeyboardFocus(true);
     setLookAndFeel(&lookAndFeel);
@@ -65,6 +66,17 @@ void NodeCanvas::childrenChanged()
     for (juce::Component* child : getChildren()) {
         child->setTransform(viewTransform);
     }
+}
+
+void NodeCanvas::applyViewTransform(const juce::AffineTransform& newViewTransform, float zoom)
+{
+    viewTransform       = newViewTransform;
+    modelTransform      = newViewTransform.inverted();
+    valueField.viewZoom = zoom;
+
+    valueField.updateBrushCursor();
+
+    valueField.refresh();
 }
 
 void NodeCanvas::setProcessorPlayback(bool isPlaying)
@@ -207,6 +219,12 @@ void NodeCanvas::handleAsyncUpdate()
                     if (const auto* const encapsulator = dynamic_cast<const Encapsulator*>(recolouredNode)) {
                         encapsulationView.recolourGroup(*encapsulator);
                     }
+                }
+                break;
+
+            case AsyncUpdateType::OrnamentChanged:
+                if (Node* const ornamentedNode = nodeManager.find(nodeId)) {
+                    ornamentMarks.refresh(*ornamentedNode);
                 }
                 break;
 

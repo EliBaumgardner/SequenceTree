@@ -97,6 +97,10 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
         nodeCanvas.asyncUpdates.push_back({ .type   = NodeCanvas::AsyncUpdateType::NodeColourChanged,
                                             .nodeId = tree.getProperty(ValueTreeIdentifiers::Id) });
     }
+    else if (propertyIdentifier == ValueTreeIdentifiers::OrnamentUid) {
+        nodeCanvas.asyncUpdates.push_back({ .type   = NodeCanvas::AsyncUpdateType::OrnamentChanged,
+                                            .nodeId = tree.getProperty(ValueTreeIdentifiers::Id) });
+    }
     else if (propertyIdentifier == ValueTreeIdentifiers::ArrowDuration) {
         nodeCanvas.asyncUpdates.push_back({ .type   = NodeCanvas::AsyncUpdateType::ArrowDurationChanged,
                                             .nodeId = tree.getParent().getParent().getProperty(ValueTreeIdentifiers::Id) });

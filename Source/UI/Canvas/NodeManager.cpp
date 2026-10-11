@@ -88,6 +88,8 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
     createdNode->setInterceptsMouseClicks(!nodeCanvas.paintMode, !nodeCanvas.paintMode && !nodeCanvas.spanMode);
     createdNode->setMouseCursor(juce::MouseCursor::ParentCursor);
 
+    nodeCanvas.ornamentMarks.refresh(*createdNode);
+
     nodeCanvas.addAndMakeVisible(createdNode);
 
     nodes[nodeId] = std::move(node);

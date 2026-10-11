@@ -94,7 +94,29 @@ public:
     static const juce::Identifier ColourPreset;
     static const juce::Identifier PresetColour;
 
+    static const juce::Identifier OrnamentLibraries;
+    static const juce::Identifier OrnamentLibrary;
+    static const juce::Identifier LibraryUid;
+    static const juce::Identifier LibraryName;
+
+    static const juce::Identifier OrnamentData;
+    static const juce::Identifier OrnamentFigure;
+    static const juce::Identifier PublishedFigure;
+    static const juce::Identifier OrnamentNoteData;
+
+    static const juce::Identifier OrnamentUid;
+    static const juce::Identifier OrnamentName;
+    static const juce::Identifier OrnamentSymbol;
+    static const juce::Identifier OrnamentOffset;
+    static const juce::Identifier OrnamentVelocity;
+    static const juce::Identifier ActiveOrnamentUid;
+    static const juce::Identifier OrnamentIndex;
+    static const juce::Identifier LegacyLibrariesImported;
+    static const juce::Identifier NextFigureNodeId;
+    static const juce::Identifier OrnamentHostId;
+
     static const juce::Identifier ThemeColour;
+    static const juce::Identifier InterfaceZoom;
 };
 
 #endif //SEQUENCETREE_VALUETREEIDENTIFIERS_H

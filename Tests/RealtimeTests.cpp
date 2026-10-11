@@ -6,6 +6,7 @@
 #include "Graph/RTGraphBuilder.h"
 #include "Graph/ValueTreeIdentifiers.h"
 #include "Graph/NodeFactory.h"
+#include "Graph/OrnamentLibraries.h"
 
 int main(int argc, char* argv[])
 {
@@ -24,13 +25,37 @@ struct HostPlayHead : juce::AudioPlayHead
     }
 };
 
+struct TemporaryLibraryFolder
+{
+    juce::File folder = juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("RealtimeTestsOrnaments", "", false);
+
+    ~TemporaryLibraryFolder()
+    {
+        folder.deleteRecursively();
+    }
+};
+
 TEST_CASE("processBlock stays realtime-safe while playing, editing, retiming, relocating and resetting", "[realtime]")
 {
     constexpr double sampleRate = 48000.0;
     constexpr int    blockSize  = 512;
 
+    TemporaryLibraryFolder     temporary;
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState&                graph     = processor.graphState;
+    OrnamentLibraries&         ornaments = processor.ornamentLibraries;
+
+    ornaments.load(temporary.folder);
+
+    juce::ValueTree       ornament = ornaments.addOrnament(ornaments.addLibrary("Realtime tests", nullptr), nullptr);
+    juce::ValueTree       grace    = ornaments.addFigureNode(ornament, -1, { 0, 0 }, nullptr);
+    const juce::ValueTree host     = ornaments.addFigureNode(ornament, grace.getProperty(ValueTreeIdentifiers::Id), { 100, 0 }, nullptr);
+
+    grace.setProperty(ValueTreeIdentifiers::OrnamentOffset, -1, nullptr);
+
+    ornaments.addFigureNode(ornament, host.getProperty(ValueTreeIdentifiers::Id), { 150, 0 }, nullptr);
+    ornaments.toggleHost(ornament, host.getProperty(ValueTreeIdentifiers::Id), nullptr);
+    ornaments.publish(ornament, nullptr);
 
     NodeFactory::createRootNode(graph, NodePosition { 0, 0, 25 }, nullptr);
 
@@ -44,6 +69,9 @@ TEST_CASE("processBlock stays realtime-safe while playing, editing, retiming, re
 
     NodeFactory::createNode(graph, rootId, ValueTreeIdentifiers::NodeData, NodePosition { 150, 50, 25 }, nullptr);
     NodeFactory::createNode(graph, firstId, ValueTreeIdentifiers::NodeData, NodePosition { 200, 0, 25 }, nullptr);
+
+    first.setProperty(ValueTreeIdentifiers::OrnamentUid, ornament.getProperty(ValueTreeIdentifiers::OrnamentUid), nullptr);
+    graph.getNode(rootId).setProperty(ValueTreeIdentifiers::OrnamentUid, ornament.getProperty(ValueTreeIdentifiers::OrnamentUid), nullptr);
 
     processor.rtGraphBuilder.rebuildAllGraphs();
 

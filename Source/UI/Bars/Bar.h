@@ -17,6 +17,8 @@ public:
 
     void paint(juce::Graphics& graphics) final;
 
+    static constexpr int contentSpacing = 12;
+
 protected:
 
     virtual void paintOverBar(juce::Graphics& graphics)
@@ -24,8 +26,6 @@ protected:
     }
 
     juce::Rectangle<int> getContentBounds() const;
-
-    static constexpr int contentSpacing = 12;
 
 private:
 

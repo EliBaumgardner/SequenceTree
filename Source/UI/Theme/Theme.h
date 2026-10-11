@@ -39,8 +39,6 @@ struct Theme
 
     juce::Colour popupMenuColour              = raisedColour;
     juce::Colour popupMenuBorderColour        = borderStrongColour;
-
-    float textHeight = labelFontHeight;
     juce::Colour popupMenuTextColour          = textColour;
     juce::Colour popupMenuHighlightColour     = selectedColour;
     juce::Colour popupMenuHighlightTextColour = textColour;
@@ -130,6 +128,14 @@ struct Theme
     static constexpr float arrowShaftHoverThickness  = 2.2f;
     static constexpr float arrowTrailThickness       = 2.6f;
 
+    static constexpr int   rulerTicksPerGridSpace   = 5;
+    static constexpr float rulerMinorTickHalfLength = 1.5f;
+    static constexpr float rulerMajorTickHalfLength = 4.0f;
+    static constexpr float rulerMinorTickThickness  = 1.0f;
+    static constexpr float rulerMajorTickThickness  = 1.4f;
+    static constexpr float rulerSpineThickness      = 1.0f;
+    static constexpr float rulerSpineAlpha          = 0.8f;
+
     static constexpr float selectionRingGap   = 1.5f;
     static constexpr float selectionRingWidth = 1.5f;
 
@@ -165,6 +171,13 @@ struct Theme
     static constexpr float glyphSizeRatio   = 0.52f;
     static constexpr float glyphStrokeRatio = 1.75f / glyphGridSize;
     static constexpr float glyphFillAlpha   = 0.28f;
+
+    static constexpr float cursorScale         = 2.0f;
+    static constexpr float cursorHaloWidth     = 4.25f;
+    static constexpr int   pencilHotSpotX      = 2;
+    static constexpr int   pencilHotSpotY      = 22;
+    static constexpr int   eraserHotSpotX      = 5;
+    static constexpr int   eraserHotSpotY      = 19;
     static constexpr float incrementGlyphScale = 3.0f;
 
     static constexpr float disabledButtonAlpha = 0.4f;
@@ -184,16 +197,18 @@ struct Theme
 
     static constexpr float labelFontHeight = 9.0f;
 
-    static constexpr int menuEdgeInset = 6;
-    static constexpr int windowGutter  = 8;
+    static constexpr int menuEdgeInset    = 6;
+    static constexpr int menuContentWidth = 160;
+    static constexpr int windowGutter     = 8;
 
     static constexpr float frostScale      = 0.2f;
     static constexpr float frostBlurRadius = 3.0f;
     static constexpr int   frostKernelSize = 9;
 
-    static constexpr float barHeightRatio        = 0.05f;
+    static constexpr int   barHeight  = 24;
+    static constexpr float textHeight = 9.0f;
+
     static constexpr float textHeightRatio       = 0.376f;
-    static constexpr float textWidthRatio        = 0.0136f;
     static constexpr float contentInsetRatio     = 0.1f;
     static constexpr float contentSpacingRatio   = 0.018f;
     static constexpr float iconGapRatio          = 0.2f;

@@ -4,6 +4,7 @@
 #include "../Buttons/IconButton.h"
 #include "../Buttons/ButtonPane.h"
 #include "../Menus/ItemSelector.h"
+#include "../Menus/PatchControls.h"
 #include "../Buttons/TempoDisplay.h"
 #include "../../Input/NodeController.h"
 
@@ -18,6 +19,7 @@ public:
     void resized() override;
 
     void applyPlaybackState(bool shouldPlay);
+    int  narrowestWidth() const;
 
     std::function<void(NodeDisplayMode)> onDisplayModeChanged;
 
@@ -31,6 +33,10 @@ private:
     void configureDisplaySelector();
     void configureTempoDisplay();
 
+    static constexpr int tempoDisplayWidth    = 57;
+    static constexpr int modePaneWidth        = 159;
+    static constexpr int displaySelectorWidth = 70;
+
     SequenceTreeAudioProcessor& processor;
     NodeCanvas&                 nodeCanvas;
     NodeController&             nodeController;
@@ -41,6 +47,7 @@ private:
     ItemSelector         displaySelector;
     TempoDisplay         tempoDisplay;
     ButtonPane           undoRedoPane;
+    PatchControls        patchControls;
 
     IconButton*          playButton = nullptr;
     IconButton*          syncButton = nullptr;

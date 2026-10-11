@@ -11,13 +11,15 @@ Titlebar::Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas
       nodeController(nodeController),
       undoManager(undoManager),
       displaySelector(undoManager),
-      tempoDisplay(undoManager)
+      tempoDisplay(undoManager),
+      patchControls(processor, processor.patchFolder)
 {
     addAndMakeVisible(transportPane);
     addAndMakeVisible(tempoDisplay);
     addAndMakeVisible(buttonPane);
     addAndMakeVisible(displaySelector);
     addAndMakeVisible(undoRedoPane);
+    addAndMakeVisible(patchControls);
 
     configureTransportPane();
     configureModePane();
@@ -37,12 +39,10 @@ void Titlebar::resized()
     auto bounds = getContentBounds();
 
     int transportPaneWidth = transportPane.idealWidth(bounds.getHeight());
-    int tempoDisplayWidth = bounds.getWidth() / 11;
-    int buttonPaneWidth = bounds.getWidth() / 4;
-    int displaySelectorWidth = bounds.getWidth() / 9;
     int undoRedoPaneWidth = undoRedoPane.idealWidth(bounds.getHeight());
-    int spacing = juce::roundToInt(bounds.getWidth() * Theme::contentSpacingRatio);
-    float textHeight = CustomLookAndFeel::get(*this).textHeight;
+    int patchPaneWidth = patchControls.idealWidth(bounds.getHeight());
+    int spacing = contentSpacing;
+    float textHeight = Theme::textHeight;
 
     tempoDisplay.editor.setFontHeight(textHeight);
     displaySelector.labelEditor.setFontHeight(textHeight);
@@ -56,10 +56,13 @@ void Titlebar::resized()
     undoRedoPane.setBounds(bounds.removeFromLeft(undoRedoPaneWidth));
     bounds.removeFromLeft(spacing);
 
+    patchControls.setBounds(bounds.removeFromLeft(patchPaneWidth));
+    bounds.removeFromLeft(spacing);
+
     displaySelector.setBounds(bounds.removeFromRight(displaySelectorWidth));
     bounds.removeFromRight(spacing);
 
-    buttonPane.setBounds(bounds.removeFromRight(buttonPaneWidth));
+    buttonPane.setBounds(bounds.removeFromRight(modePaneWidth));
 }
 
 void Titlebar::configureTransportPane()
@@ -191,4 +194,13 @@ void Titlebar::configureTempoDisplay()
     };
 
     tempoAttachment->sendInitialUpdate();
+}
+
+int Titlebar::narrowestWidth() const
+{
+    const auto bounds = getContentBounds();
+    const int  height = bounds.getHeight();
+
+    return getWidth() - bounds.getWidth() + transportPane.idealWidth(height) + tempoDisplayWidth + undoRedoPane.idealWidth(height) + patchControls.idealWidth(height)
+           + displaySelectorWidth + modePaneWidth + contentSpacing * 5;
 }

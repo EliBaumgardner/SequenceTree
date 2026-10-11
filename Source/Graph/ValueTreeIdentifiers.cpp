@@ -85,4 +85,26 @@ const juce::Identifier ValueTreeIdentifiers::ColourPresets        {"ColourPreset
 const juce::Identifier ValueTreeIdentifiers::ColourPreset         {"ColourPreset"};
 const juce::Identifier ValueTreeIdentifiers::PresetColour         {"PresetColour"};
 
+const juce::Identifier ValueTreeIdentifiers::OrnamentLibraries    {"OrnamentLibraries"};
+const juce::Identifier ValueTreeIdentifiers::OrnamentLibrary      {"OrnamentLibrary"};
+const juce::Identifier ValueTreeIdentifiers::LibraryUid           {"LibraryUid"};
+const juce::Identifier ValueTreeIdentifiers::LibraryName          {"LibraryName"};
+
+const juce::Identifier ValueTreeIdentifiers::OrnamentData         {"OrnamentData"};
+const juce::Identifier ValueTreeIdentifiers::OrnamentFigure       {"OrnamentFigure"};
+const juce::Identifier ValueTreeIdentifiers::PublishedFigure      {"PublishedFigure"};
+const juce::Identifier ValueTreeIdentifiers::OrnamentNoteData     {"OrnamentNoteData"};
+
+const juce::Identifier ValueTreeIdentifiers::OrnamentUid          {"OrnamentUid"};
+const juce::Identifier ValueTreeIdentifiers::OrnamentName         {"OrnamentName"};
+const juce::Identifier ValueTreeIdentifiers::OrnamentSymbol       {"OrnamentSymbol"};
+const juce::Identifier ValueTreeIdentifiers::OrnamentOffset       {"OrnamentOffset"};
+const juce::Identifier ValueTreeIdentifiers::OrnamentVelocity     {"OrnamentVelocity"};
+const juce::Identifier ValueTreeIdentifiers::ActiveOrnamentUid    {"ActiveOrnamentUid"};
+const juce::Identifier ValueTreeIdentifiers::OrnamentIndex        {"OrnamentIndex"};
+const juce::Identifier ValueTreeIdentifiers::LegacyLibrariesImported {"LegacyLibrariesImported"};
+const juce::Identifier ValueTreeIdentifiers::NextFigureNodeId     {"NextFigureNodeId"};
+const juce::Identifier ValueTreeIdentifiers::OrnamentHostId       {"OrnamentHostId"};
+
 const juce::Identifier ValueTreeIdentifiers::ThemeColour          {"ThemeColour"};
+const juce::Identifier ValueTreeIdentifiers::InterfaceZoom        {"InterfaceZoom"};
