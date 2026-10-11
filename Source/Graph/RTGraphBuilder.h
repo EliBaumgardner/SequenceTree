@@ -28,20 +28,25 @@ class RTGraphBuilder : public juce::ValueTree::Listener,
                        public juce::AsyncUpdater
 {
 public:
+
     RTGraphBuilder(SequenceTreeAudioProcessor& processor, GraphState& graphState);
     ~RTGraphBuilder() override;
 
-    void makeRTGraph(const juce::ValueTree& nodeValueTree);
-    void discardGraph(int graphId);
-    RTtraversal buildRTtraversal(TraversalKey key);
+    void makeRTGraph     (const juce::ValueTree& nodeValueTree);
+    void discardGraph    (int graphId);
     void rebuildAllGraphs();
-    void updateDurationMaps(std::span<const int> nodeIds);
-    void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
+
+    void valueTreeChildAdded     (juce::ValueTree& parent, juce::ValueTree& child) override;
+    void valueTreeChildRemoved   (juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& propertyIdentifier) override;
-    void handleAsyncUpdate() override;
+
+    void updateDurationMaps(std::span<const int> nodeIds);
+    void handleAsyncUpdate () override;
+
+    RTtraversal buildRTtraversal(TraversalKey key);
 
 private:
+
     struct PendingChanges
     {
         std::unordered_set<int> addedNodeIds;
@@ -54,34 +59,28 @@ private:
 
     void rebuildGraphsForTraversal(int traversalId);
 
-    void createRTNodes(juce::ValueTree rootNodeValueTree,
-                       NodeBuildMap& builtNodes,
-                       std::unordered_map<int, juce::ValueTree>& tempNodeMap);
+    void createRTNodes          (juce::ValueTree rootNodeValueTree, NodeBuildMap& builtNodes, std::unordered_map<int, juce::ValueTree>& tempNodeMap);
+    void createRTNodeConnections(NodeBuildMap& builtNodes, std::unordered_map<int, juce::ValueTree>& tempNodeMap);
 
-    void fillDurationMap(const juce::ValueTree& nodeValueTree, RTNode& rtNode);
-    static RTConnection& connectionFor(RTNode& node, int childId);
-    static void collectDisabledTraversals(const juce::ValueTree& owner, std::vector<TraversalKey>& disabledKeys);
+    void fillDurationMap  (const juce::ValueTree& nodeValueTree, RTNode& rtNode);
     void fillEncapsulation(const juce::ValueTree& nodeValueTree, RTNode& rtNode);
-    static RTNode::NodeType rtNodeTypeFor(const juce::Identifier& valueTreeType);
 
-    void createRTNodeConnections(NodeBuildMap& builtNodes,
-                                 std::unordered_map<int, juce::ValueTree>& tempNodeMap);
-
-    static void classifyRootConnection(const juce::ValueTree& parentValueTree,
-                                       const juce::ValueTree& childIdTree,
-                                       const juce::ValueTree& childValueTree,
-                                       RTConnection& connection);
-
-    static NodeMap freezeNodes(NodeBuildMap& source);
     void rememberStructureChange(const juce::ValueTree& parent, const juce::ValueTree& child);
-    void rememberOwners(juce::ValueTree graphOwner, const juce::ValueTree& reshapedNode);
+    void rememberOwners         (juce::ValueTree graphOwner, const juce::ValueTree& reshapedNode);
+
+    static void             collectDisabledTraversals(const juce::ValueTree& owner, std::vector<TraversalKey>& disabledKeys);
+    static void             classifyRootConnection   (const juce::ValueTree& parentValueTree, const juce::ValueTree& childIdTree,
+                                                      const juce::ValueTree& childValueTree, RTConnection& connection);
+    static RTConnection&    connectionFor            (RTNode& node, int childId);
+    static RTNode::NodeType rtNodeTypeFor            (const juce::Identifier& valueTreeType);
+    static NodeMap          freezeNodes              (NodeBuildMap& source);
 
     SequenceTreeAudioProcessor& processor;
-    GraphState&             graphState;
+    GraphState&                 graphState;
 
-    std::unordered_set<int>     builtGraphIds;
+    std::unordered_set<int> builtGraphIds;
 
-    std::vector<int>            durationRefreshScratch;
+    std::vector<int> durationRefreshScratch;
 
-    PendingChanges              pending;
+    PendingChanges pending;
 };

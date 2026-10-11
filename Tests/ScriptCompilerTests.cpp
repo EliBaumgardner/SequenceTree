@@ -155,6 +155,43 @@ TEST_CASE("main reads the node advance lands on and hands playNote its values", 
     CHECK(fixture.members[0] == 2);
 }
 
+TEST_CASE("a node reads the id of the traversal that landed on it, and none reads none", "[script]")
+{
+    const ScriptCompileResult compiled = compileTraversalScript(classWith(
+        "Node selectedNode;\n"
+        "Node missing;\n"
+        "int landedBy;\n"
+        "int missingLandedBy;\n"
+        "void main() {\n"
+        "    selectedNode    = advance(1);\n"
+        "    missing         = none;\n"
+        "    landedBy        = selectedNode.traversalId;\n"
+        "    missingLandedBy = missing.traversalId;\n"
+        "}\n"));
+
+    REQUIRE(compiled.succeeded());
+
+    ScriptFixture    fixture;
+    RecordingHost    host;
+    ScriptRunContext context = fixture.context(compiled.script, ScriptWrites::Commit, &host);
+
+    context.traversalKey = { 3, 1 };
+
+    ScriptRun run(context);
+
+    run.call(compiled.script.mainFunction, {});
+
+    CHECK(fixture.members[2] == 3);
+    CHECK(fixture.members[3] == -1);
+}
+
+TEST_CASE("node.traversalId can only be read", "[script]")
+{
+    const ScriptCompileResult compiled = compileTraversalScript(classWith("void main() { current.traversalId = 2; }"));
+
+    CHECK_FALSE(compiled.succeeded());
+}
+
 TEST_CASE("a member typed by name alone is reported with the type it needs", "[script]")
 {
     const ScriptCompileResult compiled = compileTraversalScript(classWith("selectedNode;"));

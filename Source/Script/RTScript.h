@@ -87,7 +87,8 @@ enum class ScriptField
     ChildCount,
     LastChild,
     Parent,
-    Eligible
+    Eligible,
+    TraversalId
 };
 
 struct ScriptInstruction
