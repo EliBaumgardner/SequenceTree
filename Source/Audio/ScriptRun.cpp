@@ -393,7 +393,8 @@ int ScriptRun::readField(ScriptField field, int nodeId)
     const RTNode* const node = context.nodes.find(nodeId);
 
     if (node == nullptr) {
-        if (field == ScriptField::Id || field == ScriptField::LastChild || field == ScriptField::Parent) {
+        if (field == ScriptField::Id || field == ScriptField::LastChild || field == ScriptField::Parent
+            || field == ScriptField::TraversalId) {
             return -1;
         }
 
@@ -417,6 +418,7 @@ int ScriptRun::readField(ScriptField field, int nodeId)
         case ScriptField::ChildCount:   return static_cast<int>(node->connections.size());
         case ScriptField::LastChild:    return readState(NodeStateSlot::LastNode, nodeId);
         case ScriptField::Eligible:     return 1;
+        case ScriptField::TraversalId:  return context.traversalKey.typeId;
 
         case ScriptField::Duration: {
             if (context.host == nullptr) {

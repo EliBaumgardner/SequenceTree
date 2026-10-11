@@ -449,7 +449,8 @@ const FieldEntry nodeFieldTable[] = {
     { "childCount",   ScriptField::ChildCount,   ValueType::Int,  FieldAccess::ReadOnly },
     { "lastChild",    ScriptField::LastChild,    ValueType::Node, FieldAccess::ReadOnly },
     { "parent",       ScriptField::Parent,       ValueType::Node, FieldAccess::ReadOnly },
-    { "eligible",     ScriptField::Eligible,     ValueType::Int,  FieldAccess::ReadOnly }
+    { "eligible",     ScriptField::Eligible,     ValueType::Int,  FieldAccess::ReadOnly },
+    { "traversalId",  ScriptField::TraversalId,  ValueType::Int,  FieldAccess::ReadOnly }
 };
 
 const FieldEntry& Emitter::nodeField(const Expression& expression)

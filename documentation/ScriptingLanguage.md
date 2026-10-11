@@ -119,7 +119,7 @@ Conditions need no parentheses. A condition must be a number, where 0 is false a
 | `playNote(node, pitch, duration, velocity)` | Plays the next note on `node`. Pitch and velocity are MIDI values, clamped to 0–127. Duration is in milliseconds and sets how long this note lasts. Call it from `main`. |
 | `current` | The node the walk is on. It can be read but not assigned; move the walk with `advance`. |
 | `children` | The arrows leaving `current`, walked with `for child in children { }`. A child the walk cannot take right now (its count limit, trigger limit or traversal rules rule it out) reads as `none`. |
-| `traversal.id` | Which traversal this is. |
+| `traversal.id` | Which traversal this is. Every traversal runs its own copy of the script, so this is the traversal whose walk the script is moving. |
 | `traversal.instance` | Which running copy of that traversal this is. |
 | `traversal.random` | A large non-negative whole number, new on every step. Use `%` to bring it into range, as in `traversal.random % 4`. |
 | `core::random(value, spread)` | A decimal spread evenly around `value`: `core::random(50, 0.5)` is anywhere from 25 to 75. Needs `import core;` at the top of the script. |
@@ -127,7 +127,7 @@ Conditions need no parentheses. A condition must be a number, where 0 is false a
 
 ## Node properties
 
-Read a property with a dot, as in `current.pitch` or `child.parent.id`. Only the four counts can be changed, with `=`, `+=` or `-=`. Reading a property of `none` gives `none` for `id`, `parent` and `lastChild`, and 0 for everything else.
+Read a property with a dot, as in `current.pitch` or `child.parent.id`. Only the four counts can be changed, with `=`, `+=` or `-=`. Reading a property of `none` gives `none` for `id`, `parent`, `lastChild` and `traversalId`, and 0 for everything else.
 
 | Property | Type | Can change | Meaning |
 | --- | --- | --- | --- |
@@ -149,6 +149,7 @@ Read a property with a dot, as in `current.pitch` or `child.parent.id`. Only the
 | `eligible` | int | No | 1 for any child reached through `children`; children the walk cannot take already read as `none` |
 | `lastChild` | Node | No | The child the walk last chose from this node |
 | `parent` | Node | No | The node this one hangs from, or `none` for a root |
+| `traversalId` | int | No | The id of the traversal that advanced and landed on the node, the same number as `traversal.id`. Use it to give each traversal its own rules, as in `if selectedNode.traversalId == 2 { ... }` |
 
 
 ## Limits and errors
@@ -232,6 +233,31 @@ public:
         if traversal.random % 2 == 0 {
             playNote(next, next.pitch, next.duration, next.velocity);
         }
+    }
+
+};
+```
+
+### A rule for one traversal
+
+Every traversal runs the same script, so `traversalId` lets each one behave differently. Here traversal 2 plays an octave down and every other traversal plays as written.
+
+```
+class Traversal : defaultTraversal {
+
+public:
+
+    Node selectedNode;
+
+    void main() {
+        selectedNode = advance(1);
+        int pitch    = selectedNode.pitch;
+
+        if selectedNode.traversalId == 2 {
+            pitch -= 12;
+        }
+
+        playNote(selectedNode, pitch, selectedNode.duration, selectedNode.velocity);
     }
 
 };
