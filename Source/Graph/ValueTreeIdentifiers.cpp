@@ -81,10 +81,6 @@ const juce::Identifier ValueTreeIdentifiers::RuleName             {"RuleName"};
 const juce::Identifier ValueTreeIdentifiers::RuleSource           {"RuleSource"};
 const juce::Identifier ValueTreeIdentifiers::ActiveRuleId         {"ActiveRuleId"};
 
-const juce::Identifier ValueTreeIdentifiers::ColourPresets        {"ColourPresets"};
-const juce::Identifier ValueTreeIdentifiers::ColourPreset         {"ColourPreset"};
-const juce::Identifier ValueTreeIdentifiers::PresetColour         {"PresetColour"};
-
 const juce::Identifier ValueTreeIdentifiers::OrnamentLibraries    {"OrnamentLibraries"};
 const juce::Identifier ValueTreeIdentifiers::OrnamentLibrary      {"OrnamentLibrary"};
 const juce::Identifier ValueTreeIdentifiers::LibraryUid           {"LibraryUid"};
@@ -105,6 +101,3 @@ const juce::Identifier ValueTreeIdentifiers::OrnamentIndex        {"OrnamentInde
 const juce::Identifier ValueTreeIdentifiers::LegacyLibrariesImported {"LegacyLibrariesImported"};
 const juce::Identifier ValueTreeIdentifiers::NextFigureNodeId     {"NextFigureNodeId"};
 const juce::Identifier ValueTreeIdentifiers::OrnamentHostId       {"OrnamentHostId"};
-
-const juce::Identifier ValueTreeIdentifiers::ThemeColour          {"ThemeColour"};
-const juce::Identifier ValueTreeIdentifiers::InterfaceZoom        {"InterfaceZoom"};

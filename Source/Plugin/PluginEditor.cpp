@@ -7,7 +7,7 @@
 */
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "../Graph/ValueTreeIdentifiers.h"
+#include "../UI/Theme/InterfaceIdentifiers.h"
 
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
 : AudioProcessorEditor(p), audioProcessor(p)
@@ -21,8 +21,8 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     interfaceSettings = std::make_unique<juce::PropertiesFile>(interfaceSettingsOptions);
 
-    if (interfaceSettings->containsKey(ValueTreeIdentifiers::ThemeColour.toString())) {
-        lookAndFeel.applyThemeColour(juce::Colour::fromString(interfaceSettings->getValue(ValueTreeIdentifiers::ThemeColour.toString())));
+    if (interfaceSettings->containsKey(InterfaceIdentifiers::ThemeColour.toString())) {
+        lookAndFeel.applyThemeColour(juce::Colour::fromString(interfaceSettings->getValue(InterfaceIdentifiers::ThemeColour.toString())));
     }
 
     setLookAndFeel(&lookAndFeel);

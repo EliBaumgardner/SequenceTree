@@ -10,6 +10,7 @@
 #include "../Graph/TraversalRuleState.h"
 #include "../Graph/OrnamentLibraries.h"
 #include "../Graph/ValueTreeIdentifiers.h"
+#include "../UI/Theme/InterfaceIdentifiers.h"
 #include "../Graph/RTGraphBuilder.h"
 #include "../Audio/EventManager.h"
 #include "../Audio/TraversalSession.h"
@@ -107,7 +108,7 @@ public:
 
     TraversalRuleState traversalRuleState;
 
-    juce::ValueTree colourPresets { ValueTreeIdentifiers::ColourPresets };
+    juce::ValueTree colourPresets { InterfaceIdentifiers::ColourPresets };
 
     juce::File userFolder  { juce::File::getSpecialLocation(juce::File::userMusicDirectory).getChildFile(JucePlugin_Name) };
     juce::File patchFolder { userFolder.getChildFile("Patches") };

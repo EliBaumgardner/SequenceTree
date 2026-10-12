@@ -1,10 +1,10 @@
 #include "ScaledView.h"
-#include "../Graph/ValueTreeIdentifiers.h"
+#include "Theme/InterfaceIdentifiers.h"
 
 ScaledView::ScaledView(juce::Component& content, juce::PropertiesFile& interfaceSettings)
     : content(content), interfaceSettings(interfaceSettings)
 {
-    const float savedZoom = static_cast<float>(interfaceSettings.getDoubleValue(ValueTreeIdentifiers::InterfaceZoom.toString(), 1.0));
+    const float savedZoom = static_cast<float>(interfaceSettings.getDoubleValue(InterfaceIdentifiers::InterfaceZoom.toString(), 1.0));
 
     zoom         = juce::jlimit(minimumZoom, maximumZoom, savedZoom);
     previousZoom = zoom;
@@ -45,7 +45,7 @@ bool ScaledView::zoomFits(float candidateZoom) const
 
 void ScaledView::changeListenerCallback(juce::ChangeBroadcaster*)
 {
-    const float savedZoom = static_cast<float>(interfaceSettings.getDoubleValue(ValueTreeIdentifiers::InterfaceZoom.toString(), 1.0));
+    const float savedZoom = static_cast<float>(interfaceSettings.getDoubleValue(InterfaceIdentifiers::InterfaceZoom.toString(), 1.0));
 
     previousZoom = zoom;
     zoom         = juce::jlimit(minimumZoom, maximumZoom, savedZoom);

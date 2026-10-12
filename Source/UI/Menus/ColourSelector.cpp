@@ -1,5 +1,5 @@
 #include "ColourSelector.h"
-#include "../../Graph/ValueTreeIdentifiers.h"
+#include "../Theme/InterfaceIdentifiers.h"
 #include "../Theme/CustomLookAndFeel.h"
 
 ColourPicker::ColourPicker(juce::ValueTree colourPresets, juce::UndoManager& undoManager)
@@ -51,14 +51,14 @@ void ColourPicker::paint(juce::Graphics& graphics)
 
     for (int presetIndex = 0; presetIndex < presetCount; ++presetIndex) {
         const juce::ValueTree preset      = presets.getChild(presetIndex);
-        const bool            isSet       = preset.hasProperty(ValueTreeIdentifiers::PresetColour);
+        const bool            isSet       = preset.hasProperty(InterfaceIdentifiers::PresetColour);
         const auto            slot        = juce::Rectangle<float>(presetArea.getX() + presetIndex * (presetWidth + presetGap),
                                                                    static_cast<float>(presetArea.getY()), presetWidth,
                                                                    static_cast<float>(presetArea.getHeight()));
         const float           glyphLength = slot.getWidth() * presetGlyphRatio;
 
         if (isSet) {
-            graphics.setColour(juce::Colour::fromString(preset.getProperty(ValueTreeIdentifiers::PresetColour).toString()));
+            graphics.setColour(juce::Colour::fromString(preset.getProperty(InterfaceIdentifiers::PresetColour).toString()));
             graphics.fillRoundedRectangle(slot, Theme::paneCornerRadius);
         }
         else {
@@ -130,7 +130,7 @@ void ColourPicker::showColour(juce::Colour colour)
     colour.getHSB(hue, saturation, brightness);
 
     while (presets.getNumChildren() < presetCount) {
-        presets.appendChild(juce::ValueTree(ValueTreeIdentifiers::ColourPreset), nullptr);
+        presets.appendChild(juce::ValueTree(InterfaceIdentifiers::ColourPreset), nullptr);
     }
 
     renderSaturationBrightnessImage();
@@ -166,15 +166,15 @@ void ColourPicker::mouseDown(const juce::MouseEvent& event)
         const int       presetIndex = juce::jlimit(0, presetCount - 1, (position.x - presetArea.getX()) * presetCount / presetArea.getWidth());
         juce::ValueTree preset      = presets.getChild(presetIndex);
 
-        if (event.mods.isPopupMenu() || ! preset.hasProperty(ValueTreeIdentifiers::PresetColour)) {
-            preset.setProperty(ValueTreeIdentifiers::PresetColour, currentColour.toString(), nullptr);
+        if (event.mods.isPopupMenu() || ! preset.hasProperty(InterfaceIdentifiers::PresetColour)) {
+            preset.setProperty(InterfaceIdentifiers::PresetColour, currentColour.toString(), nullptr);
 
             repaint();
 
             return;
         }
 
-        chosenColour = juce::Colour::fromString(preset.getProperty(ValueTreeIdentifiers::PresetColour).toString());
+        chosenColour = juce::Colour::fromString(preset.getProperty(InterfaceIdentifiers::PresetColour).toString());
     }
     else if (! originalArea.contains(position)) {
         return;
