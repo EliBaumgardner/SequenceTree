@@ -2,6 +2,8 @@
 
 The tools the research pipeline uses in SequenceTree. They come from the `research-suite` plugin's refactoring suite and its `refactor.*` commands, and each stage reads the sections it needs. The analysis agent gets this whole file in its prompt.
 
+Every tool below covers `Source/` and `Tests/` only. The theme, `CustomLookAndFeel` and the generic components (`#include <ArsNovaUI/...>`) live in the `ArsNovaUI` library at `../ArsNovaUI`, outside `sources`: they compile into SequenceTree but are measured, checked and edited from the library's own repository, under its own `.claude/refactor.toml`. A finding about one of them is a finding against the library.
+
 ## Design Rules
 
 - The **Key Design Rules** and **How to Systematically Solve Problems** are research-suite's `rules/style.md` and `rules/systematic.md`. A Claude session already has them in context; any other agent prints them, together with the Project Design Rules, with `session-rules.sh`.

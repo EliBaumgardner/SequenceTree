@@ -25,8 +25,6 @@ core_purpose_api = [
     "Source/Plugin/AudioSnapshotPublisher.h:endBlock",
     "Source/UI/Canvas/NodeManager.h:all",
     "Source/UI/Canvas/ArrowManager.h:all",
-    "Source/UI/Menus/ItemSelector.h:addItem",
-    "Source/UI/Menus/ContextMenu.cpp:addItem",
 ]
 kept_small_classes = ["Source/Graph/RTData.h:NodeMap"]
 unchecked = [

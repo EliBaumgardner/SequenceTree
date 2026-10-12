@@ -146,7 +146,7 @@ The library is a third repository. Each tool depends on it; neither tool depends
 
 Plan: a local path while the library is still changing, then a submodule once it settles.
 
-The library would be built as a JUCE module (`juce_add_module`) or a plain CMake static library. Every `.cpp` is still listed explicitly. Neither project's refactor gates cover it until it gets its own configuration (`refactor.init`, `research-init`).
+The library is `ArsNovaUI`, a plain CMake `INTERFACE` target with a gallery app. Its creation is planned step by step in `.claude/context/Proposals/Unimplemented/GenericUILibrary.md`.
 
 ## Patterns to copy, not share
 
@@ -172,8 +172,7 @@ The library is extracted after step 3 so it is shaped by a real second user rath
 - **What drives browsing.** Mouse only, or also automation and MIDI. This decides where the nearest-slice lookup runs (see *Real-time model*).
 - **During re-analysis.** Whether the previous corpus keeps playing while a new one is analysed, or playback stops until it finishes.
 - **Canvas mechanics in the library.** Zoom and pan (`DynamicPort`) and grid drawing are generic. Hit testing, selection and dragging are written against SequenceTree's `Node` and `Arrow` today (`CanvasHitTester`, `NodeController`). Decide whether a generic version of those belongs in the library once the corpus map shows what it needs.
-- **Library packaging.** Confirm local path first, submodule later. Confirm a JUCE module or a static library.
-- **Names.** The tool's name and the library's name.
+- **Name.** The concatenator's name. The library is `ArsNovaUI`.
 
 ## Sources
 
