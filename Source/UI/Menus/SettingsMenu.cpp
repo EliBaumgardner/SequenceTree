@@ -1,6 +1,6 @@
 #include "SettingsMenu.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "../../Graph/ValueTreeIdentifiers.h"
+#include "../Theme/InterfaceIdentifiers.h"
 #include "../ScaledView.h"
 
 SettingsMenu::SettingsMenu(CustomLookAndFeel& lookAndFeel, juce::PropertiesFile& interfaceSettings, ScaledView& scaledView, juce::ValueTree colourPresets,
@@ -39,7 +39,7 @@ SettingsMenu::SettingsMenu(CustomLookAndFeel& lookAndFeel, juce::PropertiesFile&
             return;
         }
 
-        this->interfaceSettings.setValue(ValueTreeIdentifiers::InterfaceZoom.toString(), enteredZoom);
+        this->interfaceSettings.setValue(InterfaceIdentifiers::InterfaceZoom.toString(), enteredZoom);
     };
 
     themeColourSelector.onColourPicked = [this](juce::Colour pickedColour) {
@@ -47,7 +47,7 @@ SettingsMenu::SettingsMenu(CustomLookAndFeel& lookAndFeel, juce::PropertiesFile&
 
         this->lookAndFeel.applyThemeColour(pickedColour);
 
-        this->interfaceSettings.setValue(ValueTreeIdentifiers::ThemeColour.toString(), pickedColour.toString());
+        this->interfaceSettings.setValue(InterfaceIdentifiers::ThemeColour.toString(), pickedColour.toString());
 
         for (int index = 0; index < desktop.getNumComponents(); ++index) {
             desktop.getComponent(index)->sendLookAndFeelChange();

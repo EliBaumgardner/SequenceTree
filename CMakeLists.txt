@@ -159,6 +159,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Theme/CustomLookAndFeelOrnaments.cpp
         Source/UI/Theme/CustomLookAndFeelMenus.cpp
         Source/UI/Theme/CustomTextCaret.cpp
+        Source/UI/Theme/InterfaceIdentifiers.cpp
         Source/UI/Buttons/RootRectangle.cpp
         Source/UI/Buttons/IconButton.cpp
         Source/UI/Buttons/ButtonPane.cpp

@@ -92,9 +92,6 @@ public:
     static const juce::Identifier TraversalTranspose;
     static const juce::Identifier TraversalVelocity;
 
-    static const juce::Identifier ColourPresets;
-    static const juce::Identifier ColourPreset;
-    static const juce::Identifier PresetColour;
 
     static const juce::Identifier OrnamentLibraries;
     static const juce::Identifier OrnamentLibrary;
@@ -118,9 +115,6 @@ public:
     static const juce::Identifier ActiveOrnamentUid;
     static const juce::Identifier OrnamentIndex;
     static const juce::Identifier LegacyLibrariesImported;
-
-    static const juce::Identifier ThemeColour;
-    static const juce::Identifier InterfaceZoom;
 };
 
 #endif //SEQUENCETREE_VALUETREEIDENTIFIERS_H
