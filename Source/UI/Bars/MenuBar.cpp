@@ -1,5 +1,6 @@
 #include "MenuBar.h"
 #include "../Theme/CustomLookAndFeel.h"
+#include "../Canvas/NodeCanvas.h"
 
 MenuBar::MenuBar(NodeCanvas& nodeCanvas)
     : Bar(nodeCanvas, Orientation::Vertical, iconInsetRatio)

@@ -3,6 +3,8 @@
 #include "Bar.h"
 #include "../Buttons/IconButton.h"
 
+class NodeCanvas;
+
 class MenuBar : public Bar
 {
 public:

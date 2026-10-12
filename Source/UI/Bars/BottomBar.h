@@ -15,6 +15,7 @@
 
 #include <array>
 
+class NodeCanvas;
 class TraversalSession;
 class OrnamentLibraries;
 class OrnamentApplier;

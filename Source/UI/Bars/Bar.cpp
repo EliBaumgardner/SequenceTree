@@ -1,14 +1,13 @@
 #include "Bar.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "../Canvas/NodeCanvas.h"
 
 Bar::Bar(Orientation orientation, float contentInsetRatio)
     : orientation(orientation), contentInsetRatio(contentInsetRatio)
 {
 }
 
-Bar::Bar(NodeCanvas& nodeCanvas, Orientation orientation, float contentInsetRatio)
-    : orientation(orientation), contentInsetRatio(contentInsetRatio), surface(Surface::Frosted), nodeCanvas(&nodeCanvas)
+Bar::Bar(juce::Component& backdrop, Orientation orientation, float contentInsetRatio)
+    : orientation(orientation), contentInsetRatio(contentInsetRatio), surface(Surface::Frosted), backdrop(&backdrop)
 {
 }
 
@@ -17,7 +16,7 @@ void Bar::paint(juce::Graphics& graphics)
     CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
 
     if (surface == Surface::Frosted) {
-        lookAndFeel.drawFrostedGlass(graphics, *this, *nodeCanvas, getLocalBounds());
+        lookAndFeel.drawFrostedGlass(graphics, *this, *backdrop, getLocalBounds());
     }
     else {
         graphics.setColour(lookAndFeel.barColour);

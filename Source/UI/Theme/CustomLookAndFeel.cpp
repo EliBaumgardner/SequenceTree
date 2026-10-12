@@ -74,11 +74,11 @@ void CustomLookAndFeel::drawPane(juce::Graphics& graphics, juce::Rectangle<float
     graphics.drawRoundedRectangle(area, groupCornerRadius, borderThickness);
 }
 
-void CustomLookAndFeel::drawFrostedGlass(juce::Graphics& graphics, juce::Component& surface, NodeCanvas& nodeCanvas, juce::Rectangle<int> area)
+void CustomLookAndFeel::drawFrostedGlass(juce::Graphics& graphics, juce::Component& surface, juce::Component& backdrop, juce::Rectangle<int> area)
 {
     const int  margin         = juce::roundToInt(frostKernelSize / frostScale);
-    const auto backdropArea   = nodeCanvas.getLocalBounds().expanded(margin);
-    const auto backdropOrigin = surface.getLocalPoint(&nodeCanvas, backdropArea.getPosition()).toFloat();
+    const auto backdropArea   = backdrop.getLocalBounds().expanded(margin);
+    const auto backdropOrigin = surface.getLocalPoint(&backdrop, backdropArea.getPosition()).toFloat();
     const auto frostedBounds  = (backdropArea.withZeroOrigin().toFloat() * frostScale).toNearestInt();
 
     juce::Graphics::ScopedSaveState savedState(graphics);
@@ -101,9 +101,9 @@ void CustomLookAndFeel::drawFrostedGlass(juce::Graphics& graphics, juce::Compone
         backdropGraphics.setOrigin(-backdropArea.getPosition());
         backdropGraphics.excludeClipRegion(unfrostedArea.reduced(margin));
 
-        nodeCanvas.paint(backdropGraphics);
+        backdrop.paint(backdropGraphics);
 
-        for (juce::Component* child : nodeCanvas.getChildren()) {
+        for (juce::Component* child : backdrop.getChildren()) {
             if (! child->isVisible() || ! backdropGraphics.clipRegionIntersects(child->getBoundsInParent())) {
                 continue;
             }
