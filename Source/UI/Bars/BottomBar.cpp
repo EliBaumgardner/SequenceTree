@@ -19,7 +19,7 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, TraversalSession& traversalSession,
 {
     ornamentLauncher.openingScale = OrnamentWindow::openingScale;
 
-    quaverTool = &quaverPane.addButton(&CustomLookAndFeel::drawQuaverToolIcon, "Note",
+    quaverTool = &quaverPane.addButton(&CustomLookAndFeel::drawQuaverIcon, "Note",
         [this]() {
             quaverTool->setSelected(! quaverTool->state.isSelected);
 
@@ -31,7 +31,7 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, TraversalSession& traversalSession,
             this->nodeCanvas.setQuaverMode(NodeCanvas::QuaverMode::Off);
         });
 
-    spanTool = &toolPane.addButton(&CustomLookAndFeel::drawSpanToolIcon, "Node Span",
+    spanTool = &toolPane.addButton(&CustomLookAndFeel::drawDashedBoxIcon, "Node Span",
         [this]() {
             spanTool->setSelected(! spanTool->state.isSelected);
 
@@ -169,14 +169,14 @@ void BottomBar::configureOrnamentButton()
         const juce::String           symbol      = ornamentLibraries.findOrnament(activeUid).getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString();
 
         if (symbol.isEmpty()) {
-            lookAndFeel.drawOrnamentButton(graphics, glyphArea, state);
+            lookAndFeel.drawWaveButton(graphics, glyphArea, state);
 
             return;
         }
 
         graphics.setColour(lookAndFeel.pressableButtonColour(state));
 
-        lookAndFeel.drawOrnamentSymbol(graphics, glyphArea.withSizeKeepingCentre(glyphSide, glyphSide), OrnamentLibraries::readSymbol(symbol));
+        lookAndFeel.drawStrokeSymbol(graphics, glyphArea.withSizeKeepingCentre(glyphSide, glyphSide), OrnamentLibraries::readSymbol(symbol));
     };
 }
 
@@ -202,7 +202,7 @@ void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
     axis.button->onRightClick = [this, &axis]() { showAxisMenu(axis); };
 
     axis.button->painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawAxisButton(graphics, bounds, state);
+        CustomLookAndFeel::get(*this).drawTextButton(graphics, bounds, state);
     };
 
     axis.button->setText(text);

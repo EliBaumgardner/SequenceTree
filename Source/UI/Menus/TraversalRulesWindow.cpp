@@ -70,10 +70,10 @@ void TraversalRulesWindow::paint(juce::Graphics& graphics)
     graphics.fillRect(statusBounds);
 
     if (statusIsError) {
-        graphics.setColour(theme.scriptErrorColour);
+        graphics.setColour(theme.errorColour);
     }
     else {
-        graphics.setColour(theme.scriptOkColour);
+        graphics.setColour(theme.successColour);
     }
 
     graphics.setFont(theme.font(Theme::FontStyle::Mono, Theme::labelFontHeight));

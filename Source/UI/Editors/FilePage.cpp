@@ -25,7 +25,7 @@ void FilePage::paintOverChildren(juce::Graphics& graphics)
     const int firstLine = getFirstLineOnScreen();
     const int lastLine  = firstLine + getNumLinesOnScreen();
 
-    graphics.setColour(CustomLookAndFeel::get(*this).scriptErrorColour.withAlpha(errorLineAlpha));
+    graphics.setColour(CustomLookAndFeel::get(*this).errorColour.withAlpha(errorLineAlpha));
 
     for (int line : errorLines) {
         if (line >= firstLine && line <= lastLine) {

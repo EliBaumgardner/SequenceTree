@@ -5,8 +5,8 @@ PatchControls::PatchControls(juce::AudioProcessor& processor, const juce::File& 
     : processor(processor),
       patchFolder(patchFolder)
 {
-    addButton(&CustomLookAndFeel::drawImportIcon,     "Open a saved patch", [this]() { chooseFileToOpen(); });
-    addButton(&CustomLookAndFeel::drawResetPatchIcon, "Reset the patch",    [this]() { confirmReset(); });
+    addButton(&CustomLookAndFeel::drawImportIcon, "Open a saved patch", [this]() { chooseFileToOpen(); });
+    addButton(&CustomLookAndFeel::drawReloadIcon, "Reset the patch",    [this]() { confirmReset(); });
 }
 
 void PatchControls::chooseFileToOpen()

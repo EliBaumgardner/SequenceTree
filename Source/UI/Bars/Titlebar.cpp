@@ -96,14 +96,14 @@ void Titlebar::configureTransportPane()
 
     playButton->setSelected(processor.isPlaying.load());
 
-    transportPane.addButton(&CustomLookAndFeel::drawResetIcon, "Reset",
+    transportPane.addButton(&CustomLookAndFeel::drawSkipBackIcon, "Reset",
         [this]() { resetTraversals(); });
 
     if (processor.wrapperType == juce::AudioProcessor::wrapperType_Standalone) {
         return;
     }
 
-    syncButton = &transportPane.addButton(&CustomLookAndFeel::drawSyncIcon, "Sync to host playhead",
+    syncButton = &transportPane.addButton(&CustomLookAndFeel::drawLinkIcon, "Sync to host playhead",
         [this]() { syncAttachment->setValueAsCompleteGesture(static_cast<float>(! syncButton->state.isSelected)); });
 
     syncAttachment = std::make_unique<juce::ParameterAttachment>(
@@ -121,13 +121,13 @@ void Titlebar::configureModePane()
         nodeController.setArrowMode(selected == nullptr);
     };
 
-    IconButton& nodeButton = buttonPane.addButton(&CustomLookAndFeel::drawNodeModeIcon, "Node Mode",
+    IconButton& nodeButton = buttonPane.addButton(&CustomLookAndFeel::drawCircleIcon, "Node Mode",
         [this]() { nodeController.nodeControllerMode = NodeController::NodeControllerMode::Node; });
 
-    IconButton& modulatorButton = buttonPane.addButton(&CustomLookAndFeel::drawModulatorIcon, "Modulator Mode",
+    IconButton& modulatorButton = buttonPane.addButton(&CustomLookAndFeel::drawRoundedSquareIcon, "Modulator Mode",
         [this]() { nodeController.nodeControllerMode = NodeController::NodeControllerMode::Modulator; });
 
-    IconButton& flagButton = buttonPane.addButton(&CustomLookAndFeel::drawTraversalFlagIcon, "Traversal Flag Mode",
+    IconButton& flagButton = buttonPane.addButton(&CustomLookAndFeel::drawTriangleIcon, "Traversal Flag Mode",
         [this]() { nodeController.nodeControllerMode = NodeController::NodeControllerMode::TraversalFlag; });
 
     nodeButton.state.look      = ButtonState::Look::Raised;

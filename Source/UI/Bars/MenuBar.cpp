@@ -5,9 +5,9 @@
 MenuBar::MenuBar(NodeCanvas& nodeCanvas)
     : Bar(nodeCanvas, Orientation::Vertical, iconInsetRatio)
 {
-    treeIcon.icon      = &CustomLookAndFeel::drawTreeIcon;
-    nodeIcon.icon      = &CustomLookAndFeel::drawNodeIcon;
-    traversalIcon.icon = &CustomLookAndFeel::drawTraversalIcon;
+    treeIcon.icon      = &CustomLookAndFeel::drawForkIcon;
+    nodeIcon.icon      = &CustomLookAndFeel::drawRingDotIcon;
+    traversalIcon.icon = &CustomLookAndFeel::drawRouteIcon;
 
     treeIcon.setEnabled(false);
 

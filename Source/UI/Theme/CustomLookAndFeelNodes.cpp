@@ -15,7 +15,7 @@ static void paintNodeShadow(juce::Graphics& graphics, juce::Rectangle<float> sha
     graphics.fillEllipse(shadowBounds);
 }
 
-void CustomLookAndFeel::drawNode(juce::Graphics& graphics, const NodeVisual& visual)
+void CustomLookAndFeel::drawCircleNode(juce::Graphics& graphics, const NodeVisual& visual)
 {
     auto         circleBounds = getNodeCircleBounds(visual.bounds);
     auto         circleFill   = circleBounds.reduced(0.5f);
@@ -42,12 +42,12 @@ void CustomLookAndFeel::drawNode(juce::Graphics& graphics, const NodeVisual& vis
 
     if (visual.hasInnerRim) {
         graphics.setColour(visual.colour.brighter(0.35f));
-        graphics.drawEllipse(circleFill.reduced(encapsulatorRimInset), encapsulatorRimWidth);
+        graphics.drawEllipse(circleFill.reduced(innerRimInset), innerRimWidth);
     }
 
-    if (visual.isEncapsulationRinged) {
-        graphics.setColour(visual.encapsulationRingColour);
-        graphics.drawEllipse(circleFill.expanded(encapsulationRingWidth * 0.5f), encapsulationRingWidth);
+    if (visual.hasOuterRing) {
+        graphics.setColour(visual.outerRingColour);
+        graphics.drawEllipse(circleFill.expanded(outerRingWidth * 0.5f), outerRingWidth);
     }
 
     float ringInset = highlightRingWidth * 0.5f;
@@ -65,17 +65,17 @@ void CustomLookAndFeel::drawNode(juce::Graphics& graphics, const NodeVisual& vis
     }
 
     if (visual.isOutlined) {
-        graphics.setColour(spanOutlineColour);
-        graphics.drawEllipse(circleBounds.expanded(spanOutlineGap + spanOutlineWidth * 0.5f), spanOutlineWidth);
+        graphics.setColour(outlineRingColour);
+        graphics.drawEllipse(circleBounds.expanded(outlineRingGap + outlineRingWidth * 0.5f), outlineRingWidth);
     }
 }
 
-void CustomLookAndFeel::drawModulatorNode(juce::Graphics& graphics, const NodeVisual& visual)
+void CustomLookAndFeel::drawSquareNode(juce::Graphics& graphics, const NodeVisual& visual)
 {
     auto         squareBounds = visual.bounds;
     auto         squareFill   = squareBounds.reduced(0.5f);
     auto         squareSelect = squareBounds.expanded(selectionRingGap + selectionRingWidth * 0.5f);
-    const float  cornerRadius = squareBounds.getWidth() * modulatorCornerRatio;
+    const float  cornerRadius = squareBounds.getWidth() * squareNodeCornerRatio;
     juce::Colour fill         = visual.colour;
     juce::Colour outline      = borderStrongColour;
 
@@ -111,7 +111,7 @@ void CustomLookAndFeel::drawModulatorNode(juce::Graphics& graphics, const NodeVi
     }
 }
 
-void CustomLookAndFeel::drawRootRectangle(juce::Graphics& graphics, juce::Rectangle<float> bounds)
+void CustomLookAndFeel::drawRaisedPanel(juce::Graphics& graphics, juce::Rectangle<float> bounds)
 {
     const auto area = bounds.reduced(borderThickness * 0.5f);
 

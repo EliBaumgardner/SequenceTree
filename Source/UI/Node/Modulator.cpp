@@ -12,7 +12,7 @@ Modulator::Modulator(juce::UndoManager& undoManager) : Node(undoManager)
 
 void Modulator::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawModulatorNode(graphics, getNodeVisual(getSquareBounds()));
+    CustomLookAndFeel::get(*this).drawSquareNode(graphics, getNodeVisual(getSquareBounds()));
 }
 
 void Modulator::bindValueEditorForMode()

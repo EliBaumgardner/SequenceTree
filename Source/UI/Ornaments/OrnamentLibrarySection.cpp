@@ -18,7 +18,7 @@ OrnamentLibrarySection::OrnamentLibrarySection(OrnamentLibraries& ornamentLibrar
     nameEditor.setJustification(juce::Justification::centredLeft);
     nameEditor.bindEditor(library, ValueTreeIdentifiers::LibraryName);
 
-    foldButton.icon    = &CustomLookAndFeel::drawCollapseIcon;
+    foldButton.icon    = &CustomLookAndFeel::drawChevronUpIcon;
     foldButton.onClick = [this]() { toggleFold(); };
     addCard.onClick    = [this]() { addOrnament(); };
 
@@ -127,11 +127,11 @@ void OrnamentLibrarySection::toggleFold()
 {
     if (fold == Fold::Open) {
         fold            = Fold::Closed;
-        foldButton.icon = &CustomLookAndFeel::drawDisplayArrowIcon;
+        foldButton.icon = &CustomLookAndFeel::drawChevronDownIcon;
     }
     else {
         fold            = Fold::Open;
-        foldButton.icon = &CustomLookAndFeel::drawCollapseIcon;
+        foldButton.icon = &CustomLookAndFeel::drawChevronUpIcon;
     }
 
     body.setVisible(fold == Fold::Open);

@@ -24,7 +24,7 @@ TraversalMenu::TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, Tra
     int                   firstTraversalId = -1;
 
     editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawRulesButton(graphics, bounds, state, Theme::textHeight);
+        CustomLookAndFeel::get(*this).drawCodeButton(graphics, bounds, state, Theme::textHeight);
     };
 
     displayMenu.labelEditor.autoFitText = false;

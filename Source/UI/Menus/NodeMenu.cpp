@@ -14,7 +14,7 @@ NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRule
       colourSelector(colourPresets, undoManager)
 {
     editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawRulesButton(graphics, bounds, state, Theme::textHeight);
+        CustomLookAndFeel::get(*this).drawCodeButton(graphics, bounds, state, Theme::textHeight);
     };
 
     colourLabel.setText("COL", juce::dontSendNotification);

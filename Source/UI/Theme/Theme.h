@@ -50,7 +50,7 @@ struct Theme
         captionColour                = shifted(base.captionColour);
         lineNumberColour             = shifted(base.lineNumberColour);
         hoverRingColour              = shifted(base.hoverRingColour);
-        spanOutlineColour            = shifted(base.spanOutlineColour);
+        outlineRingColour            = shifted(base.outlineRingColour);
         popupMenuColour              = shifted(base.popupMenuColour);
         popupMenuBorderColour        = shifted(base.popupMenuBorderColour);
         popupMenuTextColour          = shifted(base.popupMenuTextColour);
@@ -101,13 +101,13 @@ struct Theme
     juce::Colour captionColour    = mutedTextColour;
     juce::Colour lineNumberColour = dimTextColour;
 
-    juce::Colour scriptErrorColour = juce::Colour::fromRGB(207, 102, 90);
-    juce::Colour scriptOkColour    = juce::Colour::fromRGB(126, 168, 116);
+    juce::Colour errorColour   = juce::Colour::fromRGB(207, 102, 90);
+    juce::Colour successColour = juce::Colour::fromRGB(126, 168, 116);
 
     juce::Colour selectionBoxColour  = accentColour;
     juce::Colour selectionRingColour = accentColour;
     juce::Colour hoverRingColour     = softTextColour;
-    juce::Colour spanOutlineColour   = softTextColour;
+    juce::Colour outlineRingColour   = softTextColour;
 
     juce::Colour popupMenuColour              = raisedColour;
     juce::Colour popupMenuBorderColour        = borderStrongColour;
@@ -149,8 +149,8 @@ struct Theme
     static constexpr float highlightTintAmount  = 0.25f;
     static constexpr float hoverFillBrightness  = 0.15f;
 
-    static constexpr float spanOutlineGap   = 2.5f;
-    static constexpr float spanOutlineWidth = 1.5f;
+    static constexpr float outlineRingGap   = 2.5f;
+    static constexpr float outlineRingWidth = 1.5f;
 
     static constexpr int   nodeRadius    = 24;
     static constexpr float nodeCirclePad = 4.0f;
@@ -160,12 +160,12 @@ struct Theme
     static constexpr float nodeShadowBlur    = 5.0f;
     static constexpr float nodeShadowAlpha   = 0.45f;
 
-    static constexpr float modulatorCornerRatio = 0.22f;
+    static constexpr float squareNodeCornerRatio = 0.22f;
 
-    static constexpr float encapsulatorRimInset = 2.5f;
-    static constexpr float encapsulatorRimWidth = 1.0f;
+    static constexpr float innerRimInset = 2.5f;
+    static constexpr float innerRimWidth = 1.0f;
 
-    static constexpr float encapsulationRingWidth = 2.0f;
+    static constexpr float outerRingWidth = 2.0f;
 
     static constexpr float borderThickness    = 1.0f;
     static constexpr float paneCornerRadius   = 7.0f;
