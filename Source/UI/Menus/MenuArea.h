@@ -10,6 +10,7 @@
 #include "SettingsMenu.h"
 
 class MenuBar;
+class NodeCanvas;
 class GraphState;
 class TraversalRuleState;
 class AudioSnapshotPublisher;

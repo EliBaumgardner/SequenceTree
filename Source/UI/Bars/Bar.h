@@ -3,8 +3,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Theme/Theme.h"
 
-class NodeCanvas;
-
 class Bar : public juce::Component
 {
 public:
@@ -12,7 +10,7 @@ public:
     enum class Orientation;
 
     Bar(Orientation orientation, float contentInsetRatio);
-    Bar(NodeCanvas& nodeCanvas, Orientation orientation, float contentInsetRatio);
+    Bar(juce::Component& backdrop, Orientation orientation, float contentInsetRatio);
 
     void paint(juce::Graphics& graphics) final;
 
@@ -29,8 +27,8 @@ protected:
 
 private:
 
-    Orientation orientation;
-    float       contentInsetRatio;
-    Surface     surface    = Surface::Solid;
-    NodeCanvas* nodeCanvas = nullptr;
+    Orientation      orientation;
+    float            contentInsetRatio;
+    Surface          surface  = Surface::Solid;
+    juce::Component* backdrop = nullptr;
 };

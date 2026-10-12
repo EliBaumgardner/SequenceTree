@@ -8,6 +8,7 @@
 #include "../Buttons/TempoDisplay.h"
 #include "../../Input/NodeController.h"
 
+class NodeCanvas;
 class SequenceTreeAudioProcessor;
 
 class Titlebar : public Bar, private juce::ChangeListener
