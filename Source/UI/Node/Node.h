@@ -8,22 +8,10 @@
 #include "../../Util/NodeInfo.h"
 #include "../Buttons/IconButton.h"
 #include "../Editors/ValueEditor.h"
+#include "../Theme/Visuals.h"
 
 class Arrow;
 class NodeCanvas;
-
-struct NodeVisual
-{
-    juce::Rectangle<float>             bounds;
-    juce::Colour                       colour;
-    const std::map<int, juce::Colour>& highlights;
-    bool                               isHovered             = false;
-    bool                               isSelected            = false;
-    bool                               isOutlined            = false;
-    bool                               isEncapsulationRinged = false;
-    bool                               hasInnerRim           = false;
-    juce::Colour                       encapsulationRingColour;
-};
 
 class Node : public juce::Component
 {

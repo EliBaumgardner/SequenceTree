@@ -12,7 +12,6 @@ class FileLabel;
 class ValueSlider;
 
 struct ButtonState;
-struct NodeVisual;
 
 class CustomLookAndFeel : public juce::LookAndFeel_V4, public Theme
 {

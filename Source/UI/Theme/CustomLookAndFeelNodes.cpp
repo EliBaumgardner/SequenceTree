@@ -1,5 +1,4 @@
 #include "CustomLookAndFeel.h"
-#include "../Node/Node.h"
 
 static void paintNodeShadow(juce::Graphics& graphics, juce::Rectangle<float> shapeBounds)
 {
