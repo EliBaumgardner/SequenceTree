@@ -2,7 +2,7 @@
 #include "../Theme/CustomLookAndFeel.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../Editors/Formats/ValueFormat.h"
+#include "../Editors/Formats/TraversalFlagFormat.h"
 
 #include <algorithm>
 #include <cmath>
