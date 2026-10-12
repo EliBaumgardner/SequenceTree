@@ -1,4 +1,4 @@
-#include "ValueFormat.h"
+#include "TraversalFlagFormat.h"
 #include "../../../Graph/ValueTreeIdentifiers.h"
 
 const juce::String TraversalFlagFormat::instanceLetters { "abcdefghijklmnopqrstuvwxyz" };

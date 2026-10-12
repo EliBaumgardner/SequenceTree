@@ -4,8 +4,6 @@
 #include <limits>
 #include <vector>
 
-#include "../../../Graph/RTData.h"
-
 struct InputRestrictions
 {
     int          maxLength = 4;
@@ -72,6 +70,9 @@ public:
     InputRestrictions restrictions() const override;
     juce::String      text (const ValueBinding& binding, TextPurpose purpose) const override;
     ParsedValue       parse(const ValueBinding& binding, const juce::String& enteredText) const override;
+
+    static constexpr int lowestPitch  = 0;
+    static constexpr int highestPitch = 127;
 };
 
 class GreekLetterFormat : public NumberFormat
@@ -94,21 +95,6 @@ public:
     ParsedValue       parse(const ValueBinding& binding, const juce::String& enteredText) const override;
 };
 
-class TraversalFlagFormat : public NumberFormat
-{
-public:
-
-    TraversalFlagFormat();
-
-    InputRestrictions restrictions() const override;
-    juce::String      text (const ValueBinding& binding, TextPurpose purpose) const override;
-    ParsedValue       parse(const ValueBinding& binding, const juce::String& enteredText) const override;
-
-    static std::vector<TraversalKey> parseKeys(const juce::String& text);
-    static juce::String              describe (const TraversalKey& key);
-
-    static const juce::String instanceLetters;
-};
 
 class TextFormat : public ValueFormat
 {

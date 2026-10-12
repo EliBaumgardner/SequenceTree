@@ -1,7 +1,6 @@
 #include "ValueFormat.h"
-#include "../../../Util/NodeInfo.h"
 
-PitchFormat::PitchFormat() : NumberFormat(minimumMidiPitch, maximumMidiPitch)
+PitchFormat::PitchFormat() : NumberFormat(lowestPitch, highestPitch)
 {
 }
 
@@ -36,7 +35,7 @@ static constexpr int semitonesPerOctave = 12;
 
 juce::String PitchFormat::text(const ValueBinding& binding, TextPurpose purpose) const
 {
-    const int          midiNote = juce::jlimit(minimumMidiPitch, maximumMidiPitch, static_cast<int>(binding.primary.getValue()));
+    const int          midiNote = juce::jlimit(lowestPitch, highestPitch, static_cast<int>(binding.primary.getValue()));
     const int          octave   = (midiNote / semitonesPerOctave) - 1;
     const juce::String name     = pitchNames[midiNote % semitonesPerOctave] + juce::String(octave);
 
@@ -53,7 +52,7 @@ static constexpr int naturalSemitones[] = { 0, 2, 4, 5, 7, 9, 11 };
 
 ParsedValue PitchFormat::parse(const ValueBinding& binding, const juce::String& enteredText) const
 {
-    const int          currentNote = juce::jlimit(minimumMidiPitch, maximumMidiPitch, static_cast<int>(binding.primary.getValue()));
+    const int          currentNote = juce::jlimit(lowestPitch, highestPitch, static_cast<int>(binding.primary.getValue()));
     const juce::String typed       = enteredText.trim().toLowerCase();
     const int          letterIndex = naturalLetters.indexOfChar(typed[0]);
     juce::String       octaveText  = typed.substring(1);
@@ -81,5 +80,5 @@ ParsedValue PitchFormat::parse(const ValueBinding& binding, const juce::String& 
         octave = octaveText.getIntValue();
     }
 
-    return { juce::jlimit(minimumMidiPitch, maximumMidiPitch, (octave + 1) * semitonesPerOctave + naturalSemitones[letterIndex] + accidental), {} };
+    return { juce::jlimit(lowestPitch, highestPitch, (octave + 1) * semitonesPerOctave + naturalSemitones[letterIndex] + accidental), {} };
 }
