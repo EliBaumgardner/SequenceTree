@@ -15,7 +15,7 @@ endif()
 # Add JUCEIO
 add_subdirectory(JUCE)
 
-set(ARSNOVAUI_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../ArsNovaUI" CACHE PATH "Checkout of the ArsNovaUI library")
+set(ARSNOVAUI_PATH "${CMAKE_CURRENT_SOURCE_DIR}/ArsNovaUI" CACHE PATH "Checkout of the ArsNovaUI library")
 add_subdirectory(${ARSNOVAUI_PATH} ${CMAKE_CURRENT_BINARY_DIR}/ArsNovaUI)
 
 # Add your plugin
