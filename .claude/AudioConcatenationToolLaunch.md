@@ -144,9 +144,7 @@ The library is a third repository. Each tool depends on it; neither tool depends
 | Submodule | Each tool's repo records a pinned commit of the library, the way SequenceTree pins `JUCE` and `Catch2` in `.gitmodules` | Each tool builds the exact library version it was tested with; a fresh clone works anywhere | Each library change means a commit there and a pointer update in each tool |
 | Copy | The files are copied into the new tool | Nothing to set up | The two copies drift apart |
 
-Plan: a local path while the library is still changing, then a submodule once it settles.
-
-The library is `ArsNovaUI`, a plain CMake `INTERFACE` target with a gallery app. Its creation is planned step by step in `.claude/context/Proposals/Unimplemented/GenericUILibrary.md`.
+The library is `ArsNovaUI` (`https://github.com/EliBaumgardner/ArsNovaUI`), a plain CMake `INTERFACE` target with a gallery app. SequenceTree holds it as a submodule, and the concatenator does the same. How it was built is in `.claude/context/Proposals/Implemented/GenericUILibrary.md`.
 
 ## Patterns to copy, not share
 
