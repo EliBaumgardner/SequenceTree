@@ -42,17 +42,6 @@ juce::ValueTree GraphState::addRootNode(juce::UndoManager* undoManager)
     return rootNode;
 }
 
-void GraphState::setNodeLimitProperties(juce::ValueTree node, juce::UndoManager* undoManager)
-{
-    node.setProperty(ValueTreeIdentifiers::CountLimit,        defaultNodeCountLimit,    undoManager);
-    node.setProperty(ValueTreeIdentifiers::TriggerLimit,      defaultTriggerLimit,      undoManager);
-    node.setProperty(ValueTreeIdentifiers::SwitchCountLimit,  defaultSwitchCountLimit,  undoManager);
-    node.setProperty(ValueTreeIdentifiers::SubLoopCountLimit, defaultSubLoopCountLimit, undoManager);
-
-    node.setProperty(ValueTreeIdentifiers::RepeatValue,       defaultRepeatValue,       undoManager);
-    node.setProperty(ValueTreeIdentifiers::Probability,       defaultProbability,       undoManager);
-}
-
 juce::ValueTree GraphState::addChildNode(int parentNodeId, const juce::Identifier& nodeType,
                                          juce::UndoManager* undoManager)
 {
@@ -87,49 +76,6 @@ juce::ValueTree GraphState::addChildNode(int parentNodeId, const juce::Identifie
     return node;
 }
 
-juce::ValueTree GraphState::getNode(int nodeId) const
-{
-    const auto indexed = nodeIndex.find(nodeId);
-
-    if (indexed == nodeIndex.end()) {
-        return {};
-    }
-
-    return indexed->second;
-}
-
-void GraphState::connectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager)
-{
-    juce::ValueTree parentNode = getNode(parentNodeId);
-    juce::ValueTree childNode  = getNode(childNodeId);
-
-    juce::ValueTree childId {ValueTreeIdentifiers::NodeId};
-    childId.setProperty(ValueTreeIdentifiers::Id, childNodeId, undoManager);
-
-    ArrowInfo arrowInfo;
-
-    if (parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData
-        || parentNode.getType() == ValueTreeIdentifiers::AlternativeModulatorData) {
-        arrowInfo.xBinding = ArrowBinding::NoBind;
-        arrowInfo.yBinding = ArrowBinding::DurationBind;
-    }
-
-    ArrowBindingOps::setArrowInfo(childId, arrowInfo, undoManager);
-
-    parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).addChild(childId, -1, undoManager);
-
-    if (! childNode.isValid()) {
-        return;
-    }
-
-    if (parentNode.hasProperty(ValueTreeIdentifiers::NodeColour)) {
-        childNode.setProperty(ValueTreeIdentifiers::NodeColour, parentNode.getProperty(ValueTreeIdentifiers::NodeColour), undoManager);
-    }
-    else {
-        childNode.removeProperty(ValueTreeIdentifiers::NodeColour, undoManager);
-    }
-}
-
 juce::ValueTree GraphState::addTraversalFlagNode(int parentNodeId, juce::UndoManager* undoManager)
 {
     jassert(getNode(parentNodeId).getType() == ValueTreeIdentifiers::NodeData
@@ -161,35 +107,6 @@ juce::ValueTree GraphState::addModulatorRoot(int parentNodeId, juce::UndoManager
     juce::ValueTree modulatorNode = addModulatorNode(parentNode, ValueTreeIdentifiers::ModulatorRootData, nodeIdIncrement, undoManager);
 
     nodeMap.addChild(modulatorNode, -1, undoManager);
-
-    return modulatorNode;
-}
-
-juce::ValueTree GraphState::addModulatorNode(juce::ValueTree parentNode, const juce::Identifier& nodeType,
-                                             int newNodeId, juce::UndoManager* undoManager)
-{
-    int rootId = static_cast<int>(parentNode.getProperty(ValueTreeIdentifiers::RootNodeId));
-
-    if (nodeType == ValueTreeIdentifiers::ModulatorRootData) {
-        rootId = newNodeId;
-    }
-
-    juce::ValueTree modulatorNode        {nodeType};
-    juce::ValueTree modulatorChildrenIds {ValueTreeIdentifiers::NodeChildrenIds};
-
-    modulatorNode.addChild(modulatorChildrenIds, -1, undoManager);
-
-    setNodeLimitProperties(modulatorNode, undoManager);
-
-    modulatorNode.setProperty(ValueTreeIdentifiers::RootNodeId, rootId,           undoManager);
-    modulatorNode.setProperty(ValueTreeIdentifiers::ModAmount,  defaultModAmount, undoManager);
-    modulatorNode.setProperty(ValueTreeIdentifiers::Id,         newNodeId,        undoManager);
-
-    if (parentNode.hasProperty(ValueTreeIdentifiers::NodeColour)) {
-        modulatorNode.setProperty(ValueTreeIdentifiers::NodeColour, parentNode.getProperty(ValueTreeIdentifiers::NodeColour), undoManager);
-    }
-
-    connectNodes(parentNode.getProperty(ValueTreeIdentifiers::Id), newNodeId, undoManager);
 
     return modulatorNode;
 }
@@ -230,47 +147,100 @@ juce::ValueTree GraphState::addAlternativeModulator(int parentNodeId, juce::Undo
     return alternativeModulatorNode;
 }
 
-void GraphState::addMidiNote(int nodeId, NodeNote note, juce::UndoManager* undoManager)
+juce::ValueTree GraphState::getNode(int nodeId) const
 {
-    juce::ValueTree node = getNode(nodeId);
+    const auto indexed = nodeIndex.find(nodeId);
 
-    jassert(node.isValid());
-    jassert(node.getType() == ValueTreeIdentifiers::NodeData
-         || node.getType() == ValueTreeIdentifiers::AlternativeNodeData
-         || node.getType() == ValueTreeIdentifiers::RootNodeData);
+    if (indexed == nodeIndex.end()) {
+        return {};
+    }
 
-    juce::ValueTree midiNote {ValueTreeIdentifiers::MidiNoteData};
-
-    midiNote.setProperty(ValueTreeIdentifiers::MidiPitch,    note.pitch,       undoManager);
-    midiNote.setProperty(ValueTreeIdentifiers::MidiVelocity, note.velocity,    undoManager);
-    midiNote.setProperty(ValueTreeIdentifiers::MidiDuration, note.duration,    undoManager);
-    midiNote.setProperty(ValueTreeIdentifiers::MidiChannel,  note.midiChannel, undoManager);
-
-    node.getChildWithName(ValueTreeIdentifiers::MidiNotesData).addChild(midiNote, -1, undoManager);
+    return indexed->second;
 }
 
-void GraphState::replaceState(const juce::ValueTree& restoredNodeMap,
-                              const juce::ValueTree& restoredTraversalMap)
+juce::ValueTree GraphState::getNodeParent(int nodeId) const
 {
-    traversals.map.removeAllChildren(nullptr);
-    nodeMap.removeAllChildren(nullptr);
+    std::vector<int>        frontier {nodeId};
+    std::unordered_set<int> visited  {nodeId};
 
-    for (int i = 0; i < restoredTraversalMap.getNumChildren(); ++i) {
-        traversals.map.addChild(restoredTraversalMap.getChild(i).createCopy(), -1, nullptr);
-    }
+    while (! frontier.empty()) {
+        const int currentId = frontier.front();
+        frontier.erase(frontier.begin());
 
-    for (int i = 0; i < restoredNodeMap.getNumChildren(); ++i) {
-        nodeMap.addChild(restoredNodeMap.getChild(i).createCopy(), -1, nullptr);
-    }
+        const auto parents = parentIdsOf.find(currentId);
 
-    nodeIdIncrement = 0;
-
-    for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
-        const int id = nodeMap.getChild(i).getProperty(ValueTreeIdentifiers::Id);
-
-        if (id > nodeIdIncrement) {
-            nodeIdIncrement = id;
+        if (parents == parentIdsOf.end()) {
+            continue;
         }
+
+        for (const int parentId : parents->second) {
+            const juce::ValueTree parent = getNode(parentId);
+
+            if (! parent.isValid()) {
+                continue;
+            }
+
+            if (parent.getType() != ValueTreeIdentifiers::TraversalFlagData) {
+                return parent;
+            }
+
+            if (visited.insert(parentId).second) {
+                frontier.push_back(parentId);
+            }
+        }
+    }
+
+    return {};
+}
+
+juce::ValueTree GraphState::getMidiNotes(int nodeId) const
+{
+    juce::ValueTree node      = getNode(nodeId);
+    juce::ValueTree midiNotes = node.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
+
+    if (! node.isValid() || ! midiNotes.isValid()) {
+        return {};
+    }
+
+    return midiNotes;
+}
+
+juce::ValueTree GraphState::getConnection(int parentNodeId, int childNodeId) const
+{
+    juce::ValueTree nodeChildrenIds = getNode(parentNodeId).getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+    return nodeChildrenIds.getChildWithProperty(ValueTreeIdentifiers::Id, childNodeId);
+}
+
+void GraphState::connectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager)
+{
+    juce::ValueTree parentNode = getNode(parentNodeId);
+    juce::ValueTree childNode  = getNode(childNodeId);
+
+    juce::ValueTree childId {ValueTreeIdentifiers::NodeId};
+    childId.setProperty(ValueTreeIdentifiers::Id, childNodeId, undoManager);
+
+    ArrowInfo arrowInfo;
+
+    if (parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData
+        || parentNode.getType() == ValueTreeIdentifiers::AlternativeModulatorData) {
+        arrowInfo.xBinding = ArrowBinding::NoBind;
+        arrowInfo.yBinding = ArrowBinding::DurationBind;
+    }
+
+    ArrowBindingOps::setArrowInfo(childId, arrowInfo, undoManager);
+
+    parentNode.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).addChild(childId, -1, undoManager);
+
+    if (! childNode.isValid()) {
+        return;
+    }
+
+    if (parentNode.hasProperty(ValueTreeIdentifiers::NodeColour)) {
+        childNode.setProperty(ValueTreeIdentifiers::NodeColour, parentNode.getProperty(ValueTreeIdentifiers::NodeColour), undoManager);
+    }
+    else {
+        childNode.removeProperty(ValueTreeIdentifiers::NodeColour, undoManager);
     }
 }
 
@@ -330,32 +300,23 @@ void GraphState::removeNode(int nodeId, juce::UndoManager* undoManager)
     }
 }
 
-void GraphState::setNodePosition(juce::ValueTree node, NodePosition nodePosition, juce::UndoManager* undoManager)
-{
-    jassert(node.isValid());
-
-    node.setProperty(ValueTreeIdentifiers::XPosition, nodePosition.xPosition, undoManager);
-    node.setProperty(ValueTreeIdentifiers::YPosition, nodePosition.yPosition, undoManager);
-    node.setProperty(ValueTreeIdentifiers::Radius,    nodePosition.radius,    undoManager);
-
-    const int nodeId = node.getProperty(ValueTreeIdentifiers::Id);
-
-    arrows.clearArrowDurations(nodeId, undoManager);
-    arrows.syncPitchBindings(nodeId, undoManager);
-}
-
-NodePosition GraphState::getNodePosition(int nodeId) const
+void GraphState::addMidiNote(int nodeId, NodeNote note, juce::UndoManager* undoManager)
 {
     juce::ValueTree node = getNode(nodeId);
+
     jassert(node.isValid());
+    jassert(node.getType() == ValueTreeIdentifiers::NodeData
+         || node.getType() == ValueTreeIdentifiers::AlternativeNodeData
+         || node.getType() == ValueTreeIdentifiers::RootNodeData);
 
-    NodePosition nodePosition;
+    juce::ValueTree midiNote {ValueTreeIdentifiers::MidiNoteData};
 
-    nodePosition.xPosition = node.getProperty(ValueTreeIdentifiers::XPosition);
-    nodePosition.yPosition = node.getProperty(ValueTreeIdentifiers::YPosition);
-    nodePosition.radius    = node.getProperty(ValueTreeIdentifiers::Radius);
+    midiNote.setProperty(ValueTreeIdentifiers::MidiPitch,    note.pitch,       undoManager);
+    midiNote.setProperty(ValueTreeIdentifiers::MidiVelocity, note.velocity,    undoManager);
+    midiNote.setProperty(ValueTreeIdentifiers::MidiDuration, note.duration,    undoManager);
+    midiNote.setProperty(ValueTreeIdentifiers::MidiChannel,  note.midiChannel, undoManager);
 
-    return nodePosition;
+    node.getChildWithName(ValueTreeIdentifiers::MidiNotesData).addChild(midiNote, -1, undoManager);
 }
 
 void GraphState::setNodeColour(int nodeId, const juce::String& colourText, juce::UndoManager* undoManager)
@@ -401,6 +362,59 @@ void GraphState::setNodeColour(int nodeId, const juce::String& colourText, juce:
             pendingIds.push_back(childId);
         }
     }
+}
+
+void GraphState::setNodePosition(juce::ValueTree node, NodePosition nodePosition, juce::UndoManager* undoManager)
+{
+    jassert(node.isValid());
+
+    node.setProperty(ValueTreeIdentifiers::XPosition, nodePosition.xPosition, undoManager);
+    node.setProperty(ValueTreeIdentifiers::YPosition, nodePosition.yPosition, undoManager);
+    node.setProperty(ValueTreeIdentifiers::Radius,    nodePosition.radius,    undoManager);
+
+    const int nodeId = node.getProperty(ValueTreeIdentifiers::Id);
+
+    arrows.clearArrowDurations(nodeId, undoManager);
+    arrows.syncPitchBindings(nodeId, undoManager);
+}
+
+void GraphState::replaceState(const juce::ValueTree& restoredNodeMap,
+                              const juce::ValueTree& restoredTraversalMap)
+{
+    traversals.map.removeAllChildren(nullptr);
+    nodeMap.removeAllChildren(nullptr);
+
+    for (int i = 0; i < restoredTraversalMap.getNumChildren(); ++i) {
+        traversals.map.addChild(restoredTraversalMap.getChild(i).createCopy(), -1, nullptr);
+    }
+
+    for (int i = 0; i < restoredNodeMap.getNumChildren(); ++i) {
+        nodeMap.addChild(restoredNodeMap.getChild(i).createCopy(), -1, nullptr);
+    }
+
+    nodeIdIncrement = 0;
+
+    for (int i = 0; i < nodeMap.getNumChildren(); ++i) {
+        const int id = nodeMap.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+
+        if (id > nodeIdIncrement) {
+            nodeIdIncrement = id;
+        }
+    }
+}
+
+NodePosition GraphState::getNodePosition(int nodeId) const
+{
+    juce::ValueTree node = getNode(nodeId);
+    jassert(node.isValid());
+
+    NodePosition nodePosition;
+
+    nodePosition.xPosition = node.getProperty(ValueTreeIdentifiers::XPosition);
+    nodePosition.yPosition = node.getProperty(ValueTreeIdentifiers::YPosition);
+    nodePosition.radius    = node.getProperty(ValueTreeIdentifiers::Radius);
+
+    return nodePosition;
 }
 
 std::vector<int> GraphState::nodeIdsBetween(int startNodeId, int endNodeId) const
@@ -502,58 +516,15 @@ std::vector<int> GraphState::nodeIdsBetween(int startNodeId, int endNodeId) cons
     return spanNodeIds;
 }
 
-juce::ValueTree GraphState::getNodeParent(int nodeId) const
+void GraphState::setNodeLimitProperties(juce::ValueTree node, juce::UndoManager* undoManager)
 {
-    std::vector<int>        frontier {nodeId};
-    std::unordered_set<int> visited  {nodeId};
+    node.setProperty(ValueTreeIdentifiers::CountLimit,        defaultNodeCountLimit,    undoManager);
+    node.setProperty(ValueTreeIdentifiers::TriggerLimit,      defaultTriggerLimit,      undoManager);
+    node.setProperty(ValueTreeIdentifiers::SwitchCountLimit,  defaultSwitchCountLimit,  undoManager);
+    node.setProperty(ValueTreeIdentifiers::SubLoopCountLimit, defaultSubLoopCountLimit, undoManager);
 
-    while (! frontier.empty()) {
-        const int currentId = frontier.front();
-        frontier.erase(frontier.begin());
-
-        const auto parents = parentIdsOf.find(currentId);
-
-        if (parents == parentIdsOf.end()) {
-            continue;
-        }
-
-        for (const int parentId : parents->second) {
-            const juce::ValueTree parent = getNode(parentId);
-
-            if (! parent.isValid()) {
-                continue;
-            }
-
-            if (parent.getType() != ValueTreeIdentifiers::TraversalFlagData) {
-                return parent;
-            }
-
-            if (visited.insert(parentId).second) {
-                frontier.push_back(parentId);
-            }
-        }
-    }
-
-    return {};
-}
-
-juce::ValueTree GraphState::getMidiNotes(int nodeId) const
-{
-    juce::ValueTree node      = getNode(nodeId);
-    juce::ValueTree midiNotes = node.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
-
-    if (! node.isValid() || ! midiNotes.isValid()) {
-        return {};
-    }
-
-    return midiNotes;
-}
-
-juce::ValueTree GraphState::getConnection(int parentNodeId, int childNodeId) const
-{
-    juce::ValueTree nodeChildrenIds = getNode(parentNodeId).getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-
-    return nodeChildrenIds.getChildWithProperty(ValueTreeIdentifiers::Id, childNodeId);
+    node.setProperty(ValueTreeIdentifiers::RepeatValue,       defaultRepeatValue,       undoManager);
+    node.setProperty(ValueTreeIdentifiers::Probability,       defaultProbability,       undoManager);
 }
 
 void GraphState::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
@@ -563,6 +534,18 @@ void GraphState::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& c
     }
     else if (parent.getType() == ValueTreeIdentifiers::NodeChildrenIds) {
         linkParent(parent.getParent().getProperty(ValueTreeIdentifiers::Id), child.getProperty(ValueTreeIdentifiers::Id));
+    }
+}
+
+void GraphState::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex)
+{
+    juce::ignoreUnused(childIndex);
+
+    if (parent.getType() == ValueTreeIdentifiers::NodeMap) {
+        unindexNode(child);
+    }
+    else if (parent.getType() == ValueTreeIdentifiers::NodeChildrenIds) {
+        unlinkParent(parent.getParent().getProperty(ValueTreeIdentifiers::Id), child.getProperty(ValueTreeIdentifiers::Id));
     }
 }
 
@@ -579,27 +562,6 @@ void GraphState::indexNode(const juce::ValueTree& node)
     }
 }
 
-void GraphState::linkParent(int parentNodeId, int childNodeId)
-{
-    std::vector<int>& parents = parentIdsOf[childNodeId];
-
-    if (std::ranges::find(parents, parentNodeId) == parents.end()) {
-        parents.push_back(parentNodeId);
-    }
-}
-
-void GraphState::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex)
-{
-    juce::ignoreUnused(childIndex);
-
-    if (parent.getType() == ValueTreeIdentifiers::NodeMap) {
-        unindexNode(child);
-    }
-    else if (parent.getType() == ValueTreeIdentifiers::NodeChildrenIds) {
-        unlinkParent(parent.getParent().getProperty(ValueTreeIdentifiers::Id), child.getProperty(ValueTreeIdentifiers::Id));
-    }
-}
-
 void GraphState::unindexNode(const juce::ValueTree& node)
 {
     const int nodeId = node.getProperty(ValueTreeIdentifiers::Id);
@@ -610,6 +572,15 @@ void GraphState::unindexNode(const juce::ValueTree& node)
 
     for (int i = 0; i < childIds.getNumChildren(); ++i) {
         unlinkParent(nodeId, childIds.getChild(i).getProperty(ValueTreeIdentifiers::Id));
+    }
+}
+
+void GraphState::linkParent(int parentNodeId, int childNodeId)
+{
+    std::vector<int>& parents = parentIdsOf[childNodeId];
+
+    if (std::ranges::find(parents, parentNodeId) == parents.end()) {
+        parents.push_back(parentNodeId);
     }
 }
 
@@ -628,4 +599,33 @@ void GraphState::unlinkParent(int parentNodeId, int childNodeId)
     if (parents.empty()) {
         parentIdsOf.erase(entry);
     }
+}
+
+juce::ValueTree GraphState::addModulatorNode(juce::ValueTree parentNode, const juce::Identifier& nodeType,
+                                             int newNodeId, juce::UndoManager* undoManager)
+{
+    int rootId = static_cast<int>(parentNode.getProperty(ValueTreeIdentifiers::RootNodeId));
+
+    if (nodeType == ValueTreeIdentifiers::ModulatorRootData) {
+        rootId = newNodeId;
+    }
+
+    juce::ValueTree modulatorNode        {nodeType};
+    juce::ValueTree modulatorChildrenIds {ValueTreeIdentifiers::NodeChildrenIds};
+
+    modulatorNode.addChild(modulatorChildrenIds, -1, undoManager);
+
+    setNodeLimitProperties(modulatorNode, undoManager);
+
+    modulatorNode.setProperty(ValueTreeIdentifiers::RootNodeId, rootId,           undoManager);
+    modulatorNode.setProperty(ValueTreeIdentifiers::ModAmount,  defaultModAmount, undoManager);
+    modulatorNode.setProperty(ValueTreeIdentifiers::Id,         newNodeId,        undoManager);
+
+    if (parentNode.hasProperty(ValueTreeIdentifiers::NodeColour)) {
+        modulatorNode.setProperty(ValueTreeIdentifiers::NodeColour, parentNode.getProperty(ValueTreeIdentifiers::NodeColour), undoManager);
+    }
+
+    connectNodes(parentNode.getProperty(ValueTreeIdentifiers::Id), newNodeId, undoManager);
+
+    return modulatorNode;
 }

@@ -31,31 +31,6 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
     ornamentLibraries.importLegacyLibraries(applicationSupport.getChildFile(JucePlugin_Name).getChildFile("Ornament Libraries"));
 }
 
-juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::createParameterLayout()
-{
-    juce::NormalisableRange<float> tempoRange { static_cast<float>(RTtraversal::minimumTempoMultiplier),
-                                                static_cast<float>(RTtraversal::maximumTempoMultiplier) };
-    tempoRange.setSkewForCentre(1.0f);
-
-    juce::AudioProcessorValueTreeState::ParameterLayout layout;
-
-    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { tempoParameterId, parameterVersion },
-                                                           "Tempo Multiplier", tempoRange, 1.0f,
-                                                           juce::AudioParameterFloatAttributes().withStringFromValueFunction([](float value, int) {
-                                                               return juce::String(value, 2);
-                                                           })));
-
-    layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { velocityParameterId, parameterVersion },
-                                                         "Velocity", 0, maximumMidiVelocity, maximumMidiVelocity));
-
-    layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { transposeParameterId, parameterVersion },
-                                                         "Transpose", minimumGlobalTranspose, maximumGlobalTranspose, 0));
-
-    layout.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID { hostSyncParameterId, parameterVersion }, "Sync To Host", true));
-
-    return layout;
-}
-
 //==============================================================================
 void SequenceTreeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
@@ -288,12 +263,6 @@ bool SequenceTreeAudioProcessor::hasEditor() const
     return true;
 }
 
-//==============================================================================
-const juce::String SequenceTreeAudioProcessor::getName() const
-{
-    return JucePlugin_Name;
-}
-
 bool SequenceTreeAudioProcessor::acceptsMidi() const
 {
    #if JucePlugin_WantsMidiInput
@@ -319,6 +288,12 @@ bool SequenceTreeAudioProcessor::isMidiEffect() const
    #else
     return false;
    #endif
+}
+
+//==============================================================================
+const juce::String SequenceTreeAudioProcessor::getName() const
+{
+    return JucePlugin_Name;
 }
 
 double SequenceTreeAudioProcessor::getTailLengthSeconds() const
@@ -376,6 +351,37 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
     copyXmlToBinary(*xml, destData);
 }
 
+void SequenceTreeAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+{
+    if (data == nullptr || sizeInBytes == 0) {
+        pendingRestoreState = juce::ValueTree(ValueTreeIdentifiers::NodeMap);
+    }
+    else {
+        std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+
+        if (xmlState == nullptr)     { DBG("INVALID STATE DATA"); return; }
+
+        juce::ValueTree restoredTree = juce::ValueTree::fromXml (*xmlState);
+
+        if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
+
+        pendingRestoreState = restoredTree;
+    }
+
+    if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        applyRestoredState();
+        return;
+    }
+
+    juce::WeakReference<SequenceTreeAudioProcessor> safeThis (this);
+
+    juce::MessageManager::callAsync([safeThis]() mutable {
+        if (safeThis != nullptr) {
+            safeThis->applyRestoredState();
+        }
+    });
+}
+
 void SequenceTreeAudioProcessor::applyRestoredState()
 {
     if (!pendingRestoreState.isValid()) {
@@ -422,35 +428,29 @@ void SequenceTreeAudioProcessor::applyRestoredState()
     }
 }
 
-void SequenceTreeAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::createParameterLayout()
 {
-    if (data == nullptr || sizeInBytes == 0) {
-        pendingRestoreState = juce::ValueTree(ValueTreeIdentifiers::NodeMap);
-    }
-    else {
-        std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+    juce::NormalisableRange<float> tempoRange { static_cast<float>(RTtraversal::minimumTempoMultiplier),
+                                                static_cast<float>(RTtraversal::maximumTempoMultiplier) };
+    tempoRange.setSkewForCentre(1.0f);
 
-        if (xmlState == nullptr)     { DBG("INVALID STATE DATA"); return; }
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-        juce::ValueTree restoredTree = juce::ValueTree::fromXml (*xmlState);
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID { tempoParameterId, parameterVersion },
+                                                           "Tempo Multiplier", tempoRange, 1.0f,
+                                                           juce::AudioParameterFloatAttributes().withStringFromValueFunction([](float value, int) {
+                                                               return juce::String(value, 2);
+                                                           })));
 
-        if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
+    layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { velocityParameterId, parameterVersion },
+                                                         "Velocity", 0, maximumMidiVelocity, maximumMidiVelocity));
 
-        pendingRestoreState = restoredTree;
-    }
+    layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { transposeParameterId, parameterVersion },
+                                                         "Transpose", minimumGlobalTranspose, maximumGlobalTranspose, 0));
 
-    if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-        applyRestoredState();
-        return;
-    }
+    layout.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID { hostSyncParameterId, parameterVersion }, "Sync To Host", true));
 
-    juce::WeakReference<SequenceTreeAudioProcessor> safeThis (this);
-
-    juce::MessageManager::callAsync([safeThis]() mutable {
-        if (safeThis != nullptr) {
-            safeThis->applyRestoredState();
-        }
-    });
+    return layout;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

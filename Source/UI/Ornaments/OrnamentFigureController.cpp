@@ -115,6 +115,104 @@ void OrnamentFigureController::mouseDown(const juce::MouseEvent& event)
     handleCanvasMouseDown(event, point, snapped);
 }
 
+void OrnamentFigureController::mouseDrag(const juce::MouseEvent& event)
+{
+    const int              grid                = static_cast<int>(ArrowInfo::pixelsPerGridSpace);
+    const juce::Point<int> point               = event.getEventRelativeTo(&canvas).position.transformedBy(canvas.modelTransform).roundToInt();
+    const juce::Point<int> nearest             { juce::roundToInt(point.x / ArrowInfo::pixelsPerGridSpace) * grid,
+                                                 juce::roundToInt(point.y / ArrowInfo::pixelsPerGridSpace) * grid };
+    juce::Point<int>       snapped             = point;
+    const bool             pastThreshold       = event.getDistanceFromDragStart() >= dragThreshold;
+    const int              scrubSteps          = -event.getOffsetFromDragStart().y / pixelsPerScrubStep;
+    const auto             draggedNode         = canvas.nodes.find(draggedNodeId);
+    const juce::ValueTree  draggedNodeTree     = canvas.figure.getChildWithProperty(ValueTreeIdentifiers::Id, draggedNodeId);
+    const juce::Point<int> draggedNodePosition { draggedNodeTree.getProperty(ValueTreeIdentifiers::XPosition), draggedNodeTree.getProperty(ValueTreeIdentifiers::YPosition) };
+
+    if (std::abs(point.x - nearest.x) < OrnamentCanvas::snapThreshold) {
+        snapped.x = nearest.x;
+    }
+
+    if (std::abs(point.y - nearest.y) < OrnamentCanvas::snapThreshold) {
+        snapped.y = nearest.y;
+    }
+
+    switch (dragState) {
+        case DragState::MovingNode:
+        case DragState::MovingArrowHead:
+            if (pastThreshold) {
+                ornamentLibraries.setFigureNodePosition(ornament, draggedNodeId, snapped, &undoManager);
+            }
+            break;
+
+        case DragState::GrowingChain:
+            if (pastThreshold) {
+                draggedNodeId = ornamentLibraries.addFigureNode(ornament, draggedNodeId, snapped, &undoManager).getProperty(ValueTreeIdentifiers::Id, -1);
+                dragState     = DragState::MovingArrowHead;
+            }
+            break;
+
+        case DragState::CreatingDanglingArrow:
+            if (pastThreshold) {
+                juce::Point<int> tipOffset = snapped - draggedNodePosition;
+
+                if (tipOffset.x == 0 && tipOffset.y == 0) {
+                    tipOffset.x = static_cast<int>(ArrowInfo::pixelsPerGridSpace);
+                }
+
+                ornamentLibraries.addDanglingArrow(ornament, draggedNodeId, tipOffset, &undoManager);
+
+                dragState = DragState::MovingDanglingTip;
+            }
+            break;
+
+        case DragState::MovingDanglingTip:
+            ornamentLibraries.setLastNodeLength(ornament, snapped - draggedNodePosition, &undoManager);
+            break;
+
+        case DragState::ScrubbingValue:
+            if (draggedNode != canvas.nodes.end()) {
+                draggedNode->second->nodeValueEditor.setNumericValue(dragStartValue + scrubSteps);
+                draggedNode->second->refreshValueDisplay();
+            }
+            break;
+
+        case DragState::Panning:
+            port.mouseDrag(event.getEventRelativeTo(&port));
+            break;
+
+        case DragState::Idle:
+            break;
+    }
+}
+
+void OrnamentFigureController::mouseUp(const juce::MouseEvent& event)
+{
+    const auto node         = canvas.nodes.find(draggedNodeId);
+    const bool isPlainClick = dragState == DragState::MovingNode && node != canvas.nodes.end() && event.getDistanceFromDragStart() < dragThreshold
+                              && ! event.mods.isAnyModifierKeyDown();
+
+    if (dragState == DragState::MovingDanglingTip) {
+        for (Arrow* const arrow : canvas.arrows) {
+            if (arrow->isDangling() && arrow->startNode != nullptr && arrow->startNode->nodeId == draggedNodeId) {
+                arrow->triggerSnapAnimation();
+            }
+        }
+    }
+    else if (dragState == DragState::MovingArrowHead) {
+        for (Arrow* const arrow : canvas.arrows) {
+            if (arrow->endNode != nullptr && arrow->endNode->nodeId == draggedNodeId) {
+                arrow->triggerSnapAnimation();
+            }
+        }
+    }
+
+    if (isPlainClick) {
+        node->second->respondToClick(event.getEventRelativeTo(node->second.get()).getPosition());
+    }
+
+    dragState = DragState::Idle;
+}
+
 void OrnamentFigureController::switchClickMode(ClickMode mode)
 {
     juce::Image    cursorImage(juce::Image::ARGB, hostCursorSize, hostCursorSize, true);
@@ -136,6 +234,25 @@ void OrnamentFigureController::switchClickMode(ClickMode mode)
 
     if (onClickModeChanged != nullptr) {
         onClickModeChanged();
+    }
+
+    if (onArrowModeChanged != nullptr) {
+        onArrowModeChanged();
+    }
+}
+
+void OrnamentFigureController::setArrowMode(bool enabled)
+{
+    if (arrowMode == enabled) {
+        return;
+    }
+
+    arrowMode = enabled;
+
+    if (enabled && clickMode == ClickMode::PickHost) {
+        switchClickMode(ClickMode::Build);
+
+        return;
     }
 
     if (onArrowModeChanged != nullptr) {
@@ -253,121 +370,4 @@ void OrnamentFigureController::handleCanvasMouseDown(const juce::MouseEvent& eve
     dragState = DragState::Panning;
 
     port.mouseDown(event.getEventRelativeTo(&port));
-}
-
-void OrnamentFigureController::setArrowMode(bool enabled)
-{
-    if (arrowMode == enabled) {
-        return;
-    }
-
-    arrowMode = enabled;
-
-    if (enabled && clickMode == ClickMode::PickHost) {
-        switchClickMode(ClickMode::Build);
-
-        return;
-    }
-
-    if (onArrowModeChanged != nullptr) {
-        onArrowModeChanged();
-    }
-}
-
-void OrnamentFigureController::mouseDrag(const juce::MouseEvent& event)
-{
-    const int              grid                = static_cast<int>(ArrowInfo::pixelsPerGridSpace);
-    const juce::Point<int> point               = event.getEventRelativeTo(&canvas).position.transformedBy(canvas.modelTransform).roundToInt();
-    const juce::Point<int> nearest             { juce::roundToInt(point.x / ArrowInfo::pixelsPerGridSpace) * grid,
-                                                 juce::roundToInt(point.y / ArrowInfo::pixelsPerGridSpace) * grid };
-    juce::Point<int>       snapped             = point;
-    const bool             pastThreshold       = event.getDistanceFromDragStart() >= dragThreshold;
-    const int              scrubSteps          = -event.getOffsetFromDragStart().y / pixelsPerScrubStep;
-    const auto             draggedNode         = canvas.nodes.find(draggedNodeId);
-    const juce::ValueTree  draggedNodeTree     = canvas.figure.getChildWithProperty(ValueTreeIdentifiers::Id, draggedNodeId);
-    const juce::Point<int> draggedNodePosition { draggedNodeTree.getProperty(ValueTreeIdentifiers::XPosition), draggedNodeTree.getProperty(ValueTreeIdentifiers::YPosition) };
-
-    if (std::abs(point.x - nearest.x) < OrnamentCanvas::snapThreshold) {
-        snapped.x = nearest.x;
-    }
-
-    if (std::abs(point.y - nearest.y) < OrnamentCanvas::snapThreshold) {
-        snapped.y = nearest.y;
-    }
-
-    switch (dragState) {
-        case DragState::MovingNode:
-        case DragState::MovingArrowHead:
-            if (pastThreshold) {
-                ornamentLibraries.setFigureNodePosition(ornament, draggedNodeId, snapped, &undoManager);
-            }
-            break;
-
-        case DragState::GrowingChain:
-            if (pastThreshold) {
-                draggedNodeId = ornamentLibraries.addFigureNode(ornament, draggedNodeId, snapped, &undoManager).getProperty(ValueTreeIdentifiers::Id, -1);
-                dragState     = DragState::MovingArrowHead;
-            }
-            break;
-
-        case DragState::CreatingDanglingArrow:
-            if (pastThreshold) {
-                juce::Point<int> tipOffset = snapped - draggedNodePosition;
-
-                if (tipOffset.x == 0 && tipOffset.y == 0) {
-                    tipOffset.x = static_cast<int>(ArrowInfo::pixelsPerGridSpace);
-                }
-
-                ornamentLibraries.addDanglingArrow(ornament, draggedNodeId, tipOffset, &undoManager);
-
-                dragState = DragState::MovingDanglingTip;
-            }
-            break;
-
-        case DragState::MovingDanglingTip:
-            ornamentLibraries.setLastNodeLength(ornament, snapped - draggedNodePosition, &undoManager);
-            break;
-
-        case DragState::ScrubbingValue:
-            if (draggedNode != canvas.nodes.end()) {
-                draggedNode->second->nodeValueEditor.setNumericValue(dragStartValue + scrubSteps);
-                draggedNode->second->refreshValueDisplay();
-            }
-            break;
-
-        case DragState::Panning:
-            port.mouseDrag(event.getEventRelativeTo(&port));
-            break;
-
-        case DragState::Idle:
-            break;
-    }
-}
-
-void OrnamentFigureController::mouseUp(const juce::MouseEvent& event)
-{
-    const auto node         = canvas.nodes.find(draggedNodeId);
-    const bool isPlainClick = dragState == DragState::MovingNode && node != canvas.nodes.end() && event.getDistanceFromDragStart() < dragThreshold
-                              && ! event.mods.isAnyModifierKeyDown();
-
-    if (dragState == DragState::MovingDanglingTip) {
-        for (Arrow* const arrow : canvas.arrows) {
-            if (arrow->isDangling() && arrow->startNode != nullptr && arrow->startNode->nodeId == draggedNodeId) {
-                arrow->triggerSnapAnimation();
-            }
-        }
-    }
-    else if (dragState == DragState::MovingArrowHead) {
-        for (Arrow* const arrow : canvas.arrows) {
-            if (arrow->endNode != nullptr && arrow->endNode->nodeId == draggedNodeId) {
-                arrow->triggerSnapAnimation();
-            }
-        }
-    }
-
-    if (isPlainClick) {
-        node->second->respondToClick(event.getEventRelativeTo(node->second.get()).getPosition());
-    }
-
-    dragState = DragState::Idle;
 }

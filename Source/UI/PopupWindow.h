@@ -32,11 +32,9 @@ public:
 
     using ContentFactory = std::function<std::unique_ptr<juce::Component>()>;
 
-    PopupWindowLauncher(juce::String title, ContentFactory factory,
-                        juce::Colour backgroundColour = juce::Colour::fromRGB(30, 30, 30));
+    PopupWindowLauncher(juce::String title, ContentFactory factory, juce::Colour backgroundColour = juce::Colour::fromRGB(30, 30, 30));
 
-    explicit PopupWindowLauncher(juce::String title,
-                                 juce::Colour backgroundColour = juce::Colour::fromRGB(30, 30, 30));
+    explicit PopupWindowLauncher(juce::String title, juce::Colour backgroundColour = juce::Colour::fromRGB(30, 30, 30));
 
     void show(juce::Component& origin);
     void show(juce::Component& origin, const ContentFactory& factory);

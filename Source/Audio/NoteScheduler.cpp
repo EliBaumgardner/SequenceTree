@@ -73,45 +73,6 @@ void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, d
     }
 }
 
-void NoteScheduler::startOrnamentStep(ActiveNote& note, std::span<const OrnamentStep> figure, double sample)
-{
-    OrnamentProgress& progress        = note.ornament;
-    double            stepSamples     = progress.remainingSamples;
-    int               remainingWeight = 0;
-
-    note.event.pitch    = progress.basePitch;
-    note.event.velocity = progress.baseVelocity;
-
-    if (progress.step < static_cast<int>(figure.size())) {
-        const OrnamentStep& step = figure[static_cast<std::size_t>(progress.step)];
-
-        note.event.pitch    = juce::jlimit(0, 127, progress.basePitch + step.offset);
-        note.event.velocity = juce::jlimit(0, 127, juce::roundToInt(progress.baseVelocity * step.velocityPercent / 100.0));
-
-        for (const OrnamentStep& remainingStep : figure.subspan(static_cast<std::size_t>(progress.step))) {
-            remainingWeight += remainingStep.durationWeight;
-        }
-
-        if (progress.step + 1 < static_cast<int>(figure.size())) {
-            stepSamples = progress.remainingSamples * step.durationWeight / remainingWeight;
-        }
-    }
-
-    note.remainingSamples      = sample + stepSamples;
-    progress.remainingSamples -= stepSamples;
-}
-
-bool NoteScheduler::isNoteSounding(const ActiveNote& note)
-{
-    return isNodeAudible(note.nodeType) && !note.isConnectionTrigger && note.sound == Sound::Audible;
-}
-
-bool NoteScheduler::isNodeAudible(RTNode::NodeType nodeType)
-{
-    return nodeType != RTNode::NodeType::ModulatorRoot
-        && nodeType != RTNode::NodeType::TraversalFlagData;
-}
-
 void NoteScheduler::continueOrnament(ActiveNote note, const RTNode* node, juce::MidiBuffer& midiMessages, double sample)
 {
     std::span<const OrnamentStep> figure;
@@ -143,4 +104,43 @@ void NoteScheduler::removeNote(int index)
 {
     activeNotes[index] = std::move(activeNotes.back());
     activeNotes.pop_back();
+}
+
+bool NoteScheduler::isNoteSounding(const ActiveNote& note)
+{
+    return isNodeAudible(note.nodeType) && !note.isConnectionTrigger && note.sound == Sound::Audible;
+}
+
+bool NoteScheduler::isNodeAudible(RTNode::NodeType nodeType)
+{
+    return nodeType != RTNode::NodeType::ModulatorRoot
+        && nodeType != RTNode::NodeType::TraversalFlagData;
+}
+
+void NoteScheduler::startOrnamentStep(ActiveNote& note, std::span<const OrnamentStep> figure, double sample)
+{
+    OrnamentProgress& progress        = note.ornament;
+    double            stepSamples     = progress.remainingSamples;
+    int               remainingWeight = 0;
+
+    note.event.pitch    = progress.basePitch;
+    note.event.velocity = progress.baseVelocity;
+
+    if (progress.step < static_cast<int>(figure.size())) {
+        const OrnamentStep& step = figure[static_cast<std::size_t>(progress.step)];
+
+        note.event.pitch    = juce::jlimit(0, 127, progress.basePitch + step.offset);
+        note.event.velocity = juce::jlimit(0, 127, juce::roundToInt(progress.baseVelocity * step.velocityPercent / 100.0));
+
+        for (const OrnamentStep& remainingStep : figure.subspan(static_cast<std::size_t>(progress.step))) {
+            remainingWeight += remainingStep.durationWeight;
+        }
+
+        if (progress.step + 1 < static_cast<int>(figure.size())) {
+            stepSamples = progress.remainingSamples * step.durationWeight / remainingWeight;
+        }
+    }
+
+    note.remainingSamples      = sample + stepSamples;
+    progress.remainingSamples -= stepSamples;
 }

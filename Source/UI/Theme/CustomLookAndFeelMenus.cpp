@@ -118,6 +118,28 @@ void CustomLookAndFeel::drawPopupMenuBackgroundWithOptions(juce::Graphics& graph
     graphics.fillRoundedRectangle(bounds, paneCornerRadius);
 }
 
+void CustomLookAndFeel::getIdealPopupMenuItemSize(const juce::String& text, bool isSeparator,
+                                                  int standardMenuItemHeight,
+                                                  int& idealWidth, int& idealHeight)
+{
+    int itemHeight = popupMenuItemHeight;
+
+    if (standardMenuItemHeight > 0) {
+        itemHeight = standardMenuItemHeight;
+    }
+
+    if (isSeparator) {
+        idealWidth  = 50;
+        idealHeight = itemHeight / 2;
+        return;
+    }
+
+    idealHeight = itemHeight;
+    idealWidth  = juce::GlyphArrangement::getStringWidthInt(getPopupMenuFont(), text)
+                    + idealHeight
+                    + static_cast<int>(popupMenuTextInset * 4.0f);
+}
+
 void CustomLookAndFeel::drawPopupMenuItem(juce::Graphics& graphics, const juce::Rectangle<int>& area,
                                           bool isSeparator, bool isActive, bool isHighlighted, bool isTicked,
                                           bool hasSubMenu, const juce::String& text,
@@ -190,38 +212,6 @@ void CustomLookAndFeel::drawPopupMenuItem(juce::Graphics& graphics, const juce::
     }
 }
 
-juce::Font CustomLookAndFeel::getPopupMenuFont()
-{
-    return font(FontStyle::Regular, labelFontHeight);
-}
-
-void CustomLookAndFeel::getIdealPopupMenuItemSize(const juce::String& text, bool isSeparator,
-                                                  int standardMenuItemHeight,
-                                                  int& idealWidth, int& idealHeight)
-{
-    int itemHeight = popupMenuItemHeight;
-
-    if (standardMenuItemHeight > 0) {
-        itemHeight = standardMenuItemHeight;
-    }
-
-    if (isSeparator) {
-        idealWidth  = 50;
-        idealHeight = itemHeight / 2;
-        return;
-    }
-
-    idealHeight = itemHeight;
-    idealWidth  = juce::GlyphArrangement::getStringWidthInt(getPopupMenuFont(), text)
-                    + idealHeight
-                    + static_cast<int>(popupMenuTextInset * 4.0f);
-}
-
-int CustomLookAndFeel::getPopupMenuBorderSize()
-{
-    return popupMenuPadding;
-}
-
 void CustomLookAndFeel::drawCallOutBoxBackground(juce::CallOutBox& box, juce::Graphics& graphics, const juce::Path& path,
                                                  juce::Image& cachedShadow)
 {
@@ -241,4 +231,14 @@ void CustomLookAndFeel::drawCallOutBoxBackground(juce::CallOutBox& box, juce::Gr
 
     graphics.setColour(popupMenuBorderColour);
     graphics.strokePath(path, juce::PathStrokeType(popupMenuBorderThickness));
+}
+
+int CustomLookAndFeel::getPopupMenuBorderSize()
+{
+    return popupMenuPadding;
+}
+
+juce::Font CustomLookAndFeel::getPopupMenuFont()
+{
+    return font(FontStyle::Regular, labelFontHeight);
 }

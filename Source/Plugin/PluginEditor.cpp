@@ -133,42 +133,23 @@ void SequenceTreeAudioProcessorEditor::resized()
     lookAndFeel.unfrostedArea = nodeCanvas->getLocalArea(&workspace, bounds);
 }
 
-void SequenceTreeAudioProcessorEditor::configureWindowSize()
+void SequenceTreeAudioProcessorEditor::parentHierarchyChanged()
 {
-    const int minMenuWidth = juce::roundToInt(Theme::barHeight * (MenuArea::menuBarWidthRatio + MenuArea::resizerWidthRatio));
+    auto* top = getTopLevelComponent();
 
-    scaledView->onZoomChanged = [this]() {
-        const float                          zoom        = scaledView->zoom;
-        const float                          zoomRatio   = scaledView->previousZoom / zoom;
-        const juce::Point<int>               minimumSize = scaledView->minimumContentSize;
-        juce::Component* const               window      = getTopLevelComponent();
-        const juce::Displays::Display* const display     = juce::Desktop::getInstance().getDisplays().getDisplayForRect(window->getScreenBounds());
+    if (top == keyListenerTarget) {
+        return;
+    }
 
-        menuWidth = juce::roundToInt(static_cast<float>(menuWidth) * zoomRatio);
+    if (keyListenerTarget != nullptr) {
+        keyListenerTarget->removeKeyListener(this);
+    }
 
-        port->setZoom(port->zoom * zoomRatio, -port->getPosition().toFloat());
+    keyListenerTarget = top;
 
-        setResizeLimits(juce::roundToInt(minimumSize.x * zoom), juce::roundToInt(minimumSize.y * zoom), maximumWindowSide, maximumWindowSide);
-
-        resized();
-
-        if (audioProcessor.wrapperType == juce::AudioProcessor::wrapperType_Standalone && display != nullptr) {
-            window->setBounds(window->getBounds().constrainedWithin(display->userArea));
-        }
-    };
-
-    addAndMakeVisible(*scaledView);
-
-    setResizable(true, false);
-    setSize(seedWidth, seedHeight);
-
-    const int barsWidth = juce::jmax(titleBar->narrowestWidth(), bottomBar->narrowestWidth());
-
-    scaledView->minimumContentSize = { Theme::windowGutter * 3 + minMenuWidth + barsWidth, Theme::windowGutter * 2 + menuArea->narrowestHeight() };
-
-    scaledView->onZoomChanged();
-
-    setSize(juce::roundToInt(getConstrainer()->getMinimumWidth() * openingScale), juce::roundToInt(getConstrainer()->getMinimumHeight() * openingScale));
+    if (keyListenerTarget != nullptr) {
+        keyListenerTarget->addKeyListener(this);
+    }
 }
 
 bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, juce::Component*)
@@ -241,6 +222,44 @@ bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, ju
     return false;
 }
 
+void SequenceTreeAudioProcessorEditor::configureWindowSize()
+{
+    const int minMenuWidth = juce::roundToInt(Theme::barHeight * (MenuArea::menuBarWidthRatio + MenuArea::resizerWidthRatio));
+
+    scaledView->onZoomChanged = [this]() {
+        const float                          zoom        = scaledView->zoom;
+        const float                          zoomRatio   = scaledView->previousZoom / zoom;
+        const juce::Point<int>               minimumSize = scaledView->minimumContentSize;
+        juce::Component* const               window      = getTopLevelComponent();
+        const juce::Displays::Display* const display     = juce::Desktop::getInstance().getDisplays().getDisplayForRect(window->getScreenBounds());
+
+        menuWidth = juce::roundToInt(static_cast<float>(menuWidth) * zoomRatio);
+
+        port->setZoom(port->zoom * zoomRatio, -port->getPosition().toFloat());
+
+        setResizeLimits(juce::roundToInt(minimumSize.x * zoom), juce::roundToInt(minimumSize.y * zoom), maximumWindowSide, maximumWindowSide);
+
+        resized();
+
+        if (audioProcessor.wrapperType == juce::AudioProcessor::wrapperType_Standalone && display != nullptr) {
+            window->setBounds(window->getBounds().constrainedWithin(display->userArea));
+        }
+    };
+
+    addAndMakeVisible(*scaledView);
+
+    setResizable(true, false);
+    setSize(seedWidth, seedHeight);
+
+    const int barsWidth = juce::jmax(titleBar->narrowestWidth(), bottomBar->narrowestWidth());
+
+    scaledView->minimumContentSize = { Theme::windowGutter * 3 + minMenuWidth + barsWidth, Theme::windowGutter * 2 + menuArea->narrowestHeight() };
+
+    scaledView->onZoomChanged();
+
+    setSize(juce::roundToInt(getConstrainer()->getMinimumWidth() * openingScale), juce::roundToInt(getConstrainer()->getMinimumHeight() * openingScale));
+}
+
 void SequenceTreeAudioProcessorEditor::toggleFullScreen()
 {
     auto& desktop = juce::Desktop::getInstance();
@@ -250,24 +269,5 @@ void SequenceTreeAudioProcessorEditor::toggleFullScreen()
     }
     else {
         desktop.setKioskModeComponent(nullptr);
-    }
-}
-
-void SequenceTreeAudioProcessorEditor::parentHierarchyChanged()
-{
-    auto* top = getTopLevelComponent();
-
-    if (top == keyListenerTarget) {
-        return;
-    }
-
-    if (keyListenerTarget != nullptr) {
-        keyListenerTarget->removeKeyListener(this);
-    }
-
-    keyListenerTarget = top;
-
-    if (keyListenerTarget != nullptr) {
-        keyListenerTarget->addKeyListener(this);
     }
 }

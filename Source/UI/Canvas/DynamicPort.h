@@ -6,6 +6,17 @@ class DynamicPort : public juce::Component
 {
 public:
 
+    explicit DynamicPort(juce::Component& content);
+
+    void resized() override;
+
+    void mouseDown     (const juce::MouseEvent& event) override;
+    void mouseDrag     (const juce::MouseEvent& event) override;
+    void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
+    void mouseMagnify  (const juce::MouseEvent& event, float scaleFactor) override;
+
+    void setZoom(float newZoom, juce::Point<float> pivot);
+
     static constexpr float minimumZoom         = 0.1f;
     static constexpr float maximumZoom         = 5.0f;
     static constexpr float wheelZoomStep       = 0.15f;
@@ -16,24 +27,16 @@ public:
     juce::Point<float> initialViewCentre { 1500.0f, 1500.0f };
     float              zoom = 1.0f;
 
-    explicit DynamicPort(juce::Component& content);
-
-    void resized() override;
-
-    void mouseDown(const juce::MouseEvent& event) override;
-    void mouseDrag(const juce::MouseEvent& event) override;
-    void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
-    void setZoom(float newZoom, juce::Point<float> pivot);
-    void mouseMagnify(const juce::MouseEvent& event, float scaleFactor) override;
-
 private:
 
     void applyTransform();
 
     juce::Component& content;
-    float            translateX   = 0.0f;
-    float            translateY   = 0.0f;
-    bool             centeredOnce = false;
+
+    float translateX = 0.0f;
+    float translateY = 0.0f;
+
+    bool centeredOnce = false;
 
     juce::Point<int> lastMousePosition;
 };

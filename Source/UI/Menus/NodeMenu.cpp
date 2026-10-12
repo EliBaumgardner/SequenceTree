@@ -130,6 +130,17 @@ void NodeMenu::resized()
     }
 }
 
+int NodeMenu::narrowestHeight() const
+{
+    const int barHeight    = Theme::barHeight;
+    const int spacing      = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
+    const int rowHeight    = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
+    const int buttonHeight = juce::roundToInt(barHeight * Theme::menuButtonHeightRatio);
+    const int rowCount     = static_cast<int>(labeledRows.size());
+
+    return spacing * 2 + buttonHeight + rowHeight + rowCount * (spacing + rowHeight);
+}
+
 void NodeMenu::bindToNode(const Node* node)
 {
     const bool hasNodeTree = node->nodeValueTree.isValid();
@@ -155,15 +166,4 @@ void NodeMenu::bindToNode(const Node* node)
 
         row.field.setVisible(isShown);
     }
-}
-
-int NodeMenu::narrowestHeight() const
-{
-    const int barHeight    = Theme::barHeight;
-    const int spacing      = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
-    const int rowHeight    = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
-    const int buttonHeight = juce::roundToInt(barHeight * Theme::menuButtonHeightRatio);
-    const int rowCount     = static_cast<int>(labeledRows.size());
-
-    return spacing * 2 + buttonHeight + rowHeight + rowCount * (spacing + rowHeight);
 }

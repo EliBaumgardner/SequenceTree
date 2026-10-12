@@ -20,6 +20,7 @@ class ScaledView;
 class MenuArea : public juce::Component
 {
 public:
+
     MenuArea(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
              juce::PropertiesFile& interfaceSettings, ScaledView& scaledView, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
@@ -37,9 +38,11 @@ public:
 
 private:
 
-    enum class ActivePanel { None, Traversal, Node };
+    enum class ActivePanel;
 
     void togglePanel(ActivePanel panel);
+
+    enum class ActivePanel { None, Traversal, Node };
 
     Bar topBar;
 

@@ -61,41 +61,6 @@ void NodeCanvas::clearCanvas()
     gridVisible   = false;
 }
 
-void NodeCanvas::childrenChanged()
-{
-    for (juce::Component* child : getChildren()) {
-        child->setTransform(viewTransform);
-    }
-}
-
-void NodeCanvas::applyViewTransform(const juce::AffineTransform& newViewTransform, float zoom)
-{
-    viewTransform       = newViewTransform;
-    modelTransform      = newViewTransform.inverted();
-    valueField.viewZoom = zoom;
-
-    valueField.updateBrushCursor();
-
-    valueField.refresh();
-}
-
-void NodeCanvas::setProcessorPlayback(bool isPlaying)
-{
-    start = isPlaying;
-
-    processor.isPlaying.store(start);
-
-    if (isPlaying) {
-        nodeManager.equipRootTraversals();
-        arrowManager.resumeAllProgress();
-    }
-    else {
-        arrowManager.pauseAllProgress();
-    }
-
-    rtGraphBuilder.handleUpdateNowIfNeeded();
-}
-
 void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
 {
     asyncUpdates.clear();
@@ -157,6 +122,13 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
         gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
         gridSpacing   = ArrowInfo::pixelsPerGridSpace;
         gridOriginSet = true;
+    }
+}
+
+void NodeCanvas::childrenChanged()
+{
+    for (juce::Component* child : getChildren()) {
+        child->setTransform(viewTransform);
     }
 }
 
@@ -236,6 +208,14 @@ void NodeCanvas::handleAsyncUpdate()
     if (paintMode && !pendingUpdates.empty()) {
         valueField.refresh();
     }
+}
+
+void NodeCanvas::cancelPendingUpdatesFor(int nodeId)
+{
+    std::erase_if(asyncUpdates, [nodeId](const AsyncUpdate& update) {
+        return update.nodeId == nodeId
+            && update.type != AsyncUpdateType::NodeRemoved;
+    });
 }
 
 void NodeCanvas::setPaintMode(bool enabled)
@@ -334,6 +314,34 @@ void NodeCanvas::hideGrid()
     }
 }
 
+void NodeCanvas::applyViewTransform(const juce::AffineTransform& newViewTransform, float zoom)
+{
+    viewTransform       = newViewTransform;
+    modelTransform      = newViewTransform.inverted();
+    valueField.viewZoom = zoom;
+
+    valueField.updateBrushCursor();
+
+    valueField.refresh();
+}
+
+void NodeCanvas::setProcessorPlayback(bool isPlaying)
+{
+    start = isPlaying;
+
+    processor.isPlaying.store(start);
+
+    if (isPlaying) {
+        nodeManager.equipRootTraversals();
+        arrowManager.resumeAllProgress();
+    }
+    else {
+        arrowManager.pauseAllProgress();
+    }
+
+    rtGraphBuilder.handleUpdateNowIfNeeded();
+}
+
 juce::Point<int> NodeCanvas::snapPointToGrid(juce::Point<int> point) const
 {
     if (!gridOriginSet) {
@@ -354,12 +362,4 @@ juce::Point<int> NodeCanvas::snapPointToGrid(juce::Point<int> point) const
     }
 
     return result;
-}
-
-void NodeCanvas::cancelPendingUpdatesFor(int nodeId)
-{
-    std::erase_if(asyncUpdates, [nodeId](const AsyncUpdate& update) {
-        return update.nodeId == nodeId
-            && update.type != AsyncUpdateType::NodeRemoved;
-    });
 }

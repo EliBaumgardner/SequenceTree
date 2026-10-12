@@ -7,7 +7,7 @@ class PanelResizer : public juce::Component
 {
 public:
 
-    enum class Edge { Left, Right };
+    enum class Edge;
 
     explicit PanelResizer(Edge edge);
 
@@ -18,6 +18,8 @@ public:
     void mouseUp   (const juce::MouseEvent& event) override;
     void mouseEnter(const juce::MouseEvent& event) override;
     void mouseExit (const juce::MouseEvent& event) override;
+
+    enum class Edge { Left, Right };
 
     std::function<void(int)> onWidthDragged;
 

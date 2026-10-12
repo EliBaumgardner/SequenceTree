@@ -57,20 +57,6 @@ void EncapsulationOps::dissolve(int encapsulatorId, juce::UndoManager* undoManag
     graphState.nodeMap.removeChild(encapsulator, undoManager);
 }
 
-std::vector<int> EncapsulationOps::memberIds(int encapsulatorId) const
-{
-    const juce::ValueTree encapsulatedIds =
-        graphState.getNode(encapsulatorId).getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
-
-    std::vector<int> memberNodeIds;
-
-    for (int i = 0; i < encapsulatedIds.getNumChildren(); ++i) {
-        memberNodeIds.push_back(encapsulatedIds.getChild(i).getProperty(ValueTreeIdentifiers::Id));
-    }
-
-    return memberNodeIds;
-}
-
 void EncapsulationOps::removeGroup(int encapsulatorId, juce::UndoManager* undoManager)
 {
     for (const int memberNodeId : memberIds(encapsulatorId)) {
@@ -107,6 +93,20 @@ void EncapsulationOps::insertNodeAfter(int nodeId, int siblingNodeId, juce::Undo
     encapsulatedIds.addChild(memberId, encapsulatedIds.indexOf(siblingId) + 1, undoManager);
 
     node.setProperty(ValueTreeIdentifiers::EncapsulatorId, encapsulatorId, undoManager);
+}
+
+std::vector<int> EncapsulationOps::memberIds(int encapsulatorId) const
+{
+    const juce::ValueTree encapsulatedIds =
+        graphState.getNode(encapsulatorId).getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+
+    std::vector<int> memberNodeIds;
+
+    for (int i = 0; i < encapsulatedIds.getNumChildren(); ++i) {
+        memberNodeIds.push_back(encapsulatedIds.getChild(i).getProperty(ValueTreeIdentifiers::Id));
+    }
+
+    return memberNodeIds;
 }
 
 int EncapsulationOps::unusedLabel() const

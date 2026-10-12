@@ -24,8 +24,8 @@ public:
     juce::PropertiesFile& interfaceSettings;
     juce::Point<int>      minimumContentSize;
 
-    float                 zoom         = 1.0f;
-    float                 previousZoom = 1.0f;
+    float zoom         = 1.0f;
+    float previousZoom = 1.0f;
 
 private:
 

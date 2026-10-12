@@ -99,6 +99,75 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
     return createdNode;
 }
 
+void NodeManager::add(int nodeId)
+{
+    const juce::ValueTree nodeChildTree = graphState.getNode(nodeId);
+
+    jassert(nodeChildTree.isValid());
+
+    Node* const childNode = instantiateFromTree(nodeChildTree);
+
+    if (childNode == nullptr) {
+        return;
+    }
+
+    connectIncomingArrows(nodeId, childNode);
+    connectOutgoingArrows(nodeChildTree, childNode);
+
+    if (nodeChildTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
+        nodeCanvas.encapsulationView.collapse(nodeId);
+    }
+
+    const int owningEncapsulatorId = nodeChildTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    if (auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(find(owningEncapsulatorId))) {
+        if (owningEncapsulator->isExpanded) {
+            nodeCanvas.encapsulationView.refreshMembership(owningEncapsulatorId);
+        }
+        else {
+            nodeCanvas.encapsulationView.collapse(owningEncapsulatorId);
+        }
+    }
+
+    if (!nodeCanvas.gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
+        const NodePosition rootPosition = graphState.getNodePosition(nodeId);
+
+        nodeCanvas.gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
+        nodeCanvas.gridSpacing   = ArrowInfo::pixelsPerGridSpace;
+        nodeCanvas.gridOriginSet = true;
+    }
+}
+
+void NodeManager::remove(int nodeId)
+{
+    Node* const node = find(nodeId);
+
+    if (node == nullptr) {
+        return;
+    }
+
+    if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node)) {
+        nodeCanvas.encapsulationView.showMembers(encapsulator->memberNodeIds);
+    }
+
+    const int encapsulatorId = node->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    nodeCanvas.arrowManager.removeForNode(node);
+    nodeCanvas.removeChildComponent(node);
+    nodes.erase(nodeId);
+
+    nodeCanvas.encapsulationView.refreshMembership(encapsulatorId);
+}
+
+void NodeManager::clear()
+{
+    for (auto& [nodeId, node] : nodes) {
+        nodeCanvas.removeChildComponent(node.get());
+    }
+
+    nodes.clear();
+}
+
 void NodeManager::setPosition(int nodeId)
 {
     Node* const           node          = find(nodeId);
@@ -143,115 +212,6 @@ void NodeManager::setPosition(int nodeId)
     nodeCanvas.arrowManager.refreshFor(node);
 }
 
-void NodeManager::add(int nodeId)
-{
-    const juce::ValueTree nodeChildTree = graphState.getNode(nodeId);
-
-    jassert(nodeChildTree.isValid());
-
-    Node* const childNode = instantiateFromTree(nodeChildTree);
-
-    if (childNode == nullptr) {
-        return;
-    }
-
-    connectIncomingArrows(nodeId, childNode);
-    connectOutgoingArrows(nodeChildTree, childNode);
-
-    if (nodeChildTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-        nodeCanvas.encapsulationView.collapse(nodeId);
-    }
-
-    const int owningEncapsulatorId = nodeChildTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-
-    if (auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(find(owningEncapsulatorId))) {
-        if (owningEncapsulator->isExpanded) {
-            nodeCanvas.encapsulationView.refreshMembership(owningEncapsulatorId);
-        }
-        else {
-            nodeCanvas.encapsulationView.collapse(owningEncapsulatorId);
-        }
-    }
-
-    if (!nodeCanvas.gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
-        const NodePosition rootPosition = graphState.getNodePosition(nodeId);
-
-        nodeCanvas.gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
-        nodeCanvas.gridSpacing   = ArrowInfo::pixelsPerGridSpace;
-        nodeCanvas.gridOriginSet = true;
-    }
-}
-
-void NodeManager::connectIncomingArrows(int nodeId, Node* node)
-{
-    const juce::ValueTree nodeMapTree = graphState.nodeMap;
-
-    for (int parentIndex = 0; parentIndex < nodeMapTree.getNumChildren(); ++parentIndex) {
-        const juce::ValueTree parentTree        = nodeMapTree.getChild(parentIndex);
-        const juce::ValueTree parentChildrenIds = parentTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-
-        if (! parentChildrenIds.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId).isValid()) {
-            continue;
-        }
-
-        const int   parentNodeId = parentTree.getProperty(ValueTreeIdentifiers::Id);
-        Node* const parentNode   = find(parentNodeId);
-
-        if (parentNode == nullptr || parentNodeId == nodeId) {
-            continue;
-        }
-
-        nodeCanvas.arrowManager.connectParentToChild(parentNode, node);
-    }
-}
-
-void NodeManager::connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node)
-{
-    const int             nodeId          = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
-    const juce::ValueTree nodeChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-
-    for (int childIndex = 0; childIndex < nodeChildrenIds.getNumChildren(); ++childIndex) {
-        const int   childNodeId = nodeChildrenIds.getChild(childIndex).getProperty(ValueTreeIdentifiers::Id);
-        Node* const childNode   = find(childNodeId);
-
-        if (childNode == nullptr || childNodeId == nodeId) {
-            continue;
-        }
-
-        nodeCanvas.arrowManager.connectParentToChild(node, childNode);
-    }
-}
-
-void NodeManager::remove(int nodeId)
-{
-    Node* const node = find(nodeId);
-
-    if (node == nullptr) {
-        return;
-    }
-
-    if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node)) {
-        nodeCanvas.encapsulationView.showMembers(encapsulator->memberNodeIds);
-    }
-
-    const int encapsulatorId = node->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-
-    nodeCanvas.arrowManager.removeForNode(node);
-    nodeCanvas.removeChildComponent(node);
-    nodes.erase(nodeId);
-
-    nodeCanvas.encapsulationView.refreshMembership(encapsulatorId);
-}
-
-void NodeManager::clear()
-{
-    for (auto& [nodeId, node] : nodes) {
-        nodeCanvas.removeChildComponent(node.get());
-    }
-
-    nodes.clear();
-}
-
 static std::unordered_set<int> collectAncestorIds(const GraphState& graphState, int nodeId)
 {
     std::unordered_set<int> ancestors;
@@ -292,56 +252,6 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
     moveEncapsulatorWithEntryMember(rootId, rootId, deltaX, deltaY);
 
     moveDescendants(nodeValueTree, deltaX, deltaY, visited, rootId);
-}
-
-void NodeManager::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY)
-{
-    const int              encapsulatorId = graphState.getNode(nodeId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-    const juce::ValueTree  encapsulator   = graphState.getNode(encapsulatorId);
-    const std::vector<int> memberNodeIds  = graphState.encapsulation.memberIds(encapsulatorId);
-
-    if (memberNodeIds.empty() || encapsulatorId == draggedNodeId || memberNodeIds.front() != nodeId) {
-        return;
-    }
-
-    NodePosition encapsulatorPosition = graphState.getNodePosition(encapsulatorId);
-
-    encapsulatorPosition.xPosition += deltaX;
-    encapsulatorPosition.yPosition += deltaY;
-
-    graphState.setNodePosition(encapsulator, encapsulatorPosition, &undoManager);
-}
-
-void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY,
-                                  std::unordered_set<int>& visited, int draggedNodeId)
-{
-    juce::Identifier childIdListType = ValueTreeIdentifiers::NodeChildrenIds;
-
-    if (nodeValueTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-        childIdListType = ValueTreeIdentifiers::EncapsulatedIds;
-    }
-
-    const juce::ValueTree childIds = nodeValueTree.getChildWithName(childIdListType);
-
-    for (int childIndex = 0; childIndex < childIds.getNumChildren(); ++childIndex) {
-        const int childId = childIds.getChild(childIndex).getProperty(ValueTreeIdentifiers::Id);
-
-        if (! visited.insert(childId).second) {
-            continue;
-        }
-
-        const juce::ValueTree childNodeTree = graphState.getNode(childId);
-        NodePosition          childPosition = graphState.getNodePosition(childId);
-
-        childPosition.xPosition += deltaX;
-        childPosition.yPosition += deltaY;
-
-        graphState.setNodePosition(childNodeTree, childPosition, &undoManager);
-
-        moveEncapsulatorWithEntryMember(childId, draggedNodeId, deltaX, deltaY);
-
-        moveDescendants(childNodeTree, deltaX, deltaY, visited, draggedNodeId);
-    }
 }
 
 void NodeManager::setDisplayMode(NodeDisplayMode mode)
@@ -389,4 +299,94 @@ void NodeManager::setInterceptsClicks(bool shouldIntercept, bool shouldChildrenI
             node->setInterceptsMouseClicks(shouldIntercept, shouldChildrenIntercept);
         }
     }
+}
+
+void NodeManager::connectIncomingArrows(int nodeId, Node* node)
+{
+    const juce::ValueTree nodeMapTree = graphState.nodeMap;
+
+    for (int parentIndex = 0; parentIndex < nodeMapTree.getNumChildren(); ++parentIndex) {
+        const juce::ValueTree parentTree        = nodeMapTree.getChild(parentIndex);
+        const juce::ValueTree parentChildrenIds = parentTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+        if (! parentChildrenIds.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId).isValid()) {
+            continue;
+        }
+
+        const int   parentNodeId = parentTree.getProperty(ValueTreeIdentifiers::Id);
+        Node* const parentNode   = find(parentNodeId);
+
+        if (parentNode == nullptr || parentNodeId == nodeId) {
+            continue;
+        }
+
+        nodeCanvas.arrowManager.connectParentToChild(parentNode, node);
+    }
+}
+
+void NodeManager::connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node)
+{
+    const int             nodeId          = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+    const juce::ValueTree nodeChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+    for (int childIndex = 0; childIndex < nodeChildrenIds.getNumChildren(); ++childIndex) {
+        const int   childNodeId = nodeChildrenIds.getChild(childIndex).getProperty(ValueTreeIdentifiers::Id);
+        Node* const childNode   = find(childNodeId);
+
+        if (childNode == nullptr || childNodeId == nodeId) {
+            continue;
+        }
+
+        nodeCanvas.arrowManager.connectParentToChild(node, childNode);
+    }
+}
+
+void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY,
+                                  std::unordered_set<int>& visited, int draggedNodeId)
+{
+    juce::Identifier childIdListType = ValueTreeIdentifiers::NodeChildrenIds;
+
+    if (nodeValueTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
+        childIdListType = ValueTreeIdentifiers::EncapsulatedIds;
+    }
+
+    const juce::ValueTree childIds = nodeValueTree.getChildWithName(childIdListType);
+
+    for (int childIndex = 0; childIndex < childIds.getNumChildren(); ++childIndex) {
+        const int childId = childIds.getChild(childIndex).getProperty(ValueTreeIdentifiers::Id);
+
+        if (! visited.insert(childId).second) {
+            continue;
+        }
+
+        const juce::ValueTree childNodeTree = graphState.getNode(childId);
+        NodePosition          childPosition = graphState.getNodePosition(childId);
+
+        childPosition.xPosition += deltaX;
+        childPosition.yPosition += deltaY;
+
+        graphState.setNodePosition(childNodeTree, childPosition, &undoManager);
+
+        moveEncapsulatorWithEntryMember(childId, draggedNodeId, deltaX, deltaY);
+
+        moveDescendants(childNodeTree, deltaX, deltaY, visited, draggedNodeId);
+    }
+}
+
+void NodeManager::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY)
+{
+    const int              encapsulatorId = graphState.getNode(nodeId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+    const juce::ValueTree  encapsulator   = graphState.getNode(encapsulatorId);
+    const std::vector<int> memberNodeIds  = graphState.encapsulation.memberIds(encapsulatorId);
+
+    if (memberNodeIds.empty() || encapsulatorId == draggedNodeId || memberNodeIds.front() != nodeId) {
+        return;
+    }
+
+    NodePosition encapsulatorPosition = graphState.getNodePosition(encapsulatorId);
+
+    encapsulatorPosition.xPosition += deltaX;
+    encapsulatorPosition.yPosition += deltaY;
+
+    graphState.setNodePosition(encapsulator, encapsulatorPosition, &undoManager);
 }

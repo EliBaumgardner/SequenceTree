@@ -9,11 +9,18 @@ ScriptRun::ScriptRun(const ScriptRunContext& runContext)
     : context(runContext)
 {
     memberValues = &context.members;
+    globalValues = &trialGlobals;
     randomState  = (static_cast<unsigned int>(context.randomValue) * 2654435761u ^ 2463534242u) | 1u;
+
+    if (context.globals != nullptr) {
+        trialGlobals = context.globals->values;
+        globalValues = &context.globals->values;
+    }
 
     if (context.writes == ScriptWrites::Trial) {
         trialMembers = context.members;
         memberValues = &trialMembers;
+        globalValues = &trialGlobals;
     }
 }
 
@@ -98,11 +105,13 @@ ScriptRun::Progress ScriptRun::execute(const ScriptInstruction& instruction, int
         case ScriptOpcode::PushReal:
         case ScriptOpcode::PushLocal:
         case ScriptOpcode::PushMember:
+        case ScriptOpcode::PushGlobal:
         case ScriptOpcode::PushContext:
             return pushValue(instruction);
 
         case ScriptOpcode::StoreLocal:
         case ScriptOpcode::StoreMember:
+        case ScriptOpcode::StoreGlobal:
         case ScriptOpcode::Pop:
         case ScriptOpcode::JumpIfFalse:
         case ScriptOpcode::JumpIfTrue:
@@ -173,6 +182,63 @@ ScriptRun::Progress ScriptRun::execute(const ScriptInstruction& instruction, int
     return Progress::Running;
 }
 
+ScriptRun::Progress ScriptRun::popValue(const ScriptInstruction& instruction, int& programCounter, int& result)
+{
+    const int operand   = instruction.operand;
+    const int localBase = frames[static_cast<std::size_t>(frameCount - 1)].localBase;
+
+    if (stackTop < 1) {
+        return Progress::Faulted;
+    }
+
+    const double value = stack[static_cast<std::size_t>(--stackTop)];
+
+    if (instruction.opcode == ScriptOpcode::StoreLocal) {
+        if (operand < 0 || operand >= RTScript::maxLocals) {
+            return Progress::Faulted;
+        }
+
+        locals[static_cast<std::size_t>(localBase + operand)] = value;
+    }
+
+    if (instruction.opcode == ScriptOpcode::StoreMember) {
+        if (operand < 0 || operand >= RTScript::maxMembers) {
+            return Progress::Faulted;
+        }
+
+        (*memberValues)[static_cast<std::size_t>(operand)] = value;
+    }
+
+    if (instruction.opcode == ScriptOpcode::StoreGlobal) {
+        if (operand < 0 || operand >= RTScript::maxMembers) {
+            return Progress::Faulted;
+        }
+
+        (*globalValues)[static_cast<std::size_t>(operand)] = value;
+    }
+
+    if ((instruction.opcode == ScriptOpcode::JumpIfFalse && value == 0)
+        || (instruction.opcode == ScriptOpcode::JumpIfTrue && value != 0)) {
+        programCounter = operand;
+    }
+
+    if (instruction.opcode == ScriptOpcode::Return) {
+        const Frame frame = frames[static_cast<std::size_t>(--frameCount)];
+
+        stackTop = frame.stackBase;
+
+        if (frameCount == 0) {
+            result = static_cast<int>(convert(ScriptNumber::Int, value));
+            return Progress::Returned;
+        }
+
+        programCounter = frame.returnAddress;
+        stack[static_cast<std::size_t>(stackTop++)] = value;
+    }
+
+    return Progress::Running;
+}
+
 ScriptRun::Progress ScriptRun::pushValue(const ScriptInstruction& instruction)
 {
     const int operand   = instruction.operand;
@@ -208,103 +274,20 @@ ScriptRun::Progress ScriptRun::pushValue(const ScriptInstruction& instruction)
         value = (*memberValues)[static_cast<std::size_t>(operand)];
     }
 
+    if (instruction.opcode == ScriptOpcode::PushGlobal) {
+        if (operand < 0 || operand >= RTScript::maxMembers) {
+            return Progress::Faulted;
+        }
+
+        value = (*globalValues)[static_cast<std::size_t>(operand)];
+    }
+
     if (instruction.opcode == ScriptOpcode::PushContext) {
         value = readContext(static_cast<ScriptContextValue>(operand));
     }
 
     stack[static_cast<std::size_t>(stackTop++)] = value;
     return Progress::Running;
-}
-
-int ScriptRun::readContext(ScriptContextValue value) const
-{
-    switch (value) {
-        case ScriptContextValue::Current:           return context.currentNodeId;
-        case ScriptContextValue::TraversalId:       return context.traversalKey.typeId;
-        case ScriptContextValue::TraversalRandom:   return context.randomValue;
-        case ScriptContextValue::TraversalInstance: return context.traversalKey.instance;
-    }
-
-    return 0;
-}
-
-ScriptRun::Progress ScriptRun::popValue(const ScriptInstruction& instruction, int& programCounter, int& result)
-{
-    const int operand   = instruction.operand;
-    const int localBase = frames[static_cast<std::size_t>(frameCount - 1)].localBase;
-
-    if (stackTop < 1) {
-        return Progress::Faulted;
-    }
-
-    const double value = stack[static_cast<std::size_t>(--stackTop)];
-
-    if (instruction.opcode == ScriptOpcode::StoreLocal) {
-        if (operand < 0 || operand >= RTScript::maxLocals) {
-            return Progress::Faulted;
-        }
-
-        locals[static_cast<std::size_t>(localBase + operand)] = value;
-    }
-
-    if (instruction.opcode == ScriptOpcode::StoreMember) {
-        if (operand < 0 || operand >= RTScript::maxMembers) {
-            return Progress::Faulted;
-        }
-
-        (*memberValues)[static_cast<std::size_t>(operand)] = value;
-    }
-
-    if ((instruction.opcode == ScriptOpcode::JumpIfFalse && value == 0)
-        || (instruction.opcode == ScriptOpcode::JumpIfTrue && value != 0)) {
-        programCounter = operand;
-    }
-
-    if (instruction.opcode == ScriptOpcode::Return) {
-        const Frame frame = frames[static_cast<std::size_t>(--frameCount)];
-
-        stackTop = frame.stackBase;
-
-        if (frameCount == 0) {
-            result = static_cast<int>(convert(ScriptNumber::Int, value));
-            return Progress::Returned;
-        }
-
-        programCounter = frame.returnAddress;
-        stack[static_cast<std::size_t>(stackTop++)] = value;
-    }
-
-    return Progress::Running;
-}
-
-double ScriptRun::convert(ScriptNumber number, double value)
-{
-    constexpr double intLowest    = std::numeric_limits<int>::min();
-    constexpr double intHighest   = std::numeric_limits<int>::max();
-    constexpr double floatHighest = std::numeric_limits<float>::max();
-
-    switch (number) {
-        case ScriptNumber::Int: {
-            if (std::isnan(value)) {
-                return 0.0;
-            }
-
-            return std::trunc(std::clamp(value, intLowest, intHighest));
-        }
-
-        case ScriptNumber::Float: {
-            if (std::isfinite(value)) {
-                value = std::clamp(value, -floatHighest, floatHighest);
-            }
-
-            return static_cast<float>(value);
-        }
-
-        case ScriptNumber::Double:
-            return value;
-    }
-
-    return value;
 }
 
 ScriptRun::Progress ScriptRun::executeNodeOpcode(const ScriptInstruction& instruction)
@@ -388,6 +371,25 @@ ScriptRun::Progress ScriptRun::executeNodeOpcode(const ScriptInstruction& instru
     }
 }
 
+ScriptRun::Progress ScriptRun::drawRandom()
+{
+    constexpr double unitScale = 1.0 / 16777216.0;
+
+    if (stackTop < 2) {
+        return Progress::Faulted;
+    }
+
+    const double spread = stack[static_cast<std::size_t>(--stackTop)];
+    double&      centre = stack[static_cast<std::size_t>(stackTop - 1)];
+
+    randomState ^= randomState << 13;
+    randomState ^= randomState >> 17;
+    randomState ^= randomState << 5;
+
+    centre += centre * spread * (2.0 * static_cast<double>(randomState >> 8) * unitScale - 1.0);
+    return Progress::Running;
+}
+
 int ScriptRun::readField(ScriptField field, int nodeId)
 {
     const RTNode* const node = context.nodes.find(nodeId);
@@ -469,6 +471,18 @@ int ScriptRun::noteValue(ScriptField field, const RTNode& node) const
     return velocity;
 }
 
+int ScriptRun::readContext(ScriptContextValue value) const
+{
+    switch (value) {
+        case ScriptContextValue::Current:           return context.currentNodeId;
+        case ScriptContextValue::TraversalId:       return context.traversalKey.typeId;
+        case ScriptContextValue::TraversalRandom:   return context.randomValue;
+        case ScriptContextValue::TraversalInstance: return context.traversalKey.instance;
+    }
+
+    return 0;
+}
+
 int ScriptRun::readState(NodeStateSlot slot, int nodeId) const
 {
     for (int index = trialWriteCount; index > 0; --index) {
@@ -480,6 +494,26 @@ int ScriptRun::readState(NodeStateSlot slot, int nodeId) const
     }
 
     return context.nodeState.get(slot, nodeId);
+}
+
+int ScriptRun::childAt(int parentId, int childIndex) const
+{
+    const RTNode* const parent = context.nodes.find(parentId);
+
+    if (parent == nullptr || childIndex < 0 || childIndex >= static_cast<int>(parent->connections.size())) {
+        return -1;
+    }
+
+    const RuleContext ruleContext { context.nodes, *parent, 0, context.traversalKey, context.isEligible,
+                                    context.nodeState, context.randomValue };
+
+    const int childId = parent->connections[static_cast<std::size_t>(childIndex)].childId;
+
+    if (ruleContext.eligibleChild(childId) == nullptr) {
+        return -1;
+    }
+
+    return childId;
 }
 
 void ScriptRun::writeField(ScriptField field, int nodeId, int value)
@@ -518,43 +552,37 @@ void ScriptRun::writeState(NodeStateSlot slot, int nodeId, int value)
     }
 }
 
-int ScriptRun::childAt(int parentId, int childIndex) const
+double ScriptRun::convert(ScriptNumber number, double value)
 {
-    const RTNode* const parent = context.nodes.find(parentId);
+    constexpr double intLowest    = std::numeric_limits<int>::min();
+    constexpr double intHighest   = std::numeric_limits<int>::max();
+    constexpr double floatHighest = std::numeric_limits<float>::max();
 
-    if (parent == nullptr || childIndex < 0 || childIndex >= static_cast<int>(parent->connections.size())) {
-        return -1;
+    switch (number) {
+        case ScriptNumber::Int: {
+            if (std::isnan(value)) {
+                return 0.0;
+            }
+
+            return std::trunc(std::clamp(value, intLowest, intHighest));
+        }
+
+        case ScriptNumber::Float: {
+            if (std::isfinite(value)) {
+                value = std::clamp(value, -floatHighest, floatHighest);
+            }
+
+            return static_cast<float>(value);
+        }
+
+        case ScriptNumber::Double:
+            return value;
+
+        case ScriptNumber::Bool:
+            return static_cast<double>(value != 0.0);
     }
 
-    const RuleContext ruleContext { context.nodes, *parent, 0, context.traversalKey, context.isEligible,
-                                    context.nodeState, context.randomValue };
-
-    const int childId = parent->connections[static_cast<std::size_t>(childIndex)].childId;
-
-    if (ruleContext.eligibleChild(childId) == nullptr) {
-        return -1;
-    }
-
-    return childId;
-}
-
-ScriptRun::Progress ScriptRun::drawRandom()
-{
-    constexpr double unitScale = 1.0 / 16777216.0;
-
-    if (stackTop < 2) {
-        return Progress::Faulted;
-    }
-
-    const double spread = stack[static_cast<std::size_t>(--stackTop)];
-    double&      centre = stack[static_cast<std::size_t>(stackTop - 1)];
-
-    randomState ^= randomState << 13;
-    randomState ^= randomState >> 17;
-    randomState ^= randomState << 5;
-
-    centre += centre * spread * (2.0 * static_cast<double>(randomState >> 8) * unitScale - 1.0);
-    return Progress::Running;
+    return value;
 }
 
 double ScriptRun::calculate(const ScriptInstruction& instruction, double left, double right)
@@ -570,6 +598,36 @@ double ScriptRun::calculate(const ScriptInstruction& instruction, double left, d
     }
 
     return realArithmetic(instruction.opcode, left, right);
+}
+
+double ScriptRun::realArithmetic(ScriptOpcode opcode, double left, double right)
+{
+    switch (opcode) {
+        case ScriptOpcode::Add:            return left + right;
+        case ScriptOpcode::Subtract:       return left - right;
+        case ScriptOpcode::Negate:         return -right;
+        case ScriptOpcode::Multiply:       return left * right;
+        case ScriptOpcode::Equal:          return static_cast<double>(left == right);
+        case ScriptOpcode::NotEqual:       return static_cast<double>(left != right);
+        case ScriptOpcode::Less:           return static_cast<double>(left < right);
+        case ScriptOpcode::LessOrEqual:    return static_cast<double>(left <= right);
+        case ScriptOpcode::Greater:        return static_cast<double>(left > right);
+        case ScriptOpcode::GreaterOrEqual: return static_cast<double>(left >= right);
+        case ScriptOpcode::LogicalAnd:     return static_cast<double>(left != 0.0 && right != 0.0);
+        case ScriptOpcode::LogicalOr:      return static_cast<double>(left != 0.0 || right != 0.0);
+        case ScriptOpcode::LogicalNot:     return static_cast<double>(right == 0.0);
+
+        case ScriptOpcode::Divide: {
+            if (right != 0.0) {
+                return left / right;
+            }
+
+            return 0.0;
+        }
+
+        default:
+            return 0.0;
+    }
 }
 
 int ScriptRun::arithmetic(ScriptOpcode opcode, int left, int right)
@@ -613,35 +671,5 @@ int ScriptRun::arithmetic(ScriptOpcode opcode, int left, int right)
 
         default:
             return 0;
-    }
-}
-
-double ScriptRun::realArithmetic(ScriptOpcode opcode, double left, double right)
-{
-    switch (opcode) {
-        case ScriptOpcode::Add:            return left + right;
-        case ScriptOpcode::Subtract:       return left - right;
-        case ScriptOpcode::Negate:         return -right;
-        case ScriptOpcode::Multiply:       return left * right;
-        case ScriptOpcode::Equal:          return static_cast<double>(left == right);
-        case ScriptOpcode::NotEqual:       return static_cast<double>(left != right);
-        case ScriptOpcode::Less:           return static_cast<double>(left < right);
-        case ScriptOpcode::LessOrEqual:    return static_cast<double>(left <= right);
-        case ScriptOpcode::Greater:        return static_cast<double>(left > right);
-        case ScriptOpcode::GreaterOrEqual: return static_cast<double>(left >= right);
-        case ScriptOpcode::LogicalAnd:     return static_cast<double>(left != 0.0 && right != 0.0);
-        case ScriptOpcode::LogicalOr:      return static_cast<double>(left != 0.0 || right != 0.0);
-        case ScriptOpcode::LogicalNot:     return static_cast<double>(right == 0.0);
-
-        case ScriptOpcode::Divide: {
-            if (right != 0.0) {
-                return left / right;
-            }
-
-            return 0.0;
-        }
-
-        default:
-            return 0.0;
     }
 }

@@ -7,16 +7,19 @@ class NodeCanvas;
 
 class Modulator : public Node
 {
-    public:
+public:
 
     explicit Modulator(juce::UndoManager& undoManager);
 
-    void  paint(juce::Graphics& graphics) override;
+    void paint(juce::Graphics& graphics) override;
+
+    void bindValueEditorForMode() override;
+
+    bool hitTest(int x, int y) override;
+
+    float getBodyExtent(juce::Point<float> approachDirection) const override;
 
     juce::Rectangle<float> getSquareBounds() const;
-    bool  hitTest(int x, int y) override;
-    void  bindValueEditorForMode() override;
-    float getBodyExtent(juce::Point<float> approachDirection) const override;
 
     static constexpr int minimumPitchOffset = -48;
     static constexpr int maximumPitchOffset =  48;

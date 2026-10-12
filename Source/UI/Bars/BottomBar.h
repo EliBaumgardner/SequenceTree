@@ -22,6 +22,7 @@ class OrnamentApplier;
 class BottomBar : public Bar, private juce::ValueTree::Listener
 {
 public:
+
     BottomBar(NodeCanvas& nodeCanvas, TraversalSession& traversalSession, juce::ValueTree colourPresets, juce::UndoManager& undoManager,
               OrnamentLibraries& ornamentLibraries, juce::UndoManager& ornamentUndoManager, OrnamentApplier& ornamentApplier);
 
@@ -30,9 +31,23 @@ public:
     void resized() override;
 
     void applyDisplayMode(NodeDisplayMode mode);
-    int  narrowestWidth() const;
+
+    int narrowestWidth() const;
 
 private:
+
+    struct BindAxis;
+
+    void configureOrnamentButton();
+    void showActiveOrnamentName ();
+
+    void configureAxis(BindAxis& axis, const juce::String& text);
+    void toggleAxis   (BindAxis& axis);
+    void showAxisMenu (BindAxis& axis);
+
+    void showQuaverMenu();
+
+    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
 
     struct BindAxis
     {
@@ -49,21 +64,13 @@ private:
         ArrowBinding binding;
     };
 
-    void configureOrnamentButton();
-    void configureAxis(BindAxis& axis, const juce::String& text);
-    void toggleAxis(BindAxis& axis);
-    void showAxisMenu(BindAxis& axis);
-    void showQuaverMenu();
-    void showActiveOrnamentName();
-    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
-
     static constexpr std::array<BindTarget, 2> bindTargets {{
         { "pitch",    ArrowBinding::PitchBind },
         { "duration", ArrowBinding::DurationBind }
     }};
 
-    static constexpr float quaverButtonWidthRatio  = 0.28f;
-    static constexpr float countsLabelWidthRatio   = 0.42f;
+    static constexpr float quaverButtonWidthRatio = 0.28f;
+    static constexpr float countsLabelWidthRatio  = 0.42f;
 
     static constexpr double minimumBindMultiplier  = 0.25;
     static constexpr double maximumBindMultiplier  = 4.0;

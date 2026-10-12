@@ -73,13 +73,6 @@ void PopupWindowLauncher::show(juce::Component& origin)
     presentWindow();
 }
 
-void PopupWindowLauncher::presentWindow()
-{
-    window->centreWithSize(window->getWidth(), window->getHeight());
-    window->setVisible(true);
-    window->toFront(true);
-}
-
 void PopupWindowLauncher::show(juce::Component& origin, const ContentFactory& factory)
 {
     window = std::make_unique<PopupWindow>(windowTitle, factory(), origin, openingScale, windowBackgroundColour);
@@ -92,4 +85,11 @@ void PopupWindowLauncher::toFront()
     if (window != nullptr) {
         window->toFront(true);
     }
+}
+
+void PopupWindowLauncher::presentWindow()
+{
+    window->centreWithSize(window->getWidth(), window->getHeight());
+    window->setVisible(true);
+    window->toFront(true);
 }

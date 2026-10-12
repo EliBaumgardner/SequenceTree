@@ -28,6 +28,9 @@ public:
 
 private:
 
+    bool isTraversalEnabled(const TraversalKey& key) const;
+    void setTraversalEnabled(const TraversalKey& key, bool enabled);
+
     class ToggleButton : public juce::Component
     {
     public:
@@ -39,9 +42,6 @@ private:
         bool                      isOn = true;
         std::function<void(bool)> onToggle;
     };
-
-    bool isTraversalEnabled(const TraversalKey& key) const;
-    void setTraversalEnabled(const TraversalKey& key, bool enabled);
 
     struct TraversalRow
     {

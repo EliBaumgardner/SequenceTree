@@ -13,13 +13,13 @@ public:
 
     FlagScheduler(TraversalDispatcher& owner, AudioUIBridge& bridgeRef);
 
-    void dispatchFlags(const RTNode& node, int hostRunId, const TraversalKey& hostKey,
-                       int parentCount, double sample, double tempoMultiplier,
-                       const DispatchContext& context);
+    void dispatchFlags(const RTNode& node, int hostRunId, const TraversalKey& hostKey, int parentCount,
+                       double sample, double tempoMultiplier, const DispatchContext& context);
+
+    void advance(int numSamples);
+    void clear  ();
 
     bool startNextDue(double before, const DispatchContext& context);
-    void advance(int numSamples);
-    void clear();
 
     struct PendingStart
     {
@@ -35,14 +35,10 @@ public:
 
 private:
 
-    void queueRemoval(const RTNode& flagNode, int hostRunId, const TraversalKey& hostKey,
-                      TraversalPool& traversalMap);
+    void queueRemoval(const RTNode& flagNode, int hostRunId, const TraversalKey& hostKey, TraversalPool& traversalMap);
+    void queueStart  (const RTNode& flagNode, const TraversalKey& hostKey, int delayMs, double sample, double tempoMultiplier, const DispatchContext& context);
 
-    void startFlagTraversal(const RTNode& flagNode, const TraversalKey& hostKey, double sample,
-                            const DispatchContext& context);
-
-    void queueStart(const RTNode& flagNode, const TraversalKey& hostKey, int delayMs, double sample,
-                    double tempoMultiplier, const DispatchContext& context);
+    void startFlagTraversal(const RTNode& flagNode, const TraversalKey& hostKey, double sample, const DispatchContext& context);
 
     TraversalDispatcher& dispatcher;
     AudioUIBridge&       bridge;

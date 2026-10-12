@@ -2,11 +2,6 @@
 #include "../Canvas/NodeCanvas.h"
 #include "CustomTextCaret.h"
 
-int CustomLookAndFeel::getDefaultScrollbarWidth()
-{
-    return scrollBarThickness;
-}
-
 void CustomLookAndFeel::drawScrollbar(juce::Graphics& graphics, juce::ScrollBar&, int x, int y, int width, int height,
                                       bool isScrollbarVertical, int thumbStartPosition, int thumbSize,
                                       bool isMouseOver, bool isMouseDown)
@@ -31,13 +26,6 @@ void CustomLookAndFeel::drawScrollbar(juce::Graphics& graphics, juce::ScrollBar&
     }
 
     graphics.fillRoundedRectangle(thumb.toFloat().reduced(scrollBarThumbInset), scrollBarCornerRadius);
-}
-
-juce::CaretComponent* CustomLookAndFeel::createCaretComponent(juce::Component* keyFocusOwner)
-{
-    auto caret = std::make_unique<CustomTextCaret>(keyFocusOwner);
-    caret->caretWidth = 1.0f;
-    return caret.release();
 }
 
 void CustomLookAndFeel::drawCanvas(juce::Graphics& graphics, const NodeCanvas& nodeCanvas)
@@ -210,4 +198,16 @@ void CustomLookAndFeel::blurFrostedImage(juce::Image& frosted)
             target[index] = static_cast<juce::uint8>(juce::jmin(0xff, juce::roundToInt(columnPass[static_cast<size_t>(index)])));
         }
     }
+}
+
+int CustomLookAndFeel::getDefaultScrollbarWidth()
+{
+    return scrollBarThickness;
+}
+
+juce::CaretComponent* CustomLookAndFeel::createCaretComponent(juce::Component* keyFocusOwner)
+{
+    auto caret = std::make_unique<CustomTextCaret>(keyFocusOwner);
+    caret->caretWidth = 1.0f;
+    return caret.release();
 }

@@ -22,6 +22,7 @@ public:
     void resized() override;
 
     void syncTiles();
+
     void mouseDown(const juce::MouseEvent& event) override;
 
     int heightForWidth(int width) const;
@@ -37,12 +38,13 @@ public:
 
 private:
 
-    enum class Fold { Open, Closed };
-
-    void toggleFold();
+    void toggleFold ();
     void addOrnament();
-    void showMenu();
+
+    void showMenu     ();
     void confirmRemove();
+
+    enum class Fold { Open, Closed };
 
     OrnamentLibraries& ornamentLibraries;
     juce::UndoManager& undoManager;

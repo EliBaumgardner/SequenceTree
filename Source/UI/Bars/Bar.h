@@ -9,21 +9,21 @@ class Bar : public juce::Component
 {
 public:
 
-    enum class Orientation { Horizontal, Vertical };
-    enum class Surface     { Solid, Frosted };
+    enum class Orientation;
 
     Bar(Orientation orientation, float contentInsetRatio);
     Bar(NodeCanvas& nodeCanvas, Orientation orientation, float contentInsetRatio);
 
     void paint(juce::Graphics& graphics) final;
 
+    enum class Orientation { Horizontal, Vertical };
+    enum class Surface     { Solid, Frosted };
+
     static constexpr int contentSpacing = 12;
 
 protected:
 
-    virtual void paintOverBar(juce::Graphics& graphics)
-    {
-    }
+    virtual void paintOverBar(juce::Graphics& graphics) {}
 
     juce::Rectangle<int> getContentBounds() const;
 
@@ -31,6 +31,6 @@ private:
 
     Orientation orientation;
     float       contentInsetRatio;
-    Surface     surface  = Surface::Solid;
+    Surface     surface    = Surface::Solid;
     NodeCanvas* nodeCanvas = nullptr;
 };

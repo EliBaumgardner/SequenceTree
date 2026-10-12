@@ -12,14 +12,15 @@
 
 struct TraversalRuntime
 {
-    bool asFlag         = false;
-    bool asCrossTree    = false;
-    int  sourceNodeId   = -1;
+    bool asFlag      = false;
+    bool asCrossTree = false;
+
+    int sourceNodeId = -1;
+    int originRootId = -1;
+
     bool pendingRemoval = false;
 
-    int  originRootId   = -1;
-
-    int  repeatCount = 0;
+    int repeatCount = 0;
 
     ScriptNote scriptNote;
 
@@ -29,21 +30,7 @@ struct TraversalRuntime
 class TraversalPool
 {
 public:
-    struct Instance
-    {
-        TraversalLogic   logic;
-        TraversalRuntime runtime;
-    };
-
-    using Entry = std::pair<int, Instance>;
-
-    enum class Choices { Random, Fixed };
-
-    struct Slot
-    {
-        Entry entry;
-        bool  active = false;
-    };
+    struct Instance;
 
     void prepare(int capacity, const TraversalRule& rule)
     {
@@ -111,6 +98,7 @@ public:
             slot.entry.second.logic.mode              = mode;
             slot.entry.second.logic.previewVisitCount = previewVisitCount;
             slot.entry.second.logic.script            = script;
+            slot.entry.second.logic.sharedGlobals     = &globals;
 
             ++activeCount;
             ++epoch;
@@ -140,7 +128,8 @@ public:
             slot.active = false;
         }
 
-        activeCount = 0;
+        activeCount    = 0;
+        globals.script = nullptr;
         ++epoch;
     }
 
@@ -181,6 +170,22 @@ public:
 
     int nextRunId() { return ++runIdCounter; }
 
+    struct Instance
+    {
+        TraversalLogic   logic;
+        TraversalRuntime runtime;
+    };
+
+    using Entry = std::pair<int, Instance>;
+
+    enum class Choices { Random, Fixed };
+
+    struct Slot
+    {
+        Entry entry;
+        bool  active = false;
+    };
+
     std::uint64_t epoch = 0;
 
     Choices choices = Choices::Random;
@@ -189,6 +194,8 @@ public:
     int                  previewVisitCount = 1;
 
     const RTScript* script = nullptr;
+
+    ScriptGlobals globals;
 
     int runIdCounter = 0;
 

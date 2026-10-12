@@ -41,24 +41,30 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
-    NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const;
-    void incrementNodeValue(int incrementValue);
+    void incrementNodeValue (int incrementValue);
     void refreshValueDisplay();
-    void setHoverVisual(bool isHovered);
-    void setSelectVisual(bool isSelected);
-    void setSelectVisual();
+    void setDisplayMode     (NodeDisplayMode mode);
+
+    void setHoverVisual    (bool isHovered);
+    void setSelectVisual   (bool isSelected);
+    void setSelectVisual   ();
     void setHighlightVisual(int runId, bool isHighlighted, juce::Colour colour);
-    void advancePulse(double frameSec);
-    virtual juce::Point<int> getNodeCentre() const;
-    virtual float            getVisualRadius() const;
-    virtual float            getBodyExtent(juce::Point<float> approachDirection) const;
-    virtual void bindToTree();
-    virtual void bindValueEditorForMode();
-    void setDisplayMode(NodeDisplayMode mode);
+    void advancePulse      (double frameSec);
+
     void mouseMove(const juce::MouseEvent& event) override;
     void mouseExit(const juce::MouseEvent& event) override;
+
     void lookAndFeelChanged() override;
-    virtual void respondToClick(juce::Point<int> localPoint);
+
+    virtual void bindToTree            ();
+    virtual void bindValueEditorForMode();
+    virtual void respondToClick        (juce::Point<int> localPoint);
+
+    virtual juce::Point<int> getNodeCentre  () const;
+    virtual float            getVisualRadius() const;
+    virtual float            getBodyExtent  (juce::Point<float> approachDirection) const;
+
+    NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const;
 
     std::function<void(Node*, bool)> onSelected;
 
@@ -83,15 +89,18 @@ public:
     NodeType nodeType      = NodeType::Node;
     float    incomingAngle = 0.0f;
 
-    bool isHovered             = false;
-    bool isSelected            = false;
-    bool isOutlined            = false;
+    bool isHovered     = false;
+    bool isSelected    = false;
+    bool isHighlighted = false;
+
+    bool isOutlined  = false;
+    bool hasInnerRim = false;
+
     bool isEncapsulated        = false;
     bool isEncapsulationExit   = false;
     bool isEncapsulationRinged = false;
-    bool hasInnerRim           = false;
-    bool isHighlighted         = false;
-    bool isAlternativeNode     = false;
+
+    bool isAlternativeNode = false;
 
     std::map<int, juce::Colour> activeHighlights;
     std::set<int>               pendingHighlightOffIds;
@@ -102,7 +111,8 @@ public:
 
     int displayCurrentCount = 0;
     int displayCountLimit   = 1;
-    int interiorLeftInset   = 0;
+
+    int interiorLeftInset = 0;
 
 protected:
 

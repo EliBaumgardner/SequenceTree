@@ -31,8 +31,11 @@ enum class TokenKind
     KeywordInt,
     KeywordFloat,
     KeywordDouble,
+    KeywordBool,
     KeywordNode,
     KeywordNone,
+    KeywordTrue,
+    KeywordFalse,
     KeywordImport,
 
     LeftBrace,
@@ -93,15 +96,20 @@ public:
     std::vector<Token> run();
 
 private:
+
     void advance(int count = 1);
+    void report (const std::string& message, const Token& token);
+
     char peek(std::size_t offset) const;
-    Token readNumber();
-    Token makeToken(TokenKind kind, int length) const;
-    void report(const std::string& message, const Token& token);
-    Token readIdentifier();
-    static bool isIdentifierPart(char c);
+
+    Token readNumber     ();
+    Token readIdentifier ();
     Token readPunctuation();
+
     Token readFixed(TokenKind kind, int length);
+    Token makeToken(TokenKind kind, int length) const;
+
+    static bool isIdentifierPart(char c);
 
     const std::string&             source;
     std::vector<ScriptDiagnostic>& diagnostics;

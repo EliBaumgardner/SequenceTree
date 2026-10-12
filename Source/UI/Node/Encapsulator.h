@@ -10,12 +10,14 @@ class NodeCanvas;
 class Encapsulator : public Node
 {
 public:
+
     Encapsulator(juce::UndoManager& undoManager, GraphState& graphState, NodeCanvas& nodeCanvas);
 
-    void bindToTree() override;
+    void bindToTree            () override;
     void bindValueEditorForMode() override;
+    void lookAndFeelChanged    () override;
+
     void syncHighlightsFromMembers();
-    void lookAndFeelChanged() override;
 
     std::vector<int> memberNodeIds;
     juce::ValueTree  firstMemberValueTree;

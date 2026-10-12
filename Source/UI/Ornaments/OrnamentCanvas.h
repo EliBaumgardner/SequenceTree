@@ -12,23 +12,27 @@ class OrnamentCanvas : public juce::Component, public juce::AsyncUpdater
 {
 public:
 
-    enum class ArrowPart { Shaft, Head, Label, DanglingTip };
+    enum class ArrowPart;
 
     explicit OrnamentCanvas(juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
 
-    void          childrenChanged  () override;
-    void          handleAsyncUpdate() override;
+    void childrenChanged  () override;
+    void handleAsyncUpdate() override;
 
-    OrnamentNode* findNodeAt       (juce::Point<int> point) const;
-    Arrow*        findArrowNear    (juce::Point<float> point, float radius, ArrowPart part) const;
+    OrnamentNode* findNodeAt(juce::Point<int> point) const;
+
+    Arrow* findArrowNear(juce::Point<float> point, float radius, ArrowPart part) const;
+
+    enum class ArrowPart { Shaft, Head, Label, DanglingTip };
 
     static constexpr int initialViewColumns = 4;
     static constexpr int tipGrabRadius      = 14;
     static constexpr int snapThreshold      = 5;
 
-    juce::ValueTree       figure;
+    juce::ValueTree figure;
+
     juce::AffineTransform viewTransform;
     juce::AffineTransform modelTransform;
 

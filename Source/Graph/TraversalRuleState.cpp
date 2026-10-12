@@ -47,6 +47,16 @@ void TraversalRuleState::removeRule(int ruleId, juce::UndoManager* undoManager)
     rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, replacementId, undoManager);
 }
 
+void TraversalRuleState::setRuleSource(int ruleId, const juce::String& source,
+                                       juce::UndoManager* undoManager)
+{
+    juce::ValueTree rule = rules.getChildWithProperty(ValueTreeIdentifiers::Id, ruleId);
+
+    if (rule.isValid()) {
+        rule.setProperty(ValueTreeIdentifiers::RuleSource, source, undoManager);
+    }
+}
+
 void TraversalRuleState::reorderRules(std::span<const int> ruleIds, juce::UndoManager* undoManager)
 {
     for (int index = 0; index < static_cast<int>(ruleIds.size()); ++index) {
@@ -62,28 +72,6 @@ void TraversalRuleState::reorderRules(std::span<const int> ruleIds, juce::UndoMa
             rules.moveChild(currentIndex, index, undoManager);
         }
     }
-}
-
-void TraversalRuleState::setRuleSource(int ruleId, const juce::String& source,
-                                       juce::UndoManager* undoManager)
-{
-    juce::ValueTree rule = rules.getChildWithProperty(ValueTreeIdentifiers::Id, ruleId);
-
-    if (rule.isValid()) {
-        rule.setProperty(ValueTreeIdentifiers::RuleSource, source, undoManager);
-    }
-}
-
-juce::String TraversalRuleState::activeRuleSource() const
-{
-    const juce::ValueTree rule =
-        rules.getChildWithProperty(ValueTreeIdentifiers::Id, rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
-
-    if (! rule.isValid()) {
-        return {};
-    }
-
-    return rule.getProperty(ValueTreeIdentifiers::RuleSource).toString();
 }
 
 void TraversalRuleState::ensureDefaultRule()
@@ -122,4 +110,16 @@ void TraversalRuleState::replaceState(const juce::ValueTree& restoredRules)
             ruleIdIncrement = id;
         }
     }
+}
+
+juce::String TraversalRuleState::activeRuleSource() const
+{
+    const juce::ValueTree rule =
+        rules.getChildWithProperty(ValueTreeIdentifiers::Id, rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
+
+    if (! rule.isValid()) {
+        return {};
+    }
+
+    return rule.getProperty(ValueTreeIdentifiers::RuleSource).toString();
 }

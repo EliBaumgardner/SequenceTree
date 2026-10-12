@@ -14,8 +14,6 @@ class CommandFifo
 {
 public:
 
-    std::atomic<bool> overflowed { false };
-
     void push(const Command& command)
     {
         const auto scope = fifo.write(1);
@@ -50,6 +48,8 @@ public:
         return fifo.getNumReady() > 0;
     }
 
+    std::atomic<bool> overflowed { false };
+
 private:
 
     juce::AbstractFifo            fifo { Capacity };
@@ -59,6 +59,22 @@ private:
 class AudioUIBridge
 {
 public:
+
+    static constexpr int primaryTrail(int runId)
+    {
+        return runId * 2;
+    }
+    static constexpr int modulatorTrail(int runId)
+    {
+        return runId * 2 + 1;
+    }
+
+    constexpr bool hasPendingCommands() const
+    {
+        return highlights.hasPending()
+        || arrows.hasPending()
+        || counts.hasPending();
+    }
 
     enum class HighlightKind { Show, Hide, ClearEveryNode };
 
@@ -95,22 +111,6 @@ public:
 
     CommandDelivery delivery = CommandDelivery::Deliver;
 
-    static constexpr int primaryTrail(int runId)
-    {
-        return runId * 2;
-    }
-    static constexpr int modulatorTrail(int runId)
-    {
-        return runId * 2 + 1;
-    }
-
-    constexpr bool hasPendingCommands() const
-    {
-        return highlights.hasPending()
-        || arrows.hasPending()
-        || counts.hasPending();
-    }
-
 private:
 
     friend class EventManager;
@@ -118,32 +118,6 @@ private:
     friend class TraversalDispatcher;
     friend class TraversalSession;
     friend class AudioCommandDrainer;
-
-    struct RecordedArrow
-    {
-        ArrowCommand command;
-        double       recordedAtMs = 0.0;
-    };
-
-    static constexpr int arrowCommandCapacity = 1024;
-
-    static constexpr int recordedHighlightCapacity = 256;
-    static constexpr int recordedArrowCapacity     = 512;
-    static constexpr int recordedCountCapacity     = 256;
-
-    CommandFifo<HighlightCommand>                   highlights;
-    CommandFifo<ArrowCommand, arrowCommandCapacity> arrows;
-    CommandFifo<CountCommand>                       counts;
-
-    double recordClockMs = 0.0;
-
-    std::array<HighlightCommand, recordedHighlightCapacity> recordedHighlights {};
-    std::array<RecordedArrow, recordedArrowCapacity>        recordedArrows {};
-    std::array<CountCommand, recordedCountCapacity>         recordedCounts {};
-
-    int numRecordedHighlights = 0;
-    int numRecordedArrows     = 0;
-    int numRecordedCounts     = 0;
 
     void beginRecording()
     {
@@ -299,4 +273,30 @@ private:
     {
         send(CountCommand { nodeId, currentCount, countLimit });
     }
+
+    struct RecordedArrow
+    {
+        ArrowCommand command;
+        double       recordedAtMs = 0.0;
+    };
+
+    static constexpr int arrowCommandCapacity = 1024;
+
+    static constexpr int recordedHighlightCapacity = 256;
+    static constexpr int recordedArrowCapacity     = 512;
+    static constexpr int recordedCountCapacity     = 256;
+
+    CommandFifo<HighlightCommand>                   highlights;
+    CommandFifo<ArrowCommand, arrowCommandCapacity> arrows;
+    CommandFifo<CountCommand>                       counts;
+
+    double recordClockMs = 0.0;
+
+    std::array<HighlightCommand, recordedHighlightCapacity> recordedHighlights {};
+    std::array<RecordedArrow, recordedArrowCapacity>        recordedArrows {};
+    std::array<CountCommand, recordedCountCapacity>         recordedCounts {};
+
+    int numRecordedHighlights = 0;
+    int numRecordedArrows     = 0;
+    int numRecordedCounts     = 0;
 };

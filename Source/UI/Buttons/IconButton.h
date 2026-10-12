@@ -22,6 +22,23 @@ class IconButton : public juce::Component, public juce::SettableTooltipClient
 {
 public:
 
+    IconButton();
+
+    void paint(juce::Graphics& graphics) override;
+    void resized() override;
+
+    void setText    (juce::String newText);
+    void setCaption (const juce::String& newCaption);
+    void setSelected(bool shouldBeSelected);
+
+    void lookAndFeelChanged() override;
+    void enablementChanged () override;
+
+    void mouseEnter(const juce::MouseEvent& event) override;
+    void mouseExit (const juce::MouseEvent& event) override;
+    void mouseDown (const juce::MouseEvent& event) override;
+    void mouseUp   (const juce::MouseEvent& event) override;
+
     using Painter = std::function<void(juce::Graphics&, juce::Rectangle<float>, const ButtonState&)>;
     using Icon    = void (CustomLookAndFeel::*)(juce::Graphics&, juce::Rectangle<float>, const ButtonState&);
 
@@ -35,21 +52,6 @@ public:
     Icon    icon = nullptr;
 
     ButtonState state;
-
-    IconButton();
-
-    void paint(juce::Graphics& graphics) override;
-    void resized() override;
-
-    void lookAndFeelChanged() override;
-    void enablementChanged() override;
-    void setText(juce::String newText);
-    void setCaption(const juce::String& newCaption);
-    void setSelected(bool shouldBeSelected);
-    void mouseEnter(const juce::MouseEvent& event) override;
-    void mouseExit(const juce::MouseEvent& event) override;
-    void mouseDown(const juce::MouseEvent& event) override;
-    void mouseUp(const juce::MouseEvent& event) override;
 
 private:
 

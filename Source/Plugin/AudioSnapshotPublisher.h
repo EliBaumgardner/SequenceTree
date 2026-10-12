@@ -14,13 +14,7 @@ class AudioSnapshotPublisher
 {
 public:
 
-    struct Snapshot
-    {
-        std::shared_ptr<NodeMap>      globalNodes;
-        std::shared_ptr<RTScript>     traversalScript;
-
-        std::uint64_t                 generation = 0;
-    };
+    struct Snapshot;
 
     explicit AudioSnapshotPublisher(TraversalRuleState& traversalRuleState);
 
@@ -35,17 +29,30 @@ public:
         blockEpoch.fetch_add(1, std::memory_order_seq_cst);
     }
 
-    const Snapshot* getPublished() const { return publishedSnapshot.get(); }
-    std::shared_ptr<Snapshot> beginEdit() const;
-
     void publish      (std::shared_ptr<Snapshot> snapshot);
     void publishScript(std::shared_ptr<RTScript> script);
     void publishGraph (int graphId, NodeMap graphNodes);
 
-    ScriptCompileResult publishActiveTraversalRule();
     void releaseRetiredSnapshots();
 
+    ScriptCompileResult publishActiveTraversalRule();
+
+    std::shared_ptr<Snapshot> beginEdit() const;
+
+    const Snapshot* getPublished() const { return publishedSnapshot.get(); }
+
+    struct Snapshot
+    {
+        std::shared_ptr<NodeMap>  globalNodes;
+        std::shared_ptr<RTScript> traversalScript;
+
+        std::uint64_t generation = 0;
+    };
+
 private:
+
+    void collectRetiredSnapshots();
+    static int findFirstUnlinkedRootId(const NodeMap& nodes);
 
     struct RetiredSnapshot
     {
@@ -53,16 +60,13 @@ private:
         std::uint64_t             retiredAtEpoch = 0;
     };
 
-    void collectRetiredSnapshots();
-    static int findFirstUnlinkedRootId(const NodeMap& nodes);
-
     TraversalRuleState& traversalRuleState;
 
-    std::atomic<Snapshot*>       currentSnapshot { nullptr };
-    std::atomic<std::uint64_t>   blockEpoch { 0 };
+    std::atomic<Snapshot*>     currentSnapshot { nullptr };
+    std::atomic<std::uint64_t> blockEpoch { 0 };
 
     std::shared_ptr<Snapshot>    publishedSnapshot;
     std::vector<RetiredSnapshot> retiredSnapshots;
 
-    std::uint64_t                snapshotGeneration = 0;
+    std::uint64_t snapshotGeneration = 0;
 };

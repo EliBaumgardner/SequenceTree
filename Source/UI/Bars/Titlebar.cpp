@@ -65,6 +65,22 @@ void Titlebar::resized()
     buttonPane.setBounds(bounds.removeFromRight(modePaneWidth));
 }
 
+void Titlebar::applyPlaybackState(bool shouldPlay)
+{
+    playButton->setSelected(shouldPlay);
+
+    nodeCanvas.setProcessorPlayback(shouldPlay);
+}
+
+int Titlebar::narrowestWidth() const
+{
+    const auto bounds = getContentBounds();
+    const int  height = bounds.getHeight();
+
+    return getWidth() - bounds.getWidth() + transportPane.idealWidth(height) + tempoDisplayWidth + undoRedoPane.idealWidth(height) + patchControls.idealWidth(height)
+           + displaySelectorWidth + modePaneWidth + contentSpacing * 5;
+}
+
 void Titlebar::configureTransportPane()
 {
     playButton = &transportPane.addButton(&CustomLookAndFeel::drawPlayIcon, "Play / Pause",
@@ -95,20 +111,6 @@ void Titlebar::configureTransportPane()
         [this](float synced) { syncButton->setSelected(synced >= 0.5f); });
 
     syncAttachment->sendInitialUpdate();
-}
-
-void Titlebar::applyPlaybackState(bool shouldPlay)
-{
-    playButton->setSelected(shouldPlay);
-
-    nodeCanvas.setProcessorPlayback(shouldPlay);
-}
-
-void Titlebar::resetTraversals()
-{
-    processor.resetRequested.store(true);
-
-    nodeCanvas.arrowManager.resetAllProgress();
 }
 
 void Titlebar::configureModePane()
@@ -152,12 +154,6 @@ void Titlebar::configureUndoRedoPane()
     changeListenerCallback(&undoManager);
 }
 
-void Titlebar::changeListenerCallback(juce::ChangeBroadcaster*)
-{
-    undoButton->setEnabled(undoManager.canUndo());
-    redoButton->setEnabled(undoManager.canRedo());
-}
-
 void Titlebar::configureDisplaySelector()
 {
     auto addDisplayMode = [this](int itemId, juce::String label, NodeDisplayMode mode) {
@@ -196,11 +192,15 @@ void Titlebar::configureTempoDisplay()
     tempoAttachment->sendInitialUpdate();
 }
 
-int Titlebar::narrowestWidth() const
+void Titlebar::resetTraversals()
 {
-    const auto bounds = getContentBounds();
-    const int  height = bounds.getHeight();
+    processor.resetRequested.store(true);
 
-    return getWidth() - bounds.getWidth() + transportPane.idealWidth(height) + tempoDisplayWidth + undoRedoPane.idealWidth(height) + patchControls.idealWidth(height)
-           + displaySelectorWidth + modePaneWidth + contentSpacing * 5;
+    nodeCanvas.arrowManager.resetAllProgress();
+}
+
+void Titlebar::changeListenerCallback(juce::ChangeBroadcaster*)
+{
+    undoButton->setEnabled(undoManager.canUndo());
+    redoButton->setEnabled(undoManager.canRedo());
 }

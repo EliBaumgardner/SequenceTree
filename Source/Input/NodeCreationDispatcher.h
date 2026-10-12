@@ -11,11 +11,6 @@ class NodeCreationDispatcher
 {
 public:
 
-    static juce::ValueTree create(NodeCreationMode         mode,
-                                  GraphState&              state,
-                                  int                      parentNodeId,
-                                  const juce::Identifier&  parentType,
-                                  bool                     makeAlternative,
-                                  const NodePosition&      position,
-                                  juce::UndoManager*       undoManager);
+    static juce::ValueTree create(NodeCreationMode mode, GraphState& state, int parentNodeId, const juce::Identifier& parentType, bool makeAlternative,
+                                  const NodePosition& position, juce::UndoManager* undoManager);
 };

@@ -121,6 +121,22 @@ void ColourPicker::renderSaturationBrightnessImage()
     }
 }
 
+void ColourPicker::showColour(juce::Colour colour)
+{
+    juce::ValueTree presets = colourPresets;
+
+    originalColour = colour;
+
+    colour.getHSB(hue, saturation, brightness);
+
+    while (presets.getNumChildren() < presetCount) {
+        presets.appendChild(juce::ValueTree(ValueTreeIdentifiers::ColourPreset), nullptr);
+    }
+
+    renderSaturationBrightnessImage();
+    repaint();
+}
+
 void ColourPicker::mouseDown(const juce::MouseEvent& event)
 {
     const juce::Point<int> position      = event.getPosition();
@@ -207,22 +223,6 @@ void ColourPicker::mouseDrag(const juce::MouseEvent& event)
 void ColourPicker::mouseUp(const juce::MouseEvent&)
 {
     dragTarget = DragTarget::None;
-}
-
-void ColourPicker::showColour(juce::Colour colour)
-{
-    juce::ValueTree presets = colourPresets;
-
-    originalColour = colour;
-
-    colour.getHSB(hue, saturation, brightness);
-
-    while (presets.getNumChildren() < presetCount) {
-        presets.appendChild(juce::ValueTree(ValueTreeIdentifiers::ColourPreset), nullptr);
-    }
-
-    renderSaturationBrightnessImage();
-    repaint();
 }
 
 ColourSelector::ColourSelector(juce::ValueTree colourPresets, juce::UndoManager& undoManager)

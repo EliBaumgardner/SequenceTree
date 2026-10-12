@@ -9,6 +9,7 @@ class GraphState;
 class AudioCommandDrainer
 {
 public:
+
     AudioCommandDrainer(NodeCanvas& nodeCanvas, AudioUIBridge& bridge, GraphState& graphState);
 
     void drainAll();
@@ -16,9 +17,10 @@ public:
 private:
 
     void drainHighlights();
+    void drainArrows    ();
+    void drainCounts    ();
+
     juce::Colour getTraversalColour(int traversalId) const;
-    void drainArrows();
-    void drainCounts();
 
     NodeCanvas&    nodeCanvas;
     AudioUIBridge& bridge;

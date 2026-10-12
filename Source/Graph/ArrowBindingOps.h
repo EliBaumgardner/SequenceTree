@@ -12,20 +12,17 @@ public:
 
     explicit ArrowBindingOps(GraphState& graphState) : graphState(graphState) {}
 
-    static void      setArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo,
-                                  juce::UndoManager* undoManager);
-
-    static ArrowInfo getArrowInfo(const juce::ValueTree& arrowTree);
     void syncPitchBindings  (int nodeId, juce::UndoManager* undoManager);
     void clearArrowDurations(int nodeId, juce::UndoManager* undoManager);
 
-    void applyNodeBinding(ArrowInfo& arrowInfo, int nodeId,
-                          const juce::ValueTree& newArrow = {}) const;
+    void applyNodeBinding(ArrowInfo& arrowInfo, int nodeId, const juce::ValueTree& newArrow = {}) const;
+
+    static void      setArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo, juce::UndoManager* undoManager);
+    static ArrowInfo getArrowInfo(const juce::ValueTree& arrowTree);
 
 private:
 
-    void applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId,
-                               int deltaX, int deltaY, juce::UndoManager* undoManager);
+    void applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId, int deltaX, int deltaY, juce::UndoManager* undoManager);
 
     GraphState& graphState;
 };

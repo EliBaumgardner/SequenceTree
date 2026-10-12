@@ -12,6 +12,18 @@ class ValueField : public juce::Timer
 {
 public:
 
+    enum class PaintLayer;
+
+    explicit ValueField(NodeCanvas& nodeCanvas);
+    ~ValueField() override;
+
+    void setActivePaintLayer(PaintLayer layer);
+    void updateBrushCursor  ();
+    void refresh            ();
+
+    void paintStroke(juce::Point<float> canvasPosition, bool isStart, bool erase = false);
+    void endStroke  ();
+
     enum class PaintLayer { Pitch, Duration, Velocity };
 
     enum class BrushStroke { Idle, Painting, Erasing };
@@ -23,36 +35,33 @@ public:
     static constexpr float glowRadius       = 330.0f;
     static constexpr float maximumMidiValue = 127.0f;
 
-    explicit ValueField(NodeCanvas& nodeCanvas);
-    ~ValueField() override;
+    juce::Image image;
 
-    void setActivePaintLayer(PaintLayer layer);
-    void updateBrushCursor();
-    void refresh();
-    void paintStroke(juce::Point<float> canvasPosition, bool isStart, bool erase = false);
-    void endStroke();
+    juce::Colour brushColour = juce::Colours::white;
+    float        brushRadius = 12.0f;
+    float        brushFlow   = 0.22f;
 
-    juce::Image  image;
-    juce::Colour brushColour      = juce::Colours::white;
-    float        brushRadius      = 12.0f;
-    float        brushFlow        = 0.22f;
-    PaintLayer   activePaintLayer = PaintLayer::Pitch;
-    float        viewZoom         = 1.0f;
+    PaintLayer activePaintLayer = PaintLayer::Pitch;
+    float      viewZoom         = 1.0f;
 
     std::array<std::vector<float>, paintLayerCount> paintDensity;
 
 private:
 
-    void render();
+    void render            ();
     void accumulateNodeGlow(int fieldWidth, int fieldHeight);
-    juce::Identifier paintLayerValueId() const;
-    juce::Colour     mapFieldColour(float factor) const;
-    void ensurePaintBuffers();
+
+    void accumulateStroke          (juce::Point<float> from, juce::Point<float> to, bool rearm = false);
+    void applyPaintToNodes         (juce::Point<float> from, juce::Point<float> to);
+    void ensurePaintBuffers        ();
     void seedStrokeDensityFromNodes();
-    void accumulateStroke(juce::Point<float> from, juce::Point<float> to, bool rearm = false);
-    void applyPaintToNodes(juce::Point<float> from, juce::Point<float> to);
-    std::optional<float> densityUnderNode(const Node& node) const;
+
     void timerCallback() override;
+
+    juce::Identifier paintLayerValueId() const;
+    juce::Colour     mapFieldColour   (float factor) const;
+
+    std::optional<float> densityUnderNode(const Node& node) const;
 
     NodeCanvas& nodeCanvas;
 
@@ -62,6 +71,7 @@ private:
 
     std::vector<float> strokeMask;
     juce::Point<float> strokePreviousPoint;
+
     juce::Point<float> brushCurrentPoint;
     BrushStroke        brushStroke = BrushStroke::Idle;
 };

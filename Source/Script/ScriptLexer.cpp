@@ -69,6 +69,11 @@ void Lexer::advance(int count)
     }
 }
 
+void Lexer::report(const std::string& message, const Token& token)
+{
+    diagnostics.push_back({ message, token.line, token.column, token.length });
+}
+
 char Lexer::peek(std::size_t offset) const
 {
     const std::size_t index = position + offset;
@@ -119,21 +124,6 @@ Token Lexer::readNumber()
     return token;
 }
 
-Token Lexer::makeToken(TokenKind kind, int length) const
-{
-    Token token;
-    token.kind   = kind;
-    token.line   = line;
-    token.column = column;
-    token.length = length;
-    return token;
-}
-
-void Lexer::report(const std::string& message, const Token& token)
-{
-    diagnostics.push_back({ message, token.line, token.column, token.length });
-}
-
 const KeywordEntry keywordTable[] = {
     { "let",      TokenKind::KeywordLet },
     { "if",       TokenKind::KeywordIf },
@@ -150,8 +140,11 @@ const KeywordEntry keywordTable[] = {
     { "int",      TokenKind::KeywordInt },
     { "float",    TokenKind::KeywordFloat },
     { "double",   TokenKind::KeywordDouble },
+    { "bool",     TokenKind::KeywordBool },
     { "Node",     TokenKind::KeywordNode },
     { "none",     TokenKind::KeywordNone },
+    { "true",     TokenKind::KeywordTrue },
+    { "false",    TokenKind::KeywordFalse },
     { "import",   TokenKind::KeywordImport },
     { "and",      TokenKind::And },
     { "or",       TokenKind::Or },
@@ -182,11 +175,6 @@ Token Lexer::readIdentifier()
     token.kind   = keywordKind(token.text);
 
     return token;
-}
-
-bool Lexer::isIdentifierPart(char c)
-{
-    return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
 }
 
 Token Lexer::readPunctuation()
@@ -243,4 +231,19 @@ Token Lexer::readFixed(TokenKind kind, int length)
     }
 
     return token;
+}
+
+Token Lexer::makeToken(TokenKind kind, int length) const
+{
+    Token token;
+    token.kind   = kind;
+    token.line   = line;
+    token.column = column;
+    token.length = length;
+    return token;
+}
+
+bool Lexer::isIdentifierPart(char c)
+{
+    return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
 }

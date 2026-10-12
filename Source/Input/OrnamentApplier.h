@@ -13,7 +13,8 @@ public:
 
     OrnamentApplier(NodeCanvas& nodeCanvas, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
 
-    void setActive         (bool shouldBeActive);
+    void setActive(bool shouldBeActive);
+
     void respondToClick    (juce::Component* clickedComponent);
     void respondToMarkClick(const juce::MouseEvent& event, OrnamentMarkView& markView);
 

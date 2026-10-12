@@ -34,14 +34,16 @@ public:
 
 private:
 
-    void valueTreeChildAdded       (juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved     (juce::ValueTree& parent, juce::ValueTree& child, int index) override;
-    void valueTreePropertyChanged  (juce::ValueTree& tree, const juce::Identifier& property) override;
+    void valueTreeChildAdded     (juce::ValueTree& parent, juce::ValueTree& child) override;
+    void valueTreeChildRemoved   (juce::ValueTree& parent, juce::ValueTree& child, int index) override;
+    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
+
     void componentMovedOrResized   (juce::Component& component, bool wasMoved, bool wasResized) override;
     void componentVisibilityChanged(juce::Component& component) override;
     void componentBeingDeleted     (juce::Component& component) override;
-    void place                     (Node& node);
-    void refreshAll                ();
+
+    void place     (Node& node);
+    void refreshAll();
 
     NodeCanvas&        nodeCanvas;
     OrnamentLibraries& ornamentLibraries;

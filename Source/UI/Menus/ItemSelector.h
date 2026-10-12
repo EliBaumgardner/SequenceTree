@@ -18,9 +18,10 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
-    void addItem(int itemId, juce::String label, Action onChosen = nullptr, bool isEnabled = true);
+    void addItem   (int itemId, juce::String label, Action onChosen = nullptr, bool isEnabled = true);
     void removeItem(int itemId);
     void clearItems();
+
     void setSelectedItem(int itemId);
 
     std::function<void(int)> onItemSelected;
@@ -35,6 +36,13 @@ public:
 
 private:
 
+    struct Item;
+
+    void showMenu    ();
+    void handleResult(int itemId);
+
+    const Item* findItem(int itemId) const;
+
     struct Item
     {
         int          id;
@@ -42,10 +50,6 @@ private:
         Action       action;
         bool         isEnabled;
     };
-
-    void showMenu();
-    void handleResult(int itemId);
-    const Item* findItem(int itemId) const;
 
     IconButton button;
 

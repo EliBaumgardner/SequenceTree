@@ -33,14 +33,16 @@ public:
     static const juce::Identifier DanglingArrow;
     static const juce::Identifier ArrowTipX;
     static const juce::Identifier ArrowTipY;
+
     static const juce::Identifier ArrowType;
+    static const juce::Identifier ArrowDuration;
+    static const juce::Identifier ArrowSync;
+
     static const juce::Identifier ArrowXBinding;
     static const juce::Identifier ArrowYBinding;
     static const juce::Identifier ArrowXMultiplier;
     static const juce::Identifier ArrowYMultiplier;
     static const juce::Identifier ArrowPitchOffset;
-    static const juce::Identifier ArrowDuration;
-    static const juce::Identifier ArrowSync;
 
     static const juce::Identifier Id;
 
@@ -107,13 +109,15 @@ public:
     static const juce::Identifier OrnamentUid;
     static const juce::Identifier OrnamentName;
     static const juce::Identifier OrnamentSymbol;
+    static const juce::Identifier OrnamentHostId;
+    static const juce::Identifier NextFigureNodeId;
+
     static const juce::Identifier OrnamentOffset;
     static const juce::Identifier OrnamentVelocity;
+
     static const juce::Identifier ActiveOrnamentUid;
     static const juce::Identifier OrnamentIndex;
     static const juce::Identifier LegacyLibrariesImported;
-    static const juce::Identifier NextFigureNodeId;
-    static const juce::Identifier OrnamentHostId;
 
     static const juce::Identifier ThemeColour;
     static const juce::Identifier InterfaceZoom;

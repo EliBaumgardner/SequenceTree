@@ -100,50 +100,6 @@ void OrnamentCanvas::handleAsyncUpdate()
     updateArrows();
 }
 
-void OrnamentCanvas::updateArrows()
-{
-    for (const auto& [nodeId, node] : nodes) {
-        const juce::ValueTree connection         = node->nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChild(0);
-        const juce::ValueTree dangling           = node->nodeValueTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows).getChild(0);
-        const auto            child              = nodes.find(static_cast<int>(connection.getProperty(ValueTreeIdentifiers::Id, -1)));
-        const bool            hasConnectionArrow = std::any_of(arrows.begin(), arrows.end(), [&connection](const Arrow* arrow) { return arrow->arrowTree == connection; });
-        const bool            hasDanglingArrow   = std::any_of(arrows.begin(), arrows.end(), [&dangling](const Arrow* arrow) { return arrow->arrowTree == dangling; });
-
-        if (connection.isValid() && child != nodes.end() && ! hasConnectionArrow) {
-            Arrow* const arrow = arrows.add(std::make_unique<Arrow>(node.get(), child->second.get(), undoManager));
-
-            arrow->arrowTree = connection;
-
-            arrow->setInterceptsMouseClicks(false, true);
-
-            addAndMakeVisible(*arrow);
-
-            arrow->toBack();
-        }
-
-        if (dangling.isValid() && ! hasDanglingArrow) {
-            Arrow* const arrow = arrows.add(std::make_unique<Arrow>(node.get(), juce::Point<int> {}, undoManager));
-
-            arrow->arrowTree = dangling;
-
-            arrow->valueEditor->setVisible(false);
-
-            addAndMakeVisible(*arrow);
-
-            arrow->toBack();
-        }
-    }
-
-    for (Arrow* const arrow : arrows) {
-        if (arrow->isDangling()) {
-            arrow->setTipOffset({ arrow->arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX), arrow->arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY) });
-        }
-        else {
-            arrow->setArrowBounds();
-        }
-    }
-}
-
 OrnamentNode* OrnamentCanvas::findNodeAt(juce::Point<int> point) const
 {
     for (const auto& [nodeId, node] : nodes) {
@@ -194,4 +150,48 @@ Arrow* OrnamentCanvas::findArrowNear(juce::Point<float> point, float radius, Arr
     }
 
     return nearest;
+}
+
+void OrnamentCanvas::updateArrows()
+{
+    for (const auto& [nodeId, node] : nodes) {
+        const juce::ValueTree connection         = node->nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChild(0);
+        const juce::ValueTree dangling           = node->nodeValueTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows).getChild(0);
+        const auto            child              = nodes.find(static_cast<int>(connection.getProperty(ValueTreeIdentifiers::Id, -1)));
+        const bool            hasConnectionArrow = std::any_of(arrows.begin(), arrows.end(), [&connection](const Arrow* arrow) { return arrow->arrowTree == connection; });
+        const bool            hasDanglingArrow   = std::any_of(arrows.begin(), arrows.end(), [&dangling](const Arrow* arrow) { return arrow->arrowTree == dangling; });
+
+        if (connection.isValid() && child != nodes.end() && ! hasConnectionArrow) {
+            Arrow* const arrow = arrows.add(std::make_unique<Arrow>(node.get(), child->second.get(), undoManager));
+
+            arrow->arrowTree = connection;
+
+            arrow->setInterceptsMouseClicks(false, true);
+
+            addAndMakeVisible(*arrow);
+
+            arrow->toBack();
+        }
+
+        if (dangling.isValid() && ! hasDanglingArrow) {
+            Arrow* const arrow = arrows.add(std::make_unique<Arrow>(node.get(), juce::Point<int> {}, undoManager));
+
+            arrow->arrowTree = dangling;
+
+            arrow->valueEditor->setVisible(false);
+
+            addAndMakeVisible(*arrow);
+
+            arrow->toBack();
+        }
+    }
+
+    for (Arrow* const arrow : arrows) {
+        if (arrow->isDangling()) {
+            arrow->setTipOffset({ arrow->arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX), arrow->arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY) });
+        }
+        else {
+            arrow->setArrowBounds();
+        }
+    }
 }

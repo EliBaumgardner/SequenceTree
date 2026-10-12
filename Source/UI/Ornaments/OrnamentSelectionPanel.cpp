@@ -58,6 +58,17 @@ void OrnamentSelectionPanel::resized()
     layoutSections();
 }
 
+juce::Point<int> OrnamentSelectionPanel::narrowestSize() const
+{
+    const int barInset      = juce::roundToInt(titlebarHeight * titlebarInsetRatio);
+    const int buttonSize    = titlebarHeight - barInset * 2;
+    const int titlebarWidth = barInset * 2 + buttonSize * 2 + Bar::contentSpacing;
+    const int tileArea      = OrnamentLibrarySection::tileGap * 2 + OrnamentTile::tileWidth;
+    const int viewportWidth = Theme::windowGutter * 2 + viewport.getScrollBarThickness() + tileArea;
+    const int sectionHeight = OrnamentLibrarySection::headerHeight + OrnamentLibrarySection::tileGap * 2 + OrnamentTile::tileHeight;
+
+    return { juce::jmax(titlebarWidth, viewportWidth), titlebarHeight + Theme::windowGutter * 2 + sectionHeight };
+}
 
 void OrnamentSelectionPanel::chooseLibraryFile()
 {
@@ -92,18 +103,6 @@ void OrnamentSelectionPanel::layoutSections()
     }
 
     sectionList.setSize(width, top);
-}
-
-juce::Point<int> OrnamentSelectionPanel::narrowestSize() const
-{
-    const int barInset      = juce::roundToInt(titlebarHeight * titlebarInsetRatio);
-    const int buttonSize    = titlebarHeight - barInset * 2;
-    const int titlebarWidth = barInset * 2 + buttonSize * 2 + Bar::contentSpacing;
-    const int tileArea      = OrnamentLibrarySection::tileGap * 2 + OrnamentTile::tileWidth;
-    const int viewportWidth = Theme::windowGutter * 2 + viewport.getScrollBarThickness() + tileArea;
-    const int sectionHeight = OrnamentLibrarySection::headerHeight + OrnamentLibrarySection::tileGap * 2 + OrnamentTile::tileHeight;
-
-    return { juce::jmax(titlebarWidth, viewportWidth), titlebarHeight + Theme::windowGutter * 2 + sectionHeight };
 }
 
 void OrnamentSelectionPanel::handleAsyncUpdate()
