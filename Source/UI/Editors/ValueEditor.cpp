@@ -1,6 +1,5 @@
 #include "ValueEditor.h"
 #include "../Theme/CustomLookAndFeel.h"
-#include "../../Util/NodeInfo.h"
 
 #include <cmath>
 
@@ -30,7 +29,7 @@ ValueEditor::ValueEditor(juce::UndoManager& undoManager) : undoManager(undoManag
 
     boundValue.addListener(this);
 
-    setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
+    setFormat(std::make_unique<NumberFormat>(std::numeric_limits<int>::min(), std::numeric_limits<int>::max()));
 }
 
 ValueEditor::~ValueEditor()
