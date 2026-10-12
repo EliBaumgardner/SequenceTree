@@ -4,36 +4,13 @@
 #include "ArrowAnimation.h"
 #include "../Editors/ValueEditor.h"
 #include "../../Util/ArrowInfo.h"
+#include "../Theme/Visuals.h"
 
 class Node;
-
-struct ArrowGeometry
-{
-    juce::Point<float> centre;
-    juce::Point<float> start;
-    juce::Point<float> tip;
-    juce::Point<float> direction;
-    juce::Point<float> chord;
-    juce::Point<float> control1;
-    juce::Point<float> control2;
-
-    float length   = 0.0f;
-    bool  straight = true;
-    bool  drawHead = false;
-    bool  valid    = false;
-};
-
-struct ArrowLabel
-{
-    juce::Point<float> centre;
-    float              angle = 0.0f;
-};
 
 class Arrow : public juce::Component
 {
 public:
-
-    enum class ShaftStyle;
 
     Arrow(Node* startNode, Node* endNode, juce::UndoManager& undoManager);
     Arrow(Node* startNode, juce::Point<int> tipOffset, juce::UndoManager& undoManager);
@@ -70,6 +47,7 @@ public:
     int          getDuration     () const;
     juce::String getDurationLabel() const;
 
+    ArrowVisual   getArrowVisual() const;
     ArrowGeometry getGeometry   (float animationProgress) const;
     ArrowLabel    getLabel      (const ArrowGeometry& geometry, float headLength) const;
     juce::Path    buildShaftPath(const ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const;
@@ -77,9 +55,7 @@ public:
     juce::Point<int>   getTip       () const;
     juce::Point<float> getHeadAnchor() const;
 
-    ShaftStyle shaftStyle() const;
-
-    enum class ShaftStyle { Solid, Dashed, Ruler };
+    ArrowVisual::ShaftStyle shaftStyle() const;
 
     Node* const startNode = nullptr;
     Node* const endNode   = nullptr;

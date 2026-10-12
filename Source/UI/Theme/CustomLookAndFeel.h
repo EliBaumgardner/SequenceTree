@@ -5,8 +5,6 @@
 #include "Visuals.h"
 #include "../../Util/NodeInfo.h"
 
-class Arrow;
-
 class FileLabel;
 
 class ValueSlider;
@@ -46,7 +44,7 @@ public:
     void drawNode         (juce::Graphics& graphics, const NodeVisual& visual);
     void drawModulatorNode(juce::Graphics& graphics, const NodeVisual& visual);
     void drawRootRectangle(juce::Graphics& graphics, juce::Rectangle<float> bounds);
-    void drawArrow        (juce::Graphics& graphics, const Arrow& arrow);
+    void drawArrow        (juce::Graphics& graphics, const ArrowVisual& visual);
 
     void drawTreeIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawNodeIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
