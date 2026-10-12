@@ -2,12 +2,12 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../Bars/Bar.h"
-#include "../Buttons/ButtonPane.h"
-#include "../Buttons/IconButton.h"
-#include "../PanelResizer.h"
-#include "../LabelPanel.h"
-#include "../Editors/FilePage.h"
+#include <ArsNovaUI/Bars/Bar.h>
+#include <ArsNovaUI/Buttons/ButtonPane.h>
+#include <ArsNovaUI/Buttons/IconButton.h>
+#include <ArsNovaUI/PanelResizer.h>
+#include <ArsNovaUI/LabelPanel.h>
+#include <ArsNovaUI/Editors/FilePage.h>
 
 class CustomLookAndFeel;
 class TraversalRuleState;

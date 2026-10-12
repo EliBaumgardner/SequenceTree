@@ -5,7 +5,7 @@
 #include "Graph/GraphState.h"
 #include "Graph/RTGraphBuilder.h"
 #include "Graph/ValueTreeIdentifiers.h"
-#include "UI/Theme/InterfaceIdentifiers.h"
+#include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
 #include "Audio/TraversalLogic.h"
 #include "Input/ConnectionOps.h"
 #include "Script/ScriptCompiler.h"

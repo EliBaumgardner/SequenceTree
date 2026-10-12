@@ -1,5 +1,5 @@
 #include "OrnamentWindow.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 OrnamentWindow::OrnamentWindow(CustomLookAndFeel& lookAndFeel, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
     : undoManager(undoManager),

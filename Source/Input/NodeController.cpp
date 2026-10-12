@@ -15,12 +15,12 @@
 #include "../UI/Node/Modulator.h"
 #include "../UI/Node/Encapsulator.h"
 #include "../Graph/NodeFactory.h"
-#include "../UI/Canvas/DynamicPort.h"
+#include <ArsNovaUI/Canvas/DynamicPort.h>
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "../Graph/GraphState.h"
 #include "../UI/Menus/AllowedTraversalsMenu.h"
-#include "../UI/Menus/ContextMenu.h"
-#include "../UI/Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Menus/ContextMenu.h>
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Plugin/PluginProcessor.h"
 
 NodeController::NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager, TraversalSession& traversalSession,

@@ -1,7 +1,7 @@
 #include "TraversalMenu.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Util/NodeInfo.h"
 #include "../Canvas/NodeCanvas.h"
 

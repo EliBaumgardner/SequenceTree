@@ -1,5 +1,5 @@
 #include "TraversalRulesWindow.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/TraversalRuleState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Plugin/AudioSnapshotPublisher.h"

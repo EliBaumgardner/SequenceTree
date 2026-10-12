@@ -6,9 +6,9 @@
 #include <unordered_map>
 
 #include "../../Util/NodeInfo.h"
-#include "../Buttons/IconButton.h"
-#include "../Editors/ValueEditor.h"
-#include "../Theme/Visuals.h"
+#include <ArsNovaUI/Buttons/IconButton.h>
+#include <ArsNovaUI/Editors/ValueEditor.h>
+#include <ArsNovaUI/Theme/Visuals.h>
 
 class Arrow;
 class NodeCanvas;

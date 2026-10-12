@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "../../Graph/RTData.h"
-#include "../Editors/LabeledEditor.h"
+#include <ArsNovaUI/Editors/LabeledEditor.h>
 
 class CustomLookAndFeel;
 class GraphState;

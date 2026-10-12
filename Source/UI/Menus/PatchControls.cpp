@@ -1,5 +1,5 @@
 #include "PatchControls.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 PatchControls::PatchControls(juce::AudioProcessor& processor, const juce::File& patchFolder)
     : processor(processor),

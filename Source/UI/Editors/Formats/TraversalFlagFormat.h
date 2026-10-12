@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ValueFormat.h"
+#include <ArsNovaUI/Editors/Formats/ValueFormat.h>
 #include "../../../Graph/RTData.h"
 
 class TraversalFlagFormat : public NumberFormat

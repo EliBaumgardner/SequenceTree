@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Bar.h"
-#include "../Buttons/IconButton.h"
-#include "../Buttons/ButtonPane.h"
-#include "../Menus/ItemSelector.h"
+#include <ArsNovaUI/Bars/Bar.h>
+#include <ArsNovaUI/Buttons/IconButton.h>
+#include <ArsNovaUI/Buttons/ButtonPane.h>
+#include <ArsNovaUI/Menus/ItemSelector.h>
 #include "../Menus/PatchControls.h"
 #include "../Buttons/TempoDisplay.h"
 #include "../../Input/NodeController.h"

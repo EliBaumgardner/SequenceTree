@@ -2,14 +2,14 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <array>
-#include "../Editors/LabeledEditor.h"
+#include <ArsNovaUI/Editors/LabeledEditor.h>
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Util/NodeInfo.h"
-#include "ColourSelector.h"
-#include "../Buttons/IconButton.h"
+#include <ArsNovaUI/Menus/ColourSelector.h>
+#include <ArsNovaUI/Buttons/IconButton.h>
 #include "TraversalRulesWindow.h"
-#include "../PopupWindow.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/PopupWindow.h>
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 class Node;
 class NodeCanvas;

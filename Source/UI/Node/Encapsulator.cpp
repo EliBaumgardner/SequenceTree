@@ -3,7 +3,7 @@
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Canvas/NodeCanvas.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 Encapsulator::Encapsulator(juce::UndoManager& undoManager, GraphState& graphState, NodeCanvas& nodeCanvas)
     : Node(undoManager), graphState(graphState), nodeCanvas(nodeCanvas)

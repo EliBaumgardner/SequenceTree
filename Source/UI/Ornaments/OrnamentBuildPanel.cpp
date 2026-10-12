@@ -1,5 +1,5 @@
 #include "OrnamentBuildPanel.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
 
 OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)

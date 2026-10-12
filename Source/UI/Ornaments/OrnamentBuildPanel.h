@@ -5,10 +5,10 @@
 #include "OrnamentCanvas.h"
 #include "OrnamentFigureController.h"
 #include "OrnamentSymbolEditor.h"
-#include "../Bars/Bar.h"
-#include "../Buttons/ButtonPane.h"
-#include "../Canvas/DynamicPort.h"
-#include "../Editors/ValueEditor.h"
+#include <ArsNovaUI/Bars/Bar.h>
+#include <ArsNovaUI/Buttons/ButtonPane.h>
+#include <ArsNovaUI/Canvas/DynamicPort.h>
+#include <ArsNovaUI/Editors/ValueEditor.h>
 
 class OrnamentLibraries;
 

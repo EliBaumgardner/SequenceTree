@@ -1,6 +1,6 @@
 #include "Modulator.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 #include <cmath>
 #include <limits>

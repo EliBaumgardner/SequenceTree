@@ -1,6 +1,6 @@
 #include "RootRectangle.h"
-#include "../Theme/CustomLookAndFeel.h"
-#include "../Editors/Formats/ValueFormat.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
+#include <ArsNovaUI/Editors/Formats/ValueFormat.h>
 #include "../Editors/Formats/TraversalFlagFormat.h"
 
 static constexpr int traversalRefListLength = 24;

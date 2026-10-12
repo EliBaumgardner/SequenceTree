@@ -1,6 +1,6 @@
 #include "OrnamentApplier.h"
 #include "../UI/Canvas/NodeCanvas.h"
-#include "../UI/Menus/ContextMenu.h"
+#include <ArsNovaUI/Menus/ContextMenu.h>
 #include "../UI/Node/Node.h"
 #include "../Graph/OrnamentLibraries.h"
 #include "../Graph/ValueTreeIdentifiers.h"

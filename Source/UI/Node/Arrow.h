@@ -2,9 +2,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ArrowAnimation.h"
-#include "../Editors/ValueEditor.h"
+#include <ArsNovaUI/Editors/ValueEditor.h>
 #include "../../Util/ArrowInfo.h"
-#include "../Theme/Visuals.h"
+#include <ArsNovaUI/Theme/Visuals.h>
 
 class Node;
 

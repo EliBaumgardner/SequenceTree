@@ -1,6 +1,6 @@
 #include "Node.h"
 #include "Arrow.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Canvas/NodeCanvas.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 

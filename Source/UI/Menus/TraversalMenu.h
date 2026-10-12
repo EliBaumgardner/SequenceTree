@@ -2,13 +2,13 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "ItemSelector.h"
-#include "../Editors/LabeledEditor.h"
-#include "ColourSelector.h"
-#include "../Buttons/IconButton.h"
+#include <ArsNovaUI/Menus/ItemSelector.h>
+#include <ArsNovaUI/Editors/LabeledEditor.h>
+#include <ArsNovaUI/Menus/ColourSelector.h>
+#include <ArsNovaUI/Buttons/IconButton.h>
 #include "TraversalRulesWindow.h"
-#include "../PopupWindow.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/PopupWindow.h>
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 class NodeCanvas;
 class GraphState;

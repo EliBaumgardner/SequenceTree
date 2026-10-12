@@ -1,6 +1,6 @@
 #include "OrnamentFigureController.h"
 #include "OrnamentCanvas.h"
-#include "../Canvas/DynamicPort.h"
+#include <ArsNovaUI/Canvas/DynamicPort.h>
 #include "../../Util/ArrowInfo.h"
 
 OrnamentFigureController::OrnamentFigureController(OrnamentCanvas& canvas, DynamicPort& port, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)

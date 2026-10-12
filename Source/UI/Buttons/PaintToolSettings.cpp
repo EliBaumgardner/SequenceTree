@@ -1,5 +1,5 @@
 #include "PaintToolSettings.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Canvas/NodeCanvas.h"
 
 PaintToolSettings::PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree colourPresets, juce::UndoManager& undoManager)
