@@ -1,8 +1,16 @@
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
 #include <map>
 #include <vector>
+
+enum class OrnamentMark { None, Symbol, Missing };
+
+struct SymbolStroke
+{
+    juce::Path path;
+    float      width = 0.0f;
+};
 
 struct CanvasGrid
 {

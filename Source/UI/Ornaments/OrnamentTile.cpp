@@ -56,7 +56,7 @@ void OrnamentTile::paint(juce::Graphics& graphics)
 
     graphics.setColour(lookAndFeel.textColour);
 
-    lookAndFeel.drawOrnamentSymbol(graphics, symbol, ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString());
+    lookAndFeel.drawOrnamentSymbol(graphics, symbol, OrnamentLibraries::readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString()));
 }
 
 void OrnamentTile::mouseDown(const juce::MouseEvent& event)

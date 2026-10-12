@@ -7,7 +7,7 @@
 
 void OrnamentMarkView::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawNodeOrnament(graphics, getLocalBounds().toFloat(), mark, symbol);
+    CustomLookAndFeel::get(*this).drawNodeOrnament(graphics, getLocalBounds().toFloat(), mark, OrnamentLibraries::readSymbol(symbol));
 }
 
 OrnamentMarks::OrnamentMarks(NodeCanvas& nodeCanvas, OrnamentLibraries& ornamentLibraries)
