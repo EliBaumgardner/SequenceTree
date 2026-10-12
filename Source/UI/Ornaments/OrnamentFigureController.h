@@ -12,8 +12,7 @@ class OrnamentFigureController : public juce::MouseListener
 {
 public:
 
-    enum class DragState { Idle, MovingNode, MovingArrowHead, GrowingChain, MovingDanglingTip, CreatingDanglingArrow, ScrubbingValue, Panning };
-    enum class ClickMode { Build, PickHost };
+    enum class ClickMode;
 
     OrnamentFigureController(OrnamentCanvas& canvas, DynamicPort& port, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
 
@@ -22,8 +21,12 @@ public:
     void mouseDown      (const juce::MouseEvent& event) override;
     void mouseDrag      (const juce::MouseEvent& event) override;
     void mouseUp        (const juce::MouseEvent& event) override;
+
     void switchClickMode(ClickMode mode);
     void setArrowMode   (bool enabled);
+
+    enum class DragState { Idle, MovingNode, MovingArrowHead, GrowingChain, MovingDanglingTip, CreatingDanglingArrow, ScrubbingValue, Panning };
+    enum class ClickMode { Build, PickHost };
 
     static constexpr float arrowHoverRadius     = 8.0f;
     static constexpr float arrowHeadGrabRadius  = 16.0f;
@@ -32,9 +35,11 @@ public:
     static constexpr int   pixelsPerScrubStep   = 3;
     static constexpr int   hostCursorSize       = 20;
 
-    juce::ValueTree       ornament;
-    ClickMode             clickMode = ClickMode::Build;
-    bool                  arrowMode = false;
+    juce::ValueTree ornament;
+
+    ClickMode clickMode = ClickMode::Build;
+    bool      arrowMode = false;
+
     std::function<void()> onClickModeChanged;
     std::function<void()> onArrowModeChanged;
 

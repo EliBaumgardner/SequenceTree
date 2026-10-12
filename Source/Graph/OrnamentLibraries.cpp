@@ -16,486 +16,43 @@ OrnamentLibraries::~OrnamentLibraries()
     libraries.removeListener(this);
 }
 
-void OrnamentLibraries::timerCallback()
+void OrnamentLibraries::setFigureNodePosition(juce::ValueTree ornament, int nodeId, juce::Point<int> position, juce::UndoManager* undoManager)
 {
-    stopTimer();
+    const juce::ValueTree  figure  = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
+    juce::ValueTree        node    = figure.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId);
+    const juce::Point<int> delta   = position - juce::Point<int> { node.getProperty(ValueTreeIdentifiers::XPosition), node.getProperty(ValueTreeIdentifiers::YPosition) };
+    const int              oldRow  = juce::roundToInt(static_cast<double>(node.getProperty(ValueTreeIdentifiers::YPosition)) / ArrowInfo::pixelsPerGridSpace);
+    const int              newRow  = juce::roundToInt(position.y / ArrowInfo::pixelsPerGridSpace);
+    const int              shifted = static_cast<int>(node.getProperty(ValueTreeIdentifiers::OrnamentOffset))
+                                     + juce::roundToInt((oldRow - newRow) * ArrowInfo::semitonesPerGridSpace);
+    juce::ValueTree        moved   = node;
 
-    for (const juce::String& libraryUid : changedLibraryUids) {
-        const juce::ValueTree library = libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryUid);
-
-        if (! library.isValid() || ! folder.createDirectory().wasOk()) {
-            continue;
+    auto clearDurationOverride = [undoManager](juce::ValueTree arrowTree) {
+        if (static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride)) != ArrowInfo::noDurationOverride) {
+            arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride, undoManager);
         }
+    };
 
-        saveLibrary(library, libraryFolders[libraryUid]);
-    }
-
-    changedLibraryUids.clear();
-}
-
-void OrnamentLibraries::saveLibrary(const juce::ValueTree& library, LibraryFolder& libraryFolder)
-{
-    const juce::String libraryName = library.getProperty(ValueTreeIdentifiers::LibraryName).toString();
-    juce::String       folderName  = juce::File::createLegalFileName(libraryName.trim());
-    juce::ValueTree    libraryInfo {ValueTreeIdentifiers::OrnamentLibrary};
-
-    if (folderName.isEmpty()) {
-        folderName = "Library";
-    }
-
-    if (libraryFolder.folder == juce::File()) {
-        libraryFolder.folder = folder.getNonexistentChildFile(folderName, "", false);
-    }
-
-    if (libraryFolder.savedName != libraryName && libraryFolder.folder.isDirectory()) {
-        const juce::File renamed = folder.getNonexistentChildFile(folderName, "", false);
-
-        if (libraryFolder.folder.moveFileTo(renamed)) {
-            libraryFolder.folder = renamed;
-        }
-    }
-
-    libraryFolder.savedName = libraryName;
-
-    if (! libraryFolder.folder.createDirectory().wasOk()) {
+    if (! node.isValid()) {
         return;
     }
 
-    libraryInfo.copyPropertiesFrom(library, nullptr);
+    node.setProperty(ValueTreeIdentifiers::OrnamentOffset, std::clamp(shifted, -maximumOffset, maximumOffset), undoManager);
 
-    const juce::TemporaryFile               infoFile(libraryFolder.folder.getChildFile(libraryInfoFileName));
-    const std::unique_ptr<juce::XmlElement> infoXml = libraryInfo.createXml();
-
-    if (infoXml->writeTo(infoFile.getFile())) {
-        infoFile.overwriteTargetFileWithTemporary();
+    for (const juce::ValueTree& candidate : figure) {
+        clearDurationOverride(candidate.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChildWithProperty(ValueTreeIdentifiers::Id, nodeId));
     }
 
-    for (int index = 0; index < library.getNumChildren(); ++index) {
-        const juce::ValueTree                   ornament     = library.getChild(index);
-        const juce::String                      ornamentUid  = ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
-        const juce::String                      ornamentName = ornament.getProperty(ValueTreeIdentifiers::OrnamentName).toString();
-        juce::String                            fileName     = juce::File::createLegalFileName(ornamentName.trim());
-        OrnamentFile&                           ornamentFile = libraryFolder.ornamentFiles[ornamentUid];
-        const juce::String                      previousName = ornamentFile.fileName;
-        const std::unique_ptr<juce::XmlElement> xml          = ornament.createXml();
+    while (moved.isValid()) {
+        const juce::ValueTree outgoing = moved.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChild(0);
 
-        if (fileName.isEmpty()) {
-            fileName = "Ornament";
-        }
+        moved.setProperty(ValueTreeIdentifiers::XPosition, static_cast<int>(moved.getProperty(ValueTreeIdentifiers::XPosition)) + delta.x, undoManager);
+        moved.setProperty(ValueTreeIdentifiers::YPosition, static_cast<int>(moved.getProperty(ValueTreeIdentifiers::YPosition)) + delta.y, undoManager);
 
-        if (previousName.isEmpty() || ornamentFile.savedName != ornamentName) {
-            ornamentFile.fileName = libraryFolder.folder.getNonexistentChildFile(fileName, ornamentExtension, false).getFileName();
-        }
+        clearDurationOverride(outgoing);
 
-        ornamentFile.savedName = ornamentName;
-
-        xml->setAttribute(ValueTreeIdentifiers::OrnamentIndex, index);
-
-        const juce::TemporaryFile temporaryFile(libraryFolder.folder.getChildFile(ornamentFile.fileName));
-
-        if (xml->writeTo(temporaryFile.getFile()) && temporaryFile.overwriteTargetFileWithTemporary()
-            && previousName.isNotEmpty() && previousName != ornamentFile.fileName) {
-            libraryFolder.folder.getChildFile(previousName).deleteFile();
-        }
+        moved = figure.getChildWithProperty(ValueTreeIdentifiers::Id, outgoing.getProperty(ValueTreeIdentifiers::Id, -1));
     }
-
-    for (auto entry = libraryFolder.ornamentFiles.begin(); entry != libraryFolder.ornamentFiles.end(); ) {
-        if (library.getChildWithProperty(ValueTreeIdentifiers::OrnamentUid, entry->first).isValid()) {
-            ++entry;
-
-            continue;
-        }
-
-        libraryFolder.folder.getChildFile(entry->second.fileName).deleteFile();
-
-        entry = libraryFolder.ornamentFiles.erase(entry);
-    }
-
-    libraryFolder.savedAt = newestChange(libraryFolder.folder);
-}
-
-juce::Time OrnamentLibraries::newestChange(const juce::File& directory)
-{
-    juce::Time newest = directory.getLastModificationTime();
-
-    for (const juce::File& file : directory.findChildFiles(juce::File::findFiles, false)) {
-        newest = std::max(newest, file.getLastModificationTime());
-    }
-
-    return newest;
-}
-
-void OrnamentLibraries::load(const juce::File& libraryFolder)
-{
-    juce::PropertiesFile::Options settingsOptions;
-    juce::Array<juce::File>       directories;
-
-    folder                                   = libraryFolder;
-    settingsOptions.millisecondsBeforeSaving = 0;
-
-    folder.createDirectory();
-
-    settings = std::make_unique<juce::PropertiesFile>(folder.getChildFile("Ornaments.settings"), settingsOptions);
-
-    directories = folder.findChildFiles(juce::File::findDirectories, false);
-
-    directories.sort();
-
-    libraries.removeListener(this);
-
-    for (const juce::File& directory : directories) {
-        LibraryFolder         loadedFolder;
-        const juce::ValueTree library    = readLibraryFolder(directory, loadedFolder);
-        const juce::String    libraryUid = library.getProperty(ValueTreeIdentifiers::LibraryUid).toString();
-
-        if (! library.isValid() || libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryUid).isValid()) {
-            continue;
-        }
-
-        libraryFolders[libraryUid] = loadedFolder;
-
-        libraries.appendChild(library, nullptr);
-    }
-
-    libraries.setProperty(ValueTreeIdentifiers::ActiveOrnamentUid, settings->getValue(ValueTreeIdentifiers::ActiveOrnamentUid.toString()), nullptr);
-
-    ensureActiveOrnament();
-
-    libraries.addListener(this);
-}
-
-juce::ValueTree OrnamentLibraries::readLibraryFolder(const juce::File& directory, LibraryFolder& libraryFolder)
-{
-    const std::unique_ptr<juce::XmlElement> infoXml   = juce::XmlDocument::parse(directory.getChildFile(libraryInfoFileName));
-    juce::Array<juce::File>                 fileList  = directory.findChildFiles(juce::File::findFiles, false, juce::String("*") + ornamentExtension);
-    std::vector<juce::ValueTree>            ornaments;
-    juce::ValueTree                         library;
-
-    if (infoXml == nullptr) {
-        return {};
-    }
-
-    library = juce::ValueTree::fromXml(*infoXml);
-
-    if (library.getType() != ValueTreeIdentifiers::OrnamentLibrary || library.getProperty(ValueTreeIdentifiers::LibraryUid).toString().isEmpty()) {
-        return {};
-    }
-
-    library.removeAllChildren(nullptr);
-
-    fileList.sort();
-
-    for (const juce::File& file : fileList) {
-        const std::unique_ptr<juce::XmlElement> xml = juce::XmlDocument::parse(file);
-        juce::ValueTree                         ornament;
-        juce::String                            ornamentUid;
-
-        if (xml == nullptr) {
-            continue;
-        }
-
-        ornament    = juce::ValueTree::fromXml(*xml);
-        ornamentUid = ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
-
-        if (ornament.getType() != ValueTreeIdentifiers::OrnamentData || ornamentUid.isEmpty()
-            || ! ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure).isValid() || libraryFolder.ornamentFiles.count(ornamentUid) > 0) {
-            continue;
-        }
-
-        libraryFolder.ornamentFiles[ornamentUid] = OrnamentFile { file.getFileName(), ornament.getProperty(ValueTreeIdentifiers::OrnamentName).toString() };
-
-        ornaments.push_back(ornament);
-    }
-
-    std::stable_sort(ornaments.begin(), ornaments.end(), [](const juce::ValueTree& first, const juce::ValueTree& second) {
-        return static_cast<int>(first.getProperty(ValueTreeIdentifiers::OrnamentIndex, unlistedOrnamentIndex))
-               < static_cast<int>(second.getProperty(ValueTreeIdentifiers::OrnamentIndex, unlistedOrnamentIndex));
-    });
-
-    for (juce::ValueTree& ornament : ornaments) {
-        ornament.removeProperty(ValueTreeIdentifiers::OrnamentIndex, nullptr);
-
-        library.appendChild(ornament, nullptr);
-    }
-
-    libraryFolder.folder    = directory;
-    libraryFolder.savedAt   = newestChange(directory);
-    libraryFolder.savedName = library.getProperty(ValueTreeIdentifiers::LibraryName).toString();
-
-    return library;
-}
-
-void OrnamentLibraries::ensureActiveOrnament()
-{
-    juce::String activeUid;
-
-    if (findOrnament(libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString()).isValid()) {
-        return;
-    }
-
-    for (const juce::ValueTree& library : libraries) {
-        if (library.getNumChildren() > 0) {
-            activeUid = library.getChild(0).getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
-
-            break;
-        }
-    }
-
-    libraries.setProperty(ValueTreeIdentifiers::ActiveOrnamentUid, activeUid, nullptr);
-}
-
-juce::ValueTree OrnamentLibraries::findOrnament(const juce::String& uid) const
-{
-    for (const juce::ValueTree& library : libraries) {
-        const juce::ValueTree ornament = library.getChildWithProperty(ValueTreeIdentifiers::OrnamentUid, uid);
-
-        if (ornament.isValid()) {
-            return ornament;
-        }
-    }
-
-    return {};
-}
-
-void OrnamentLibraries::importLegacyLibraries(const juce::File& legacyFolder)
-{
-    juce::Array<juce::File> legacyFiles = legacyFolder.findChildFiles(juce::File::findFiles, false, "*.ornaments");
-
-    if (settings == nullptr || settings->getBoolValue(ValueTreeIdentifiers::LegacyLibrariesImported.toString())) {
-        return;
-    }
-
-    legacyFiles.sort();
-
-    for (const juce::File& file : legacyFiles) {
-        importLibrary(file);
-    }
-
-    settings->setValue(ValueTreeIdentifiers::LegacyLibrariesImported.toString(), true);
-}
-
-juce::ValueTree OrnamentLibraries::importLibrary(const juce::File& source)
-{
-    LibraryFolder   importedFolder;
-    juce::ValueTree library;
-    juce::String    libraryUid;
-
-    if (source.isDirectory()) {
-        library = readLibraryFolder(source, importedFolder);
-    }
-    else {
-        library = readLibraryFile(source);
-    }
-
-    libraryUid = library.getProperty(ValueTreeIdentifiers::LibraryUid).toString();
-
-    if (! library.isValid() || libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryUid).isValid()) {
-        return {};
-    }
-
-    if (source.isDirectory()) {
-        const juce::File target = folder.getNonexistentChildFile(source.getFileName(), "", false);
-
-        if (! folder.createDirectory().wasOk() || ! source.copyDirectoryTo(target)) {
-            return {};
-        }
-
-        importedFolder.folder  = target;
-        importedFolder.savedAt = newestChange(target);
-
-        libraryFolders[libraryUid] = importedFolder;
-    }
-
-    libraries.appendChild(library, nullptr);
-
-    return library;
-}
-
-juce::ValueTree OrnamentLibraries::readLibraryFile(const juce::File& file)
-{
-    const std::unique_ptr<juce::XmlElement> xml = juce::XmlDocument::parse(file);
-    juce::ValueTree                         library;
-
-    if (xml == nullptr) {
-        return {};
-    }
-
-    library = juce::ValueTree::fromXml(*xml);
-
-    if (library.getType() != ValueTreeIdentifiers::OrnamentLibrary || library.getProperty(ValueTreeIdentifiers::LibraryUid).toString().isEmpty()) {
-        return {};
-    }
-
-    for (int index = library.getNumChildren() - 1; index >= 0; --index) {
-        const juce::ValueTree ornament = library.getChild(index);
-
-        if (ornament.getType() != ValueTreeIdentifiers::OrnamentData
-            || ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString().isEmpty()
-            || ! ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure).isValid()) {
-            library.removeChild(index, nullptr);
-        }
-    }
-
-    return library;
-}
-
-juce::ValueTree OrnamentLibraries::addLibrary(const juce::String& name, juce::UndoManager* undoManager)
-{
-    juce::ValueTree library {ValueTreeIdentifiers::OrnamentLibrary};
-
-    library.setProperty(ValueTreeIdentifiers::LibraryUid,  juce::Uuid().toString(), nullptr);
-    library.setProperty(ValueTreeIdentifiers::LibraryName, name,                    nullptr);
-
-    libraries.appendChild(library, undoManager);
-
-    return library;
-}
-
-juce::ValueTree OrnamentLibraries::addOrnament(juce::ValueTree library, juce::UndoManager* undoManager)
-{
-    juce::ValueTree ornament {ValueTreeIdentifiers::OrnamentData};
-    juce::ValueTree figure   {ValueTreeIdentifiers::OrnamentFigure};
-
-    if (! library.isValid()) {
-        library = libraries.getChild(0);
-    }
-
-    if (! library.isValid()) {
-        library = addLibrary("My Ornaments", undoManager);
-    }
-
-    ornament.setProperty(ValueTreeIdentifiers::OrnamentUid,      juce::Uuid().toString(),                                  nullptr);
-    ornament.setProperty(ValueTreeIdentifiers::OrnamentName,     "Ornament " + juce::String(library.getNumChildren() + 1), nullptr);
-    ornament.setProperty(ValueTreeIdentifiers::OrnamentSymbol,   juce::String(),                                           nullptr);
-    ornament.setProperty(ValueTreeIdentifiers::NextFigureNodeId, 1,                                                        nullptr);
-
-    figure.setProperty(ValueTreeIdentifiers::OrnamentHostId, noHostId, nullptr);
-
-    ornament.appendChild(figure, nullptr);
-
-    library.appendChild(ornament, undoManager);
-
-    return ornament;
-}
-
-juce::ValueTree OrnamentLibraries::duplicateOrnament(const juce::String& uid, juce::UndoManager* undoManager)
-{
-    const juce::ValueTree source    = findOrnament(uid);
-    const juce::String    copyName  = source.getProperty(ValueTreeIdentifiers::OrnamentName).toString() + " copy";
-    juce::ValueTree       library   = source.getParent();
-    juce::ValueTree       duplicate = source.createCopy();
-
-    if (! source.isValid()) {
-        return {};
-    }
-
-    duplicate.setProperty(ValueTreeIdentifiers::OrnamentUid,  juce::Uuid().toString(), nullptr);
-    duplicate.setProperty(ValueTreeIdentifiers::OrnamentName, copyName,                nullptr);
-
-    library.addChild(duplicate, library.indexOf(source) + 1, undoManager);
-
-    return duplicate;
-}
-
-juce::ValueTree OrnamentLibraries::addFigureNode(juce::ValueTree ornament, int parentNodeId, juce::Point<int> position, juce::UndoManager* undoManager)
-{
-    juce::ValueTree figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    juce::ValueTree parent = figure.getChildWithProperty(ValueTreeIdentifiers::Id, parentNodeId);
-    const int       nodeId = ornament.getProperty(ValueTreeIdentifiers::NextFigureNodeId, 1);
-    juce::ValueTree node   {ValueTreeIdentifiers::OrnamentNoteData};
-    ArrowInfo       arrowInfo;
-
-    if (! figure.isValid() || (parentNodeId == -1 && figure.getNumChildren() > 0)) {
-        return {};
-    }
-
-    if (parentNodeId != -1 && (! parent.isValid() || parent.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getNumChildren() > 0)) {
-        return {};
-    }
-
-    arrowInfo.xBinding = ArrowBinding::DurationBind;
-    arrowInfo.yBinding = ArrowBinding::NoBind;
-
-    node.setProperty(ValueTreeIdentifiers::Id,               nodeId,                 nullptr);
-    node.setProperty(ValueTreeIdentifiers::XPosition,        position.x,             nullptr);
-    node.setProperty(ValueTreeIdentifiers::YPosition,        position.y,             nullptr);
-    node.setProperty(ValueTreeIdentifiers::OrnamentOffset,   0,                      nullptr);
-    node.setProperty(ValueTreeIdentifiers::OrnamentVelocity, defaultVelocityPercent, nullptr);
-
-    node.appendChild(juce::ValueTree(ValueTreeIdentifiers::NodeChildrenIds), nullptr);
-
-    if (parent.isValid()) {
-        juce::ValueTree connection {ValueTreeIdentifiers::NodeId};
-
-        connection.setProperty(ValueTreeIdentifiers::Id, nodeId, nullptr);
-
-        ArrowBindingOps::setArrowInfo(connection, arrowInfo, nullptr);
-
-        parent.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).appendChild(connection, undoManager);
-        parent.removeChild(parent.getChildWithName(ValueTreeIdentifiers::DanglingArrows), undoManager);
-    }
-
-    ornament.setProperty(ValueTreeIdentifiers::NextFigureNodeId, nodeId + 1, undoManager);
-
-    figure.appendChild(node, undoManager);
-
-    return node;
-}
-
-void OrnamentLibraries::rescan(juce::UndoManager& undoManager)
-{
-    juce::Array<juce::File> directories = folder.findChildFiles(juce::File::findDirectories, false);
-    bool                    changed     = false;
-
-    directories.sort();
-
-    libraries.removeListener(this);
-
-    for (auto libraryFolder = libraryFolders.begin(); libraryFolder != libraryFolders.end(); ) {
-        if (libraryFolder->second.folder.isDirectory()) {
-            ++libraryFolder;
-
-            continue;
-        }
-
-        libraries.removeChild(libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryFolder->first), nullptr);
-
-        libraryFolder = libraryFolders.erase(libraryFolder);
-        changed       = true;
-    }
-
-    for (const juce::File& directory : directories) {
-        const auto    known = std::find_if(libraryFolders.begin(), libraryFolders.end(), [&directory](const auto& entry) { return entry.second.folder == directory; });
-        LibraryFolder loadedFolder;
-
-        if (known != libraryFolders.end() && (newestChange(directory) <= known->second.savedAt || changedLibraryUids.count(known->first) > 0)) {
-            continue;
-        }
-
-        const juce::ValueTree library    = readLibraryFolder(directory, loadedFolder);
-        const juce::String    libraryUid = library.getProperty(ValueTreeIdentifiers::LibraryUid).toString();
-        const juce::ValueTree loaded     = libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryUid);
-
-        if (! library.isValid() || (known == libraryFolders.end() && loaded.isValid()) || (known != libraryFolders.end() && known->first != libraryUid)) {
-            continue;
-        }
-
-        libraries.addChild(library, libraries.indexOf(loaded), nullptr);
-        libraries.removeChild(loaded, nullptr);
-
-        libraryFolders[libraryUid] = loadedFolder;
-        changed                    = true;
-    }
-
-    libraries.addListener(this);
-
-    if (! changed) {
-        return;
-    }
-
-    ensureActiveOrnament();
-
-    undoManager.clearUndoHistory();
 }
 
 void OrnamentLibraries::removeFigureNode(juce::ValueTree ornament, int nodeId, juce::UndoManager* undoManager)
@@ -556,69 +113,6 @@ void OrnamentLibraries::toggleHost(juce::ValueTree ornament, int nodeId, juce::U
     figure.setProperty(ValueTreeIdentifiers::OrnamentHostId, hostId, undoManager);
 }
 
-void OrnamentLibraries::setFigureNodePosition(juce::ValueTree ornament, int nodeId, juce::Point<int> position, juce::UndoManager* undoManager)
-{
-    const juce::ValueTree  figure  = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    juce::ValueTree        node    = figure.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId);
-    const juce::Point<int> delta   = position - juce::Point<int> { node.getProperty(ValueTreeIdentifiers::XPosition), node.getProperty(ValueTreeIdentifiers::YPosition) };
-    const int              oldRow  = juce::roundToInt(static_cast<double>(node.getProperty(ValueTreeIdentifiers::YPosition)) / ArrowInfo::pixelsPerGridSpace);
-    const int              newRow  = juce::roundToInt(position.y / ArrowInfo::pixelsPerGridSpace);
-    const int              shifted = static_cast<int>(node.getProperty(ValueTreeIdentifiers::OrnamentOffset))
-                                     + juce::roundToInt((oldRow - newRow) * ArrowInfo::semitonesPerGridSpace);
-    juce::ValueTree        moved   = node;
-
-    auto clearDurationOverride = [undoManager](juce::ValueTree arrowTree) {
-        if (static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride)) != ArrowInfo::noDurationOverride) {
-            arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride, undoManager);
-        }
-    };
-
-    if (! node.isValid()) {
-        return;
-    }
-
-    node.setProperty(ValueTreeIdentifiers::OrnamentOffset, std::clamp(shifted, -maximumOffset, maximumOffset), undoManager);
-
-    for (const juce::ValueTree& candidate : figure) {
-        clearDurationOverride(candidate.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChildWithProperty(ValueTreeIdentifiers::Id, nodeId));
-    }
-
-    while (moved.isValid()) {
-        const juce::ValueTree outgoing = moved.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChild(0);
-
-        moved.setProperty(ValueTreeIdentifiers::XPosition, static_cast<int>(moved.getProperty(ValueTreeIdentifiers::XPosition)) + delta.x, undoManager);
-        moved.setProperty(ValueTreeIdentifiers::YPosition, static_cast<int>(moved.getProperty(ValueTreeIdentifiers::YPosition)) + delta.y, undoManager);
-
-        clearDurationOverride(outgoing);
-
-        moved = figure.getChildWithProperty(ValueTreeIdentifiers::Id, outgoing.getProperty(ValueTreeIdentifiers::Id, -1));
-    }
-}
-
-void OrnamentLibraries::setLastNodeLength(juce::ValueTree ornament, juce::Point<int> tipOffset, juce::UndoManager* undoManager)
-{
-    const juce::ValueTree figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-
-    for (const juce::ValueTree& node : figure) {
-        juce::ValueTree danglingArrow = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows).getChild(0);
-
-        if (danglingArrow.isValid()) {
-            danglingArrow.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
-            danglingArrow.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
-
-            return;
-        }
-    }
-
-    for (const juce::ValueTree& node : figure) {
-        if (node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getNumChildren() == 0) {
-            addDanglingArrow(ornament, node.getProperty(ValueTreeIdentifiers::Id), tipOffset, undoManager);
-
-            return;
-        }
-    }
-}
-
 void OrnamentLibraries::addDanglingArrow(juce::ValueTree ornament, int nodeId, juce::Point<int> tipOffset, juce::UndoManager* undoManager)
 {
     const juce::ValueTree figure         = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
@@ -664,6 +158,30 @@ void OrnamentLibraries::removeDanglingArrow(juce::ValueTree ornament, juce::Undo
 
         if (danglingArrows.isValid()) {
             node.removeChild(danglingArrows, undoManager);
+        }
+    }
+}
+
+void OrnamentLibraries::setLastNodeLength(juce::ValueTree ornament, juce::Point<int> tipOffset, juce::UndoManager* undoManager)
+{
+    const juce::ValueTree figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
+
+    for (const juce::ValueTree& node : figure) {
+        juce::ValueTree danglingArrow = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows).getChild(0);
+
+        if (danglingArrow.isValid()) {
+            danglingArrow.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
+            danglingArrow.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
+
+            return;
+        }
+    }
+
+    for (const juce::ValueTree& node : figure) {
+        if (node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getNumChildren() == 0) {
+            addDanglingArrow(ornament, node.getProperty(ValueTreeIdentifiers::Id), tipOffset, undoManager);
+
+            return;
         }
     }
 }
@@ -746,27 +264,130 @@ void OrnamentLibraries::eraseSymbol(juce::ValueTree ornament, juce::Point<float>
     ornament.setProperty(ValueTreeIdentifiers::OrnamentSymbol, erasedStrokes.joinIntoString("|"), undoManager);
 }
 
-std::vector<SymbolStroke> OrnamentLibraries::readSymbol(const juce::String& symbol)
+void OrnamentLibraries::publish(juce::ValueTree ornament, juce::UndoManager* undoManager)
 {
-    std::vector<SymbolStroke> strokes;
+    juce::ValueTree published {ValueTreeIdentifiers::PublishedFigure};
 
-    for (const juce::String& entry : juce::StringArray::fromTokens(symbol, "|", "")) {
-        const juce::String widthText = entry.upToFirstOccurrenceOf(" ", false, false);
-        SymbolStroke       stroke { juce::Path(), defaultStrokeWidth };
-
-        if (widthText.containsOnly("0123456789.")) {
-            stroke.width = widthText.getFloatValue();
-
-            stroke.path.restoreFromString(entry.fromFirstOccurrenceOf(" ", false, false));
-        }
-        else {
-            stroke.path.restoreFromString(entry);
-        }
-
-        strokes.push_back(stroke);
+    if (! isPublishable(ornament)) {
+        return;
     }
 
-    return strokes;
+    published.copyPropertiesAndChildrenFrom(ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure), nullptr);
+
+    ornament.removeChild(ornament.getChildWithName(ValueTreeIdentifiers::PublishedFigure), undoManager);
+    ornament.appendChild(published, undoManager);
+}
+
+void OrnamentLibraries::load(const juce::File& libraryFolder)
+{
+    juce::PropertiesFile::Options settingsOptions;
+    juce::Array<juce::File>       directories;
+
+    folder                                   = libraryFolder;
+    settingsOptions.millisecondsBeforeSaving = 0;
+
+    folder.createDirectory();
+
+    settings = std::make_unique<juce::PropertiesFile>(folder.getChildFile("Ornaments.settings"), settingsOptions);
+
+    directories = folder.findChildFiles(juce::File::findDirectories, false);
+
+    directories.sort();
+
+    libraries.removeListener(this);
+
+    for (const juce::File& directory : directories) {
+        LibraryFolder         loadedFolder;
+        const juce::ValueTree library    = readLibraryFolder(directory, loadedFolder);
+        const juce::String    libraryUid = library.getProperty(ValueTreeIdentifiers::LibraryUid).toString();
+
+        if (! library.isValid() || libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryUid).isValid()) {
+            continue;
+        }
+
+        libraryFolders[libraryUid] = loadedFolder;
+
+        libraries.appendChild(library, nullptr);
+    }
+
+    libraries.setProperty(ValueTreeIdentifiers::ActiveOrnamentUid, settings->getValue(ValueTreeIdentifiers::ActiveOrnamentUid.toString()), nullptr);
+
+    ensureActiveOrnament();
+
+    libraries.addListener(this);
+}
+
+void OrnamentLibraries::importLegacyLibraries(const juce::File& legacyFolder)
+{
+    juce::Array<juce::File> legacyFiles = legacyFolder.findChildFiles(juce::File::findFiles, false, "*.ornaments");
+
+    if (settings == nullptr || settings->getBoolValue(ValueTreeIdentifiers::LegacyLibrariesImported.toString())) {
+        return;
+    }
+
+    legacyFiles.sort();
+
+    for (const juce::File& file : legacyFiles) {
+        importLibrary(file);
+    }
+
+    settings->setValue(ValueTreeIdentifiers::LegacyLibrariesImported.toString(), true);
+}
+
+void OrnamentLibraries::rescan(juce::UndoManager& undoManager)
+{
+    juce::Array<juce::File> directories = folder.findChildFiles(juce::File::findDirectories, false);
+    bool                    changed     = false;
+
+    directories.sort();
+
+    libraries.removeListener(this);
+
+    for (auto libraryFolder = libraryFolders.begin(); libraryFolder != libraryFolders.end(); ) {
+        if (libraryFolder->second.folder.isDirectory()) {
+            ++libraryFolder;
+
+            continue;
+        }
+
+        libraries.removeChild(libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryFolder->first), nullptr);
+
+        libraryFolder = libraryFolders.erase(libraryFolder);
+        changed       = true;
+    }
+
+    for (const juce::File& directory : directories) {
+        const auto    known = std::find_if(libraryFolders.begin(), libraryFolders.end(), [&directory](const auto& entry) { return entry.second.folder == directory; });
+        LibraryFolder loadedFolder;
+
+        if (known != libraryFolders.end() && (newestChange(directory) <= known->second.savedAt || changedLibraryUids.count(known->first) > 0)) {
+            continue;
+        }
+
+        const juce::ValueTree library    = readLibraryFolder(directory, loadedFolder);
+        const juce::String    libraryUid = library.getProperty(ValueTreeIdentifiers::LibraryUid).toString();
+        const juce::ValueTree loaded     = libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryUid);
+
+        if (! library.isValid() || (known == libraryFolders.end() && loaded.isValid()) || (known != libraryFolders.end() && known->first != libraryUid)) {
+            continue;
+        }
+
+        libraries.addChild(library, libraries.indexOf(loaded), nullptr);
+        libraries.removeChild(loaded, nullptr);
+
+        libraryFolders[libraryUid] = loadedFolder;
+        changed                    = true;
+    }
+
+    libraries.addListener(this);
+
+    if (! changed) {
+        return;
+    }
+
+    ensureActiveOrnament();
+
+    undoManager.clearUndoHistory();
 }
 
 void OrnamentLibraries::removeLibrary(const juce::String& libraryUid, juce::UndoManager& undoManager)
@@ -790,18 +411,174 @@ void OrnamentLibraries::removeOrnament(const juce::String& uid, juce::UndoManage
     library.removeChild(ornament, undoManager);
 }
 
-void OrnamentLibraries::publish(juce::ValueTree ornament, juce::UndoManager* undoManager)
+void OrnamentLibraries::timerCallback()
 {
-    juce::ValueTree published {ValueTreeIdentifiers::PublishedFigure};
+    stopTimer();
 
-    if (! isPublishable(ornament)) {
-        return;
+    for (const juce::String& libraryUid : changedLibraryUids) {
+        const juce::ValueTree library = libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryUid);
+
+        if (! library.isValid() || ! folder.createDirectory().wasOk()) {
+            continue;
+        }
+
+        saveLibrary(library, libraryFolders[libraryUid]);
     }
 
-    published.copyPropertiesAndChildrenFrom(ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure), nullptr);
+    changedLibraryUids.clear();
+}
 
-    ornament.removeChild(ornament.getChildWithName(ValueTreeIdentifiers::PublishedFigure), undoManager);
-    ornament.appendChild(published, undoManager);
+juce::ValueTree OrnamentLibraries::addLibrary(const juce::String& name, juce::UndoManager* undoManager)
+{
+    juce::ValueTree library {ValueTreeIdentifiers::OrnamentLibrary};
+
+    library.setProperty(ValueTreeIdentifiers::LibraryUid,  juce::Uuid().toString(), nullptr);
+    library.setProperty(ValueTreeIdentifiers::LibraryName, name,                    nullptr);
+
+    libraries.appendChild(library, undoManager);
+
+    return library;
+}
+
+juce::ValueTree OrnamentLibraries::importLibrary(const juce::File& source)
+{
+    LibraryFolder   importedFolder;
+    juce::ValueTree library;
+    juce::String    libraryUid;
+
+    if (source.isDirectory()) {
+        library = readLibraryFolder(source, importedFolder);
+    }
+    else {
+        library = readLibraryFile(source);
+    }
+
+    libraryUid = library.getProperty(ValueTreeIdentifiers::LibraryUid).toString();
+
+    if (! library.isValid() || libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryUid).isValid()) {
+        return {};
+    }
+
+    if (source.isDirectory()) {
+        const juce::File target = folder.getNonexistentChildFile(source.getFileName(), "", false);
+
+        if (! folder.createDirectory().wasOk() || ! source.copyDirectoryTo(target)) {
+            return {};
+        }
+
+        importedFolder.folder  = target;
+        importedFolder.savedAt = newestChange(target);
+
+        libraryFolders[libraryUid] = importedFolder;
+    }
+
+    libraries.appendChild(library, nullptr);
+
+    return library;
+}
+
+juce::ValueTree OrnamentLibraries::addOrnament(juce::ValueTree library, juce::UndoManager* undoManager)
+{
+    juce::ValueTree ornament {ValueTreeIdentifiers::OrnamentData};
+    juce::ValueTree figure   {ValueTreeIdentifiers::OrnamentFigure};
+
+    if (! library.isValid()) {
+        library = libraries.getChild(0);
+    }
+
+    if (! library.isValid()) {
+        library = addLibrary("My Ornaments", undoManager);
+    }
+
+    ornament.setProperty(ValueTreeIdentifiers::OrnamentUid,      juce::Uuid().toString(),                                  nullptr);
+    ornament.setProperty(ValueTreeIdentifiers::OrnamentName,     "Ornament " + juce::String(library.getNumChildren() + 1), nullptr);
+    ornament.setProperty(ValueTreeIdentifiers::OrnamentSymbol,   juce::String(),                                           nullptr);
+    ornament.setProperty(ValueTreeIdentifiers::NextFigureNodeId, 1,                                                        nullptr);
+
+    figure.setProperty(ValueTreeIdentifiers::OrnamentHostId, noHostId, nullptr);
+
+    ornament.appendChild(figure, nullptr);
+
+    library.appendChild(ornament, undoManager);
+
+    return ornament;
+}
+
+juce::ValueTree OrnamentLibraries::duplicateOrnament(const juce::String& uid, juce::UndoManager* undoManager)
+{
+    const juce::ValueTree source    = findOrnament(uid);
+    const juce::String    copyName  = source.getProperty(ValueTreeIdentifiers::OrnamentName).toString() + " copy";
+    juce::ValueTree       library   = source.getParent();
+    juce::ValueTree       duplicate = source.createCopy();
+
+    if (! source.isValid()) {
+        return {};
+    }
+
+    duplicate.setProperty(ValueTreeIdentifiers::OrnamentUid,  juce::Uuid().toString(), nullptr);
+    duplicate.setProperty(ValueTreeIdentifiers::OrnamentName, copyName,                nullptr);
+
+    library.addChild(duplicate, library.indexOf(source) + 1, undoManager);
+
+    return duplicate;
+}
+
+juce::ValueTree OrnamentLibraries::findOrnament(const juce::String& uid) const
+{
+    for (const juce::ValueTree& library : libraries) {
+        const juce::ValueTree ornament = library.getChildWithProperty(ValueTreeIdentifiers::OrnamentUid, uid);
+
+        if (ornament.isValid()) {
+            return ornament;
+        }
+    }
+
+    return {};
+}
+
+juce::ValueTree OrnamentLibraries::addFigureNode(juce::ValueTree ornament, int parentNodeId, juce::Point<int> position, juce::UndoManager* undoManager)
+{
+    juce::ValueTree figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
+    juce::ValueTree parent = figure.getChildWithProperty(ValueTreeIdentifiers::Id, parentNodeId);
+    const int       nodeId = ornament.getProperty(ValueTreeIdentifiers::NextFigureNodeId, 1);
+    juce::ValueTree node   {ValueTreeIdentifiers::OrnamentNoteData};
+    ArrowInfo       arrowInfo;
+
+    if (! figure.isValid() || (parentNodeId == -1 && figure.getNumChildren() > 0)) {
+        return {};
+    }
+
+    if (parentNodeId != -1 && (! parent.isValid() || parent.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getNumChildren() > 0)) {
+        return {};
+    }
+
+    arrowInfo.xBinding = ArrowBinding::DurationBind;
+    arrowInfo.yBinding = ArrowBinding::NoBind;
+
+    node.setProperty(ValueTreeIdentifiers::Id,               nodeId,                 nullptr);
+    node.setProperty(ValueTreeIdentifiers::XPosition,        position.x,             nullptr);
+    node.setProperty(ValueTreeIdentifiers::YPosition,        position.y,             nullptr);
+    node.setProperty(ValueTreeIdentifiers::OrnamentOffset,   0,                      nullptr);
+    node.setProperty(ValueTreeIdentifiers::OrnamentVelocity, defaultVelocityPercent, nullptr);
+
+    node.appendChild(juce::ValueTree(ValueTreeIdentifiers::NodeChildrenIds), nullptr);
+
+    if (parent.isValid()) {
+        juce::ValueTree connection {ValueTreeIdentifiers::NodeId};
+
+        connection.setProperty(ValueTreeIdentifiers::Id, nodeId, nullptr);
+
+        ArrowBindingOps::setArrowInfo(connection, arrowInfo, nullptr);
+
+        parent.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).appendChild(connection, undoManager);
+        parent.removeChild(parent.getChildWithName(ValueTreeIdentifiers::DanglingArrows), undoManager);
+    }
+
+    ornament.setProperty(ValueTreeIdentifiers::NextFigureNodeId, nodeId + 1, undoManager);
+
+    figure.appendChild(node, undoManager);
+
+    return node;
 }
 
 bool OrnamentLibraries::isPublishable(const juce::ValueTree& ornament) const
@@ -900,6 +677,53 @@ OrnamentStatus OrnamentLibraries::statusOf(const juce::ValueTree& ornament) cons
     return OrnamentStatus::ChangesPending;
 }
 
+std::vector<SymbolStroke> OrnamentLibraries::readSymbol(const juce::String& symbol)
+{
+    std::vector<SymbolStroke> strokes;
+
+    for (const juce::String& entry : juce::StringArray::fromTokens(symbol, "|", "")) {
+        const juce::String widthText = entry.upToFirstOccurrenceOf(" ", false, false);
+        SymbolStroke       stroke { juce::Path(), defaultStrokeWidth };
+
+        if (widthText.containsOnly("0123456789.")) {
+            stroke.width = widthText.getFloatValue();
+
+            stroke.path.restoreFromString(entry.fromFirstOccurrenceOf(" ", false, false));
+        }
+        else {
+            stroke.path.restoreFromString(entry);
+        }
+
+        strokes.push_back(stroke);
+    }
+
+    return strokes;
+}
+
+void OrnamentLibraries::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
+{
+    markLibraryChanged(child);
+
+    ensureActiveOrnament();
+}
+
+void OrnamentLibraries::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index)
+{
+    const auto libraryFolder = libraryFolders.find(child.getProperty(ValueTreeIdentifiers::LibraryUid).toString());
+
+    if (parent != libraries) {
+        markLibraryChanged(parent);
+    }
+
+    if (parent == libraries && libraryFolder != libraryFolders.end()) {
+        libraryFolder->second.folder.moveToTrash();
+
+        libraryFolders.erase(libraryFolder);
+    }
+
+    ensureActiveOrnament();
+}
+
 void OrnamentLibraries::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
 {
     if (property != ValueTreeIdentifiers::ActiveOrnamentUid) {
@@ -928,26 +752,202 @@ void OrnamentLibraries::markLibraryChanged(juce::ValueTree tree)
     startTimer(saveDelayMs);
 }
 
-void OrnamentLibraries::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
+void OrnamentLibraries::saveLibrary(const juce::ValueTree& library, LibraryFolder& libraryFolder)
 {
-    markLibraryChanged(child);
+    const juce::String libraryName = library.getProperty(ValueTreeIdentifiers::LibraryName).toString();
+    juce::String       folderName  = juce::File::createLegalFileName(libraryName.trim());
+    juce::ValueTree    libraryInfo {ValueTreeIdentifiers::OrnamentLibrary};
 
-    ensureActiveOrnament();
+    if (folderName.isEmpty()) {
+        folderName = "Library";
+    }
+
+    if (libraryFolder.folder == juce::File()) {
+        libraryFolder.folder = folder.getNonexistentChildFile(folderName, "", false);
+    }
+
+    if (libraryFolder.savedName != libraryName && libraryFolder.folder.isDirectory()) {
+        const juce::File renamed = folder.getNonexistentChildFile(folderName, "", false);
+
+        if (libraryFolder.folder.moveFileTo(renamed)) {
+            libraryFolder.folder = renamed;
+        }
+    }
+
+    libraryFolder.savedName = libraryName;
+
+    if (! libraryFolder.folder.createDirectory().wasOk()) {
+        return;
+    }
+
+    libraryInfo.copyPropertiesFrom(library, nullptr);
+
+    const juce::TemporaryFile               infoFile(libraryFolder.folder.getChildFile(libraryInfoFileName));
+    const std::unique_ptr<juce::XmlElement> infoXml = libraryInfo.createXml();
+
+    if (infoXml->writeTo(infoFile.getFile())) {
+        infoFile.overwriteTargetFileWithTemporary();
+    }
+
+    for (int index = 0; index < library.getNumChildren(); ++index) {
+        const juce::ValueTree                   ornament     = library.getChild(index);
+        const juce::String                      ornamentUid  = ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
+        const juce::String                      ornamentName = ornament.getProperty(ValueTreeIdentifiers::OrnamentName).toString();
+        juce::String                            fileName     = juce::File::createLegalFileName(ornamentName.trim());
+        OrnamentFile&                           ornamentFile = libraryFolder.ornamentFiles[ornamentUid];
+        const juce::String                      previousName = ornamentFile.fileName;
+        const std::unique_ptr<juce::XmlElement> xml          = ornament.createXml();
+
+        if (fileName.isEmpty()) {
+            fileName = "Ornament";
+        }
+
+        if (previousName.isEmpty() || ornamentFile.savedName != ornamentName) {
+            ornamentFile.fileName = libraryFolder.folder.getNonexistentChildFile(fileName, ornamentExtension, false).getFileName();
+        }
+
+        ornamentFile.savedName = ornamentName;
+
+        xml->setAttribute(ValueTreeIdentifiers::OrnamentIndex, index);
+
+        const juce::TemporaryFile temporaryFile(libraryFolder.folder.getChildFile(ornamentFile.fileName));
+
+        if (xml->writeTo(temporaryFile.getFile()) && temporaryFile.overwriteTargetFileWithTemporary()
+            && previousName.isNotEmpty() && previousName != ornamentFile.fileName) {
+            libraryFolder.folder.getChildFile(previousName).deleteFile();
+        }
+    }
+
+    for (auto entry = libraryFolder.ornamentFiles.begin(); entry != libraryFolder.ornamentFiles.end(); ) {
+        if (library.getChildWithProperty(ValueTreeIdentifiers::OrnamentUid, entry->first).isValid()) {
+            ++entry;
+
+            continue;
+        }
+
+        libraryFolder.folder.getChildFile(entry->second.fileName).deleteFile();
+
+        entry = libraryFolder.ornamentFiles.erase(entry);
+    }
+
+    libraryFolder.savedAt = newestChange(libraryFolder.folder);
 }
 
-void OrnamentLibraries::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index)
+void OrnamentLibraries::ensureActiveOrnament()
 {
-    const auto libraryFolder = libraryFolders.find(child.getProperty(ValueTreeIdentifiers::LibraryUid).toString());
+    juce::String activeUid;
 
-    if (parent != libraries) {
-        markLibraryChanged(parent);
+    if (findOrnament(libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString()).isValid()) {
+        return;
     }
 
-    if (parent == libraries && libraryFolder != libraryFolders.end()) {
-        libraryFolder->second.folder.moveToTrash();
+    for (const juce::ValueTree& library : libraries) {
+        if (library.getNumChildren() > 0) {
+            activeUid = library.getChild(0).getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
 
-        libraryFolders.erase(libraryFolder);
+            break;
+        }
     }
 
-    ensureActiveOrnament();
+    libraries.setProperty(ValueTreeIdentifiers::ActiveOrnamentUid, activeUid, nullptr);
+}
+
+juce::Time OrnamentLibraries::newestChange(const juce::File& directory)
+{
+    juce::Time newest = directory.getLastModificationTime();
+
+    for (const juce::File& file : directory.findChildFiles(juce::File::findFiles, false)) {
+        newest = std::max(newest, file.getLastModificationTime());
+    }
+
+    return newest;
+}
+
+juce::ValueTree OrnamentLibraries::readLibraryFolder(const juce::File& directory, LibraryFolder& libraryFolder)
+{
+    const std::unique_ptr<juce::XmlElement> infoXml   = juce::XmlDocument::parse(directory.getChildFile(libraryInfoFileName));
+    juce::Array<juce::File>                 fileList  = directory.findChildFiles(juce::File::findFiles, false, juce::String("*") + ornamentExtension);
+    std::vector<juce::ValueTree>            ornaments;
+    juce::ValueTree                         library;
+
+    if (infoXml == nullptr) {
+        return {};
+    }
+
+    library = juce::ValueTree::fromXml(*infoXml);
+
+    if (library.getType() != ValueTreeIdentifiers::OrnamentLibrary || library.getProperty(ValueTreeIdentifiers::LibraryUid).toString().isEmpty()) {
+        return {};
+    }
+
+    library.removeAllChildren(nullptr);
+
+    fileList.sort();
+
+    for (const juce::File& file : fileList) {
+        const std::unique_ptr<juce::XmlElement> xml = juce::XmlDocument::parse(file);
+        juce::ValueTree                         ornament;
+        juce::String                            ornamentUid;
+
+        if (xml == nullptr) {
+            continue;
+        }
+
+        ornament    = juce::ValueTree::fromXml(*xml);
+        ornamentUid = ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
+
+        if (ornament.getType() != ValueTreeIdentifiers::OrnamentData || ornamentUid.isEmpty()
+            || ! ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure).isValid() || libraryFolder.ornamentFiles.count(ornamentUid) > 0) {
+            continue;
+        }
+
+        libraryFolder.ornamentFiles[ornamentUid] = OrnamentFile { file.getFileName(), ornament.getProperty(ValueTreeIdentifiers::OrnamentName).toString() };
+
+        ornaments.push_back(ornament);
+    }
+
+    std::stable_sort(ornaments.begin(), ornaments.end(), [](const juce::ValueTree& first, const juce::ValueTree& second) {
+        return static_cast<int>(first.getProperty(ValueTreeIdentifiers::OrnamentIndex, unlistedOrnamentIndex))
+               < static_cast<int>(second.getProperty(ValueTreeIdentifiers::OrnamentIndex, unlistedOrnamentIndex));
+    });
+
+    for (juce::ValueTree& ornament : ornaments) {
+        ornament.removeProperty(ValueTreeIdentifiers::OrnamentIndex, nullptr);
+
+        library.appendChild(ornament, nullptr);
+    }
+
+    libraryFolder.folder    = directory;
+    libraryFolder.savedAt   = newestChange(directory);
+    libraryFolder.savedName = library.getProperty(ValueTreeIdentifiers::LibraryName).toString();
+
+    return library;
+}
+
+juce::ValueTree OrnamentLibraries::readLibraryFile(const juce::File& file)
+{
+    const std::unique_ptr<juce::XmlElement> xml = juce::XmlDocument::parse(file);
+    juce::ValueTree                         library;
+
+    if (xml == nullptr) {
+        return {};
+    }
+
+    library = juce::ValueTree::fromXml(*xml);
+
+    if (library.getType() != ValueTreeIdentifiers::OrnamentLibrary || library.getProperty(ValueTreeIdentifiers::LibraryUid).toString().isEmpty()) {
+        return {};
+    }
+
+    for (int index = library.getNumChildren() - 1; index >= 0; --index) {
+        const juce::ValueTree ornament = library.getChild(index);
+
+        if (ornament.getType() != ValueTreeIdentifiers::OrnamentData
+            || ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString().isEmpty()
+            || ! ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure).isValid()) {
+            library.removeChild(index, nullptr);
+        }
+    }
+
+    return library;
 }

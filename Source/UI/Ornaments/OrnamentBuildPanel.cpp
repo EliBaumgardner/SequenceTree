@@ -113,6 +113,16 @@ void OrnamentBuildPanel::resized()
     nameEditor.setBounds(bounds.getX() + nameInset, bounds.getBottom() - nameInset - nameHeight, nameWidth, nameHeight);
 }
 
+int OrnamentBuildPanel::minimumWidth() const
+{
+    const int   barInset      = juce::roundToInt(titlebarHeight * titlebarInsetRatio);
+    const int   contentHeight = titlebarHeight - barInset * 2;
+    const int   buttonsWidth  = juce::roundToInt(contentHeight * buttonWidthRatio) * titlebarButtons + titlebar.undoRedoPane.idealWidth(contentHeight);
+    const float spacingShare  = 1.0f - Theme::contentSpacingRatio * titlebarGaps;
+
+    return barInset * 2 + static_cast<int>(std::ceil(buttonsWidth / spacingShare));
+}
+
 void OrnamentBuildPanel::applyView()
 {
     titlebar.hostButton.setVisible(ornament.isValid() && view == BuildView::Figure);
@@ -158,16 +168,6 @@ void OrnamentBuildPanel::refreshFigure()
     titlebar.publishButton.setEnabled(ornament.isValid() && canPublish);
 
     canvas.triggerAsyncUpdate();
-}
-
-int OrnamentBuildPanel::minimumWidth() const
-{
-    const int   barInset      = juce::roundToInt(titlebarHeight * titlebarInsetRatio);
-    const int   contentHeight = titlebarHeight - barInset * 2;
-    const int   buttonsWidth  = juce::roundToInt(contentHeight * buttonWidthRatio) * titlebarButtons + titlebar.undoRedoPane.idealWidth(contentHeight);
-    const float spacingShare  = 1.0f - Theme::contentSpacingRatio * titlebarGaps;
-
-    return barInset * 2 + static_cast<int>(std::ceil(buttonsWidth / spacingShare));
 }
 
 void OrnamentBuildPanel::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)

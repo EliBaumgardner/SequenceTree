@@ -7,27 +7,21 @@ TreeJev runs this project's flow on every Claude Code hook event. Its results re
 ## On every prompt (UserPromptSubmit)
 - **Snapshot Source**: runs `"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/turn-scope.sh" --snapshot "$TREEJEV_SESSION"`; what it prints reaches you as context, a denial or a block.
 - **Turn mode**: tree `sequence_tree_turn` reads the output of `history=$(ls "$(dirname "$TREEJEV_TURN_FILE")"/history/*.json 2>/dev/null | tail -1); previous=none; if [ -n "$history" ]; then previous=$(jq -r '.values.mode // "none"' "$history"); fi; jq -c --arg previousMode "$previous" --arg sessionId "$TREEJEV_SESSION" --arg cwd "$PWD" '{prompt: (.prompt // ""), previousMode: $previousMode, sessionId: $sessionId, cwd: $cwd}'`. Its action's directive reaches you as `[TreeJev: sequence_tree_turn | Final Action: <action>]` and is the decision: follow it, and do not run the tree again yourself. Then it becomes `deep` when -deep in the prompt; `skip`, `light`, `research` below confidence 0.5 becomes `code`.
-- **Design-rule context**: runs `"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/design-rules.sh" --turn-context`; what it prints reaches you as context, a denial or a block. Only when turn.values.mode is one of code, deep.
-- **Code-turn protocol**: runs `cat <<'EOF'
-Code-turn protocol. Do not run design-rules.sh, readability.sh, refactor.order --check or refactor.smell yourself mid-turn: the prompt step and the Stop gates run them on the turn's diff, and a run of your own repeats that work. Build once when the edits are done and run the tests once; refactor.* commands skip the build with --no-build and run no gates unless given --gates. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.
-EOF`; what it prints reaches you as context, a denial or a block. Only when turn.values.mode is one of code, deep.
+- **Owed checks**: runs the checks the turn's tree actions marked as owed. Checks: `design-context`, `code-protocol`.
 
 ## Before a tool runs (PreToolUse)
 - **Edit tools**: runs `"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/edit-tools-check.py" Source Tests`; what it prints reaches you as context, a denial or a block. For tools matching `Bash`.
-- **Owed checks**: runs the checks the turn's tree actions marked as owed. Checks: `edit-tools` (PreToolUse), `repeat` (PostToolUse), `tests` (Stop).
+- **Owed checks**: runs the checks the turn's tree actions marked as owed.
 
 ## After a tool runs (PostToolUse)
-- **Owed checks**: runs the checks the turn's tree actions marked as owed. Checks: `edit-tools` (PreToolUse), `repeat` (PostToolUse), `tests` (Stop).
+- **Owed checks**: runs the checks the turn's tree actions marked as owed. Checks: `repeat`.
 
 ## When you stop (Stop)
 - **Change size**: tree `change_size` reads the output of `"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/turn-scope.sh" --stats "$TREEJEV_SESSION"`. Its action's directive reaches you as `[TreeJev: change_size | Final Action: <action>]` and is the decision: follow it, and do not run the tree again yourself. Only when payload.stop_hook_active is false.
-- **Design-rule gate**: runs `"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/design-rules.sh" --hook stop`; what it prints reaches you as context, a denial or a block. Only when turn.values.size is one of small, large.
-- **Readability gate**: runs `"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/readability.sh" --hook stop`; what it prints reaches you as context, a denial or a block. Only when turn.values.size is one of small, large.
 - **Count Source lines**: runs `"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/source-lines.sh"`; what it prints reaches you as context, a denial or a block.
-- **Change surface**: tree `change_surface` reads the output of `"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/systematic-check.sh" --state "$TREEJEV_SESSION"`. Its action's directive reaches you as `[TreeJev: change_surface | Final Action: <action>]` and is the decision: follow it, and do not run the tree again yourself. Only when payload.stop_hook_active is false and (turn.values.mode is deep or turn.values.size is large).
-- **Change area**: tree `change_area` reads the output of `"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/systematic-check.sh" --state "$TREEJEV_SESSION"`. Its action's directive reaches you as `[TreeJev: change_area | Final Action: <action>]` and is the decision: follow it, and do not run the tree again yourself. Only when payload.stop_hook_active is false and (turn.values.mode is deep or turn.values.size is large).
-- **Look-and-feel call sites**: runs `"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/unit-check.sh" lookandfeel_before_parent 'CustomLookAndFeel::get' Source`; what it prints reaches you as context, a denial or a block. Only when payload.stop_hook_active is false and turn.values.size is one of small, large.
-- **Owed checks**: runs the checks the turn's tree actions marked as owed. Checks: `edit-tools` (PreToolUse), `repeat` (PostToolUse), `tests` (Stop). Only when payload.stop_hook_active is false.
+- **Change surface**: tree `change_surface` reads the output of `"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/systematic-check.sh" --state "$TREEJEV_SESSION"`. Its action's directive reaches you as `[TreeJev: change_surface | Final Action: <action>]` and is the decision: follow it, and do not run the tree again yourself. Only when a tree action earlier in the turn owed this tree. Only when payload.stop_hook_active is false.
+- **Change area**: tree `change_area` reads the output of `"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/systematic-check.sh" --state "$TREEJEV_SESSION"`. Its action's directive reaches you as `[TreeJev: change_area | Final Action: <action>]` and is the decision: follow it, and do not run the tree again yourself. Only when a tree action earlier in the turn owed this tree. Only when payload.stop_hook_active is false.
+- **Owed checks**: runs the checks the turn's tree actions marked as owed. Checks: `design-gate`, `readability-gate`, `lookandfeel-units`, `tests`. Only when payload.stop_hook_active is false.
 - **Tree report**: shows the user every tree this turn ran and the action each reached.
 
 ## Agents without hooks

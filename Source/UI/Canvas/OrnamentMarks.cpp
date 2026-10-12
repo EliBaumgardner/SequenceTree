@@ -70,32 +70,6 @@ void OrnamentMarks::refresh(Node& node)
     view->repaint();
 }
 
-void OrnamentMarks::place(Node& node)
-{
-    OrnamentMarkView* const    view       = views[&node].get();
-    const juce::Rectangle<int> nodeSquare = node.getBounds().withTrimmedLeft(node.interiorLeftInset);
-    const int                  markHeight = juce::roundToInt(static_cast<float>(nodeSquare.getHeight()) * markHeightRatio);
-
-    view->setBounds(nodeSquare.withHeight(markHeight).withBottomY(nodeSquare.getY()));
-    view->setVisible(node.isVisible());
-}
-
-void OrnamentMarks::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier& property)
-{
-    if (property == ValueTreeIdentifiers::OrnamentSymbol) {
-        refreshAll();
-    }
-}
-
-void OrnamentMarks::refreshAll()
-{
-    for (const auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
-        if (node != nullptr) {
-            refresh(*node);
-        }
-    }
-}
-
 void OrnamentMarks::valueTreeChildAdded(juce::ValueTree&, juce::ValueTree&)
 {
     refreshAll();
@@ -104,6 +78,13 @@ void OrnamentMarks::valueTreeChildAdded(juce::ValueTree&, juce::ValueTree&)
 void OrnamentMarks::valueTreeChildRemoved(juce::ValueTree&, juce::ValueTree&, int)
 {
     refreshAll();
+}
+
+void OrnamentMarks::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier& property)
+{
+    if (property == ValueTreeIdentifiers::OrnamentSymbol) {
+        refreshAll();
+    }
 }
 
 void OrnamentMarks::componentMovedOrResized(juce::Component& component, bool, bool)
@@ -119,4 +100,23 @@ void OrnamentMarks::componentVisibilityChanged(juce::Component& component)
 void OrnamentMarks::componentBeingDeleted(juce::Component& component)
 {
     views.erase(&component);
+}
+
+void OrnamentMarks::place(Node& node)
+{
+    OrnamentMarkView* const    view       = views[&node].get();
+    const juce::Rectangle<int> nodeSquare = node.getBounds().withTrimmedLeft(node.interiorLeftInset);
+    const int                  markHeight = juce::roundToInt(static_cast<float>(nodeSquare.getHeight()) * markHeightRatio);
+
+    view->setBounds(nodeSquare.withHeight(markHeight).withBottomY(nodeSquare.getY()));
+    view->setVisible(node.isVisible());
+}
+
+void OrnamentMarks::refreshAll()
+{
+    for (const auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
+        if (node != nullptr) {
+            refresh(*node);
+        }
+    }
 }

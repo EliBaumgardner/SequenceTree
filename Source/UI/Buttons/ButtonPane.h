@@ -8,6 +8,15 @@ class ButtonPane : public juce::Component
 {
 public:
 
+    void paint(juce::Graphics& graphics) override;
+    void resized() override;
+
+    IconButton& addButton(IconButton::Icon icon, const juce::String& tooltip, std::function<void()> onClick = nullptr);
+
+    void setSelectedButton(const IconButton* selected);
+
+    int idealWidth(int height) const;
+
     struct Grid
     {
         int cellWidth;
@@ -22,13 +31,6 @@ public:
 
     Selection           selection = Selection::Momentary;
     std::optional<Grid> gridLayout;
-
-    void paint(juce::Graphics& graphics) override;
-    void resized() override;
-
-    IconButton& addButton(IconButton::Icon icon, const juce::String& tooltip, std::function<void()> onClick = nullptr);
-    void setSelectedButton(const IconButton* selected);
-    int  idealWidth(int height) const;
 
 private:
 

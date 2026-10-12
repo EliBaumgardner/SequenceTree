@@ -10,18 +10,6 @@ AudioSnapshotPublisher::AudioSnapshotPublisher(TraversalRuleState& traversalRule
 {
 }
 
-std::shared_ptr<AudioSnapshotPublisher::Snapshot> AudioSnapshotPublisher::beginEdit() const
-{
-    auto edit = std::make_shared<Snapshot>();
-
-    if (publishedSnapshot != nullptr) {
-        edit->globalNodes       = publishedSnapshot->globalNodes;
-        edit->traversalScript   = publishedSnapshot->traversalScript;
-    }
-
-    return edit;
-}
-
 void AudioSnapshotPublisher::publish(std::shared_ptr<Snapshot> snapshot)
 {
     static_assert(std::atomic<Snapshot*>::is_always_lock_free, "the audio thread must be able to read the snapshot without a lock");
@@ -45,15 +33,13 @@ void AudioSnapshotPublisher::publish(std::shared_ptr<Snapshot> snapshot)
     collectRetiredSnapshots();
 }
 
-void AudioSnapshotPublisher::collectRetiredSnapshots()
+void AudioSnapshotPublisher::publishScript(std::shared_ptr<RTScript> script)
 {
-    const std::uint64_t epoch = blockEpoch.load(std::memory_order_seq_cst);
+    auto edit = beginEdit();
 
-    auto isUnreachableByAudioThread = [epoch](const RetiredSnapshot& entry) {
-        return epoch > entry.retiredAtEpoch;
-    };
+    edit->traversalScript = std::move(script);
 
-    std::erase_if(retiredSnapshots, isUnreachableByAudioThread);
+    publish(std::move(edit));
 }
 
 void AudioSnapshotPublisher::publishGraph(int graphId, NodeMap graphNodes)
@@ -83,6 +69,46 @@ void AudioSnapshotPublisher::publishGraph(int graphId, NodeMap graphNodes)
     publish(std::move(edit));
 }
 
+void AudioSnapshotPublisher::releaseRetiredSnapshots()
+{
+    retiredSnapshots.clear();
+}
+
+ScriptCompileResult AudioSnapshotPublisher::publishActiveTraversalRule()
+{
+    ScriptCompileResult result =
+        compileTraversalScript(traversalRuleState.activeRuleSource().toStdString());
+
+    if (result.succeeded()) {
+        publishScript(std::make_shared<RTScript>(std::move(result.script)));
+    }
+
+    return result;
+}
+
+std::shared_ptr<AudioSnapshotPublisher::Snapshot> AudioSnapshotPublisher::beginEdit() const
+{
+    auto edit = std::make_shared<Snapshot>();
+
+    if (publishedSnapshot != nullptr) {
+        edit->globalNodes       = publishedSnapshot->globalNodes;
+        edit->traversalScript   = publishedSnapshot->traversalScript;
+    }
+
+    return edit;
+}
+
+void AudioSnapshotPublisher::collectRetiredSnapshots()
+{
+    const std::uint64_t epoch = blockEpoch.load(std::memory_order_seq_cst);
+
+    auto isUnreachableByAudioThread = [epoch](const RetiredSnapshot& entry) {
+        return epoch > entry.retiredAtEpoch;
+    };
+
+    std::erase_if(retiredSnapshots, isUnreachableByAudioThread);
+}
+
 int AudioSnapshotPublisher::findFirstUnlinkedRootId(const NodeMap& nodes)
 {
     std::vector<int> linkedRootIds;
@@ -108,30 +134,4 @@ int AudioSnapshotPublisher::findFirstUnlinkedRootId(const NodeMap& nodes)
     }
 
     return -1;
-}
-
-void AudioSnapshotPublisher::publishScript(std::shared_ptr<RTScript> script)
-{
-    auto edit = beginEdit();
-
-    edit->traversalScript = std::move(script);
-
-    publish(std::move(edit));
-}
-
-ScriptCompileResult AudioSnapshotPublisher::publishActiveTraversalRule()
-{
-    ScriptCompileResult result =
-        compileTraversalScript(traversalRuleState.activeRuleSource().toStdString());
-
-    if (result.succeeded()) {
-        publishScript(std::make_shared<RTScript>(std::move(result.script)));
-    }
-
-    return result;
-}
-
-void AudioSnapshotPublisher::releaseRetiredSnapshots()
-{
-    retiredSnapshots.clear();
 }

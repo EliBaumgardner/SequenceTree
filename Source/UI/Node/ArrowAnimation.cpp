@@ -85,10 +85,25 @@ bool ArrowAnimation::advanceSnap(float elapsedSec)
     return true;
 }
 
-bool ArrowAnimation::snapSettled()
+bool ArrowAnimation::advanceHover(float elapsedSec)
 {
-    return std::abs(snapProgress - 1.0f) < snapSettledEpsilon
-        && std::abs(snapVelocity) < snapSettledEpsilon;
+    if (alphaTarget < alpha && ! snapSettled()) {
+        return true;
+    }
+
+    if (std::abs(alpha - alphaTarget) < hoverFadeEpsilon) {
+        alpha = alphaTarget;
+        return false;
+    }
+
+    float step = -hoverFadePerSecond * elapsedSec;
+
+    if (alpha < alphaTarget) {
+        step = hoverFadePerSecond * elapsedSec;
+    }
+
+    alpha = juce::jlimit(0.0f, 1.0f, alpha + step);
+    return true;
 }
 
 bool ArrowAnimation::advanceTrails()
@@ -126,23 +141,8 @@ bool ArrowAnimation::advanceTrails()
     return anyActive;
 }
 
-bool ArrowAnimation::advanceHover(float elapsedSec)
+bool ArrowAnimation::snapSettled()
 {
-    if (alphaTarget < alpha && ! snapSettled()) {
-        return true;
-    }
-
-    if (std::abs(alpha - alphaTarget) < hoverFadeEpsilon) {
-        alpha = alphaTarget;
-        return false;
-    }
-
-    float step = -hoverFadePerSecond * elapsedSec;
-
-    if (alpha < alphaTarget) {
-        step = hoverFadePerSecond * elapsedSec;
-    }
-
-    alpha = juce::jlimit(0.0f, 1.0f, alpha + step);
-    return true;
+    return std::abs(snapProgress - 1.0f) < snapSettledEpsilon
+        && std::abs(snapVelocity) < snapSettledEpsilon;
 }

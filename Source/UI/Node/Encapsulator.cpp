@@ -66,6 +66,13 @@ void Encapsulator::bindValueEditorForMode()
     nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::EncapsulatorLabel);
 }
 
+void Encapsulator::lookAndFeelChanged()
+{
+    Node::lookAndFeelChanged();
+
+    nodeCanvas.encapsulationView.recolourGroup(*this);
+}
+
 void Encapsulator::syncHighlightsFromMembers()
 {
     std::map<int, juce::Colour> memberHighlights;
@@ -103,11 +110,4 @@ void Encapsulator::syncHighlightsFromMembers()
 
         setHighlightVisual(highlight.first, true, highlight.second);
     }
-}
-
-void Encapsulator::lookAndFeelChanged()
-{
-    Node::lookAndFeelChanged();
-
-    nodeCanvas.encapsulationView.recolourGroup(*this);
 }

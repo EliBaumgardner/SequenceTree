@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Audio/ScriptRun.h"
+#include "Audio/TraversalLogic.h"
 #include "Script/ScriptCompiler.h"
 
 #include <string>
@@ -39,13 +40,14 @@ struct ScriptFixture
     NodeMap        nodes = twoNodeGraph();
     NodeStateTable nodeState;
     ScriptMembers  members {};
+    ScriptGlobals  globals;
 
     ScriptFixture() { nodeState.prepare(); }
 
     ScriptRunContext context(const RTScript& script, ScriptWrites writes, ScriptHost* host)
     {
         return { script, nodes, nodeState, members, TraversalKey {}, 0, 1, NodeStateSlot::Count,
-                 [] (RTNode::NodeType) { return true; }, writes, host };
+                 [] (RTNode::NodeType) { return true; }, writes, host, &globals };
     }
 };
 
@@ -324,6 +326,51 @@ TEST_CASE("a float holds float precision and a double holds double precision", "
     CHECK(runFirstFunction("int value() { double d = 16777216; d += 1; int x = d; return x; }") == 16777217);
 }
 
+TEST_CASE("true and false count as 1 and 0 in arithmetic", "[script]")
+{
+    CHECK(runFirstFunction("int value() { return true + 2; }") == 3);
+    CHECK(runFirstFunction("int value() { return -true; }") == -1);
+    CHECK(runFirstFunction("int value() { return false * 5 + 1; }") == 1);
+}
+
+TEST_CASE("a number stored in a bool is true whenever it is not zero", "[script]")
+{
+    CHECK(runFirstFunction("int value() { bool b = 3; return b; }") == 1);
+    CHECK(runFirstFunction("int value() { bool b = 0; return b; }") == 0);
+    CHECK(runFirstFunction("int value() { bool b = -0.5; return b; }") == 1);
+    CHECK(runFirstFunction("int value() { bool b = false; b += 5; return b; }") == 1);
+}
+
+TEST_CASE("bool parameters and return values convert like a bool variable", "[script]")
+{
+    CHECK(runFirstFunction("int value() { return isSet(-4) + isSet(0) * 10 + flip(false) * 100; }\n"
+                           "bool isSet(bool n) { return n; }\n"
+                           "bool flip(bool b) { return not b; }") == 101);
+}
+
+TEST_CASE("let takes bool from a comparison, and int keeps the number", "[script]")
+{
+    CHECK(runFirstFunction("int value() { let x = 1 < 2; x = 7; return x; }") == 1);
+    CHECK(runFirstFunction("int value() { int x = 1 < 2; x = 7; return x; }") == 7);
+}
+
+TEST_CASE("a bool member starts false", "[script]")
+{
+    const ScriptCompileResult compiled = compileTraversalScript(classWith(
+        "bool seen;\n"
+        "int check() { int before = seen; seen = true; return before; }"));
+
+    REQUIRE(compiled.succeeded());
+    REQUIRE(compiled.script.memberDefaults == std::vector<double> { 0 });
+
+    ScriptFixture fixture;
+
+    for (int expected : { 0, 1 }) {
+        ScriptRun run(fixture.context(compiled.script, ScriptWrites::Commit, nullptr));
+        CHECK(run.call(0, {}) == expected);
+    }
+}
+
 TEST_CASE("a decimal too large for an int stores as the largest int", "[script]")
 {
     CHECK(runFirstFunction("int value() { int x = 100000.0 * 100000.0; return x; }") == 2147483647);
@@ -371,6 +418,76 @@ TEST_CASE("members keep their value between calls and start at 0 or none", "[scr
     }
 
     CHECK(fixture.members[1] == 1);
+}
+
+TEST_CASE("members and variables outside the class start at any value", "[script]")
+{
+    const ScriptCompileResult compiled = compileTraversalScript(
+        "int base = 3 * 4;\n"
+        "class Traversal : defaultTraversal {\n"
+        "public:\n"
+        "int steps = base + 1;\n"
+        "Node start = current;\n"
+        "double half = steps / 2.0;\n"
+        "int ticks;\n"
+        "int value() { return steps; }\n"
+        "};\n"
+        "bool ready = base > 10;\n");
+
+    REQUIRE(compiled.succeeded());
+
+    ScriptFixture fixture;
+
+    ScriptRun(fixture.context(compiled.script, ScriptWrites::Commit, nullptr)).call(compiled.script.globalInitFunction, {});
+    ScriptRun(fixture.context(compiled.script, ScriptWrites::Commit, nullptr)).call(compiled.script.memberInitFunction, {});
+
+    CHECK(fixture.globals.values[0] == 12);
+    CHECK(fixture.globals.values[1] == 1);
+    CHECK(fixture.members[0] == 13);
+    CHECK(fixture.members[1] == 1);
+    CHECK(fixture.members[2] == 6.5);
+    CHECK(fixture.members[3] == 0);
+}
+
+TEST_CASE("variables outside the class are shared by every traversal and start again on a restart", "[script]")
+{
+    const ScriptCompileResult compiled = compileTraversalScript(
+        "int hits = 10;\n" + classWith("int mine = hits;\nint hit() { hits += 1; mine += 1; return hits * 100 + mine; }"));
+
+    REQUIRE(compiled.succeeded());
+
+    const NodeMap nodes = twoNodeGraph();
+
+    ScriptGlobals  globals;
+    TraversalLogic first;
+    TraversalLogic second;
+
+    first.nodeState.prepare();
+    second.nodeState.prepare();
+
+    first.script  = &compiled.script;
+    second.script = &compiled.script;
+
+    first.sharedGlobals  = &globals;
+    second.sharedGlobals = &globals;
+
+    CHECK(ScriptRun(first.makeScriptContext(nodes, TraversalLogic::Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1111);
+    CHECK(ScriptRun(second.makeScriptContext(nodes, TraversalLogic::Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1212);
+    CHECK(ScriptRun(first.makeScriptContext(nodes, TraversalLogic::Walk::Primary, ScriptWrites::Trial, nullptr)).call(0, {}) == 1312);
+    CHECK(ScriptRun(first.makeScriptContext(nodes, TraversalLogic::Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1312);
+
+    globals.script = nullptr;
+
+    first.reset(1, {});
+
+    CHECK(ScriptRun(first.makeScriptContext(nodes, TraversalLogic::Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1111);
+}
+
+TEST_CASE("only variables may sit outside the class", "[script]")
+{
+    CHECK_FALSE(compileTraversalScript("int helper() { return 1; }\n" + classWith("")).succeeded());
+    CHECK_FALSE(compileTraversalScript(classWith("") + "void main() { }\n").succeeded());
+    CHECK_FALSE(compileTraversalScript("int hits;\n" + classWith("int hits;")).succeeded());
 }
 
 TEST_CASE("a trial run reads its own writes and leaves the traversal untouched", "[script]")
@@ -436,6 +553,9 @@ TEST_CASE("malformed scripts are rejected", "[script]")
                               "int value() { return 5.5 % 2; }",
                               "int value() { Node n = 1.5; return 0; }",
                               "int value() { double d = current; return 0; }",
+                              "int value() { bool b = current; return 0; }",
+                              "int value() { Node n = true; return 0; }",
+                              "int value() { int true = 1; return 0; }",
                               "int value() { return; }",
                               "void main() { return 1; }",
                               "void main() { playNote(current, 1, 2); }",
@@ -445,7 +565,7 @@ TEST_CASE("malformed scripts are rejected", "[script]")
                               "Node advance(int n) { playNote(current, 1, 2, 3); return none; }",
                               "void playNote() { }",
                               "int value() { return 0; } int value() { return 1; }",
-                              "int ticks = 3;",
+                              "Node ticks = 3;",
                               "void ticks;" }) {
         CAPTURE(body);
         CHECK_FALSE(compileTraversalScript(classWith(body)).succeeded());

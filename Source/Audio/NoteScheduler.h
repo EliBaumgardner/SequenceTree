@@ -9,6 +9,22 @@ class NoteScheduler
 {
 public:
 
+    enum class NoteRole;
+    struct ActiveNote;
+    struct NoteVoicing;
+
+    NoteScheduler();
+
+    void scheduleNote(const RTNode& node, NoteRole role, int runId, double sample, juce::MidiBuffer& midiMessages, double sampleRate,
+                      double tempoMultiplier, int duration, bool isConnectionTrigger, const NoteVoicing& voicing);
+
+    void continueOrnament(ActiveNote note, const RTNode* node, juce::MidiBuffer& midiMessages, double sample);
+    void sendNoteOff     (const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
+    void removeNote      (int index);
+
+    static bool isNoteSounding(const ActiveNote& note);
+    static bool isNodeAudible (RTNode::NodeType nodeType);
+
     struct MidiEvent
     {
         int pitch       = 0;
@@ -58,20 +74,6 @@ public:
     static constexpr int maxExpectedActiveNotes = 1024;
 
     std::vector<ActiveNote> activeNotes;
-
-    NoteScheduler();
-
-    void scheduleNote(const RTNode& node, NoteRole role, int runId, double sample,
-                      juce::MidiBuffer& midiMessages,
-                      double sampleRate, double tempoMultiplier,
-                      int duration, bool isConnectionTrigger,
-                      const NoteVoicing& voicing);
-
-    static bool isNoteSounding(const ActiveNote& note);
-    static bool isNodeAudible(RTNode::NodeType nodeType);
-    void continueOrnament(ActiveNote note, const RTNode* node, juce::MidiBuffer& midiMessages, double sample);
-    void sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
-    void removeNote(int index);
 
 private:
 

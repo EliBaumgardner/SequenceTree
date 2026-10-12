@@ -12,6 +12,17 @@ class PaintToolSettings : public juce::Component
 {
 public:
 
+    PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
+
+    void paint(juce::Graphics& graphics) override;
+    void resized() override;
+
+    void configureValueFields(ValueField& valueField, float brushFlow);
+    void setPaintMode        (ValueField::PaintLayer layer);
+    void componentCallBack   ();
+
+    juce::Colour& paintLayerColour();
+
     static constexpr float minBrushFlow = 0.002f;
     static constexpr float maxBrushFlow = 0.25f;
 
@@ -33,14 +44,4 @@ public:
     ColourSelector colourSelector;
     LabeledEditor  sizeField;
     LabeledEditor  flowField;
-
-    PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
-
-    void paint(juce::Graphics& graphics) override;
-    void resized() override;
-
-    void configureValueFields(ValueField &valueField, float brushFlow);
-    void componentCallBack();
-    void setPaintMode(ValueField::PaintLayer layer);
-    juce::Colour& paintLayerColour();
 };

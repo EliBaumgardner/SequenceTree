@@ -18,6 +18,7 @@ class AudioSnapshotPublisher;
 class TraversalMenu : public juce::Component, private juce::ValueTree::Listener
 {
 public:
+
     TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
                   juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
@@ -27,7 +28,8 @@ public:
     void resized() override;
 
     void selectTraversal(int traversalId);
-    int  narrowestHeight() const;
+
+    int narrowestHeight() const;
 
     ItemSelector displayMenu;
 
@@ -54,7 +56,7 @@ public:
 
 private:
 
-    void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
+    void valueTreeChildAdded  (juce::ValueTree& parent, juce::ValueTree& child) override;
     void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
 
     NodeCanvas&             nodeCanvas;

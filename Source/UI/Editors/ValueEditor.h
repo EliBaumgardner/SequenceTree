@@ -17,18 +17,22 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
-    void setFormat(std::unique_ptr<ValueFormat> newFormat);
-    void mouseDown(const juce::MouseEvent& event) override;
-    void beginEditing(bool selectAllText = true);
-    void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
-    void setNumericValue(double newValue);
-    void mouseDrag(const juce::MouseEvent& event) override;
-    void setPersistentEditor(bool shouldStayVisible);
     void bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID);
-    void setFontHeight(float newFontHeight);
-    void setJustification(juce::Justification newJustification);
-    void commitText(const juce::String& enteredText);
-    void commitValue();
+    void setFormat (std::unique_ptr<ValueFormat> newFormat);
+
+    void setFontHeight      (float newFontHeight);
+    void setJustification   (juce::Justification newJustification);
+    void setPersistentEditor(bool shouldStayVisible);
+
+    void beginEditing   (bool selectAllText = true);
+    void setNumericValue(double newValue);
+    void commitText     (const juce::String& enteredText);
+    void commitValue    ();
+
+    void mouseDown     (const juce::MouseEvent& event) override;
+    void mouseDrag     (const juce::MouseEvent& event) override;
+    void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
+
     void valueChanged(juce::Value&) override;
 
     enum class WheelResponse { PassToParent, StepValue };
@@ -76,9 +80,10 @@ public:
 
 protected:
 
-    juce::Font displayFont(const juce::String& text) const;
     void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
-    void textEditorFocusLost(juce::TextEditor& editor) override;
+    void textEditorFocusLost       (juce::TextEditor& editor) override;
+
+    juce::Font displayFont(const juce::String& text) const;
 
 private:
 

@@ -58,39 +58,6 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
     return createdArrow;
 }
 
-juce::ValueTree ArrowManager::connectionTreeFor(int startNodeId, int endNodeId) const
-{
-    const juce::ValueTree connection = graphState.getConnection(startNodeId, endNodeId);
-
-    if (connection.isValid()) {
-        return connection;
-    }
-
-    return graphState.getConnection(endNodeId, startNodeId);
-}
-
-void ArrowManager::adopt(std::unique_ptr<Arrow> arrow)
-{
-    if (arrow == nullptr) {
-        return;
-    }
-
-    if (arrow->startNode != nullptr) {
-        arrow->startNode->nodeArrows.insert({ arrowKey(*arrow), arrow.get() });
-    }
-
-    arrows.add(arrow.release());
-}
-
-int ArrowManager::arrowKey(const Arrow& arrow)
-{
-    if (arrow.isDangling()) {
-        return -(arrow.danglingIndex + 1);
-    }
-
-    return arrow.endNode->nodeId;
-}
-
 Arrow* ArrowManager::connectParentToChild(Node* parentNode, Node* childNode)
 {
     Node* startNode = parentNode;
@@ -111,6 +78,19 @@ Arrow* ArrowManager::connectParentToChild(Node* parentNode, Node* childNode)
     refreshFor(endNode);
 
     return arrow;
+}
+
+void ArrowManager::adopt(std::unique_ptr<Arrow> arrow)
+{
+    if (arrow == nullptr) {
+        return;
+    }
+
+    if (arrow->startNode != nullptr) {
+        arrow->startNode->nodeArrows.insert({ arrowKey(*arrow), arrow.get() });
+    }
+
+    arrows.add(arrow.release());
 }
 
 void ArrowManager::refreshFor(const Node* movedNode)
@@ -143,124 +123,6 @@ void ArrowManager::endNodeDrag()
             arrow->endDrag();
         }
     }
-}
-
-void ArrowManager::remove(Arrow* arrow)
-{
-    if (arrow == nullptr) {
-        return;
-    }
-
-    const int index = arrows.indexOf(arrow);
-
-    if (index >= 0) {
-        detach(arrow);
-        arrows.remove(index);
-    }
-}
-
-void ArrowManager::detach(Arrow* arrow)
-{
-    if (arrow->startNode != nullptr) {
-        auto&      nodeArrows = arrow->startNode->nodeArrows;
-        const auto arrowRange = nodeArrows.equal_range(arrowKey(*arrow));
-
-        for (auto entry = arrowRange.first; entry != arrowRange.second; ++entry) {
-            if (entry->second == arrow) {
-                nodeArrows.erase(entry);
-                break;
-            }
-        }
-    }
-
-    nodeCanvas.removeChildComponent(arrow);
-}
-
-void ArrowManager::removeForNode(const Node* node)
-{
-    if (preview != nullptr && preview->startNode == node) {
-        preview.reset();
-    }
-
-    if (snapGhostArrow != nullptr
-        && (snapGhostArrow->startNode == node || snapGhostArrow->endNode == node)) {
-        hideSnapGhost();
-    }
-
-    removeMatching([node](Arrow* arrow) {
-        return arrow->startNode == node || arrow->endNode == node;
-    });
-}
-
-void ArrowManager::hideSnapGhost()
-{
-    if (snapGhostArrow != nullptr) {
-        nodeCanvas.removeChildComponent(snapGhostArrow.get());
-
-        snapGhostArrow.reset();
-    }
-}
-
-void ArrowManager::removeMatching(const std::function<bool(Arrow*)>& predicate)
-{
-    for (int arrowIndex = arrows.size() - 1; arrowIndex >= 0; --arrowIndex) {
-        Arrow* const arrow = arrows[arrowIndex];
-
-        if (predicate(arrow)) {
-            detach(arrow);
-
-            arrows.remove(arrowIndex);
-        }
-    }
-}
-
-void ArrowManager::clear()
-{
-    hideSnapGhost();
-    preview.reset();
-    arrows.clear();
-}
-
-void ArrowManager::updatePreview(Node* node, juce::Point<int> tipOffset)
-{
-    if (node == nullptr) {
-        return;
-    }
-
-    if (preview == nullptr || preview->startNode != node) {
-        preview = std::make_unique<Arrow>(node, tipOffset, undoManager);
-
-        preview->dragging = true;
-
-        nodeCanvas.addAndMakeVisible(*preview);
-
-        preview->toBack();
-    }
-
-    preview->setTipOffset(tipOffset);
-}
-
-void ArrowManager::commitPreview()
-{
-    if (preview == nullptr) {
-        return;
-    }
-
-    const Node* const      node      = preview->startNode;
-    const juce::Point<int> tipOffset = preview->tipOffset;
-
-    preview.reset();
-
-    if (node == nullptr) {
-        return;
-    }
-
-    ArrowInfo arrowInfo = currentArrowInfo;
-    const int nodeId    = node->nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
-
-    graphState.arrows.applyNodeBinding(arrowInfo, nodeId);
-
-    NodeFactory::createDanglingArrow(graphState, node->nodeValueTree, tipOffset, arrowInfo, &undoManager);
 }
 
 void ArrowManager::rebuildDanglingForNode(int nodeId)
@@ -319,6 +181,56 @@ void ArrowManager::refreshEncapsulatedArrows()
     }
 }
 
+void ArrowManager::remove(Arrow* arrow)
+{
+    if (arrow == nullptr) {
+        return;
+    }
+
+    const int index = arrows.indexOf(arrow);
+
+    if (index >= 0) {
+        detach(arrow);
+        arrows.remove(index);
+    }
+}
+
+void ArrowManager::removeForNode(const Node* node)
+{
+    if (preview != nullptr && preview->startNode == node) {
+        preview.reset();
+    }
+
+    if (snapGhostArrow != nullptr
+        && (snapGhostArrow->startNode == node || snapGhostArrow->endNode == node)) {
+        hideSnapGhost();
+    }
+
+    removeMatching([node](Arrow* arrow) {
+        return arrow->startNode == node || arrow->endNode == node;
+    });
+}
+
+void ArrowManager::removeMatching(const std::function<bool(Arrow*)>& predicate)
+{
+    for (int arrowIndex = arrows.size() - 1; arrowIndex >= 0; --arrowIndex) {
+        Arrow* const arrow = arrows[arrowIndex];
+
+        if (predicate(arrow)) {
+            detach(arrow);
+
+            arrows.remove(arrowIndex);
+        }
+    }
+}
+
+void ArrowManager::clear()
+{
+    hideSnapGhost();
+    preview.reset();
+    arrows.clear();
+}
+
 void ArrowManager::handleArrowAdded(int parentNodeId, int childNodeId)
 {
     Node* const parentNode = nodeCanvas.nodeManager.find(parentNodeId);
@@ -339,6 +251,94 @@ void ArrowManager::handleArrowInfoChanged(int parentNodeId, int childNodeId)
         arrow->arrowTree = connectionTreeFor(parentNodeId, childNodeId);
 
         arrow->repaint();
+    }
+}
+
+void ArrowManager::updatePreview(Node* node, juce::Point<int> tipOffset)
+{
+    if (node == nullptr) {
+        return;
+    }
+
+    if (preview == nullptr || preview->startNode != node) {
+        preview = std::make_unique<Arrow>(node, tipOffset, undoManager);
+
+        preview->dragging = true;
+
+        nodeCanvas.addAndMakeVisible(*preview);
+
+        preview->toBack();
+    }
+
+    preview->setTipOffset(tipOffset);
+}
+
+void ArrowManager::commitPreview()
+{
+    if (preview == nullptr) {
+        return;
+    }
+
+    const Node* const      node      = preview->startNode;
+    const juce::Point<int> tipOffset = preview->tipOffset;
+
+    preview.reset();
+
+    if (node == nullptr) {
+        return;
+    }
+
+    ArrowInfo arrowInfo = currentArrowInfo;
+    const int nodeId    = node->nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+
+    graphState.arrows.applyNodeBinding(arrowInfo, nodeId);
+
+    NodeFactory::createDanglingArrow(graphState, node->nodeValueTree, tipOffset, arrowInfo, &undoManager);
+}
+
+void ArrowManager::showSnapGhost(Node* from, Node* to)
+{
+    if (snapGhostArrow != nullptr
+        && snapGhostArrow->startNode == from && snapGhostArrow->endNode == to) {
+        return;
+    }
+
+    hideSnapGhost();
+
+    snapGhostArrow = std::make_unique<Arrow>(from, to, undoManager);
+
+    snapGhostArrow->isGhost = true;
+
+    nodeCanvas.addAndMakeVisible(*snapGhostArrow);
+
+    snapGhostArrow->toBack();
+    snapGhostArrow->setInterceptsMouseClicks(false, false);
+    snapGhostArrow->setArrowBounds();
+    snapGhostArrow->triggerSnapAnimation();
+}
+
+void ArrowManager::hideSnapGhost()
+{
+    if (snapGhostArrow != nullptr) {
+        nodeCanvas.removeChildComponent(snapGhostArrow.get());
+
+        snapGhostArrow.reset();
+    }
+}
+
+void ArrowManager::triggerSnapForNode(int nodeId)
+{
+    Node* const node = nodeCanvas.nodeManager.find(nodeId);
+
+    if (node == nullptr) {
+        return;
+    }
+
+    for (Arrow* const arrow : arrows) {
+        if (arrow->endNode == node) {
+            arrow->triggerSnapAnimation();
+            return;
+        }
     }
 }
 
@@ -405,39 +405,39 @@ void ArrowManager::resetTrail(int trailId)
     }
 }
 
-void ArrowManager::triggerSnapForNode(int nodeId)
+void ArrowManager::detach(Arrow* arrow)
 {
-    Node* const node = nodeCanvas.nodeManager.find(nodeId);
+    if (arrow->startNode != nullptr) {
+        auto&      nodeArrows = arrow->startNode->nodeArrows;
+        const auto arrowRange = nodeArrows.equal_range(arrowKey(*arrow));
 
-    if (node == nullptr) {
-        return;
-    }
-
-    for (Arrow* const arrow : arrows) {
-        if (arrow->endNode == node) {
-            arrow->triggerSnapAnimation();
-            return;
+        for (auto entry = arrowRange.first; entry != arrowRange.second; ++entry) {
+            if (entry->second == arrow) {
+                nodeArrows.erase(entry);
+                break;
+            }
         }
     }
+
+    nodeCanvas.removeChildComponent(arrow);
 }
 
-void ArrowManager::showSnapGhost(Node* from, Node* to)
+juce::ValueTree ArrowManager::connectionTreeFor(int startNodeId, int endNodeId) const
 {
-    if (snapGhostArrow != nullptr
-        && snapGhostArrow->startNode == from && snapGhostArrow->endNode == to) {
-        return;
+    const juce::ValueTree connection = graphState.getConnection(startNodeId, endNodeId);
+
+    if (connection.isValid()) {
+        return connection;
     }
 
-    hideSnapGhost();
+    return graphState.getConnection(endNodeId, startNodeId);
+}
 
-    snapGhostArrow = std::make_unique<Arrow>(from, to, undoManager);
+int ArrowManager::arrowKey(const Arrow& arrow)
+{
+    if (arrow.isDangling()) {
+        return -(arrow.danglingIndex + 1);
+    }
 
-    snapGhostArrow->isGhost = true;
-
-    nodeCanvas.addAndMakeVisible(*snapGhostArrow);
-
-    snapGhostArrow->toBack();
-    snapGhostArrow->setInterceptsMouseClicks(false, false);
-    snapGhostArrow->setArrowBounds();
-    snapGhostArrow->triggerSnapAnimation();
+    return arrow.endNode->nodeId;
 }

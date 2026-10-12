@@ -8,6 +8,16 @@ class FileLabel : public juce::Component
 {
 public:
 
+    explicit FileLabel(juce::UndoManager& undoManager);
+
+    void paint(juce::Graphics& graphics) override;
+    void resized() override;
+
+    void mouseDown(const juce::MouseEvent& event) override;
+
+    void setGrabbed (bool shouldBeGrabbed);
+    void setSelected(bool shouldBeSelected);
+
     static constexpr float fileLabelInsetRatio = 0.06f;
     static constexpr float removeButtonRatio   = 0.7f;
     static constexpr float fileTextWidthRatio  = 0.5f;
@@ -16,19 +26,11 @@ public:
     std::function<void()> onRemove;
     std::function<void()> onMouseClicked;
 
-    int  fileId   = -1;
+    int fileId = -1;
+
     bool grabbed  = false;
     bool selected = false;
 
     ValueEditor fileText;
     IconButton  removeButton;
-
-    explicit FileLabel(juce::UndoManager& undoManager);
-
-    void paint(juce::Graphics& graphics) override;
-    void resized() override;
-
-    void mouseDown(const juce::MouseEvent& event) override;
-    void setGrabbed(bool shouldBeGrabbed);
-    void setSelected(bool shouldBeSelected);
 };

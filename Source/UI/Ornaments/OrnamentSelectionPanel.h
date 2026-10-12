@@ -18,6 +18,14 @@ class OrnamentSelectionPanel : public juce::Component,
 {
 public:
 
+    OrnamentSelectionPanel(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
+    ~OrnamentSelectionPanel() override;
+
+    void paint  (juce::Graphics& graphics) override;
+    void resized() override;
+
+    juce::Point<int> narrowestSize() const;
+
     class PanelTitlebar : public Bar
     {
     public:
@@ -32,14 +40,6 @@ public:
         void resized() override;
     };
 
-    OrnamentSelectionPanel(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
-    ~OrnamentSelectionPanel() override;
-
-    void paint  (juce::Graphics& graphics) override;
-    void resized() override;
-
-    juce::Point<int> narrowestSize() const;
-
     static constexpr int   titlebarHeight     = 28;
     static constexpr float titlebarInsetRatio = 0.143f;
 
@@ -47,9 +47,11 @@ public:
 
 private:
 
-    void chooseLibraryFile       ();
-    void layoutSections          ();
-    void handleAsyncUpdate       () override;
+    void chooseLibraryFile();
+    void layoutSections   ();
+
+    void handleAsyncUpdate() override;
+
     void valueTreeChildAdded     (juce::ValueTree& parent, juce::ValueTree& child) override;
     void valueTreeChildRemoved   (juce::ValueTree& parent, juce::ValueTree& child, int index) override;
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;

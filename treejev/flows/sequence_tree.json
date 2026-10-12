@@ -1,22 +1,41 @@
 {
   "id": "sequence_tree",
   "name": "SequenceTree turn flow",
-  "description": "The turn tree on every prompt, research-suite gates and route checks, the change-size tree on every stop, and the change trees on deep turns and large changes",
+  "description": "Coordinates the hook events: the turn tree on every prompt, the change-size tree on every stop, and the checks and change trees those trees' actions owe",
   "plugins": ["research-suite"],
   "reportTrees": true,
   "injectInstructions": false,
   "checks": {
-    "edit-tools": {
-      "description": "The same check as the Edit tools step in the PreToolUse lane, registered under a name so a tree action could owe it. It refuses a Bash command that writes into Source/ or Tests/ by hand. No tree owes it today, so it never runs from here; the Edit tools step already runs it before every Bash command.",
-      "event": "PreToolUse",
-      "matcher": "Bash",
-      "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/edit-tools-check.py\" Source Tests"
+    "design-context": {
+      "description": "Tells Claude, before any work starts, what the end-of-turn checks will look for, so it writes the code to pass them instead of fixing it afterwards. Every code and deep action of the turn tree and the Code change subtree owes it.\nOn a deep turn, Claude gets:\n- the full design rules\n- the design-rule check's current results for every Source file that differs from the last commit\n- an instruction to audit every function it edits for behaviour changes the request didn't ask for\nOn a code turn, Claude gets a short note about the gates and the readability limits (no function over 80 lines, one class per .cpp, definitions in header order, one public: and one private: section). It gets this only on the first code turn of a session, so the note isn't repeated on every prompt.",
+      "event": "UserPromptSubmit",
+      "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/design-rules.sh\" --turn-context"
+    },
+    "code-protocol": {
+      "description": "Gives Claude three fixed working instructions on every code and deep turn, owed by the same actions as design-context:\n- Don't run the checking scripts yourself during the turn. The Stop gates already run them on this turn's changes, so a second run only wastes time.\n- Build once when the edits are done, and run the tests once.\n- Change Source/ and Tests/ through the refactor.* commands. The Edit tools step refuses a Python script, sed -i, redirect or copy that writes into those folders.\nThe text is fixed, so this check costs nothing to run.",
+      "event": "UserPromptSubmit",
+      "command": "cat <<'EOF'\nCode-turn protocol. Do not run design-rules.sh, readability.sh, refactor.order --check or refactor.smell yourself mid-turn: the prompt step and the Stop gates run them on the turn's diff, and a run of your own repeats that work. Build once when the edits are done and run the tests once; refactor.* commands skip the build with --no-build and run no gates unless given --gates. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.\nEOF"
     },
     "repeat": {
       "description": "After Claude edits or writes a file in Source/, it lists every stretch of five or more lines Claude just wrote that already exists elsewhere in Source/. That way Claude can see whether existing code already does the job while the edit is fresh. It is information only, not an instruction to extract a function: the design rules forbid lifting small repeated pieces into their own functions. The Code change subtree owes it when the prompt asks to restructure code inside a few functions or across classes.",
       "event": "PostToolUse",
       "matcher": "Edit|Write",
       "command": "case \"$ROUTE_CHECK_FILE\" in Source/*) \"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/repeat-check.sh\" --hook post-tool ;; esac"
+    },
+    "design-gate": {
+      "description": "Owed by change_size when this turn changed Source/ (small or large). It checks the Source files this turn changed against the design rules a script can check: inline, ternary operators, comments, missing braces, functions that only forward a call, very small classes, getters and setters, raw pointers, and modes or kinds held outside an enum.\nIf it finds anything, Claude can't finish. It is shown the violations and told to fix the ones it introduced, and to leave and report any that were already there. Rules a script can't judge, such as whether code fits its class's purpose, are listed for Claude to judge itself.",
+      "event": "Stop",
+      "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/design-rules.sh\" --hook stop"
+    },
+    "readability-gate": {
+      "description": "Owed by change_size when this turn changed Source/ (small or large). It checks the code this turn added for:\n- functions over 80 lines, with blocks of 30+ lines that could be lifted out\n- a second class implemented in one .cpp\n- definitions out of header order or out of call-hierarchy order\n- declarations that aren't grouped\n- a public: or private: section that is opened twice\nIf it finds anything, Claude can't finish until it fixes the code it wrote. Findings in older code it didn't touch are to be reported, not fixed. If there's no snapshot for the turn, the findings would cover the whole uncommitted tree, so they are reported to you without blocking.",
+      "event": "Stop",
+      "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/readability.sh\" --hook stop"
+    },
+    "lookandfeel-units": {
+      "description": "Owed by change_size when this turn changed Source/ (small or large). It finds every CustomLookAndFeel::get call in the lines this turn changed and asks the lookandfeel_before_parent tree about each one: does the call read the theme while the component is still being constructed, before it has a parent or a look-and-feel of its own?\nThat would be undefined behaviour, because CustomLookAndFeel::get casts whatever look-and-feel the component finds, and at that point it has none.\nIf a call is flagged, or the tree isn't sure, Claude can't finish until it fixes or judges that call site. Otherwise you are shown a one-line summary.",
+      "event": "Stop",
+      "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/unit-check.sh\" lookandfeel_before_parent 'CustomLookAndFeel::get' Source"
     },
     "tests": {
       "description": "When the turn ends, if this turn changed any .cpp or .h file in Source/, it builds the two test programs (SequenceTree_Tests and SequenceTree_GraphTests) and runs them with ctest. If the build or any test fails, Claude can't finish and is shown the last 40 lines of output. It is owed by Code change for deep traversal and audio work, by Change area for traversal, audio-thread and graph-model changes, and by Change surface when the public surface changed.",
@@ -43,7 +62,7 @@
         {
           "id": "turn",
           "label": "Turn mode",
-          "description": "Decides how much checking this turn gets. It gives the sequence_tree_turn tree the prompt, the previous turn's mode and the session id, and the tree picks one mode:\n- skip: a short steering reply (stop, yes, no) that asks for no new work\n- light: a simple question that needs no code reading\n- research: a question about code, a design or a plan, with nothing being changed\n- code: a routine code change\n- deep: a new feature or a change across several files or classes\nA short reply such as \"go ahead\" carries on the previous turn: code after a research or code turn, deep after a deep one. A code request is sorted further by the Code change subtree, which can mark the repeat or tests check as owed.\nThe mode is stored as turn.values.mode, and later steps read it to decide whether they run. Claude is shown the mode's instruction.\nTwo rules override the tree. Writing -deep anywhere in the prompt always gives deep. And if the tree picks skip, light or research with confidence under 0.5, the turn is treated as code, so an unclear prompt gets checked rather than waved through.",
+          "description": "Decides how much checking this turn gets. It gives the sequence_tree_turn tree the prompt, the previous turn's mode and the session id, and the tree picks one mode:\n- skip: a short steering reply (stop, yes, no) that asks for no new work\n- light: a simple question that needs no code reading\n- research: a question about code, a design or a plan, with nothing being changed\n- code: a routine code change\n- deep: a new feature or a change across several files or classes\nA short reply such as \"go ahead\" carries on the previous turn: code after a research or code turn, deep after a deep one. A code request is sorted further by the Code change subtree.\nThe mode is stored as turn.values.mode, and Claude is shown the mode's instruction. Every code and deep action owes the design-context and code-protocol checks, which the Owed checks step right after this one runs; deep actions also owe the change_surface and change_area trees at Stop, and the Code change subtree can owe the repeat or tests check.\nTwo rules override the tree. Writing -deep anywhere in the prompt always gives deep. And if the tree picks skip, light or research with confidence under 0.5, the turn is treated as code, so an unclear prompt gets checked rather than waved through.",
           "kind": "tree",
           "treeId": "sequence_tree_turn",
           "input": { "from": "command", "command": "history=$(ls \"$(dirname \"$TREEJEV_TURN_FILE\")\"/history/*.json 2>/dev/null | tail -1); previous=none; if [ -n \"$history\" ]; then previous=$(jq -r '.values.mode // \"none\"' \"$history\"); fi; jq -c --arg previousMode \"$previous\" --arg sessionId \"$TREEJEV_SESSION\" --arg cwd \"$PWD\" '{prompt: (.prompt // \"\"), previousMode: $previousMode, sessionId: $sessionId, cwd: $cwd}'" },
@@ -56,22 +75,7 @@
           ],
           "confidenceFloor": { "floor": 0.5, "appliesTo": ["skip", "light", "research"], "action": "code" }
         },
-        {
-          "id": "design-context",
-          "label": "Design-rule context",
-          "description": "Runs only on code and deep turns. It tells Claude, before any work starts, what the end-of-turn checks will look for, so it writes the code to pass them instead of fixing it afterwards.\nOn a deep turn, Claude gets:\n- the full design rules\n- the design-rule check's current results for every Source file that differs from the last commit\n- an instruction to audit every function it edits for behaviour changes the request didn't ask for\nOn a code turn, Claude gets a short note about the gates and the readability limits (no function over 80 lines, one class per .cpp, definitions in header order, one public: and one private: section). It gets this only on the first code turn of a session, so the note isn't repeated on every prompt.",
-          "kind": "command",
-          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/design-rules.sh\" --turn-context",
-          "when": { "all": [{ "path": "turn.values.mode", "in": ["code", "deep"] }] }
-        },
-        {
-          "id": "code-protocol",
-          "label": "Code-turn protocol",
-          "description": "Runs only on code and deep turns. It gives Claude three fixed working instructions:\n- Don't run the checking scripts yourself during the turn. The Stop gates already run them on this turn's changes, so a second run only wastes time.\n- Build once when the edits are done, and run the tests once.\n- Change Source/ and Tests/ through the refactor.* commands. The Edit tools step refuses a Python script, sed -i, redirect or copy that writes into those folders.\nThe text is fixed, so this step costs nothing to run.",
-          "kind": "command",
-          "command": "cat <<'EOF'\nCode-turn protocol. Do not run design-rules.sh, readability.sh, refactor.order --check or refactor.smell yourself mid-turn: the prompt step and the Stop gates run them on the turn's diff, and a run of your own repeats that work. Build once when the edits are done and run the tests once; refactor.* commands skip the build with --no-build and run no gates unless given --gates. Edit Source/ and Tests/ through the refactor.* commands: refactor.edit for text edits (exact, '<<< all', '<<< regex', '<<< after' / '<<< before', --build), refactor.rewrite for one shape at many sites, refactor.encap / decap / replace for extract, inline and rename, Write for a new file. A Python script, sed -i, redirect or copy that writes into them is denied.\nEOF",
-          "when": { "all": [{ "path": "turn.values.mode", "in": ["code", "deep"] }] }
-        }
+        { "id": "owed-prompt", "label": "Owed checks", "description": "Runs the UserPromptSubmit checks the turn tree's action owed: design-context and code-protocol on code and deep turns. What they print reaches Claude as context before any work starts.", "kind": "owedChecks" }
       ]
     },
     "PreToolUse": {
@@ -84,7 +88,7 @@
           "matcher": "Bash",
           "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/edit-tools-check.py\" Source Tests"
         },
-        { "id": "owed-pre", "description": "Before each tool call, runs the PreToolUse checks this turn's trees marked as owed, when the tool matches the check's tool pattern. In this flow the only PreToolUse check is edit-tools, and no tree marks it owed, so in practice this step runs nothing. It is here so a tree can start owing a before-tool check without the flow having to change.", "label": "Owed checks", "kind": "owedChecks" }
+        { "id": "owed-pre", "description": "Before each tool call, runs the PreToolUse checks this turn's trees marked as owed, when the tool matches the check's tool pattern. The flow registers no PreToolUse check today, so it runs nothing; it is here so a tree can start owing a before-tool check without the flow having to change.", "label": "Owed checks", "kind": "owedChecks" }
       ]
     },
     "PostToolUse": {
@@ -95,63 +99,41 @@
         {
           "id": "change-size",
           "label": "Change size",
-          "description": "Runs when Claude tries to finish its turn. It measures how much of Source/ this turn changed, compared with the snapshot taken when the prompt arrived, and stores the result as turn.values.size:\n- none: no .cpp or .h file changed\n- small: 3 files or fewer and 40 changed lines or fewer, with no new file\n- large: anything bigger, or any new file\nThe steps after it read this value. none skips the design-rule, readability and look-and-feel checks. large also turns on the two change trees, which otherwise run only on deep turns.\nIt is skipped when Claude is already continuing because a Stop check sent it back, so answering a block doesn't start the measurement over.",
+          "description": "Runs when Claude tries to finish its turn. It measures how much of Source/ this turn changed, compared with the snapshot taken when the prompt arrived, and stores the result as turn.values.size:\n- none: no .cpp or .h file changed, and nothing is owed\n- small: 3 files or fewer and 40 changed lines or fewer, with no new file; owes the design-gate, readability-gate and lookandfeel-units checks\n- large: anything bigger, or any new file; owes the same checks and the change_surface and change_area trees\nIt is skipped when Claude is already continuing because a Stop check sent it back, so answering a block doesn't start the measurement over.",
           "kind": "tree",
           "treeId": "change_size",
           "input": { "from": "command", "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/turn-scope.sh\" --stats \"$TREEJEV_SESSION\"" },
           "when": { "all": [{ "path": "payload.stop_hook_active", "equals": false }] }
         },
         {
-          "id": "design-gate",
-          "label": "Design-rule gate",
-          "description": "Runs when this turn changed Source/ (size small or large). It checks the Source files this turn changed against the design rules a script can check: inline, ternary operators, comments, missing braces, functions that only forward a call, very small classes, getters and setters, raw pointers, and modes or kinds held outside an enum.\nIf it finds anything, Claude can't finish. It is shown the violations and told to fix the ones it introduced, and to leave and report any that were already there. Rules a script can't judge, such as whether code fits its class's purpose, are listed for Claude to judge itself.",
-          "kind": "command",
-          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/design-rules.sh\" --hook stop",
-          "when": { "all": [{ "path": "turn.values.size", "in": ["small", "large"] }] }
-        },
-        {
-          "id": "readability-gate",
-          "label": "Readability gate",
-          "description": "Runs when this turn changed Source/ (size small or large). It checks the code this turn added for:\n- functions over 80 lines, with blocks of 30+ lines that could be lifted out\n- a second class implemented in one .cpp\n- definitions out of header order or out of call-hierarchy order\n- declarations that aren't grouped\n- a public: or private: section that is opened twice\nIf it finds anything, Claude can't finish until it fixes the code it wrote. Findings in older code it didn't touch are to be reported, not fixed. If there's no snapshot for the turn, the findings would cover the whole uncommitted tree, so they are reported to you without blocking.",
-          "kind": "command",
-          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/readability.sh\" --hook stop",
-          "when": { "all": [{ "path": "turn.values.size", "in": ["small", "large"] }] }
-        },
-        {
           "id": "source-lines",
           "label": "Count Source lines",
-          "description": "When the turn ends, shows you (not Claude) one line with the number of lines and files in Source/, counting .cpp, .h and .py files. This lets you watch the codebase grow or shrink turn by turn. It is skipped on skip, light and research turns that changed nothing in Source/, and it never blocks.",
+          "description": "When the turn ends, shows you (not Claude) one line with the number of lines and files in Source/, counting .cpp, .h and .py files. This lets you watch the codebase grow or shrink turn by turn. The script stays silent on skip, light and research turns that changed nothing in Source/, and it never blocks.",
           "kind": "command",
           "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/source-lines.sh\""
         },
         {
           "id": "change-surface",
           "label": "Change surface",
-          "description": "Runs on deep turns and on large changes. It gives the change_surface tree three things: this turn's Source diff, the functions the diff touches, and up to 40 places in other files that use those functions. The tree decides whether the change alters what other classes can use: a public function's parameters, return type or visibility, a public member variable, or something moved between public and private.\nIf it does, Claude can't finish until it has checked each listed caller still gets what it expects, and the tests check is marked as owed, so the test suite runs before the turn can end. If the turn already did this, Claude can answer the block in one line.",
+          "description": "Runs when this turn owes the change_surface tree: a deep turn owes it from the prompt, and a large change owes it from Change size. It gives the tree three things: this turn's Source diff, the functions the diff touches, and up to 40 places in other files that use those functions. The tree decides whether the change alters what other classes can use: a public function's parameters, return type or visibility, a public member variable, or something moved between public and private.\nIf it does, Claude can't finish until it has checked each listed caller still gets what it expects, and the tests check is marked as owed, so the test suite runs before the turn can end. If the turn already did this, Claude can answer the block in one line. It is skipped when Claude is already continuing after a Stop block.",
           "kind": "tree",
           "treeId": "change_surface",
+          "owed": true,
           "input": { "from": "command", "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/systematic-check.sh\" --state \"$TREEJEV_SESSION\"" },
-          "when": { "all": [{ "path": "payload.stop_hook_active", "equals": false }], "any": [{ "path": "turn.values.mode", "equals": "deep" }, { "path": "turn.values.size", "equals": "large" }] }
+          "when": { "all": [{ "path": "payload.stop_hook_active", "equals": false }] }
         },
         {
           "id": "change-area",
           "label": "Change area",
-          "description": "Runs on deep turns and on large changes, on the same diff as Change surface. The change_area tree decides which part of the plugin the change is in, and holds Claude to what that part needs:\n- How the graph is walked: run the same graph shape as a node traversal and as a modulator walk and compare the sequences (TraversalTests.cpp).\n- The audio thread: show that nothing processBlock reaches allocates, locks or blocks.\n- The graph model: arrow length must still set note duration, and a pitch-bound arrow must still only shift pitch.\nThose three stop Claude until it answers, and they mark the tests check as owed, as does a change inside the walk that doesn't alter which node comes next.\nA canvas gesture or a UI-only change passes with a reminder to try it in a host, because the tests don't reach that code.",
+          "description": "Runs when this turn owes the change_area tree, on the same terms and the same diff as Change surface. The tree decides which part of the plugin the change is in, and holds Claude to what that part needs:\n- How the graph is walked: run the same graph shape as a node traversal and as a modulator walk and compare the sequences (TraversalTests.cpp).\n- The audio thread: show that nothing processBlock reaches allocates, locks or blocks.\n- The graph model: arrow length must still set note duration, and a pitch-bound arrow must still only shift pitch.\nThose three stop Claude until it answers, and they mark the tests check as owed, as does a change inside the walk that doesn't alter which node comes next.\nA canvas gesture or a UI-only change passes with a reminder to try it in a host, because the tests don't reach that code.",
           "kind": "tree",
           "treeId": "change_area",
+          "owed": true,
           "input": { "from": "command", "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/systematic-check.sh\" --state \"$TREEJEV_SESSION\"" },
-          "when": { "all": [{ "path": "payload.stop_hook_active", "equals": false }], "any": [{ "path": "turn.values.mode", "equals": "deep" }, { "path": "turn.values.size", "equals": "large" }] }
+          "when": { "all": [{ "path": "payload.stop_hook_active", "equals": false }] }
         },
         {
-          "id": "lookandfeel-units",
-          "label": "Look-and-feel call sites",
-          "description": "Runs when this turn changed Source/ (size small or large). It finds every CustomLookAndFeel::get call in the lines this turn changed and asks the lookandfeel_before_parent tree about each one: does the call read the theme while the component is still being constructed, before it has a parent or a look-and-feel of its own?\nThat would be undefined behaviour, because CustomLookAndFeel::get casts whatever look-and-feel the component finds, and at that point it has none.\nIf a call is flagged, or the tree isn't sure, Claude can't finish until it fixes or judges that call site. Otherwise you are shown a one-line summary.",
-          "kind": "command",
-          "command": "\"$TREEJEV_PLUGIN_RESEARCH_SUITE/bin/unit-check.sh\" lookandfeel_before_parent 'CustomLookAndFeel::get' Source",
-          "when": { "all": [{ "path": "payload.stop_hook_active", "equals": false }, { "path": "turn.values.size", "in": ["small", "large"] }] }
-        },
-        {
-          "id": "owed-stop", "description": "Runs the Stop checks this turn's trees marked as owed. In this flow that is the tests check. It runs after Change surface and Change area, so the checks those trees owe in this same Stop are included. If an owed check fails, Claude can't finish and is shown the last 40 lines of its output. It is skipped when Claude is already continuing after a Stop block.",
+          "id": "owed-stop", "description": "Runs the Stop checks this turn's trees marked as owed: the design-gate, readability-gate and lookandfeel-units checks Change size owes for a changed Source/, and the tests check that Code change, Change surface and Change area can owe. It runs after the change trees, so the checks they owe in this same Stop are included. If an owed check fails or prints a block, Claude can't finish and is shown its output. It is skipped when Claude is already continuing after a Stop block.",
           "label": "Owed checks",
           "kind": "owedChecks",
           "when": { "all": [{ "path": "payload.stop_hook_active", "equals": false }] }

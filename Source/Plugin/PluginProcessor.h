@@ -23,41 +23,65 @@ public:
     SequenceTreeAudioProcessor();
     ~SequenceTreeAudioProcessor() override = default;
 
-    void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+    void prepareToPlay   (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
 
 #ifndef JucePlugin_PreferredChannelConfigurations
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 #endif
 
-    void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) noexcept [[clang::nonblocking]] override;
+    void processBlock       (juce::AudioBuffer<float>&, juce::MidiBuffer&) noexcept [[clang::nonblocking]] override;
     void followHostTransport(const int numSamples) noexcept;
-    void driveWalk(const AudioSnapshotPublisher::Snapshot& snap, juce::MidiBuffer& midiMessages,
-                   const int numSamples, const bool playing, const bool resetHit,
+
+    void driveWalk(const AudioSnapshotPublisher::Snapshot& snap, juce::MidiBuffer& midiMessages, const int numSamples, const bool playing, const bool resetHit,
                    const bool replayThisBlock) noexcept;
 
     juce::AudioProcessorEditor* createEditor() override;
-    bool hasEditor() const override;
+    bool                        hasEditor   () const override;
+
+    bool acceptsMidi () const override;
+    bool producesMidi() const override;
+    bool isMidiEffect() const override;
 
     const juce::String getName() const override;
 
-    bool acceptsMidi() const override;
-    bool producesMidi() const override;
-    bool isMidiEffect() const override;
     double getTailLengthSeconds() const override;
 
-    int getNumPrograms() override;
-    int getCurrentProgram() override;
-    void setCurrentProgram (int index) override;
-    const juce::String getProgramName (int index) override;
-    void changeProgramName (int index, const juce::String& newName) override;
+    int                getNumPrograms   () override;
+    int                getCurrentProgram() override;
+    void               setCurrentProgram(int index) override;
+    const juce::String getProgramName   (int index) override;
+    void               changeProgramName(int index, const juce::String& newName) override;
 
-    void getStateInformation (juce::MemoryBlock& destData) override;
-    void applyRestoredState();
+    void getStateInformation(juce::MemoryBlock& destData) override;
+    void setStateInformation(const void* data, int sizeInBytes) override;
+    void applyRestoredState ();
 
-    juce::ValueTree                        pendingRestoreState;
+    struct TempoInfo
+    {
+        static constexpr double referenceBpm             = 120.0;
+        static constexpr double relocationToleranceBeats = 1.0 / 64.0;
 
-    void setStateInformation (const void* data, int sizeInBytes) override;
+        double currentSampleRate = 44100.0;
+        double hostBpm           = 0.0;
+        bool   hostWasPlaying    = false;
+
+        std::optional<double> expectedPpq;
+        std::optional<double> pendingRelocationSamples;
+    };
+
+    struct BlockScope
+    {
+        AudioSnapshotPublisher&                 publisher;
+        const AudioSnapshotPublisher::Snapshot* snapshot = publisher.beginBlock();
+
+        ~BlockScope()
+        {
+            publisher.endBlock();
+        }
+    };
+
+    juce::ValueTree pendingRestoreState;
 
     std::atomic<bool>   isPlaying       = false;
     std::atomic<bool>   resetRequested  = false;
@@ -96,32 +120,7 @@ public:
 
     RTGraphBuilder rtGraphBuilder { *this, graphState };
 
-
-    struct TempoInfo
-    {
-        static constexpr double referenceBpm             = 120.0;
-        static constexpr double relocationToleranceBeats = 1.0 / 64.0;
-
-        double currentSampleRate = 44100.0;
-        double hostBpm           = 0.0;
-        bool   hostWasPlaying    = false;
-
-        std::optional<double> expectedPpq;
-        std::optional<double> pendingRelocationSamples;
-    };
-
     TempoInfo tempoInfo;
-
-    struct BlockScope
-    {
-        AudioSnapshotPublisher&                 publisher;
-        const AudioSnapshotPublisher::Snapshot* snapshot = publisher.beginBlock();
-
-        ~BlockScope()
-        {
-            publisher.endBlock();
-        }
-    };
 
     AudioUIBridge    bridge;
     EventManager     eventManager        { bridge };

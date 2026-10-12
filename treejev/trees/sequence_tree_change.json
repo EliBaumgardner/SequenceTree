@@ -93,7 +93,9 @@
         "description": "Code change with the design-rule and readability gates.",
         "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends.",
         "checks": [
-          "repeat"
+          "repeat",
+          "design-context",
+          "code-protocol"
         ],
         "context": "Refactor turn. Extracts, inlines and renames go through `refactor.encap`, `refactor.decap` and `refactor.replace`, and multi-site rewrites through `refactor.rewrite`; read the command's section of ~/Documents/GitHub/research-suite/REFACTORING.md before using it.",
         "effects": {
@@ -116,7 +118,9 @@
         "description": "Code change with the design-rule and readability gates.",
         "directive": "Write the change under the Key Design Rules; the design-rule and readability gates check it when the turn ends.",
         "checks": [
-          "repeat"
+          "repeat",
+          "design-context",
+          "code-protocol"
         ],
         "context": "Refactor turn. Extracts, inlines and renames go through `refactor.encap`, `refactor.decap` and `refactor.replace`, and multi-site rewrites through `refactor.rewrite`; read the command's section of ~/Documents/GitHub/research-suite/REFACTORING.md before using it. Run `refactor.order` (without --check) on every file whose definitions moved; the Stop gates check order and wrappers.",
         "effects": {
@@ -139,13 +143,19 @@
         "description": "Full protocol: gates plus the systematic pass.",
         "directive": "Run the full verification protocol: front-load api-surface, structure and data-flow before editing; the gates and change trees check the diff when the turn ends.",
         "checks": [
-          "tests"
+          "tests",
+          "design-context",
+          "code-protocol"
         ],
         "context": "Traversal refactor. Every walk is the same traversal: run the walk-parity shapes in Tests/TraversalTests.cpp, and add one for any mechanic the change touches.",
         "effects": {
           "set": {
             "mode": "deep"
-          }
+          },
+          "trees": [
+            "change_surface",
+            "change_area"
+          ]
         }
       },
       "parentId": "scope"
@@ -166,7 +176,11 @@
           "set": {
             "mode": "code"
           }
-        }
+        },
+        "checks": [
+          "design-context",
+          "code-protocol"
+        ]
       },
       "parentId": "kind"
     },
@@ -182,13 +196,19 @@
         "description": "Full protocol: gates plus the systematic pass.",
         "directive": "Run the full verification protocol: front-load api-surface, structure and data-flow before editing; the gates and change trees check the diff when the turn ends.",
         "checks": [
-          "tests"
+          "tests",
+          "design-context",
+          "code-protocol"
         ],
         "context": "Audio-thread change: no allocation, lock or message post is reachable from processBlock; verify with SequenceTree_RealtimeTests if the change reaches it.",
         "effects": {
           "set": {
             "mode": "deep"
-          }
+          },
+          "trees": [
+            "change_surface",
+            "change_area"
+          ]
         }
       },
       "parentId": "audio"
@@ -208,7 +228,11 @@
           "set": {
             "mode": "code"
           }
-        }
+        },
+        "checks": [
+          "design-context",
+          "code-protocol"
+        ]
       },
       "parentId": "audio"
     }

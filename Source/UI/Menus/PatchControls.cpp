@@ -27,25 +27,6 @@ void PatchControls::chooseFileToOpen()
     });
 }
 
-void PatchControls::confirmReset()
-{
-    const auto options = juce::MessageBoxOptions().withIconType(juce::MessageBoxIconType::QuestionIcon).withTitle("Reset patch")
-                             .withMessage("Save the current patch before resetting?").withButton("Yes").withButton("No").withButton("Cancel")
-                             .withAssociatedComponent(this);
-
-    juce::AlertWindow::showAsync(options, [safeThis = juce::Component::SafePointer<PatchControls>(this)](int result) {
-        if (safeThis == nullptr) {
-            return;
-        }
-
-        switch (static_cast<ResetAnswer>(result)) {
-            case ResetAnswer::Yes:    safeThis->chooseFileToSave(); break;
-            case ResetAnswer::No:     safeThis->resetPatch();       break;
-            case ResetAnswer::Cancel: break;
-        }
-    });
-}
-
 void PatchControls::chooseFileToSave()
 {
     const int chooserFlags = juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::warnAboutOverwriting;
@@ -71,6 +52,25 @@ void PatchControls::chooseFileToSave()
         }
 
         resetPatch();
+    });
+}
+
+void PatchControls::confirmReset()
+{
+    const auto options = juce::MessageBoxOptions().withIconType(juce::MessageBoxIconType::QuestionIcon).withTitle("Reset patch")
+                             .withMessage("Save the current patch before resetting?").withButton("Yes").withButton("No").withButton("Cancel")
+                             .withAssociatedComponent(this);
+
+    juce::AlertWindow::showAsync(options, [safeThis = juce::Component::SafePointer<PatchControls>(this)](int result) {
+        if (safeThis == nullptr) {
+            return;
+        }
+
+        switch (static_cast<ResetAnswer>(result)) {
+            case ResetAnswer::Yes:    safeThis->chooseFileToSave(); break;
+            case ResetAnswer::No:     safeThis->resetPatch();       break;
+            case ResetAnswer::Cancel: break;
+        }
     });
 }
 

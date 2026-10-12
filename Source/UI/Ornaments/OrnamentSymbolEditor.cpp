@@ -116,28 +116,6 @@ void OrnamentSymbolEditor::mouseDown(const juce::MouseEvent& event)
     repaint();
 }
 
-void OrnamentSymbolEditor::eraseAlong(juce::Point<float> target)
-{
-    const float distance = lastPoint.getDistanceFrom(target);
-    const float radius   = drawingArea.getWidth() * brushWidth * 0.5f;
-    const int   steps    = juce::jmax(1, static_cast<int>(std::ceil(distance / juce::jmax(radius * eraserStepRatio, pointSpacing))));
-    const float scale    = 1.0f / drawingArea.getWidth();
-
-    repaint();
-
-    if (! ornament.isValid() || drawingArea.isEmpty()) {
-        return;
-    }
-
-    for (int step = 1; step <= steps; ++step) {
-        const auto centre = (lastPoint + (target - lastPoint) * (static_cast<float>(step) / steps) - drawingArea.getPosition()) * scale;
-
-        ornamentLibraries.eraseSymbol(ornament, centre, brushWidth * 0.5f, &undoManager);
-    }
-
-    lastPoint = target;
-}
-
 void OrnamentSymbolEditor::mouseDrag(const juce::MouseEvent& event)
 {
     cursorPosition = event.position;
@@ -201,4 +179,26 @@ juce::MouseCursor OrnamentSymbolEditor::getMouseCursor()
     }
 
     return lookAndFeel.pencilCursor;
+}
+
+void OrnamentSymbolEditor::eraseAlong(juce::Point<float> target)
+{
+    const float distance = lastPoint.getDistanceFrom(target);
+    const float radius   = drawingArea.getWidth() * brushWidth * 0.5f;
+    const int   steps    = juce::jmax(1, static_cast<int>(std::ceil(distance / juce::jmax(radius * eraserStepRatio, pointSpacing))));
+    const float scale    = 1.0f / drawingArea.getWidth();
+
+    repaint();
+
+    if (! ornament.isValid() || drawingArea.isEmpty()) {
+        return;
+    }
+
+    for (int step = 1; step <= steps; ++step) {
+        const auto centre = (lastPoint + (target - lastPoint) * (static_cast<float>(step) / steps) - drawingArea.getPosition()) * scale;
+
+        ornamentLibraries.eraseSymbol(ornament, centre, brushWidth * 0.5f, &undoManager);
+    }
+
+    lastPoint = target;
 }

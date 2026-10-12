@@ -16,25 +16,6 @@ class OrnamentBuildPanel : public juce::Component, private juce::ValueTree::List
 {
 public:
 
-    class BuildTitlebar : public Bar
-    {
-    public:
-
-        BuildTitlebar();
-
-        IconButton  hostButton;
-        IconButton  arrowButton;
-        ButtonPane  undoRedoPane;
-        IconButton  publishButton;
-        IconButton  symbolButton;
-
-    private:
-
-        void resized() override;
-    };
-
-    enum class BuildView { Figure, Symbol };
-
     OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
     ~OrnamentBuildPanel() override;
 
@@ -42,6 +23,25 @@ public:
     void resized() override;
 
     int minimumWidth() const;
+
+    class BuildTitlebar : public Bar
+    {
+    public:
+
+        BuildTitlebar();
+
+        IconButton hostButton;
+        IconButton arrowButton;
+        ButtonPane undoRedoPane;
+        IconButton publishButton;
+        IconButton symbolButton;
+
+    private:
+
+        void resized() override;
+    };
+
+    enum class BuildView { Figure, Symbol };
 
     static constexpr int   titlebarHeight     = 28;
     static constexpr float titlebarInsetRatio = 0.143f;
@@ -61,9 +61,10 @@ public:
 
 private:
 
-    void applyView               ();
-    void showActiveOrnament      ();
-    void refreshFigure           ();
+    void applyView         ();
+    void showActiveOrnament();
+    void refreshFigure     ();
+
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
     void valueTreeChildAdded     (juce::ValueTree& parent, juce::ValueTree& child) override;
     void valueTreeChildRemoved   (juce::ValueTree& parent, juce::ValueTree& child, int index) override;

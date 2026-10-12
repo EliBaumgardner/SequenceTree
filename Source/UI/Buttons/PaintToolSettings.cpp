@@ -82,6 +82,21 @@ void PaintToolSettings::configureValueFields(ValueField &valueField, const float
     flowField.editor.setTooltip("Brush rate");
 }
 
+void PaintToolSettings::setPaintMode(ValueField::PaintLayer layer)
+{
+    paintLayer = layer;
+
+    const juce::Colour savedColour = paintLayerColour();
+
+    colourSelector.colour = savedColour;
+
+    colourSelector.repaint();
+
+    nodeCanvas.valueField.brushColour = savedColour;
+
+    nodeCanvas.valueField.setActivePaintLayer(layer);
+}
+
 void PaintToolSettings::componentCallBack() {
     paintTool.onClick = [this]() {
         const bool paintModeEnabled = ! paintTool.state.isSelected;
@@ -117,21 +132,6 @@ void PaintToolSettings::componentCallBack() {
 
         nodeCanvas.valueField.brushFlow = juce::jmap(sliderValue, 0.0f, 1.0f, minBrushFlow, maxBrushFlow);
     };
-}
-
-void PaintToolSettings::setPaintMode(ValueField::PaintLayer layer)
-{
-    paintLayer = layer;
-
-    const juce::Colour savedColour = paintLayerColour();
-
-    colourSelector.colour = savedColour;
-
-    colourSelector.repaint();
-
-    nodeCanvas.valueField.brushColour = savedColour;
-
-    nodeCanvas.valueField.setActivePaintLayer(layer);
 }
 
 juce::Colour& PaintToolSettings::paintLayerColour()

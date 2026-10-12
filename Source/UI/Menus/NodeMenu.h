@@ -20,6 +20,7 @@ class AudioSnapshotPublisher;
 class NodeMenu : public juce::Component
 {
 public:
+
     NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
              juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
@@ -29,6 +30,8 @@ public:
     int narrowestHeight() const;
 
 private:
+
+    void bindToNode(const Node* node);
 
     enum class RowSource { NodeTree, SubLoop, MidiNote };
 
@@ -44,8 +47,6 @@ private:
         juce::String     prefix;
         juce::String     suffix;
     };
-
-    void bindToNode(const Node* node);
 
     GraphState&             graphState;
     TraversalRuleState&     traversalRuleState;

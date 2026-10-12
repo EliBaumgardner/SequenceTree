@@ -15,12 +15,22 @@ void Modulator::paint(juce::Graphics& graphics)
     CustomLookAndFeel::get(*this).drawModulatorNode(graphics, getNodeVisual(getSquareBounds()));
 }
 
-juce::Rectangle<float> Modulator::getSquareBounds() const
+void Modulator::bindValueEditorForMode()
 {
-    const auto  circleBounds = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
-    const float side         = circleBounds.getWidth() * equalAreaSideFactor;
+    Node::bindValueEditorForMode();
 
-    return circleBounds.withSizeKeepingCentre(side, side);
+    if (mode != NodeDisplayMode::Pitch || ! nodeValueTree.isValid()) {
+        return;
+    }
+
+    auto offsetFormat = std::make_unique<NumberFormat>(minimumPitchOffset, maximumPitchOffset);
+
+    offsetFormat->showsPositiveSign = true;
+
+    nodeValueEditor.setFormat(std::move(offsetFormat));
+    nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::ModAmount);
+
+    nodeValueEditor.editable = true;
 }
 
 bool Modulator::hitTest(int x, int y)
@@ -38,24 +48,6 @@ bool Modulator::hitTest(int x, int y)
     }
 
     return false;
-}
-
-void Modulator::bindValueEditorForMode()
-{
-    Node::bindValueEditorForMode();
-
-    if (mode != NodeDisplayMode::Pitch || ! nodeValueTree.isValid()) {
-        return;
-    }
-
-    auto offsetFormat = std::make_unique<NumberFormat>(minimumPitchOffset, maximumPitchOffset);
-
-    offsetFormat->showsPositiveSign = true;
-
-    nodeValueEditor.setFormat(std::move(offsetFormat));
-    nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::ModAmount);
-
-    nodeValueEditor.editable = true;
 }
 
 float Modulator::getBodyExtent(juce::Point<float> approachDirection) const
@@ -76,4 +68,12 @@ float Modulator::getBodyExtent(juce::Point<float> approachDirection) const
     }
 
     return std::max(0.0f, exit);
+}
+
+juce::Rectangle<float> Modulator::getSquareBounds() const
+{
+    const auto  circleBounds = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
+    const float side         = circleBounds.getWidth() * equalAreaSideFactor;
+
+    return circleBounds.withSizeKeepingCentre(side, side);
 }

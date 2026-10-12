@@ -94,7 +94,11 @@
           "set": {
             "mode": "code"
           }
-        }
+        },
+        "checks": [
+          "design-context",
+          "code-protocol"
+        ]
       }
     },
     "skip": {
@@ -171,8 +175,16 @@
         "effects": {
           "set": {
             "mode": "deep"
-          }
-        }
+          },
+          "trees": [
+            "change_surface",
+            "change_area"
+          ]
+        },
+        "checks": [
+          "design-context",
+          "code-protocol"
+        ]
       }
     },
     "change": {

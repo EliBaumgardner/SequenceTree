@@ -8,6 +8,11 @@ class ArrowAnimation
 {
 public:
 
+    void startTrail  (int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot, TrailSource source);
+    void resumeTrails();
+
+    bool advance(double frameSec);
+
     struct Trail
     {
         float        progress   = 0.0f;
@@ -18,12 +23,6 @@ public:
         bool         oneShot    = false;
         TrailSource  source     = TrailSource::Live;
     };
-
-    void startTrail(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot,
-                    TrailSource source);
-
-    void resumeTrails();
-    bool advance(double frameSec);
 
     static constexpr float snapSpringRateHz    = 60.0f;
     static constexpr float snapSpringStiffness = 0.20f;
@@ -36,9 +35,11 @@ public:
 
     float snapProgress = 1.0f;
     float snapVelocity = 0.0f;
-    float alpha        = 1.0f;
-    float alphaTarget  = 1.0f;
-    float rulerFade    = 0.0f;
+
+    float alpha       = 1.0f;
+    float alphaTarget = 1.0f;
+
+    float rulerFade = 0.0f;
 
     double lastFrameSec = 0.0;
 
@@ -49,8 +50,9 @@ public:
 
 private:
 
-    bool advanceSnap(float elapsedSec);
-    bool snapSettled();
+    bool advanceSnap  (float elapsedSec);
+    bool advanceHover (float elapsedSec);
     bool advanceTrails();
-    bool advanceHover(float elapsedSec);
+
+    bool snapSettled();
 };

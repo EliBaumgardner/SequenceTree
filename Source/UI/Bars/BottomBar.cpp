@@ -127,6 +127,24 @@ void BottomBar::resized()
     countsField.setBounds(quaverPaneBounds);
 }
 
+void BottomBar::applyDisplayMode(NodeDisplayMode mode)
+{
+    switch (mode) {
+        case NodeDisplayMode::Pitch:    paintPanel.setPaintMode(ValueField::PaintLayer::Pitch);    break;
+        case NodeDisplayMode::Velocity: paintPanel.setPaintMode(ValueField::PaintLayer::Velocity); break;
+        default: break;
+    }
+}
+
+int BottomBar::narrowestWidth() const
+{
+    const auto bounds = getContentBounds();
+    const int  height = bounds.getHeight();
+
+    return getWidth() - bounds.getWidth() + paintPanelWidth + bindPane.idealWidth(height) + toolPane.idealWidth(height) + ornamentPane.idealWidth(height)
+           + quaverPaneWidth + contentSpacing * 4;
+}
+
 void BottomBar::configureOrnamentButton()
 {
     ornamentButton = &ornamentPane.addButton(nullptr, "Ornaments", [this]() {
@@ -160,6 +178,19 @@ void BottomBar::configureOrnamentButton()
 
         lookAndFeel.drawOrnamentSymbol(graphics, glyphArea.withSizeKeepingCentre(glyphSide, glyphSide), symbol);
     };
+}
+
+void BottomBar::showActiveOrnamentName()
+{
+    const juce::String    activeUid = ornamentLibraries.libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString();
+    const juce::ValueTree active    = ornamentLibraries.findOrnament(activeUid);
+    juce::String          tooltip   = "Ornaments";
+
+    if (active.isValid()) {
+        tooltip = "Ornaments - " + active.getProperty(ValueTreeIdentifiers::OrnamentName).toString();
+    }
+
+    ornamentButton->setTooltip(tooltip);
 }
 
 void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
@@ -239,37 +270,6 @@ void BottomBar::showQuaverMenu()
         }); }, true, nodeCanvas.quaverRepeat);
 
     menu.show(*quaverTool);
-}
-
-void BottomBar::showActiveOrnamentName()
-{
-    const juce::String    activeUid = ornamentLibraries.libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString();
-    const juce::ValueTree active    = ornamentLibraries.findOrnament(activeUid);
-    juce::String          tooltip   = "Ornaments";
-
-    if (active.isValid()) {
-        tooltip = "Ornaments - " + active.getProperty(ValueTreeIdentifiers::OrnamentName).toString();
-    }
-
-    ornamentButton->setTooltip(tooltip);
-}
-
-void BottomBar::applyDisplayMode(NodeDisplayMode mode)
-{
-    switch (mode) {
-        case NodeDisplayMode::Pitch:    paintPanel.setPaintMode(ValueField::PaintLayer::Pitch);    break;
-        case NodeDisplayMode::Velocity: paintPanel.setPaintMode(ValueField::PaintLayer::Velocity); break;
-        default: break;
-    }
-}
-
-int BottomBar::narrowestWidth() const
-{
-    const auto bounds = getContentBounds();
-    const int  height = bounds.getHeight();
-
-    return getWidth() - bounds.getWidth() + paintPanelWidth + bindPane.idealWidth(height) + toolPane.idealWidth(height) + ornamentPane.idealWidth(height)
-           + quaverPaneWidth + contentSpacing * 4;
 }
 
 void BottomBar::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)

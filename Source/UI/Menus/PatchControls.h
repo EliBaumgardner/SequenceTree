@@ -15,12 +15,13 @@ public:
 
 private:
 
-    enum class ResetAnswer { Cancel = 0, Yes = 1, No = 2 };
-
     void chooseFileToOpen();
-    void confirmReset();
     void chooseFileToSave();
-    void resetPatch();
+
+    void confirmReset();
+    void resetPatch  ();
+
+    enum class ResetAnswer { Cancel = 0, Yes = 1, No = 2 };
 
     juce::AudioProcessor& processor;
     juce::File            patchFolder;

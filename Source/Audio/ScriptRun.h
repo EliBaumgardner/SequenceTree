@@ -25,12 +25,18 @@ public:
 
     virtual ~ScriptHost() = default;
 
-    virtual int  advance(int steps) = 0;
-    virtual void playNote(const ScriptNote& note) = 0;
+    virtual int  advance     (int steps) = 0;
     virtual int  noteDuration(int nodeId) = 0;
+    virtual void playNote    (const ScriptNote& note) = 0;
 };
 
 using ScriptMembers = std::array<double, RTScript::maxMembers>;
+
+struct ScriptGlobals
+{
+    ScriptMembers   values {};
+    const RTScript* script = nullptr;
+};
 
 struct ScriptRunContext
 {
@@ -49,6 +55,8 @@ struct ScriptRunContext
 
     ScriptWrites writes = ScriptWrites::Commit;
     ScriptHost*  host   = nullptr;
+
+    ScriptGlobals* globals = nullptr;
 };
 
 class ScriptRun
@@ -61,21 +69,7 @@ public:
 
 private:
 
-    enum class Progress { Running, Returned, Faulted };
-
-    struct Frame
-    {
-        int returnAddress = -1;
-        int localBase     = 0;
-        int stackBase     = 0;
-    };
-
-    struct TrialWrite
-    {
-        NodeStateSlot slot   = NodeStateSlot::Count;
-        int           nodeId = -1;
-        int           value  = 0;
-    };
+    enum class Progress;
 
     bool enterFunction(int functionIndex, int returnAddress, int& programCounter);
 
@@ -99,6 +93,22 @@ private:
     static double realArithmetic(ScriptOpcode opcode, double left, double right);
     static int    arithmetic    (ScriptOpcode opcode, int left, int right);
 
+    enum class Progress { Running, Returned, Faulted };
+
+    struct Frame
+    {
+        int returnAddress = -1;
+        int localBase     = 0;
+        int stackBase     = 0;
+    };
+
+    struct TrialWrite
+    {
+        NodeStateSlot slot   = NodeStateSlot::Count;
+        int           nodeId = -1;
+        int           value  = 0;
+    };
+
     static constexpr int stackCapacity      = RTScript::maxStack * RTScript::maxCallDepth;
     static constexpr int localCapacity      = RTScript::maxLocals * RTScript::maxCallDepth;
     static constexpr int trialWriteCapacity = 64;
@@ -106,7 +116,9 @@ private:
     ScriptRunContext context;
 
     ScriptMembers  trialMembers {};
+    ScriptMembers  trialGlobals {};
     ScriptMembers* memberValues = nullptr;
+    ScriptMembers* globalValues = nullptr;
 
     std::array<double, stackCapacity>          stack {};
     std::array<double, localCapacity>          locals {};

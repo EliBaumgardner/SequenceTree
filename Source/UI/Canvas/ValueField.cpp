@@ -24,6 +24,73 @@ void ValueField::setActivePaintLayer(PaintLayer layer)
     nodeCanvas.repaint();
 }
 
+void ValueField::updateBrushCursor()
+{
+    if (!nodeCanvas.paintMode) {
+        return;
+    }
+
+    const int      cursorSize = juce::jmax(1, static_cast<int>(brushRadius * viewZoom * 2.0f));
+    const int      hotspot    = cursorSize / 2;
+    juce::Image    cursorImage(juce::Image::ARGB, cursorSize, cursorSize, true);
+    juce::Graphics cursorGraphics(cursorImage);
+
+    cursorGraphics.setColour(juce::Colours::black);
+    cursorGraphics.drawEllipse(cursorImage.getBounds().toFloat().reduced(1.0f), 1.0f);
+
+    nodeCanvas.setMouseCursor(juce::MouseCursor(cursorImage, hotspot, hotspot));
+}
+
+void ValueField::refresh()
+{
+    if (!nodeCanvas.paintMode) {
+        return;
+    }
+
+    render();
+
+    nodeCanvas.repaint();
+}
+
+void ValueField::paintStroke(juce::Point<float> canvasPosition, bool isStart, bool erase)
+{
+    if (isStart) {
+        brushStroke = BrushStroke::Painting;
+
+        if (erase) {
+            brushStroke = BrushStroke::Erasing;
+        }
+
+        ensurePaintBuffers();
+
+        std::ranges::fill(strokeMask, 0.0f);
+
+        seedStrokeDensityFromNodes();
+
+        strokePreviousPoint = canvasPosition;
+
+        startTimerHz(dwellTimerHz);
+    }
+
+    brushCurrentPoint = canvasPosition;
+
+    accumulateStroke(strokePreviousPoint, canvasPosition);
+    applyPaintToNodes(strokePreviousPoint, canvasPosition);
+
+    strokePreviousPoint = canvasPosition;
+}
+
+void ValueField::endStroke()
+{
+    if (brushStroke == BrushStroke::Idle) {
+        return;
+    }
+
+    brushStroke = BrushStroke::Idle;
+
+    stopTimer();
+}
+
 void ValueField::render()
 {
     const int canvasWidth  = nodeCanvas.getWidth();
@@ -118,144 +185,6 @@ void ValueField::accumulateNodeGlow(int fieldWidth, int fieldHeight)
                 weightedSum[column]  += weight * valueFactor;
                 totalWeight[column]  += weight;
                 coverageProd[column] *= (1.0f - weight);
-            }
-        }
-    }
-}
-
-juce::Identifier ValueField::paintLayerValueId() const
-{
-    switch (activePaintLayer) {
-        case PaintLayer::Duration: return ValueTreeIdentifiers::MidiDuration;
-        case PaintLayer::Velocity: return ValueTreeIdentifiers::MidiVelocity;
-        case PaintLayer::Pitch:    return ValueTreeIdentifiers::MidiPitch;
-    }
-
-    return ValueTreeIdentifiers::MidiPitch;
-}
-
-juce::Colour ValueField::mapFieldColour(float factor) const
-{
-    const float boosted    = factor * 1.6f;
-    const float brightness = juce::jlimit(0.0f, 1.0f, boosted);
-    const float whiteMix   = juce::jlimit(0.0f, 0.4f, boosted - 1.0f);
-
-    return brushColour.withMultipliedBrightness(brightness).interpolatedWith(juce::Colours::white, whiteMix);
-}
-
-void ValueField::updateBrushCursor()
-{
-    if (!nodeCanvas.paintMode) {
-        return;
-    }
-
-    const int      cursorSize = juce::jmax(1, static_cast<int>(brushRadius * viewZoom * 2.0f));
-    const int      hotspot    = cursorSize / 2;
-    juce::Image    cursorImage(juce::Image::ARGB, cursorSize, cursorSize, true);
-    juce::Graphics cursorGraphics(cursorImage);
-
-    cursorGraphics.setColour(juce::Colours::black);
-    cursorGraphics.drawEllipse(cursorImage.getBounds().toFloat().reduced(1.0f), 1.0f);
-
-    nodeCanvas.setMouseCursor(juce::MouseCursor(cursorImage, hotspot, hotspot));
-}
-
-void ValueField::refresh()
-{
-    if (!nodeCanvas.paintMode) {
-        return;
-    }
-
-    render();
-
-    nodeCanvas.repaint();
-}
-
-void ValueField::paintStroke(juce::Point<float> canvasPosition, bool isStart, bool erase)
-{
-    if (isStart) {
-        brushStroke = BrushStroke::Painting;
-
-        if (erase) {
-            brushStroke = BrushStroke::Erasing;
-        }
-
-        ensurePaintBuffers();
-
-        std::ranges::fill(strokeMask, 0.0f);
-
-        seedStrokeDensityFromNodes();
-
-        strokePreviousPoint = canvasPosition;
-
-        startTimerHz(dwellTimerHz);
-    }
-
-    brushCurrentPoint = canvasPosition;
-
-    accumulateStroke(strokePreviousPoint, canvasPosition);
-    applyPaintToNodes(strokePreviousPoint, canvasPosition);
-
-    strokePreviousPoint = canvasPosition;
-}
-
-void ValueField::ensurePaintBuffers()
-{
-    const size_t        pixelCount = static_cast<size_t>(nodeCanvas.getWidth()) * static_cast<size_t>(nodeCanvas.getHeight());
-    std::vector<float>& density    = paintDensity[static_cast<size_t>(activePaintLayer)];
-
-    if (density.size() != pixelCount) {
-        density.assign(pixelCount, 0.0f);
-    }
-
-    if (strokeMask.size() != pixelCount) {
-        strokeMask.assign(pixelCount, 0.0f);
-    }
-}
-
-void ValueField::seedStrokeDensityFromNodes()
-{
-    const int canvasWidth  = nodeCanvas.getWidth();
-    const int canvasHeight = nodeCanvas.getHeight();
-
-    if (canvasWidth <= 0 || canvasHeight <= 0) {
-        return;
-    }
-
-    const juce::Identifier valueId = paintLayerValueId();
-    std::vector<float>&    density = paintDensity[static_cast<size_t>(activePaintLayer)];
-
-    for (auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
-        if (node == nullptr) {
-            continue;
-        }
-
-        const juce::ValueTree note = nodeCanvas.graphState.getMidiNotes(nodeId).getChild(0);
-
-        if (!note.isValid()) {
-            continue;
-        }
-
-        const float seedDensity  = juce::jlimit(0.0f, 1.0f, static_cast<int>(note.getProperty(valueId)) / maximumMidiValue);
-        const auto  nodeCentre   = node->getNodeCentre().toFloat().transformedBy(nodeCanvas.viewTransform);
-        const float nodeRadius   = node->getVisualRadius() * viewZoom;
-        const float radiusSquare = nodeRadius * nodeRadius;
-        const int   firstColumn  = juce::jmax(0,                static_cast<int>(std::floor(nodeCentre.x - nodeRadius)));
-        const int   lastColumn   = juce::jmin(canvasWidth - 1,  static_cast<int>(std::ceil (nodeCentre.x + nodeRadius)));
-        const int   firstRow     = juce::jmax(0,                static_cast<int>(std::floor(nodeCentre.y - nodeRadius)));
-        const int   lastRow      = juce::jmin(canvasHeight - 1, static_cast<int>(std::ceil (nodeCentre.y + nodeRadius)));
-
-        for (int row = firstRow; row <= lastRow; ++row) {
-            const float offsetY = static_cast<float>(row) - nodeCentre.y;
-
-            for (int column = firstColumn; column <= lastColumn; ++column) {
-                const float offsetX = static_cast<float>(column) - nodeCentre.x;
-
-                if (offsetX * offsetX + offsetY * offsetY > radiusSquare) {
-                    continue;
-                }
-
-                density[static_cast<size_t>(row) * static_cast<size_t>(canvasWidth) + static_cast<size_t>(column)] = seedDensity;
             }
         }
     }
@@ -397,6 +326,99 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
     }
 }
 
+void ValueField::ensurePaintBuffers()
+{
+    const size_t        pixelCount = static_cast<size_t>(nodeCanvas.getWidth()) * static_cast<size_t>(nodeCanvas.getHeight());
+    std::vector<float>& density    = paintDensity[static_cast<size_t>(activePaintLayer)];
+
+    if (density.size() != pixelCount) {
+        density.assign(pixelCount, 0.0f);
+    }
+
+    if (strokeMask.size() != pixelCount) {
+        strokeMask.assign(pixelCount, 0.0f);
+    }
+}
+
+void ValueField::seedStrokeDensityFromNodes()
+{
+    const int canvasWidth  = nodeCanvas.getWidth();
+    const int canvasHeight = nodeCanvas.getHeight();
+
+    if (canvasWidth <= 0 || canvasHeight <= 0) {
+        return;
+    }
+
+    const juce::Identifier valueId = paintLayerValueId();
+    std::vector<float>&    density = paintDensity[static_cast<size_t>(activePaintLayer)];
+
+    for (auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
+        if (node == nullptr) {
+            continue;
+        }
+
+        const juce::ValueTree note = nodeCanvas.graphState.getMidiNotes(nodeId).getChild(0);
+
+        if (!note.isValid()) {
+            continue;
+        }
+
+        const float seedDensity  = juce::jlimit(0.0f, 1.0f, static_cast<int>(note.getProperty(valueId)) / maximumMidiValue);
+        const auto  nodeCentre   = node->getNodeCentre().toFloat().transformedBy(nodeCanvas.viewTransform);
+        const float nodeRadius   = node->getVisualRadius() * viewZoom;
+        const float radiusSquare = nodeRadius * nodeRadius;
+        const int   firstColumn  = juce::jmax(0,                static_cast<int>(std::floor(nodeCentre.x - nodeRadius)));
+        const int   lastColumn   = juce::jmin(canvasWidth - 1,  static_cast<int>(std::ceil (nodeCentre.x + nodeRadius)));
+        const int   firstRow     = juce::jmax(0,                static_cast<int>(std::floor(nodeCentre.y - nodeRadius)));
+        const int   lastRow      = juce::jmin(canvasHeight - 1, static_cast<int>(std::ceil (nodeCentre.y + nodeRadius)));
+
+        for (int row = firstRow; row <= lastRow; ++row) {
+            const float offsetY = static_cast<float>(row) - nodeCentre.y;
+
+            for (int column = firstColumn; column <= lastColumn; ++column) {
+                const float offsetX = static_cast<float>(column) - nodeCentre.x;
+
+                if (offsetX * offsetX + offsetY * offsetY > radiusSquare) {
+                    continue;
+                }
+
+                density[static_cast<size_t>(row) * static_cast<size_t>(canvasWidth) + static_cast<size_t>(column)] = seedDensity;
+            }
+        }
+    }
+}
+
+void ValueField::timerCallback()
+{
+    if (brushStroke == BrushStroke::Idle) {
+        stopTimer();
+        return;
+    }
+
+    accumulateStroke(brushCurrentPoint, brushCurrentPoint, true);
+    applyPaintToNodes(brushCurrentPoint, brushCurrentPoint);
+}
+
+juce::Identifier ValueField::paintLayerValueId() const
+{
+    switch (activePaintLayer) {
+        case PaintLayer::Duration: return ValueTreeIdentifiers::MidiDuration;
+        case PaintLayer::Velocity: return ValueTreeIdentifiers::MidiVelocity;
+        case PaintLayer::Pitch:    return ValueTreeIdentifiers::MidiPitch;
+    }
+
+    return ValueTreeIdentifiers::MidiPitch;
+}
+
+juce::Colour ValueField::mapFieldColour(float factor) const
+{
+    const float boosted    = factor * 1.6f;
+    const float brightness = juce::jlimit(0.0f, 1.0f, boosted);
+    const float whiteMix   = juce::jlimit(0.0f, 0.4f, boosted - 1.0f);
+
+    return brushColour.withMultipliedBrightness(brightness).interpolatedWith(juce::Colours::white, whiteMix);
+}
+
 std::optional<float> ValueField::densityUnderNode(const Node& node) const
 {
     const int                 canvasWidth   = nodeCanvas.getWidth();
@@ -445,26 +467,4 @@ std::optional<float> ValueField::densityUnderNode(const Node& node) const
     }
 
     return sampled;
-}
-
-void ValueField::endStroke()
-{
-    if (brushStroke == BrushStroke::Idle) {
-        return;
-    }
-
-    brushStroke = BrushStroke::Idle;
-
-    stopTimer();
-}
-
-void ValueField::timerCallback()
-{
-    if (brushStroke == BrushStroke::Idle) {
-        stopTimer();
-        return;
-    }
-
-    accumulateStroke(brushCurrentPoint, brushCurrentPoint, true);
-    applyPaintToNodes(brushCurrentPoint, brushCurrentPoint);
 }

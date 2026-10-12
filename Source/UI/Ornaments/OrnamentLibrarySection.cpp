@@ -79,37 +79,6 @@ void OrnamentLibrarySection::resized()
     }
 }
 
-void OrnamentLibrarySection::toggleFold()
-{
-    if (fold == Fold::Open) {
-        fold            = Fold::Closed;
-        foldButton.icon = &CustomLookAndFeel::drawDisplayArrowIcon;
-    }
-    else {
-        fold            = Fold::Open;
-        foldButton.icon = &CustomLookAndFeel::drawCollapseIcon;
-    }
-
-    body.setVisible(fold == Fold::Open);
-
-    foldButton.repaint();
-
-    if (onFoldChanged) {
-        onFoldChanged();
-    }
-}
-
-void OrnamentLibrarySection::addOrnament()
-{
-    juce::ValueTree ornament;
-
-    undoManager.beginNewTransaction();
-
-    ornament = ornamentLibraries.addOrnament(library, &undoManager);
-
-    ornamentLibraries.libraries.setProperty(ValueTreeIdentifiers::ActiveOrnamentUid, ornament.getProperty(ValueTreeIdentifiers::OrnamentUid), nullptr);
-}
-
 void OrnamentLibrarySection::syncTiles()
 {
     std::vector<std::unique_ptr<OrnamentTile>> synced;
@@ -142,6 +111,49 @@ void OrnamentLibrarySection::mouseDown(const juce::MouseEvent& event)
     }
 }
 
+int OrnamentLibrarySection::heightForWidth(int width) const
+{
+    const int columns = juce::jmax(1, (width - tileGap) / (OrnamentTile::tileWidth + tileGap));
+    const int rows    = (static_cast<int>(tiles.size()) + columns) / columns;
+
+    if (fold == Fold::Closed) {
+        return headerHeight;
+    }
+
+    return headerHeight + tileGap + rows * (OrnamentTile::tileHeight + tileGap);
+}
+
+void OrnamentLibrarySection::toggleFold()
+{
+    if (fold == Fold::Open) {
+        fold            = Fold::Closed;
+        foldButton.icon = &CustomLookAndFeel::drawDisplayArrowIcon;
+    }
+    else {
+        fold            = Fold::Open;
+        foldButton.icon = &CustomLookAndFeel::drawCollapseIcon;
+    }
+
+    body.setVisible(fold == Fold::Open);
+
+    foldButton.repaint();
+
+    if (onFoldChanged) {
+        onFoldChanged();
+    }
+}
+
+void OrnamentLibrarySection::addOrnament()
+{
+    juce::ValueTree ornament;
+
+    undoManager.beginNewTransaction();
+
+    ornament = ornamentLibraries.addOrnament(library, &undoManager);
+
+    ornamentLibraries.libraries.setProperty(ValueTreeIdentifiers::ActiveOrnamentUid, ornament.getProperty(ValueTreeIdentifiers::OrnamentUid), nullptr);
+}
+
 void OrnamentLibrarySection::showMenu()
 {
     const auto  libraryFolder = ornamentLibraries.libraryFolders.find(library.getProperty(ValueTreeIdentifiers::LibraryUid).toString());
@@ -171,16 +183,4 @@ void OrnamentLibrarySection::confirmRemove()
             libraries.removeLibrary(uid, undoManager);
         }
     });
-}
-
-int OrnamentLibrarySection::heightForWidth(int width) const
-{
-    const int columns = juce::jmax(1, (width - tileGap) / (OrnamentTile::tileWidth + tileGap));
-    const int rows    = (static_cast<int>(tiles.size()) + columns) / columns;
-
-    if (fold == Fold::Closed) {
-        return headerHeight;
-    }
-
-    return headerHeight + tileGap + rows * (OrnamentTile::tileHeight + tileGap);
 }

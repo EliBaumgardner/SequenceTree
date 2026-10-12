@@ -99,27 +99,6 @@ void TraversalRulesWindow::resized()
     }
 }
 
-void TraversalRulesWindow::setPanelWidth(int newWidth)
-{
-    const int clamped = clampPanelWidth(newWidth);
-
-    if (clamped == panelWidth) {
-        return;
-    }
-
-    panelWidth = clamped;
-
-    resized();
-}
-
-int TraversalRulesWindow::clampPanelWidth(int newWidth) const
-{
-    const int available = getWidth() - minContentWidth;
-    const int maxWidth  = juce::jmax(RulesPanel::minPanelWidth, available);
-
-    return juce::jlimit(RulesPanel::minPanelWidth, maxWidth, newWidth);
-}
-
 void TraversalRulesWindow::setActivePage(int id)
 {
     const auto match = filePages.find(id);
@@ -150,61 +129,6 @@ void TraversalRulesWindow::setActivePage(int id)
     compileViewedPage();
 }
 
-void TraversalRulesWindow::compileViewedPage()
-{
-    if (activePage == nullptr || viewedRuleId < 0) {
-        setStatus({}, false);
-
-        return;
-    }
-
-    TraversalRuleState& state            = traversalRuleState;
-    const juce::String  source           = activePage->getDocument().getAllContent();
-    ScriptCompileResult result           = compileTraversalScript(source.toStdString());
-    const bool          isLiveRule       = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == viewedRuleId;
-    const juce::String  instructionCount = juce::String(static_cast<int>(result.script.instructions.size()));
-
-    state.setRuleSource(viewedRuleId, source, nullptr);
-
-    activePage->errorLines.clear();
-
-    for (const ScriptDiagnostic& diagnostic : result.diagnostics) {
-        activePage->errorLines.push_back(diagnostic.line - 1);
-    }
-
-    activePage->repaint();
-
-    if (!result.succeeded()) {
-        const ScriptDiagnostic& first = result.diagnostics.front();
-
-        setStatus(juce::String(first.line) + ":" + juce::String(first.column) + "  " + juce::String(first.message), true);
-
-        return;
-    }
-
-    if (!isLiveRule) {
-        setStatus(instructionCount + " instructions - press play to make this the live rule", false);
-
-        return;
-    }
-
-    snapshots.publishScript(std::make_shared<RTScript>(std::move(result.script)));
-
-    setStatus(instructionCount + " instructions - live", false);
-}
-
-void TraversalRulesWindow::setStatus(const juce::String& text, bool isError)
-{
-    if (statusText == text && statusIsError == isError) {
-        return;
-    }
-
-    statusText    = text;
-    statusIsError = isError;
-
-    repaint(getLocalBounds().removeFromBottom(statusBarHeight));
-}
-
 void TraversalRulesWindow::addRule()
 {
     const juce::ValueTree rule = traversalRuleState.addRule(nullptr);
@@ -212,6 +136,40 @@ void TraversalRulesWindow::addRule()
     syncWithRuleState();
 
     setActivePage(rule.getProperty(ValueTreeIdentifiers::Id));
+}
+
+void TraversalRulesWindow::removeRule(int ruleId)
+{
+    TraversalRuleState& state       = traversalRuleState;
+    const bool          wasLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == ruleId;
+
+    state.removeRule(ruleId, nullptr);
+
+    if (state.rules.getNumChildren() == 0) {
+        addRule();
+
+        state.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
+    }
+    else {
+        syncWithRuleState();
+    }
+
+    if (wasLiveRule) {
+        snapshots.publishActiveTraversalRule();
+    }
+
+    compileViewedPage();
+}
+
+void TraversalRulesWindow::makeViewedRuleActive()
+{
+    if (viewedRuleId < 0) {
+        return;
+    }
+
+    traversalRuleState.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
+
+    compileViewedPage();
 }
 
 void TraversalRulesWindow::syncWithRuleState()
@@ -289,38 +247,72 @@ void TraversalRulesWindow::createPage(int ruleId, const juce::String& source)
     filePages.emplace(ruleId, std::move(page));
 }
 
-void TraversalRulesWindow::makeViewedRuleActive()
+void TraversalRulesWindow::compileViewedPage()
 {
-    if (viewedRuleId < 0) {
+    if (activePage == nullptr || viewedRuleId < 0) {
+        setStatus({}, false);
+
         return;
     }
 
-    traversalRuleState.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
+    TraversalRuleState& state            = traversalRuleState;
+    const juce::String  source           = activePage->getDocument().getAllContent();
+    ScriptCompileResult result           = compileTraversalScript(source.toStdString());
+    const bool          isLiveRule       = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == viewedRuleId;
+    const juce::String  instructionCount = juce::String(static_cast<int>(result.script.instructions.size()));
 
-    compileViewedPage();
+    state.setRuleSource(viewedRuleId, source, nullptr);
+
+    activePage->errorLines.clear();
+
+    for (const ScriptDiagnostic& diagnostic : result.diagnostics) {
+        activePage->errorLines.push_back(diagnostic.line - 1);
+    }
+
+    activePage->repaint();
+
+    if (!result.succeeded()) {
+        const ScriptDiagnostic& first = result.diagnostics.front();
+
+        setStatus(juce::String(first.line) + ":" + juce::String(first.column) + "  " + juce::String(first.message), true);
+
+        return;
+    }
+
+    if (!isLiveRule) {
+        setStatus(instructionCount + " instructions - press play to make this the live rule", false);
+
+        return;
+    }
+
+    snapshots.publishScript(std::make_shared<RTScript>(std::move(result.script)));
+
+    setStatus(instructionCount + " instructions - live", false);
 }
 
-void TraversalRulesWindow::removeRule(int ruleId)
+void TraversalRulesWindow::setStatus(const juce::String& text, bool isError)
 {
-    TraversalRuleState& state       = traversalRuleState;
-    const bool          wasLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == ruleId;
-
-    state.removeRule(ruleId, nullptr);
-
-    if (state.rules.getNumChildren() == 0) {
-        addRule();
-
-        state.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
-    }
-    else {
-        syncWithRuleState();
+    if (statusText == text && statusIsError == isError) {
+        return;
     }
 
-    if (wasLiveRule) {
-        snapshots.publishActiveTraversalRule();
+    statusText    = text;
+    statusIsError = isError;
+
+    repaint(getLocalBounds().removeFromBottom(statusBarHeight));
+}
+
+void TraversalRulesWindow::setPanelWidth(int newWidth)
+{
+    const int clamped = clampPanelWidth(newWidth);
+
+    if (clamped == panelWidth) {
+        return;
     }
 
-    compileViewedPage();
+    panelWidth = clamped;
+
+    resized();
 }
 
 void TraversalRulesWindow::timerCallback()
@@ -328,6 +320,11 @@ void TraversalRulesWindow::timerCallback()
     stopTimer();
 
     compileViewedPage();
+}
+
+void TraversalRulesWindow::handleAsyncUpdate()
+{
+    syncWithRuleState();
 }
 
 void TraversalRulesWindow::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
@@ -347,9 +344,12 @@ void TraversalRulesWindow::valueTreePropertyChanged(juce::ValueTree& tree, const
     }
 }
 
-void TraversalRulesWindow::handleAsyncUpdate()
+int TraversalRulesWindow::clampPanelWidth(int newWidth) const
 {
-    syncWithRuleState();
+    const int available = getWidth() - minContentWidth;
+    const int maxWidth  = juce::jmax(RulesPanel::minPanelWidth, available);
+
+    return juce::jlimit(RulesPanel::minPanelWidth, maxWidth, newWidth);
 }
 
 TraversalRulesWindow::RulesTitlebar::RulesTitlebar()

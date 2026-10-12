@@ -72,7 +72,12 @@
           "set": {
             "size": "small"
           }
-        }
+        },
+        "checks": [
+          "design-gate",
+          "readability-gate",
+          "lookandfeel-units"
+        ]
       }
     },
     "large": {
@@ -90,8 +95,17 @@
         "effects": {
           "set": {
             "size": "large"
-          }
-        }
+          },
+          "trees": [
+            "change_surface",
+            "change_area"
+          ]
+        },
+        "checks": [
+          "design-gate",
+          "readability-gate",
+          "lookandfeel-units"
+        ]
       }
     }
   },

@@ -58,47 +58,67 @@ public:
 
 private:
 
-    void declareMembers  (const ClassDeclaration& declaration);
-    const LocalBinding*      findMember  (const std::string& name) const;
+    void declareMembers  (std::span<const MemberDeclaration> declarations, std::vector<LocalBinding>& bindings, std::vector<double>& defaults);
     void declareFunctions(const ClassDeclaration& declaration);
-    const FunctionSignature* findFunction(const std::string& name) const;
-    void emitFunction    (const FunctionDeclaration& declaration, const FunctionSignature& signature);
-    int here() const;
+
+    void emitFunction(const FunctionDeclaration& declaration, const FunctionSignature& signature);
+
+    void emitSequence(std::span<const StatementPtr> statements);
+    void emitBlock   (std::span<const StatementPtr> body);
+
+    void emitStatement  (const Statement& statement);
+    void emitDeclare    (const Statement& statement);
+    void emitAssign     (const Statement& statement);
+    void emitAssignField(const Statement& statement);
+
+    void emitIf   (const Statement& statement);
+    void emitFor  (const Statement& statement);
+    void emitWhile(const Statement& statement);
+
+    void emitBreak   (const Statement& statement);
+    void emitContinue(const Statement& statement);
+    void emitReturn  (const Statement& statement);
+
+    void openScope ();
+    void closeScope();
+
+    void patch         (int jumpIndex, int target);
+    void patchLoopFrame(const LoopFrame& frame, int continueTarget, int exitTarget);
+
+    [[noreturn]] void fail(const std::string& message, const Expression& expression);
+    [[noreturn]] void fail(const std::string& message, const Statement& statement);
+
+    const LocalBinding*      findMember  (const std::string& name) const;
+    const LocalBinding*      findGlobal  (const std::string& name) const;
     const LocalBinding*      findLocal   (const std::string& name) const;
+    const FunctionSignature* findFunction(const std::string& name) const;
+
+    int emitInitializer(std::span<const MemberDeclaration> declarations, std::span<const LocalBinding> bindings, ScriptOpcode storeOpcode);
+
+    int emit(ScriptOpcode opcode, int operand = 0);
+    int here() const;
+
     int declareLocal(const std::string& name, ValueType type);
     int allocateSlot();
-    void emitSequence(std::span<const StatementPtr> statements);
-    void emitStatement(const Statement& statement);
-    void emitDeclare(const Statement& statement);
-    int emit(ScriptOpcode opcode, int operand = 0);
-    static int stackDelta(ScriptOpcode opcode);
+
     ValueType emitExpression(const Expression& expression);
-    ValueType emitName(const Expression& expression);
-    [[noreturn]] void fail(const std::string& message, const Expression& expression);
-    ValueType emitField(const Expression& expression);
-    const FieldEntry& nodeField(const Expression& expression);
-    ValueType emitCall(const Expression& expression);
-    bool emitConversion(ValueType from, ValueType to);
-    static ValueType commonType(ValueType left, ValueType right);
-    static ScriptNumber numberKind(ValueType type);
-    static const char* typeName(ValueType type);
-    ValueType emitUnary(const Expression& expression);
+    ValueType emitName      (const Expression& expression);
+    ValueType emitField     (const Expression& expression);
+    ValueType emitCall      (const Expression& expression);
+
+    ValueType emitUnary (const Expression& expression);
     ValueType emitBinary(const Expression& expression);
+
+    const FieldEntry& nodeField(const Expression& expression);
+
     ScriptOpcode binaryOpcode(const Expression& expression);
-    void emitAssign(const Statement& statement);
-    void emitAssignField(const Statement& statement);
-    void emitIf(const Statement& statement);
-    void emitBlock(std::span<const StatementPtr> body);
-    void openScope();
-    void closeScope();
-    void patch(int jumpIndex, int target);
-    void emitFor(const Statement& statement);
-    void patchLoopFrame(const LoopFrame& frame, int continueTarget, int exitTarget);
-    void emitWhile(const Statement& statement);
-    void emitBreak(const Statement& statement);
-    [[noreturn]] void fail(const std::string& message, const Statement& statement);
-    void emitContinue(const Statement& statement);
-    void emitReturn(const Statement& statement);
+
+    bool emitConversion(ValueType from, ValueType to);
+
+    static int          stackDelta(ScriptOpcode opcode);
+    static ValueType    commonType(ValueType left, ValueType right);
+    static ScriptNumber numberKind(ValueType type);
+    static const char*  typeName  (ValueType type);
 
     RTScript&                      script;
     std::vector<ScriptDiagnostic>& diagnostics;
@@ -106,6 +126,7 @@ private:
     std::vector<std::string>       imports;
     std::vector<LocalBinding>      locals;
     std::vector<LocalBinding>      members;
+    std::vector<LocalBinding>      globals;
     std::vector<FunctionSignature> functions;
 
     std::vector<std::size_t> scopeMarks;

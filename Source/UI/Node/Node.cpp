@@ -86,13 +86,6 @@ void Node::resized()
     subLoopLimitEditor.setBounds(nodeSquare.getX(), nodeSquare.getBottom() - editorHeight, editorWidth, editorHeight);
 }
 
-NodeVisual Node::getNodeVisual(juce::Rectangle<float> bounds) const
-{
-    return { bounds, nodeColour, activeHighlights, isHovered, isSelected, isOutlined,
-             isEncapsulationRinged, hasInnerRim, encapsulationRingColour };
-}
-
-
 void Node::incrementNodeValue(int incrementValue)
 {
     const double currentValue = static_cast<double>(nodeValueEditor.boundValue.getValue());
@@ -106,6 +99,16 @@ void Node::incrementNodeValue(int incrementValue)
 
 void Node::refreshValueDisplay()
 {
+    nodeValueEditor.repaint();
+    repaint();
+}
+
+void Node::setDisplayMode(NodeDisplayMode newMode)
+{
+    mode = newMode;
+
+    bindValueEditorForMode();
+
     nodeValueEditor.repaint();
     repaint();
 }
@@ -216,29 +219,27 @@ void Node::advancePulse(double frameSec)
     }
 }
 
-juce::Point<int> Node::getNodeCentre() const
+void Node::mouseMove(const juce::MouseEvent& event)
 {
-    return getBounds().getCentre();
+    const bool showIncrementButtons = nodeValueEditor.isVisible() && contains(event.getEventRelativeTo(this).getPosition()) && ! event.mods.isShiftDown();
+
+    upButton.setVisible(showIncrementButtons);
+    downButton.setVisible(showIncrementButtons);
 }
 
-float Node::getVisualRadius() const
+void Node::mouseExit(const juce::MouseEvent& event)
 {
-    return getHeight() * 0.5f;
+    const bool showIncrementButtons = nodeValueEditor.isVisible() && contains(event.getEventRelativeTo(this).getPosition()) && ! event.mods.isShiftDown();
+
+    upButton.setVisible(showIncrementButtons);
+    downButton.setVisible(showIncrementButtons);
 }
 
-float Node::getBodyExtent(juce::Point<float> approachDirection) const
+void Node::lookAndFeelChanged()
 {
-    const juce::Rectangle<float> circle    = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
-    const float                  radius    = std::max(0.0f, circle.getWidth() * 0.5f);
-    const juce::Point<float>     toCircle  = circle.getCentre() - (getNodeCentre() - getPosition()).toFloat();
-    const float                  along     = approachDirection.getDotProduct(toCircle);
-    const float                  clearance = along * along - toCircle.getDistanceSquaredFromOrigin() + radius * radius;
+    const juce::String defaultColourText = CustomLookAndFeel::get(*this).defaultNodeColour.toString();
 
-    if (clearance <= 0.0f) {
-        return radius;
-    }
-
-    return std::max(0.0f, std::sqrt(clearance) - along);
+    nodeColour = juce::Colour::fromString(nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, defaultColourText).toString());
 }
 
 void Node::bindToTree()
@@ -316,39 +317,6 @@ void Node::bindValueEditorForMode()
     }
 }
 
-void Node::setDisplayMode(NodeDisplayMode newMode)
-{
-    mode = newMode;
-
-    bindValueEditorForMode();
-
-    nodeValueEditor.repaint();
-    repaint();
-}
-
-void Node::mouseMove(const juce::MouseEvent& event)
-{
-    const bool showIncrementButtons = nodeValueEditor.isVisible() && contains(event.getEventRelativeTo(this).getPosition()) && ! event.mods.isShiftDown();
-
-    upButton.setVisible(showIncrementButtons);
-    downButton.setVisible(showIncrementButtons);
-}
-
-void Node::mouseExit(const juce::MouseEvent& event)
-{
-    const bool showIncrementButtons = nodeValueEditor.isVisible() && contains(event.getEventRelativeTo(this).getPosition()) && ! event.mods.isShiftDown();
-
-    upButton.setVisible(showIncrementButtons);
-    downButton.setVisible(showIncrementButtons);
-}
-
-void Node::lookAndFeelChanged()
-{
-    const juce::String defaultColourText = CustomLookAndFeel::get(*this).defaultNodeColour.toString();
-
-    nodeColour = juce::Colour::fromString(nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, defaultColourText).toString());
-}
-
 void Node::respondToClick(juce::Point<int> localPoint)
 {
     for (ValueEditor* badge : { &countEditor, &switchCountEditor, &subLoopLimitEditor }) {
@@ -371,4 +339,35 @@ void Node::respondToClick(juce::Point<int> localPoint)
     if (nodeValueEditor.isVisible() && nodeValueEditor.getBounds().contains(localPoint)) {
         nodeValueEditor.beginEditing();
     }
+}
+
+juce::Point<int> Node::getNodeCentre() const
+{
+    return getBounds().getCentre();
+}
+
+float Node::getVisualRadius() const
+{
+    return getHeight() * 0.5f;
+}
+
+float Node::getBodyExtent(juce::Point<float> approachDirection) const
+{
+    const juce::Rectangle<float> circle    = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
+    const float                  radius    = std::max(0.0f, circle.getWidth() * 0.5f);
+    const juce::Point<float>     toCircle  = circle.getCentre() - (getNodeCentre() - getPosition()).toFloat();
+    const float                  along     = approachDirection.getDotProduct(toCircle);
+    const float                  clearance = along * along - toCircle.getDistanceSquaredFromOrigin() + radius * radius;
+
+    if (clearance <= 0.0f) {
+        return radius;
+    }
+
+    return std::max(0.0f, std::sqrt(clearance) - along);
+}
+
+NodeVisual Node::getNodeVisual(juce::Rectangle<float> bounds) const
+{
+    return { bounds, nodeColour, activeHighlights, isHovered, isSelected, isOutlined,
+             isEncapsulationRinged, hasInnerRim, encapsulationRingColour };
 }

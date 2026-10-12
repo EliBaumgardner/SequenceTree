@@ -10,16 +10,19 @@ class GraphState;
 class EncapsulationView
 {
 public:
+
     EncapsulationView(NodeCanvas& nodeCanvas, GraphState& graphState);
 
-    void collapse   (int encapsulatorId) const;
-    void expand     (int encapsulatorId) const;
-    void showMembers(std::span<const int> memberNodeIds) const;
+    void collapse         (int encapsulatorId) const;
+    void expand           (int encapsulatorId) const;
     void refreshMembership(int encapsulatorId) const;
-    void collapseAll() const;
-    juce::Point<int> collapsedSpanShift(int nodeId) const;
+    void collapseAll      () const;
+
+    void showMembers   (std::span<const int> memberNodeIds) const;
     void syncHighlights() const;
-    void recolourGroup(const Encapsulator& encapsulator) const;
+    void recolourGroup (const Encapsulator& encapsulator) const;
+
+    juce::Point<int> collapsedSpanShift(int nodeId) const;
 
 private:
 

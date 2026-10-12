@@ -74,285 +74,6 @@ void Arrow::resized()
     valueEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight).withCentre(getTip() - getPosition()));
 }
 
-ArrowGeometry Arrow::getGeometry(float animationProgress) const
-{
-    ArrowGeometry geometry;
-
-    if (startNode == nullptr) {
-        return geometry;
-    }
-
-    const juce::Point<float> centre = startNode->getNodeCentre().toFloat();
-    const juce::Point<float> target = getTip().toFloat();
-
-    const juce::Point<float> delta = (target - centre) * animationProgress;
-    const float length = delta.getDistanceFromOrigin();
-
-    if (length < 1.0f) {
-        return geometry;
-    }
-
-    const juce::Point<float> direction = delta / length;
-
-    juce::Point<float> start = centre;
-    juce::Point<float> tip   = centre + delta;
-
-    const bool endIsTraversalFlag = endNode != nullptr && endNode->nodeType == NodeType::TraversalFlag;
-
-    if (isDangling()) {
-        start += direction * startNode->getVisualRadius();
-    }
-    else if (endIsTraversalFlag) {
-        const float endHalf        = std::min(endNode->getWidth(), endNode->getHeight()) * 0.5f;
-        const float baseHalfHeight = (endHalf - 4.0f) * 0.7f * 0.5f;
-        tip += direction * baseHalfHeight;
-    }
-    else {
-        tip -= direction * endNode->getBodyExtent(direction);
-    }
-
-    const juce::Point<float> shaft = tip - start;
-    const float shaftLength = shaft.getDistanceFromOrigin();
-
-    geometry.centre    = centre;
-    geometry.start     = start;
-    geometry.tip       = tip;
-    geometry.direction = direction;
-    geometry.chord     = direction;
-
-    if (shaftLength > 0.0f) {
-        geometry.chord = shaft / shaftLength;
-    }
-
-    geometry.length   = length;
-    geometry.drawHead = ! endIsTraversalFlag && animationProgress > headVisibleThreshold;
-    geometry.straight = isDangling() || endIsTraversalFlag
-                      || std::abs(shaft.x) < 1.0f || std::abs(shaft.y) < 1.0f;
-    geometry.valid     = true;
-
-    if (geometry.straight) {
-        return geometry;
-    }
-
-    float sign = -1.0f;
-
-    if (shaft.x >= 0.0f) {
-        sign = 1.0f;
-    }
-
-    const juce::Point<float> perpendicular { -direction.y * curvePerpScale * sign,
-                                              direction.x * curvePerpScale * sign };
-
-    const float offset = shaftLength * curveOffsetFactor;
-
-    geometry.control1 = start + shaft * 0.33f + perpendicular * offset;
-    geometry.control2 = start + shaft * 0.67f - perpendicular * offset;
-
-    const juce::Point<float> neck       = tip - geometry.control2;
-    const float              neckLength = neck.getDistanceFromOrigin();
-
-    if (neckLength > 0.0f) {
-        geometry.direction = neck / neckLength;
-    }
-
-    return geometry;
-}
-
-juce::Point<int> Arrow::getTip() const
-{
-    if (endNode != nullptr) {
-        return endNode->getNodeCentre();
-    }
-
-    if (startNode == nullptr) {
-        return tipOffset;
-    }
-
-    return startNode->getNodeCentre() + tipOffset;
-}
-
-ArrowLabel Arrow::getLabel(const ArrowGeometry& geometry, float headLength) const
-{
-    ArrowLabel label;
-
-    if (startNode == nullptr) {
-        return label;
-    }
-
-    const juce::Point<float> delta = geometry.tip - geometry.centre;
-
-    juce::Point<float> shaftStart = geometry.centre;
-    juce::Point<float> shaftEnd   = geometry.tip;
-
-    const float length = delta.getDistanceFromOrigin();
-
-    if (length > 0.0f) {
-        const juce::Point<float> unit = delta / length;
-
-        shaftStart += unit * startNode->getVisualRadius();
-        shaftEnd   -= unit * headLength;
-    }
-
-    label.centre = (shaftStart + shaftEnd) * 0.5f;
-
-    float angle = std::atan2(delta.y, delta.x);
-
-    const float halfPi = juce::MathConstants<float>::halfPi;
-
-    while (angle > halfPi) {
-        angle -= juce::MathConstants<float>::pi;
-    }
-
-    while (angle <= -halfPi) {
-        angle += juce::MathConstants<float>::pi;
-    }
-
-    if (std::abs(delta.x) < std::abs(delta.y) * verticalLabelThreshold) {
-        angle = 0.0f;
-    }
-
-    label.angle = angle;
-
-    return label;
-}
-
-Arrow::ShaftStyle Arrow::shaftStyle() const
-{
-    if (dragging) {
-        return ShaftStyle::Ruler;
-    }
-
-    if (isGhost) {
-        return ShaftStyle::Dashed;
-    }
-
-    if (startNode == nullptr) {
-        return ShaftStyle::Solid;
-    }
-
-    if (startNode->nodeType == NodeType::TraversalFlag) {
-        return ShaftStyle::Dashed;
-    }
-
-    if (endNode == nullptr || endNode->nodeType != NodeType::Root || startNode->isAlternativeNode) {
-        return ShaftStyle::Solid;
-    }
-
-    const ArrowType arrowType = ArrowBindingOps::getArrowInfo(arrowTree).type;
-
-    if (arrowType == ArrowType::Traversal || arrowType == ArrowType::StepIntoTree) {
-        return ShaftStyle::Solid;
-    }
-
-    return ShaftStyle::Dashed;
-}
-
-bool Arrow::isTraversalArrow() const
-{
-    if (isDangling() || ! arrowTree.isValid()) {
-        return false;
-    }
-
-    return ArrowBindingOps::getArrowInfo(arrowTree).type == ArrowType::Traversal;
-}
-
-bool Arrow::isSyncArrow() const
-{
-    return ArrowBindingOps::getArrowInfo(arrowTree).isSynced;
-}
-
-juce::Point<float> Arrow::getHeadAnchor() const
-{
-    if (isDangling()) {
-        return getTip().toFloat();
-    }
-
-    const ArrowGeometry geometry = getGeometry(1.0f);
-    if (! geometry.valid) {
-        return getTip().toFloat();
-    }
-
-    const float endExtent = endNode->getBodyExtent(geometry.chord);
-    return endNode->getNodeCentre().toFloat() - geometry.chord * (endExtent + headAnchorInset);
-}
-
-int Arrow::getDuration() const
-{
-    if (startNode == nullptr) {
-        return 0;
-    }
-
-    const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
-
-    return ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(arrowTree), delta.x, delta.y);
-}
-
-bool Arrow::showsDurationLabel() const
-{
-    const ArrowInfo arrowInfo = ArrowBindingOps::getArrowInfo(arrowTree);
-
-    if (ArrowInfo::bindsTo(arrowInfo, ArrowBinding::DurationBind)) {
-        return true;
-    }
-
-    return ! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind);
-}
-
-juce::String Arrow::getDurationLabel() const
-{
-    if (startNode == nullptr) {
-        return "0";
-    }
-
-    if (! showsDurationLabel()) {
-        const Node* pitchedNode = endNode;
-
-        if (isDangling() || startNode->isAlternativeNode) {
-            pitchedNode = startNode;
-        }
-
-        if (pitchedNode != nullptr) {
-            return juce::String(static_cast<int>(pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch, defaultMidiPitch)));
-        }
-    }
-
-    const int duration = getDuration();
-
-    if (startNode->nodeType == NodeType::Modulator) {
-        return juce::String(duration / ArrowInfo::millisecondsPerDurationPercent) + "%";
-    }
-
-    return juce::String(duration);
-}
-
-juce::Path Arrow::buildShaftPath(const ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const
-{
-    juce::Path path;
-
-    if (! geometry.valid) {
-        return path;
-    }
-
-    const juce::Point<float> start = geometry.start - origin;
-    const juce::Point<float> tip   = geometry.tip   - origin;
-
-    juce::Point<float> shaftEnd = tip;
-
-    if (geometry.drawHead) {
-        shaftEnd = tip - geometry.direction * headLength;
-    }
-
-    path.startNewSubPath(start);
-
-    if (geometry.straight) {
-        path.lineTo(shaftEnd);
-        return path;
-    }
-
-    path.cubicTo(geometry.control1 - origin, geometry.control2 - origin, shaftEnd);
-    return path;
-}
-
 void Arrow::setArrowBounds()
 {
     if (startNode == nullptr) {
@@ -428,6 +149,16 @@ void Arrow::beginDurationEdit()
     repaint();
 }
 
+void Arrow::endDrag()
+{
+    dragging            = false;
+    animation.rulerFade = 1.0f;
+
+    if (animationFrames.isEmpty()) {
+        animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
+    }
+}
+
 void Arrow::triggerSnapAnimation()
 {
     animation.snapProgress = 0.0f;
@@ -436,16 +167,6 @@ void Arrow::triggerSnapAnimation()
     if (dragging) {
         animation.rulerFade = 1.0f;
     }
-
-    if (animationFrames.isEmpty()) {
-        animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
-    }
-}
-
-void Arrow::endDrag()
-{
-    dragging            = false;
-    animation.rulerFade = 1.0f;
 
     if (animationFrames.isEmpty()) {
         animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
@@ -536,4 +257,283 @@ void Arrow::resumeProgress()
     if (! animation.trails.empty() && animationFrames.isEmpty()) {
         animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
     }
+}
+
+bool Arrow::isTraversalArrow() const
+{
+    if (isDangling() || ! arrowTree.isValid()) {
+        return false;
+    }
+
+    return ArrowBindingOps::getArrowInfo(arrowTree).type == ArrowType::Traversal;
+}
+
+bool Arrow::isSyncArrow() const
+{
+    return ArrowBindingOps::getArrowInfo(arrowTree).isSynced;
+}
+
+bool Arrow::showsDurationLabel() const
+{
+    const ArrowInfo arrowInfo = ArrowBindingOps::getArrowInfo(arrowTree);
+
+    if (ArrowInfo::bindsTo(arrowInfo, ArrowBinding::DurationBind)) {
+        return true;
+    }
+
+    return ! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind);
+}
+
+int Arrow::getDuration() const
+{
+    if (startNode == nullptr) {
+        return 0;
+    }
+
+    const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
+
+    return ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(arrowTree), delta.x, delta.y);
+}
+
+juce::String Arrow::getDurationLabel() const
+{
+    if (startNode == nullptr) {
+        return "0";
+    }
+
+    if (! showsDurationLabel()) {
+        const Node* pitchedNode = endNode;
+
+        if (isDangling() || startNode->isAlternativeNode) {
+            pitchedNode = startNode;
+        }
+
+        if (pitchedNode != nullptr) {
+            return juce::String(static_cast<int>(pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch, defaultMidiPitch)));
+        }
+    }
+
+    const int duration = getDuration();
+
+    if (startNode->nodeType == NodeType::Modulator) {
+        return juce::String(duration / ArrowInfo::millisecondsPerDurationPercent) + "%";
+    }
+
+    return juce::String(duration);
+}
+
+ArrowGeometry Arrow::getGeometry(float animationProgress) const
+{
+    ArrowGeometry geometry;
+
+    if (startNode == nullptr) {
+        return geometry;
+    }
+
+    const juce::Point<float> centre = startNode->getNodeCentre().toFloat();
+    const juce::Point<float> target = getTip().toFloat();
+
+    const juce::Point<float> delta = (target - centre) * animationProgress;
+    const float length = delta.getDistanceFromOrigin();
+
+    if (length < 1.0f) {
+        return geometry;
+    }
+
+    const juce::Point<float> direction = delta / length;
+
+    juce::Point<float> start = centre;
+    juce::Point<float> tip   = centre + delta;
+
+    const bool endIsTraversalFlag = endNode != nullptr && endNode->nodeType == NodeType::TraversalFlag;
+
+    if (isDangling()) {
+        start += direction * startNode->getVisualRadius();
+    }
+    else if (endIsTraversalFlag) {
+        const float endHalf        = std::min(endNode->getWidth(), endNode->getHeight()) * 0.5f;
+        const float baseHalfHeight = (endHalf - 4.0f) * 0.7f * 0.5f;
+        tip += direction * baseHalfHeight;
+    }
+    else {
+        tip -= direction * endNode->getBodyExtent(direction);
+    }
+
+    const juce::Point<float> shaft = tip - start;
+    const float shaftLength = shaft.getDistanceFromOrigin();
+
+    geometry.centre    = centre;
+    geometry.start     = start;
+    geometry.tip       = tip;
+    geometry.direction = direction;
+    geometry.chord     = direction;
+
+    if (shaftLength > 0.0f) {
+        geometry.chord = shaft / shaftLength;
+    }
+
+    geometry.length   = length;
+    geometry.drawHead = ! endIsTraversalFlag && animationProgress > headVisibleThreshold;
+    geometry.straight = isDangling() || endIsTraversalFlag
+                      || std::abs(shaft.x) < 1.0f || std::abs(shaft.y) < 1.0f;
+    geometry.valid     = true;
+
+    if (geometry.straight) {
+        return geometry;
+    }
+
+    float sign = -1.0f;
+
+    if (shaft.x >= 0.0f) {
+        sign = 1.0f;
+    }
+
+    const juce::Point<float> perpendicular { -direction.y * curvePerpScale * sign,
+                                              direction.x * curvePerpScale * sign };
+
+    const float offset = shaftLength * curveOffsetFactor;
+
+    geometry.control1 = start + shaft * 0.33f + perpendicular * offset;
+    geometry.control2 = start + shaft * 0.67f - perpendicular * offset;
+
+    const juce::Point<float> neck       = tip - geometry.control2;
+    const float              neckLength = neck.getDistanceFromOrigin();
+
+    if (neckLength > 0.0f) {
+        geometry.direction = neck / neckLength;
+    }
+
+    return geometry;
+}
+
+ArrowLabel Arrow::getLabel(const ArrowGeometry& geometry, float headLength) const
+{
+    ArrowLabel label;
+
+    if (startNode == nullptr) {
+        return label;
+    }
+
+    const juce::Point<float> delta = geometry.tip - geometry.centre;
+
+    juce::Point<float> shaftStart = geometry.centre;
+    juce::Point<float> shaftEnd   = geometry.tip;
+
+    const float length = delta.getDistanceFromOrigin();
+
+    if (length > 0.0f) {
+        const juce::Point<float> unit = delta / length;
+
+        shaftStart += unit * startNode->getVisualRadius();
+        shaftEnd   -= unit * headLength;
+    }
+
+    label.centre = (shaftStart + shaftEnd) * 0.5f;
+
+    float angle = std::atan2(delta.y, delta.x);
+
+    const float halfPi = juce::MathConstants<float>::halfPi;
+
+    while (angle > halfPi) {
+        angle -= juce::MathConstants<float>::pi;
+    }
+
+    while (angle <= -halfPi) {
+        angle += juce::MathConstants<float>::pi;
+    }
+
+    if (std::abs(delta.x) < std::abs(delta.y) * verticalLabelThreshold) {
+        angle = 0.0f;
+    }
+
+    label.angle = angle;
+
+    return label;
+}
+
+juce::Path Arrow::buildShaftPath(const ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const
+{
+    juce::Path path;
+
+    if (! geometry.valid) {
+        return path;
+    }
+
+    const juce::Point<float> start = geometry.start - origin;
+    const juce::Point<float> tip   = geometry.tip   - origin;
+
+    juce::Point<float> shaftEnd = tip;
+
+    if (geometry.drawHead) {
+        shaftEnd = tip - geometry.direction * headLength;
+    }
+
+    path.startNewSubPath(start);
+
+    if (geometry.straight) {
+        path.lineTo(shaftEnd);
+        return path;
+    }
+
+    path.cubicTo(geometry.control1 - origin, geometry.control2 - origin, shaftEnd);
+    return path;
+}
+
+juce::Point<int> Arrow::getTip() const
+{
+    if (endNode != nullptr) {
+        return endNode->getNodeCentre();
+    }
+
+    if (startNode == nullptr) {
+        return tipOffset;
+    }
+
+    return startNode->getNodeCentre() + tipOffset;
+}
+
+juce::Point<float> Arrow::getHeadAnchor() const
+{
+    if (isDangling()) {
+        return getTip().toFloat();
+    }
+
+    const ArrowGeometry geometry = getGeometry(1.0f);
+    if (! geometry.valid) {
+        return getTip().toFloat();
+    }
+
+    const float endExtent = endNode->getBodyExtent(geometry.chord);
+    return endNode->getNodeCentre().toFloat() - geometry.chord * (endExtent + headAnchorInset);
+}
+
+Arrow::ShaftStyle Arrow::shaftStyle() const
+{
+    if (dragging) {
+        return ShaftStyle::Ruler;
+    }
+
+    if (isGhost) {
+        return ShaftStyle::Dashed;
+    }
+
+    if (startNode == nullptr) {
+        return ShaftStyle::Solid;
+    }
+
+    if (startNode->nodeType == NodeType::TraversalFlag) {
+        return ShaftStyle::Dashed;
+    }
+
+    if (endNode == nullptr || endNode->nodeType != NodeType::Root || startNode->isAlternativeNode) {
+        return ShaftStyle::Solid;
+    }
+
+    const ArrowType arrowType = ArrowBindingOps::getArrowInfo(arrowTree).type;
+
+    if (arrowType == ArrowType::Traversal || arrowType == ArrowType::StepIntoTree) {
+        return ShaftStyle::Solid;
+    }
+
+    return ShaftStyle::Dashed;
 }

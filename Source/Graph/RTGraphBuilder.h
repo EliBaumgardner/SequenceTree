@@ -47,16 +47,6 @@ public:
 
 private:
 
-    struct PendingChanges
-    {
-        std::unordered_set<int> addedNodeIds;
-        std::unordered_set<int> rebuildNodeIds;
-        std::unordered_set<int> rebuildRootIds;
-        std::unordered_set<int> traversalIds;
-        std::vector<int>        durationRefreshNodeIds;
-        bool                    ornamentsChanged = false;
-    };
-
     void rebuildGraphsForTraversal(int traversalId);
 
     void createRTNodes          (juce::ValueTree rootNodeValueTree, NodeBuildMap& builtNodes, std::unordered_map<int, juce::ValueTree>& tempNodeMap);
@@ -74,6 +64,16 @@ private:
     static RTConnection&    connectionFor            (RTNode& node, int childId);
     static RTNode::NodeType rtNodeTypeFor            (const juce::Identifier& valueTreeType);
     static NodeMap          freezeNodes              (NodeBuildMap& source);
+
+    struct PendingChanges
+    {
+        std::unordered_set<int> addedNodeIds;
+        std::unordered_set<int> rebuildNodeIds;
+        std::unordered_set<int> rebuildRootIds;
+        std::unordered_set<int> traversalIds;
+        std::vector<int>        durationRefreshNodeIds;
+        bool                    ornamentsChanged = false;
+    };
 
     SequenceTreeAudioProcessor& processor;
     GraphState&                 graphState;

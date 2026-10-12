@@ -27,6 +27,33 @@ void TraversalSession::prepare()
     previewTraversals.runIdCounter = juce::jmax(previewTraversals.runIdCounter, previewRunIdBase);
 }
 
+void TraversalSession::clearTraversals()
+{
+    eventManager.dispatcher.flagScheduler.clear();
+    eventManager.bridge.pushArrowReset(AudioUIBridge::allTrails);
+    traversals.clear();
+}
+
+void TraversalSession::setTraversalScript(const RTScript* script)
+{
+    const RTScript* activeScript = nullptr;
+
+    if (script != nullptr && !script->isEmpty()) {
+        activeScript = script;
+    }
+
+    traversals.script        = activeScript;
+    previewTraversals.script = activeScript;
+
+    for (auto& [runId, instance] : traversals.entries()) {
+        instance.logic.script = activeScript;
+    }
+
+    for (auto& [runId, instance] : previewTraversals.entries()) {
+        instance.logic.script = activeScript;
+    }
+}
+
 void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
 {
     for (const auto& note : eventManager.scheduler.activeNotes) {
@@ -40,13 +67,6 @@ void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
     if (playback == Playback::Suspended) {
         playback = Playback::Live;
     }
-}
-
-void TraversalSession::clearTraversals()
-{
-    eventManager.dispatcher.flagScheduler.clear();
-    eventManager.bridge.pushArrowReset(AudioUIBridge::allTrails);
-    traversals.clear();
 }
 
 void TraversalSession::suspendActiveNotes(juce::MidiBuffer& midiMessages)
@@ -119,24 +139,6 @@ void TraversalSession::restartActiveTraversals(const DispatchContext& context)
     }
 }
 
-void TraversalSession::startTraversal(const RTNode& rootNode, const RTtraversal& traversal,
-                                      const DispatchContext& context)
-{
-    const int rootId = rootNode.nodeID;
-    const int runId  = traversals.nextRunId();
-
-    TraversalPool::Instance* acquired = traversals.acquire(runId, rootId, traversal);
-
-    if (acquired == nullptr) {
-        return;
-    }
-
-    acquired->logic.begin(context.nodes, rootId, rootNode.graphLoopLimit);
-
-    eventManager.bridge.highlightNode(rootNode, AudioUIBridge::HighlightKind::Show, runId, traversal.key.typeId);
-    eventManager.dispatcher.pushNote(rootNode, runId, context, 0);
-}
-
 void TraversalSession::syncWithGraph(const DispatchContext& context, std::uint64_t graphGeneration)
 {
     if (graphGeneration == syncedGraphGeneration
@@ -151,6 +153,127 @@ void TraversalSession::syncWithGraph(const DispatchContext& context, std::uint64
 
     syncedGraphGeneration = graphGeneration;
     syncedPoolEpoch       = traversals.epoch;
+}
+
+void TraversalSession::playPreview(const DispatchContext& context, int numSamples)
+{
+    previewRequests.drain([this, &context](const RTPreviewRequest& request) {
+        int loopLimit = 1;
+
+        switch (request.kind) {
+            case RTPreviewRequest::Kind::Start: {
+                stopPreview(context.midiMessages);
+                startPreview(request, context);
+                break;
+            }
+            case RTPreviewRequest::Kind::Stop: {
+                stopPreview(context.midiMessages);
+                break;
+            }
+            case RTPreviewRequest::Kind::SetRepeat: {
+                break;
+            }
+        }
+
+        if (request.repeat) {
+            loopLimit = 0;
+        }
+
+        for (auto& [runId, instance] : previewTraversals.entries()) {
+            if (instance.logic.loop.returnId != -1) {
+                instance.logic.loop.limit = loopLimit;
+            }
+        }
+    });
+
+    previewEventManager.followTempo(context.tempoMultiplier);
+
+    if (previewTraversals.empty()) {
+        return;
+    }
+
+    previewEventManager.processEvents(numSamples, context);
+}
+
+void TraversalSession::beginReplay(const DispatchContext& context, double targetSamples)
+{
+    silenceAllNotes(context.midiMessages);
+    clearTraversals();
+
+    eventManager.bridge.beginRecording();
+
+    playback              = Playback::Replaying;
+    replayRemainingSamples = targetSamples;
+
+    const DispatchContext replayContext { context.nodes, context.traversalMap, replayMidi,
+                                          context.sampleRate, context.tempoMultiplier,
+                                          context.transpose, context.velocityScale };
+
+    replayMidi.clear();
+    startTraversalsFromFirstRoot(replayContext);
+}
+
+bool TraversalSession::startTraversalsFromFirstRoot(const DispatchContext& context)
+{
+    const int           rootId   = context.nodes.firstUnlinkedRootId;
+    const RTNode* const rootNode = context.nodes.find(rootId);
+
+    if (rootNode == nullptr) {
+        return false;
+    }
+
+    for (const RTtraversal& traversal : rootNode->traversals) {
+        startTraversal(*rootNode, traversal, context);
+    }
+
+    return true;
+}
+
+TraversalSession::Playback TraversalSession::continueReplay(const DispatchContext& context,
+                                                            std::uint64_t graphGeneration, int numSamples,
+                                                            bool playing)
+{
+    if (playback != Playback::Replaying) {
+        return playback;
+    }
+
+    const DispatchContext replayContext { context.nodes, context.traversalMap, replayMidi,
+                                          context.sampleRate, context.tempoMultiplier,
+                                          context.transpose, context.velocityScale };
+
+    syncWithGraph(replayContext, graphGeneration);
+
+    const double budgetMs  = 1000.0 * replayShareOfBlock * numSamples / context.sampleRate;
+    const double startedMs = juce::Time::getMillisecondCounterHiRes();
+
+    while (replayRemainingSamples >= 1.0
+           && juce::Time::getMillisecondCounterHiRes() - startedMs < budgetMs) {
+        const int chunkSamples = static_cast<int>(juce::jmin(replayRemainingSamples, static_cast<double>(replayChunkSamples)));
+        eventManager.processEvents(chunkSamples, replayContext);
+        replayMidi.clear();
+        replayRemainingSamples -= chunkSamples;
+
+        eventManager.bridge.recordClockMs += 1000.0 * chunkSamples / context.sampleRate;
+    }
+
+    if (replayRemainingSamples >= 1.0) {
+        if (playing) {
+            replayRemainingSamples += numSamples;
+        }
+
+        return Playback::Replaying;
+    }
+
+    eventManager.bridge.deliverRecording();
+
+    if (playing) {
+        context.midiMessages.addEvents(replayMidi, 0, -1, 0);
+    }
+
+    replayMidi.clear();
+
+    playback = Playback::Live;
+    return Playback::Live;
 }
 
 void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
@@ -213,27 +336,6 @@ void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiB
         stopTraversalNotes(runId, midiMessages);
         traversals.erase(runId);
     }
-}
-
-void TraversalSession::stopTraversalNotes(int runId, juce::MidiBuffer& midiMessages)
-{
-    auto& activeNotes = eventManager.scheduler.activeNotes;
-
-    for (int i = static_cast<int>(activeNotes.size()) - 1; i >= 0; --i) {
-        auto& note = activeNotes[i];
-
-        if (note.runId != runId || note.role != NoteScheduler::NoteRole::Stepping) {
-            continue;
-        }
-
-        eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
-
-        eventManager.bridge.highlightNode(note.nodeId, AudioUIBridge::HighlightKind::Hide, runId);
-        eventManager.scheduler.removeNote(i);
-    }
-
-    eventManager.bridge.pushArrowReset(AudioUIBridge::primaryTrail(runId));
-    eventManager.bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
 }
 
 void TraversalSession::startMissingTraversals(const DispatchContext& context)
@@ -308,104 +410,43 @@ void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
     }
 }
 
-bool TraversalSession::startTraversalsFromFirstRoot(const DispatchContext& context)
+void TraversalSession::startTraversal(const RTNode& rootNode, const RTtraversal& traversal,
+                                      const DispatchContext& context)
 {
-    const int           rootId   = context.nodes.firstUnlinkedRootId;
-    const RTNode* const rootNode = context.nodes.find(rootId);
+    const int rootId = rootNode.nodeID;
+    const int runId  = traversals.nextRunId();
 
-    if (rootNode == nullptr) {
-        return false;
-    }
+    TraversalPool::Instance* acquired = traversals.acquire(runId, rootId, traversal);
 
-    for (const RTtraversal& traversal : rootNode->traversals) {
-        startTraversal(*rootNode, traversal, context);
-    }
-
-    return true;
-}
-
-void TraversalSession::setTraversalScript(const RTScript* script)
-{
-    const RTScript* activeScript = nullptr;
-
-    if (script != nullptr && !script->isEmpty()) {
-        activeScript = script;
-    }
-
-    traversals.script        = activeScript;
-    previewTraversals.script = activeScript;
-
-    for (auto& [runId, instance] : traversals.entries()) {
-        instance.logic.script = activeScript;
-    }
-
-    for (auto& [runId, instance] : previewTraversals.entries()) {
-        instance.logic.script = activeScript;
-    }
-}
-
-void TraversalSession::playPreview(const DispatchContext& context, int numSamples)
-{
-    previewRequests.drain([this, &context](const RTPreviewRequest& request) {
-        int loopLimit = 1;
-
-        switch (request.kind) {
-            case RTPreviewRequest::Kind::Start: {
-                stopPreview(context.midiMessages);
-                startPreview(request, context);
-                break;
-            }
-            case RTPreviewRequest::Kind::Stop: {
-                stopPreview(context.midiMessages);
-                break;
-            }
-            case RTPreviewRequest::Kind::SetRepeat: {
-                break;
-            }
-        }
-
-        if (request.repeat) {
-            loopLimit = 0;
-        }
-
-        for (auto& [runId, instance] : previewTraversals.entries()) {
-            if (instance.logic.loop.returnId != -1) {
-                instance.logic.loop.limit = loopLimit;
-            }
-        }
-    });
-
-    previewEventManager.followTempo(context.tempoMultiplier);
-
-    if (previewTraversals.empty()) {
+    if (acquired == nullptr) {
         return;
     }
 
-    previewEventManager.processEvents(numSamples, context);
+    acquired->logic.begin(context.nodes, rootId, rootNode.graphLoopLimit);
+
+    eventManager.bridge.highlightNode(rootNode, AudioUIBridge::HighlightKind::Show, runId, traversal.key.typeId);
+    eventManager.dispatcher.pushNote(rootNode, runId, context, 0);
 }
 
-void TraversalSession::stopPreview(juce::MidiBuffer& midiMessages)
+void TraversalSession::stopTraversalNotes(int runId, juce::MidiBuffer& midiMessages)
 {
-    AudioUIBridge& bridge = previewEventManager.bridge;
+    auto& activeNotes = eventManager.scheduler.activeNotes;
 
-    for (const auto& note : previewEventManager.scheduler.activeNotes) {
-        previewEventManager.scheduler.sendNoteOff(note, midiMessages, 0);
-        bridge.highlightNode(note.nodeId, AudioUIBridge::HighlightKind::Hide, note.runId);
+    for (int i = static_cast<int>(activeNotes.size()) - 1; i >= 0; --i) {
+        auto& note = activeNotes[i];
+
+        if (note.runId != runId || note.role != NoteScheduler::NoteRole::Stepping) {
+            continue;
+        }
+
+        eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
+
+        eventManager.bridge.highlightNode(note.nodeId, AudioUIBridge::HighlightKind::Hide, runId);
+        eventManager.scheduler.removeNote(i);
     }
 
-    for (const auto& [runId, instance] : previewTraversals.entries()) {
-        bridge.highlightNode(instance.logic.primary.target,               AudioUIBridge::HighlightKind::Hide, runId);
-        bridge.highlightNode(instance.logic.primary.alternativeTarget,    AudioUIBridge::HighlightKind::Hide, runId);
-        bridge.highlightNode(instance.logic.mod.walker.target,            AudioUIBridge::HighlightKind::Hide, runId);
-        bridge.highlightNode(instance.logic.mod.walker.alternativeTarget, AudioUIBridge::HighlightKind::Hide, runId);
-
-        bridge.pushArrowReset(AudioUIBridge::primaryTrail(runId));
-        bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
-    }
-
-    previewEventManager.scheduler.activeNotes.clear();
-    previewEventManager.dispatcher.flagScheduler.clear();
-    previewTraversals.clear();
+    eventManager.bridge.pushArrowReset(AudioUIBridge::primaryTrail(runId));
+    eventManager.bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
 }
 
 void TraversalSession::startPreview(const RTPreviewRequest& request, const DispatchContext& context)
@@ -460,67 +501,26 @@ void TraversalSession::startPreview(const RTPreviewRequest& request, const Dispa
     previewEventManager.dispatcher.pushNote(*hostNode, runId, context, 0);
 }
 
-void TraversalSession::beginReplay(const DispatchContext& context, double targetSamples)
+void TraversalSession::stopPreview(juce::MidiBuffer& midiMessages)
 {
-    silenceAllNotes(context.midiMessages);
-    clearTraversals();
+    AudioUIBridge& bridge = previewEventManager.bridge;
 
-    eventManager.bridge.beginRecording();
-
-    playback              = Playback::Replaying;
-    replayRemainingSamples = targetSamples;
-
-    const DispatchContext replayContext { context.nodes, context.traversalMap, replayMidi,
-                                          context.sampleRate, context.tempoMultiplier,
-                                          context.transpose, context.velocityScale };
-
-    replayMidi.clear();
-    startTraversalsFromFirstRoot(replayContext);
-}
-
-TraversalSession::Playback TraversalSession::continueReplay(const DispatchContext& context,
-                                                            std::uint64_t graphGeneration, int numSamples,
-                                                            bool playing)
-{
-    if (playback != Playback::Replaying) {
-        return playback;
+    for (const auto& note : previewEventManager.scheduler.activeNotes) {
+        previewEventManager.scheduler.sendNoteOff(note, midiMessages, 0);
+        bridge.highlightNode(note.nodeId, AudioUIBridge::HighlightKind::Hide, note.runId);
     }
 
-    const DispatchContext replayContext { context.nodes, context.traversalMap, replayMidi,
-                                          context.sampleRate, context.tempoMultiplier,
-                                          context.transpose, context.velocityScale };
+    for (const auto& [runId, instance] : previewTraversals.entries()) {
+        bridge.highlightNode(instance.logic.primary.target,               AudioUIBridge::HighlightKind::Hide, runId);
+        bridge.highlightNode(instance.logic.primary.alternativeTarget,    AudioUIBridge::HighlightKind::Hide, runId);
+        bridge.highlightNode(instance.logic.mod.walker.target,            AudioUIBridge::HighlightKind::Hide, runId);
+        bridge.highlightNode(instance.logic.mod.walker.alternativeTarget, AudioUIBridge::HighlightKind::Hide, runId);
 
-    syncWithGraph(replayContext, graphGeneration);
-
-    const double budgetMs  = 1000.0 * replayShareOfBlock * numSamples / context.sampleRate;
-    const double startedMs = juce::Time::getMillisecondCounterHiRes();
-
-    while (replayRemainingSamples >= 1.0
-           && juce::Time::getMillisecondCounterHiRes() - startedMs < budgetMs) {
-        const int chunkSamples = static_cast<int>(juce::jmin(replayRemainingSamples, static_cast<double>(replayChunkSamples)));
-        eventManager.processEvents(chunkSamples, replayContext);
-        replayMidi.clear();
-        replayRemainingSamples -= chunkSamples;
-
-        eventManager.bridge.recordClockMs += 1000.0 * chunkSamples / context.sampleRate;
+        bridge.pushArrowReset(AudioUIBridge::primaryTrail(runId));
+        bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
     }
 
-    if (replayRemainingSamples >= 1.0) {
-        if (playing) {
-            replayRemainingSamples += numSamples;
-        }
-
-        return Playback::Replaying;
-    }
-
-    eventManager.bridge.deliverRecording();
-
-    if (playing) {
-        context.midiMessages.addEvents(replayMidi, 0, -1, 0);
-    }
-
-    replayMidi.clear();
-
-    playback = Playback::Live;
-    return Playback::Live;
+    previewEventManager.scheduler.activeNotes.clear();
+    previewEventManager.dispatcher.flagScheduler.clear();
+    previewTraversals.clear();
 }

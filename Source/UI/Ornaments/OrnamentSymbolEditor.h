@@ -12,8 +12,6 @@ class OrnamentSymbolEditor : public juce::Component
 {
 public:
 
-    enum class SymbolTool { Pencil, Eraser };
-
     OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
 
     void paint  (juce::Graphics& graphics) override;
@@ -26,6 +24,8 @@ public:
     void mouseExit(const juce::MouseEvent& event) override;
 
     juce::MouseCursor getMouseCursor() override;
+
+    enum class SymbolTool { Pencil, Eraser };
 
     static constexpr float pointSpacing      = 2.0f;
     static constexpr float drawingInsetRatio = 0.1f;

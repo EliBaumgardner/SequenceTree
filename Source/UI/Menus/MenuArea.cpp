@@ -65,6 +65,18 @@ void MenuArea::resized()
     nodeMenu->setBounds(bounds);
 }
 
+int MenuArea::narrowestHeight() const
+{
+    const int barHeight    = Theme::barHeight;
+    const int menuBarWidth = juce::roundToInt(barHeight * menuBarWidthRatio);
+    const int iconInset    = juce::roundToInt(menuBarWidth * MenuBar::iconInsetRatio);
+    const int iconSize     = menuBarWidth - iconInset * 2;
+    const int iconGap      = juce::roundToInt(iconSize * Theme::iconGapRatio);
+    const int columnHeight = barHeight + Theme::windowGutter + iconInset * 2 + iconSize * 3 + iconGap * 2;
+
+    return juce::jmax(columnHeight, traversalMenu->narrowestHeight(), nodeMenu->narrowestHeight());
+}
+
 void MenuArea::togglePanel(ActivePanel panel)
 {
     if (activePanel == panel) {
@@ -83,16 +95,4 @@ void MenuArea::togglePanel(ActivePanel panel)
     resized();
 
     menuBar->repaint();
-}
-
-int MenuArea::narrowestHeight() const
-{
-    const int barHeight    = Theme::barHeight;
-    const int menuBarWidth = juce::roundToInt(barHeight * menuBarWidthRatio);
-    const int iconInset    = juce::roundToInt(menuBarWidth * MenuBar::iconInsetRatio);
-    const int iconSize     = menuBarWidth - iconInset * 2;
-    const int iconGap      = juce::roundToInt(iconSize * Theme::iconGapRatio);
-    const int columnHeight = barHeight + Theme::windowGutter + iconInset * 2 + iconSize * 3 + iconGap * 2;
-
-    return juce::jmax(columnHeight, traversalMenu->narrowestHeight(), nodeMenu->narrowestHeight());
 }

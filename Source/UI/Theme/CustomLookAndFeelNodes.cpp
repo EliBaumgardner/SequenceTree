@@ -1,13 +1,6 @@
 #include "CustomLookAndFeel.h"
 #include "../Node/Node.h"
 
-juce::Rectangle<float> CustomLookAndFeel::getNodeCircleBounds(juce::Rectangle<float> componentBounds)
-{
-    float diameter = componentBounds.getWidth() - nodeCirclePad - nodeShadowOffsetX - nodeShadowBlur;
-    return juce::Rectangle<float>(diameter, diameter)
-               .withPosition(componentBounds.getX() + nodeCirclePad, componentBounds.getY() + nodeCirclePad);
-}
-
 static void paintNodeShadow(juce::Graphics& graphics, juce::Rectangle<float> shapeBounds)
 {
     const float innerR       = shapeBounds.getWidth() * 0.5f;
@@ -128,4 +121,11 @@ void CustomLookAndFeel::drawRootRectangle(juce::Graphics& graphics, juce::Rectan
 
     graphics.setColour(borderStrongColour);
     graphics.drawRoundedRectangle(area, paneCornerRadius, borderThickness);
+}
+
+juce::Rectangle<float> CustomLookAndFeel::getNodeCircleBounds(juce::Rectangle<float> componentBounds)
+{
+    float diameter = componentBounds.getWidth() - nodeCirclePad - nodeShadowOffsetX - nodeShadowBlur;
+    return juce::Rectangle<float>(diameter, diameter)
+               .withPosition(componentBounds.getX() + nodeCirclePad, componentBounds.getY() + nodeCirclePad);
 }

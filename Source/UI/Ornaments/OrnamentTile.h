@@ -26,7 +26,7 @@ public:
 
 private:
 
-    void showMenu();
+    void showMenu     ();
     void confirmDelete();
 
     OrnamentLibraries& ornamentLibraries;

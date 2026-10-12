@@ -26,51 +26,6 @@ void EncapsulationView::collapse(int encapsulatorId) const
     nodeCanvas.arrowManager.refreshEncapsulatedArrows();
 }
 
-bool EncapsulationView::applyCollapsedState(int encapsulatorId) const
-{
-    auto* const encapsulator = dynamic_cast<Encapsulator*>(nodeCanvas.nodeManager.find(encapsulatorId));
-
-    if (encapsulator == nullptr) {
-        return false;
-    }
-
-    encapsulator->isExpanded = false;
-
-    encapsulator->bindToTree();
-
-    encapsulator->setVisible(true);
-    encapsulator->setInterceptsMouseClicks(!nodeCanvas.paintMode, !nodeCanvas.paintMode && !nodeCanvas.spanMode);
-
-    for (const int memberNodeId : encapsulator->memberNodeIds) {
-        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
-
-        if (member == nullptr) {
-            continue;
-        }
-
-        member->isEncapsulated        = true;
-        member->isEncapsulationExit   = memberNodeId == encapsulator->memberNodeIds.back();
-        member->isOutlined            = false;
-        member->isEncapsulationRinged = false;
-        member->hasInnerRim           = false;
-
-        member->setVisible(false);
-        member->setInterceptsMouseClicks(false, false);
-    }
-
-    encapsulator->syncHighlightsFromMembers();
-    encapsulator->toFront(false);
-
-    return true;
-}
-
-void EncapsulationView::repositionAll() const
-{
-    for (const auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
-        nodeCanvas.nodeManager.setPosition(nodeId);
-    }
-}
-
 void EncapsulationView::expand(int encapsulatorId) const
 {
     auto* const encapsulator = dynamic_cast<Encapsulator*>(nodeCanvas.nodeManager.find(encapsulatorId));
@@ -87,29 +42,6 @@ void EncapsulationView::expand(int encapsulatorId) const
     showMembers(encapsulator->memberNodeIds);
 
     refreshMembership(encapsulatorId);
-}
-
-void EncapsulationView::showMembers(std::span<const int> memberNodeIds) const
-{
-    for (const int memberNodeId : memberNodeIds) {
-        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
-
-        if (member == nullptr) {
-            continue;
-        }
-
-        member->isEncapsulated        = false;
-        member->isEncapsulationExit   = false;
-        member->isEncapsulationRinged = false;
-        member->hasInnerRim           = false;
-
-        member->setVisible(true);
-        member->setInterceptsMouseClicks(!nodeCanvas.paintMode, !nodeCanvas.paintMode && !nodeCanvas.spanMode);
-    }
-
-    repositionAll();
-
-    nodeCanvas.arrowManager.refreshEncapsulatedArrows();
 }
 
 void EncapsulationView::refreshMembership(int encapsulatorId) const
@@ -156,6 +88,53 @@ void EncapsulationView::collapseAll() const
     repositionAll();
 
     nodeCanvas.arrowManager.refreshEncapsulatedArrows();
+}
+
+void EncapsulationView::showMembers(std::span<const int> memberNodeIds) const
+{
+    for (const int memberNodeId : memberNodeIds) {
+        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
+
+        if (member == nullptr) {
+            continue;
+        }
+
+        member->isEncapsulated        = false;
+        member->isEncapsulationExit   = false;
+        member->isEncapsulationRinged = false;
+        member->hasInnerRim           = false;
+
+        member->setVisible(true);
+        member->setInterceptsMouseClicks(!nodeCanvas.paintMode, !nodeCanvas.paintMode && !nodeCanvas.spanMode);
+    }
+
+    repositionAll();
+
+    nodeCanvas.arrowManager.refreshEncapsulatedArrows();
+}
+
+void EncapsulationView::syncHighlights() const
+{
+    for (auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
+        if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node.get())) {
+            encapsulator->syncHighlightsFromMembers();
+        }
+    }
+}
+
+void EncapsulationView::recolourGroup(const Encapsulator& encapsulator) const
+{
+    for (const int memberNodeId : encapsulator.memberNodeIds) {
+        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
+
+        if (member == nullptr) {
+            continue;
+        }
+
+        member->encapsulationRingColour = encapsulator.nodeColour;
+
+        member->repaint();
+    }
 }
 
 juce::Point<int> EncapsulationView::collapsedSpanShift(int nodeId) const
@@ -233,26 +212,47 @@ juce::Point<int> EncapsulationView::collapsedSpanShift(int nodeId) const
     return shift;
 }
 
-void EncapsulationView::syncHighlights() const
+bool EncapsulationView::applyCollapsedState(int encapsulatorId) const
 {
-    for (auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
-        if (auto* const encapsulator = dynamic_cast<Encapsulator*>(node.get())) {
-            encapsulator->syncHighlightsFromMembers();
-        }
-    }
-}
+    auto* const encapsulator = dynamic_cast<Encapsulator*>(nodeCanvas.nodeManager.find(encapsulatorId));
 
-void EncapsulationView::recolourGroup(const Encapsulator& encapsulator) const
-{
-    for (const int memberNodeId : encapsulator.memberNodeIds) {
+    if (encapsulator == nullptr) {
+        return false;
+    }
+
+    encapsulator->isExpanded = false;
+
+    encapsulator->bindToTree();
+
+    encapsulator->setVisible(true);
+    encapsulator->setInterceptsMouseClicks(!nodeCanvas.paintMode, !nodeCanvas.paintMode && !nodeCanvas.spanMode);
+
+    for (const int memberNodeId : encapsulator->memberNodeIds) {
         Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
 
         if (member == nullptr) {
             continue;
         }
 
-        member->encapsulationRingColour = encapsulator.nodeColour;
+        member->isEncapsulated        = true;
+        member->isEncapsulationExit   = memberNodeId == encapsulator->memberNodeIds.back();
+        member->isOutlined            = false;
+        member->isEncapsulationRinged = false;
+        member->hasInnerRim           = false;
 
-        member->repaint();
+        member->setVisible(false);
+        member->setInterceptsMouseClicks(false, false);
+    }
+
+    encapsulator->syncHighlightsFromMembers();
+    encapsulator->toFront(false);
+
+    return true;
+}
+
+void EncapsulationView::repositionAll() const
+{
+    for (const auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
+        nodeCanvas.nodeManager.setPosition(nodeId);
     }
 }

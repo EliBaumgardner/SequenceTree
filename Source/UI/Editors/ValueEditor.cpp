@@ -135,6 +135,22 @@ void ValueEditor::resized()
     textEditor->setBounds(textBounds);
 }
 
+void ValueEditor::bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID)
+{
+    boundValue.removeListener(this);
+
+    boundTree       = tree;
+    boundIdentifier = propertyID;
+
+    boundValue.referTo(tree.getPropertyAsValue(propertyID, &undoManager));
+
+    boundValue.addListener(this);
+
+    bindSecondaryProperties();
+
+    repaint();
+}
+
 void ValueEditor::setFormat(std::unique_ptr<ValueFormat> newFormat)
 {
     format = std::move(newFormat);
@@ -146,74 +162,48 @@ void ValueEditor::setFormat(std::unique_ptr<ValueFormat> newFormat)
     repaint();
 }
 
-void ValueEditor::bindSecondaryProperties()
+void ValueEditor::setFontHeight(float newFontHeight)
 {
-    for (auto& value : secondaryValues) {
-        value.removeListener(this);
-    }
-
-    secondaryValues.clear();
-
-    if (! boundTree.isValid()) {
+    if (juce::approximatelyEqual(fontHeight, newFontHeight)) {
         return;
     }
 
-    secondaryValues.reserve(format->extraProperties.size());
+    fontHeight = newFontHeight;
 
-    for (const auto& identifier : format->extraProperties) {
-        secondaryValues.push_back(boundTree.getPropertyAsValue(identifier, &undoManager));
-    }
+    const juce::Font font = displayFont(format->text(binding, TextPurpose::Display));
 
-    for (auto& value : secondaryValues) {
-        value.addListener(this);
-    }
+    textEditor->setFont(font);
+    textEditor->applyFontToAllText(font);
+
+    repaint();
 }
 
-juce::Font ValueEditor::displayFont(const juce::String& text) const
+void ValueEditor::setJustification(juce::Justification newJustification)
 {
-    juce::Font font = CustomLookAndFeel::get(*this).font(fontStyle, fontHeight);
+    justification = newJustification;
 
-    if (! autoFitText) {
-        return font;
-    }
+    textEditor->setJustification(newJustification);
 
-    const float inset      = static_cast<float>(getHeight()) * autoFitInsetRatio;
-    const auto  bounds     = getLocalBounds().toFloat().reduced(inset);
-    const float textWidth  = font.getStringWidthFloat(text);
-    const float textHeight = font.getHeight();
-
-    if (bounds.getWidth() <= 0.0f || bounds.getHeight() <= 0.0f || textHeight <= 0.0f) {
-        return font;
-    }
-
-    float fittedHeight = bounds.getHeight();
-
-    if (textWidth > 0.0f) {
-        fittedHeight = std::min(textHeight * (bounds.getWidth() / textWidth), fittedHeight);
-    }
-
-    if (fittedHeight <= 0.0f || ! std::isfinite(fittedHeight)) {
-        return font;
-    }
-
-    font.setHeight(fittedHeight);
-
-    return font;
+    repaint();
 }
 
-void ValueEditor::mouseDown(const juce::MouseEvent& event)
+void ValueEditor::setPersistentEditor(bool shouldStayVisible)
 {
-    if (event.mods.isCtrlDown() && ! event.mods.isShiftDown()) {
-        scrubStartValue = static_cast<double>(boundValue.getValue());
+    persistentEditor = shouldStayVisible;
 
-        if (boundTree.isValid()) {
-            undoManager.beginNewTransaction();
-        }
-
+    if (! persistentEditor) {
         return;
     }
 
-    beginEditing();
+    const juce::String displayed = format->text(binding, TextPurpose::Display);
+    const juce::Font   font      = displayFont(displayed);
+
+    textEditor->setFont(font);
+    textEditor->applyFontToAllText(font);
+    textEditor->setText(displayed, juce::dontSendNotification);
+    textEditor->setVisible(true);
+
+    repaint();
 }
 
 void ValueEditor::beginEditing(bool selectAllText)
@@ -245,33 +235,6 @@ void ValueEditor::beginEditing(bool selectAllText)
     repaint();
 }
 
-void ValueEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
-{
-    if (wheelResponse == WheelResponse::PassToParent || isEditing || juce::approximatelyEqual(wheel.deltaY, 0.0f)) {
-        juce::Component::mouseWheelMove(event, wheel);
-        return;
-    }
-
-    double wheelDelta = wheel.deltaY;
-
-    if (wheel.isReversed) {
-        wheelDelta = -wheelDelta;
-    }
-
-    const double smallestStep = std::pow(10.0, -format->decimalPlaces);
-    double       step         = wheelDelta * (format->maximum - format->minimum) * wheelRangeFraction;
-
-    if (std::abs(step) < smallestStep) {
-        step = std::copysign(smallestStep, wheelDelta);
-    }
-
-    if (boundTree.isValid()) {
-        undoManager.beginNewTransaction();
-    }
-
-    setNumericValue(static_cast<double>(boundValue.getValue()) + step);
-}
-
 void ValueEditor::setNumericValue(double newValue)
 {
     const double clamped = juce::jlimit(format->minimum, format->maximum, newValue);
@@ -285,78 +248,6 @@ void ValueEditor::setNumericValue(double newValue)
     }
 
     boundValue.setValue(juce::roundToInt(clamped));
-}
-
-void ValueEditor::mouseDrag(const juce::MouseEvent& event)
-{
-    if (! editable || isEditing || ! event.mods.isCtrlDown() || event.mods.isShiftDown()) {
-        return;
-    }
-
-    const double smallestStep = std::pow(10.0, -format->decimalPlaces);
-    const int    scrubSteps   = -event.getOffsetFromDragStart().y / pixelsPerScrubStep;
-
-    setNumericValue(scrubStartValue + scrubSteps * smallestStep);
-}
-
-void ValueEditor::setPersistentEditor(bool shouldStayVisible)
-{
-    persistentEditor = shouldStayVisible;
-
-    if (! persistentEditor) {
-        return;
-    }
-
-    const juce::String displayed = format->text(binding, TextPurpose::Display);
-    const juce::Font   font      = displayFont(displayed);
-
-    textEditor->setFont(font);
-    textEditor->applyFontToAllText(font);
-    textEditor->setText(displayed, juce::dontSendNotification);
-    textEditor->setVisible(true);
-
-    repaint();
-}
-
-void ValueEditor::bindEditor(juce::ValueTree tree, const juce::Identifier& propertyID)
-{
-    boundValue.removeListener(this);
-
-    boundTree       = tree;
-    boundIdentifier = propertyID;
-
-    boundValue.referTo(tree.getPropertyAsValue(propertyID, &undoManager));
-
-    boundValue.addListener(this);
-
-    bindSecondaryProperties();
-
-    repaint();
-}
-
-void ValueEditor::setFontHeight(float newFontHeight)
-{
-    if (juce::approximatelyEqual(fontHeight, newFontHeight)) {
-        return;
-    }
-
-    fontHeight = newFontHeight;
-
-    const juce::Font font = displayFont(format->text(binding, TextPurpose::Display));
-
-    textEditor->setFont(font);
-    textEditor->applyFontToAllText(font);
-
-    repaint();
-}
-
-void ValueEditor::setJustification(juce::Justification newJustification)
-{
-    justification = newJustification;
-
-    textEditor->setJustification(newJustification);
-
-    repaint();
 }
 
 void ValueEditor::commitText(const juce::String& enteredText)
@@ -415,6 +306,60 @@ void ValueEditor::commitValue()
     }
 }
 
+void ValueEditor::mouseDown(const juce::MouseEvent& event)
+{
+    if (event.mods.isCtrlDown() && ! event.mods.isShiftDown()) {
+        scrubStartValue = static_cast<double>(boundValue.getValue());
+
+        if (boundTree.isValid()) {
+            undoManager.beginNewTransaction();
+        }
+
+        return;
+    }
+
+    beginEditing();
+}
+
+void ValueEditor::mouseDrag(const juce::MouseEvent& event)
+{
+    if (! editable || isEditing || ! event.mods.isCtrlDown() || event.mods.isShiftDown()) {
+        return;
+    }
+
+    const double smallestStep = std::pow(10.0, -format->decimalPlaces);
+    const int    scrubSteps   = -event.getOffsetFromDragStart().y / pixelsPerScrubStep;
+
+    setNumericValue(scrubStartValue + scrubSteps * smallestStep);
+}
+
+void ValueEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
+{
+    if (wheelResponse == WheelResponse::PassToParent || isEditing || juce::approximatelyEqual(wheel.deltaY, 0.0f)) {
+        juce::Component::mouseWheelMove(event, wheel);
+        return;
+    }
+
+    double wheelDelta = wheel.deltaY;
+
+    if (wheel.isReversed) {
+        wheelDelta = -wheelDelta;
+    }
+
+    const double smallestStep = std::pow(10.0, -format->decimalPlaces);
+    double       step         = wheelDelta * (format->maximum - format->minimum) * wheelRangeFraction;
+
+    if (std::abs(step) < smallestStep) {
+        step = std::copysign(smallestStep, wheelDelta);
+    }
+
+    if (boundTree.isValid()) {
+        undoManager.beginNewTransaction();
+    }
+
+    setNumericValue(static_cast<double>(boundValue.getValue()) + step);
+}
+
 void ValueEditor::valueChanged(juce::Value&)
 {
     repaint();
@@ -432,4 +377,59 @@ void ValueEditor::textEditorReturnKeyPressed(juce::TextEditor&)
 void ValueEditor::textEditorFocusLost(juce::TextEditor&)
 {
     commitValue();
+}
+
+juce::Font ValueEditor::displayFont(const juce::String& text) const
+{
+    juce::Font font = CustomLookAndFeel::get(*this).font(fontStyle, fontHeight);
+
+    if (! autoFitText) {
+        return font;
+    }
+
+    const float inset      = static_cast<float>(getHeight()) * autoFitInsetRatio;
+    const auto  bounds     = getLocalBounds().toFloat().reduced(inset);
+    const float textWidth  = font.getStringWidthFloat(text);
+    const float textHeight = font.getHeight();
+
+    if (bounds.getWidth() <= 0.0f || bounds.getHeight() <= 0.0f || textHeight <= 0.0f) {
+        return font;
+    }
+
+    float fittedHeight = bounds.getHeight();
+
+    if (textWidth > 0.0f) {
+        fittedHeight = std::min(textHeight * (bounds.getWidth() / textWidth), fittedHeight);
+    }
+
+    if (fittedHeight <= 0.0f || ! std::isfinite(fittedHeight)) {
+        return font;
+    }
+
+    font.setHeight(fittedHeight);
+
+    return font;
+}
+
+void ValueEditor::bindSecondaryProperties()
+{
+    for (auto& value : secondaryValues) {
+        value.removeListener(this);
+    }
+
+    secondaryValues.clear();
+
+    if (! boundTree.isValid()) {
+        return;
+    }
+
+    secondaryValues.reserve(format->extraProperties.size());
+
+    for (const auto& identifier : format->extraProperties) {
+        secondaryValues.push_back(boundTree.getPropertyAsValue(identifier, &undoManager));
+    }
+
+    for (auto& value : secondaryValues) {
+        value.addListener(this);
+    }
 }

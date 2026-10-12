@@ -51,6 +51,60 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostRunId, const Trave
     }
 }
 
+void FlagScheduler::advance(int numSamples)
+{
+    for (PendingStart& pending : pendingStarts) {
+        if (pending.active) {
+            pending.remainingSamples -= numSamples;
+        }
+    }
+}
+
+void FlagScheduler::clear()
+{
+    for (PendingStart& pending : pendingStarts) {
+        pending.active = false;
+    }
+}
+
+bool FlagScheduler::startNextDue(double before, const DispatchContext& context)
+{
+    PendingStart* earliest = nullptr;
+
+    for (PendingStart& pending : pendingStarts) {
+        if (!pending.active || pending.remainingSamples >= before) {
+            continue;
+        }
+
+        if (earliest == nullptr || pending.remainingSamples < earliest->remainingSamples) {
+            earliest = &pending;
+        }
+    }
+
+    if (earliest == nullptr) {
+        return false;
+    }
+
+    const PendingStart due = *earliest;
+    earliest->active       = false;
+
+    const RTNode* flagEntry = context.nodes.find(due.flagNodeId);
+
+    if (flagEntry == nullptr) {
+        return true;
+    }
+
+    const RTNode& flagNode = *flagEntry;
+
+    if (flagNode.nodeType != RTNode::NodeType::TraversalFlagData || flagNode.flagRemovesTraversal) {
+        return true;
+    }
+
+    startFlagTraversal(flagNode, due.hostKey, juce::jmax(0.0, due.remainingSamples), context);
+
+    return true;
+}
+
 void FlagScheduler::queueRemoval(const RTNode& flagNode, int hostRunId, const TraversalKey& hostKey,
                                  TraversalPool& traversalMap)
 {
@@ -70,6 +124,33 @@ void FlagScheduler::queueRemoval(const RTNode& flagNode, int hostRunId, const Tr
     }
 
     hostInstance->runtime.pendingRemoval = true;
+}
+
+void FlagScheduler::queueStart(const RTNode& flagNode, const TraversalKey& hostKey,
+                               int delayMs, double sample, double tempoMultiplier,
+                               const DispatchContext& context)
+{
+    const double delaySamples = (delayMs / 1000.0) * context.sampleRate / tempoMultiplier;
+
+    PendingStart* slot = nullptr;
+
+    for (PendingStart& pending : pendingStarts) {
+        if (!pending.active) {
+            slot = &pending;
+            break;
+        }
+    }
+
+    if (slot == nullptr) {
+        jassertfalse;
+        startFlagTraversal(flagNode, hostKey, sample, context);
+        return;
+    }
+
+    slot->flagNodeId       = flagNode.nodeID;
+    slot->hostKey          = hostKey;
+    slot->remainingSamples = delaySamples + sample;
+    slot->active           = true;
 }
 
 void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKey& hostKey, double sample,
@@ -117,85 +198,4 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKe
 
     bridge.highlightNode(startNode, AudioUIBridge::HighlightKind::Show, runId, instance->logic.traversal.key.typeId);
     dispatcher.pushNote(startNode, runId, context, sample);
-}
-
-void FlagScheduler::queueStart(const RTNode& flagNode, const TraversalKey& hostKey,
-                               int delayMs, double sample, double tempoMultiplier,
-                               const DispatchContext& context)
-{
-    const double delaySamples = (delayMs / 1000.0) * context.sampleRate / tempoMultiplier;
-
-    PendingStart* slot = nullptr;
-
-    for (PendingStart& pending : pendingStarts) {
-        if (!pending.active) {
-            slot = &pending;
-            break;
-        }
-    }
-
-    if (slot == nullptr) {
-        jassertfalse;
-        startFlagTraversal(flagNode, hostKey, sample, context);
-        return;
-    }
-
-    slot->flagNodeId       = flagNode.nodeID;
-    slot->hostKey          = hostKey;
-    slot->remainingSamples = delaySamples + sample;
-    slot->active           = true;
-}
-
-bool FlagScheduler::startNextDue(double before, const DispatchContext& context)
-{
-    PendingStart* earliest = nullptr;
-
-    for (PendingStart& pending : pendingStarts) {
-        if (!pending.active || pending.remainingSamples >= before) {
-            continue;
-        }
-
-        if (earliest == nullptr || pending.remainingSamples < earliest->remainingSamples) {
-            earliest = &pending;
-        }
-    }
-
-    if (earliest == nullptr) {
-        return false;
-    }
-
-    const PendingStart due = *earliest;
-    earliest->active       = false;
-
-    const RTNode* flagEntry = context.nodes.find(due.flagNodeId);
-
-    if (flagEntry == nullptr) {
-        return true;
-    }
-
-    const RTNode& flagNode = *flagEntry;
-
-    if (flagNode.nodeType != RTNode::NodeType::TraversalFlagData || flagNode.flagRemovesTraversal) {
-        return true;
-    }
-
-    startFlagTraversal(flagNode, due.hostKey, juce::jmax(0.0, due.remainingSamples), context);
-
-    return true;
-}
-
-void FlagScheduler::advance(int numSamples)
-{
-    for (PendingStart& pending : pendingStarts) {
-        if (pending.active) {
-            pending.remainingSamples -= numSamples;
-        }
-    }
-}
-
-void FlagScheduler::clear()
-{
-    for (PendingStart& pending : pendingStarts) {
-        pending.active = false;
-    }
 }

@@ -5,47 +5,6 @@
 #include <algorithm>
 #include <utility>
 
-void ArrowBindingOps::setArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo,
-                                   juce::UndoManager* undoManager)
-{
-    if (! arrowTree.isValid()) {
-        return;
-    }
-
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowType,        static_cast<int>(arrowInfo.type),     undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowXBinding,    static_cast<int>(arrowInfo.xBinding), undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowYBinding,    static_cast<int>(arrowInfo.yBinding), undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, arrowInfo.xMultiplier,                undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowYMultiplier, arrowInfo.yMultiplier,                undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowSync,        arrowInfo.isSynced,                   undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration,    arrowInfo.durationOverride,           undoManager);
-}
-
-ArrowInfo ArrowBindingOps::getArrowInfo(const juce::ValueTree& arrowTree)
-{
-    ArrowInfo arrowInfo;
-
-    if (! arrowTree.isValid()) {
-        return arrowInfo;
-    }
-
-    arrowInfo.type = static_cast<ArrowType>(static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowType,
-                                                                               static_cast<int>(arrowInfo.type))));
-
-    arrowInfo.xBinding = static_cast<ArrowBinding>(static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowXBinding,
-                                                                               static_cast<int>(arrowInfo.xBinding))));
-
-    arrowInfo.yBinding = static_cast<ArrowBinding>(static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowYBinding,
-                                                                               static_cast<int>(arrowInfo.yBinding))));
-
-    arrowInfo.xMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowXMultiplier, arrowInfo.xMultiplier);
-    arrowInfo.yMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowYMultiplier, arrowInfo.yMultiplier);
-    arrowInfo.isSynced    = arrowTree.getProperty(ValueTreeIdentifiers::ArrowSync,        arrowInfo.isSynced);
-    arrowInfo.durationOverride = arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration, arrowInfo.durationOverride);
-
-    return arrowInfo;
-}
-
 void ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManager* undoManager)
 {
     juce::ValueTree node = graphState.getNode(nodeId);
@@ -101,44 +60,6 @@ void ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManager* undoManag
         applyArrowPitchOffset(arrowTree, nodeId, static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
                               static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)), undoManager);
     }
-}
-
-void ArrowBindingOps::applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId,
-                                            int deltaX, int deltaY, juce::UndoManager* undoManager)
-{
-    const ArrowInfo arrowInfo = getArrowInfo(arrowTree);
-
-    if (! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind)) {
-        return;
-    }
-
-    const int offset = ArrowInfo::pitchOffsetFromDelta(arrowInfo, deltaX, deltaY);
-
-    if (! arrowTree.hasProperty(ValueTreeIdentifiers::ArrowPitchOffset)) {
-        arrowTree.setProperty(ValueTreeIdentifiers::ArrowPitchOffset, offset, undoManager);
-        return;
-    }
-
-    const int appliedPitchOffset = arrowTree.getProperty(ValueTreeIdentifiers::ArrowPitchOffset, 0);
-
-    if (offset == appliedPitchOffset) {
-        return;
-    }
-
-    juce::ValueTree note = graphState.getMidiNotes(targetNodeId)
-                                     .getChildWithName(ValueTreeIdentifiers::MidiNoteData);
-
-    if (! note.isValid()) {
-        return;
-    }
-
-    const int currentPitch = note.getProperty(ValueTreeIdentifiers::MidiPitch, defaultMidiPitch);
-    const int wantedPitch  = currentPitch + offset - appliedPitchOffset;
-    const int newPitch     = std::clamp(wantedPitch, minimumMidiPitch, maximumMidiPitch);
-
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowPitchOffset, offset - (wantedPitch - newPitch), undoManager);
-
-    note.setProperty(ValueTreeIdentifiers::MidiPitch, newPitch, undoManager);
 }
 
 void ArrowBindingOps::clearArrowDurations(int nodeId, juce::UndoManager* undoManager)
@@ -237,4 +158,83 @@ void ArrowBindingOps::applyNodeBinding(ArrowInfo& arrowInfo, int nodeId,
             arrowInfo.yBinding = ArrowBinding::NoBind;
         }
     }
+}
+
+void ArrowBindingOps::setArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo,
+                                   juce::UndoManager* undoManager)
+{
+    if (! arrowTree.isValid()) {
+        return;
+    }
+
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowType,        static_cast<int>(arrowInfo.type),     undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowXBinding,    static_cast<int>(arrowInfo.xBinding), undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowYBinding,    static_cast<int>(arrowInfo.yBinding), undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, arrowInfo.xMultiplier,                undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowYMultiplier, arrowInfo.yMultiplier,                undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowSync,        arrowInfo.isSynced,                   undoManager);
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration,    arrowInfo.durationOverride,           undoManager);
+}
+
+ArrowInfo ArrowBindingOps::getArrowInfo(const juce::ValueTree& arrowTree)
+{
+    ArrowInfo arrowInfo;
+
+    if (! arrowTree.isValid()) {
+        return arrowInfo;
+    }
+
+    arrowInfo.type = static_cast<ArrowType>(static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowType,
+                                                                               static_cast<int>(arrowInfo.type))));
+
+    arrowInfo.xBinding = static_cast<ArrowBinding>(static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowXBinding,
+                                                                               static_cast<int>(arrowInfo.xBinding))));
+
+    arrowInfo.yBinding = static_cast<ArrowBinding>(static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowYBinding,
+                                                                               static_cast<int>(arrowInfo.yBinding))));
+
+    arrowInfo.xMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowXMultiplier, arrowInfo.xMultiplier);
+    arrowInfo.yMultiplier = arrowTree.getProperty(ValueTreeIdentifiers::ArrowYMultiplier, arrowInfo.yMultiplier);
+    arrowInfo.isSynced    = arrowTree.getProperty(ValueTreeIdentifiers::ArrowSync,        arrowInfo.isSynced);
+    arrowInfo.durationOverride = arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration, arrowInfo.durationOverride);
+
+    return arrowInfo;
+}
+
+void ArrowBindingOps::applyArrowPitchOffset(juce::ValueTree arrowTree, int targetNodeId,
+                                            int deltaX, int deltaY, juce::UndoManager* undoManager)
+{
+    const ArrowInfo arrowInfo = getArrowInfo(arrowTree);
+
+    if (! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind)) {
+        return;
+    }
+
+    const int offset = ArrowInfo::pitchOffsetFromDelta(arrowInfo, deltaX, deltaY);
+
+    if (! arrowTree.hasProperty(ValueTreeIdentifiers::ArrowPitchOffset)) {
+        arrowTree.setProperty(ValueTreeIdentifiers::ArrowPitchOffset, offset, undoManager);
+        return;
+    }
+
+    const int appliedPitchOffset = arrowTree.getProperty(ValueTreeIdentifiers::ArrowPitchOffset, 0);
+
+    if (offset == appliedPitchOffset) {
+        return;
+    }
+
+    juce::ValueTree note = graphState.getMidiNotes(targetNodeId)
+                                     .getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+
+    if (! note.isValid()) {
+        return;
+    }
+
+    const int currentPitch = note.getProperty(ValueTreeIdentifiers::MidiPitch, defaultMidiPitch);
+    const int wantedPitch  = currentPitch + offset - appliedPitchOffset;
+    const int newPitch     = std::clamp(wantedPitch, minimumMidiPitch, maximumMidiPitch);
+
+    arrowTree.setProperty(ValueTreeIdentifiers::ArrowPitchOffset, offset - (wantedPitch - newPitch), undoManager);
+
+    note.setProperty(ValueTreeIdentifiers::MidiPitch, newPitch, undoManager);
 }

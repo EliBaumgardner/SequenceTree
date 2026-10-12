@@ -20,6 +20,16 @@ class TraversalRulesWindow : public juce::Component,
 {
 public:
 
+    TraversalRulesWindow(CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
+                         juce::UndoManager& undoManager);
+
+    ~TraversalRulesWindow() override;
+
+    void paint(juce::Graphics& graphics) override;
+    void resized() override;
+
+    void setActivePage(int id);
+
     class RulesTitlebar : public Bar
     {
     public:
@@ -37,16 +47,6 @@ public:
         void resized() override;
     };
 
-    TraversalRulesWindow(CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-                         juce::UndoManager& undoManager);
-
-    ~TraversalRulesWindow() override;
-
-    void paint(juce::Graphics& graphics) override;
-    void resized() override;
-
-    void setActivePage(int id);
-
     static constexpr int defaultWidth  = 360;
     static constexpr int defaultHeight = 260 + RulesTitlebar::preferredHeight;
 
@@ -57,6 +57,26 @@ public:
 
 private:
 
+    void addRule             ();
+    void removeRule          (int ruleId);
+    void makeViewedRuleActive();
+    void syncWithRuleState   ();
+
+    void createPage       (int ruleId, const juce::String& source);
+    void compileViewedPage();
+    void setStatus        (const juce::String& text, bool isError);
+
+    void setPanelWidth(int newWidth);
+
+    void timerCallback    () override;
+    void handleAsyncUpdate() override;
+
+    void valueTreeChildAdded     (juce::ValueTree& parent, juce::ValueTree& child) override;
+    void valueTreeChildRemoved   (juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
+    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
+
+    int clampPanelWidth(int newWidth) const;
+
     class RulesPanel : public juce::Component
     {
     public:
@@ -66,13 +86,9 @@ private:
         void paint(juce::Graphics& graphics) override;
         void resized() override;
 
-        void addLabel(int fileId, const juce::String& name);
+        void addLabel   (int fileId, const juce::String& name);
         void removeLabel(int fileId);
         void selectLabel(int fileId);
-
-        static constexpr int resizerWidth      = 10;
-        static constexpr int minPanelWidth     = 60;
-        static constexpr int defaultPanelWidth = 120;
 
         class PanelTitlebar : public Bar
         {
@@ -87,25 +103,14 @@ private:
             void resized() override;
         };
 
+        static constexpr int resizerWidth      = 10;
+        static constexpr int minPanelWidth     = 60;
+        static constexpr int defaultPanelWidth = 120;
+
         PanelResizer  resizer;
         LabelPanel    labelPanel;
         PanelTitlebar panelTitlebar;
     };
-
-    void setPanelWidth(int newWidth);
-    int  clampPanelWidth(int newWidth) const;
-    void compileViewedPage();
-    void setStatus(const juce::String& text, bool isError);
-    void addRule();
-    void syncWithRuleState();
-    void createPage(int ruleId, const juce::String& source);
-    void makeViewedRuleActive();
-    void removeRule(int ruleId);
-    void timerCallback() override;
-    void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
-    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
-    void handleAsyncUpdate() override;
 
     RulesTitlebar titlebar;
     RulesPanel    rulesPanel;

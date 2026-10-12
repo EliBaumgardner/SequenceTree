@@ -6,18 +6,19 @@ class ColourPicker : public juce::Component
 {
 public:
 
-    enum class DragTarget { None, SaturationBrightness, Hue };
-
     ColourPicker(juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
     void renderSaturationBrightnessImage();
+    void showColour                     (juce::Colour colour);
+
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
-    void mouseUp(const juce::MouseEvent& event) override;
-    void showColour(juce::Colour colour);
+    void mouseUp  (const juce::MouseEvent& event) override;
+
+    enum class DragTarget { None, SaturationBrightness, Hue };
 
     static constexpr int   presetCount          = 8;
     static constexpr float heightToWidthRatio   = 1.41f;
@@ -61,13 +62,13 @@ class ColourSelector : public juce::Component, public juce::SettableTooltipClien
 {
 public:
 
-    enum class Shape { Square, Circle };
-
     ColourSelector(juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
 
     void mouseDown(const juce::MouseEvent& event) override;
+
+    enum class Shape { Square, Circle };
 
     std::function<void(juce::Colour)> onColourPicked;
 

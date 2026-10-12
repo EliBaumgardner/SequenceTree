@@ -26,6 +26,34 @@ class NodeCanvas : public juce::Component
 {
 public:
 
+    enum class QuaverMode;
+
+    NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, RTGraphBuilder& rtGraphBuilder, juce::UndoManager& undoManager,
+               CustomLookAndFeel& lookAndFeel);
+
+    ~NodeCanvas() override;
+
+    void paint(juce::Graphics& graphics) override;
+
+    void clearCanvas       ();
+    void rebuildFromNodeMap(const juce::ValueTree& stateTree);
+    void childrenChanged   () override;
+
+    void handleAsyncUpdate      ();
+    void cancelPendingUpdatesFor(int nodeId);
+
+    void setPaintMode (bool enabled);
+    void setSpanMode  (bool enabled);
+    void setQuaverMode(QuaverMode mode);
+
+    void showGrid();
+    void hideGrid();
+
+    void applyViewTransform  (const juce::AffineTransform& newViewTransform, float zoom);
+    void setProcessorPlayback(bool isPlaying);
+
+    juce::Point<int> snapPointToGrid(juce::Point<int> point) const;
+
     enum class AsyncUpdateType
     {
         None,
@@ -56,27 +84,6 @@ public:
         int parentNodeId;
         int childNodeId;
     };
-
-    NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, RTGraphBuilder& rtGraphBuilder, juce::UndoManager& undoManager,
-               CustomLookAndFeel& lookAndFeel);
-
-    ~NodeCanvas() override;
-
-    void paint(juce::Graphics& graphics) override;
-
-    void clearCanvas();
-    void childrenChanged() override;
-    void applyViewTransform(const juce::AffineTransform& newViewTransform, float zoom);
-    void setProcessorPlayback(bool isPlaying);
-    void rebuildFromNodeMap(const juce::ValueTree& stateTree);
-    void handleAsyncUpdate();
-    void setPaintMode(bool enabled);
-    void setSpanMode(bool enabled);
-    void setQuaverMode(QuaverMode mode);
-    void showGrid();
-    void hideGrid();
-    juce::Point<int> snapPointToGrid(juce::Point<int> point) const;
-    void cancelPendingUpdatesFor(int nodeId);
 
     SequenceTreeAudioProcessor& processor;
     GraphState&                 graphState;

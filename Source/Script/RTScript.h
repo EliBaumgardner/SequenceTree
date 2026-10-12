@@ -10,10 +10,12 @@ enum class ScriptOpcode
     PushReal,
     PushLocal,
     PushMember,
+    PushGlobal,
     PushContext,
     PushNodeField,
     StoreLocal,
     StoreMember,
+    StoreGlobal,
     StoreNodeField,
     Pop,
 
@@ -55,7 +57,8 @@ enum class ScriptNumber
 {
     Int,
     Float,
-    Double
+    Double,
+    Bool
 };
 
 enum class ScriptContextValue
@@ -123,10 +126,13 @@ struct RTScript
     std::vector<ScriptInstruction> instructions;
     std::vector<ScriptFunction>    functions;
     std::vector<double>            memberDefaults;
+    std::vector<double>            globalDefaults;
     std::vector<double>            constants;
 
-    int mainFunction    = -1;
-    int advanceFunction = -1;
+    int mainFunction       = -1;
+    int advanceFunction    = -1;
+    int memberInitFunction = -1;
+    int globalInitFunction = -1;
 
     int stepBudget = defaultStepBudget;
 

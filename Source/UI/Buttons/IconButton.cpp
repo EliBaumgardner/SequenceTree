@@ -38,24 +38,6 @@ void IconButton::resized()
     }
 }
 
-void IconButton::lookAndFeelChanged()
-{
-    if (const auto* theme = dynamic_cast<const Theme*>(&getLookAndFeel())) {
-        caption.setFont(theme->font(Theme::FontStyle::Regular, Theme::labelFontHeight));
-    }
-}
-
-void IconButton::enablementChanged()
-{
-    float alpha = Theme::disabledButtonAlpha;
-
-    if (isEnabled()) {
-        alpha = 1.0f;
-    }
-
-    setAlpha(alpha);
-}
-
 void IconButton::setText(juce::String newText)
 {
     if (state.text == newText) {
@@ -84,6 +66,24 @@ void IconButton::setSelected(bool shouldBeSelected)
     state.isSelected = shouldBeSelected;
 
     repaint();
+}
+
+void IconButton::lookAndFeelChanged()
+{
+    if (const auto* theme = dynamic_cast<const Theme*>(&getLookAndFeel())) {
+        caption.setFont(theme->font(Theme::FontStyle::Regular, Theme::labelFontHeight));
+    }
+}
+
+void IconButton::enablementChanged()
+{
+    float alpha = Theme::disabledButtonAlpha;
+
+    if (isEnabled()) {
+        alpha = 1.0f;
+    }
+
+    setAlpha(alpha);
 }
 
 void IconButton::mouseEnter(const juce::MouseEvent&)
