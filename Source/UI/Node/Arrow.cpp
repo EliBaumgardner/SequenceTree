@@ -32,6 +32,7 @@ Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, juce::UndoManager& und
 
     valueEditor->setInterceptsMouseClicks(true, false);
     valueEditor->setTooltip("Count Limit");
+    valueEditor->setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
     addAndMakeVisible(*valueEditor);
 
     durationEditor = std::make_unique<ValueEditor>(undoManager);
