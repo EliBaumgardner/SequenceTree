@@ -3,8 +3,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "OrnamentTile.h"
-#include "../Buttons/IconButton.h"
-#include "../Editors/ValueEditor.h"
+#include <ArsNovaUI/Buttons/IconButton.h>
+#include <ArsNovaUI/Editors/ValueEditor.h>
 
 #include <functional>
 #include <memory>

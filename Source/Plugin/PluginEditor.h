@@ -15,13 +15,13 @@
 #include "../UI/Canvas/CanvasFrame.h"
 #include "../UI/Node/Node.h"
 #include "../Graph/RTGraphBuilder.h"
-#include "../UI/Canvas/DynamicPort.h"
+#include <ArsNovaUI/Canvas/DynamicPort.h>
 #include "../UI/Bars/Titlebar.h"
 #include "../UI/Bars/BottomBar.h"
-#include "../UI/Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Graph/GraphState.h"
 #include "../UI/Menus/MenuArea.h"
-#include "../UI/ScaledView.h"
+#include <ArsNovaUI/ScaledView.h>
 
 
 //==============================================================================

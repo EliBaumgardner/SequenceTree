@@ -3,7 +3,7 @@
 #include "../Node/Node.h"
 #include "../../Graph/OrnamentLibraries.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 void OrnamentMarkView::paint(juce::Graphics& graphics)
 {

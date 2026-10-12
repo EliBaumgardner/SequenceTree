@@ -7,7 +7,7 @@
 */
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "../UI/Theme/InterfaceIdentifiers.h"
+#include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
 
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
 : AudioProcessorEditor(p), audioProcessor(p)

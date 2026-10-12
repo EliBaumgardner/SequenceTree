@@ -1,14 +1,14 @@
 #pragma once
 
-#include "Bar.h"
-#include "../Buttons/IconButton.h"
-#include "../Buttons/ButtonPane.h"
-#include "../Editors/LabeledEditor.h"
+#include <ArsNovaUI/Bars/Bar.h>
+#include <ArsNovaUI/Buttons/IconButton.h>
+#include <ArsNovaUI/Buttons/ButtonPane.h>
+#include <ArsNovaUI/Editors/LabeledEditor.h>
 #include "../Buttons/PaintToolSettings.h"
-#include "../Buttons/ValueSlider.h"
-#include "../Menus/ContextMenu.h"
-#include "../PopupWindow.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Buttons/ValueSlider.h>
+#include <ArsNovaUI/Menus/ContextMenu.h>
+#include <ArsNovaUI/PopupWindow.h>
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Ornaments/OrnamentWindow.h"
 #include "../../Util/ArrowInfo.h"
 #include "../../Util/NodeInfo.h"

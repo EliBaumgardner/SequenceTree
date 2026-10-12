@@ -4,7 +4,7 @@
 #include <map>
 #include <memory>
 
-#include "../Theme/Visuals.h"
+#include <ArsNovaUI/Theme/Visuals.h>
 
 class NodeCanvas;
 class Node;

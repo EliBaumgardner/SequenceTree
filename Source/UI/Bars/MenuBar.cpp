@@ -1,5 +1,5 @@
 #include "MenuBar.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Canvas/NodeCanvas.h"
 
 MenuBar::MenuBar(NodeCanvas& nodeCanvas)

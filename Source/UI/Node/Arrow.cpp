@@ -3,7 +3,7 @@
 #include "Arrow.h"
 
 #include "Node.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 Arrow::Arrow(Node* startNode, Node* endNode, juce::UndoManager& undoManager)
     : startNode(startNode), endNode(endNode)

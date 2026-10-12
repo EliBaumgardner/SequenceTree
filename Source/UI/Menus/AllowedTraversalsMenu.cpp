@@ -1,7 +1,7 @@
 #include "AllowedTraversalsMenu.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Editors/Formats/TraversalFlagFormat.h"
 
 #include <algorithm>

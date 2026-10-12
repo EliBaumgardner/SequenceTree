@@ -2,7 +2,7 @@
 
 #include "RTData.h"
 #include "ValueTreeIdentifiers.h"
-#include "../UI/Theme/Visuals.h"
+#include <ArsNovaUI/Theme/Visuals.h>
 
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_events/juce_events.h>

@@ -1,10 +1,10 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../Menus/ColourSelector.h"
-#include "../Editors/LabeledEditor.h"
+#include <ArsNovaUI/Menus/ColourSelector.h>
+#include <ArsNovaUI/Editors/LabeledEditor.h>
 #include "../Canvas/ValueField.h"
-#include "IconButton.h"
+#include <ArsNovaUI/Buttons/IconButton.h>
 
 class NodeCanvas;
 

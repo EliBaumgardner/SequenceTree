@@ -1,5 +1,5 @@
 #include "OrnamentSelectionPanel.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
 
 #include <algorithm>

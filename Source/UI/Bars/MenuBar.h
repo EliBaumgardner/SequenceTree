@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Bar.h"
-#include "../Buttons/IconButton.h"
+#include <ArsNovaUI/Bars/Bar.h>
+#include <ArsNovaUI/Buttons/IconButton.h>
 
 class NodeCanvas;
 

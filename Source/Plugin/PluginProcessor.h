@@ -10,7 +10,7 @@
 #include "../Graph/TraversalRuleState.h"
 #include "../Graph/OrnamentLibraries.h"
 #include "../Graph/ValueTreeIdentifiers.h"
-#include "../UI/Theme/InterfaceIdentifiers.h"
+#include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
 #include "../Graph/RTGraphBuilder.h"
 #include "../Audio/EventManager.h"
 #include "../Audio/TraversalSession.h"

@@ -3,9 +3,9 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "OrnamentLibrarySection.h"
-#include "../Bars/Bar.h"
-#include "../Buttons/IconButton.h"
-#include "../PanelResizer.h"
+#include <ArsNovaUI/Bars/Bar.h>
+#include <ArsNovaUI/Buttons/IconButton.h>
+#include <ArsNovaUI/PanelResizer.h>
 
 #include <memory>
 #include <vector>

@@ -2,12 +2,12 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../Bars/Bar.h"
-#include "../PanelResizer.h"
-#include "../PopupWindow.h"
-#include "../Buttons/ButtonPane.h"
-#include "../Theme/CustomLookAndFeel.h"
-#include "SettingsMenu.h"
+#include <ArsNovaUI/Bars/Bar.h>
+#include <ArsNovaUI/PanelResizer.h>
+#include <ArsNovaUI/PopupWindow.h>
+#include <ArsNovaUI/Buttons/ButtonPane.h>
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
+#include <ArsNovaUI/Menus/SettingsMenu.h>
 
 class MenuBar;
 class NodeCanvas;

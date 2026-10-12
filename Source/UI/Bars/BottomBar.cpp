@@ -1,5 +1,5 @@
 #include "BottomBar.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Canvas/NodeCanvas.h"
 #include "../../Audio/TraversalSession.h"
 #include "../../Util/NodeInfo.h"

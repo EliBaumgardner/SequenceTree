@@ -4,8 +4,8 @@
 
 #include <optional>
 
-#include "../Buttons/ButtonPane.h"
-#include "../Editors/LabeledEditor.h"
+#include <ArsNovaUI/Buttons/ButtonPane.h>
+#include <ArsNovaUI/Editors/LabeledEditor.h>
 #include "../../Graph/OrnamentLibraries.h"
 
 class OrnamentSymbolEditor : public juce::Component

@@ -1,6 +1,6 @@
 #include "OrnamentCanvas.h"
 #include "../Canvas/CanvasHitTester.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Util/ArrowInfo.h"

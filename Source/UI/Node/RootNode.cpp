@@ -1,5 +1,5 @@
 #include "RootNode.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../Editors/Formats/TraversalFlagFormat.h"

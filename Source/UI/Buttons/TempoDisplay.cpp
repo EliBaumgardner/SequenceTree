@@ -1,6 +1,6 @@
 #include "TempoDisplay.h"
-#include "IconButton.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Buttons/IconButton.h>
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/RTData.h"
 
 TempoDisplay::TempoDisplay(juce::UndoManager& undoManager)

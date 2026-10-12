@@ -1,6 +1,6 @@
 #include "OrnamentLibrarySection.h"
-#include "../Menus/ContextMenu.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Menus/ContextMenu.h>
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
 
 #include <algorithm>

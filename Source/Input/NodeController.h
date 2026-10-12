@@ -12,7 +12,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include "../Util/NodeInfo.h"
-#include "../UI/PopupWindow.h"
+#include <ArsNovaUI/PopupWindow.h>
 #include "NodeCreationDispatcher.h"
 #include "ConnectionOps.h"
 #include "SelectionOps.h"

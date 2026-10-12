@@ -6,7 +6,7 @@
 #include "../Node/RootNode.h"
 #include "../Node/Modulator.h"
 #include "../Node/TraversalFlagNode.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Node/Encapsulator.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"

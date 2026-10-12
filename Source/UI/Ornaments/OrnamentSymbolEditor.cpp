@@ -1,5 +1,5 @@
 #include "OrnamentSymbolEditor.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
 
 OrnamentSymbolEditor::OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)

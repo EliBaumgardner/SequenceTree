@@ -1,5 +1,5 @@
 #include "NodeCanvas.h"
-#include "../Theme/CustomLookAndFeel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Node/Node.h"
 #include "../Node/Arrow.h"
 #include "../Node/Encapsulator.h"
