@@ -3,7 +3,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Theme.h"
 #include "Visuals.h"
-#include "../../Util/NodeInfo.h"
 
 class FileLabel;
 
@@ -85,8 +84,8 @@ public:
     void drawPencilIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawEraserIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawOrnamentSymbol(juce::Graphics& graphics, juce::Rectangle<float> bounds, const juce::String& symbol);
-    void drawNodeOrnament  (juce::Graphics& graphics, juce::Rectangle<float> bounds, OrnamentMark mark, const juce::String& symbol);
+    void drawOrnamentSymbol(juce::Graphics& graphics, juce::Rectangle<float> bounds, const std::vector<SymbolStroke>& strokes);
+    void drawNodeOrnament  (juce::Graphics& graphics, juce::Rectangle<float> bounds, OrnamentMark mark, const std::vector<SymbolStroke>& strokes);
 
     void drawAxisButton (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawRulesButton(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state, float fontHeight = labelFontHeight);

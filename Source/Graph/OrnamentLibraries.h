@@ -2,6 +2,7 @@
 
 #include "RTData.h"
 #include "ValueTreeIdentifiers.h"
+#include "../UI/Theme/Visuals.h"
 
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_events/juce_events.h>
@@ -14,12 +15,6 @@
 #include <vector>
 
 enum class OrnamentStatus { Draft, Published, ChangesPending };
-
-struct SymbolStroke
-{
-    juce::Path path;
-    float      width = 0.0f;
-};
 
 class OrnamentLibraries : public juce::ValueTree::Listener, private juce::Timer
 {

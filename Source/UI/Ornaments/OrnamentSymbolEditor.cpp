@@ -66,7 +66,7 @@ void OrnamentSymbolEditor::paint(juce::Graphics& graphics)
 
     graphics.setColour(lookAndFeel.textColour);
 
-    lookAndFeel.drawOrnamentSymbol(graphics, drawingArea, ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString());
+    lookAndFeel.drawOrnamentSymbol(graphics, drawingArea, OrnamentLibraries::readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString()));
 
     graphics.strokePath(stroke, juce::PathStrokeType(strokeWidth, juce::PathStrokeType::curved, juce::PathStrokeType::butt));
 

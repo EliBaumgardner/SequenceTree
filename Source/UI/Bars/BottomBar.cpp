@@ -176,7 +176,7 @@ void BottomBar::configureOrnamentButton()
 
         graphics.setColour(lookAndFeel.pressableButtonColour(state));
 
-        lookAndFeel.drawOrnamentSymbol(graphics, glyphArea.withSizeKeepingCentre(glyphSide, glyphSide), symbol);
+        lookAndFeel.drawOrnamentSymbol(graphics, glyphArea.withSizeKeepingCentre(glyphSide, glyphSide), OrnamentLibraries::readSymbol(symbol));
     };
 }
 

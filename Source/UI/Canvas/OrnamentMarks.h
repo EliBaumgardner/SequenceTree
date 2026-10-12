@@ -4,7 +4,7 @@
 #include <map>
 #include <memory>
 
-#include "../../Util/NodeInfo.h"
+#include "../Theme/Visuals.h"
 
 class NodeCanvas;
 class Node;

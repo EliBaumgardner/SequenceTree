@@ -1,5 +1,6 @@
 #include "ValueEditor.h"
 #include "../Theme/CustomLookAndFeel.h"
+#include "../../Util/NodeInfo.h"
 
 #include <cmath>
 
