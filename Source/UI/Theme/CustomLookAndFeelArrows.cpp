@@ -1,5 +1,4 @@
 #include "CustomLookAndFeel.h"
-#include "../Node/Arrow.h"
 
 static void strokeArrowShaft(juce::Graphics& graphics, const juce::Path& shaft, bool emphasised, float alpha, juce::Colour colour)
 {
@@ -74,16 +73,14 @@ static juce::Path trimPathToFraction(const juce::Path& source, float fraction)
     return trimmed;
 }
 
-static void drawArrowProgress(juce::Graphics& graphics, const Arrow& arrow, const juce::Path& shaft, juce::Point<float> chord)
+static void drawArrowProgress(juce::Graphics& graphics, const std::vector<ArrowTrail>& trails, const juce::Path& shaft, juce::Point<float> chord)
 {
     static constexpr float baseOffset   = 0.0f;
     static constexpr float trailSpacing = Theme::arrowTrailThickness;
 
     int drawnCount = 0;
 
-    for (const auto& entry : arrow.animation.trails) {
-        const ArrowAnimation::Trail& trail = entry.second;
-
+    for (const ArrowTrail& trail : trails) {
         if (trail.progress <= 0.0f) {
             continue;
         }
@@ -99,7 +96,7 @@ static void drawArrowProgress(juce::Graphics& graphics, const Arrow& arrow, cons
 
             graphics.setColour(trail.colour);
 
-            if (trail.source == TrailSource::Preview) {
+            if (trail.stroke == ArrowTrail::Stroke::Dashed) {
                 float dashLengths[] = { 4.0f, 3.0f };
                 progressStroke.createDashedStroke(progressPath, progressPath, dashLengths, 2);
                 graphics.fillPath(progressPath);
@@ -140,23 +137,17 @@ static void drawArrowHead(juce::Graphics& graphics, juce::Point<float> tip, juce
     graphics.strokePath(head, juce::PathStrokeType(thickness, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
-static void drawArrowLabel(juce::Graphics& graphics, const Arrow& arrow, const ArrowGeometry& geometry,
-                    float headLength, juce::Point<float> origin, const Theme& theme)
+static void drawArrowLabel(juce::Graphics& graphics, const ArrowVisual& visual, const Theme& theme)
 {
-    const juce::String labelText = arrow.getDurationLabel();
-
-    if (labelText.isEmpty() || arrow.editingDuration
-        || arrow.animation.snapProgress <= Arrow::labelVisibleThreshold) {
+    if (! visual.showsLabel) {
         return;
     }
 
-    const ArrowLabel label = arrow.getLabel(geometry, headLength);
-
-    const juce::Point<float> mid = label.centre - origin;
+    const juce::Point<float> mid = visual.label.centre - visual.origin;
 
     const juce::Graphics::ScopedSaveState savedState(graphics);
 
-    graphics.addTransform(juce::AffineTransform::rotation(label.angle).translated(mid.x, mid.y));
+    graphics.addTransform(juce::AffineTransform::rotation(visual.label.angle).translated(mid.x, mid.y));
 
     graphics.setFont(theme.font(Theme::FontStyle::Mono, 9.5f));
     graphics.setColour(theme.mutedTextColour);
@@ -164,44 +155,32 @@ static void drawArrowLabel(juce::Graphics& graphics, const Arrow& arrow, const A
     static constexpr float textW = 60.0f;
     static constexpr float textH = 12.0f;
 
-    graphics.drawText(labelText, -textW * 0.5f, -textH, textW, textH, juce::Justification::centredBottom, true);
+    graphics.drawText(visual.labelText, -textW * 0.5f, -textH, textW, textH, juce::Justification::centredBottom, true);
 }
 
-void CustomLookAndFeel::drawArrow(juce::Graphics& graphics, const Arrow& arrow)
+void CustomLookAndFeel::drawArrow(juce::Graphics& graphics, const ArrowVisual& visual)
 {
-    const ArrowGeometry geometry = arrow.getGeometry(arrow.animation.snapProgress);
+    const ArrowGeometry& geometry     = visual.geometry;
+    const float          rulerOpacity = visual.rulerOpacity;
+    juce::Path           shaft        = visual.shaft;
+    float                headWidth    = 4.25f;
+    float                alpha        = 1.0f;
 
     if (! geometry.valid) {
         return;
     }
 
-    const bool  emphasised = arrow.hovered || arrow.selected;
-    float headLength = Arrow::arrowHeadLength;
-    float headWidth  = 4.25f;
-    float alpha      = 1.0f;
-
-    if (emphasised) {
-        headLength = Arrow::arrowHeadLengthHover;
-        headWidth  = 5.25f;
+    if (visual.emphasised) {
+        headWidth = 5.25f;
     }
 
-    if (arrow.isGhost) {
+    if (visual.ghost) {
         alpha = 0.5f;
-    }
-
-    const juce::Point<float> origin { static_cast<float>(arrow.getX()), static_cast<float>(arrow.getY()) };
-
-    juce::Path              shaft        = arrow.buildShaftPath(geometry, headLength, origin);
-    const Arrow::ShaftStyle shaftStyle   = arrow.shaftStyle();
-    float                   rulerOpacity = arrow.animation.rulerFade;
-
-    if (shaftStyle == Arrow::ShaftStyle::Ruler) {
-        rulerOpacity = 1.0f;
     }
 
     if (rulerOpacity > 0.0f) {
         const float shaftLength = shaft.getLength();
-        const float tickSpacing = ArrowInfo::pixelsPerGridSpace / static_cast<float>(rulerTicksPerGridSpace);
+        const float tickSpacing = visual.rulerSpacing / static_cast<float>(rulerTicksPerGridSpace);
         juce::Path  minorTicks;
         juce::Path  majorTicks;
 
@@ -230,28 +209,28 @@ void CustomLookAndFeel::drawArrow(juce::Graphics& graphics, const Arrow& arrow)
         graphics.strokePath(majorTicks, juce::PathStrokeType(rulerMajorTickThickness, juce::PathStrokeType::mitered, juce::PathStrokeType::butt));
     }
 
-    if (shaftStyle == Arrow::ShaftStyle::Dashed) {
+    if (visual.shaftStyle == ArrowVisual::ShaftStyle::Dashed) {
         juce::PathStrokeType dashStroke(arrowShaftThickness);
         float dashLengths[] = { 6.0f, 7.0f };
         dashStroke.createDashedStroke(shaft, shaft, dashLengths, 2);
     }
 
-    if (shaftStyle != Arrow::ShaftStyle::Ruler) {
-        strokeArrowShaft(graphics, shaft, emphasised, alpha * (1.0f - rulerOpacity), arrowColour);
+    if (visual.shaftStyle != ArrowVisual::ShaftStyle::Ruler) {
+        strokeArrowShaft(graphics, shaft, visual.emphasised, alpha * (1.0f - rulerOpacity), arrowColour);
     }
 
-    if (! arrow.isGhost && ! arrow.animation.trails.empty()) {
-        drawArrowProgress(graphics, arrow, shaft, geometry.chord);
+    if (! visual.ghost && ! visual.trails.empty()) {
+        drawArrowProgress(graphics, visual.trails, shaft, geometry.chord);
     }
 
     if (geometry.drawHead) {
-        if (arrow.isTraversalArrow()) {
-            drawArrowHead(graphics, geometry.tip - origin, geometry.direction, headLength, headWidth, alpha, arrowHeadColour, arrowHeadOutlineThickness, canvasColour);
+        if (visual.head == ArrowVisual::HeadStyle::Outlined) {
+            drawArrowHead(graphics, geometry.tip - visual.origin, geometry.direction, visual.headLength, headWidth, alpha, arrowHeadColour, arrowHeadOutlineThickness, canvasColour);
         }
         else {
-            drawArrowHead(graphics, geometry.tip - origin, geometry.direction, headLength, headWidth, alpha, arrowHeadColour, arrowShaftThickness * 0.5f, arrowHeadColour);
+            drawArrowHead(graphics, geometry.tip - visual.origin, geometry.direction, visual.headLength, headWidth, alpha, arrowHeadColour, arrowShaftThickness * 0.5f, arrowHeadColour);
         }
     }
 
-    drawArrowLabel(graphics, arrow, geometry, headLength, origin, *this);
+    drawArrowLabel(graphics, visual, *this);
 }

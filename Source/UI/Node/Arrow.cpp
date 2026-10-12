@@ -51,7 +51,7 @@ Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, juce::UndoManager& und
 
 void Arrow::paint(juce::Graphics& graphics)
 {
-  CustomLookAndFeel::get(*this).drawArrow(graphics, *this);
+    CustomLookAndFeel::get(*this).drawArrow(graphics, getArrowVisual());
 }
 
 void Arrow::resized()
@@ -322,6 +322,58 @@ juce::String Arrow::getDurationLabel() const
     return juce::String(duration);
 }
 
+ArrowVisual Arrow::getArrowVisual() const
+{
+    ArrowVisual visual;
+
+    visual.geometry = getGeometry(animation.snapProgress);
+
+    if (! visual.geometry.valid) {
+        return visual;
+    }
+
+    visual.origin       = { static_cast<float>(getX()), static_cast<float>(getY()) };
+    visual.labelText    = getDurationLabel();
+    visual.shaftStyle   = shaftStyle();
+    visual.headLength   = arrowHeadLength;
+    visual.rulerOpacity = animation.rulerFade;
+    visual.rulerSpacing = ArrowInfo::pixelsPerGridSpace;
+    visual.emphasised   = hovered || selected;
+    visual.ghost        = isGhost;
+    visual.showsLabel   = visual.labelText.isNotEmpty() && ! editingDuration && animation.snapProgress > labelVisibleThreshold;
+
+    if (visual.emphasised) {
+        visual.headLength = arrowHeadLengthHover;
+    }
+
+    if (visual.shaftStyle == ArrowVisual::ShaftStyle::Ruler) {
+        visual.rulerOpacity = 1.0f;
+    }
+
+    if (isTraversalArrow()) {
+        visual.head = ArrowVisual::HeadStyle::Outlined;
+    }
+
+    visual.shaft = buildShaftPath(visual.geometry, visual.headLength, visual.origin);
+
+    if (visual.showsLabel) {
+        visual.label = getLabel(visual.geometry, visual.headLength);
+    }
+
+    for (const auto& entry : animation.trails) {
+        const ArrowAnimation::Trail& trail = entry.second;
+        ArrowTrail                   drawnTrail { trail.colour, trail.progress };
+
+        if (trail.source == TrailSource::Preview) {
+            drawnTrail.stroke = ArrowTrail::Stroke::Dashed;
+        }
+
+        visual.trails.push_back(drawnTrail);
+    }
+
+    return visual;
+}
+
 ArrowGeometry Arrow::getGeometry(float animationProgress) const
 {
     ArrowGeometry geometry;
@@ -507,33 +559,33 @@ juce::Point<float> Arrow::getHeadAnchor() const
     return endNode->getNodeCentre().toFloat() - geometry.chord * (endExtent + headAnchorInset);
 }
 
-Arrow::ShaftStyle Arrow::shaftStyle() const
+ArrowVisual::ShaftStyle Arrow::shaftStyle() const
 {
     if (dragging) {
-        return ShaftStyle::Ruler;
+        return ArrowVisual::ShaftStyle::Ruler;
     }
 
     if (isGhost) {
-        return ShaftStyle::Dashed;
+        return ArrowVisual::ShaftStyle::Dashed;
     }
 
     if (startNode == nullptr) {
-        return ShaftStyle::Solid;
+        return ArrowVisual::ShaftStyle::Solid;
     }
 
     if (startNode->nodeType == NodeType::TraversalFlag) {
-        return ShaftStyle::Dashed;
+        return ArrowVisual::ShaftStyle::Dashed;
     }
 
     if (endNode == nullptr || endNode->nodeType != NodeType::Root || startNode->isAlternativeNode) {
-        return ShaftStyle::Solid;
+        return ArrowVisual::ShaftStyle::Solid;
     }
 
     const ArrowType arrowType = ArrowBindingOps::getArrowInfo(arrowTree).type;
 
     if (arrowType == ArrowType::Traversal || arrowType == ArrowType::StepIntoTree) {
-        return ShaftStyle::Solid;
+        return ArrowVisual::ShaftStyle::Solid;
     }
 
-    return ShaftStyle::Dashed;
+    return ArrowVisual::ShaftStyle::Dashed;
 }
