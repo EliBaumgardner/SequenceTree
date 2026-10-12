@@ -62,7 +62,7 @@ Node::Node(juce::UndoManager& undoManager)
 
 void Node::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawNode(graphics, getNodeVisual(getLocalBounds().toFloat()));
+    CustomLookAndFeel::get(*this).drawCircleNode(graphics, getNodeVisual(getLocalBounds().toFloat()));
 }
 
 void Node::resized()

@@ -8,7 +8,7 @@ PaintToolSettings::PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree col
     ValueField& valueField = nodeCanvas.valueField;
     const float brushFlow  = juce::jlimit(minBrushFlow, maxBrushFlow, valueField.brushFlow);
 
-    paintTool.icon = &CustomLookAndFeel::drawPaintToolIcon;
+    paintTool.icon = &CustomLookAndFeel::drawBrushIcon;
 
     colourSelector.shape = ColourSelector::Shape::Circle;
 

@@ -25,7 +25,7 @@ void TempoDisplay::paint(juce::Graphics& graphics)
     const auto         contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * Theme::contentInsetRatio));
 
     lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
-    lookAndFeel.drawTempoIcon(graphics, contentBounds.withWidth(contentBounds.getHeight()).toFloat(), ButtonState {});
+    lookAndFeel.drawMetronomeIcon(graphics, contentBounds.withWidth(contentBounds.getHeight()).toFloat(), ButtonState {});
 }
 
 void TempoDisplay::resized()

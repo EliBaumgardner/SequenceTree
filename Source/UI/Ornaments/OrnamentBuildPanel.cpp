@@ -219,15 +219,15 @@ OrnamentBuildPanel::BuildTitlebar::BuildTitlebar()
     : Bar(Orientation::Horizontal, titlebarInsetRatio)
 {
     hostButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawHostButton(graphics, bounds, state);
+        CustomLookAndFeel::get(*this).drawCircledHButton(graphics, bounds, state);
     };
 
     arrowButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawDanglingArrowButton(graphics, bounds, state);
+        CustomLookAndFeel::get(*this).drawArrowButton(graphics, bounds, state);
     };
 
     publishButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawPublishButton(graphics, bounds, state);
+        CustomLookAndFeel::get(*this).drawUploadButton(graphics, bounds, state);
     };
 
     symbolButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {

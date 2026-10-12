@@ -40,55 +40,55 @@ public:
     void drawFrostedGlass(juce::Graphics& graphics, juce::Component& surface, juce::Component& backdrop, juce::Rectangle<int> area);
     void blurFrostedImage(juce::Image& frosted);
 
-    void drawNode         (juce::Graphics& graphics, const NodeVisual& visual);
-    void drawModulatorNode(juce::Graphics& graphics, const NodeVisual& visual);
-    void drawRootRectangle(juce::Graphics& graphics, juce::Rectangle<float> bounds);
-    void drawArrow        (juce::Graphics& graphics, const ArrowVisual& visual);
+    void drawCircleNode (juce::Graphics& graphics, const NodeVisual& visual);
+    void drawSquareNode (juce::Graphics& graphics, const NodeVisual& visual);
+    void drawRaisedPanel(juce::Graphics& graphics, juce::Rectangle<float> bounds);
+    void drawArrow      (juce::Graphics& graphics, const ArrowVisual& visual);
 
-    void drawTreeIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawNodeIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawTraversalIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawSettingsIcon (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawForkIcon    (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawRingDotIcon (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawRouteIcon   (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawSettingsIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawPlayIcon      (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawSyncIcon      (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawTempoIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawResetIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawResetPatchIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawPlayIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawLinkIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawMetronomeIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawSkipBackIcon (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawReloadIcon   (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawUndoIcon      (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawRedoIcon      (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawUndoIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawRedoIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawNodeModeIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawModulatorIcon    (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawTraversalFlagIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawCircleIcon       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawRoundedSquareIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawTriangleIcon     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawDisplayArrowIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawCollapseIcon    (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawEyeIcon         (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawChevronDownIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawChevronUpIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawEyeIcon        (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
     void drawAddIcon   (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawRemoveIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawImportIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawPaintToolIcon (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawSpanToolIcon  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawQuaverToolIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawBrushIcon    (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawDashedBoxIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawQuaverIcon   (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawHostButton         (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawDanglingArrowButton(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawPencilButton       (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawPublishButton      (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawOrnamentButton     (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawCircledHButton(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawArrowButton   (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawPencilButton  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawUploadButton  (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawWaveButton    (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
     void drawPencilIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
     void drawEraserIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
 
-    void drawOrnamentSymbol(juce::Graphics& graphics, juce::Rectangle<float> bounds, const std::vector<SymbolStroke>& strokes);
-    void drawNodeOrnament  (juce::Graphics& graphics, juce::Rectangle<float> bounds, OrnamentMark mark, const std::vector<SymbolStroke>& strokes);
+    void drawStrokeSymbol(juce::Graphics& graphics, juce::Rectangle<float> bounds, const std::vector<SymbolStroke>& strokes);
+    void drawSymbolMark  (juce::Graphics& graphics, juce::Rectangle<float> bounds, SymbolMark mark, const std::vector<SymbolStroke>& strokes);
 
-    void drawAxisButton (juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
-    void drawRulesButton(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state, float fontHeight = labelFontHeight);
+    void drawTextButton(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state);
+    void drawCodeButton(juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state, float fontHeight = labelFontHeight);
 
     void drawIncrementIcon(juce::Graphics& graphics, juce::Rectangle<float> bounds, bool pointsUp);
 
@@ -118,42 +118,42 @@ private:
     struct GlyphPaths
     {
         juce::Path add;
+        juce::Path arrow;
+        juce::Path boxDash;
+        juce::Path boxDots;
+        juce::Path brushHandle;
+        juce::Path brushTip;
         juce::Path chevronDown;
         juce::Path chevronUp;
-        juce::Path danglingArrow;
+        juce::Path circle;
+        juce::Path circledH;
+        juce::Path code;
+        juce::Path dashedBox;
+        juce::Path dot;
         juce::Path eraser;
         juce::Path eye;
-        juce::Path host;
+        juce::Path fork;
         juce::Path import;
-        juce::Path modulator;
-        juce::Path nodeDot;
-        juce::Path nodeMode;
-        juce::Path nodeRing;
-        juce::Path ornament;
-        juce::Path paintHandle;
-        juce::Path paintTip;
+        juce::Path link;
+        juce::Path metronome;
         juce::Path pause;
         juce::Path pencil;
         juce::Path play;
-        juce::Path publish;
         juce::Path quaverHead;
         juce::Path quaverStem;
         juce::Path redo;
+        juce::Path reload;
         juce::Path remove;
-        juce::Path resetBar;
-        juce::Path resetPatch;
-        juce::Path resetTriangle;
-        juce::Path rules;
+        juce::Path ring;
+        juce::Path roundedSquare;
+        juce::Path route;
         juce::Path settings;
-        juce::Path spanBridge;
-        juce::Path spanEnds;
-        juce::Path spanOutline;
-        juce::Path sync;
-        juce::Path tempo;
-        juce::Path traversal;
-        juce::Path traversalFlag;
-        juce::Path tree;
+        juce::Path skipBar;
+        juce::Path skipTriangle;
+        juce::Path triangle;
         juce::Path undo;
+        juce::Path upload;
+        juce::Path wave;
     };
 
     juce::Image frostedBackdrop;

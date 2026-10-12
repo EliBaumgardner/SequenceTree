@@ -7,7 +7,7 @@
 
 void OrnamentMarkView::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawNodeOrnament(graphics, getLocalBounds().toFloat(), mark, OrnamentLibraries::readSymbol(symbol));
+    CustomLookAndFeel::get(*this).drawSymbolMark(graphics, getLocalBounds().toFloat(), mark, OrnamentLibraries::readSymbol(symbol));
 }
 
 OrnamentMarks::OrnamentMarks(NodeCanvas& nodeCanvas, OrnamentLibraries& ornamentLibraries)
@@ -30,17 +30,17 @@ void OrnamentMarks::refresh(Node& node)
 {
     const juce::String    uid      = node.nodeValueTree.getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
     const juce::ValueTree ornament = ornamentLibraries.findOrnament(uid);
-    OrnamentMark          mark     = OrnamentMark::None;
+    SymbolMark            mark     = SymbolMark::None;
 
     if (uid.isNotEmpty()) {
-        mark = OrnamentMark::Missing;
+        mark = SymbolMark::Missing;
     }
 
     if (uid.isNotEmpty() && ornamentLibraries.statusOf(ornament) != OrnamentStatus::Draft) {
-        mark = OrnamentMark::Symbol;
+        mark = SymbolMark::Symbol;
     }
 
-    if (mark == OrnamentMark::None) {
+    if (mark == SymbolMark::None) {
         views.erase(&node);
 
         node.removeComponentListener(this);

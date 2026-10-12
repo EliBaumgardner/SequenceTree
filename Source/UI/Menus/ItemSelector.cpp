@@ -4,7 +4,7 @@
 ItemSelector::ItemSelector(juce::UndoManager& undoManager)
     : labelEditor(undoManager)
 {
-    button.icon = &CustomLookAndFeel::drawDisplayArrowIcon;
+    button.icon = &CustomLookAndFeel::drawChevronDownIcon;
 
     labelEditor.autoFitText = true;
     labelEditor.editable    = false;

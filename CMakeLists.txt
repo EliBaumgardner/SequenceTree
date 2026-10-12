@@ -40,42 +40,42 @@ juce_add_binary_data(SequenceTreeIcons
         NAMESPACE IconData
         SOURCES
         Resources/Icons/Add.svg
+        Resources/Icons/Arrow.svg
+        Resources/Icons/BoxDash.svg
+        Resources/Icons/BoxDots.svg
+        Resources/Icons/BrushHandle.svg
+        Resources/Icons/BrushTip.svg
         Resources/Icons/ChevronDown.svg
         Resources/Icons/ChevronUp.svg
-        Resources/Icons/DanglingArrow.svg
+        Resources/Icons/Circle.svg
+        Resources/Icons/CircledH.svg
+        Resources/Icons/Code.svg
+        Resources/Icons/DashedBox.svg
+        Resources/Icons/Dot.svg
         Resources/Icons/Eraser.svg
         Resources/Icons/Eye.svg
-        Resources/Icons/Host.svg
+        Resources/Icons/Fork.svg
         Resources/Icons/Import.svg
-        Resources/Icons/Modulator.svg
-        Resources/Icons/NodeDot.svg
-        Resources/Icons/NodeMode.svg
-        Resources/Icons/NodeRing.svg
-        Resources/Icons/Ornament.svg
-        Resources/Icons/PaintHandle.svg
-        Resources/Icons/PaintTip.svg
+        Resources/Icons/Link.svg
+        Resources/Icons/Metronome.svg
         Resources/Icons/Pause.svg
         Resources/Icons/Pencil.svg
         Resources/Icons/Play.svg
-        Resources/Icons/Publish.svg
         Resources/Icons/QuaverHead.svg
         Resources/Icons/QuaverStem.svg
         Resources/Icons/Redo.svg
+        Resources/Icons/Reload.svg
         Resources/Icons/Remove.svg
-        Resources/Icons/ResetBar.svg
-        Resources/Icons/ResetPatch.svg
-        Resources/Icons/ResetTriangle.svg
-        Resources/Icons/Rules.svg
+        Resources/Icons/Ring.svg
+        Resources/Icons/RoundedSquare.svg
+        Resources/Icons/Route.svg
         Resources/Icons/Settings.svg
-        Resources/Icons/SpanBridge.svg
-        Resources/Icons/SpanEnds.svg
-        Resources/Icons/SpanOutline.svg
-        Resources/Icons/Sync.svg
-        Resources/Icons/Tempo.svg
-        Resources/Icons/TraversalFlag.svg
-        Resources/Icons/Traversal.svg
-        Resources/Icons/Tree.svg
+        Resources/Icons/SkipBar.svg
+        Resources/Icons/SkipTriangle.svg
+        Resources/Icons/Triangle.svg
         Resources/Icons/Undo.svg
+        Resources/Icons/Upload.svg
+        Resources/Icons/Wave.svg
 )
 
 target_compile_features(SequenceTree PRIVATE cxx_std_20)

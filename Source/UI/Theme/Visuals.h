@@ -4,7 +4,7 @@
 #include <map>
 #include <vector>
 
-enum class OrnamentMark { None, Symbol, Missing };
+enum class SymbolMark { None, Symbol, Missing };
 
 struct SymbolStroke
 {
@@ -28,12 +28,12 @@ struct NodeVisual
     juce::Rectangle<float>             bounds;
     juce::Colour                       colour;
     const std::map<int, juce::Colour>& highlights;
-    bool                               isHovered             = false;
-    bool                               isSelected            = false;
-    bool                               isOutlined            = false;
-    bool                               isEncapsulationRinged = false;
-    bool                               hasInnerRim           = false;
-    juce::Colour                       encapsulationRingColour;
+    bool                               isHovered    = false;
+    bool                               isSelected   = false;
+    bool                               isOutlined   = false;
+    bool                               hasOuterRing = false;
+    bool                               hasInnerRim  = false;
+    juce::Colour                       outerRingColour;
 };
 
 struct ArrowGeometry

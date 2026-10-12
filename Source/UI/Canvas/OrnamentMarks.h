@@ -16,7 +16,7 @@ public:
 
     void paint(juce::Graphics& graphics) override;
 
-    OrnamentMark    mark = OrnamentMark::None;
+    SymbolMark      mark = SymbolMark::None;
     juce::String    symbol;
     juce::ValueTree nodeValueTree;
 };

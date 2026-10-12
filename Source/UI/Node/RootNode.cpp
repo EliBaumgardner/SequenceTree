@@ -30,7 +30,7 @@ void RootNode::paint(juce::Graphics& graphics)
     const auto circleBounds = getLocalBounds().toFloat()
                             .withTrimmedLeft(static_cast<float>(loopLimitRectangleWidth));
 
-    CustomLookAndFeel::get(*this).drawNode(graphics, getNodeVisual(circleBounds));
+    CustomLookAndFeel::get(*this).drawCircleNode(graphics, getNodeVisual(circleBounds));
 }
 
 void RootNode::resized()

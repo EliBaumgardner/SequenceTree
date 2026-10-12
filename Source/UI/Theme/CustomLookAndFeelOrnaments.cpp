@@ -1,6 +1,6 @@
 #include "CustomLookAndFeel.h"
 
-void CustomLookAndFeel::drawOrnamentSymbol(juce::Graphics& graphics, juce::Rectangle<float> bounds, const std::vector<SymbolStroke>& strokes)
+void CustomLookAndFeel::drawStrokeSymbol(juce::Graphics& graphics, juce::Rectangle<float> bounds, const std::vector<SymbolStroke>& strokes)
 {
     const float                  side   = juce::jmin(bounds.getWidth(), bounds.getHeight());
     const juce::Rectangle<float> square = bounds.withSizeKeepingCentre(side, side);
@@ -11,18 +11,18 @@ void CustomLookAndFeel::drawOrnamentSymbol(juce::Graphics& graphics, juce::Recta
     }
 }
 
-void CustomLookAndFeel::drawNodeOrnament(juce::Graphics& graphics, juce::Rectangle<float> bounds, OrnamentMark mark, const std::vector<SymbolStroke>& strokes)
+void CustomLookAndFeel::drawSymbolMark(juce::Graphics& graphics, juce::Rectangle<float> bounds, SymbolMark mark, const std::vector<SymbolStroke>& strokes)
 {
-    if (mark == OrnamentMark::Symbol) {
+    if (mark == SymbolMark::Symbol) {
         graphics.setColour(textColour);
 
-        drawOrnamentSymbol(graphics, bounds, strokes);
+        drawStrokeSymbol(graphics, bounds, strokes);
 
         return;
     }
 
-    if (mark == OrnamentMark::Missing) {
-        graphics.setColour(scriptErrorColour);
+    if (mark == SymbolMark::Missing) {
+        graphics.setColour(errorColour);
         graphics.setFont(font(FontStyle::SemiBold, bounds.getHeight()));
         graphics.drawFittedText("?", bounds.toNearestInt(), juce::Justification::centred, 1);
     }

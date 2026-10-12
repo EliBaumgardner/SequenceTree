@@ -19,7 +19,7 @@ RootRectangle::RootRectangle(juce::UndoManager& undoManager) : traversalEditor(u
 
 void RootRectangle::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawRootRectangle(graphics, getLocalBounds().toFloat());
+    CustomLookAndFeel::get(*this).drawRaisedPanel(graphics, getLocalBounds().toFloat());
 }
 
 void RootRectangle::resized()
