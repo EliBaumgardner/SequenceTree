@@ -2,9 +2,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "Theme.h"
+#include "Visuals.h"
 #include "../../Util/NodeInfo.h"
-
-class NodeCanvas;
 
 class Arrow;
 
@@ -40,7 +39,7 @@ public:
 
     void drawCallOutBoxBackground(juce::CallOutBox& box, juce::Graphics& graphics, const juce::Path& path, juce::Image& cachedShadow) override;
 
-    void drawCanvas      (juce::Graphics& graphics, const NodeCanvas& nodeCanvas);
+    void drawCanvas      (juce::Graphics& graphics, const CanvasGrid& grid);
     void drawPane        (juce::Graphics& graphics, juce::Rectangle<float> bounds);
     void drawFrostedGlass(juce::Graphics& graphics, juce::Component& surface, juce::Component& backdrop, juce::Rectangle<int> area);
     void blurFrostedImage(juce::Image& frosted);

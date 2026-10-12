@@ -1,5 +1,4 @@
 #include "CustomLookAndFeel.h"
-#include "../Canvas/NodeCanvas.h"
 #include "CustomTextCaret.h"
 
 void CustomLookAndFeel::drawScrollbar(juce::Graphics& graphics, juce::ScrollBar&, int x, int y, int width, int height,
@@ -28,11 +27,11 @@ void CustomLookAndFeel::drawScrollbar(juce::Graphics& graphics, juce::ScrollBar&
     graphics.fillRoundedRectangle(thumb.toFloat().reduced(scrollBarThumbInset), scrollBarCornerRadius);
 }
 
-void CustomLookAndFeel::drawCanvas(juce::Graphics& graphics, const NodeCanvas& nodeCanvas)
+void CustomLookAndFeel::drawCanvas(juce::Graphics& graphics, const CanvasGrid& grid)
 {
-    const float                     spacing = nodeCanvas.gridSpacing;
-    const auto                      bounds  = nodeCanvas.getLocalBounds().toFloat().transformedBy(nodeCanvas.modelTransform);
-    const auto                      visible = graphics.getClipBounds().toFloat().transformedBy(nodeCanvas.modelTransform).expanded(gridDotDiameter).getIntersection(bounds);
+    const float                     spacing = grid.spacing;
+    const auto                      bounds  = grid.bounds.transformedBy(grid.modelTransform);
+    const auto                      visible = graphics.getClipBounds().toFloat().transformedBy(grid.modelTransform).expanded(gridDotDiameter).getIntersection(bounds);
     const auto                      dot     = juce::Rectangle<float>(gridDotDiameter, gridDotDiameter);
     float                           originX = bounds.getCentreX();
     float                           originY = bounds.getCentreY();
@@ -40,15 +39,15 @@ void CustomLookAndFeel::drawCanvas(juce::Graphics& graphics, const NodeCanvas& n
 
     graphics.fillAll(canvasColour);
 
-    if (!nodeCanvas.gridVisible || spacing < 15.0f) {
+    if (!grid.visible || spacing < 15.0f) {
         return;
     }
 
-    graphics.addTransform(nodeCanvas.viewTransform);
+    graphics.addTransform(grid.viewTransform);
 
-    if (nodeCanvas.gridOriginSet) {
-        originX = nodeCanvas.gridOrigin.x;
-        originY = nodeCanvas.gridOrigin.y;
+    if (grid.originSet) {
+        originX = grid.origin.x;
+        originY = grid.origin.y;
     }
 
     const float firstX = originX - std::ceil((originX - visible.getX()) / spacing) * spacing;

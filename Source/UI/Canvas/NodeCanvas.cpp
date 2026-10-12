@@ -32,7 +32,9 @@ NodeCanvas::~NodeCanvas()
 
 void NodeCanvas::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawCanvas(graphics, *this);
+    const CanvasGrid grid { getLocalBounds().toFloat(), modelTransform, viewTransform, gridOrigin, gridSpacing, gridVisible, gridOriginSet };
+
+    CustomLookAndFeel::get(*this).drawCanvas(graphics, grid);
 
     if (paintMode && valueField.image.isValid()) {
         graphics.setImageResamplingQuality(juce::Graphics::mediumResamplingQuality);
