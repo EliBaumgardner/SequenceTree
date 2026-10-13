@@ -4,7 +4,7 @@
 
 **Draw a graph. Hear a sequence.**
 
-A polyphonic, generative MIDI sequencer. You draw trees of notes, and traversals walk them: counting their visits, branching, looping, spawning one another, and playing many voices at once.
+SequenceTree is a graph-based music sequencer. The user trees of nodes which contain musical data about notes. A traversal of the tree controls the manner in which notes are played: counting their visits, branching, looping, spawning one another, and playing many voices at once.
 
 ![C++20](https://img.shields.io/badge/C%2B%2B20-1f2328?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![JUCE 8](https://img.shields.io/badge/JUCE_8-1f2328?style=for-the-badge&logo=juce&logoColor=white)
@@ -23,19 +23,19 @@ A polyphonic, generative MIDI sequencer. You draw trees of notes, and traversals
 
 ## What it is
 
-Most sequencers store a pattern and play it back. SequenceTree stores **rules** for a pattern. Every node is a note, every arrow is a path the music can take, and a small set of counters on each node decides which path is taken on which pass. A graph of a dozen nodes can play for minutes before it repeats, and several graphs, or several voices in one graph, play at the same time.
+A music sequencer is a tool musicians use to control the flow of musical information over time. A MIDI sequencer determines when a note plays, and its pitch, velocity, and duration. Typically this output is routed to a device which generates sound with these parameters.  Most sequencers store a pattern and play it back. SequenceTree stores **rules** for a pattern. Every node is a note, every arrow is a path the music can take, and a small set of counters on each node decides which path is taken on which pass. A graph of a dozen nodes can play for minutes before it repeats, and several graphs, or several voices in one graph, play at the same time.
 
 SequenceTree is an instrument plugin that only sends MIDI. It drives any synth or sampler in your DAW (AU and VST3), or runs as a standalone app.
 
 ## How a traversal unfolds
 
-A **traversal** is one voice moving through a tree. It plays a node, waits for the note to end, chooses the next node, and plays that.
+A **traversal** is one voice moving through a tree of notes. At each node (which contains musical data about a note),  it waits for the note to end, and chooses the child based on an algorithm, which can be user defined using the built-in scripting language.
 
-1. **It starts at a root** and follows arrows downward, playing each node it lands on.
-2. **The arrow's length is the note's length.** The note a node plays lasts as long as the arrow leaving it toward the next node, so the shape of the graph is its rhythm. Drag a node and the music retimes as you drag.
-3. **Each node counts how many times it has been left**, and its children's **count limits** decide where it goes. A child with count limit *N* is a candidate every *N*th time, and the candidate with the highest limit wins.
-4. **When it runs out of places to go, it returns to the root** and starts the next pass. The counts are kept, so the next pass takes a different route.
-5. **It keeps looping** until the root's loop limit is reached (0 means forever).
+1. **It starts at the root of a tree** and descends directed edges, processing the musical data in each node it lands on. (by processing I mean generating a midi note message)
+2. **The arrow's length is the note's length.** The midi note a node contains lasts as long as the arrow leaving it toward the next node, so the shape of the graph is its rhythm. 
+3. **Each node counts how many times it has been visited**, and its children's **count limits** is used to determine whether or not a child should be traversed. A child with count limit *N* is a candidate every *N*th time, and the candidate with the highest limit wins (This can be altered with the scripting language)
+4. **When it runs out of places to go, it returns to the root** and starts the next pass. The counts are kept, so the next pass takes a different route. This loop allows musical events to repeat, and new sections to be played.
+5. **It keeps looping** until the root's loop limit is reached (the default 0 means forever).
 
 For example, a root R leads to A, and A has three children: B (count limit 1), C (2) and D (4). Each pass ends at a leaf and goes back to R:
 
@@ -65,7 +65,7 @@ A **modulator** is a small tree hung off a note node that changes how that note 
 
 ### Traversal flags
 
-A **traversal flag** starts or stops a voice. Hang a flag off a note node, then Shift-drag from the flag onto the node where the new voice should start, and type which traversal it controls: `+2` starts traversal 2 there, `-2` stops it. The flag fires every *N*th time its host is played (its count limit), and the length of the arrow to the flag is how long it waits before firing. Flags are how one melody calls in a bass line every eighth bar, or how a voice ends itself after a set number of passes.
+A **traversal flag** starts or stops a voice on top of the first created voice (a monophonic voice traverses the first user tree by default as specified by its root rectangle). Hang a flag off a note node, then Shift-drag from the flag onto the node where the new voice should start, and type which traversal it controls: `+2` starts traversal 2 there, `-2` stops it. The flag fires every *N*th time its host is played (its count limit), and the length of the arrow to the flag is how long it waits before firing. The musical relevance of the traversal flags is the creation of polyphonic texture (two or more simultaneous, independent voices), and determining when a voice starts or stops. A limitation right now is that all polyphonic voices are mediated by the first voice, since the first traversal is the first active traversal that can reach a traversalFlag, and make it start another traversal. 
 
 ## Node values
 
