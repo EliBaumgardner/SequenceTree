@@ -113,7 +113,7 @@ SequenceTree plays many voices at once, in several ways that combine freely.
 
 ## What's under the hood
 
-### Audio that never stutters
+### Real Time Safe Architecture 
 
 Audio software has a strict deadline. Every few milliseconds the computer asks the plugin for the next slice of sound. If the plugin is even slightly late, the listener hears a click or a dropout.
 
