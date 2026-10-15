@@ -4,7 +4,7 @@
 
 **Draw a graph. Hear a sequence.**
 
-SequenceTree is a graph-based music sequencer. The user trees of nodes which contain musical data about notes. A traversal of the tree controls the manner in which notes are played: counting their visits, branching, looping, spawning one another, and playing many voices at once.
+SequenceTree is a graph-based music sequencer. The user draws trees of nodes which contain musical data (midi notes). A traversal of the tree controls the way notes are played, specifically when and where a note is performed. 
 
 ![C++20](https://img.shields.io/badge/C%2B%2B20-1f2328?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![JUCE 8](https://img.shields.io/badge/JUCE_8-1f2328?style=for-the-badge&logo=juce&logoColor=white)
