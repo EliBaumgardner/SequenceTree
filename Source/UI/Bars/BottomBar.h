@@ -18,14 +18,14 @@
 class NodeCanvas;
 class TraversalSession;
 class OrnamentLibraries;
-class OrnamentApplier;
+
 
 class BottomBar : public Bar, private juce::ValueTree::Listener
 {
 public:
 
     BottomBar(NodeCanvas& nodeCanvas, TraversalSession& traversalSession, juce::ValueTree colourPresets, juce::UndoManager& undoManager,
-              OrnamentLibraries& ornamentLibraries, juce::UndoManager& ornamentUndoManager, OrnamentApplier& ornamentApplier);
+              OrnamentLibraries& ornamentLibraries, juce::UndoManager& ornamentUndoManager);
 
     ~BottomBar() override;
 
@@ -85,7 +85,7 @@ private:
     TraversalSession&  traversalSession;
     OrnamentLibraries& ornamentLibraries;
     juce::UndoManager& ornamentUndoManager;
-    OrnamentApplier&   ornamentApplier;
+
 
     PaintToolSettings paintPanel;
     ButtonPane        toolPane;

@@ -4,16 +4,15 @@
 #include "../../Audio/TraversalSession.h"
 #include "../../Util/NodeInfo.h"
 #include "../../Graph/OrnamentLibraries.h"
-#include "../../Input/OrnamentApplier.h"
 
 BottomBar::BottomBar(NodeCanvas& nodeCanvas, TraversalSession& traversalSession, juce::ValueTree colourPresets, juce::UndoManager& undoManager,
-                     OrnamentLibraries& ornamentLibraries, juce::UndoManager& ornamentUndoManager, OrnamentApplier& ornamentApplier)
+                     OrnamentLibraries& ornamentLibraries, juce::UndoManager& ornamentUndoManager)
     : Bar(nodeCanvas, Orientation::Horizontal, Theme::contentInsetRatio),
       nodeCanvas(nodeCanvas),
       traversalSession(traversalSession),
       ornamentLibraries(ornamentLibraries),
       ornamentUndoManager(ornamentUndoManager),
-      ornamentApplier(ornamentApplier),
+
       paintPanel(nodeCanvas, colourPresets, undoManager),
       countsField(undoManager)
 {
@@ -21,24 +20,32 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, TraversalSession& traversalSession,
 
     quaverTool = &quaverPane.addButton(&CustomLookAndFeel::drawQuaverIcon, "Note",
         [this]() {
-            quaverTool->setSelected(! quaverTool->state.isSelected);
-
-            if (quaverTool->state.isSelected) {
-                this->nodeCanvas.setQuaverMode(NodeCanvas::QuaverMode::Preview);
+            if (this->nodeCanvas.activeTool == NodeCanvas::CanvasTool::NotePreview) {
+                this->nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::None);
                 return;
             }
 
-            this->nodeCanvas.setQuaverMode(NodeCanvas::QuaverMode::Off);
+            this->nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::NotePreview);
         });
 
     spanTool = &toolPane.addButton(&CustomLookAndFeel::drawDashedBoxIcon, "Node Span",
         [this]() {
-            spanTool->setSelected(! spanTool->state.isSelected);
+            if (this->nodeCanvas.activeTool == NodeCanvas::CanvasTool::Span) {
+                this->nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::None);
+                return;
+            }
 
-            this->nodeCanvas.setSpanMode(spanTool->state.isSelected);
+            this->nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::Span);
         });
 
     configureOrnamentButton();
+
+    nodeCanvas.onActiveToolChanged = [this](NodeCanvas::CanvasTool tool) {
+        paintPanel.paintTool.setSelected(tool == NodeCanvas::CanvasTool::Paint);
+        spanTool->setSelected(tool == NodeCanvas::CanvasTool::Span);
+        quaverTool->setSelected(tool == NodeCanvas::CanvasTool::NotePreview);
+        ornamentButton->setSelected(tool == NodeCanvas::CanvasTool::Ornament);
+    };
 
     configureAxis(xAxis, "X");
     configureAxis(yAxis, "Y");
@@ -90,6 +97,7 @@ void BottomBar::resized()
     const int            labelWidth      = juce::roundToInt(paneWidth * countsLabelWidthRatio);
     const float          textHeight      = Theme::textHeight;
     const juce::Font     textFont        = CustomLookAndFeel::get(*this).font(Theme::FontStyle::Regular, textHeight);
+
     juce::Rectangle<int> quaverPaneBounds;
 
     paintPanel.sizeField.label.setFont(textFont);
@@ -98,7 +106,7 @@ void BottomBar::resized()
 
     paintPanel.sizeField.editor.setFontHeight(textHeight);
     paintPanel.flowField.editor.setFontHeight(textHeight);
-    countsField.editor.setFontHeight(textHeight);
+    countsField.editor         .setFontHeight(textHeight);
 
     paintPanel.setBounds(bounds.removeFromLeft(paintPanelWidth));
 
@@ -148,7 +156,12 @@ int BottomBar::narrowestWidth() const
 void BottomBar::configureOrnamentButton()
 {
     ornamentButton = &ornamentPane.addButton(nullptr, "Ornaments", [this]() {
-        ornamentApplier.setActive(! ornamentApplier.isActive);
+        if (nodeCanvas.activeTool == NodeCanvas::CanvasTool::Ornament) {
+            nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::None);
+            return;
+        }
+
+        nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::Ornament);
     });
 
     ornamentButton->onRightClick = [this]() {
@@ -157,9 +170,6 @@ void BottomBar::configureOrnamentButton()
         ornamentLauncher.show(*this);
     };
 
-    ornamentApplier.onActiveChanged = [this](bool isActive) {
-        ornamentButton->setSelected(isActive);
-    };
 
     ornamentButton->painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
         CustomLookAndFeel&           lookAndFeel = CustomLookAndFeel::get(*this);
@@ -200,10 +210,6 @@ void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
     axis.button = &bindPane.addButton(nullptr, text + " Binding", [this, &axis]() { toggleAxis(axis); });
 
     axis.button->onRightClick = [this, &axis]() { showAxisMenu(axis); };
-
-    axis.button->painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawTextButton(graphics, bounds, state);
-    };
 
     axis.button->setText(text);
 

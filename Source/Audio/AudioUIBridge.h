@@ -83,6 +83,7 @@ public:
     struct HighlightCommand
     {
         HighlightKind kind        = HighlightKind::Hide;
+
         int           nodeId      = 0;
         int           runId       = -1;
         int           traversalId = -1;
@@ -91,12 +92,14 @@ public:
     struct ArrowCommand
     {
         ArrowKind   kind         = ArrowKind::Progress;
+
         int         parentNodeId = 0;
         int         childNodeId  = 0;
         int         durationMs   = 0;
         int         trailId      = -1;
         int         traversalId  = -1;
         int         elapsedMs    = 0;
+
         TrailSource source       = TrailSource::Live;
     };
 
@@ -119,160 +122,21 @@ private:
     friend class TraversalSession;
     friend class AudioCommandDrainer;
 
-    void beginRecording()
-    {
-        delivery              = CommandDelivery::Record;
-        recordClockMs         = 0.0;
-        numRecordedHighlights = 0;
-        numRecordedArrows     = 0;
-        numRecordedCounts     = 0;
-    }
+    void beginRecording  ();
+    void deliverRecording();
 
-    void deliverRecording()
-    {
-        delivery = CommandDelivery::Deliver;
+    void send(const HighlightCommand& command);
+    void send(const ArrowCommand& command);
+    void send(const CountCommand& command);
 
-        clearAllHighlights();
-        pushArrowReset(allTrails);
+    void highlightNode     (int nodeId, HighlightKind kind, int runId = -1, int traversalId = -1);
+    void highlightNode     (const RTNode& node, HighlightKind kind, int runId = -1, int traversalId = -1);
+    void clearAllHighlights();
 
-        for (int i = 0; i < numRecordedHighlights; ++i) {
-            highlights.push(recordedHighlights[static_cast<size_t>(i)]);
-        }
-
-        for (int i = 0; i < numRecordedArrows; ++i) {
-            const RecordedArrow& recorded = recordedArrows[static_cast<size_t>(i)];
-
-            ArrowCommand command = recorded.command;
-            command.elapsedMs    = static_cast<int>(recordClockMs - recorded.recordedAtMs);
-
-            const bool connectionFinished = command.kind == ArrowKind::Connection
-                                         && command.elapsedMs >= command.durationMs;
-
-            if (connectionFinished) {
-                continue;
-            }
-
-            arrows.push(command);
-        }
-
-        for (int i = 0; i < numRecordedCounts; ++i) {
-            counts.push(recordedCounts[static_cast<size_t>(i)]);
-        }
-    }
-
-    void send(const HighlightCommand& command)
-    {
-        if (delivery == CommandDelivery::Deliver) {
-            highlights.push(command);
-            return;
-        }
-
-        if (command.kind == HighlightKind::ClearEveryNode) {
-            numRecordedHighlights = 0;
-            return;
-        }
-
-        const bool hidesEveryRun = command.kind == HighlightKind::Hide && command.runId == -1;
-
-        for (int i = numRecordedHighlights - 1; i >= 0; --i) {
-            const HighlightCommand& recorded = recordedHighlights[static_cast<size_t>(i)];
-
-            const bool sameRun = hidesEveryRun || recorded.runId == command.runId;
-
-            if (recorded.nodeId == command.nodeId && sameRun) {
-                --numRecordedHighlights;
-                recordedHighlights[static_cast<size_t>(i)] = recordedHighlights[static_cast<size_t>(numRecordedHighlights)];
-            }
-        }
-
-        if (command.kind == HighlightKind::Show && numRecordedHighlights < recordedHighlightCapacity) {
-            recordedHighlights[static_cast<size_t>(numRecordedHighlights)] = command;
-            ++numRecordedHighlights;
-        }
-    }
-
-    void send(const ArrowCommand& command)
-    {
-        if (delivery == CommandDelivery::Deliver) {
-            arrows.push(command);
-            return;
-        }
-
-        const bool resetsTrail = command.kind == ArrowKind::TrailReset;
-
-        for (int i = numRecordedArrows - 1; i >= 0; --i) {
-            const ArrowCommand& recorded = recordedArrows[static_cast<size_t>(i)].command;
-
-            bool replaced = recorded.trailId == command.trailId
-                         && recorded.parentNodeId == command.parentNodeId
-                         && recorded.childNodeId == command.childNodeId;
-
-            if (resetsTrail) {
-                replaced = command.trailId == allTrails || recorded.trailId == command.trailId;
-            }
-
-            if (replaced) {
-                --numRecordedArrows;
-                recordedArrows[static_cast<size_t>(i)] = recordedArrows[static_cast<size_t>(numRecordedArrows)];
-            }
-        }
-
-        if (!resetsTrail && numRecordedArrows < recordedArrowCapacity) {
-            recordedArrows[static_cast<size_t>(numRecordedArrows)] = { command, recordClockMs };
-            ++numRecordedArrows;
-        }
-    }
-
-    void send(const CountCommand& command)
-    {
-        if (delivery == CommandDelivery::Deliver) {
-            counts.push(command);
-            return;
-        }
-
-        for (int i = 0; i < numRecordedCounts; ++i) {
-            if (recordedCounts[static_cast<size_t>(i)].nodeId == command.nodeId) {
-                recordedCounts[static_cast<size_t>(i)] = command;
-                return;
-            }
-        }
-
-        if (numRecordedCounts < recordedCountCapacity) {
-            recordedCounts[static_cast<size_t>(numRecordedCounts)] = command;
-            ++numRecordedCounts;
-        }
-    }
-
-    void highlightNode(int nodeId, HighlightKind kind, int runId = -1, int traversalId = -1)
-    {
-        send(HighlightCommand { kind, nodeId, runId, traversalId });
-    }
-
-    void highlightNode(const RTNode& node, HighlightKind kind, int runId = -1, int traversalId = -1)
-    {
-        highlightNode(node.nodeID, kind, runId, traversalId);
-    }
-
-    void clearAllHighlights()
-    {
-        send(HighlightCommand { HighlightKind::ClearEveryNode });
-    }
-
-    void pushProgress(int parentNodeId, int childNodeId, int durationMs, int trailId, int traversalId,
-                      TrailSource source, ArrowKind kind = ArrowKind::Progress)
-    {
-        send(ArrowCommand { kind, parentNodeId, childNodeId, durationMs, trailId, traversalId, 0, source });
-    }
-
-    void pushArrowReset(int trailId)
-    {
-        send(ArrowCommand { ArrowKind::TrailReset, 0, 0, 0, trailId, -1 });
-    }
-
-    void pushCount(int nodeId, int currentCount, int countLimit)
-    {
-        send(CountCommand { nodeId, currentCount, countLimit });
-    }
+    void pushProgress  (int parentNodeId, int childNodeId, int durationMs, int trailId, int traversalId,
+                        TrailSource source, ArrowKind kind = ArrowKind::Progress);
+    void pushArrowReset(int trailId);
+    void pushCount     (int nodeId, int currentCount, int countLimit);
 
     struct RecordedArrow
     {

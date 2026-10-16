@@ -287,17 +287,7 @@ void GraphState::removeNode(int nodeId, juce::UndoManager* undoManager)
         disconnectNodes(parentId, nodeId, undoManager);
     }
 
-    juce::ValueTree encapsulatedIds = getNode(encapsulatorId).getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
-
-    if (! encapsulatedIds.isValid()) {
-        return;
-    }
-
-    encapsulatedIds.removeChild(encapsulatedIds.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId), undoManager);
-
-    if (encapsulatedIds.getNumChildren() == 0) {
-        encapsulation.dissolve(encapsulatorId, undoManager);
-    }
+    encapsulation.removeMember(nodeId, encapsulatorId, undoManager);
 }
 
 void GraphState::addMidiNote(int nodeId, NodeNote note, juce::UndoManager* undoManager)
@@ -415,6 +405,24 @@ NodePosition GraphState::getNodePosition(int nodeId) const
     nodePosition.radius    = node.getProperty(ValueTreeIdentifiers::Radius);
 
     return nodePosition;
+}
+
+bool GraphState::connectsToOtherTreeRoot(int parentNodeId, int childNodeId) const
+{
+    const juce::ValueTree childTree  = getNode(childNodeId);
+    const juce::ValueTree parentTree = getNode(parentNodeId);
+
+    if (childTree.getType() != ValueTreeIdentifiers::RootNodeData) {
+        return false;
+    }
+
+    if (parentTree.getType() == ValueTreeIdentifiers::ModulatorData
+        || parentTree.getType() == ValueTreeIdentifiers::ModulatorRootData
+        || parentTree.getType() == ValueTreeIdentifiers::AlternativeModulatorData) {
+        return false;
+    }
+
+    return static_cast<int>(parentTree.getProperty(ValueTreeIdentifiers::RootNodeId)) != childNodeId;
 }
 
 std::vector<int> GraphState::nodeIdsBetween(int startNodeId, int endNodeId) const

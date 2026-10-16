@@ -25,28 +25,29 @@ Node::Node(juce::UndoManager& undoManager)
     nodeValueEditor.autoFitText       = true;
     nodeValueEditor.autoFitInsetRatio = nodeValueTextInsetRatio;
     nodeValueEditor.fontStyle         = Theme::FontStyle::SemiBold;
-    countEditor.backdrop              = ValueEditor::Backdrop::Badge;
-    switchCountEditor.backdrop        = ValueEditor::Backdrop::Badge;
+
+    countEditor       .backdrop       = ValueEditor::Backdrop::Badge;
+    switchCountEditor .backdrop       = ValueEditor::Backdrop::Badge;
     subLoopLimitEditor.backdrop       = ValueEditor::Backdrop::Badge;
 
-    nodeValueEditor.setFormat(std::make_unique<PitchFormat>());
-    countEditor.setFormat(std::make_unique<DualIntFormat>(minimumCountLimit, maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
+    nodeValueEditor   .setFormat(std::make_unique<PitchFormat>());
+    countEditor       .setFormat(std::make_unique<DualIntFormat>(minimumCountLimit, maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
     subLoopLimitEditor.setFormat(std::make_unique<NumberFormat>(minimumSubLoopLimit, maximumSubLoopLimit));
-    switchCountEditor.setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
+    switchCountEditor .setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
 
     nodeValueEditor.editable = false;
 
     nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
 
-    countEditor.setTooltip("Count Limit");
+    countEditor       .setTooltip("Count Limit");
     subLoopLimitEditor.setTooltip("Sub Loop Count Limit");
-    switchCountEditor.setTooltip("Switch Count Limit");
+    switchCountEditor .setTooltip("Switch Count Limit");
 
-    upButton.setInterceptsMouseClicks(false, false);
-    downButton.setInterceptsMouseClicks(false, false);
-    nodeValueEditor.setInterceptsMouseClicks(false, true);
-    countEditor.setInterceptsMouseClicks(false, true);
-    switchCountEditor.setInterceptsMouseClicks(false, true);
+    upButton          .setInterceptsMouseClicks(false, false);
+    downButton        .setInterceptsMouseClicks(false, false);
+    nodeValueEditor   .setInterceptsMouseClicks(false, true);
+    countEditor       .setInterceptsMouseClicks(false, true);
+    switchCountEditor. setInterceptsMouseClicks(false, true);
     subLoopLimitEditor.setInterceptsMouseClicks(false, true);
 
     addChildComponent(upButton);

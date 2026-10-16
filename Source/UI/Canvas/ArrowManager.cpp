@@ -288,12 +288,7 @@ void ArrowManager::commitPreview()
         return;
     }
 
-    ArrowInfo arrowInfo = currentArrowInfo;
-    const int nodeId    = node->nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
-
-    graphState.arrows.applyNodeBinding(arrowInfo, nodeId);
-
-    NodeFactory::createDanglingArrow(graphState, node->nodeValueTree, tipOffset, arrowInfo, &undoManager);
+    NodeFactory::createDanglingArrow(graphState, node->nodeValueTree, tipOffset, currentArrowInfo, &undoManager);
 }
 
 void ArrowManager::showSnapGhost(Node* from, Node* to)
@@ -339,6 +334,25 @@ void ArrowManager::triggerSnapForNode(int nodeId)
             arrow->triggerSnapAnimation();
             return;
         }
+    }
+}
+
+void ArrowManager::connectWithSnapAnimation(int parentNodeId, int childNodeId)
+{
+    Node* const parentNode = nodeCanvas.nodeManager.find(parentNodeId);
+    Node* const childNode  = nodeCanvas.nodeManager.find(childNodeId);
+
+    if (parentNode == nullptr || childNode == nullptr) {
+        return;
+    }
+
+    connect(parentNode, childNode);
+    refreshFor(parentNode);
+
+    auto arrowIterator = parentNode->nodeArrows.find(childNodeId);
+
+    if (arrowIterator != parentNode->nodeArrows.end()) {
+        arrowIterator->second->triggerSnapAnimation();
     }
 }
 

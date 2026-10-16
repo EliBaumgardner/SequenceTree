@@ -105,7 +105,8 @@ void EncapsulationView::showMembers(std::span<const int> memberNodeIds) const
         member->hasInnerRim           = false;
 
         member->setVisible(true);
-        member->setInterceptsMouseClicks(!nodeCanvas.paintMode, !nodeCanvas.paintMode && !nodeCanvas.spanMode);
+        member->setInterceptsMouseClicks(nodeCanvas.activeTool != NodeCanvas::CanvasTool::Paint,
+                                         nodeCanvas.activeTool != NodeCanvas::CanvasTool::Paint && nodeCanvas.activeTool != NodeCanvas::CanvasTool::Span);
     }
 
     repositionAll();
@@ -225,7 +226,8 @@ bool EncapsulationView::applyCollapsedState(int encapsulatorId) const
     encapsulator->bindToTree();
 
     encapsulator->setVisible(true);
-    encapsulator->setInterceptsMouseClicks(!nodeCanvas.paintMode, !nodeCanvas.paintMode && !nodeCanvas.spanMode);
+    encapsulator->setInterceptsMouseClicks(nodeCanvas.activeTool != NodeCanvas::CanvasTool::Paint,
+                                           nodeCanvas.activeTool != NodeCanvas::CanvasTool::Paint && nodeCanvas.activeTool != NodeCanvas::CanvasTool::Span);
 
     for (const int memberNodeId : encapsulator->memberNodeIds) {
         Node* const member = nodeCanvas.nodeManager.find(memberNodeId);

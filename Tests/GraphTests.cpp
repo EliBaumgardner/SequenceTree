@@ -7,7 +7,6 @@
 #include "Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
 #include "Audio/TraversalLogic.h"
-#include "Input/ConnectionOps.h"
 #include "Script/ScriptCompiler.h"
 #include "Graph/NodeFactory.h"
 #include "Graph/OrnamentLibraries.h"
@@ -292,14 +291,11 @@ TEST_CASE("only a note node's arrow into another tree's root is a root connectio
     const juce::ValueTree alternativeModulator = NodeFactory::createAlternativeModulator(graph, modulatorId, NodePosition { 200, 300, 25 }, nullptr);
     const int alternativeModulatorId = alternativeModulator.getProperty(ValueTreeIdentifiers::Id);
 
-    const ArrowInfo     currentArrowInfo;
-    const ConnectionOps connections { graph, processor.undoManager, currentArrowInfo };
-
-    CHECK(connections.connectsToOtherTreeRoot(nodeId, foreignRootId));
-    CHECK_FALSE(connections.connectsToOtherTreeRoot(nodeId, rootId));
-    CHECK_FALSE(connections.connectsToOtherTreeRoot(modulatorRootId, foreignRootId));
-    CHECK_FALSE(connections.connectsToOtherTreeRoot(modulatorId, foreignRootId));
-    CHECK_FALSE(connections.connectsToOtherTreeRoot(alternativeModulatorId, foreignRootId));
+    CHECK(graph.connectsToOtherTreeRoot(nodeId, foreignRootId));
+    CHECK_FALSE(graph.connectsToOtherTreeRoot(nodeId, rootId));
+    CHECK_FALSE(graph.connectsToOtherTreeRoot(modulatorRootId, foreignRootId));
+    CHECK_FALSE(graph.connectsToOtherTreeRoot(modulatorId, foreignRootId));
+    CHECK_FALSE(graph.connectsToOtherTreeRoot(alternativeModulatorId, foreignRootId));
 }
 
 TEST_CASE("the published graph names its first unlinked root", "[graph]")

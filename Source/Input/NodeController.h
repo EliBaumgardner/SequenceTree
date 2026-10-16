@@ -11,33 +11,24 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_data_structures/juce_data_structures.h>
-#include "../Util/NodeInfo.h"
-#include <ArsNovaUI/PopupWindow.h>
-#include "NodeCreationDispatcher.h"
-#include "ConnectionOps.h"
-#include "SelectionOps.h"
+#include "SelectionGestures.h"
 #include "OrnamentApplier.h"
+#include "ArrowGestures.h"
+#include "NodeGestures.h"
+#include "EncapsulationGestures.h"
 
 
 class NodeCanvas;
 
 class Node;
 
-class Modulator;
-
-class NodeMenu;
-
-class NodeData;
-
-class NodeFactory;
-
-class Arrow;
-
 class GraphState;
 
 class TraversalSession;
 
 class RTGraphBuilder;
+
+class OrnamentLibraries;
 
 
 
@@ -56,99 +47,43 @@ public:
     void mouseMove (const juce::MouseEvent& e) override;
     void mouseDrag (const juce::MouseEvent& e) override;
 
-    void handleNodeDrag     (int nodeId, NodePosition newPosition);
-    void handleNodeDragStart(Node* node, int nodeId, NodePosition newPosition, const juce::ModifierKeys& mods);
-
-    void checkRootNodeSnap(juce::Point<int> canvasPoint);
-    void snapToGrid       (NodePosition& newPosition, juce::ValueTree draggedNodeTree);
-
-    void showArrowContextMenu(Arrow* arrow);
-    void setArrowMode        (bool enabled);
-
-    using NodeControllerMode = NodeCreationMode;
-
-    NodeControllerMode nodeControllerMode = NodeControllerMode::Node;
-    SelectionOps       selectionOps;
-    OrnamentApplier    ornamentApplier;
+    SelectionGestures     selectionGestures;
+    OrnamentApplier       ornamentApplier;
+    ArrowGestures         arrowGestures;
+    NodeGestures          nodeGestures;
+    EncapsulationGestures encapsulationGestures;
 
 private:
 
-    void dragValue   (const juce::MouseEvent& e);
-    void dragArrowTip(juce::Point<int> cursor);
-    void endDrag     ();
+    void dragValue(const juce::MouseEvent& e);
 
     void handleCanvasMouseDown(const juce::MouseEvent& e);
     void handleCanvasMouseDrag(const juce::MouseEvent& e);
     void handleNodeMouseDown  (const juce::MouseEvent& e, Node& node);
     void handleNodeMouseDrag  (const juce::MouseEvent& e, Node& node);
 
-    void beginBoxSelection (const juce::Point<int>& clickPoint);
-    void updateBoxSelection(const juce::MouseEvent& e);
-    void finishBoxSelection();
-
-    void updateArrowHover   (juce::Point<float> cursor);
-    void finishArrowTip     ();
-    void finishArrowHeadDrag();
-
-    void connectWithSnapAnimation(int parentNodeId, int childNodeId, ArrowType rootConnectionType);
-    void connectDraggedNodeToRoot();
-
-    void setDraggedNodeVisible(bool shouldBeVisible);
-    void selectSpanNode       (Node& node);
-    void showSelectionMenu    (juce::Point<int> canvasPoint);
-
-    bool isNodeCreationModeActive    () const;
-    bool isArrowMode                 () const { return arrowMode; }
-    bool toggleEncapsulationExpansion(Node& node);
-
-    Node* findTipSnapTarget(const Node& startNode, juce::Point<int> tip) const;
-
-    enum class DragState {
+    enum class Gesture {
         Idle,
         EditingValue,
         MovingArrowHead,
-        MovingDanglingTip,
         ArrowSelected,
-        CreatingDanglingArrow,
-        ConnectingFlag,
+        MovingDanglingTip,
+        DrawingArrow,
         BoxSelecting
     };
 
-    static constexpr float rootSnapThreshold       = 20.0f;
-    static constexpr float danglingArrowGrabRadius = 14.0f;
-    static constexpr float arrowHoverRadius        = 8.0f;
-    static constexpr float flagProximityRadius     = 28.0f;
-    static constexpr float arrowHeadGrabRadius     = 16.0f;
-    static constexpr float arrowLabelGrabRadius    = 10.0f;
-    static constexpr int   dragThreshold           = 5;
+    static constexpr int dragThreshold = 5;
 
-    GraphState&         graphState;
-    juce::UndoManager&  undoManager;
-    TraversalSession&   traversalSession;
-    RTGraphBuilder&     rtGraphBuilder;
-    NodeCanvas&         nodeCanvas;
-    PopupWindowLauncher allowedTraversalsLauncher { "Allowed Traversals" };
+    GraphState&        graphState;
+    juce::UndoManager& undoManager;
+    TraversalSession&  traversalSession;
+    RTGraphBuilder&    rtGraphBuilder;
+    NodeCanvas&        nodeCanvas;
 
-    ConnectionOps connectionOps;
 
-    DragState dragState = DragState::Idle;
+    Gesture gesture = Gesture::Idle;
 
-    juce::Component::SafePointer<Arrow> draggingDanglingArrow;
-    juce::Component::SafePointer<Node>  tipSnapTarget;
-    juce::Component::SafePointer<Node>  newArrowSourceNode;
-    juce::Component::SafePointer<Node>  snapTargetRoot;
-    juce::Component::SafePointer<Node>  draggingArrowHeadNode;
-    juce::Component::SafePointer<Node>  draggingValueNode;
+    juce::Component::SafePointer<Node> draggingValueNode;
 
     double dragStartValue = 0.0;
-
-    juce::Point<float> dragParentCenter;
-    juce::Point<int>   selectionAnchor;
-
-    juce::ValueTree draggedNodeTree;
-
-    int snapSourceNodeId = -1;
-
-    bool isDragStart = true;
-    bool arrowMode   = false;
 };

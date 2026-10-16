@@ -45,9 +45,10 @@ public:
     void updatePreview(Node* node, juce::Point<int> tipOffset);
     void commitPreview();
 
-    void showSnapGhost     (Node* from, Node* to);
-    void hideSnapGhost     ();
-    void triggerSnapForNode(int nodeId);
+    void showSnapGhost           (Node* from, Node* to);
+    void hideSnapGhost           ();
+    void triggerSnapForNode      (int nodeId);
+    void connectWithSnapAnimation(int parentNodeId, int childNodeId);
 
     void setSelected   (Arrow* arrow);
     void clearSelection();

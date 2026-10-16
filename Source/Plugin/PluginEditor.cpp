@@ -35,7 +35,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     port           = std::make_unique<DynamicPort>(*nodeCanvas);
     menuArea       = std::make_unique<MenuArea>(*nodeCanvas, p.graphState, p.traversalRuleState, p.snapshots, *interfaceSettings, *scaledView, p.colourPresets, p.undoManager);
     titleBar       = std::make_unique<Titlebar>(p, *nodeCanvas, *nodeController, p.undoManager);
-    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, p.traversalSession, p.colourPresets, p.undoManager, p.ornamentLibraries, p.ornamentUndoManager, nodeController->ornamentApplier);
+    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, p.traversalSession, p.colourPresets, p.undoManager, p.ornamentLibraries, p.ornamentUndoManager);
     canvasFrame    = std::make_unique<CanvasFrame>(*nodeCanvas, *menuArea, *titleBar, *bottomBar);
 
     titleBar->onDisplayModeChanged = [this](NodeDisplayMode mode) { bottomBar->applyDisplayMode(mode); };
@@ -175,8 +175,8 @@ bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, ju
     const juce::ModifierKeys command      = juce::ModifierKeys::commandModifier;
     const juce::ModifierKeys commandShift = juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier;
 
-    SelectionOps&      selectionOps = nodeController->selectionOps;
-    juce::UndoManager& undoManager  = audioProcessor.undoManager;
+    SelectionGestures& selectionGestures = nodeController->selectionGestures;
+    juce::UndoManager& undoManager       = audioProcessor.undoManager;
 
     if (key == juce::KeyPress::spaceKey) {
         titleBar->applyPlaybackState(!nodeCanvas->start);
@@ -184,7 +184,7 @@ bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, ju
     }
 
     if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey) {
-        selectionOps.deleteSelection();
+        selectionGestures.deleteSelection();
         return true;
     }
 
@@ -199,7 +199,7 @@ bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, ju
     }
 
     if (key == juce::KeyPress('c', command, 0)) {
-        selectionOps.copySelection();
+        selectionGestures.copySelection();
         return true;
     }
 
@@ -210,12 +210,12 @@ bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, ju
             pastePoint = nodeCanvas->getMouseXYRelative().toFloat();
         }
 
-        selectionOps.pasteAt(pastePoint.transformedBy(nodeCanvas->modelTransform).roundToInt());
+        selectionGestures.pasteAt(pastePoint.transformedBy(nodeCanvas->modelTransform).roundToInt());
         return true;
     }
 
     if (key == juce::KeyPress('a', command, 0)) {
-        selectionOps.selectAll();
+        selectionGestures.selectAll();
         return true;
     }
 

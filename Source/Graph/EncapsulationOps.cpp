@@ -95,6 +95,21 @@ void EncapsulationOps::insertNodeAfter(int nodeId, int siblingNodeId, juce::Undo
     node.setProperty(ValueTreeIdentifiers::EncapsulatorId, encapsulatorId, undoManager);
 }
 
+void EncapsulationOps::removeMember(int nodeId, int encapsulatorId, juce::UndoManager* undoManager)
+{
+    juce::ValueTree encapsulatedIds = graphState.getNode(encapsulatorId).getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
+
+    if (! encapsulatedIds.isValid()) {
+        return;
+    }
+
+    encapsulatedIds.removeChild(encapsulatedIds.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId), undoManager);
+
+    if (encapsulatedIds.getNumChildren() == 0) {
+        dissolve(encapsulatorId, undoManager);
+    }
+}
+
 std::vector<int> EncapsulationOps::memberIds(int encapsulatorId) const
 {
     const juce::ValueTree encapsulatedIds =

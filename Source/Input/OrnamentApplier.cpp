@@ -12,23 +12,6 @@ OrnamentApplier::OrnamentApplier(NodeCanvas& nodeCanvas, OrnamentLibraries& orna
 {
 }
 
-void OrnamentApplier::setActive(bool shouldBeActive)
-{
-    isActive = shouldBeActive;
-
-    if (onActiveChanged) {
-        onActiveChanged(shouldBeActive);
-    }
-
-    if (! shouldBeActive) {
-        nodeCanvas.setMouseCursor(juce::MouseCursor::NormalCursor);
-
-        return;
-    }
-
-    nodeCanvas.setMouseCursor(juce::MouseCursor::CrosshairCursor);
-}
-
 void OrnamentApplier::respondToClick(juce::Component* clickedComponent)
 {
     Node* const          clickedNode = dynamic_cast<Node*>(clickedComponent);
@@ -36,7 +19,7 @@ void OrnamentApplier::respondToClick(juce::Component* clickedComponent)
     const OrnamentStatus status      = ornamentLibraries.statusOf(ornamentLibraries.findOrnament(activeUid));
 
     if (clickedNode == nullptr) {
-        setActive(false);
+        nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::None);
 
         return;
     }

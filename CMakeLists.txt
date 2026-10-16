@@ -53,12 +53,14 @@ target_sources(SequenceTree PRIVATE
         Source/Plugin/PluginProcessor.cpp
         Source/Plugin/PluginEditor.cpp
         Source/Plugin/AudioSnapshotPublisher.cpp
+        Source/Audio/AudioUIBridge.cpp
         Source/Audio/EventManager.cpp
         Source/Audio/NoteScheduler.cpp
         Source/Audio/TraversalLogic.cpp
         Source/Audio/TraversalDispatcher.cpp
         Source/Audio/FlagScheduler.cpp
         Source/Audio/TraversalSession.cpp
+        Source/Audio/VirtualMidiOutput.cpp
         Source/Audio/TraversalRule.cpp
         Source/Audio/ScriptRun.cpp
         Source/Script/ScriptLexer.cpp
@@ -75,6 +77,7 @@ target_sources(SequenceTree PRIVATE
         Source/Graph/OrnamentLibraries.cpp
         Source/Graph/ValueTreeIdentifiers.cpp
         Source/Graph/NodeFactory.cpp
+        Source/Graph/Clipboard.cpp
         Source/Input/NodeController.cpp
         Source/UI/Canvas/CanvasFrame.cpp
         Source/UI/Canvas/NodeCanvas.cpp
@@ -86,10 +89,11 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Canvas/ArrowManager.cpp
         Source/UI/Canvas/CanvasHitTester.cpp
         Source/UI/Canvas/EncapsulationView.cpp
-        Source/Input/NodeCreationDispatcher.cpp
-        Source/Input/ConnectionOps.cpp
         Source/Input/OrnamentApplier.cpp
-        Source/Input/SelectionOps.cpp
+        Source/Input/SelectionGestures.cpp
+        Source/Input/ArrowGestures.cpp
+        Source/Input/NodeGestures.cpp
+        Source/Input/EncapsulationGestures.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
         Source/UI/Node/Arrow.cpp
