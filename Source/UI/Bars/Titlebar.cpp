@@ -12,7 +12,7 @@ Titlebar::Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas
       undoManager(undoManager),
       displaySelector(undoManager),
       tempoDisplay(undoManager),
-      patchControls(processor, processor.patchFolder)
+      patchControls(processor, processor.patch, processor.patchFolder)
 {
     addAndMakeVisible(transportPane);
     addAndMakeVisible(tempoDisplay);
@@ -118,17 +118,17 @@ void Titlebar::configureModePane()
     buttonPane.selection = ButtonPane::Selection::ExclusiveOrNone;
 
     buttonPane.onSelectionChanged = [this](const IconButton* selected) {
-        nodeController.setArrowMode(selected == nullptr);
+        nodeController.arrowGestures.setArrowMode(selected == nullptr);
     };
 
     IconButton& nodeButton = buttonPane.addButton(&CustomLookAndFeel::drawCircleIcon, "Node Mode",
-        [this]() { nodeController.nodeControllerMode = NodeController::NodeControllerMode::Node; });
+        [this]() { nodeController.nodeGestures.creationMode = NodeCreationMode::Node; });
 
     IconButton& modulatorButton = buttonPane.addButton(&CustomLookAndFeel::drawRoundedSquareIcon, "Modulator Mode",
-        [this]() { nodeController.nodeControllerMode = NodeController::NodeControllerMode::Modulator; });
+        [this]() { nodeController.nodeGestures.creationMode = NodeCreationMode::Modulator; });
 
     IconButton& flagButton = buttonPane.addButton(&CustomLookAndFeel::drawTriangleIcon, "Traversal Flag Mode",
-        [this]() { nodeController.nodeControllerMode = NodeController::NodeControllerMode::TraversalFlag; });
+        [this]() { nodeController.nodeGestures.creationMode = NodeCreationMode::TraversalFlag; });
 
     nodeButton.state.look      = ButtonState::Look::Raised;
     modulatorButton.state.look = ButtonState::Look::Raised;

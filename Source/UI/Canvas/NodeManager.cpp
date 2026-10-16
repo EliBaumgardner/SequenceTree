@@ -85,7 +85,8 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
 
     createdNode->bindToTree();
     createdNode->setDisplayMode(displayMode);
-    createdNode->setInterceptsMouseClicks(!nodeCanvas.paintMode, !nodeCanvas.paintMode && !nodeCanvas.spanMode);
+    createdNode->setInterceptsMouseClicks(nodeCanvas.activeTool != NodeCanvas::CanvasTool::Paint,
+                                          nodeCanvas.activeTool != NodeCanvas::CanvasTool::Paint && nodeCanvas.activeTool != NodeCanvas::CanvasTool::Span);
     createdNode->setMouseCursor(juce::MouseCursor::ParentCursor);
 
     nodeCanvas.ornamentMarks.refresh(*createdNode);

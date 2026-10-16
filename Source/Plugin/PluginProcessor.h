@@ -14,6 +14,7 @@
 #include "../Graph/RTGraphBuilder.h"
 #include "../Audio/EventManager.h"
 #include "../Audio/TraversalSession.h"
+#include "../Audio/VirtualMidiOutput.h"
 #include "AudioSnapshotPublisher.h"
 
 class SequenceTreeAudioProcessorEditor;
@@ -66,6 +67,7 @@ public:
         double currentSampleRate = 44100.0;
         double hostBpm           = 0.0;
         bool   hostWasPlaying    = false;
+        bool   hostPositionKnown = false;
 
         std::optional<double> expectedPpq;
         std::optional<double> pendingRelocationSamples;
@@ -113,6 +115,10 @@ public:
     juce::File userFolder  { juce::File::getSpecialLocation(juce::File::userMusicDirectory).getChildFile(JucePlugin_Name) };
     juce::File patchFolder { userFolder.getChildFile("Patches") };
 
+    juce::ValueTree patch { ValueTreeIdentifiers::Patch };
+
+    static constexpr const char* patchExtension = ".sqtree";
+
     juce::UndoManager ornamentUndoManager;
 
     OrnamentLibraries ornamentLibraries;
@@ -127,6 +133,8 @@ public:
     EventManager     eventManager        { bridge };
     EventManager     previewEventManager { bridge };
     TraversalSession traversalSession    { eventManager, previewEventManager };
+
+    VirtualMidiOutput virtualMidiOutput;
 
     std::vector<juce::MidiMessage> pendingNoteOffs;
 

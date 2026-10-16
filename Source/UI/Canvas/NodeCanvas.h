@@ -26,7 +26,7 @@ class NodeCanvas : public juce::Component
 {
 public:
 
-    enum class QuaverMode;
+    enum class CanvasTool;
 
     NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, RTGraphBuilder& rtGraphBuilder, juce::UndoManager& undoManager,
                CustomLookAndFeel& lookAndFeel);
@@ -42,9 +42,7 @@ public:
     void handleAsyncUpdate      ();
     void cancelPendingUpdatesFor(int nodeId);
 
-    void setPaintMode (bool enabled);
-    void setSpanMode  (bool enabled);
-    void setQuaverMode(QuaverMode mode);
+    void setActiveTool(CanvasTool tool);
 
     void showGrid();
     void hideGrid();
@@ -70,7 +68,7 @@ public:
         OrnamentChanged
     };
 
-    enum class QuaverMode { Off, Preview };
+    enum class CanvasTool { None, Paint, Span, NotePreview, Ornament };
 
     struct AsyncUpdate
     {
@@ -95,9 +93,9 @@ public:
     juce::AffineTransform modelTransform;
 
     bool       start      = false;
-    bool       paintMode  = false;
-    bool       spanMode   = false;
-    QuaverMode quaverMode = QuaverMode::Off;
+    CanvasTool activeTool = CanvasTool::None;
+
+    std::function<void(CanvasTool)> onActiveToolChanged;
 
     int         quaverTraversalId = 1;
     juce::Value quaverCount { minimumCountLimit };
@@ -127,4 +125,9 @@ public:
     CanvasHitTester     hitTester { *this };
     EncapsulationView   encapsulationView;
     OrnamentMarks       ornamentMarks;
+
+private:
+
+    juce::MouseCursor spanCursor  () const;
+    juce::MouseCursor quaverCursor() const;
 };

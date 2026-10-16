@@ -12,7 +12,7 @@ cmake --build cmake-build-debug
 cmake --build cmake-build-release
 ```
 
-`cmake-build-debug` and `cmake-build-release` are CLion's build directories, and they are the only ones. Terminal builds and CLion's run buttons share them on purpose: `COPY_PLUGIN_AFTER_BUILD` installs over the system plugin, so a second build tree means the installed AU and VST3 silently come from different builds. Never configure a new one (`cmake -B build`) — build into these. The one exception is a RealtimeSanitizer tree (see Tests), which needs a different compiler, never installs the plugin, and belongs outside the repo.
+`cmake-build-debug` and `cmake-build-release` are CLion's build directories, and they are the only ones. Terminal builds and CLion's run buttons share them on purpose: `COPY_PLUGIN_AFTER_BUILD` installs over the system plugin, so a second build tree means the installed AU and VST3 silently come from different builds. Never configure a new one (`cmake -B build`) — build into these. (The README's `build` directory is for someone building from a fresh clone, who has no CLion trees and no installed plugin to keep in step.) The one exception is a RealtimeSanitizer tree (see Tests), which needs a different compiler, never installs the plugin, and belongs outside the repo.
 
 They use Ninja, so the config is fixed when the directory is configured and `--config` on the build line does nothing. CLion creates them; only a fresh clone needs them configured by hand, and Ninja is not on `PATH`, so the bundled one must be named:
 

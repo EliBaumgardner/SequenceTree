@@ -36,7 +36,7 @@ void NodeCanvas::paint(juce::Graphics& graphics)
 
     CustomLookAndFeel::get(*this).drawCanvas(graphics, grid);
 
-    if (paintMode && valueField.image.isValid()) {
+    if (activeTool == CanvasTool::Paint && valueField.image.isValid()) {
         graphics.setImageResamplingQuality(juce::Graphics::mediumResamplingQuality);
         graphics.drawImage(valueField.image, getLocalBounds().toFloat());
     }
@@ -207,7 +207,7 @@ void NodeCanvas::handleAsyncUpdate()
         }
     }
 
-    if (paintMode && !pendingUpdates.empty()) {
+    if (activeTool == CanvasTool::Paint && !pendingUpdates.empty()) {
         valueField.refresh();
     }
 }
@@ -220,82 +220,48 @@ void NodeCanvas::cancelPendingUpdatesFor(int nodeId)
     });
 }
 
-void NodeCanvas::setPaintMode(bool enabled)
+void NodeCanvas::setActiveTool(CanvasTool tool)
 {
-    paintMode = enabled;
+    const CanvasTool previousTool = activeTool;
 
-    nodeManager.setInterceptsClicks(!enabled, !enabled && !spanMode);
-
-    if (enabled) {
-        valueField.updateBrushCursor();
-        valueField.refresh();
-    }
-    else {
-        setMouseCursor(juce::MouseCursor::NormalCursor);
-        repaint();
-    }
-}
-
-void NodeCanvas::setSpanMode(bool enabled)
-{
-    spanMode         = enabled;
+    activeTool       = tool;
     spanAnchorNodeId = -1;
 
-    nodeManager.setInterceptsClicks(!paintMode, !paintMode && !enabled);
+    nodeManager.setInterceptsClicks(tool != CanvasTool::Paint, tool != CanvasTool::Paint && tool != CanvasTool::Span);
     nodeManager.clearOutlines();
 
-    if (! enabled) {
-        setMouseCursor(juce::MouseCursor::NormalCursor);
-        return;
-    }
-
-    juce::Image cursorImage(juce::Image::ARGB, spanCursorSize, spanCursorSize, true);
-    juce::Graphics cursorGraphics(cursorImage);
-
-    cursorGraphics.setColour(juce::Colours::black);
-    cursorGraphics.drawRect(cursorImage.getBounds().reduced(1), 1);
-
-    setMouseCursor(juce::MouseCursor(cursorImage, spanCursorSize / 2, spanCursorSize / 2));
-}
-
-void NodeCanvas::setQuaverMode(QuaverMode mode)
-{
-    quaverMode = mode;
-
-    if (mode == QuaverMode::Off) {
+    if (previousTool == CanvasTool::NotePreview) {
         processor.traversalSession.previewRequests.push({ RTPreviewRequest::Kind::Stop });
-        setMouseCursor(juce::MouseCursor::NormalCursor);
-        return;
     }
 
-    juce::Image    cursorImage(juce::Image::ARGB, quaverCursorSize, quaverCursorSize, true);
-    juce::Graphics cursorGraphics(cursorImage);
-    const auto     square   = cursorImage.getBounds().toFloat().reduced(1.0f);
-    const float    side     = square.getWidth();
-    const float    headX    = square.getX() + side * 0.34f;
-    const float    headY    = square.getBottom() - side * 0.2f;
-    const float    stemX    = headX + side * 0.19f;
-    const float    stemTopY = square.getY() + side * 0.04f;
-    juce::Path     head;
-    juce::Path     stem;
-    juce::Path     flag;
+    if (onActiveToolChanged) {
+        onActiveToolChanged(tool);
+    }
 
-    cursorGraphics.setColour(juce::Colours::black);
+    repaint();
 
-    head.addEllipse(juce::Rectangle<float>(side * 0.44f, side * 0.3f).withCentre({ headX, headY }));
-    head.applyTransform(juce::AffineTransform::rotation(-0.35f, headX, headY));
-    cursorGraphics.fillPath(head);
+    switch (tool) {
+        case CanvasTool::None:
+            setMouseCursor(juce::MouseCursor::NormalCursor);
+            break;
 
-    stem.addLineSegment({ stemX, headY - side * 0.04f, stemX, stemTopY }, juce::jmax(1.0f, side * 0.08f));
-    cursorGraphics.fillPath(stem);
+        case CanvasTool::Paint:
+            valueField.updateBrushCursor();
+            valueField.refresh();
+            break;
 
-    flag.startNewSubPath(stemX, stemTopY);
-    flag.cubicTo(stemX + side * 0.08f, stemTopY + side * 0.18f, stemX + side * 0.36f, stemTopY + side * 0.24f, stemX + side * 0.26f, stemTopY + side * 0.56f);
-    flag.cubicTo(stemX + side * 0.28f, stemTopY + side * 0.34f, stemX + side * 0.12f, stemTopY + side * 0.3f, stemX, stemTopY + side * 0.26f);
-    flag.closeSubPath();
-    cursorGraphics.fillPath(flag);
+        case CanvasTool::Span:
+            setMouseCursor(spanCursor());
+            break;
 
-    setMouseCursor(juce::MouseCursor(cursorImage, quaverCursorSize / 2, quaverCursorSize / 2));
+        case CanvasTool::NotePreview:
+            setMouseCursor(quaverCursor());
+            break;
+
+        case CanvasTool::Ornament:
+            setMouseCursor(juce::MouseCursor::CrosshairCursor);
+            break;
+    }
 }
 
 void NodeCanvas::showGrid()
@@ -364,4 +330,47 @@ juce::Point<int> NodeCanvas::snapPointToGrid(juce::Point<int> point) const
     }
 
     return result;
+}
+
+juce::MouseCursor NodeCanvas::spanCursor() const
+{
+    juce::Image    cursorImage(juce::Image::ARGB, spanCursorSize, spanCursorSize, true);
+    juce::Graphics cursorGraphics(cursorImage);
+
+    cursorGraphics.setColour(juce::Colours::black);
+    cursorGraphics.drawRect(cursorImage.getBounds().reduced(1), 1);
+
+    return juce::MouseCursor(cursorImage, spanCursorSize / 2, spanCursorSize / 2);
+}
+
+juce::MouseCursor NodeCanvas::quaverCursor() const
+{
+    juce::Image    cursorImage(juce::Image::ARGB, quaverCursorSize, quaverCursorSize, true);
+    juce::Graphics cursorGraphics(cursorImage);
+    const auto     square   = cursorImage.getBounds().toFloat().reduced(1.0f);
+    const float    side     = square.getWidth();
+    const float    headX    = square.getX() + side * 0.34f;
+    const float    headY    = square.getBottom() - side * 0.2f;
+    const float    stemX    = headX + side * 0.19f;
+    const float    stemTopY = square.getY() + side * 0.04f;
+    juce::Path     head;
+    juce::Path     stem;
+    juce::Path     flag;
+
+    cursorGraphics.setColour(juce::Colours::black);
+
+    head.addEllipse(juce::Rectangle<float>(side * 0.44f, side * 0.3f).withCentre({ headX, headY }));
+    head.applyTransform(juce::AffineTransform::rotation(-0.35f, headX, headY));
+    cursorGraphics.fillPath(head);
+
+    stem.addLineSegment({ stemX, headY - side * 0.04f, stemX, stemTopY }, juce::jmax(1.0f, side * 0.08f));
+    cursorGraphics.fillPath(stem);
+
+    flag.startNewSubPath(stemX, stemTopY);
+    flag.cubicTo(stemX + side * 0.08f, stemTopY + side * 0.18f, stemX + side * 0.36f, stemTopY + side * 0.24f, stemX + side * 0.26f, stemTopY + side * 0.56f);
+    flag.cubicTo(stemX + side * 0.28f, stemTopY + side * 0.34f, stemX + side * 0.12f, stemTopY + side * 0.3f, stemX, stemTopY + side * 0.26f);
+    flag.closeSubPath();
+    cursorGraphics.fillPath(flag);
+
+    return juce::MouseCursor(cursorImage, quaverCursorSize / 2, quaverCursorSize / 2);
 }

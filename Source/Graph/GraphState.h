@@ -44,6 +44,8 @@ public:
 
     NodePosition getNodePosition(int nodeId) const;
 
+    bool connectsToOtherTreeRoot(int parentNodeId, int childNodeId) const;
+
     std::vector<int> nodeIdsBetween(int startNodeId, int endNodeId) const;
 
     juce::ValueTree nodeMap;

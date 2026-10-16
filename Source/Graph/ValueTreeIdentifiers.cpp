@@ -2,6 +2,9 @@
 
 const juce::Identifier ValueTreeIdentifiers::PluginState          {"PluginState"};
 const juce::Identifier ValueTreeIdentifiers::NodeMap              {"NodeMap"};
+const juce::Identifier ValueTreeIdentifiers::Patch                {"Patch"};
+const juce::Identifier ValueTreeIdentifiers::PatchName            {"PatchName"};
+const juce::Identifier ValueTreeIdentifiers::PatchFile            {"PatchFile"};
 
 const juce::Identifier ValueTreeIdentifiers::RootNodeData         {"RootNodeData"};
 const juce::Identifier ValueTreeIdentifiers::ModulatorRootData    {"ModulatorRootData"};

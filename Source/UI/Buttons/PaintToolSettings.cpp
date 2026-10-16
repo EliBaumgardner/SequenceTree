@@ -99,15 +99,14 @@ void PaintToolSettings::setPaintMode(ValueField::PaintLayer layer)
 
 void PaintToolSettings::componentCallBack() {
     paintTool.onClick = [this]() {
-        const bool paintModeEnabled = ! paintTool.state.isSelected;
-
-        paintTool.setSelected(paintModeEnabled);
-
-        nodeCanvas.setPaintMode(paintModeEnabled);
-
-        if (paintModeEnabled) {
-            setPaintMode(paintLayer);
+        if (nodeCanvas.activeTool == NodeCanvas::CanvasTool::Paint) {
+            nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::None);
+            return;
         }
+
+        nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::Paint);
+
+        setPaintMode(paintLayer);
     };
 
     colourSelector.onColourPicked = [this](juce::Colour colour) {

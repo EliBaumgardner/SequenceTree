@@ -6,16 +6,24 @@
 
 #include <span>
 
+enum class NodeCreationMode { Node, Modulator, TraversalFlag };
+
 class NodeFactory
 {
 public:
 
     static void createRootNode(GraphState& state, const NodePosition& nodePosition, juce::UndoManager* undoManager);
 
-    static void createDanglingArrow (GraphState& state, juce::ValueTree nodeTree, const juce::Point<int>& tipOffset, const ArrowInfo& arrowInfo,
+    static void createDanglingArrow (GraphState& state, juce::ValueTree nodeTree, const juce::Point<int>& tipOffset, ArrowInfo arrowInfo,
                                      juce::UndoManager* undoManager);
     static void setDanglingArrowTip (GraphState& state, juce::ValueTree arrowTree, const juce::Point<int>& tipOffset, juce::UndoManager* undoManager);
     static void destroyDanglingArrow(juce::ValueTree arrowTree, juce::UndoManager* undoManager);
+
+    static void applyArrowInfo(GraphState& state, int parentNodeId, int childNodeId, ArrowInfo arrowInfo, ArrowType rootConnectionType,
+                               juce::UndoManager* undoManager);
+
+    static juce::ValueTree create(NodeCreationMode mode, GraphState& state, int parentNodeId, const juce::Identifier& parentType, bool makeAlternative,
+                                  const NodePosition& position, juce::UndoManager* undoManager);
 
     static juce::ValueTree createNode             (GraphState& state, int parentNodeId, const juce::Identifier& nodeType, const NodePosition& nodePosition,
                                                    juce::UndoManager* undoManager);
@@ -32,4 +40,6 @@ private:
     static void setDefaultTraversal(GraphState& state, int nodeId, juce::UndoManager* undoManager);
 
     static void inheritFromParent(GraphState& state, int parentNodeId, int newNodeId, juce::ValueTree newNode, juce::UndoManager* undoManager);
+
+    static void inheritArrowBindings(const GraphState& state, ArrowInfo& arrowInfo, int nodeId, const juce::ValueTree& newArrow);
 };

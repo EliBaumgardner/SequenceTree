@@ -9,6 +9,9 @@ public:
 
     static const juce::Identifier PluginState;
     static const juce::Identifier NodeMap;
+    static const juce::Identifier Patch;
+    static const juce::Identifier PatchName;
+    static const juce::Identifier PatchFile;
 
     static const juce::Identifier RootNodeData;
     static const juce::Identifier NodeData;

@@ -1,6 +1,8 @@
 #include "NodeFactory.h"
 #include "ValueTreeIdentifiers.h"
 
+#include <utility>
+
 void NodeFactory::createRootNode(GraphState& state, const NodePosition& nodePosition, juce::UndoManager* undoManager)
 {
     const juce::ValueTree rootNodeValueTree = state.addRootNode(undoManager);
@@ -13,7 +15,7 @@ void NodeFactory::createRootNode(GraphState& state, const NodePosition& nodePosi
 }
 
 void NodeFactory::createDanglingArrow(GraphState& state, juce::ValueTree nodeTree, const juce::Point<int>& tipOffset,
-                                      const ArrowInfo& arrowInfo, juce::UndoManager* undoManager)
+                                      ArrowInfo arrowInfo, juce::UndoManager* undoManager)
 {
     if (!nodeTree.isValid()) {
         return;
@@ -21,6 +23,8 @@ void NodeFactory::createDanglingArrow(GraphState& state, juce::ValueTree nodeTre
 
     juce::ValueTree arrowList = nodeTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
     juce::ValueTree arrowTree(ValueTreeIdentifiers::DanglingArrow);
+
+    inheritArrowBindings(state, arrowInfo, nodeTree.getProperty(ValueTreeIdentifiers::Id), {});
 
     if (!arrowList.isValid()) {
         arrowList = juce::ValueTree(ValueTreeIdentifiers::DanglingArrows);
@@ -60,6 +64,67 @@ void NodeFactory::destroyDanglingArrow(juce::ValueTree arrowTree, juce::UndoMana
     if (arrowList.isValid()) {
         arrowList.removeChild(arrowTree, undoManager);
     }
+}
+
+void NodeFactory::applyArrowInfo(GraphState& state, int parentNodeId, int childNodeId, ArrowInfo arrowInfo, ArrowType rootConnectionType,
+                                 juce::UndoManager* undoManager)
+{
+    const bool            connectsToOtherRoot  = state.connectsToOtherTreeRoot(parentNodeId, childNodeId);
+    const bool            ownedByTraversalFlag = state.getNode(parentNodeId).getType() == ValueTreeIdentifiers::TraversalFlagData;
+    const juce::ValueTree connection           = state.getConnection(parentNodeId, childNodeId);
+
+    if (arrowInfo.type == ArrowType::Traversal && ! connectsToOtherRoot) {
+        arrowInfo.type = ArrowType::Node;
+    }
+
+    if (connectsToOtherRoot && ! ownedByTraversalFlag && arrowInfo.type != ArrowType::Traversal) {
+        arrowInfo.type = rootConnectionType;
+    }
+
+    inheritArrowBindings(state, arrowInfo, parentNodeId, connection);
+
+    ArrowBindingOps::setArrowInfo(connection, arrowInfo, undoManager);
+
+    state.arrows.syncPitchBindings(childNodeId, undoManager);
+}
+
+juce::ValueTree NodeFactory::create(NodeCreationMode mode, GraphState& state, int parentNodeId, const juce::Identifier& parentType, bool makeAlternative,
+                                    const NodePosition& position, juce::UndoManager* undoManager)
+{
+    switch (mode)
+    {
+        case NodeCreationMode::Node:
+        {
+            if (makeAlternative) {
+                return createNode(state, parentNodeId, ValueTreeIdentifiers::AlternativeNodeData, position, undoManager);
+            }
+
+            return createNode(state, parentNodeId, ValueTreeIdentifiers::NodeData, position, undoManager);
+        }
+
+        case NodeCreationMode::Modulator:
+        {
+            if (parentType == ValueTreeIdentifiers::ModulatorRootData
+                || parentType == ValueTreeIdentifiers::ModulatorData
+                || parentType == ValueTreeIdentifiers::AlternativeModulatorData) {
+
+                if (makeAlternative) {
+                    return createAlternativeModulator(state, parentNodeId, position, undoManager);
+                }
+
+                return createModulator(state, parentNodeId, position, undoManager);
+            }
+
+            return createModulatorRoot(state, parentNodeId, position, undoManager);
+        }
+
+        case NodeCreationMode::TraversalFlag:
+        {
+            return createTraversalFlagNode(state, parentNodeId, position, undoManager);
+        }
+    }
+
+    return {};
 }
 
 juce::ValueTree NodeFactory::createNode(GraphState& state, int parentNodeId, const juce::Identifier& nodeType,
@@ -160,6 +225,7 @@ void NodeFactory::inheritFromParent(GraphState& state, int parentNodeId, int new
     const juce::ValueTree  parentNode         = state.getNode(parentNodeId);
     const juce::ValueTree  parentMidi         = parentNode.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
     juce::ValueTree        newMidi            = newNode.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
+
     const juce::Identifier inheritedProperties[] = {
         ValueTreeIdentifiers::CountLimit,
         ValueTreeIdentifiers::SwitchCountLimit,
@@ -190,5 +256,67 @@ void NodeFactory::inheritFromParent(GraphState& state, int parentNodeId, int new
 
     for (int noteIndex = 0; noteIndex < parentMidi.getNumChildren(); ++noteIndex) {
         newMidi.addChild(parentMidi.getChild(noteIndex).createCopy(), -1, undoManager);
+    }
+}
+
+void NodeFactory::inheritArrowBindings(const GraphState& state, ArrowInfo& arrowInfo, int nodeId, const juce::ValueTree& newArrow)
+{
+    const juce::ValueTree node = state.getNode(nodeId);
+
+    if (! node.isValid()) {
+        return;
+    }
+
+    auto targetsAlternative = [&state](const juce::ValueTree& arrowTree) {
+        if (! arrowTree.hasProperty(ValueTreeIdentifiers::Id)) {
+            return false;
+        }
+
+        const int targetId = arrowTree.getProperty(ValueTreeIdentifiers::Id);
+
+        const juce::Identifier targetType = state.getNode(targetId).getType();
+
+        return targetType == ValueTreeIdentifiers::AlternativeNodeData
+            || targetType == ValueTreeIdentifiers::AlternativeModulatorData;
+    };
+
+    juce::ValueTree establishedArrow;
+
+    const juce::ValueTree childIds = node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+    for (int i = 0; i < childIds.getNumChildren() && ! establishedArrow.isValid(); ++i) {
+        if (childIds.getChild(i) != newArrow && ! targetsAlternative(childIds.getChild(i))) {
+            establishedArrow = childIds.getChild(i);
+        }
+    }
+
+    const juce::ValueTree danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+
+    for (int i = 0; i < danglingArrows.getNumChildren() && ! establishedArrow.isValid(); ++i) {
+        if (danglingArrows.getChild(i) != newArrow) {
+            establishedArrow = danglingArrows.getChild(i);
+        }
+    }
+
+    if (establishedArrow.isValid()) {
+        const ArrowInfo establishedInfo = ArrowBindingOps::getArrowInfo(establishedArrow);
+
+        arrowInfo.xBinding    = establishedInfo.xBinding;
+        arrowInfo.yBinding    = establishedInfo.yBinding;
+        arrowInfo.xMultiplier = establishedInfo.xMultiplier;
+        arrowInfo.yMultiplier = establishedInfo.yMultiplier;
+    }
+
+    if (targetsAlternative(newArrow)) {
+        std::swap(arrowInfo.xBinding,    arrowInfo.yBinding);
+        std::swap(arrowInfo.xMultiplier, arrowInfo.yMultiplier);
+
+        if (arrowInfo.xBinding == ArrowBinding::PitchBind) {
+            arrowInfo.xBinding = ArrowBinding::NoBind;
+        }
+
+        if (arrowInfo.yBinding == ArrowBinding::PitchBind) {
+            arrowInfo.yBinding = ArrowBinding::NoBind;
+        }
     }
 }

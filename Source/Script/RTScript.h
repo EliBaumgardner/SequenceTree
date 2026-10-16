@@ -85,6 +85,7 @@ enum class ScriptField
     TriggerLimit,
     SwitchLimit,
     SubLoopLimit,
+
     Repeat,
     Probability,
     ChildCount,

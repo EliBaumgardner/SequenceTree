@@ -17,7 +17,7 @@ void ValueField::setActivePaintLayer(PaintLayer layer)
 {
     activePaintLayer = layer;
 
-    if (nodeCanvas.paintMode) {
+    if (nodeCanvas.activeTool == NodeCanvas::CanvasTool::Paint) {
         render();
     }
 
@@ -26,7 +26,7 @@ void ValueField::setActivePaintLayer(PaintLayer layer)
 
 void ValueField::updateBrushCursor()
 {
-    if (!nodeCanvas.paintMode) {
+    if (nodeCanvas.activeTool != NodeCanvas::CanvasTool::Paint) {
         return;
     }
 
@@ -43,7 +43,7 @@ void ValueField::updateBrushCursor()
 
 void ValueField::refresh()
 {
-    if (!nodeCanvas.paintMode) {
+    if (nodeCanvas.activeTool != NodeCanvas::CanvasTool::Paint) {
         return;
     }
 

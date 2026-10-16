@@ -18,6 +18,7 @@ public:
     void dissolve       (int encapsulatorId, juce::UndoManager* undoManager);
     void removeGroup    (int encapsulatorId, juce::UndoManager* undoManager);
     void insertNodeAfter(int nodeId, int siblingNodeId, juce::UndoManager* undoManager);
+    void removeMember   (int nodeId, int encapsulatorId, juce::UndoManager* undoManager);
 
     std::vector<int> memberIds(int encapsulatorId) const;
 
