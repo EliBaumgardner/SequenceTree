@@ -18,10 +18,16 @@ Builds/
 
 scripts/
 .opencode/
-.claude/context/Analysis/Unreviewed/ProgramAudits/tracker.md
 GEMINI.md
 docs
 .gemini/
-.claude/refactor.local.toml
-.claude/research.local.toml
 .obsidian/
+
+.claude/
+.analyst/
+.opencode/
+.gemini/
+GEMINI.md
+.mcp.json
+CLAUDE.md
+CLAUDE.local.md

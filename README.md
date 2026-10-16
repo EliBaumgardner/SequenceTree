@@ -138,10 +138,6 @@ Note traversals, modulators, alternatives and trees that are stepped into all mo
 
 About 90 automated tests ([Catch2](https://github.com/catchorg/Catch2)) cover how traversals move through a graph, the script language, and how a graph's shape becomes timing and pitch. The core that walks the graph is independent of the plugin framework, so its tests build in seconds.
 
-## AI Integration and Workflow
-
-I designed SequenceTree and wrote its core by hand. AI agents help with audits and large refactors under tooling I built to hold them to my design rules. See [AI Integration and Workflow](documentation/AIWorkflow.md).
-
 ## Building
 
 **Requirements:** CMake 3.22+, a C++20 compiler, and Git.
