@@ -211,6 +211,10 @@ void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
 
     axis.button->onRightClick = [this, &axis]() { showAxisMenu(axis); };
 
+    axis.button->painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
+        CustomLookAndFeel::get(*this).drawTextButton(graphics, bounds, state);
+    };
+
     axis.button->setText(text);
 
     if (arrowInfo.*axis.binding != ArrowBinding::NoBind) {
