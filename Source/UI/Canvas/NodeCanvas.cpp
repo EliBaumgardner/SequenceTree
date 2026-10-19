@@ -11,7 +11,7 @@
 #include <cmath>
 
 NodeCanvas::NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, RTGraphBuilder& rtGraphBuilder, juce::UndoManager& undoManager,
-                       CustomLookAndFeel& lookAndFeel)
+                       ArsNovaUI::CustomLookAndFeel& lookAndFeel)
     : processor(processor),
       graphState(graphState),
       rtGraphBuilder(rtGraphBuilder),
@@ -32,9 +32,9 @@ NodeCanvas::~NodeCanvas()
 
 void NodeCanvas::paint(juce::Graphics& graphics)
 {
-    const CanvasGrid grid { getLocalBounds().toFloat(), modelTransform, viewTransform, gridOrigin, gridSpacing, gridVisible, gridOriginSet };
+    const ArsNovaUI::CanvasGrid grid { getLocalBounds().toFloat(), modelTransform, viewTransform, gridOrigin, gridSpacing, gridVisible, gridOriginSet };
 
-    CustomLookAndFeel::get(*this).drawCanvas(graphics, grid);
+    ArsNovaUI::CustomLookAndFeel::get(*this).drawCanvas(graphics, grid);
 
     if (activeTool == CanvasTool::Paint && valueField.image.isValid()) {
         graphics.setImageResamplingQuality(juce::Graphics::mediumResamplingQuality);
@@ -42,7 +42,7 @@ void NodeCanvas::paint(juce::Graphics& graphics)
     }
 
     if (!selectionBounds.isEmpty()) {
-        const Theme& theme = CustomLookAndFeel::get(*this);
+        const ArsNovaUI::Theme& theme = ArsNovaUI::CustomLookAndFeel::get(*this);
 
         graphics.addTransform(viewTransform);
 
@@ -184,7 +184,7 @@ void NodeCanvas::handleAsyncUpdate()
 
             case AsyncUpdateType::NodeColourChanged:
                 if (Node* const recolouredNode = nodeManager.find(nodeId)) {
-                    const juce::var colourText = recolouredNode->nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, CustomLookAndFeel::get(*this).defaultNodeColour.toString());
+                    const juce::var colourText = recolouredNode->nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour.toString());
 
                     recolouredNode->nodeColour = juce::Colour::fromString(colourText.toString());
 

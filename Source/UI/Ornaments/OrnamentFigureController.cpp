@@ -3,7 +3,7 @@
 #include <ArsNovaUI/Canvas/DynamicPort.h>
 #include "../../Util/ArrowInfo.h"
 
-OrnamentFigureController::OrnamentFigureController(OrnamentCanvas& canvas, DynamicPort& port, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
+OrnamentFigureController::OrnamentFigureController(OrnamentCanvas& canvas, ArsNovaUI::DynamicPort& port, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
     : canvas(canvas),
       port(port),
       ornamentLibraries(ornamentLibraries),

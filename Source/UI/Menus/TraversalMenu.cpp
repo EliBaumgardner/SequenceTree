@@ -20,11 +20,11 @@ TraversalMenu::TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, Tra
       undoManager(undoManager)
 {
     const juce::ValueTree traversalMap     = graphState.traversals.map;
-    auto                  transposeFormat  = std::make_unique<NumberFormat>(minimumTraversalTranspose, maximumTraversalTranspose);
+    auto                  transposeFormat  = std::make_unique<ArsNovaUI::NumberFormat>(minimumTraversalTranspose, maximumTraversalTranspose);
     int                   firstTraversalId = -1;
 
-    editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawCodeButton(graphics, bounds, state, Theme::textHeight);
+    editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
+        ArsNovaUI::CustomLookAndFeel::get(*this).drawCodeButton(graphics, bounds, state, ArsNovaUI::Theme::textHeight);
     };
 
     displayMenu.labelEditor.autoFitText = false;
@@ -36,11 +36,11 @@ TraversalMenu::TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, Tra
     velocityField.label.setText("Velocity", juce::dontSendNotification);
     colourLabel.setText("Colour", juce::dontSendNotification);
 
-    multiplierField.editor.setFormat(std::make_unique<NumberFormat>(minimumTraversalMultiplier, RTtraversal::maximumTempoMultiplier,
-                                                                    ValueFormat::editableDecimalPlaces));
-    channelField.editor.setFormat(std::make_unique<NumberFormat>(minimumMidiChannel, maximumMidiChannel));
+    multiplierField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumTraversalMultiplier, RTtraversal::maximumTempoMultiplier,
+                                                                               ArsNovaUI::ValueFormat::editableDecimalPlaces));
+    channelField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumMidiChannel, maximumMidiChannel));
     transposeField.editor.setFormat(std::move(transposeFormat));
-    velocityField.editor.setFormat(std::make_unique<NumberFormat>(0.0, 1.0, ValueFormat::editableDecimalPlaces));
+    velocityField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(0.0, 1.0, ArsNovaUI::ValueFormat::editableDecimalPlaces));
 
     editTraversalRulesButton.setText("edit traversal rules");
 
@@ -93,13 +93,13 @@ TraversalMenu::~TraversalMenu()
 
 void TraversalMenu::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
-    const int          barHeight   = Theme::barHeight;
-    const int          spacing     = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
+    ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
+    const int                     barHeight   = ArsNovaUI::Theme::barHeight;
+    const int                     spacing     = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuSpacingRatio);
 
     if (! currentTraversalData.isValid()) {
         graphics.setColour(lookAndFeel.mutedTextColour);
-        graphics.setFont(lookAndFeel.font(Theme::FontStyle::Regular, Theme::textHeight));
+        graphics.setFont(lookAndFeel.font(ArsNovaUI::Theme::FontStyle::Regular, ArsNovaUI::Theme::textHeight));
         graphics.drawFittedText("Shift + click the canvas to create a node", getLocalBounds().reduced(spacing), juce::Justification::centred, 2);
 
         return;
@@ -108,16 +108,16 @@ void TraversalMenu::paint(juce::Graphics& graphics)
     lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
 
     graphics.setColour(lookAndFeel.borderColour);
-    graphics.fillRect(0.0f, static_cast<float>(barHeight), static_cast<float>(getWidth()), Theme::borderThickness);
+    graphics.fillRect(0.0f, static_cast<float>(barHeight), static_cast<float>(getWidth()), ArsNovaUI::Theme::borderThickness);
 }
 
 void TraversalMenu::resized()
 {
-    const int        barHeight  = Theme::barHeight;
-    const int        spacing    = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
-    const int        rowHeight  = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
-    const float      textHeight = Theme::textHeight;
-    const juce::Font textFont   = CustomLookAndFeel::get(*this).font(Theme::FontStyle::Regular, textHeight);
+    const int        barHeight  = ArsNovaUI::Theme::barHeight;
+    const int        spacing    = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuSpacingRatio);
+    const int        rowHeight  = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuRowHeightRatio);
+    const float      textHeight = ArsNovaUI::Theme::textHeight;
+    const juce::Font textFont   = ArsNovaUI::CustomLookAndFeel::get(*this).font(ArsNovaUI::Theme::FontStyle::Regular, textHeight);
     auto             bounds     = getLocalBounds();
     auto             barArea    = bounds.removeFromTop(barHeight);
 
@@ -127,13 +127,13 @@ void TraversalMenu::resized()
     transposeField.editor.setFontHeight(textHeight);
     velocityField.editor.setFontHeight(textHeight);
 
-    displayMenu.setBounds(barArea.reduced(juce::roundToInt(barHeight * Theme::contentInsetRatio)).withWidth(Theme::menuContentWidth));
+    displayMenu.setBounds(barArea.reduced(juce::roundToInt(barHeight * ArsNovaUI::Theme::contentInsetRatio)).withWidth(ArsNovaUI::Theme::menuContentWidth));
 
-    bounds = bounds.reduced(spacing).withWidth(Theme::menuContentWidth);
+    bounds = bounds.reduced(spacing).withWidth(ArsNovaUI::Theme::menuContentWidth);
 
-    editTraversalRulesButton.setBounds(bounds.removeFromBottom(juce::roundToInt(barHeight * Theme::menuButtonHeightRatio)));
+    editTraversalRulesButton.setBounds(bounds.removeFromBottom(juce::roundToInt(barHeight * ArsNovaUI::Theme::menuButtonHeightRatio)));
 
-    for (LabeledEditor* field : { &multiplierField, &channelField, &transposeField, &velocityField }) {
+    for (ArsNovaUI::LabeledEditor* field : { &multiplierField, &channelField, &transposeField, &velocityField }) {
         auto rowArea = bounds.removeFromTop(rowHeight);
 
         field->label.setFont(textFont);
@@ -158,7 +158,7 @@ void TraversalMenu::selectTraversal(int traversalId)
     juce::ValueTree    traversalData = graphState.traversals.map.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
     const juce::String colourString  = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
 
-    const auto bindWithDefault = [&traversalData](ValueEditor& editor, const juce::Identifier& propertyId,
+    const auto bindWithDefault = [&traversalData](ArsNovaUI::ValueEditor& editor, const juce::Identifier& propertyId,
                                                   const juce::var& defaultValue) {
         if (!traversalData.hasProperty(propertyId)) {
             traversalData.setProperty(propertyId, defaultValue, nullptr);
@@ -200,10 +200,10 @@ void TraversalMenu::selectTraversal(int traversalId)
 
 int TraversalMenu::narrowestHeight() const
 {
-    const int barHeight     = Theme::barHeight;
-    const int spacing       = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
-    const int rowHeight     = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
-    const int buttonHeight  = juce::roundToInt(barHeight * Theme::menuButtonHeightRatio);
+    const int barHeight     = ArsNovaUI::Theme::barHeight;
+    const int spacing       = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuSpacingRatio);
+    const int rowHeight     = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuRowHeightRatio);
+    const int buttonHeight  = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuButtonHeightRatio);
     const int fieldRowCount = 4;
 
     return barHeight + spacing * 2 + buttonHeight + fieldRowCount * (rowHeight + spacing) + rowHeight;

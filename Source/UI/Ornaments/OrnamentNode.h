@@ -14,5 +14,5 @@ public:
     void bindValueEditorForMode() override;
     void respondToClick        (juce::Point<int> localPoint) override;
 
-    ValueEditor velocityEditor;
+    ArsNovaUI::ValueEditor velocityEditor;
 };

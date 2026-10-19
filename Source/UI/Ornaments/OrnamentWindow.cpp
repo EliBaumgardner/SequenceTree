@@ -1,7 +1,7 @@
 #include "OrnamentWindow.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
-OrnamentWindow::OrnamentWindow(CustomLookAndFeel& lookAndFeel, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
+OrnamentWindow::OrnamentWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
     : undoManager(undoManager),
       buildPanel(ornamentLibraries, undoManager),
       selectionPanel(ornamentLibraries, undoManager)
@@ -26,7 +26,7 @@ OrnamentWindow::~OrnamentWindow()
 
 void OrnamentWindow::paint(juce::Graphics& graphics)
 {
-    const Theme& theme = CustomLookAndFeel::get(*this);
+    const ArsNovaUI::Theme& theme = ArsNovaUI::CustomLookAndFeel::get(*this);
 
     graphics.setColour(theme.surfaceColour);
     graphics.fillRect(getLocalBounds());

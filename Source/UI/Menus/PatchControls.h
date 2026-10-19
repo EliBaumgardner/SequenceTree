@@ -34,9 +34,9 @@ private:
     juce::File            patchFolder;
     juce::UndoManager     nameUndoManager;
 
-    ValueEditor nameEditor;
-    IconButton  openButton;
-    IconButton  resetButton;
+    ArsNovaUI::ValueEditor nameEditor;
+    ArsNovaUI::IconButton  openButton;
+    ArsNovaUI::IconButton  resetButton;
 
     std::unique_ptr<juce::FileChooser> fileChooser;
 };

@@ -10,9 +10,9 @@ OrnamentTile::OrnamentTile(OrnamentLibraries& ornamentLibraries, juce::ValueTree
       nameTag(undoManager)
 {
     nameTag.autoFitText = true;
-    nameTag.fontStyle   = Theme::FontStyle::Regular;
+    nameTag.fontStyle   = ArsNovaUI::Theme::FontStyle::Regular;
 
-    nameTag.setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength, TextFormat::labelCharacters));
+    nameTag.setFormat(std::make_unique<ArsNovaUI::TextFormat>(ArsNovaUI::TextFormat::labelTextLength, ArsNovaUI::TextFormat::labelCharacters));
     nameTag.bindEditor(ornament, ValueTreeIdentifiers::OrnamentName);
 
     setSize(tileWidth, tileHeight);
@@ -24,14 +24,14 @@ OrnamentTile::OrnamentTile(OrnamentLibraries& ornamentLibraries, juce::ValueTree
 
 void OrnamentTile::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
-    const auto         bounds      = getLocalBounds().toFloat().reduced(Theme::borderThickness);
-    const auto         symbol      = getLocalBounds().withTrimmedTop(markerHeight).withTrimmedBottom(nameTagHeight).reduced(nameTagInset).toFloat();
-    const juce::String activeUid   = ornamentLibraries.libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString();
-    const auto         marker      = getLocalBounds().removeFromTop(markerHeight).reduced(nameTagInset, 0);
-    juce::Colour       fill        = lookAndFeel.raisedColour;
-    juce::Colour       border      = lookAndFeel.borderColour;
-    juce::String       status;
+    ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
+    const auto                    bounds      = getLocalBounds().toFloat().reduced(ArsNovaUI::Theme::borderThickness);
+    const auto                    symbol      = getLocalBounds().withTrimmedTop(markerHeight).withTrimmedBottom(nameTagHeight).reduced(nameTagInset).toFloat();
+    const juce::String            activeUid   = ornamentLibraries.libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString();
+    const auto                    marker      = getLocalBounds().removeFromTop(markerHeight).reduced(nameTagInset, 0);
+    juce::Colour                  fill        = lookAndFeel.raisedColour;
+    juce::Colour                  border      = lookAndFeel.borderColour;
+    juce::String                  status;
 
     if (activeUid == ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString()) {
         fill   = lookAndFeel.selectedColour;
@@ -39,10 +39,10 @@ void OrnamentTile::paint(juce::Graphics& graphics)
     }
 
     graphics.setColour(fill);
-    graphics.fillRoundedRectangle(bounds, Theme::paneCornerRadius);
+    graphics.fillRoundedRectangle(bounds, ArsNovaUI::Theme::paneCornerRadius);
 
     graphics.setColour(border);
-    graphics.drawRoundedRectangle(bounds, Theme::paneCornerRadius, Theme::borderThickness);
+    graphics.drawRoundedRectangle(bounds, ArsNovaUI::Theme::paneCornerRadius, ArsNovaUI::Theme::borderThickness);
 
     switch (ornamentLibraries.statusOf(ornament)) {
         case OrnamentStatus::Draft:          status = "draft";       break;
@@ -51,7 +51,7 @@ void OrnamentTile::paint(juce::Graphics& graphics)
     }
 
     graphics.setColour(lookAndFeel.mutedTextColour);
-    graphics.setFont(lookAndFeel.font(Theme::FontStyle::Regular, Theme::labelFontHeight));
+    graphics.setFont(lookAndFeel.font(ArsNovaUI::Theme::FontStyle::Regular, ArsNovaUI::Theme::labelFontHeight));
     graphics.drawText(status, marker, juce::Justification::centredRight, true);
 
     graphics.setColour(lookAndFeel.textColour);
@@ -72,16 +72,16 @@ void OrnamentTile::mouseDown(const juce::MouseEvent& event)
 
 void OrnamentTile::showMenu()
 {
-    const juce::String uid = ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
-    ContextMenu        menu;
+    const juce::String     uid = ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
+    ArsNovaUI::ContextMenu menu;
 
-    menu.addItem("duplicate", ContextMenu::ItemKind::Action, [this, uid]() {
+    menu.addItem("duplicate", ArsNovaUI::ContextMenu::ItemKind::Action, [this, uid]() {
         undoManager.beginNewTransaction();
 
         ornamentLibraries.duplicateOrnament(uid, &undoManager);
     });
 
-    menu.addItem("delete...", ContextMenu::ItemKind::Action, [this]() { confirmDelete(); });
+    menu.addItem("delete...", ArsNovaUI::ContextMenu::ItemKind::Action, [this]() { confirmDelete(); });
 
     menu.show(*this);
 }

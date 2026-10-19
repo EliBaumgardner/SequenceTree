@@ -8,6 +8,7 @@
 #include <ArsNovaUI/Buttons/ButtonPane.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include <ArsNovaUI/Menus/SettingsMenu.h>
+#include <ArsNovaUI/ScaledView.h>
 
 class MenuBar;
 class NodeCanvas;
@@ -16,14 +17,13 @@ class TraversalRuleState;
 class AudioSnapshotPublisher;
 class TraversalMenu;
 class NodeMenu;
-class ScaledView;
 
 class MenuArea : public juce::Component
 {
 public:
 
     MenuArea(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-             juce::PropertiesFile& interfaceSettings, ScaledView& scaledView, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
+             juce::PropertiesFile& interfaceSettings, ArsNovaUI::ScaledView& scaledView, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
     ~MenuArea() override;
 
@@ -35,7 +35,7 @@ public:
     static constexpr float resizerWidthRatio = 0.4f;
     static constexpr float menuBarWidthRatio = 1.12f;
 
-    PanelResizer resizer;
+    ArsNovaUI::PanelResizer resizer;
 
 private:
 
@@ -45,20 +45,20 @@ private:
 
     enum class ActivePanel { None, Traversal, Node };
 
-    Bar topBar;
+    ArsNovaUI::Bar topBar;
 
-    NodeCanvas&           nodeCanvas;
-    juce::PropertiesFile& interfaceSettings;
-    ScaledView&           scaledView;
-    juce::ValueTree       colourPresets;
-    juce::UndoManager&    undoManager;
+    NodeCanvas&            nodeCanvas;
+    juce::PropertiesFile&  interfaceSettings;
+    ArsNovaUI::ScaledView& scaledView;
+    juce::ValueTree        colourPresets;
+    juce::UndoManager&     undoManager;
 
-    ButtonPane settingsPane;
+    ArsNovaUI::ButtonPane settingsPane;
 
-    PopupWindowLauncher settingsLauncher {
+    ArsNovaUI::PopupWindowLauncher settingsLauncher {
         "Settings",
         [this]() {
-            auto content = std::make_unique<SettingsMenu>(CustomLookAndFeel::get(*this), interfaceSettings, scaledView, colourPresets, undoManager);
+            auto content = std::make_unique<ArsNovaUI::SettingsMenu>(ArsNovaUI::CustomLookAndFeel::get(*this), interfaceSettings, scaledView, colourPresets, undoManager);
 
             const juce::Point<int> size = content->narrowestSize();
 

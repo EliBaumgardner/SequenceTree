@@ -203,7 +203,7 @@ void OrnamentLibraries::eraseSymbol(juce::ValueTree ornament, juce::Point<float>
 {
     juce::StringArray erasedStrokes;
 
-    for (const SymbolStroke& stroke : readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString())) {
+    for (const ArsNovaUI::SymbolStroke& stroke : readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString())) {
         juce::Path           erased;
         juce::Point<float>   current;
         bool                 penDown = false;
@@ -677,13 +677,13 @@ OrnamentStatus OrnamentLibraries::statusOf(const juce::ValueTree& ornament) cons
     return OrnamentStatus::ChangesPending;
 }
 
-std::vector<SymbolStroke> OrnamentLibraries::readSymbol(const juce::String& symbol)
+std::vector<ArsNovaUI::SymbolStroke> OrnamentLibraries::readSymbol(const juce::String& symbol)
 {
-    std::vector<SymbolStroke> strokes;
+    std::vector<ArsNovaUI::SymbolStroke> strokes;
 
     for (const juce::String& entry : juce::StringArray::fromTokens(symbol, "|", "")) {
-        const juce::String widthText = entry.upToFirstOccurrenceOf(" ", false, false);
-        SymbolStroke       stroke { juce::Path(), defaultStrokeWidth };
+        const juce::String      widthText = entry.upToFirstOccurrenceOf(" ", false, false);
+        ArsNovaUI::SymbolStroke stroke { juce::Path(), defaultStrokeWidth };
 
         if (widthText.containsOnly("0123456789.")) {
             stroke.width = widthText.getFloatValue();

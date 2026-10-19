@@ -5,7 +5,7 @@
 #include "../../Plugin/AudioSnapshotPublisher.h"
 #include "../../Script/ScriptCompiler.h"
 
-TraversalRulesWindow::TraversalRulesWindow(CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
+TraversalRulesWindow::TraversalRulesWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
                                            juce::UndoManager& undoManager)
     : rulesPanel(undoManager),
       traversalRuleState(traversalRuleState),
@@ -14,17 +14,17 @@ TraversalRulesWindow::TraversalRulesWindow(CustomLookAndFeel& lookAndFeel, Trave
     setLookAndFeel(&lookAndFeel);
 
     rulesPanel.resizer.onWidthDragged          = [this](int newWidth) { setPanelWidth(newWidth); };
-    rulesPanel.labelPanel.onLabelClicked       = [this](FileLabel* label) { setActivePage(label->fileId); };
+    rulesPanel.labelPanel.onLabelClicked       = [this](ArsNovaUI::FileLabel* label) { setActivePage(label->fileId); };
     rulesPanel.panelTitlebar.addButton.onClick = [this] { addRule(); };
     titlebar.playButton.onClick                = [this] { makeViewedRuleActive(); };
 
-    titlebar.undoRedoPane.addButton(&CustomLookAndFeel::drawUndoIcon, "Undo", [this] {
+    titlebar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawUndoIcon, "Undo", [this] {
         if (activePage != nullptr) {
             activePage->juce::CodeEditorComponent::undo();
         }
     });
 
-    titlebar.undoRedoPane.addButton(&CustomLookAndFeel::drawRedoIcon, "Redo", [this] {
+    titlebar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRedoIcon, "Redo", [this] {
         if (activePage != nullptr) {
             activePage->juce::CodeEditorComponent::redo();
         }
@@ -60,7 +60,7 @@ TraversalRulesWindow::~TraversalRulesWindow()
 
 void TraversalRulesWindow::paint(juce::Graphics& graphics)
 {
-    const Theme&               theme        = CustomLookAndFeel::get(*this);
+    const ArsNovaUI::Theme&    theme        = ArsNovaUI::CustomLookAndFeel::get(*this);
     const juce::Rectangle<int> statusBounds = getLocalBounds().removeFromBottom(statusBarHeight);
 
     graphics.setColour(theme.surfaceColour);
@@ -76,8 +76,8 @@ void TraversalRulesWindow::paint(juce::Graphics& graphics)
         graphics.setColour(theme.successColour);
     }
 
-    graphics.setFont(theme.font(Theme::FontStyle::Mono, Theme::labelFontHeight));
-    graphics.drawText(statusText, statusBounds.reduced(Theme::menuEdgeInset, 0), juce::Justification::centredLeft, true);
+    graphics.setFont(theme.font(ArsNovaUI::Theme::FontStyle::Mono, ArsNovaUI::Theme::labelFontHeight));
+    graphics.drawText(statusText, statusBounds.reduced(ArsNovaUI::Theme::menuEdgeInset, 0), juce::Justification::centredLeft, true);
 
     graphics.setColour(theme.borderColour);
     graphics.drawRect(getLocalBounds(), 1);
@@ -107,7 +107,7 @@ void TraversalRulesWindow::setActivePage(int id)
         return;
     }
 
-    FilePage* page = match->second.get();
+    ArsNovaUI::FilePage* page = match->second.get();
 
     if (page == activePage) {
         return;
@@ -233,8 +233,8 @@ void TraversalRulesWindow::syncWithRuleState()
 
 void TraversalRulesWindow::createPage(int ruleId, const juce::String& source)
 {
-    auto      page        = std::make_unique<FilePage>(CustomLookAndFeel::get(*this));
-    FilePage* createdPage = page.get();
+    auto                 page        = std::make_unique<ArsNovaUI::FilePage>(ArsNovaUI::CustomLookAndFeel::get(*this));
+    ArsNovaUI::FilePage* createdPage = page.get();
 
     page->loadContent(source);
 
@@ -353,14 +353,14 @@ int TraversalRulesWindow::clampPanelWidth(int newWidth) const
 }
 
 TraversalRulesWindow::RulesTitlebar::RulesTitlebar()
-    : Bar(Orientation::Horizontal, titlebarInsetRatio)
+    : ArsNovaUI::Bar(Orientation::Horizontal, titlebarInsetRatio)
 {
-    playButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        ButtonState triangleState = state;
+    playButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
+        ArsNovaUI::ButtonState triangleState = state;
 
         triangleState.isSelected = false;
 
-        CustomLookAndFeel::get(*this).drawPlayIcon(graphics, bounds, triangleState);
+        ArsNovaUI::CustomLookAndFeel::get(*this).drawPlayIcon(graphics, bounds, triangleState);
     };
 
     playButton.setTooltip("Make this the live traversal rule");
@@ -382,7 +382,7 @@ void TraversalRulesWindow::RulesTitlebar::resized()
 }
 
 TraversalRulesWindow::RulesPanel::RulesPanel(juce::UndoManager& undoManager)
-    : resizer(PanelResizer::Edge::Right),
+    : resizer(ArsNovaUI::PanelResizer::Edge::Right),
       labelPanel(undoManager)
 {
     addAndMakeVisible(panelTitlebar);
@@ -392,7 +392,7 @@ TraversalRulesWindow::RulesPanel::RulesPanel(juce::UndoManager& undoManager)
 
 void TraversalRulesWindow::RulesPanel::paint(juce::Graphics& graphics)
 {
-    const Theme& theme = CustomLookAndFeel::get(*this);
+    const ArsNovaUI::Theme& theme = ArsNovaUI::CustomLookAndFeel::get(*this);
 
     graphics.setColour(theme.windowColour);
     graphics.fillRect(getLocalBounds());
@@ -437,9 +437,9 @@ void TraversalRulesWindow::RulesPanel::selectLabel(int fileId)
 }
 
 TraversalRulesWindow::RulesPanel::PanelTitlebar::PanelTitlebar()
-    : Bar(Orientation::Horizontal, RulesTitlebar::titlebarInsetRatio)
+    : ArsNovaUI::Bar(Orientation::Horizontal, RulesTitlebar::titlebarInsetRatio)
 {
-    addButton.icon = &CustomLookAndFeel::drawAddIcon;
+    addButton.icon = &ArsNovaUI::CustomLookAndFeel::drawAddIcon;
 
     addButton.setTooltip("Add Rule");
 

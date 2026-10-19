@@ -110,7 +110,7 @@ public:
 
     TraversalRuleState traversalRuleState;
 
-    juce::ValueTree colourPresets { InterfaceIdentifiers::ColourPresets };
+    juce::ValueTree colourPresets { ArsNovaUI::InterfaceIdentifiers::ColourPresets };
 
     juce::File userFolder  { juce::File::getSpecialLocation(juce::File::userMusicDirectory).getChildFile(JucePlugin_Name) };
     juce::File patchFolder { userFolder.getChildFile("Patches") };

@@ -10,12 +10,12 @@ CanvasFrame::CanvasFrame(NodeCanvas& nodeCanvas, juce::Component& menuArea, juce
 
 void CanvasFrame::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
-    const auto         frame       = canvasArea.toFloat().reduced(Theme::borderThickness * 0.5f);
-    juce::Path         surround;
+    ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
+    const auto                    frame       = canvasArea.toFloat().reduced(ArsNovaUI::Theme::borderThickness * 0.5f);
+    juce::Path                    surround;
 
     surround.addRectangle(getLocalBounds().toFloat());
-    surround.addRoundedRectangle(frame, Theme::canvasCornerRadius);
+    surround.addRoundedRectangle(frame, ArsNovaUI::Theme::canvasCornerRadius);
     surround.setUsingNonZeroWinding(false);
 
     graphics.saveState();
@@ -32,5 +32,5 @@ void CanvasFrame::paint(juce::Graphics& graphics)
     graphics.restoreState();
 
     graphics.setColour(lookAndFeel.borderColour);
-    graphics.drawRoundedRectangle(frame, Theme::canvasCornerRadius, Theme::borderThickness);
+    graphics.drawRoundedRectangle(frame, ArsNovaUI::Theme::canvasCornerRadius, ArsNovaUI::Theme::borderThickness);
 }

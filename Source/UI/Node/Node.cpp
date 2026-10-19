@@ -14,26 +14,26 @@ Node::Node(juce::UndoManager& undoManager)
       subLoopLimitEditor(undoManager),
       undoManager(undoManager)
 {
-    upButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState&) {
-        CustomLookAndFeel::get(*this).drawIncrementIcon(graphics, bounds, true);
+    upButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState&) {
+        ArsNovaUI::CustomLookAndFeel::get(*this).drawIncrementIcon(graphics, bounds, true);
     };
 
-    downButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState&) {
-        CustomLookAndFeel::get(*this).drawIncrementIcon(graphics, bounds, false);
+    downButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState&) {
+        ArsNovaUI::CustomLookAndFeel::get(*this).drawIncrementIcon(graphics, bounds, false);
     };
 
     nodeValueEditor.autoFitText       = true;
     nodeValueEditor.autoFitInsetRatio = nodeValueTextInsetRatio;
-    nodeValueEditor.fontStyle         = Theme::FontStyle::SemiBold;
+    nodeValueEditor.fontStyle         = ArsNovaUI::Theme::FontStyle::SemiBold;
 
-    countEditor       .backdrop       = ValueEditor::Backdrop::Badge;
-    switchCountEditor .backdrop       = ValueEditor::Backdrop::Badge;
-    subLoopLimitEditor.backdrop       = ValueEditor::Backdrop::Badge;
+    countEditor       .backdrop       = ArsNovaUI::ValueEditor::Backdrop::Badge;
+    switchCountEditor .backdrop       = ArsNovaUI::ValueEditor::Backdrop::Badge;
+    subLoopLimitEditor.backdrop       = ArsNovaUI::ValueEditor::Backdrop::Badge;
 
-    nodeValueEditor   .setFormat(std::make_unique<PitchFormat>());
-    countEditor       .setFormat(std::make_unique<DualIntFormat>(minimumCountLimit, maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
-    subLoopLimitEditor.setFormat(std::make_unique<NumberFormat>(minimumSubLoopLimit, maximumSubLoopLimit));
-    switchCountEditor .setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
+    nodeValueEditor   .setFormat(std::make_unique<ArsNovaUI::PitchFormat>());
+    countEditor       .setFormat(std::make_unique<ArsNovaUI::DualIntFormat>(minimumCountLimit, maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
+    subLoopLimitEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumSubLoopLimit, maximumSubLoopLimit));
+    switchCountEditor .setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumCountLimit, maximumCountLimit));
 
     nodeValueEditor.editable = false;
 
@@ -63,14 +63,14 @@ Node::Node(juce::UndoManager& undoManager)
 
 void Node::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawCircleNode(graphics, getNodeVisual(getLocalBounds().toFloat()));
+    ArsNovaUI::CustomLookAndFeel::get(*this).drawCircleNode(graphics, getNodeVisual(getLocalBounds().toFloat()));
 }
 
 void Node::resized()
 {
     const juce::Rectangle<int> nodeSquare = getLocalBounds().withTrimmedLeft(interiorLeftInset);
 
-    auto editorArea = CustomLookAndFeel::getNodeCircleBounds(nodeSquare.toFloat()).toNearestInt()
+    auto editorArea = ArsNovaUI::CustomLookAndFeel::getNodeCircleBounds(nodeSquare.toFloat()).toNearestInt()
                           .reduced(editorAreaBoundsReduction);
 
     const int buttonHeight = juce::jmax(2, juce::roundToInt(editorArea.getHeight() * incrementButtonHeightFactor));
@@ -238,7 +238,7 @@ void Node::mouseExit(const juce::MouseEvent& event)
 
 void Node::lookAndFeelChanged()
 {
-    const juce::String defaultColourText = CustomLookAndFeel::get(*this).defaultNodeColour.toString();
+    const juce::String defaultColourText = ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour.toString();
 
     nodeColour = juce::Colour::fromString(nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, defaultColourText).toString());
 }
@@ -272,27 +272,27 @@ void Node::bindValueEditorForMode()
 
     switch (mode) {
         case NodeDisplayMode::Pitch:
-            nodeValueEditor.setFormat(std::make_unique<PitchFormat>());
+            nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::PitchFormat>());
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
             break;
 
         case NodeDisplayMode::Velocity:
-            nodeValueEditor.setFormat(std::make_unique<NumberFormat>(minimumMidiVelocity, maximumMidiVelocity));
+            nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumMidiVelocity, maximumMidiVelocity));
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiVelocity);
             break;
 
         case NodeDisplayMode::CountLimit:
-            nodeValueEditor.setFormat(std::make_unique<DualIntFormat>(minimumCountLimit, maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
+            nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::DualIntFormat>(minimumCountLimit, maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
             nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
             break;
 
         case NodeDisplayMode::Channel:
-            nodeValueEditor.setFormat(std::make_unique<NumberFormat>(minimumMidiChannel, maximumMidiChannel));
+            nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumMidiChannel, maximumMidiChannel));
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiChannel);
             break;
 
         case NodeDisplayMode::RepeatValue: {
-            auto repeatFormat = std::make_unique<NumberFormat>(minimumRepeatValue, maximumRepeatValue);
+            auto repeatFormat = std::make_unique<ArsNovaUI::NumberFormat>(minimumRepeatValue, maximumRepeatValue);
 
             repeatFormat->prefix = "x";
 
@@ -302,7 +302,7 @@ void Node::bindValueEditorForMode()
         }
 
         case NodeDisplayMode::Probability: {
-            auto probabilityFormat = std::make_unique<NumberFormat>(minimumProbability, maximumProbability);
+            auto probabilityFormat = std::make_unique<ArsNovaUI::NumberFormat>(minimumProbability, maximumProbability);
 
             probabilityFormat->suffix = "%";
 
@@ -312,7 +312,7 @@ void Node::bindValueEditorForMode()
         }
 
         case NodeDisplayMode::Duration:
-            nodeValueEditor.setFormat(std::make_unique<NumberFormat>(0.0, ArrowInfo::maximumDurationMs));
+            nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(0.0, ArrowInfo::maximumDurationMs));
             nodeValueEditor.editable = false;
             break;
     }
@@ -320,7 +320,7 @@ void Node::bindValueEditorForMode()
 
 void Node::respondToClick(juce::Point<int> localPoint)
 {
-    for (ValueEditor* badge : { &countEditor, &switchCountEditor, &subLoopLimitEditor }) {
+    for (ArsNovaUI::ValueEditor* badge : { &countEditor, &switchCountEditor, &subLoopLimitEditor }) {
         if (badge->isVisible() && badge->getBounds().contains(localPoint)) {
             badge->beginEditing();
             return;
@@ -354,7 +354,7 @@ float Node::getVisualRadius() const
 
 float Node::getBodyExtent(juce::Point<float> approachDirection) const
 {
-    const juce::Rectangle<float> circle    = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
+    const juce::Rectangle<float> circle    = ArsNovaUI::CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
     const float                  radius    = std::max(0.0f, circle.getWidth() * 0.5f);
     const juce::Point<float>     toCircle  = circle.getCentre() - (getNodeCentre() - getPosition()).toFloat();
     const float                  along     = approachDirection.getDotProduct(toCircle);
@@ -367,7 +367,7 @@ float Node::getBodyExtent(juce::Point<float> approachDirection) const
     return std::max(0.0f, std::sqrt(clearance) - along);
 }
 
-NodeVisual Node::getNodeVisual(juce::Rectangle<float> bounds) const
+ArsNovaUI::NodeVisual Node::getNodeVisual(juce::Rectangle<float> bounds) const
 {
     return { bounds, nodeColour, activeHighlights, isHovered, isSelected, isOutlined,
              isEncapsulationRinged, hasInnerRim, encapsulationRingColour };

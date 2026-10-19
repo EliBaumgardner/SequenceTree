@@ -20,7 +20,7 @@ class TraversalSession;
 class OrnamentLibraries;
 
 
-class BottomBar : public Bar, private juce::ValueTree::Listener
+class BottomBar : public ArsNovaUI::Bar, private juce::ValueTree::Listener
 {
 public:
 
@@ -52,11 +52,11 @@ private:
 
     struct BindAxis
     {
-        IconButton*              button;
+        ArsNovaUI::IconButton*              button;
         ArrowBinding             target;
         ArrowBinding ArrowInfo::* binding;
         double ArrowInfo::*       multiplier;
-        ValueSlider              multiplierSlider;
+        ArsNovaUI::ValueSlider              multiplierSlider;
     };
 
     struct BindTarget
@@ -87,21 +87,21 @@ private:
     juce::UndoManager& ornamentUndoManager;
 
 
-    PaintToolSettings paintPanel;
-    ButtonPane        toolPane;
-    ButtonPane        quaverPane;
-    ButtonPane        bindPane;
-    ButtonPane        ornamentPane;
-    LabeledEditor     countsField;
+    PaintToolSettings        paintPanel;
+    ArsNovaUI::ButtonPane    toolPane;
+    ArsNovaUI::ButtonPane    quaverPane;
+    ArsNovaUI::ButtonPane    bindPane;
+    ArsNovaUI::ButtonPane    ornamentPane;
+    ArsNovaUI::LabeledEditor countsField;
 
-    IconButton* quaverTool     = nullptr;
-    IconButton* spanTool       = nullptr;
-    IconButton* ornamentButton = nullptr;
+    ArsNovaUI::IconButton* quaverTool     = nullptr;
+    ArsNovaUI::IconButton* spanTool       = nullptr;
+    ArsNovaUI::IconButton* ornamentButton = nullptr;
 
-    PopupWindowLauncher ornamentLauncher {
+    ArsNovaUI::PopupWindowLauncher ornamentLauncher {
         "Ornaments",
         [this]() {
-            auto content = std::make_unique<OrnamentWindow>(CustomLookAndFeel::get(*this), ornamentLibraries, ornamentUndoManager);
+            auto content = std::make_unique<OrnamentWindow>(ArsNovaUI::CustomLookAndFeel::get(*this), ornamentLibraries, ornamentUndoManager);
 
             const juce::Point<int> size = content->narrowestSize();
 

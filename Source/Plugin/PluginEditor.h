@@ -52,23 +52,23 @@ private:
 
     juce::Component* keyListenerTarget = nullptr;
 
-    SequenceTreeAudioProcessor&           audioProcessor;
-    CustomLookAndFeel                     lookAndFeel;
-    std::unique_ptr<juce::PropertiesFile> interfaceSettings;
-    juce::Component                       workspace;
-    std::unique_ptr<ScaledView>           scaledView;
-    juce::TooltipWindow                   tooltipWindow { &workspace, 400 };
+    SequenceTreeAudioProcessor&            audioProcessor;
+    ArsNovaUI::CustomLookAndFeel           lookAndFeel;
+    std::unique_ptr<juce::PropertiesFile>  interfaceSettings;
+    juce::Component                        workspace;
+    std::unique_ptr<ArsNovaUI::ScaledView> scaledView;
+    juce::TooltipWindow                    tooltipWindow { &workspace, 400 };
 
 public:
     std::unique_ptr<NodeCanvas> nodeCanvas = nullptr;
     std::unique_ptr<Titlebar>   titleBar   = nullptr;
 
 private:
-    std::unique_ptr<NodeController> nodeController = nullptr;
-    std::unique_ptr<BottomBar>      bottomBar      = nullptr;
-    std::unique_ptr<DynamicPort>    port           = nullptr;
-    std::unique_ptr<MenuArea>       menuArea       = nullptr;
-    std::unique_ptr<CanvasFrame>    canvasFrame    = nullptr;
+    std::unique_ptr<NodeController>         nodeController = nullptr;
+    std::unique_ptr<BottomBar>              bottomBar      = nullptr;
+    std::unique_ptr<ArsNovaUI::DynamicPort> port           = nullptr;
+    std::unique_ptr<MenuArea>               menuArea       = nullptr;
+    std::unique_ptr<CanvasFrame>            canvasFrame    = nullptr;
 
     int   menuWidth       = 0;
     float menuHeightRatio = 0.25f;

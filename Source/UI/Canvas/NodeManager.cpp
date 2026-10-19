@@ -75,7 +75,7 @@ Node* NodeManager::instantiateFromTree(const juce::ValueTree& nodeValueTree)
     createdNode->nodeId        = nodeId;
     createdNode->nodeValueTree = nodeValueTree;
     createdNode->midiNoteData  = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
-    createdNode->nodeColour    = juce::Colour::fromString(nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, CustomLookAndFeel::get(nodeCanvas).defaultNodeColour.toString()).toString());
+    createdNode->nodeColour    = juce::Colour::fromString(nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, ArsNovaUI::CustomLookAndFeel::get(nodeCanvas).defaultNodeColour.toString()).toString());
 
     createdNode->onSelected = [this](Node* selectedNode, bool isSelected) {
         for (auto& listener : nodeSelectedListeners) {
@@ -179,7 +179,7 @@ void NodeManager::setPosition(int nodeId)
     }
 
     const NodePosition     nodePosition       = graphState.getNodePosition(nodeId);
-    const int              radius             = Theme::nodeRadius;
+    const int              radius             = ArsNovaUI::Theme::nodeRadius;
     const int              encapsulatorId     = nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
     const juce::ValueTree  encapsulator       = graphState.getNode(encapsulatorId);
     auto* const            owningEncapsulator = dynamic_cast<Encapsulator*>(find(encapsulatorId));

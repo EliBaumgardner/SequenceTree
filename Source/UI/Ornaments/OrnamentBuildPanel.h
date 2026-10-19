@@ -24,17 +24,17 @@ public:
 
     int minimumWidth() const;
 
-    class BuildTitlebar : public Bar
+    class BuildTitlebar : public ArsNovaUI::Bar
     {
     public:
 
         BuildTitlebar();
 
-        IconButton hostButton;
-        IconButton arrowButton;
-        ButtonPane undoRedoPane;
-        IconButton publishButton;
-        IconButton symbolButton;
+        ArsNovaUI::IconButton hostButton;
+        ArsNovaUI::IconButton arrowButton;
+        ArsNovaUI::ButtonPane undoRedoPane;
+        ArsNovaUI::IconButton publishButton;
+        ArsNovaUI::IconButton symbolButton;
 
     private:
 
@@ -53,7 +53,7 @@ public:
     static constexpr int   nameInset          = 6;
 
     OrnamentCanvas           canvas;
-    DynamicPort              port;
+    ArsNovaUI::DynamicPort   port;
     OrnamentFigureController controller;
 
     juce::ValueTree ornament;
@@ -71,7 +71,7 @@ private:
 
     OrnamentLibraries& ornamentLibraries;
 
-    BuildTitlebar        titlebar;
-    OrnamentSymbolEditor symbolEditor;
-    ValueEditor          nameEditor;
+    BuildTitlebar          titlebar;
+    OrnamentSymbolEditor   symbolEditor;
+    ArsNovaUI::ValueEditor nameEditor;
 };

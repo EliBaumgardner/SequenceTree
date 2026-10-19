@@ -13,14 +13,14 @@ NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRule
       undoManager(undoManager),
       colourSelector(colourPresets, undoManager)
 {
-    editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawCodeButton(graphics, bounds, state, Theme::textHeight);
+    editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
+        ArsNovaUI::CustomLookAndFeel::get(*this).drawCodeButton(graphics, bounds, state, ArsNovaUI::Theme::textHeight);
     };
 
     colourLabel.setText("COL", juce::dontSendNotification);
 
     for (const LabeledRow& row : labeledRows) {
-        auto format = std::make_unique<NumberFormat>(row.minimum, row.maximum);
+        auto format = std::make_unique<ArsNovaUI::NumberFormat>(row.minimum, row.maximum);
 
         format->prefix = row.prefix;
         format->suffix = row.suffix;
@@ -79,8 +79,8 @@ NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRule
 
 void NodeMenu::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
-    const int          spacing     = juce::roundToInt(Theme::barHeight * Theme::menuSpacingRatio);
+    ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
+    const int                     spacing     = juce::roundToInt(ArsNovaUI::Theme::barHeight * ArsNovaUI::Theme::menuSpacingRatio);
 
     if (selectedNodeId >= 0) {
         lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
@@ -89,20 +89,20 @@ void NodeMenu::paint(juce::Graphics& graphics)
     }
 
     graphics.setColour(lookAndFeel.mutedTextColour);
-    graphics.setFont(lookAndFeel.font(Theme::FontStyle::Regular, Theme::textHeight));
+    graphics.setFont(lookAndFeel.font(ArsNovaUI::Theme::FontStyle::Regular, ArsNovaUI::Theme::textHeight));
     graphics.drawFittedText("Left click a node to edit it", getLocalBounds().reduced(spacing), juce::Justification::centred, 2);
 }
 
 void NodeMenu::resized()
 {
-    const int        barHeight       = Theme::barHeight;
-    const int        spacing         = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
-    const int        rowHeight       = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
-    const float      textHeight      = Theme::textHeight;
-    const juce::Font textFont        = CustomLookAndFeel::get(*this).font(Theme::FontStyle::Regular, textHeight);
-    auto             bounds          = getLocalBounds().reduced(spacing).withWidth(Theme::menuContentWidth);
+    const int        barHeight       = ArsNovaUI::Theme::barHeight;
+    const int        spacing         = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuSpacingRatio);
+    const int        rowHeight       = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuRowHeightRatio);
+    const float      textHeight      = ArsNovaUI::Theme::textHeight;
+    const juce::Font textFont        = ArsNovaUI::CustomLookAndFeel::get(*this).font(ArsNovaUI::Theme::FontStyle::Regular, textHeight);
+    auto             bounds          = getLocalBounds().reduced(spacing).withWidth(ArsNovaUI::Theme::menuContentWidth);
 
-    editTraversalRulesButton.setBounds(bounds.removeFromBottom(juce::roundToInt(barHeight * Theme::menuButtonHeightRatio)));
+    editTraversalRulesButton.setBounds(bounds.removeFromBottom(juce::roundToInt(barHeight * ArsNovaUI::Theme::menuButtonHeightRatio)));
 
     auto colourRowBounds = bounds.removeFromTop(rowHeight);
 
@@ -132,10 +132,10 @@ void NodeMenu::resized()
 
 int NodeMenu::narrowestHeight() const
 {
-    const int barHeight    = Theme::barHeight;
-    const int spacing      = juce::roundToInt(barHeight * Theme::menuSpacingRatio);
-    const int rowHeight    = juce::roundToInt(barHeight * Theme::menuRowHeightRatio);
-    const int buttonHeight = juce::roundToInt(barHeight * Theme::menuButtonHeightRatio);
+    const int barHeight    = ArsNovaUI::Theme::barHeight;
+    const int spacing      = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuSpacingRatio);
+    const int rowHeight    = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuRowHeightRatio);
+    const int buttonHeight = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuButtonHeightRatio);
     const int rowCount     = static_cast<int>(labeledRows.size());
 
     return spacing * 2 + buttonHeight + rowHeight + rowCount * (spacing + rowHeight);

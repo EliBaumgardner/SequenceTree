@@ -21,7 +21,7 @@ void NodeGestures::createRootNode(juce::Point<float> clickPoint)
 
     nodePosition.xPosition = juce::roundToInt(clickPoint.x);
     nodePosition.yPosition = juce::roundToInt(clickPoint.y);
-    nodePosition.radius    = Theme::nodeRadius;
+    nodePosition.radius    = ArsNovaUI::Theme::nodeRadius;
 
     undoManager.beginNewTransaction();
 
@@ -36,7 +36,7 @@ void NodeGestures::respondToDrag(Node& node, juce::Point<int> cursor, const juce
 
     newPosition.xPosition = cursor.x;
     newPosition.yPosition = cursor.y;
-    newPosition.radius    = Theme::nodeRadius;
+    newPosition.radius    = ArsNovaUI::Theme::nodeRadius;
 
     if (! mods.isShiftDown() && ! draggedNodeTree.isValid()) {
         handleNodeDrag(nodeId, newPosition);
@@ -85,7 +85,7 @@ void NodeGestures::dragArrowHead(juce::Point<int> cursor)
 
     newPosition.xPosition = cursor.x;
     newPosition.yPosition = cursor.y;
-    newPosition.radius    = Theme::nodeRadius;
+    newPosition.radius    = ArsNovaUI::Theme::nodeRadius;
 
     handleNodeDrag(arrowHeadNode->nodeId, newPosition);
 }

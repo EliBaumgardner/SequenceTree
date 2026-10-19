@@ -52,7 +52,7 @@ public:
     virtual float            getVisualRadius() const;
     virtual float            getBodyExtent  (juce::Point<float> approachDirection) const;
 
-    NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const;
+    ArsNovaUI::NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const;
 
     std::function<void(Node*, bool)> onSelected;
 
@@ -63,12 +63,12 @@ public:
 
     NodeDisplayMode mode = NodeDisplayMode::Pitch;
 
-    ValueEditor nodeValueEditor;
-    IconButton  upButton;
-    IconButton  downButton;
-    ValueEditor countEditor;
-    ValueEditor switchCountEditor;
-    ValueEditor subLoopLimitEditor;
+    ArsNovaUI::ValueEditor nodeValueEditor;
+    ArsNovaUI::IconButton  upButton;
+    ArsNovaUI::IconButton  downButton;
+    ArsNovaUI::ValueEditor countEditor;
+    ArsNovaUI::ValueEditor switchCountEditor;
+    ArsNovaUI::ValueEditor subLoopLimitEditor;
 
     juce::Colour nodeColour;
     juce::Colour encapsulationRingColour;

@@ -12,24 +12,24 @@ OrnamentLibrarySection::OrnamentLibrarySection(OrnamentLibraries& ornamentLibrar
       nameEditor(undoManager)
 {
     nameEditor.autoFitText = true;
-    nameEditor.fontStyle   = Theme::FontStyle::SemiBold;
+    nameEditor.fontStyle   = ArsNovaUI::Theme::FontStyle::SemiBold;
 
-    nameEditor.setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength, TextFormat::labelCharacters));
+    nameEditor.setFormat(std::make_unique<ArsNovaUI::TextFormat>(ArsNovaUI::TextFormat::labelTextLength, ArsNovaUI::TextFormat::labelCharacters));
     nameEditor.setJustification(juce::Justification::centredLeft);
     nameEditor.bindEditor(library, ValueTreeIdentifiers::LibraryName);
 
-    foldButton.icon    = &CustomLookAndFeel::drawChevronUpIcon;
+    foldButton.icon    = &ArsNovaUI::CustomLookAndFeel::drawChevronUpIcon;
     foldButton.onClick = [this]() { toggleFold(); };
     addCard.onClick    = [this]() { addOrnament(); };
 
-    addCard.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
-        const auto         card        = bounds.reduced(Theme::borderThickness);
+    addCard.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
+        ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
+        const auto                    card        = bounds.reduced(ArsNovaUI::Theme::borderThickness);
 
         lookAndFeel.drawButtonTile(graphics, card, state);
 
         graphics.setColour(lookAndFeel.borderColour);
-        graphics.drawRoundedRectangle(card, Theme::paneCornerRadius, Theme::borderThickness);
+        graphics.drawRoundedRectangle(card, ArsNovaUI::Theme::paneCornerRadius, ArsNovaUI::Theme::borderThickness);
 
         lookAndFeel.drawAddIcon(graphics, card.withSizeKeepingCentre(addGlyphSide, addGlyphSide), state);
     };
@@ -48,7 +48,7 @@ OrnamentLibrarySection::OrnamentLibrarySection(OrnamentLibraries& ornamentLibrar
 
 void OrnamentLibrarySection::paint(juce::Graphics& graphics)
 {
-    const Theme& theme = CustomLookAndFeel::get(*this);
+    const ArsNovaUI::Theme& theme = ArsNovaUI::CustomLookAndFeel::get(*this);
 
     if (getY() > 0) {
         graphics.setColour(theme.borderColour);
@@ -127,11 +127,11 @@ void OrnamentLibrarySection::toggleFold()
 {
     if (fold == Fold::Open) {
         fold            = Fold::Closed;
-        foldButton.icon = &CustomLookAndFeel::drawChevronDownIcon;
+        foldButton.icon = &ArsNovaUI::CustomLookAndFeel::drawChevronDownIcon;
     }
     else {
         fold            = Fold::Open;
-        foldButton.icon = &CustomLookAndFeel::drawChevronUpIcon;
+        foldButton.icon = &ArsNovaUI::CustomLookAndFeel::drawChevronUpIcon;
     }
 
     body.setVisible(fold == Fold::Open);
@@ -156,16 +156,16 @@ void OrnamentLibrarySection::addOrnament()
 
 void OrnamentLibrarySection::showMenu()
 {
-    const auto  libraryFolder = ornamentLibraries.libraryFolders.find(library.getProperty(ValueTreeIdentifiers::LibraryUid).toString());
-    juce::File  revealed      = ornamentLibraries.folder;
-    ContextMenu menu;
+    const auto             libraryFolder = ornamentLibraries.libraryFolders.find(library.getProperty(ValueTreeIdentifiers::LibraryUid).toString());
+    juce::File             revealed      = ornamentLibraries.folder;
+    ArsNovaUI::ContextMenu menu;
 
     if (libraryFolder != ornamentLibraries.libraryFolders.end()) {
         revealed = libraryFolder->second.folder;
     }
 
-    menu.addItem("reveal in finder", ContextMenu::ItemKind::Action, [revealed]() { revealed.revealToUser(); });
-    menu.addItem("remove library...", ContextMenu::ItemKind::Action, [this]() { confirmRemove(); });
+    menu.addItem("reveal in finder", ArsNovaUI::ContextMenu::ItemKind::Action, [revealed]() { revealed.revealToUser(); });
+    menu.addItem("remove library...", ArsNovaUI::ContextMenu::ItemKind::Action, [this]() { confirmRemove(); });
 
     menu.show(*this);
 }

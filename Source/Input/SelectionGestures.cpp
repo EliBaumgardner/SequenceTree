@@ -90,13 +90,13 @@ void SelectionGestures::finishBoxSelection()
 
 void SelectionGestures::showSelectionMenu(juce::Point<int> canvasPoint)
 {
-    const bool  hasCopiedNodes = ! selectedNodeIds().empty();
-    const bool  hasClipboard   = clipboard.contents.getNumChildren() > 0;
-    ContextMenu menu;
+    const bool             hasCopiedNodes = ! selectedNodeIds().empty();
+    const bool             hasClipboard   = clipboard.contents.getNumChildren() > 0;
+    ArsNovaUI::ContextMenu menu;
 
-    menu.addItem("copy",   ContextMenu::ItemKind::Action, [this]() { copySelection(); }, hasCopiedNodes);
-    menu.addItem("paste",  ContextMenu::ItemKind::Action, [this, canvasPoint]() { pasteAt(canvasPoint); }, hasClipboard);
-    menu.addItem("delete", ContextMenu::ItemKind::Action, [this]() { deleteSelection(); }, hasCopiedNodes);
+    menu.addItem("copy",   ArsNovaUI::ContextMenu::ItemKind::Action, [this]() { copySelection(); }, hasCopiedNodes);
+    menu.addItem("paste",  ArsNovaUI::ContextMenu::ItemKind::Action, [this, canvasPoint]() { pasteAt(canvasPoint); }, hasClipboard);
+    menu.addItem("delete", ArsNovaUI::ContextMenu::ItemKind::Action, [this]() { deleteSelection(); }, hasCopiedNodes);
 
     menu.show(nodeCanvas);
 }

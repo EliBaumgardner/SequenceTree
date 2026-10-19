@@ -390,7 +390,7 @@ TEST_CASE("a symbol's strokes survive saving and reloading its library", "[ornam
 
     reloaded.load(temporary.folder);
 
-    const std::vector<SymbolStroke> strokes = OrnamentLibraries::readSymbol(reloaded.findOrnament(uid).getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString());
+    const std::vector<ArsNovaUI::SymbolStroke> strokes = OrnamentLibraries::readSymbol(reloaded.findOrnament(uid).getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString());
 
     CHECK(reloaded.findOrnament(uid).getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString() == savedSymbol);
     REQUIRE(strokes.size() == 2);
@@ -402,7 +402,7 @@ TEST_CASE("a symbol's strokes survive saving and reloading its library", "[ornam
 
 TEST_CASE("a symbol saved before line widths reads at the default width", "[ornament]")
 {
-    const std::vector<SymbolStroke> strokes = OrnamentLibraries::readSymbol("m 0.1 0.5 l 0.9 0.5");
+    const std::vector<ArsNovaUI::SymbolStroke> strokes = OrnamentLibraries::readSymbol("m 0.1 0.5 l 0.9 0.5");
 
     REQUIRE(strokes.size() == 1);
     CHECK(strokes[0].width == Catch::Approx(OrnamentLibraries::defaultStrokeWidth));
@@ -425,8 +425,8 @@ TEST_CASE("the eraser removes every part of a line's width under its circle, and
     libraries.addSymbolStroke(ornament, line, 0.1f, nullptr);
     libraries.eraseSymbol(ornament, { 0.5f, 0.58f }, 0.05f, nullptr);
 
-    const std::vector<SymbolStroke> strokes = OrnamentLibraries::readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString());
-    const juce::Rectangle<float>    kept    = strokes.at(0).path.getBounds();
+    const std::vector<ArsNovaUI::SymbolStroke> strokes = OrnamentLibraries::readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString());
+    const juce::Rectangle<float>               kept    = strokes.at(0).path.getBounds();
 
     REQUIRE(strokes.size() == 1);
     CHECK(kept.getX() == Catch::Approx(0.1f).margin(0.001f));

@@ -35,8 +35,8 @@ void OrnamentApplier::respondToClick(juce::Component* clickedComponent)
 
 void OrnamentApplier::respondToMarkClick(const juce::MouseEvent& event, OrnamentMarkView& markView)
 {
-    juce::ValueTree ornamentedNode = markView.nodeValueTree;
-    ContextMenu     menu;
+    juce::ValueTree        ornamentedNode = markView.nodeValueTree;
+    ArsNovaUI::ContextMenu menu;
 
     if (! event.mods.isRightButtonDown()) {
         return;
@@ -50,7 +50,7 @@ void OrnamentApplier::respondToMarkClick(const juce::MouseEvent& event, Ornament
         return;
     }
 
-    menu.addItem("delete ornament", ContextMenu::ItemKind::Action, [this, ornamentedNode]() mutable {
+    menu.addItem("delete ornament", ArsNovaUI::ContextMenu::ItemKind::Action, [this, ornamentedNode]() mutable {
         undoManager.beginNewTransaction();
 
         ornamentedNode.removeProperty(ValueTreeIdentifiers::OrnamentUid, &undoManager);

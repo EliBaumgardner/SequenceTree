@@ -37,15 +37,15 @@ private:
 
     struct LabeledRow
     {
-        LabeledEditor&   field;
-        juce::String     labelText;
-        juce::String     tooltip;
-        juce::Identifier property;
-        RowSource        source;
-        int              minimum;
-        int              maximum;
-        juce::String     prefix;
-        juce::String     suffix;
+        ArsNovaUI::LabeledEditor& field;
+        juce::String              labelText;
+        juce::String              tooltip;
+        juce::Identifier          property;
+        RowSource                 source;
+        int                       minimum;
+        int                       maximum;
+        juce::String              prefix;
+        juce::String              suffix;
     };
 
     GraphState&             graphState;
@@ -53,19 +53,19 @@ private:
     AudioSnapshotPublisher& snapshots;
     juce::UndoManager&      undoManager;
 
-    ColourSelector colourSelector;
-    CaptionLabel   colourLabel;
+    ArsNovaUI::ColourSelector colourSelector;
+    ArsNovaUI::CaptionLabel   colourLabel;
 
     int selectedNodeId = -1;
 
-    LabeledEditor countLimitField        { undoManager };
-    LabeledEditor repeatField            { undoManager };
-    LabeledEditor switchCountLimitField  { undoManager };
-    LabeledEditor subLoopCountLimitField { undoManager };
-    LabeledEditor probabilityField       { undoManager };
-    LabeledEditor velocityField          { undoManager };
-    LabeledEditor pitchField             { undoManager };
-    LabeledEditor channelField           { undoManager };
+    ArsNovaUI::LabeledEditor countLimitField        { undoManager };
+    ArsNovaUI::LabeledEditor repeatField            { undoManager };
+    ArsNovaUI::LabeledEditor switchCountLimitField  { undoManager };
+    ArsNovaUI::LabeledEditor subLoopCountLimitField { undoManager };
+    ArsNovaUI::LabeledEditor probabilityField       { undoManager };
+    ArsNovaUI::LabeledEditor velocityField          { undoManager };
+    ArsNovaUI::LabeledEditor pitchField             { undoManager };
+    ArsNovaUI::LabeledEditor channelField           { undoManager };
 
     std::array<LabeledRow, 8> labeledRows {{
         { countLimitField,        "CNT", "Count Limit",          ValueTreeIdentifiers::CountLimit,        RowSource::NodeTree, minimumCountLimit,   maximumCountLimit,   "",  ""  },
@@ -78,12 +78,12 @@ private:
         { channelField,           "CH",  "Channel",              ValueTreeIdentifiers::MidiChannel,       RowSource::MidiNote, minimumMidiChannel,  maximumMidiChannel,  "",  ""  }
     }};
 
-    IconButton editTraversalRulesButton;
+    ArsNovaUI::IconButton editTraversalRulesButton;
 
-    PopupWindowLauncher traversalRulesLauncher {
+    ArsNovaUI::PopupWindowLauncher traversalRulesLauncher {
         "Traversal Rules",
         [this]() {
-            auto content = std::make_unique<TraversalRulesWindow>(CustomLookAndFeel::get(*this), traversalRuleState, snapshots, undoManager);
+            auto content = std::make_unique<TraversalRulesWindow>(ArsNovaUI::CustomLookAndFeel::get(*this), traversalRuleState, snapshots, undoManager);
 
             content->setSize(TraversalRulesWindow::defaultWidth, TraversalRulesWindow::defaultHeight);
 

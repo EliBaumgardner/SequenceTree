@@ -48,9 +48,9 @@ public:
     SymbolTool      tool       = SymbolTool::Pencil;
     float           brushWidth = OrnamentLibraries::defaultStrokeWidth;
 
-    ButtonPane    toolPane;
-    IconButton    clearButton;
-    LabeledEditor sizeField;
+    ArsNovaUI::ButtonPane    toolPane;
+    ArsNovaUI::IconButton    clearButton;
+    ArsNovaUI::LabeledEditor sizeField;
 
 private:
 

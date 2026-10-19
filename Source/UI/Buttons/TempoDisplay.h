@@ -12,5 +12,5 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
-    ValueEditor editor;
+    ArsNovaUI::ValueEditor editor;
 };

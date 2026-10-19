@@ -37,16 +37,16 @@ TraversalFlagNode::TraversalFlagNode(juce::UndoManager& undoManager, GraphState&
 
 void TraversalFlagNode::paint(juce::Graphics& graphics)
 {
-    const Theme& theme       = CustomLookAndFeel::get(*this);
-    const auto   bounds      = getLocalBounds().toFloat();
-    juce::Path   triangle    = buildTrianglePath();
-    float        pulseScale  = 1.0f;
-    juce::Colour fillColour  = nodeColour;
-    juce::Colour outline     = theme.borderStrongColour;
+    const ArsNovaUI::Theme& theme      = ArsNovaUI::CustomLookAndFeel::get(*this);
+    const auto              bounds     = getLocalBounds().toFloat();
+    juce::Path              triangle   = buildTrianglePath();
+    float                   pulseScale = 1.0f;
+    juce::Colour            fillColour = nodeColour;
+    juce::Colour            outline    = theme.borderStrongColour;
 
     if (isHighlighted) {
         pulseScale = 1.0f + 0.1f * std::sin(pulsePhase * juce::MathConstants<float>::pi);
-        fillColour = nodeColour.brighter(Theme::hoverFillBrightness);
+        fillColour = nodeColour.brighter(ArsNovaUI::Theme::hoverFillBrightness);
     }
 
     if (isHovered) {
@@ -63,7 +63,7 @@ void TraversalFlagNode::paint(juce::Graphics& graphics)
     graphics.fillPath(triangle);
 
     graphics.setColour(outline);
-    graphics.strokePath(triangle, juce::PathStrokeType(Theme::selectionRingWidth, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    graphics.strokePath(triangle, juce::PathStrokeType(ArsNovaUI::Theme::selectionRingWidth, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
 void TraversalFlagNode::resized()
@@ -111,7 +111,7 @@ bool TraversalFlagNode::hitTest(int x, int y)
 {
     const juce::Point<int> point(x, y);
 
-    for (const ValueEditor* editor : { &countEditor, &switchCountEditor, &nodeValueEditor }) {
+    for (const ArsNovaUI::ValueEditor* editor : { &countEditor, &switchCountEditor, &nodeValueEditor }) {
         if (editor->isVisible() && editor->getBounds().contains(point)) {
             return true;
         }
