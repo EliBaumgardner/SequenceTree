@@ -5,11 +5,11 @@ OrnamentNode::OrnamentNode(juce::UndoManager& undoManager)
     : Node(undoManager),
       velocityEditor(undoManager)
 {
-    auto velocityFormat = std::make_unique<NumberFormat>(1, OrnamentLibraries::maximumVelocityPercent);
+    auto velocityFormat = std::make_unique<ArsNovaUI::NumberFormat>(1, OrnamentLibraries::maximumVelocityPercent);
 
     velocityFormat->suffix = "%";
 
-    velocityEditor.backdrop = ValueEditor::Backdrop::Badge;
+    velocityEditor.backdrop = ArsNovaUI::ValueEditor::Backdrop::Badge;
 
     velocityEditor.setFormat(std::move(velocityFormat));
     velocityEditor.setTooltip("Velocity");
@@ -36,7 +36,7 @@ void OrnamentNode::bindToTree()
 
 void OrnamentNode::bindValueEditorForMode()
 {
-    auto offsetFormat = std::make_unique<NumberFormat>(-OrnamentLibraries::maximumOffset, OrnamentLibraries::maximumOffset);
+    auto offsetFormat = std::make_unique<ArsNovaUI::NumberFormat>(-OrnamentLibraries::maximumOffset, OrnamentLibraries::maximumOffset);
 
     offsetFormat->showsPositiveSign = true;
 

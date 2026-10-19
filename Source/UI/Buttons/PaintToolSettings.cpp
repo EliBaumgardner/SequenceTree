@@ -8,9 +8,9 @@ PaintToolSettings::PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree col
     ValueField& valueField = nodeCanvas.valueField;
     const float brushFlow  = juce::jlimit(minBrushFlow, maxBrushFlow, valueField.brushFlow);
 
-    paintTool.icon = &CustomLookAndFeel::drawBrushIcon;
+    paintTool.icon = &ArsNovaUI::CustomLookAndFeel::drawBrushIcon;
 
-    colourSelector.shape = ColourSelector::Shape::Circle;
+    colourSelector.shape = ArsNovaUI::ColourSelector::Shape::Circle;
 
     configureValueFields(valueField, brushFlow);
 
@@ -26,15 +26,15 @@ PaintToolSettings::PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree col
 
 void PaintToolSettings::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawPane(graphics, getLocalBounds().toFloat());
+    ArsNovaUI::CustomLookAndFeel::get(*this).drawPane(graphics, getLocalBounds().toFloat());
 }
 
 void PaintToolSettings::resized()
 {
-    auto      bounds     = getLocalBounds().reduced(juce::roundToInt(getHeight() * Theme::contentInsetRatio));
+    auto      bounds     = getLocalBounds().reduced(juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio));
     const int width      = bounds.getWidth();
     const int cellSide   = juce::jmin(bounds.getHeight(), juce::roundToInt(width * cellWidthRatio));
-    const int cellGap    = juce::roundToInt(width * Theme::contentSpacingRatio);
+    const int cellGap    = juce::roundToInt(width * ArsNovaUI::Theme::contentSpacingRatio);
     const int labelWidth = juce::roundToInt(width * labelWidthRatio);
 
     paintTool.setBounds(bounds.removeFromLeft(cellSide).withSizeKeepingCentre(cellSide, cellSide));
@@ -57,17 +57,17 @@ void PaintToolSettings::resized()
 }
 
 void PaintToolSettings::configureValueFields(ValueField &valueField, const float brushFlow) {
-    sizeField.editor.wheelResponse = ValueEditor::WheelResponse::StepValue;
-    flowField.editor.wheelResponse = ValueEditor::WheelResponse::StepValue;
+    sizeField.editor.wheelResponse = ArsNovaUI::ValueEditor::WheelResponse::StepValue;
+    flowField.editor.wheelResponse = ArsNovaUI::ValueEditor::WheelResponse::StepValue;
 
-    sizeField.editor.backdrop = ValueEditor::Backdrop::Gauge;
-    flowField.editor.backdrop = ValueEditor::Backdrop::Gauge;
+    sizeField.editor.backdrop = ArsNovaUI::ValueEditor::Backdrop::Gauge;
+    flowField.editor.backdrop = ArsNovaUI::ValueEditor::Backdrop::Gauge;
 
     sizeField.editor.setJustification(juce::Justification::centredLeft);
     flowField.editor.setJustification(juce::Justification::centredLeft);
 
-    sizeField.editor.setFormat(std::make_unique<NumberFormat>(0.0, 1.0, ValueFormat::editableDecimalPlaces));
-    flowField.editor.setFormat(std::make_unique<NumberFormat>(0.0, 1.0, ValueFormat::editableDecimalPlaces));
+    sizeField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(0.0, 1.0, ArsNovaUI::ValueFormat::editableDecimalPlaces));
+    flowField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(0.0, 1.0, ArsNovaUI::ValueFormat::editableDecimalPlaces));
 
     sizeField.editor.boundValue = juce::jmap(valueField.brushRadius, minBrushRadius, maxBrushRadius, 0.0f, 1.0f);
     flowField.editor.boundValue = juce::jmap(brushFlow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);

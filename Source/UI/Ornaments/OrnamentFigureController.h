@@ -3,8 +3,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../../Graph/OrnamentLibraries.h"
+#include <ArsNovaUI/Canvas/DynamicPort.h>
 
-class DynamicPort;
 class OrnamentCanvas;
 class OrnamentNode;
 
@@ -14,7 +14,7 @@ public:
 
     enum class ClickMode;
 
-    OrnamentFigureController(OrnamentCanvas& canvas, DynamicPort& port, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
+    OrnamentFigureController(OrnamentCanvas& canvas, ArsNovaUI::DynamicPort& port, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
 
     void mouseMove      (const juce::MouseEvent& event) override;
     void mouseExit      (const juce::MouseEvent& event) override;
@@ -48,10 +48,10 @@ private:
     void handleNodeMouseDown  (const juce::MouseEvent& event, OrnamentNode& node);
     void handleCanvasMouseDown(const juce::MouseEvent& event, juce::Point<int> point, juce::Point<int> snapped);
 
-    OrnamentCanvas&    canvas;
-    DynamicPort&       port;
-    OrnamentLibraries& ornamentLibraries;
-    juce::UndoManager& undoManager;
+    OrnamentCanvas&         canvas;
+    ArsNovaUI::DynamicPort& port;
+    OrnamentLibraries&      ornamentLibraries;
+    juce::UndoManager&      undoManager;
 
     DragState dragState      = DragState::Idle;
     int       draggedNodeId  = -1;

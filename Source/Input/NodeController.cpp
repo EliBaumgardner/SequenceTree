@@ -245,7 +245,7 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
         selectionGestures.clearAll();
     }
 
-    if (auto* dynamicPort = dynamic_cast<DynamicPort*>(nodeCanvas.getParentComponent())) {
+    if (auto* dynamicPort = dynamic_cast<ArsNovaUI::DynamicPort*>(nodeCanvas.getParentComponent())) {
         dynamicPort->mouseDown(e.getEventRelativeTo(dynamicPort));
     }
 
@@ -281,7 +281,7 @@ void NodeController::handleCanvasMouseDrag(const juce::MouseEvent& e)
         return;
     }
 
-    if (auto* dynamicPort = dynamic_cast<DynamicPort*>(nodeCanvas.getParentComponent())) {
+    if (auto* dynamicPort = dynamic_cast<ArsNovaUI::DynamicPort*>(nodeCanvas.getParentComponent())) {
         dynamicPort->mouseDrag(e.getEventRelativeTo(dynamicPort));
     }
 }

@@ -31,22 +31,22 @@ public:
 
     int narrowestHeight() const;
 
-    ItemSelector displayMenu;
+    ArsNovaUI::ItemSelector displayMenu;
 
-    LabeledEditor multiplierField;
-    LabeledEditor channelField;
-    LabeledEditor transposeField;
-    LabeledEditor velocityField;
+    ArsNovaUI::LabeledEditor multiplierField;
+    ArsNovaUI::LabeledEditor channelField;
+    ArsNovaUI::LabeledEditor transposeField;
+    ArsNovaUI::LabeledEditor velocityField;
 
-    CaptionLabel   colourLabel;
-    ColourSelector colourSelector;
+    ArsNovaUI::CaptionLabel   colourLabel;
+    ArsNovaUI::ColourSelector colourSelector;
 
-    IconButton editTraversalRulesButton;
+    ArsNovaUI::IconButton editTraversalRulesButton;
 
-    PopupWindowLauncher traversalRulesLauncher {
+    ArsNovaUI::PopupWindowLauncher traversalRulesLauncher {
         "Traversal Rules",
         [this]() {
-            auto content = std::make_unique<TraversalRulesWindow>(CustomLookAndFeel::get(*this), traversalRuleState, snapshots, undoManager);
+            auto content = std::make_unique<TraversalRulesWindow>(ArsNovaUI::CustomLookAndFeel::get(*this), traversalRuleState, snapshots, undoManager);
 
             content->setSize(TraversalRulesWindow::defaultWidth, TraversalRulesWindow::defaultHeight);
 

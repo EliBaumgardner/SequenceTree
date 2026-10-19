@@ -4,15 +4,15 @@
 
 #include "OrnamentBuildPanel.h"
 #include "OrnamentSelectionPanel.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
-class CustomLookAndFeel;
 class OrnamentLibraries;
 
 class OrnamentWindow : public juce::Component
 {
 public:
 
-    OrnamentWindow(CustomLookAndFeel& lookAndFeel, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
+    OrnamentWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
     ~OrnamentWindow() override;
 
     void paint  (juce::Graphics& graphics) override;

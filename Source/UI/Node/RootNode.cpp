@@ -30,7 +30,7 @@ void RootNode::paint(juce::Graphics& graphics)
     const auto circleBounds = getLocalBounds().toFloat()
                             .withTrimmedLeft(static_cast<float>(loopLimitRectangleWidth));
 
-    CustomLookAndFeel::get(*this).drawCircleNode(graphics, getNodeVisual(circleBounds));
+    ArsNovaUI::CustomLookAndFeel::get(*this).drawCircleNode(graphics, getNodeVisual(circleBounds));
 }
 
 void RootNode::resized()
@@ -109,7 +109,7 @@ float RootNode::getBodyExtent(juce::Point<float> approachDirection) const
 {
     static constexpr float rayAxisEpsilon = 1.0e-4f;
 
-    const juce::Rectangle<float> circle = CustomLookAndFeel::getNodeCircleBounds(
+    const juce::Rectangle<float> circle = ArsNovaUI::CustomLookAndFeel::getNodeCircleBounds(
         getLocalBounds().toFloat().withTrimmedLeft(static_cast<float>(loopLimitRectangleWidth)));
 
     const juce::Point<float>     centre    = (getNodeCentre() - getPosition()).toFloat();

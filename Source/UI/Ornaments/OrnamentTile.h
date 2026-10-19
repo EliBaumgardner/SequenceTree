@@ -32,5 +32,5 @@ private:
     OrnamentLibraries& ornamentLibraries;
     juce::UndoManager& undoManager;
 
-    ValueEditor nameTag;
+    ArsNovaUI::ValueEditor nameTag;
 };

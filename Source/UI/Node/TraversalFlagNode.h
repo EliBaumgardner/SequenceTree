@@ -22,6 +22,6 @@ private:
 
     juce::Path buildTrianglePath() const;
 
-    ValueEditor traversalNumEditor;
+    ArsNovaUI::ValueEditor traversalNumEditor;
     GraphState& graphState;
 };

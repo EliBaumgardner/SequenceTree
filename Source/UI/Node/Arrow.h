@@ -47,15 +47,15 @@ public:
     int          getDuration     () const;
     juce::String getDurationLabel() const;
 
-    ArrowVisual   getArrowVisual() const;
-    ArrowGeometry getGeometry   (float animationProgress) const;
-    ArrowLabel    getLabel      (const ArrowGeometry& geometry, float headLength) const;
-    juce::Path    buildShaftPath(const ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const;
+    ArsNovaUI::ArrowVisual   getArrowVisual () const;
+    ArsNovaUI::ArrowGeometry getGeometry    (float animationProgress) const;
+    ArsNovaUI::ArrowLabel    getLabel       (const ArsNovaUI::ArrowGeometry& geometry, float headLength) const;
+    juce::Path               buildShaftPath (const ArsNovaUI::ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const;
 
     juce::Point<int>   getTip       () const;
     juce::Point<float> getHeadAnchor() const;
 
-    ArrowVisual::ShaftStyle shaftStyle() const;
+    ArsNovaUI::ArrowVisual::ShaftStyle shaftStyle() const;
 
     Node* const startNode = nullptr;
     Node* const endNode   = nullptr;
@@ -64,8 +64,8 @@ public:
 
     int danglingIndex = -1;
 
-    std::unique_ptr<ValueEditor> valueEditor;
-    std::unique_ptr<ValueEditor> durationEditor;
+    std::unique_ptr<ArsNovaUI::ValueEditor> valueEditor;
+    std::unique_ptr<ArsNovaUI::ValueEditor> durationEditor;
 
     juce::ValueTree arrowTree;
 

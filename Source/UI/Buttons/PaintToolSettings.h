@@ -40,8 +40,8 @@ public:
 
     ValueField::PaintLayer paintLayer = ValueField::PaintLayer::Pitch;
 
-    IconButton     paintTool;
-    ColourSelector colourSelector;
-    LabeledEditor  sizeField;
-    LabeledEditor  flowField;
+    ArsNovaUI::IconButton     paintTool;
+    ArsNovaUI::ColourSelector colourSelector;
+    ArsNovaUI::LabeledEditor  sizeField;
+    ArsNovaUI::LabeledEditor  flowField;
 };

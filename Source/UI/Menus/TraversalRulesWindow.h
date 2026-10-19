@@ -8,8 +8,8 @@
 #include <ArsNovaUI/PanelResizer.h>
 #include <ArsNovaUI/LabelPanel.h>
 #include <ArsNovaUI/Editors/FilePage.h>
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
-class CustomLookAndFeel;
 class TraversalRuleState;
 class AudioSnapshotPublisher;
 
@@ -20,7 +20,7 @@ class TraversalRulesWindow : public juce::Component,
 {
 public:
 
-    TraversalRulesWindow(CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
+    TraversalRulesWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
                          juce::UndoManager& undoManager);
 
     ~TraversalRulesWindow() override;
@@ -30,7 +30,7 @@ public:
 
     void setActivePage(int id);
 
-    class RulesTitlebar : public Bar
+    class RulesTitlebar : public ArsNovaUI::Bar
     {
     public:
 
@@ -39,8 +39,8 @@ public:
         static constexpr int   preferredHeight    = 28;
         static constexpr float titlebarInsetRatio = 0.143f;
 
-        IconButton playButton;
-        ButtonPane undoRedoPane;
+        ArsNovaUI::IconButton playButton;
+        ArsNovaUI::ButtonPane undoRedoPane;
 
     private:
 
@@ -90,13 +90,13 @@ private:
         void removeLabel(int fileId);
         void selectLabel(int fileId);
 
-        class PanelTitlebar : public Bar
+        class PanelTitlebar : public ArsNovaUI::Bar
         {
         public:
 
             PanelTitlebar();
 
-            IconButton addButton;
+            ArsNovaUI::IconButton addButton;
 
         private:
 
@@ -107,9 +107,9 @@ private:
         static constexpr int minPanelWidth     = 60;
         static constexpr int defaultPanelWidth = 120;
 
-        PanelResizer  resizer;
-        LabelPanel    labelPanel;
-        PanelTitlebar panelTitlebar;
+        ArsNovaUI::PanelResizer resizer;
+        ArsNovaUI::LabelPanel   labelPanel;
+        PanelTitlebar           panelTitlebar;
     };
 
     RulesTitlebar titlebar;
@@ -118,10 +118,10 @@ private:
     TraversalRuleState&     traversalRuleState;
     AudioSnapshotPublisher& snapshots;
 
-    std::unordered_map<int, std::unique_ptr<FilePage>> filePages;
+    std::unordered_map<int, std::unique_ptr<ArsNovaUI::FilePage>> filePages;
 
-    FilePage* activePage   = nullptr;
-    int       viewedRuleId = -1;
+    ArsNovaUI::FilePage* activePage   = nullptr;
+    int                  viewedRuleId = -1;
 
     juce::String statusText;
     bool         statusIsError = false;

@@ -31,8 +31,8 @@ OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juc
         titlebar.arrowButton.setSelected(controller.arrowMode);
     };
 
-    titlebar.undoRedoPane.addButton(&CustomLookAndFeel::drawUndoIcon, "Undo", [&undoManager]() { undoManager.undo(); });
-    titlebar.undoRedoPane.addButton(&CustomLookAndFeel::drawRedoIcon, "Redo", [&undoManager]() { undoManager.redo(); });
+    titlebar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawUndoIcon, "Undo", [&undoManager]() { undoManager.undo(); });
+    titlebar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRedoIcon, "Redo", [&undoManager]() { undoManager.redo(); });
 
     titlebar.publishButton.onClick = [this, &undoManager]() {
         undoManager.beginNewTransaction();
@@ -52,9 +52,9 @@ OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juc
     };
 
     nameEditor.autoFitText = true;
-    nameEditor.fontStyle   = Theme::FontStyle::SemiBold;
+    nameEditor.fontStyle   = ArsNovaUI::Theme::FontStyle::SemiBold;
 
-    nameEditor.setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength, TextFormat::labelCharacters));
+    nameEditor.setFormat(std::make_unique<ArsNovaUI::TextFormat>(ArsNovaUI::TextFormat::labelTextLength, ArsNovaUI::TextFormat::labelCharacters));
     nameEditor.setJustification(juce::Justification::centredLeft);
     nameEditor.setTooltip("Ornament name");
 
@@ -87,8 +87,8 @@ OrnamentBuildPanel::~OrnamentBuildPanel()
 
 void OrnamentBuildPanel::paint(juce::Graphics& graphics)
 {
-    const Theme& theme = CustomLookAndFeel::get(*this);
-    const auto   body  = getLocalBounds().withTrimmedTop(titlebarHeight);
+    const ArsNovaUI::Theme& theme = ArsNovaUI::CustomLookAndFeel::get(*this);
+    const auto              body  = getLocalBounds().withTrimmedTop(titlebarHeight);
 
     graphics.setColour(theme.canvasColour);
     graphics.fillRect(body);
@@ -98,7 +98,7 @@ void OrnamentBuildPanel::paint(juce::Graphics& graphics)
     }
 
     graphics.setColour(theme.mutedTextColour);
-    graphics.setFont(theme.font(Theme::FontStyle::Regular, Theme::labelFontHeight));
+    graphics.setFont(theme.font(ArsNovaUI::Theme::FontStyle::Regular, ArsNovaUI::Theme::labelFontHeight));
     graphics.drawText("Choose an ornament, or add one to a library", body, juce::Justification::centred, true);
 }
 
@@ -118,7 +118,7 @@ int OrnamentBuildPanel::minimumWidth() const
     const int   barInset      = juce::roundToInt(titlebarHeight * titlebarInsetRatio);
     const int   contentHeight = titlebarHeight - barInset * 2;
     const int   buttonsWidth  = juce::roundToInt(contentHeight * buttonWidthRatio) * titlebarButtons + titlebar.undoRedoPane.idealWidth(contentHeight);
-    const float spacingShare  = 1.0f - Theme::contentSpacingRatio * titlebarGaps;
+    const float spacingShare  = 1.0f - ArsNovaUI::Theme::contentSpacingRatio * titlebarGaps;
 
     return barInset * 2 + static_cast<int>(std::ceil(buttonsWidth / spacingShare));
 }
@@ -216,22 +216,22 @@ void OrnamentBuildPanel::valueTreeChildRemoved(juce::ValueTree& parent, juce::Va
 }
 
 OrnamentBuildPanel::BuildTitlebar::BuildTitlebar()
-    : Bar(Orientation::Horizontal, titlebarInsetRatio)
+    : ArsNovaUI::Bar(Orientation::Horizontal, titlebarInsetRatio)
 {
-    hostButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawCircledHButton(graphics, bounds, state);
+    hostButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
+        ArsNovaUI::CustomLookAndFeel::get(*this).drawCircledHButton(graphics, bounds, state);
     };
 
-    arrowButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawArrowButton(graphics, bounds, state);
+    arrowButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
+        ArsNovaUI::CustomLookAndFeel::get(*this).drawArrowButton(graphics, bounds, state);
     };
 
-    publishButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawUploadButton(graphics, bounds, state);
+    publishButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
+        ArsNovaUI::CustomLookAndFeel::get(*this).drawUploadButton(graphics, bounds, state);
     };
 
-    symbolButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ButtonState& state) {
-        CustomLookAndFeel::get(*this).drawPencilButton(graphics, bounds, state);
+    symbolButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
+        ArsNovaUI::CustomLookAndFeel::get(*this).drawPencilButton(graphics, bounds, state);
     };
 
     hostButton.setText("Host");
@@ -256,7 +256,7 @@ void OrnamentBuildPanel::BuildTitlebar::resized()
 {
     auto      bounds      = getContentBounds();
     const int width       = bounds.getWidth();
-    const int spacing     = juce::roundToInt(width * Theme::contentSpacingRatio);
+    const int spacing     = juce::roundToInt(width * ArsNovaUI::Theme::contentSpacingRatio);
     const int buttonWidth = juce::roundToInt(bounds.getHeight() * buttonWidthRatio);
 
     hostButton.setBounds(bounds.removeFromLeft(buttonWidth));

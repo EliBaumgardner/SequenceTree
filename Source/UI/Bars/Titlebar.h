@@ -11,7 +11,7 @@
 class NodeCanvas;
 class SequenceTreeAudioProcessor;
 
-class Titlebar : public Bar, private juce::ChangeListener
+class Titlebar : public ArsNovaUI::Bar, private juce::ChangeListener
 {
 public:
 
@@ -47,18 +47,18 @@ private:
     NodeController&             nodeController;
     juce::UndoManager&          undoManager;
 
-    ButtonPane    transportPane;
-    ButtonPane    buttonPane;
-    ItemSelector  displaySelector;
-    TempoDisplay  tempoDisplay;
-    ButtonPane    undoRedoPane;
-    PatchControls patchControls;
+    ArsNovaUI::ButtonPane   transportPane;
+    ArsNovaUI::ButtonPane   buttonPane;
+    ArsNovaUI::ItemSelector displaySelector;
+    TempoDisplay            tempoDisplay;
+    ArsNovaUI::ButtonPane   undoRedoPane;
+    PatchControls           patchControls;
 
-    IconButton* playButton = nullptr;
-    IconButton* syncButton = nullptr;
+    ArsNovaUI::IconButton* playButton = nullptr;
+    ArsNovaUI::IconButton* syncButton = nullptr;
 
-    IconButton* undoButton = nullptr;
-    IconButton* redoButton = nullptr;
+    ArsNovaUI::IconButton* undoButton = nullptr;
+    ArsNovaUI::IconButton* redoButton = nullptr;
 
     std::unique_ptr<juce::ParameterAttachment> tempoAttachment;
     std::unique_ptr<juce::ParameterAttachment> syncAttachment;

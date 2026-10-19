@@ -13,6 +13,7 @@
 #include "EncapsulationView.h"
 #include "OrnamentMarks.h"
 #include "../../Util/ArrowInfo.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 class Node;
 class RootNode;
@@ -20,7 +21,6 @@ class Arrow;
 class SequenceTreeAudioProcessor;
 class GraphState;
 class RTGraphBuilder;
-class CustomLookAndFeel;
 
 class NodeCanvas : public juce::Component
 {
@@ -29,7 +29,7 @@ public:
     enum class CanvasTool;
 
     NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, RTGraphBuilder& rtGraphBuilder, juce::UndoManager& undoManager,
-               CustomLookAndFeel& lookAndFeel);
+               ArsNovaUI::CustomLookAndFeel& lookAndFeel);
 
     ~NodeCanvas() override;
 

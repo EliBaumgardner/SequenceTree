@@ -49,10 +49,10 @@ private:
     OrnamentLibraries& ornamentLibraries;
     juce::UndoManager& undoManager;
 
-    ValueEditor     nameEditor;
-    IconButton      foldButton;
-    IconButton      addCard;
-    juce::Component body;
+    ArsNovaUI::ValueEditor nameEditor;
+    ArsNovaUI::IconButton  foldButton;
+    ArsNovaUI::IconButton  addCard;
+    juce::Component        body;
 
     Fold fold = Fold::Open;
 

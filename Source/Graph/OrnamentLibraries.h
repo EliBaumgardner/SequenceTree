@@ -58,7 +58,7 @@ public:
     std::vector<OrnamentStep> figureSteps  (const juce::ValueTree& figure) const;
     OrnamentStatus            statusOf     (const juce::ValueTree& ornament) const;
 
-    static std::vector<SymbolStroke> readSymbol(const juce::String& symbol);
+    static std::vector<ArsNovaUI::SymbolStroke> readSymbol(const juce::String& symbol);
 
     struct OrnamentFile
     {

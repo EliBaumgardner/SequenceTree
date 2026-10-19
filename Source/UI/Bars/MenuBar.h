@@ -5,15 +5,15 @@
 
 class NodeCanvas;
 
-class MenuBar : public Bar
+class MenuBar : public ArsNovaUI::Bar
 {
 public:
 
     explicit MenuBar(NodeCanvas& nodeCanvas);
 
-    IconButton treeIcon;
-    IconButton nodeIcon;
-    IconButton traversalIcon;
+    ArsNovaUI::IconButton treeIcon;
+    ArsNovaUI::IconButton nodeIcon;
+    ArsNovaUI::IconButton traversalIcon;
 
     static constexpr float iconInsetRatio = 0.214f;
 

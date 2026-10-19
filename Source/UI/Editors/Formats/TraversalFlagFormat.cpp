@@ -6,14 +6,14 @@ const juce::String TraversalFlagFormat::instanceLetters { "abcdefghijklmnopqrstu
 static constexpr int maximumTraversalTypeId = 9999;
 
 TraversalFlagFormat::TraversalFlagFormat()
-    : NumberFormat(-maximumTraversalTypeId, maximumTraversalTypeId)
+    : ArsNovaUI::NumberFormat(-maximumTraversalTypeId, maximumTraversalTypeId)
 {
     extraProperties = { ValueTreeIdentifiers::TraversalInstance };
 }
 
-InputRestrictions TraversalFlagFormat::restrictions() const
+ArsNovaUI::InputRestrictions TraversalFlagFormat::restrictions() const
 {
-    InputRestrictions limits = NumberFormat::restrictions();
+    ArsNovaUI::InputRestrictions limits = ArsNovaUI::NumberFormat::restrictions();
 
     limits.allowedCharacters = "+" + limits.allowedCharacters + instanceLetters;
     limits.maxLength        += 1;
@@ -21,7 +21,7 @@ InputRestrictions TraversalFlagFormat::restrictions() const
     return limits;
 }
 
-juce::String TraversalFlagFormat::text(const ValueBinding& binding, TextPurpose purpose) const
+juce::String TraversalFlagFormat::text(const ArsNovaUI::ValueBinding& binding, ArsNovaUI::TextPurpose purpose) const
 {
     const int value = static_cast<int>(binding.primary.getValue());
 
@@ -45,12 +45,12 @@ juce::String TraversalFlagFormat::text(const ValueBinding& binding, TextPurpose 
     return "-" + juce::String(-value) + instanceText;
 }
 
-ParsedValue TraversalFlagFormat::parse(const ValueBinding& binding, const juce::String& enteredText) const
+ArsNovaUI::ParsedValue TraversalFlagFormat::parse(const ArsNovaUI::ValueBinding& binding, const juce::String& enteredText) const
 {
-    const juce::String trimmed = enteredText.trim();
-    const bool         spawns  = trimmed.startsWithChar('+');
-    const bool         removes = trimmed.startsWithChar('-');
-    const ParsedValue  cleared { 0, { 0 } };
+    const juce::String           trimmed = enteredText.trim();
+    const bool                   spawns  = trimmed.startsWithChar('+');
+    const bool                   removes = trimmed.startsWithChar('-');
+    const ArsNovaUI::ParsedValue cleared { 0, { 0 } };
 
     if (! spawns && ! removes) {
         return cleared;

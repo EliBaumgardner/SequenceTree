@@ -5,7 +5,7 @@
 #include "Titlebar.h"
 
 Titlebar::Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas, NodeController& nodeController, juce::UndoManager& undoManager)
-    : Bar(nodeCanvas, Orientation::Horizontal, Theme::contentInsetRatio),
+    : ArsNovaUI::Bar(nodeCanvas, Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
       processor(processor),
       nodeCanvas(nodeCanvas),
       nodeController(nodeController),
@@ -42,7 +42,7 @@ void Titlebar::resized()
     int undoRedoPaneWidth = undoRedoPane.idealWidth(bounds.getHeight());
     int patchPaneWidth = patchControls.idealWidth(bounds.getHeight());
     int spacing = contentSpacing;
-    float textHeight = Theme::textHeight;
+    float textHeight = ArsNovaUI::Theme::textHeight;
 
     tempoDisplay.editor.setFontHeight(textHeight);
     displaySelector.labelEditor.setFontHeight(textHeight);
@@ -83,10 +83,10 @@ int Titlebar::narrowestWidth() const
 
 void Titlebar::configureTransportPane()
 {
-    playButton = &transportPane.addButton(&CustomLookAndFeel::drawPlayIcon, "Play / Pause",
+    playButton = &transportPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawPlayIcon, "Play / Pause",
                                           [this]() { applyPlaybackState(!nodeCanvas.start); });
 
-    playButton->state.look = ButtonState::Look::Accent;
+    playButton->state.look = ArsNovaUI::ButtonState::Look::Accent;
 
     if (processor.wrapperType != juce::AudioProcessor::wrapperType_Standalone) {
         playButton->onClick = nullptr;
@@ -96,14 +96,14 @@ void Titlebar::configureTransportPane()
 
     playButton->setSelected(processor.isPlaying.load());
 
-    transportPane.addButton(&CustomLookAndFeel::drawSkipBackIcon, "Reset",
+    transportPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawSkipBackIcon, "Reset",
         [this]() { resetTraversals(); });
 
     if (processor.wrapperType == juce::AudioProcessor::wrapperType_Standalone) {
         return;
     }
 
-    syncButton = &transportPane.addButton(&CustomLookAndFeel::drawLinkIcon, "Sync to host playhead",
+    syncButton = &transportPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawLinkIcon, "Sync to host playhead",
         [this]() { syncAttachment->setValueAsCompleteGesture(static_cast<float>(! syncButton->state.isSelected)); });
 
     syncAttachment = std::make_unique<juce::ParameterAttachment>(
@@ -115,24 +115,24 @@ void Titlebar::configureTransportPane()
 
 void Titlebar::configureModePane()
 {
-    buttonPane.selection = ButtonPane::Selection::ExclusiveOrNone;
+    buttonPane.selection = ArsNovaUI::ButtonPane::Selection::ExclusiveOrNone;
 
-    buttonPane.onSelectionChanged = [this](const IconButton* selected) {
+    buttonPane.onSelectionChanged = [this](const ArsNovaUI::IconButton* selected) {
         nodeController.arrowGestures.setArrowMode(selected == nullptr);
     };
 
-    IconButton& nodeButton = buttonPane.addButton(&CustomLookAndFeel::drawCircleIcon, "Node Mode",
+    ArsNovaUI::IconButton& nodeButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawCircleIcon, "Node Mode",
         [this]() { nodeController.nodeGestures.creationMode = NodeCreationMode::Node; });
 
-    IconButton& modulatorButton = buttonPane.addButton(&CustomLookAndFeel::drawRoundedSquareIcon, "Modulator Mode",
+    ArsNovaUI::IconButton& modulatorButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRoundedSquareIcon, "Modulator Mode",
         [this]() { nodeController.nodeGestures.creationMode = NodeCreationMode::Modulator; });
 
-    IconButton& flagButton = buttonPane.addButton(&CustomLookAndFeel::drawTriangleIcon, "Traversal Flag Mode",
+    ArsNovaUI::IconButton& flagButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawTriangleIcon, "Traversal Flag Mode",
         [this]() { nodeController.nodeGestures.creationMode = NodeCreationMode::TraversalFlag; });
 
-    nodeButton.state.look      = ButtonState::Look::Raised;
-    modulatorButton.state.look = ButtonState::Look::Raised;
-    flagButton.state.look      = ButtonState::Look::Raised;
+    nodeButton.state.look      = ArsNovaUI::ButtonState::Look::Raised;
+    modulatorButton.state.look = ArsNovaUI::ButtonState::Look::Raised;
+    flagButton.state.look      = ArsNovaUI::ButtonState::Look::Raised;
 
     nodeButton.setText("Node");
     modulatorButton.setText("Modulator");
@@ -143,10 +143,10 @@ void Titlebar::configureModePane()
 
 void Titlebar::configureUndoRedoPane()
 {
-    undoButton = &undoRedoPane.addButton(&CustomLookAndFeel::drawUndoIcon, "Undo",
+    undoButton = &undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawUndoIcon, "Undo",
         [this]() { undoManager.undo(); });
 
-    redoButton = &undoRedoPane.addButton(&CustomLookAndFeel::drawRedoIcon, "Redo",
+    redoButton = &undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRedoIcon, "Redo",
         [this]() { undoManager.redo(); });
 
     undoManager.addChangeListener(this);
@@ -167,7 +167,7 @@ void Titlebar::configureDisplaySelector()
     };
 
     displaySelector.labelEditor.autoFitText = false;
-    displaySelector.leadingIcon             = &CustomLookAndFeel::drawEyeIcon;
+    displaySelector.leadingIcon             = &ArsNovaUI::CustomLookAndFeel::drawEyeIcon;
 
     addDisplayMode(1, "pitch",       NodeDisplayMode::Pitch);
     addDisplayMode(2, "velocity",    NodeDisplayMode::Velocity);

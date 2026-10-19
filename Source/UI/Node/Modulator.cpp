@@ -12,7 +12,7 @@ Modulator::Modulator(juce::UndoManager& undoManager) : Node(undoManager)
 
 void Modulator::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawSquareNode(graphics, getNodeVisual(getSquareBounds()));
+    ArsNovaUI::CustomLookAndFeel::get(*this).drawSquareNode(graphics, getNodeVisual(getSquareBounds()));
 }
 
 void Modulator::bindValueEditorForMode()
@@ -23,7 +23,7 @@ void Modulator::bindValueEditorForMode()
         return;
     }
 
-    auto offsetFormat = std::make_unique<NumberFormat>(minimumPitchOffset, maximumPitchOffset);
+    auto offsetFormat = std::make_unique<ArsNovaUI::NumberFormat>(minimumPitchOffset, maximumPitchOffset);
 
     offsetFormat->showsPositiveSign = true;
 
@@ -41,7 +41,7 @@ bool Modulator::hitTest(int x, int y)
         return true;
     }
 
-    for (const ValueEditor* editor : { &countEditor, &switchCountEditor, &subLoopLimitEditor }) {
+    for (const ArsNovaUI::ValueEditor* editor : { &countEditor, &switchCountEditor, &subLoopLimitEditor }) {
         if (editor->isVisible() && editor->getBounds().contains(point)) {
             return true;
         }
@@ -72,7 +72,7 @@ float Modulator::getBodyExtent(juce::Point<float> approachDirection) const
 
 juce::Rectangle<float> Modulator::getSquareBounds() const
 {
-    const auto  circleBounds = CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
+    const auto  circleBounds = ArsNovaUI::CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
     const float side         = circleBounds.getWidth() * equalAreaSideFactor;
 
     return circleBounds.withSizeKeepingCentre(side, side);

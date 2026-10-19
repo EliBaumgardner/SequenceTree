@@ -412,7 +412,7 @@ void SequenceTreeAudioProcessor::applyRestoredState()
         restoredNodeMap      = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
         restoredTraversalMap = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalMap);
         restoredRules        = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalRules);
-        restoredPresets      = restoredTree.getChildWithName(InterfaceIdentifiers::ColourPresets);
+        restoredPresets      = restoredTree.getChildWithName(ArsNovaUI::InterfaceIdentifiers::ColourPresets);
         restoredPatch        = restoredTree.getChildWithName(ValueTreeIdentifiers::Patch);
 
         const juce::ValueTree restoredParameters = restoredTree.getChildWithName(valueTreeState.state.getType());

@@ -5,7 +5,7 @@
 #include <algorithm>
 
 OrnamentSelectionPanel::OrnamentSelectionPanel(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
-    : resizer(PanelResizer::Edge::Left),
+    : resizer(ArsNovaUI::PanelResizer::Edge::Left),
       ornamentLibraries(ornamentLibraries),
       undoManager(undoManager)
 {
@@ -36,7 +36,7 @@ OrnamentSelectionPanel::~OrnamentSelectionPanel()
 
 void OrnamentSelectionPanel::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
+    ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
 
     graphics.setColour(lookAndFeel.windowColour);
     graphics.fillRect(getLocalBounds());
@@ -52,8 +52,8 @@ void OrnamentSelectionPanel::resized()
     auto bounds = getLocalBounds();
 
     titlebar.setBounds(bounds.removeFromTop(titlebarHeight));
-    viewport.setBounds(bounds.reduced(Theme::windowGutter));
-    resizer.setBounds(bounds.removeFromLeft(Theme::windowGutter));
+    viewport.setBounds(bounds.reduced(ArsNovaUI::Theme::windowGutter));
+    resizer.setBounds(bounds.removeFromLeft(ArsNovaUI::Theme::windowGutter));
 
     layoutSections();
 }
@@ -62,12 +62,12 @@ juce::Point<int> OrnamentSelectionPanel::narrowestSize() const
 {
     const int barInset      = juce::roundToInt(titlebarHeight * titlebarInsetRatio);
     const int buttonSize    = titlebarHeight - barInset * 2;
-    const int titlebarWidth = barInset * 2 + buttonSize * 2 + Bar::contentSpacing;
+    const int titlebarWidth = barInset * 2 + buttonSize * 2 + ArsNovaUI::Bar::contentSpacing;
     const int tileArea      = OrnamentLibrarySection::tileGap * 2 + OrnamentTile::tileWidth;
-    const int viewportWidth = Theme::windowGutter * 2 + viewport.getScrollBarThickness() + tileArea;
+    const int viewportWidth = ArsNovaUI::Theme::windowGutter * 2 + viewport.getScrollBarThickness() + tileArea;
     const int sectionHeight = OrnamentLibrarySection::headerHeight + OrnamentLibrarySection::tileGap * 2 + OrnamentTile::tileHeight;
 
-    return { juce::jmax(titlebarWidth, viewportWidth), titlebarHeight + Theme::windowGutter * 2 + sectionHeight };
+    return { juce::jmax(titlebarWidth, viewportWidth), titlebarHeight + ArsNovaUI::Theme::windowGutter * 2 + sectionHeight };
 }
 
 void OrnamentSelectionPanel::chooseLibraryFile()
@@ -164,10 +164,10 @@ void OrnamentSelectionPanel::valueTreePropertyChanged(juce::ValueTree& tree, con
 }
 
 OrnamentSelectionPanel::PanelTitlebar::PanelTitlebar()
-    : Bar(Orientation::Horizontal, titlebarInsetRatio)
+    : ArsNovaUI::Bar(Orientation::Horizontal, titlebarInsetRatio)
 {
-    newLibraryButton.icon = &CustomLookAndFeel::drawAddIcon;
-    addLibraryButton.icon = &CustomLookAndFeel::drawImportIcon;
+    newLibraryButton.icon = &ArsNovaUI::CustomLookAndFeel::drawAddIcon;
+    addLibraryButton.icon = &ArsNovaUI::CustomLookAndFeel::drawImportIcon;
 
     newLibraryButton.setTooltip("New library");
     addLibraryButton.setTooltip("Add library...");

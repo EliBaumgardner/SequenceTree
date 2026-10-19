@@ -71,7 +71,7 @@ Arrow* CanvasHitTester::danglingHeadNear(juce::Point<float> point, float radius)
 Arrow* CanvasHitTester::arrowLabelNear(juce::Point<float> point, float radius) const
 {
     return nearest(nodeCanvas.arrowManager.all(), identity, [](Arrow* arrow) { return arrow->startNode != nullptr && arrow->isVisible() && arrow->showsDurationLabel(); }, [point](Arrow* arrow) {
-            const ArrowLabel label = arrow->getLabel(arrow->getGeometry(1.0f), Arrow::arrowHeadLength);
+            const ArsNovaUI::ArrowLabel label = arrow->getLabel(arrow->getGeometry(1.0f), Arrow::arrowHeadLength);
 
             return point.getDistanceFrom(label.centre); }, radius);
 }

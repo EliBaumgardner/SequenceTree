@@ -6,8 +6,8 @@
 TempoDisplay::TempoDisplay(juce::UndoManager& undoManager)
     : editor(undoManager)
 {
-    auto tempoFormat = std::make_unique<NumberFormat>(RTtraversal::minimumTempoMultiplier, RTtraversal::maximumTempoMultiplier,
-                                                      ValueFormat::editableDecimalPlaces);
+    auto tempoFormat = std::make_unique<ArsNovaUI::NumberFormat>(RTtraversal::minimumTempoMultiplier, RTtraversal::maximumTempoMultiplier,
+                                                                 ArsNovaUI::ValueFormat::editableDecimalPlaces);
 
     setTooltip("Tempo Multiplier");
 
@@ -21,16 +21,16 @@ TempoDisplay::TempoDisplay(juce::UndoManager& undoManager)
 
 void TempoDisplay::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel& lookAndFeel   = CustomLookAndFeel::get(*this);
-    const auto         contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * Theme::contentInsetRatio));
+    ArsNovaUI::CustomLookAndFeel& lookAndFeel   = ArsNovaUI::CustomLookAndFeel::get(*this);
+    const auto                    contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio));
 
     lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
-    lookAndFeel.drawMetronomeIcon(graphics, contentBounds.withWidth(contentBounds.getHeight()).toFloat(), ButtonState {});
+    lookAndFeel.drawMetronomeIcon(graphics, contentBounds.withWidth(contentBounds.getHeight()).toFloat(), ArsNovaUI::ButtonState {});
 }
 
 void TempoDisplay::resized()
 {
-    auto contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * Theme::contentInsetRatio));
+    auto contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio));
 
     contentBounds.removeFromLeft(contentBounds.getHeight());
 

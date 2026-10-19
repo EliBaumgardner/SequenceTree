@@ -7,7 +7,7 @@ static constexpr int traversalRefListLength = 24;
 
 RootRectangle::RootRectangle(juce::UndoManager& undoManager) : traversalEditor(undoManager)
 {
-    auto traversalFormat = std::make_unique<TextFormat>(traversalRefListLength, "0123456789 ," + TraversalFlagFormat::instanceLetters);
+    auto traversalFormat = std::make_unique<ArsNovaUI::TextFormat>(traversalRefListLength, "0123456789 ," + TraversalFlagFormat::instanceLetters);
     traversalFormat->trimsWhitespace = false;
 
     traversalEditor.setInterceptsMouseClicks(true, false);
@@ -19,7 +19,7 @@ RootRectangle::RootRectangle(juce::UndoManager& undoManager) : traversalEditor(u
 
 void RootRectangle::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawRaisedPanel(graphics, getLocalBounds().toFloat());
+    ArsNovaUI::CustomLookAndFeel::get(*this).drawRaisedPanel(graphics, getLocalBounds().toFloat());
 }
 
 void RootRectangle::resized()

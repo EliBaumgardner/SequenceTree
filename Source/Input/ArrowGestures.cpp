@@ -182,13 +182,13 @@ void ArrowGestures::removeArrow(Arrow& arrow)
 
 void ArrowGestures::showArrowContextMenu(Arrow* arrow)
 {
-    ContextMenu menu;
+    ArsNovaUI::ContextMenu menu;
 
     if (arrow == nullptr) {
         return;
     }
 
-    menu.addItem("edit allowed traversals", ContextMenu::ItemKind::Action, [this, arrow]() {
+    menu.addItem("edit allowed traversals", ArsNovaUI::ContextMenu::ItemKind::Action, [this, arrow]() {
         juce::ValueTree connection = connectionTreeFor(arrow);
 
         if (! connection.isValid()) {
@@ -196,7 +196,7 @@ void ArrowGestures::showArrowContextMenu(Arrow* arrow)
         }
 
         allowedTraversalsLauncher.show(nodeCanvas, [this, connection]() {
-            auto content = std::make_unique<AllowedTraversalsMenu>(CustomLookAndFeel::get(nodeCanvas), graphState, undoManager, connection);
+            auto content = std::make_unique<AllowedTraversalsMenu>(ArsNovaUI::CustomLookAndFeel::get(nodeCanvas), graphState, undoManager, connection);
 
             content->setSize(AllowedTraversalsMenu::defaultWidth, content->getIdealHeight());
 
@@ -204,7 +204,7 @@ void ArrowGestures::showArrowContextMenu(Arrow* arrow)
         });
     });
 
-    menu.addItem("traversal arrow", ContextMenu::ItemKind::Toggle, [this, arrow]() {
+    menu.addItem("traversal arrow", ArsNovaUI::ContextMenu::ItemKind::Toggle, [this, arrow]() {
         if (arrow->isTraversalArrow()) {
             setArrowType(arrow, ArrowType::Node);
             return;
@@ -214,7 +214,7 @@ void ArrowGestures::showArrowContextMenu(Arrow* arrow)
     }, canBeTraversalArrow(arrow), arrow->isTraversalArrow());
 
     if (connectsToModulatorRoot(arrow)) {
-        menu.addItem("sync", ContextMenu::ItemKind::Toggle, [this, arrow]() {
+        menu.addItem("sync", ArsNovaUI::ContextMenu::ItemKind::Toggle, [this, arrow]() {
             setArrowSync(arrow, ! arrow->isSyncArrow());
         }, true, arrow->isSyncArrow());
     }

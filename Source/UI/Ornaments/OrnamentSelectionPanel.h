@@ -26,14 +26,14 @@ public:
 
     juce::Point<int> narrowestSize() const;
 
-    class PanelTitlebar : public Bar
+    class PanelTitlebar : public ArsNovaUI::Bar
     {
     public:
 
         PanelTitlebar();
 
-        IconButton newLibraryButton;
-        IconButton addLibraryButton;
+        ArsNovaUI::IconButton newLibraryButton;
+        ArsNovaUI::IconButton addLibraryButton;
 
     private:
 
@@ -43,7 +43,7 @@ public:
     static constexpr int   titlebarHeight     = 28;
     static constexpr float titlebarInsetRatio = 0.143f;
 
-    PanelResizer resizer;
+    ArsNovaUI::PanelResizer resizer;
 
 private:
 

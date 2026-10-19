@@ -60,10 +60,10 @@ private:
     static constexpr float flagProximityRadius = 28.0f;
     static constexpr float flagSnapThreshold   = 20.0f;
 
-    NodeCanvas&         nodeCanvas;
-    GraphState&         graphState;
-    juce::UndoManager&  undoManager;
-    PopupWindowLauncher allowedTraversalsLauncher { "Allowed Traversals" };
+    NodeCanvas&                    nodeCanvas;
+    GraphState&                    graphState;
+    juce::UndoManager&             undoManager;
+    ArsNovaUI::PopupWindowLauncher allowedTraversalsLauncher { "Allowed Traversals" };
 
     TipGesture tipGesture = TipGesture::None;
 

@@ -7,15 +7,15 @@ OrnamentSymbolEditor::OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries,
       ornamentLibraries(ornamentLibraries),
       undoManager(undoManager)
 {
-    IconButton& pencilButton = toolPane.addButton(&CustomLookAndFeel::drawPencilIcon, "Pencil: draw the symbol", [this]() { tool = SymbolTool::Pencil; });
+    ArsNovaUI::IconButton& pencilButton = toolPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawPencilIcon, "Pencil: draw the symbol", [this]() { tool = SymbolTool::Pencil; });
 
-    toolPane.addButton(&CustomLookAndFeel::drawEraserIcon, "Eraser: rub out what it touches", [this]() { tool = SymbolTool::Eraser; });
+    toolPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawEraserIcon, "Eraser: rub out what it touches", [this]() { tool = SymbolTool::Eraser; });
 
-    toolPane.selection = ButtonPane::Selection::Exclusive;
+    toolPane.selection = ArsNovaUI::ButtonPane::Selection::Exclusive;
 
     toolPane.setSelectedButton(&pencilButton);
 
-    clearButton.icon = &CustomLookAndFeel::drawRemoveIcon;
+    clearButton.icon = &ArsNovaUI::CustomLookAndFeel::drawRemoveIcon;
 
     clearButton.onClick = [this]() {
         this->undoManager.beginNewTransaction();
@@ -31,11 +31,11 @@ OrnamentSymbolEditor::OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries,
     sizeField.label.setJustificationType(juce::Justification::centredRight);
     sizeField.label.setText("Size", juce::dontSendNotification);
 
-    sizeField.editor.wheelResponse = ValueEditor::WheelResponse::StepValue;
-    sizeField.editor.backdrop      = ValueEditor::Backdrop::Gauge;
+    sizeField.editor.wheelResponse = ArsNovaUI::ValueEditor::WheelResponse::StepValue;
+    sizeField.editor.backdrop      = ArsNovaUI::ValueEditor::Backdrop::Gauge;
 
     sizeField.editor.setJustification(juce::Justification::centredLeft);
-    sizeField.editor.setFormat(std::make_unique<NumberFormat>(minBrushPercent, maxBrushPercent, brushDecimalPlaces));
+    sizeField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minBrushPercent, maxBrushPercent, brushDecimalPlaces));
     sizeField.editor.setTooltip("Pencil and eraser size, in percent of the symbol: Ctrl-drag or scroll to change");
 
     sizeField.editor.boundValue = brushWidth * percent;
@@ -53,16 +53,16 @@ OrnamentSymbolEditor::OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries,
 
 void OrnamentSymbolEditor::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
-    const float        strokeWidth = drawingArea.getWidth() * brushWidth;
-    const float        dashes[]    = { dashLength, dashLength };
-    juce::Path         toolOutline;
+    ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
+    const float                   strokeWidth = drawingArea.getWidth() * brushWidth;
+    const float                   dashes[]    = { dashLength, dashLength };
+    juce::Path                    toolOutline;
 
     graphics.setColour(lookAndFeel.canvasColour);
     graphics.fillRect(getLocalBounds());
 
     graphics.setColour(lookAndFeel.borderStrongColour);
-    graphics.drawRoundedRectangle(drawingArea, Theme::paneCornerRadius, Theme::borderThickness);
+    graphics.drawRoundedRectangle(drawingArea, ArsNovaUI::Theme::paneCornerRadius, ArsNovaUI::Theme::borderThickness);
 
     graphics.setColour(lookAndFeel.textColour);
 
@@ -76,7 +76,7 @@ void OrnamentSymbolEditor::paint(juce::Graphics& graphics)
 
     toolOutline.addEllipse(juce::Rectangle<float>(strokeWidth, strokeWidth).withCentre(*cursorPosition));
 
-    juce::PathStrokeType(Theme::borderThickness).createDashedStroke(toolOutline, toolOutline, dashes, 2);
+    juce::PathStrokeType(ArsNovaUI::Theme::borderThickness).createDashedStroke(toolOutline, toolOutline, dashes, 2);
 
     graphics.setColour(lookAndFeel.textColour);
     graphics.fillPath(toolOutline);
@@ -172,7 +172,7 @@ void OrnamentSymbolEditor::mouseExit(const juce::MouseEvent& event)
 
 juce::MouseCursor OrnamentSymbolEditor::getMouseCursor()
 {
-    const CustomLookAndFeel& lookAndFeel = CustomLookAndFeel::get(*this);
+    const ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
 
     if (tool == SymbolTool::Eraser) {
         return lookAndFeel.eraserCursor;

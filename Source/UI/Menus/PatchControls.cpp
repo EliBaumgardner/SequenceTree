@@ -8,11 +8,11 @@ PatchControls::PatchControls(juce::AudioProcessor& processor, juce::ValueTree pa
       patchFolder(patchFolder),
       nameEditor(nameUndoManager)
 {
-    nameEditor.fontStyle = Theme::FontStyle::Regular;
-    openButton.icon      = &CustomLookAndFeel::drawChevronDownIcon;
-    resetButton.icon     = &CustomLookAndFeel::drawReloadIcon;
+    nameEditor.fontStyle = ArsNovaUI::Theme::FontStyle::Regular;
+    openButton.icon      = &ArsNovaUI::CustomLookAndFeel::drawChevronDownIcon;
+    resetButton.icon     = &ArsNovaUI::CustomLookAndFeel::drawReloadIcon;
 
-    nameEditor.setFormat(std::make_unique<TextFormat>(TextFormat::labelTextLength, TextFormat::labelCharacters));
+    nameEditor.setFormat(std::make_unique<ArsNovaUI::TextFormat>(ArsNovaUI::TextFormat::labelTextLength, ArsNovaUI::TextFormat::labelCharacters));
     nameEditor.setJustification(juce::Justification::centredLeft);
     nameEditor.bindEditor(patch, ValueTreeIdentifiers::PatchName);
 
@@ -31,16 +31,16 @@ PatchControls::PatchControls(juce::AudioProcessor& processor, juce::ValueTree pa
 
 void PatchControls::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawPane(graphics, getLocalBounds().toFloat());
+    ArsNovaUI::CustomLookAndFeel::get(*this).drawPane(graphics, getLocalBounds().toFloat());
 }
 
 void PatchControls::resized()
 {
-    auto      contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * Theme::contentInsetRatio));
-    const int buttonWidth   = juce::roundToInt(contentBounds.getHeight() * Theme::buttonAspectRatio);
+    auto      contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio));
+    const int buttonWidth   = juce::roundToInt(contentBounds.getHeight() * ArsNovaUI::Theme::buttonAspectRatio);
 
     resetButton.setBounds(contentBounds.removeFromRight(buttonWidth));
-    contentBounds.removeFromRight(Theme::buttonGap);
+    contentBounds.removeFromRight(ArsNovaUI::Theme::buttonGap);
 
     openButton.setBounds(contentBounds.removeFromRight(buttonWidth));
 
@@ -49,10 +49,10 @@ void PatchControls::resized()
 
 int PatchControls::idealWidth(int height) const
 {
-    const int inset       = juce::roundToInt(height * Theme::contentInsetRatio);
-    const int buttonWidth = juce::roundToInt((height - inset * 2) * Theme::buttonAspectRatio);
+    const int inset       = juce::roundToInt(height * ArsNovaUI::Theme::contentInsetRatio);
+    const int buttonWidth = juce::roundToInt((height - inset * 2) * ArsNovaUI::Theme::buttonAspectRatio);
 
-    return inset * 2 + nameWidth + buttonWidth * 2 + Theme::buttonGap;
+    return inset * 2 + nameWidth + buttonWidth * 2 + ArsNovaUI::Theme::buttonGap;
 }
 
 void PatchControls::chooseFileToOpen()

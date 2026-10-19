@@ -8,7 +8,7 @@
 Arrow::Arrow(Node* startNode, Node* endNode, juce::UndoManager& undoManager)
     : startNode(startNode), endNode(endNode)
 {
-    durationEditor = std::make_unique<ValueEditor>(undoManager);
+    durationEditor = std::make_unique<ArsNovaUI::ValueEditor>(undoManager);
 
     durationEditor->setInterceptsMouseClicks(true, false);
     durationEditor->setTooltip("Arrow Duration");
@@ -28,14 +28,14 @@ Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, juce::UndoManager& und
 {
     setInterceptsMouseClicks(false, true);
 
-    valueEditor = std::make_unique<ValueEditor>(undoManager);
+    valueEditor = std::make_unique<ArsNovaUI::ValueEditor>(undoManager);
 
     valueEditor->setInterceptsMouseClicks(true, false);
     valueEditor->setTooltip("Count Limit");
-    valueEditor->setFormat(std::make_unique<NumberFormat>(minimumCountLimit, maximumCountLimit));
+    valueEditor->setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumCountLimit, maximumCountLimit));
     addAndMakeVisible(*valueEditor);
 
-    durationEditor = std::make_unique<ValueEditor>(undoManager);
+    durationEditor = std::make_unique<ArsNovaUI::ValueEditor>(undoManager);
 
     durationEditor->setInterceptsMouseClicks(true, false);
     durationEditor->setTooltip("Arrow Duration");
@@ -52,15 +52,15 @@ Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, juce::UndoManager& und
 
 void Arrow::paint(juce::Graphics& graphics)
 {
-    CustomLookAndFeel::get(*this).drawArrow(graphics, getArrowVisual());
+    ArsNovaUI::CustomLookAndFeel::get(*this).drawArrow(graphics, getArrowVisual());
 }
 
 void Arrow::resized()
 {
-    const ArrowGeometry geometry = getGeometry(1.0f);
+    const ArsNovaUI::ArrowGeometry geometry = getGeometry(1.0f);
 
     if (geometry.valid) {
-        const ArrowLabel label = getLabel(geometry, arrowHeadLength);
+        const ArsNovaUI::ArrowLabel label = getLabel(geometry, arrowHeadLength);
 
         const juce::Point<int> editorCentre = (label.centre - getPosition().toFloat()).roundToInt()
                                             - juce::Point<int>(0, valueEditorHeight / 2);
@@ -91,7 +91,7 @@ void Arrow::setArrowBounds()
         }
     }
 
-    const ArrowGeometry geometry = getGeometry(1.0f);
+    const ArsNovaUI::ArrowGeometry geometry = getGeometry(1.0f);
 
     if (! geometry.valid) {
         const juce::Point<int> centre = startNode->getNodeCentre();
@@ -122,10 +122,10 @@ void Arrow::beginDurationEdit()
 
     const bool percentDuration = (startNode->nodeType == NodeType::Modulator);
 
-    auto durationFormat = std::make_unique<NumberFormat>(0.0, ArrowInfo::maximumDurationMs);
+    auto durationFormat = std::make_unique<ArsNovaUI::NumberFormat>(0.0, ArrowInfo::maximumDurationMs);
 
     if (percentDuration) {
-        durationFormat = std::make_unique<NumberFormat>(
+        durationFormat = std::make_unique<ArsNovaUI::NumberFormat>(
             0.0, static_cast<double>(ArrowInfo::maximumDurationPercent * ArrowInfo::millisecondsPerDurationPercent));
 
         durationFormat->displayDivisor = ArrowInfo::millisecondsPerDurationPercent;
@@ -323,9 +323,9 @@ juce::String Arrow::getDurationLabel() const
     return juce::String(duration);
 }
 
-ArrowVisual Arrow::getArrowVisual() const
+ArsNovaUI::ArrowVisual Arrow::getArrowVisual() const
 {
-    ArrowVisual visual;
+    ArsNovaUI::ArrowVisual visual;
 
     visual.geometry = getGeometry(animation.snapProgress);
 
@@ -347,12 +347,12 @@ ArrowVisual Arrow::getArrowVisual() const
         visual.headLength = arrowHeadLengthHover;
     }
 
-    if (visual.shaftStyle == ArrowVisual::ShaftStyle::Ruler) {
+    if (visual.shaftStyle == ArsNovaUI::ArrowVisual::ShaftStyle::Ruler) {
         visual.rulerOpacity = 1.0f;
     }
 
     if (isTraversalArrow()) {
-        visual.head = ArrowVisual::HeadStyle::Outlined;
+        visual.head = ArsNovaUI::ArrowVisual::HeadStyle::Outlined;
     }
 
     visual.shaft = buildShaftPath(visual.geometry, visual.headLength, visual.origin);
@@ -363,10 +363,10 @@ ArrowVisual Arrow::getArrowVisual() const
 
     for (const auto& entry : animation.trails) {
         const ArrowAnimation::Trail& trail = entry.second;
-        ArrowTrail                   drawnTrail { trail.colour, trail.progress };
+        ArsNovaUI::ArrowTrail        drawnTrail { trail.colour, trail.progress };
 
         if (trail.source == TrailSource::Preview) {
-            drawnTrail.stroke = ArrowTrail::Stroke::Dashed;
+            drawnTrail.stroke = ArsNovaUI::ArrowTrail::Stroke::Dashed;
         }
 
         visual.trails.push_back(drawnTrail);
@@ -375,9 +375,9 @@ ArrowVisual Arrow::getArrowVisual() const
     return visual;
 }
 
-ArrowGeometry Arrow::getGeometry(float animationProgress) const
+ArsNovaUI::ArrowGeometry Arrow::getGeometry(float animationProgress) const
 {
-    ArrowGeometry geometry;
+    ArsNovaUI::ArrowGeometry geometry;
 
     if (startNode == nullptr) {
         return geometry;
@@ -459,9 +459,9 @@ ArrowGeometry Arrow::getGeometry(float animationProgress) const
     return geometry;
 }
 
-ArrowLabel Arrow::getLabel(const ArrowGeometry& geometry, float headLength) const
+ArsNovaUI::ArrowLabel Arrow::getLabel(const ArsNovaUI::ArrowGeometry& geometry, float headLength) const
 {
-    ArrowLabel label;
+    ArsNovaUI::ArrowLabel label;
 
     if (startNode == nullptr) {
         return label;
@@ -504,7 +504,7 @@ ArrowLabel Arrow::getLabel(const ArrowGeometry& geometry, float headLength) cons
     return label;
 }
 
-juce::Path Arrow::buildShaftPath(const ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const
+juce::Path Arrow::buildShaftPath(const ArsNovaUI::ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const
 {
     juce::Path path;
 
@@ -551,7 +551,7 @@ juce::Point<float> Arrow::getHeadAnchor() const
         return getTip().toFloat();
     }
 
-    const ArrowGeometry geometry = getGeometry(1.0f);
+    const ArsNovaUI::ArrowGeometry geometry = getGeometry(1.0f);
     if (! geometry.valid) {
         return getTip().toFloat();
     }
@@ -560,33 +560,33 @@ juce::Point<float> Arrow::getHeadAnchor() const
     return endNode->getNodeCentre().toFloat() - geometry.chord * (endExtent + headAnchorInset);
 }
 
-ArrowVisual::ShaftStyle Arrow::shaftStyle() const
+ArsNovaUI::ArrowVisual::ShaftStyle Arrow::shaftStyle() const
 {
     if (dragging) {
-        return ArrowVisual::ShaftStyle::Ruler;
+        return ArsNovaUI::ArrowVisual::ShaftStyle::Ruler;
     }
 
     if (isGhost) {
-        return ArrowVisual::ShaftStyle::Dashed;
+        return ArsNovaUI::ArrowVisual::ShaftStyle::Dashed;
     }
 
     if (startNode == nullptr) {
-        return ArrowVisual::ShaftStyle::Solid;
+        return ArsNovaUI::ArrowVisual::ShaftStyle::Solid;
     }
 
     if (startNode->nodeType == NodeType::TraversalFlag) {
-        return ArrowVisual::ShaftStyle::Dashed;
+        return ArsNovaUI::ArrowVisual::ShaftStyle::Dashed;
     }
 
     if (endNode == nullptr || endNode->nodeType != NodeType::Root || startNode->isAlternativeNode) {
-        return ArrowVisual::ShaftStyle::Solid;
+        return ArsNovaUI::ArrowVisual::ShaftStyle::Solid;
     }
 
     const ArrowType arrowType = ArrowBindingOps::getArrowInfo(arrowTree).type;
 
     if (arrowType == ArrowType::Traversal || arrowType == ArrowType::StepIntoTree) {
-        return ArrowVisual::ShaftStyle::Solid;
+        return ArsNovaUI::ArrowVisual::ShaftStyle::Solid;
     }
 
-    return ArrowVisual::ShaftStyle::Dashed;
+    return ArsNovaUI::ArrowVisual::ShaftStyle::Dashed;
 }

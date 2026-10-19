@@ -181,13 +181,13 @@ TEST_CASE("node colours and colour presets survive saving and restoring the plug
     SequenceTreeAudioProcessor original;
     SequenceTreeAudioProcessor restored;
     juce::MemoryBlock          savedState;
-    juce::ValueTree            preset { InterfaceIdentifiers::ColourPreset };
+    juce::ValueTree            preset { ArsNovaUI::InterfaceIdentifiers::ColourPreset };
 
     const int rootId = createRoot(original.graphState, 0, 0);
 
     original.graphState.setNodeColour(rootId, "ff993300", nullptr);
 
-    preset.setProperty(InterfaceIdentifiers::PresetColour, "ff00ff00", nullptr);
+    preset.setProperty(ArsNovaUI::InterfaceIdentifiers::PresetColour, "ff00ff00", nullptr);
 
     original.colourPresets.appendChild(preset, nullptr);
 
@@ -197,7 +197,7 @@ TEST_CASE("node colours and colour presets survive saving and restoring the plug
 
     CHECK(restored.graphState.getNode(rootId).getProperty(ValueTreeIdentifiers::NodeColour).toString() == "ff993300");
     REQUIRE(restored.colourPresets.getNumChildren() == 1);
-    CHECK(restored.colourPresets.getChild(0).getProperty(InterfaceIdentifiers::PresetColour).toString() == "ff00ff00");
+    CHECK(restored.colourPresets.getChild(0).getProperty(ArsNovaUI::InterfaceIdentifiers::PresetColour).toString() == "ff00ff00");
 }
 
 TEST_CASE("a chain built through the graph walks in order and loops", "[graph][traversal]")

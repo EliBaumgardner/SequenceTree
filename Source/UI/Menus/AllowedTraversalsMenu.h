@@ -6,15 +6,15 @@
 
 #include "../../Graph/RTData.h"
 #include <ArsNovaUI/Editors/LabeledEditor.h>
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
-class CustomLookAndFeel;
 class GraphState;
 
 class AllowedTraversalsMenu : public juce::Component
 {
 public:
 
-    AllowedTraversalsMenu(CustomLookAndFeel& lookAndFeel, GraphState& graphState, juce::UndoManager& undoManager, juce::ValueTree connection);
+    AllowedTraversalsMenu(ArsNovaUI::CustomLookAndFeel& lookAndFeel, GraphState& graphState, juce::UndoManager& undoManager, juce::ValueTree connection);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
@@ -45,9 +45,9 @@ private:
 
     struct TraversalRow
     {
-        TraversalKey                  key;
-        std::unique_ptr<CaptionLabel> label;
-        std::unique_ptr<ToggleButton> toggle;
+        TraversalKey                             key;
+        std::unique_ptr<ArsNovaUI::CaptionLabel> label;
+        std::unique_ptr<ToggleButton>            toggle;
     };
 
     juce::UndoManager& undoManager;

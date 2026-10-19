@@ -14,10 +14,10 @@ OrnamentCanvas::OrnamentCanvas(juce::UndoManager& undoManager)
 
 void OrnamentCanvas::paint(juce::Graphics& graphics)
 {
-    const Theme& theme     = CustomLookAndFeel::get(*this);
-    const float  grid      = ArrowInfo::pixelsPerGridSpace;
-    const auto   visible   = getLocalBounds().toFloat().transformedBy(modelTransform);
-    const float  lineWidth = 1.0f / viewTransform.getScaleFactor();
+    const ArsNovaUI::Theme& theme     = ArsNovaUI::CustomLookAndFeel::get(*this);
+    const float             grid      = ArrowInfo::pixelsPerGridSpace;
+    const auto              visible   = getLocalBounds().toFloat().transformedBy(modelTransform);
+    const float             lineWidth = 1.0f / viewTransform.getScaleFactor();
 
     graphics.setColour(theme.canvasColour);
     graphics.fillRect(getLocalBounds());
@@ -47,8 +47,8 @@ void OrnamentCanvas::childrenChanged()
 
 void OrnamentCanvas::handleAsyncUpdate()
 {
-    const int          diameter   = Theme::nodeRadius * 2;
-    const juce::Colour nodeColour = CustomLookAndFeel::get(*this).defaultNodeColour;
+    const int          diameter   = ArsNovaUI::Theme::nodeRadius * 2;
+    const juce::Colour nodeColour = ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour;
     const int          hostId     = figure.getProperty(ValueTreeIdentifiers::OrnamentHostId, OrnamentLibraries::noHostId);
 
     for (int arrowIndex = arrows.size() - 1; arrowIndex >= 0; --arrowIndex) {

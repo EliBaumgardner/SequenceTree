@@ -59,7 +59,7 @@ void Encapsulator::bindToTree()
 
 void Encapsulator::bindValueEditorForMode()
 {
-    nodeValueEditor.setFormat(std::make_unique<GreekLetterFormat>());
+    nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::GreekLetterFormat>());
 
     nodeValueEditor.editable = false;
 
