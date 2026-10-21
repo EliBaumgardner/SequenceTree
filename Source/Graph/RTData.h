@@ -1,18 +1,25 @@
-/*
-  ==============================================================================
-
-    RTData.h
-    Created: 12 Jul 2025 1:05:00pm
-    Author:  Eli Baumgardner
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <algorithm>
 #include <compare>
 #include <vector>
+
+/*
+    The data types the audio thread reads. They are plain copies of the graph, made on the message
+    thread, holding only numbers, bools and vectors and no ValueTree, String or other JUCE type, so
+    the audio thread can read them without locking.
+
+    RTNode is one node as playback sees it: its limits, notes, equipped traversals, ornament steps,
+    and one RTConnection per arrow to a child, holding that arrow's duration and whether it jumps to
+    another tree. NodeMap is every node of the published graph sorted by id; find looks a node up
+    by id, and firstUnlinkedRootId is the root playback starts from. RTtraversal is one traversal's
+    playback settings, TraversalKey names a traversal by id and instance, OrnamentStep is one note
+    of an ornament figure, and RTPreviewRequest asks the audio thread to start, stop or repeat a
+    note preview.
+
+    RTGraphBuilder creates them and AudioSnapshotPublisher publishes them. With RTScript they are
+    the only types that cross to the audio thread.
+*/
 
 struct RTNote {
 

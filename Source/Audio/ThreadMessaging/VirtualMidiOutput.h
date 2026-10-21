@@ -1,9 +1,22 @@
 #pragma once
 
 #include <juce_audio_devices/juce_audio_devices.h>
-#include "AudioUIBridge.h"
+#include "CommandFifo.h"
 #include <array>
 #include <memory>
+
+/*
+    A virtual MIDI output port named after the plugin, which sends out the MIDI each block produces
+    so other apps and tracks can receive it.
+
+    At the end of every processBlock, mirrorBlock copies the block's MIDI, with the time each
+    message should play, into a CommandFifo, without locking or allocating. A timer passes those
+    messages to the port every millisecond, and the port sends each one at its time. The
+    constructor picks a port name no other device is using, and the destructor turns off every
+    note on every channel.
+
+    If the port can't be created, it does nothing.
+*/
 
 class VirtualMidiOutput : private juce::HighResolutionTimer
 {

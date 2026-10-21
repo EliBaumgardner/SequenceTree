@@ -30,7 +30,7 @@ void TraversalSession::prepare()
 void TraversalSession::clearTraversals()
 {
     eventManager.dispatcher.flagScheduler.clear();
-    eventManager.bridge.pushArrowReset(AudioUIBridge::allTrails);
+    eventManager.bridge.pushArrowReset(BridgeCommands::allTrails);
     traversals.clear();
 }
 
@@ -61,8 +61,8 @@ void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
     }
 
     eventManager.bridge.clearAllHighlights();
-    eventManager.bridge.pushArrowReset(AudioUIBridge::allTrails);
-    eventManager.scheduler.activeNotes.clear();
+    eventManager.bridge.pushArrowReset(BridgeCommands::allTrails);
+    eventManager.scheduler.clear();
 
     if (playback == Playback::Suspended) {
         playback = Playback::Live;
@@ -124,7 +124,7 @@ void TraversalSession::restartActiveTraversals(const DispatchContext& context)
         }
     }
 
-    eventManager.bridge.pushArrowReset(AudioUIBridge::allTrails);
+    eventManager.bridge.pushArrowReset(BridgeCommands::allTrails);
     traversals.clear();
 
     for (int rootId : restartRootScratch) {
@@ -403,7 +403,7 @@ void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
                 traversal.state          = TraversalLogic::TraversalState::Active;
                 traversal.advanceAlternative(context.nodes, traversal.rootId);
 
-                eventManager.bridge.highlightNode(rootNode, AudioUIBridge::HighlightKind::Show, runId, traversal.traversal.key.typeId);
+                eventManager.bridge.highlightNode(rootNode, BridgeCommands::HighlightKind::Show, runId, traversal.traversal.key.typeId);
                 eventManager.dispatcher.pushNote(rootNode, runId, context, 0);
             }
         }
@@ -424,7 +424,7 @@ void TraversalSession::startTraversal(const RTNode& rootNode, const RTtraversal&
 
     acquired->logic.begin(context.nodes, rootId, rootNode.graphLoopLimit);
 
-    eventManager.bridge.highlightNode(rootNode, AudioUIBridge::HighlightKind::Show, runId, traversal.key.typeId);
+    eventManager.bridge.highlightNode(rootNode, BridgeCommands::HighlightKind::Show, runId, traversal.key.typeId);
     eventManager.dispatcher.pushNote(rootNode, runId, context, 0);
 }
 
@@ -441,12 +441,12 @@ void TraversalSession::stopTraversalNotes(int runId, juce::MidiBuffer& midiMessa
 
         eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
 
-        eventManager.bridge.highlightNode(note.nodeId, AudioUIBridge::HighlightKind::Hide, runId);
+        eventManager.bridge.highlightNode(note.nodeId, BridgeCommands::HighlightKind::Hide, runId);
         eventManager.scheduler.removeNote(i);
     }
 
-    eventManager.bridge.pushArrowReset(AudioUIBridge::primaryTrail(runId));
-    eventManager.bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
+    eventManager.bridge.pushArrowReset(BridgeCommands::primaryTrail(runId));
+    eventManager.bridge.pushArrowReset(BridgeCommands::modulatorTrail(runId));
 }
 
 void TraversalSession::startPreview(const RTPreviewRequest& request, const DispatchContext& context)
@@ -497,7 +497,7 @@ void TraversalSession::startPreview(const RTPreviewRequest& request, const Dispa
 
     instance->logic.beginPreview(context.nodes, hostNode->nodeID, alternativeId);
 
-    previewEventManager.bridge.highlightNode(*clickedNode, AudioUIBridge::HighlightKind::Show, runId, traversal.key.typeId);
+    previewEventManager.bridge.highlightNode(*clickedNode, BridgeCommands::HighlightKind::Show, runId, traversal.key.typeId);
     previewEventManager.dispatcher.pushNote(*hostNode, runId, context, 0);
 }
 
@@ -507,20 +507,20 @@ void TraversalSession::stopPreview(juce::MidiBuffer& midiMessages)
 
     for (const auto& note : previewEventManager.scheduler.activeNotes) {
         previewEventManager.scheduler.sendNoteOff(note, midiMessages, 0);
-        bridge.highlightNode(note.nodeId, AudioUIBridge::HighlightKind::Hide, note.runId);
+        bridge.highlightNode(note.nodeId, BridgeCommands::HighlightKind::Hide, note.runId);
     }
 
     for (const auto& [runId, instance] : previewTraversals.entries()) {
-        bridge.highlightNode(instance.logic.primary.target,               AudioUIBridge::HighlightKind::Hide, runId);
-        bridge.highlightNode(instance.logic.primary.alternativeTarget,    AudioUIBridge::HighlightKind::Hide, runId);
-        bridge.highlightNode(instance.logic.mod.walker.target,            AudioUIBridge::HighlightKind::Hide, runId);
-        bridge.highlightNode(instance.logic.mod.walker.alternativeTarget, AudioUIBridge::HighlightKind::Hide, runId);
+        bridge.highlightNode(instance.logic.primary.target,               BridgeCommands::HighlightKind::Hide, runId);
+        bridge.highlightNode(instance.logic.primary.alternativeTarget,    BridgeCommands::HighlightKind::Hide, runId);
+        bridge.highlightNode(instance.logic.mod.walker.target,            BridgeCommands::HighlightKind::Hide, runId);
+        bridge.highlightNode(instance.logic.mod.walker.alternativeTarget, BridgeCommands::HighlightKind::Hide, runId);
 
-        bridge.pushArrowReset(AudioUIBridge::primaryTrail(runId));
-        bridge.pushArrowReset(AudioUIBridge::modulatorTrail(runId));
+        bridge.pushArrowReset(BridgeCommands::primaryTrail(runId));
+        bridge.pushArrowReset(BridgeCommands::modulatorTrail(runId));
     }
 
-    previewEventManager.scheduler.activeNotes.clear();
+    previewEventManager.scheduler.clear();
     previewEventManager.dispatcher.flagScheduler.clear();
     previewTraversals.clear();
 }

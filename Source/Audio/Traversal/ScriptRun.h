@@ -3,8 +3,30 @@
 #include <array>
 #include <span>
 
-#include "../Script/RTScript.h"
+#include "../../Script/RTScript.h"
 #include "TraversalRule.h"
+
+/*
+    The interpreter for compiled traversal scripts: it executes a script's instructions against one
+    traversal and returns what the script decided.
+
+    A ScriptRun is made for one ScriptRunContext: the RTScript, the graph, the traversal's
+    NodeStateTable and variables, and whether its writes are kept. call runs one of the script's
+    functions with the given arguments and returns its result, which is how a script chooses where
+    the walk goes and what it plays. A call stops after the script's stepBudget instructions, so an
+    endless loop cannot hang playback, and it returns -1 if the script runs that long or hits an
+    error. It uses only fixed-size memory, so it is safe on the audio thread.
+    TraversalLogic::makeScriptContext gathers what the script can see and change into a
+    ScriptRunContext.
+
+    With ScriptWrites::Commit, the changes a script makes to counts and variables are kept. With
+    ScriptWrites::Trial they are thrown away when the run ends, so TraversalLogic::peekNextTarget
+    can ask where the walk would go without moving it.
+
+    ScriptHost is how a script tells playback to advance, asks a note's length, or plays a note,
+    and TraversalDispatcher implements it. ScriptGlobals are the script's variables shared by every
+    traversal in a pool, and ScriptMembers are the variables of one traversal.
+*/
 
 enum class ScriptWrites { Commit, Trial };
 

@@ -14,7 +14,7 @@
 #include "../Graph/RTGraphBuilder.h"
 #include "../Audio/EventManager.h"
 #include "../Audio/TraversalSession.h"
-#include "../Audio/VirtualMidiOutput.h"
+#include "../Audio/ThreadMessaging/VirtualMidiOutput.h"
 #include "AudioSnapshotPublisher.h"
 
 class SequenceTreeAudioProcessorEditor;

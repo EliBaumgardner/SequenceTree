@@ -2,8 +2,22 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "../Graph/RTData.h"
+#include <cstddef>
 #include <span>
 #include <vector>
+
+/*
+    The record of every note currently playing. It turns notes into MIDI: a note-on when a note
+    starts and a note-off once its length has run out.
+
+    scheduleNote starts a note, which a NoteVoicing can transpose, rescale, override or silence.
+    nextToExpire finds the note that ends soonest, and expireNext ends it. A note with an ornament
+    plays the figure's steps in turn within its length. Modulator roots, traversal flags, jumps to
+    another tree and silent notes take up time but send no MIDI.
+
+    TraversalDispatcher starts notes and EventManager ends them, on the audio thread. It holds at
+    most maxExpectedActiveNotes, reserved up front, and drops a note past that.
+*/
 
 class NoteScheduler
 {
@@ -20,7 +34,13 @@ public:
 
     void continueOrnament(ActiveNote note, const RTNode* node, juce::MidiBuffer& midiMessages, double sample);
     void sendNoteOff     (const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
-    void removeNote      (int index);
+
+    void removeNote(int index);
+    void clear     ();
+
+    const ActiveNote* nextToExpire();
+
+    ActiveNote expireNext(juce::MidiBuffer& midiMessages, int sample);
 
     static bool isNoteSounding(const ActiveNote& note);
     static bool isNodeAudible (RTNode::NodeType nodeType);
@@ -34,7 +54,6 @@ public:
     };
 
     enum class NoteRole { Stepping, ChordVoice };
-
     enum class Sound { Audible, Silent };
 
     struct OrnamentProgress
@@ -78,4 +97,6 @@ public:
 private:
 
     static void startOrnamentStep(ActiveNote& note, std::span<const OrnamentStep> figure, double sample);
+
+    std::size_t orderedNotes = 0;
 };

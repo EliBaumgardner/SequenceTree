@@ -14,6 +14,26 @@
 #include <set>
 #include <vector>
 
+/*
+    The store of ornaments, grouped into libraries. An ornament is a short figure played in place
+    of one note: a chain of figure nodes, one of them the host standing for the note itself, each
+    with a pitch offset and velocity, and the arrows between them setting each step's share of the
+    note's length. It also has a drawn symbol, shown on the canvas where it is applied. Each
+    ornament keeps an editable draft figure and, once published, a separate published copy, and
+    playback only ever uses the published copy.
+
+    The figure functions (addFigureNode, setFigureNodePosition, toggleHost and the rest) and the
+    symbol functions (addSymbolStroke, eraseSymbol) edit the draft. publish copies the draft into
+    the published figure if isPublishable accepts it, and statusOf reports Draft, Published or
+    ChangesPending. figureSteps turns a figure into the OrnamentSteps NoteScheduler plays.
+
+    Each library is saved as a folder with one .ornament file per ornament, half a second after its
+    last change. load reads the folder at start-up, rescan picks up libraries changed on disk, and
+    importLegacyLibraries converts the old one-file libraries once. The processor owns it; the
+    ornament window edits it, OrnamentApplier and BottomBar choose ornaments from it, and
+    RTGraphBuilder reads the published figures and rebuilds when they change.
+*/
+
 enum class OrnamentStatus { Draft, Published, ChangesPending };
 
 class OrnamentLibraries : public juce::ValueTree::Listener, private juce::Timer

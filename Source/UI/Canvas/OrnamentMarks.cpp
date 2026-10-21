@@ -5,11 +5,6 @@
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
-void OrnamentMarkView::paint(juce::Graphics& graphics)
-{
-    ArsNovaUI::CustomLookAndFeel::get(*this).drawSymbolMark(graphics, getLocalBounds().toFloat(), mark, OrnamentLibraries::readSymbol(symbol));
-}
-
 OrnamentMarks::OrnamentMarks(NodeCanvas& nodeCanvas, OrnamentLibraries& ornamentLibraries)
     : nodeCanvas(nodeCanvas),
       ornamentLibraries(ornamentLibraries)

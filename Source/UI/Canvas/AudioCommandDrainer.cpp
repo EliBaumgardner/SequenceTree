@@ -5,13 +5,13 @@
 #include "../Node/Arrow.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/GraphState.h"
-#include "../../Audio/AudioUIBridge.h"
+#include "../../Audio/ThreadMessaging/AudioUIBridge.h"
 
 AudioCommandDrainer::AudioCommandDrainer(NodeCanvas& nodeCanvas, AudioUIBridge& bridge, GraphState& graphState)
     : nodeCanvas(nodeCanvas), bridge(bridge), graphState(graphState)
 {
-    bridge.highlights.drain([](const AudioUIBridge::HighlightCommand&) {});
-    bridge.arrows.drain([](const AudioUIBridge::ArrowCommand&) {});
+    bridge.highlights.drain([](const BridgeCommands::HighlightCommand&) {});
+    bridge.arrows.drain([](const BridgeCommands::ArrowCommand&) {});
 
     bridge.highlights.overflowed.store(false);
     bridge.arrows.overflowed.store(false);
@@ -25,8 +25,8 @@ void AudioCommandDrainer::drainAll()
     const bool streamBroken      = droppedHighlights || droppedArrows;
 
     if (streamBroken) {
-        bridge.highlights.drain([](const AudioUIBridge::HighlightCommand&) {});
-        bridge.arrows.drain([](const AudioUIBridge::ArrowCommand&) {});
+        bridge.highlights.drain([](const BridgeCommands::HighlightCommand&) {});
+        bridge.arrows.drain([](const BridgeCommands::ArrowCommand&) {});
 
         nodeCanvas.nodeManager.clearHighlights();
         nodeCanvas.arrowManager.resetAllProgress();
@@ -38,7 +38,7 @@ void AudioCommandDrainer::drainAll()
     }
 
     if (droppedCounts) {
-        bridge.counts.drain([](const AudioUIBridge::CountCommand&) {});
+        bridge.counts.drain([](const BridgeCommands::CountCommand&) {});
     }
     else {
         drainCounts();
@@ -47,8 +47,8 @@ void AudioCommandDrainer::drainAll()
 
 void AudioCommandDrainer::drainHighlights()
 {
-    bridge.highlights.drain([this](const AudioUIBridge::HighlightCommand& command) {
-        if (command.kind == AudioUIBridge::HighlightKind::ClearEveryNode) {
+    bridge.highlights.drain([this](const BridgeCommands::HighlightCommand& command) {
+        if (command.kind == BridgeCommands::HighlightKind::ClearEveryNode) {
             nodeCanvas.nodeManager.clearHighlights();
             return;
         }
@@ -59,7 +59,7 @@ void AudioCommandDrainer::drainHighlights()
             return;
         }
 
-        const bool   shouldHighlight = command.kind == AudioUIBridge::HighlightKind::Show;
+        const bool   shouldHighlight = command.kind == BridgeCommands::HighlightKind::Show;
         juce::Colour highlightColour = juce::Colours::white;
 
         if (shouldHighlight) {
@@ -74,9 +74,9 @@ void AudioCommandDrainer::drainHighlights()
 
 void AudioCommandDrainer::drainArrows()
 {
-    bridge.arrows.drain([this](const AudioUIBridge::ArrowCommand& command) {
-        if (command.kind == AudioUIBridge::ArrowKind::TrailReset) {
-            if (command.trailId == AudioUIBridge::allTrails) {
+    bridge.arrows.drain([this](const BridgeCommands::ArrowCommand& command) {
+        if (command.kind == BridgeCommands::ArrowKind::TrailReset) {
+            if (command.trailId == BridgeCommands::allTrails) {
                 nodeCanvas.arrowManager.resetAllProgress();
                 return;
             }
@@ -92,7 +92,7 @@ void AudioCommandDrainer::drainArrows()
         }
 
         const juce::Colour progressColour = getTraversalColour(command.traversalId);
-        const bool         isConnection   = command.kind == AudioUIBridge::ArrowKind::Connection;
+        const bool         isConnection   = command.kind == BridgeCommands::ArrowKind::Connection;
         const auto         arrowRange     = parentNode->nodeArrows.equal_range(command.childNodeId);
 
         for (auto entry = arrowRange.first; entry != arrowRange.second; ++entry) {
@@ -116,7 +116,7 @@ void AudioCommandDrainer::drainArrows()
 
 void AudioCommandDrainer::drainCounts()
 {
-    bridge.counts.drain([this](const AudioUIBridge::CountCommand& command) {
+    bridge.counts.drain([this](const BridgeCommands::CountCommand& command) {
         Node* const node = nodeCanvas.nodeManager.find(command.nodeId);
 
         if (node == nullptr) {

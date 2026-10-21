@@ -1,6 +1,4 @@
 #include "EventManager.h"
-#include <algorithm>
-#include <functional>
 
 EventManager::EventManager(AudioUIBridge& bridgeRef) : bridge(bridgeRef)
 {
@@ -28,21 +26,13 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
 {
     handleOrphanNotes(context);
 
-    auto&  activeNotes  = scheduler.activeNotes;
-    size_t orderedNotes = 0;
-
     for (int eventsProcessed = 0; eventsProcessed < maxEventsPerBlock; ++eventsProcessed)
     {
-        while (orderedNotes < activeNotes.size()) {
-            ++orderedNotes;
-            std::ranges::push_heap(activeNotes.begin(), activeNotes.begin() + static_cast<std::ptrdiff_t>(orderedNotes),
-                                   std::ranges::greater {}, &NoteScheduler::ActiveNote::remainingSamples);
-        }
-
+        const NoteScheduler::ActiveNote* const nextNote = scheduler.nextToExpire();
         double expiringTime = static_cast<double>(numSamples);
 
-        if (!activeNotes.empty()) {
-            expiringTime = juce::jmin(expiringTime, activeNotes.front().remainingSamples);
+        if (nextNote != nullptr) {
+            expiringTime = juce::jmin(expiringTime, nextNote->remainingSamples);
         }
 
         if (dispatcher.flagScheduler.startNextDue(expiringTime, context)) {
@@ -56,13 +46,7 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
         const double expiryTime   = juce::jmax(0.0, expiringTime);
         const int    expirySample = static_cast<int>(expiryTime);
 
-        scheduler.sendNoteOff(activeNotes.front(), context.midiMessages, expirySample);
-
-        std::ranges::pop_heap(activeNotes, std::ranges::greater {}, &NoteScheduler::ActiveNote::remainingSamples);
-
-        const NoteScheduler::ActiveNote expiredNote = activeNotes.back();
-        activeNotes.pop_back();
-        --orderedNotes;
+        const NoteScheduler::ActiveNote expiredNote = scheduler.expireNext(context.midiMessages, expirySample);
 
         if (expiredNote.ornament.remainingSamples > 0.0) {
             scheduler.continueOrnament(expiredNote, context.nodes.find(expiredNote.nodeId), context.midiMessages, expiryTime);
@@ -71,7 +55,7 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
 
         if (expiredNote.role == NoteScheduler::NoteRole::ChordVoice) {
             if (NoteScheduler::isNodeAudible(expiredNote.nodeType)) {
-                bridge.highlightNode(expiredNote.nodeId, AudioUIBridge::HighlightKind::Hide, expiredNote.runId);
+                bridge.highlightNode(expiredNote.nodeId, BridgeCommands::HighlightKind::Hide, expiredNote.runId);
             }
             continue;
         }
@@ -81,7 +65,7 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
 
     dispatcher.flagScheduler.advance(numSamples);
 
-    for (auto& note : activeNotes) {
+    for (auto& note : scheduler.activeNotes) {
         note.remainingSamples -= numSamples;
     }
 }
@@ -125,7 +109,8 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
         traversal.primary.target = traversal.rootId;
         traversal.state          = TraversalLogic::TraversalState::Active;
         traversal.advanceAlternative(context.nodes, traversal.rootId);
-        bridge.highlightNode(*rootNode, AudioUIBridge::HighlightKind::Show, orphanedRunId, traversal.traversal.key.typeId);
+
+        bridge    .highlightNode(*rootNode, BridgeCommands::HighlightKind::Show, orphanedRunId, traversal.traversal.key.typeId);
         dispatcher.pushNote(*rootNode, orphanedRunId, context, 0);
     }
 }

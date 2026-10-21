@@ -35,11 +35,11 @@ public:
 
     void paint(juce::Graphics& graphics) override;
 
-    void clearCanvas       ();
+    void clearCanvas ();
     void rebuildFromNodeMap(const juce::ValueTree& stateTree);
-    void childrenChanged   () override;
+    void childrenChanged () override;
 
-    void handleAsyncUpdate      ();
+    void handleAsyncUpdate ();
     void cancelPendingUpdatesFor(int nodeId);
 
     void setActiveTool(CanvasTool tool);
@@ -72,9 +72,10 @@ public:
 
     struct AsyncUpdate
     {
-        AsyncUpdateType type       = AsyncUpdateType::None;
-        int             nodeId     = -1;
-        int             rootNodeId = -1;
+        AsyncUpdateType type = AsyncUpdateType::None;
+
+        int nodeId     = -1;
+        int rootNodeId = -1;
     };
 
     struct NodePair
@@ -92,24 +93,26 @@ public:
     juce::AffineTransform viewTransform;
     juce::AffineTransform modelTransform;
 
-    bool       start      = false;
     CanvasTool activeTool = CanvasTool::None;
 
     std::function<void(CanvasTool)> onActiveToolChanged;
 
-    int         quaverTraversalId = 1;
-    juce::Value quaverCount { minimumCountLimit };
-    bool        quaverRepeat = false;
+    bool start         = false;
+    bool quaverRepeat  = false;
+    bool gridVisible   = false;
+    bool gridOriginSet = false;
 
-    int spanAnchorNodeId = -1;
+    int quaverTraversalId = 1;
+    int spanAnchorNodeId  = -1;
+
+    juce::Value quaverCount { minimumCountLimit };
 
     static constexpr int spanCursorSize   = 16;
     static constexpr int quaverCursorSize = 24;
 
-    bool               gridVisible   = false;
-    bool               gridOriginSet = false;
-    juce::Point<float> gridOrigin    { 0.0f, 0.0f };
-    float              gridSpacing   = ArrowInfo::pixelsPerGridSpace;
+    juce::Point<float> gridOrigin { 0.0f, 0.0f };
+
+    float gridSpacing = ArrowInfo::pixelsPerGridSpace;
 
     juce::Rectangle<int> selectionBounds;
 
@@ -119,8 +122,9 @@ public:
 
     ValueField valueField { *this };
 
-    NodeManager         nodeManager;
-    ArrowManager        arrowManager;
+    NodeManager  nodeManager;
+    ArrowManager arrowManager;
+
     AudioCommandDrainer drainer;
     CanvasHitTester     hitTester { *this };
     EncapsulationView   encapsulationView;

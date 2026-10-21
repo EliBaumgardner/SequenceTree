@@ -6,7 +6,7 @@
 #include "Graph/RTGraphBuilder.h"
 #include "Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
-#include "Audio/TraversalLogic.h"
+#include "Audio/Traversal/TraversalLogic.h"
 #include "Script/ScriptCompiler.h"
 #include "Graph/NodeFactory.h"
 #include "Graph/OrnamentLibraries.h"

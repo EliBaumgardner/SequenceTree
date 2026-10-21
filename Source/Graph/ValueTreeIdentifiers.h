@@ -3,6 +3,16 @@
 
 #include <juce_data_structures/juce_data_structures.h>
 
+/*
+    The names used in the saved document. Each static member is a juce::Identifier used as a
+    ValueTree type (NodeData, TraversalData, OrnamentLibrary) or a property name (Id, XPosition,
+    MidiPitch) in the graph, traversal, rule, ornament and patch trees. Code uses these members
+    instead of string literals, so each name is spelled in one place.
+
+    The strings are written into every saved plugin state and ornament file, so changing one makes
+    older saves load without that value.
+*/
+
 class ValueTreeIdentifiers {
 
 public:

@@ -30,7 +30,7 @@ public:
     void setHoverFade  (bool shouldBeVisible);
     void initHoverState(bool visibleNow);
 
-    void startProgress (int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot, TrailSource source);
+    void startProgress (int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot, BridgeCommands::TrailSource source);
     void resetProgress ();
     void resetProgress (int trailId);
     void resumeProgress();

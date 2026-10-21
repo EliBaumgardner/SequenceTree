@@ -223,7 +223,7 @@ void Arrow::initHoverState(bool visibleNow)
 }
 
 void Arrow::startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot,
-                          TrailSource source)
+                          BridgeCommands::TrailSource source)
 {
     animation.startTrail(trailId, durationMs, elapsedMs, colour, oneShot, source);
 
@@ -365,7 +365,7 @@ ArsNovaUI::ArrowVisual Arrow::getArrowVisual() const
         const ArrowAnimation::Trail& trail = entry.second;
         ArsNovaUI::ArrowTrail        drawnTrail { trail.colour, trail.progress };
 
-        if (trail.source == TrailSource::Preview) {
+        if (trail.source == BridgeCommands::TrailSource::Preview) {
             drawnTrail.stroke = ArsNovaUI::ArrowTrail::Stroke::Dashed;
         }
 
