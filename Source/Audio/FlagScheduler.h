@@ -6,8 +6,10 @@
 #include <array>
 
 /*
-    The scheduler for traversal flags. A traversal flag is a node that starts or stops another
-    traversal; this decides when each flag fires and keeps the starts that wait on a delay.
+    The handler for traversal flags. A traversal flag is a node that starts or stops another
+    traversal when the one playing passes it. This decides whether each flag fires, and keeps the
+    starts that wait on their arrow's duration in pendingStarts until their time comes, which can
+    be in a later block.
 
     dispatchFlags fires the flags under a node whose count has reached a multiple of the flag's
     count limit. A starting flag starts its traversal at once or after its arrow's duration; a

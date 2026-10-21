@@ -6,9 +6,10 @@
 #include <concepts>
 
 /*
-    A fixed-size queue of Command values that one thread fills and one other thread empties, in the
-    order they were added, without either side locking or allocating, so the audio thread can sit
-    on either end without being kept waiting.
+    The queue behind every message that crosses the audio boundary: a fixed-size queue of Command
+    values that one thread fills and one other thread empties, in the order they were added,
+    without either side locking or allocating, so the audio thread can sit on either end without
+    being kept waiting.
 
     push adds a command at the back. When Capacity commands are already waiting, the new one is
     dropped and overflowed is set, and it stays set until the reader clears it, so the reader knows

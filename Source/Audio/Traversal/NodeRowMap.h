@@ -3,21 +3,21 @@
 #include <vector>
 
 /*
-    A set of node ids that numbers its members in the order they join. The first id added is row
-    0, the next row 1, and so on; an id keeps its row until the set is emptied, so the rows in use
-    are always exactly 0 to rowCount - 1. That lets any id, however large, stand for a small index
-    into a caller's own fixed-size arrays.
+    NodeRowMap exists so that a traversal can remember things about every node it passes through
+    (how many times it has left the node, which child it chose last, ...) without allocating while
+    audio plays. NodeStateTable keeps those values in a block of memory reserved before playback,
+    one row per node, and NodeRowMap says which row belongs to which node.
 
-    claim adds an id if it is not already a member and returns its row. find returns the row of an
-    id that is already a member, or -1, and never adds one. clear empties the set, so the next
-    claim is row 0 again. keyOfRow lists the members' slots in the order they joined.
+    It is a set of node ids in which each member has a row number: the first id added is row 0, the
+    next new id is row 1, and so on, up to 1024 rows. Ids are arbitrary whole numbers, so they
+    cannot be positions in that block; row numbers can.
 
-    NodeStateTable keeps each node's values in that node's row. TraversalDispatcher's chordVisits
-    ignores the rows and uses the set only to remember which nodes one chord has already reached.
+    claim adds an id and returns its row; an id already in the set keeps its row, and -1 comes back
+    when all 1024 rows are taken. find returns the row of an id in the set, or -1, without adding
+    it. clear empties the set, so the next id added is row 0 again.
 
-    It holds at most maxRows ids; once full, claim returns -1 for a new id, and a negative id is
-    never a member. prepare reserves all of its memory, so every other call is safe on the audio
-    thread, and clear takes time in proportion to the members, not to maxRows.
+    TraversalDispatcher's chordVisits ignores the rows and uses the set only to remember which
+    nodes one chord has reached.
 */
 
 class NodeRowMap

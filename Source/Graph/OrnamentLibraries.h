@@ -15,12 +15,12 @@
 #include <vector>
 
 /*
-    The store of ornaments, grouped into libraries. An ornament is a short figure played in place
-    of one note: a chain of figure nodes, one of them the host standing for the note itself, each
-    with a pitch offset and velocity, and the arrows between them setting each step's share of the
-    note's length. It also has a drawn symbol, shown on the canvas where it is applied. Each
-    ornament keeps an editable draft figure and, once published, a separate published copy, and
-    playback only ever uses the published copy.
+    The store of ornaments, grouped into libraries, and the files they are saved in. An ornament is
+    a short figure played in place of one note: a chain of figure nodes, one of them the host
+    standing for the note itself, each with a pitch offset and velocity, and the arrows between
+    them setting each step's share of the note's length. It also has a drawn symbol, shown on the
+    canvas where it is applied. Each ornament keeps an editable draft figure and, once published, a
+    separate published copy, and playback only ever uses the published copy.
 
     The figure functions (addFigureNode, setFigureNodePosition, toggleHost and the rest) and the
     symbol functions (addSymbolStroke, eraseSymbol) edit the draft. publish copies the draft into

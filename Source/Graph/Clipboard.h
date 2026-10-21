@@ -9,9 +9,11 @@
 #include <vector>
 
 /*
-    The copy-and-paste buffer for nodes. contents holds a copy of each copied node's tree, with its
-    properties, notes and arrows, and a copy of every encapsulation group the copied nodes belong
-    to.
+    The copy-and-paste buffer for nodes. Copying only records trees; pasting is most of the work,
+    because a pasted node needs a new id, its arrows must point at the new ids, and each pasted
+    node must be decided to be a root or a child. contents holds a copy of each copied node's tree,
+    with its properties, notes and arrows, and a copy of every encapsulation group the copied nodes
+    belong to.
 
     copy fills contents from a list of node ids, first adding every member of any group one of the
     ids is in, and records what pasting depends on: which nodes were chord members, which had a

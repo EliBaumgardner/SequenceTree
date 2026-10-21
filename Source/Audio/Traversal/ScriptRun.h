@@ -7,8 +7,10 @@
 #include "TraversalRule.h"
 
 /*
-    The interpreter for compiled traversal scripts: it executes a script's instructions against one
-    traversal and returns what the script decided.
+    The interpreter for compiled traversal scripts. Source/Script turns a script the user wrote
+    into bytecode on the message thread; this executes that bytecode on the audio thread against
+    one traversal and returns what the script decided, which stands in for the choice
+    TraversalRule would have made.
 
     A ScriptRun is made for one ScriptRunContext: the RTScript, the graph, the traversal's
     NodeStateTable and variables, and whether its writes are kept. call runs one of the script's

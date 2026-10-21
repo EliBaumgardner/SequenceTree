@@ -8,9 +8,10 @@
 #include <atomic>
 
 /*
-    The translator from traversal steps to output. A traversal only decides which node comes next;
-    this turns each node it reaches into the notes that sound and the highlights, arrow progress
-    and counts the canvas shows.
+    The part of playback that carries out what a traversal decides. TraversalLogic only works out
+    which node a walk reaches next, with no MIDI and no JUCE; this plays that node by scheduling
+    its notes in the NoteScheduler, starting flag and cross-tree traversals, and pushing the
+    highlights, arrow progress and counts the canvas shows to the AudioUIBridge.
 
     pushNote plays a node with its modulator, chord notes, traversal flags and any jump into another
     tree. handleExpiredNote runs when a traversal's note ends: it repeats the node, steps the

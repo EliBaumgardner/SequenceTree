@@ -5,10 +5,10 @@
 #include <span>
 
 /*
-    The store of traversal rule scripts. A traversal rule is a script, compiled by
-    compileTraversalScript, that chooses which child a traversal moves to next. rules holds one
-    TraversalRuleData tree per script with its id, name and source text, in the order the user
-    arranged them, and its ActiveRuleId property names the one script playback uses.
+    The store of traversal rule scripts, kept apart from the graph. A traversal rule is a script,
+    compiled by compileTraversalScript, that chooses which child a traversal moves to next. rules
+    holds one TraversalRuleData tree per script with its id, name and source text, in the order the
+    user arranged them, and its ActiveRuleId property names the one script playback uses.
 
     addRule appends a script holding defaultTraversalScriptSource. removeRule deletes one and, if
     it was active, makes the first remaining script active. setRuleSource replaces a script's text

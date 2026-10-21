@@ -7,8 +7,10 @@
 #include <vector>
 
 /*
-    The record of every note currently playing. It turns notes into MIDI: a note-on when a note
-    starts and a note-off once its length has run out.
+    The list of notes that are sounding, and the sender of their MIDI. Each entry in activeNotes
+    records a note's pitch, velocity and channel, the node and traversal it belongs to, and the
+    samples it has left. A note-on is sent when a note is added and a note-off when its time runs
+    out, which can be several blocks later.
 
     scheduleNote starts a note, which a NoteVoicing can transpose, rescale, override or silence.
     nextToExpire finds the note that ends soonest, and expireNext ends it. A note with an ornament

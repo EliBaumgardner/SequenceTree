@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 736" width="1220" height="736"><defs><marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4d4d4d"/></marker></defs><rect width="1220" height="736" fill="#ffffff"/>
+<rect x="20" y="20" width="1180" height="320" rx="10" fill="#f4f7fb" stroke="#c9c9c9"/>
+<text transform="translate(34 180.0) rotate(-90)" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="1.5" fill="#666" text-anchor="middle">MESSAGE THREAD</text>
+<rect x="20" y="348" width="1180" height="76" rx="10" fill="#fff6dc" stroke="#c9c9c9"/>
+<text transform="translate(34 386.0) rotate(-90)" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="1.5" fill="#666" text-anchor="middle">HAND-OFF</text>
+<rect x="20" y="432" width="1180" height="262" rx="10" fill="#fbf0ea" stroke="#c9c9c9"/>
+<text transform="translate(34 563.0) rotate(-90)" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="1.5" fill="#666" text-anchor="middle">AUDIO THREAD</text>
+<rect x="40" y="62" width="200" height="60" rx="8" fill="#ffffff" stroke="#5f8a3a" stroke-width="1.4"/>
+<text x="52" y="82" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">NodeController</text>
+<text x="52" y="98" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">gesture → NodeFactory /</text>
+<text x="52" y="112" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">GraphState edit</text>
+<rect x="320" y="62" width="200" height="60" rx="8" fill="#ffffff" stroke="#4a78c2" stroke-width="1.4"/>
+<text x="332" y="82" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">GraphState::nodeMap</text>
+<text x="332" y="98" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">ValueTree document;</text>
+<text x="332" y="112" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">every edit is undoable</text>
+<rect x="600" y="62" width="210" height="60" rx="8" fill="#ffffff" stroke="#5f8a3a" stroke-width="1.4"/>
+<text x="612" y="82" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="700" fill="#1f1f1f" text-anchor="start">NodeCanvasTreeListener</text>
+<text x="612" y="98" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">queues NodeCanvas::AsyncUpdate</text>
+<rect x="880" y="62" width="240" height="60" rx="8" fill="#ffffff" stroke="#5f8a3a" stroke-width="1.4"/>
+<text x="892" y="82" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="700" fill="#1f1f1f" text-anchor="start">NodeCanvas::handleAsyncUpdate</text>
+<text x="892" y="98" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">NodeManager / ArrowManager add,</text>
+<text x="892" y="112" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">move and remove components</text>
+<rect x="40" y="158" width="200" height="60" rx="8" fill="#ffffff" stroke="#5f8a3a" stroke-width="1.4"/>
+<text x="52" y="178" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="700" fill="#1f1f1f" text-anchor="start">TraversalRulesWindow</text>
+<text x="52" y="194" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">the script editor</text>
+<rect x="320" y="158" width="200" height="60" rx="8" fill="#ffffff" stroke="#4a78c2" stroke-width="1.4"/>
+<text x="332" y="178" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">TraversalRuleState</text>
+<text x="332" y="194" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">rule sources, active rule</text>
+<rect x="600" y="158" width="210" height="60" rx="8" fill="#ffffff" stroke="#8a5cc7" stroke-width="1.4"/>
+<text x="612" y="178" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">RTGraphBuilder</text>
+<text x="612" y="194" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">handleAsyncUpdate → makeRTGraph</text>
+<text x="612" y="208" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">→ freezeNodes into a NodeMap</text>
+<rect x="880" y="158" width="240" height="60" rx="8" fill="#ffffff" stroke="#5f8a3a" stroke-width="1.4"/>
+<text x="892" y="178" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">audioCommandFrames</text>
+<text x="892" y="194" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">the editor&#x27;s VBlankAttachment,</text>
+<text x="892" y="208" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">fires once per display frame</text>
+<rect x="40" y="254" width="200" height="60" rx="8" fill="#ffffff" stroke="#5f8a3a" stroke-width="1.4"/>
+<text x="52" y="274" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="700" fill="#1f1f1f" text-anchor="start">BottomBar, NodeController</text>
+<text x="52" y="290" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">note preview start / stop</text>
+<rect x="320" y="254" width="200" height="60" rx="8" fill="#ffffff" stroke="#5f8a3a" stroke-width="1.4"/>
+<text x="332" y="274" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">Titlebar</text>
+<text x="332" y="290" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">transport, tempo, host sync</text>
+<rect x="600" y="254" width="210" height="60" rx="8" fill="#ffffff" stroke="#8a5cc7" stroke-width="1.4"/>
+<text x="612" y="274" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="700" fill="#1f1f1f" text-anchor="start">AudioSnapshotPublisher</text>
+<text x="612" y="290" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">copies the Snapshot, swaps the</text>
+<text x="612" y="304" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">pointer, frees retired ones</text>
+<rect x="880" y="254" width="240" height="60" rx="8" fill="#ffffff" stroke="#5f8a3a" stroke-width="1.4"/>
+<text x="892" y="274" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">AudioCommandDrainer</text>
+<text x="892" y="290" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">drainAll: highlights, arrow trails,</text>
+<text x="892" y="304" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">counts → Node, Arrow</text>
+<rect x="40" y="364" width="200" height="48" rx="8" fill="#ffffff" stroke="#2a9a82" stroke-width="1.4"/>
+<text x="52" y="384" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">previewRequests</text>
+<text x="52" y="400" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">CommandFifo, 16 entries</text>
+<rect x="320" y="364" width="200" height="48" rx="8" fill="#ffffff" stroke="#4a78c2" stroke-width="1.4"/>
+<text x="332" y="384" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">atomics</text>
+<text x="332" y="400" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">isPlaying, APVTS parameters</text>
+<rect x="600" y="364" width="210" height="48" rx="8" fill="#ffffff" stroke="#8a5cc7" stroke-width="1.4"/>
+<text x="612" y="384" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">currentSnapshot</text>
+<text x="612" y="400" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">atomic Snapshot* + blockEpoch</text>
+<rect x="880" y="364" width="240" height="48" rx="8" fill="#ffffff" stroke="#2a9a82" stroke-width="1.4"/>
+<text x="892" y="384" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">AudioUIBridge</text>
+<text x="892" y="400" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">highlights · arrows · counts FIFOs</text>
+<rect x="40" y="474" width="200" height="60" rx="8" fill="#ffffff" stroke="#d07a2a" stroke-width="1.4"/>
+<text x="52" y="494" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">TraversalSession</text>
+<text x="52" y="510" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">playPreview · syncWithGraph ·</text>
+<text x="52" y="524" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">restart · replay</text>
+<rect x="320" y="474" width="490" height="60" rx="8" fill="#ffffff" stroke="#d07a2a" stroke-width="1.4"/>
+<text x="332" y="494" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">SequenceTreeAudioProcessor::processBlock</text>
+<text x="332" y="510" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">BlockScope holds the snapshot (beginBlock … endBlock) → driveWalk</text>
+<rect x="40" y="574" width="200" height="60" rx="8" fill="#ffffff" stroke="#d07a2a" stroke-width="1.4"/>
+<text x="52" y="594" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">EventManager</text>
+<text x="52" y="610" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">processEvents: each note end</text>
+<text x="52" y="624" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">at its exact sample</text>
+<rect x="320" y="574" width="200" height="60" rx="8" fill="#ffffff" stroke="#d07a2a" stroke-width="1.4"/>
+<text x="332" y="594" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">TraversalDispatcher</text>
+<text x="332" y="610" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">handleExpiredNote, pushNote:</text>
+<text x="332" y="624" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">step the walk, play the node</text>
+<rect x="600" y="574" width="210" height="60" rx="8" fill="#ffffff" stroke="#d07a2a" stroke-width="1.4"/>
+<text x="612" y="594" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">NoteScheduler</text>
+<text x="612" y="610" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">scheduleNote / expireNext</text>
+<text x="612" y="624" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">→ note-on, note-off</text>
+<rect x="880" y="574" width="240" height="60" rx="8" fill="#ffffff" stroke="#2a9a82" stroke-width="1.4"/>
+<text x="892" y="594" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">juce::MidiBuffer</text>
+<text x="892" y="610" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">to the host&#x27;s MIDI track, copied</text>
+<text x="892" y="624" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">by VirtualMidiOutput</text>
+<polyline points="240,92 318,92" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="279" y="86" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="middle">edit</text>
+<polyline points="520,92 598,92" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="559" y="86" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="middle">listener</text>
+<polyline points="810,92 878,92" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="844" y="86" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="middle">queued</text>
+<polyline points="420,122 420,140 705,140 705,156" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="640" y="136" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="middle">listener</text>
+<polyline points="240,188 318,188" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="279" y="182" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="middle">source</text>
+<polyline points="520,188 560,188 560,284 598,284" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="554" y="240" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="end">publishActiveTraversalRule</text>
+<polyline points="705,218 705,252" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="713" y="240" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="start">publishGraph</text>
+<polyline points="1000,218 1000,252" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="1008" y="240" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="start">drives</text>
+<polyline points="140,314 140,362" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="148" y="342" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="start">push</text>
+<polyline points="420,314 420,362" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="428" y="342" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="start">store</text>
+<polyline points="705,314 705,362" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="713" y="342" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="start">store pointer</text>
+<polyline points="1000,364 1000,316" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="1008" y="342" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="start">pop</text>
+<polyline points="140,412 140,472" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="148" y="450" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="start">pop</text>
+<polyline points="420,412 420,472" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="428" y="450" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="start">load</text>
+<polyline points="705,412 705,472" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="713" y="450" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="start">beginBlock</text>
+<polyline points="320,504 242,504" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="281" y="498" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="middle">drives</text>
+<polyline points="90,534 90,572" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="96" y="557" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="start">preview, replay</text>
+<polyline points="330,534 330,552 200,552 200,572" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="338" y="564" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="start">processEvents</text>
+<polyline points="240,604 318,604" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="279" y="598" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="middle">note ended</text>
+<polyline points="520,604 598,604" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="559" y="598" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="middle">notes</text>
+<polyline points="810,604 878,604" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="844" y="598" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="middle">MIDI</text>
+<polyline points="420,634 420,664 1180,664 1180,388 1122,388" fill="none" stroke="#4d4d4d" stroke-width="1.6" marker-end="url(#head)"/>
+<text x="800" y="658" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#333" text-anchor="middle">commands for the canvas</text>
+<text x="20" y="718" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#333" text-anchor="start">Only the hand-off band crosses threads: a lock-free FIFO or an atomic. The audio thread never locks, allocates, frees or posts a message; the message thread polls.</text>
+</svg>

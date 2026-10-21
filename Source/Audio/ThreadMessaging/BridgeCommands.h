@@ -1,9 +1,10 @@
 #pragma once
 
 /*
-    The vocabulary of messages from the audio thread to the canvas: each type describes one change
+    The messages the audio thread sends to the canvas, as plain structs: each describes one change
     the canvas makes to show playback, which nodes are lit, how far each traversal has moved along
-    its arrow, and each node's count.
+    its arrow, and each node's count. They sit in a header of their own so Arrow and ArrowAnimation
+    can use them without including AudioUIBridge.
 
     HighlightCommand turns a node's highlight on or off, or clears every node. ArrowCommand moves a
     traversal along an arrow, draws a jump to another tree (Connection), or erases a trail.
@@ -12,9 +13,6 @@
     Each run draws two trails, primaryTrail for its notes and modulatorTrail for its modulators, and
     allTrails means every trail. TrailSource says whether a trail comes from playback or from note
     preview, so Arrow can draw the two differently.
-
-    It includes nothing, so ArrowAnimation and Arrow can use these types without including
-    AudioUIBridge.
 */
 
 namespace BridgeCommands
@@ -32,9 +30,9 @@ constexpr int modulatorTrail(int runId)
 
 constexpr int allTrails = -1;
 
-enum class HighlightKind { Show, Hide, ClearEveryNode };
+enum class HighlightKind { Show, Hide, ClearEveryNode       };
 enum class ArrowKind     { Progress, Connection, TrailReset };
-enum class TrailSource   { Live, Preview };
+enum class TrailSource   { Live, Preview                    };
 
 struct HighlightCommand
 {
