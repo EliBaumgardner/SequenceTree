@@ -5,9 +5,10 @@
 #include <juce_data_structures/juce_data_structures.h>
 
 /*
-    The functions that read and write the settings stored on an arrow, and that apply an arrow's
-    pitch binding to the note it points at. An arrow is an entry in its parent node's
-    NodeChildrenIds or DanglingArrows list, and its settings are properties of that entry.
+    The functions that read and write what an arrow carries besides joining two nodes (its type,
+    bindings, multipliers, sync and duration override), and that keep the pitch an arrow's binding
+    gives its target note in step with where the nodes are. An arrow is an entry in its parent
+    node's NodeChildrenIds or DanglingArrows list, and its settings are properties of that entry.
 
     getArrowInfo reads an arrow's type, X and Y bindings, X and Y multipliers, sync and duration
     override into an ArrowInfo, and setArrowInfo writes one back. A pitch-bound arrow shifts its

@@ -5,9 +5,13 @@
 #include "TraversalDispatcher.h"
 
 /*
-    The event loop of playback. It moves a set of traversals forward through one block of time and
-    carries out every event that falls inside it, a note ending or a delayed traversal starting,
-    in the order they happen and at the exact sample.
+    The part of playback that starts and ends notes. Once per block, processEvents works through
+    everything that falls inside the block in time order: it ends each note whose length runs out
+    (sending the note-off at its exact sample), then either moves the note's ornament to its next
+    step, hides a chord voice, or has TraversalDispatcher play the node the traversal moves to
+    next, and it starts the traversals that traversal flags delayed. It first handles orphan
+    notes: a note whose node was deleted while it sounds gets a note-off, and its traversal
+    restarts from its root.
 
     processEvents runs one block. followTempo rescales the time left on every waiting event when
     the tempo changes, so each still lands at the same point in the music.

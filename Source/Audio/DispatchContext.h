@@ -6,9 +6,10 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 
 /*
-    The configuration for one block of playback: which graph and which traversals are played,
-    where the resulting MIDI is written, and how notes sound (sample rate, tempo, transpose and
-    velocity scale).
+    The inputs to one block of playback, bundled so the playback classes hand them to each other as
+    one argument: the graph (nodes), the pool of traversals being played (traversalMap), the
+    MidiBuffer the notes are written to, and the sample rate, tempo multiplier, transpose and
+    velocity scale that decide how they sound.
 
     It describes a single block and holds references, so a new one is made every block.
     SequenceTreeAudioProcessor::driveWalk makes one for playback and one for note preview, and

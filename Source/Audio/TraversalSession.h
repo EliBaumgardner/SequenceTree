@@ -9,8 +9,9 @@
 #include <cstdint>
 
 /*
-    The manager of every running traversal. It decides when traversals start, stop and restart,
-    so that what plays always matches the transport and the graph.
+    The owner of which traversals are running. It starts traversals from the graph's roots, removes
+    those whose root or assignment was deleted, and silences, suspends or resumes their notes as
+    playback stops and resumes, so that what plays always matches the transport and the graph.
 
     syncWithGraph starts traversals newly assigned to a root and removes those whose root or
     assignment is gone. When the host jumps to a new position, beginReplay and continueReplay run

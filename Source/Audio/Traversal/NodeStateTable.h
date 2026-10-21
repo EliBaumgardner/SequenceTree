@@ -6,9 +6,11 @@
 #include <vector>
 
 /*
-    The state one traversal keeps about each node: a whole number per node for each
-    NodeStateSlot, saying how many times the walk has left the node, its switch, sub-loop,
-    modulator and trigger counts, which alternative is active and which child was chosen last.
+    Everything one traversal remembers about the nodes it has passed through: for each node a whole
+    number per NodeStateSlot, saying how many times the walk has left the node, its switch,
+    sub-loop, modulator and trigger counts, which alternative is active and which child was chosen
+    last. Those counts decide which children the traversal may take next, so each traversal keeps
+    its own table.
 
     get, set, increment and ref read and write one value by slot and node id. A NodeRowMap gives
     each node id its row the first time it is written, and the values sit in one fixed block,

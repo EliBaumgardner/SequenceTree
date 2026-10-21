@@ -10,11 +10,12 @@
 #include <vector>
 
 /*
-    The converter from GraphState's ValueTree to the RTNodes the audio thread plays. A graph here is
-    one tree: a root and every node reachable from it. For each graph it builds one RTNode per
-    node, with its limits, notes, traversals, ornament steps and each arrow's duration computed
-    from the arrow's length, and publishes the result with AudioSnapshotPublisher::publishGraph,
-    which merges it into the published NodeMap.
+    The converter from GraphState's ValueTree to the RTNodes the audio thread plays, run again after
+    every edit so playback follows the graph. A graph here is one tree: a root and every node
+    reachable from it. For each graph it builds one RTNode per node, with its limits, notes,
+    traversals, ornament steps and each arrow's duration computed from the arrow's length, and
+    publishes the result with AudioSnapshotPublisher::publishGraph, which merges it into the
+    published NodeMap.
 
     makeRTGraph rebuilds the graph a node belongs to, discardGraph publishes an empty one in its
     place, and rebuildAllGraphs rebuilds every graph and discards those whose root was deleted.

@@ -8,9 +8,11 @@
 enum class CommandDelivery { Deliver, Record };
 
 /*
-    The one-way channel from the audio thread to the canvas. It carries highlights, arrow progress
-    and counts in three CommandFifos, and either delivers each command as it is sent or records it
-    to deliver later.
+    The one-way channel from the audio thread to the canvas, which is how playback is shown on
+    screen. The audio thread may not change a component, lock or allocate, so it puts plain
+    commands (light a node, move along an arrow, show a count) into three CommandFifos and the
+    canvas empties them on the message thread. Each command is either delivered as it is sent or
+    recorded to deliver later.
 
     While delivery is CommandDelivery::Deliver, highlightNode, clearAllHighlights, pushProgress,
     pushArrowReset and pushCount each put their command straight into its queue. beginRecording

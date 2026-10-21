@@ -5,9 +5,10 @@
 
 /*
     The policy for where a traversal goes next: given a node, a rule picks which of its children
-    the walk moves to. selectChild picks a child from a RuleContext, and selectDanglingArrow picks
-    one of a node's dangling arrows. RuleContext is the situation a rule decides in: the graph, the
-    parent and its count, the traversal and a random value.
+    the walk moves to. TraversalLogic asks it at every step unless a script makes the choice.
+    selectChild picks a child from a RuleContext, and selectDanglingArrow picks one of a node's
+    dangling arrows. RuleContext is the situation a rule decides in: the graph, the parent and its
+    count, the traversal and a random value.
 
     RuleContext::eligibleChild first rules out the children the walk may not take: arrows into
     another tree's root, tree-jump arrows unless they are allowed, arrows of zero length, children

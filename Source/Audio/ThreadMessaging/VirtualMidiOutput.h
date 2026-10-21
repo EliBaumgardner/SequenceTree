@@ -6,8 +6,9 @@
 #include <memory>
 
 /*
-    A virtual MIDI output port named after the plugin, which sends out the MIDI each block produces
-    so other apps and tracks can receive it.
+    A virtual MIDI output port named after the plugin. It sends out a copy of the MIDI each block
+    produces, in addition to what the plugin returns to the host, so any other app that reads MIDI
+    ports can receive the notes.
 
     At the end of every processBlock, mirrorBlock copies the block's MIDI, with the time each
     message should play, into a CommandFifo, without locking or allocating. A timer passes those
