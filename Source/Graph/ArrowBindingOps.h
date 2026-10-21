@@ -4,6 +4,25 @@
 
 #include <juce_data_structures/juce_data_structures.h>
 
+/*
+    The functions that read and write the settings stored on an arrow, and that apply an arrow's
+    pitch binding to the note it points at. An arrow is an entry in its parent node's
+    NodeChildrenIds or DanglingArrows list, and its settings are properties of that entry.
+
+    getArrowInfo reads an arrow's type, X and Y bindings, X and Y multipliers, sync and duration
+    override into an ArrowInfo, and setArrowInfo writes one back. A pitch-bound arrow shifts its
+    target's pitch by an amount computed from the arrow's X or Y length, and records the shift it
+    has applied in ArrowPitchOffset. When a node moves, syncPitchBindings recomputes that amount
+    for every arrow into, out of and dangling from the node, and changes the target's pitch only by
+    the difference from the recorded shift, kept inside the MIDI range. clearArrowDurations removes
+    the duration override from every arrow into or out of a node, so their lengths set the
+    duration again.
+
+    GraphState::setNodePosition calls both after a move, and NodeFactory calls syncPitchBindings
+    when a dangling arrow is created or its tip moves. Every write goes through the caller's
+    UndoManager.
+*/
+
 class GraphState;
 
 class ArrowBindingOps {

@@ -1,14 +1,14 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../../Audio/AudioUIBridge.h"
+#include "../../Audio/ThreadMessaging/BridgeCommands.h"
 #include <map>
 
 class ArrowAnimation
 {
 public:
 
-    void startTrail  (int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot, TrailSource source);
+    void startTrail  (int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot, BridgeCommands::TrailSource source);
     void resumeTrails();
 
     bool advance(double frameSec);
@@ -21,7 +21,7 @@ public:
         juce::Colour colour     { juce::Colours::white };
         bool         active     = false;
         bool         oneShot    = false;
-        TrailSource  source     = TrailSource::Live;
+        BridgeCommands::TrailSource  source     = BridgeCommands::TrailSource::Live;
     };
 
     static constexpr float snapSpringRateHz    = 60.0f;

@@ -1,6 +1,6 @@
 #include "FlagScheduler.h"
 #include "TraversalDispatcher.h"
-#include "AudioUIBridge.h"
+#include "ThreadMessaging/AudioUIBridge.h"
 
 #include <algorithm>
 
@@ -196,6 +196,6 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKe
     instance->runtime.asFlag       = true;
     instance->runtime.sourceNodeId = flagNode.nodeID;
 
-    bridge.highlightNode(startNode, AudioUIBridge::HighlightKind::Show, runId, instance->logic.traversal.key.typeId);
+    bridge.highlightNode(startNode, BridgeCommands::HighlightKind::Show, runId, instance->logic.traversal.key.typeId);
     dispatcher.pushNote(startNode, runId, context, sample);
 }

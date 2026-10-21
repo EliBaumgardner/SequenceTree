@@ -22,6 +22,7 @@ NodeCanvas::NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphS
       ornamentMarks(*this, processor.ornamentLibraries)
 {
     setWantsKeyboardFocus(true);
+
     setLookAndFeel(&lookAndFeel);
 }
 
@@ -65,17 +66,19 @@ void NodeCanvas::clearCanvas()
 
 void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
 {
+    std::unordered_map<int, juce::ValueTree> rootNodeMap;
+
+    std::vector<NodePair> nodePairs;
+
     asyncUpdates.clear();
 
     clearCanvas();
 
-    std::unordered_map<int, juce::ValueTree> rootNodeMap;
-    std::vector<NodePair>                    nodePairs;
-
     for (int nodeIndex = 0; nodeIndex < stateTree.getNumChildren(); ++nodeIndex) {
         const juce::ValueTree nodeValueTree = stateTree.getChild(nodeIndex);
         const juce::ValueTree childIds      = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-        const int             nodeId        = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+
+        const int nodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
 
         if (nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
             rootNodeMap[nodeId] = nodeValueTree;
@@ -136,9 +139,9 @@ void NodeCanvas::childrenChanged()
 
 void NodeCanvas::handleAsyncUpdate()
 {
-    drainer.drainAll();
-
     std::vector<AsyncUpdate> pendingUpdates;
+
+    drainer.drainAll();
 
     pendingUpdates.swap(asyncUpdates);
 
@@ -301,6 +304,7 @@ void NodeCanvas::setProcessorPlayback(bool isPlaying)
 
     if (isPlaying) {
         nodeManager.equipRootTraversals();
+
         arrowManager.resumeAllProgress();
     }
     else {
@@ -312,14 +316,15 @@ void NodeCanvas::setProcessorPlayback(bool isPlaying)
 
 juce::Point<int> NodeCanvas::snapPointToGrid(juce::Point<int> point) const
 {
+    const float snapThreshold = 5.0f;
+    const float snappedX      = gridOrigin.x + std::round((static_cast<float>(point.x) - gridOrigin.x) / gridSpacing) * gridSpacing;
+    const float snappedY      = gridOrigin.y + std::round((static_cast<float>(point.y) - gridOrigin.y) / gridSpacing) * gridSpacing;
+
+    juce::Point<int> result = point;
+
     if (!gridOriginSet) {
         return point;
     }
-
-    const float      snapThreshold = 5.0f;
-    const float      snappedX      = gridOrigin.x + std::round((static_cast<float>(point.x) - gridOrigin.x) / gridSpacing) * gridSpacing;
-    const float      snappedY      = gridOrigin.y + std::round((static_cast<float>(point.y) - gridOrigin.y) / gridSpacing) * gridSpacing;
-    juce::Point<int> result        = point;
 
     if (std::abs(static_cast<float>(point.x) - snappedX) < snapThreshold) {
         result.x = static_cast<int>(snappedX);
@@ -334,7 +339,8 @@ juce::Point<int> NodeCanvas::snapPointToGrid(juce::Point<int> point) const
 
 juce::MouseCursor NodeCanvas::spanCursor() const
 {
-    juce::Image    cursorImage(juce::Image::ARGB, spanCursorSize, spanCursorSize, true);
+    juce::Image cursorImage(juce::Image::ARGB, spanCursorSize, spanCursorSize, true);
+
     juce::Graphics cursorGraphics(cursorImage);
 
     cursorGraphics.setColour(juce::Colours::black);
@@ -345,31 +351,38 @@ juce::MouseCursor NodeCanvas::spanCursor() const
 
 juce::MouseCursor NodeCanvas::quaverCursor() const
 {
-    juce::Image    cursorImage(juce::Image::ARGB, quaverCursorSize, quaverCursorSize, true);
+    juce::Image cursorImage(juce::Image::ARGB, quaverCursorSize, quaverCursorSize, true);
+
     juce::Graphics cursorGraphics(cursorImage);
-    const auto     square   = cursorImage.getBounds().toFloat().reduced(1.0f);
-    const float    side     = square.getWidth();
-    const float    headX    = square.getX() + side * 0.34f;
-    const float    headY    = square.getBottom() - side * 0.2f;
-    const float    stemX    = headX + side * 0.19f;
-    const float    stemTopY = square.getY() + side * 0.04f;
-    juce::Path     head;
-    juce::Path     stem;
-    juce::Path     flag;
+
+    const auto square = cursorImage.getBounds().toFloat().reduced(1.0f);
+
+    const float side     = square.getWidth();
+    const float headX    = square.getX() + side * 0.34f;
+    const float headY    = square.getBottom() - side * 0.2f;
+    const float stemX    = headX + side * 0.19f;
+    const float stemTopY = square.getY() + side * 0.04f;
+
+    juce::Path head;
+    juce::Path stem;
+    juce::Path flag;
 
     cursorGraphics.setColour(juce::Colours::black);
 
     head.addEllipse(juce::Rectangle<float>(side * 0.44f, side * 0.3f).withCentre({ headX, headY }));
     head.applyTransform(juce::AffineTransform::rotation(-0.35f, headX, headY));
+
     cursorGraphics.fillPath(head);
 
     stem.addLineSegment({ stemX, headY - side * 0.04f, stemX, stemTopY }, juce::jmax(1.0f, side * 0.08f));
+
     cursorGraphics.fillPath(stem);
 
     flag.startNewSubPath(stemX, stemTopY);
     flag.cubicTo(stemX + side * 0.08f, stemTopY + side * 0.18f, stemX + side * 0.36f, stemTopY + side * 0.24f, stemX + side * 0.26f, stemTopY + side * 0.56f);
     flag.cubicTo(stemX + side * 0.28f, stemTopY + side * 0.34f, stemX + side * 0.12f, stemTopY + side * 0.3f, stemX, stemTopY + side * 0.26f);
     flag.closeSubPath();
+
     cursorGraphics.fillPath(flag);
 
     return juce::MouseCursor(cursorImage, quaverCursorSize / 2, quaverCursorSize / 2);

@@ -1,13 +1,13 @@
 #include "ArrowAnimation.h"
 
 void ArrowAnimation::startTrail(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot,
-                                TrailSource source)
+                                BridgeCommands::TrailSource source)
 {
     Trail& trail = trails[trailId];
 
     double originMs = juce::Time::getMillisecondCounterHiRes();
 
-    if (trailsPaused && source == TrailSource::Live) {
+    if (trailsPaused && source == BridgeCommands::TrailSource::Live) {
         originMs = pausedAtMs;
     }
 
@@ -29,7 +29,7 @@ void ArrowAnimation::resumeTrails()
     const double pausedForMs = juce::Time::getMillisecondCounterHiRes() - pausedAtMs;
 
     for (auto& [trailId, trail] : trails) {
-        if (trail.source == TrailSource::Live) {
+        if (trail.source == BridgeCommands::TrailSource::Live) {
             trail.startMs += pausedForMs;
         }
     }
@@ -114,7 +114,7 @@ bool ArrowAnimation::advanceTrails()
     for (auto entry = trails.begin(); entry != trails.end(); ) {
         Trail& trail = entry->second;
 
-        if (! trail.active || (trailsPaused && trail.source == TrailSource::Live)) {
+        if (! trail.active || (trailsPaused && trail.source == BridgeCommands::TrailSource::Live)) {
             ++entry;
             continue;
         }

@@ -53,7 +53,7 @@ void SequenceTreeAudioProcessor::releaseResources()
             }
         }
 
-        manager->scheduler.activeNotes.clear();
+        manager->scheduler.clear();
     }
 
     snapshots.releaseRetiredSnapshots();

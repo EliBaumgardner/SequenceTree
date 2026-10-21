@@ -4,22 +4,11 @@
 #include <map>
 #include <memory>
 
-#include <ArsNovaUI/Theme/Visuals.h>
+#include "OrnamentMarkView.h"
 
 class NodeCanvas;
 class Node;
 class OrnamentLibraries;
-
-class OrnamentMarkView : public juce::Component
-{
-public:
-
-    void paint(juce::Graphics& graphics) override;
-
-    ArsNovaUI::SymbolMark mark = ArsNovaUI::SymbolMark::None;
-    juce::String          symbol;
-    juce::ValueTree       nodeValueTree;
-};
 
 class OrnamentMarks : private juce::ValueTree::Listener, private juce::ComponentListener
 {

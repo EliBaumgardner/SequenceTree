@@ -53,21 +53,22 @@ target_sources(SequenceTree PRIVATE
         Source/Plugin/PluginProcessor.cpp
         Source/Plugin/PluginEditor.cpp
         Source/Plugin/AudioSnapshotPublisher.cpp
-        Source/Audio/AudioUIBridge.cpp
+        Source/Audio/ThreadMessaging/AudioUIBridge.cpp
         Source/Audio/EventManager.cpp
         Source/Audio/NoteScheduler.cpp
-        Source/Audio/TraversalLogic.cpp
+        Source/Audio/Traversal/TraversalLogic.cpp
         Source/Audio/TraversalDispatcher.cpp
         Source/Audio/FlagScheduler.cpp
         Source/Audio/TraversalSession.cpp
-        Source/Audio/VirtualMidiOutput.cpp
-        Source/Audio/TraversalRule.cpp
-        Source/Audio/ScriptRun.cpp
+        Source/Audio/ThreadMessaging/VirtualMidiOutput.cpp
+        Source/Audio/Traversal/TraversalRule.cpp
+        Source/Audio/Traversal/ScriptRun.cpp
         Source/Script/ScriptLexer.cpp
         Source/Script/ScriptParser.cpp
         Source/Script/ScriptEmitter.cpp
         Source/Script/ScriptCompiler.cpp
-        Source/Audio/NodeStateTable.cpp
+        Source/Audio/Traversal/NodeStateTable.cpp
+        Source/Audio/Traversal/NodeRowMap.cpp
         Source/Graph/RTGraphBuilder.cpp
         Source/Graph/GraphState.cpp
         Source/Graph/ArrowBindingOps.cpp
@@ -86,6 +87,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Canvas/AudioCommandDrainer.cpp
         Source/UI/Canvas/NodeManager.cpp
         Source/UI/Canvas/OrnamentMarks.cpp
+        Source/UI/Canvas/OrnamentMarkView.cpp
         Source/UI/Canvas/ArrowManager.cpp
         Source/UI/Canvas/CanvasHitTester.cpp
         Source/UI/Canvas/EncapsulationView.cpp
@@ -149,10 +151,11 @@ enable_testing()
 add_executable(SequenceTree_Tests
         Tests/TraversalTests.cpp
         Tests/ScriptCompilerTests.cpp
-        Source/Audio/TraversalLogic.cpp
-        Source/Audio/TraversalRule.cpp
-        Source/Audio/ScriptRun.cpp
-        Source/Audio/NodeStateTable.cpp
+        Source/Audio/Traversal/TraversalLogic.cpp
+        Source/Audio/Traversal/TraversalRule.cpp
+        Source/Audio/Traversal/ScriptRun.cpp
+        Source/Audio/Traversal/NodeStateTable.cpp
+        Source/Audio/Traversal/NodeRowMap.cpp
         Source/Script/ScriptLexer.cpp
         Source/Script/ScriptParser.cpp
         Source/Script/ScriptEmitter.cpp

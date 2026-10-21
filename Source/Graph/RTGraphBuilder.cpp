@@ -11,6 +11,7 @@
 #include "RTGraphBuilder.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <unordered_set>
 #include <utility>
 
@@ -345,12 +346,9 @@ void RTGraphBuilder::rebuildGraphsForTraversal(int traversalId)
             }
         }
         else if (node.getType() == ValueTreeIdentifiers::TraversalFlagData) {
-            int flagValue = node.getProperty(ValueTreeIdentifiers::TraversalFlagValue, 0);
-            if (flagValue < 0) {
-                flagValue = -flagValue;
-            }
+            const int flagValue = node.getProperty(ValueTreeIdentifiers::TraversalFlagValue, 0);
 
-            if (flagValue == traversalId) {
+            if (std::abs(flagValue) == traversalId) {
                 rootsToRebuild.insert(static_cast<int>(node.getProperty(ValueTreeIdentifiers::RootNodeId)));
             }
         }
@@ -367,159 +365,116 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
     while(!stack.empty()) {
 
         juce::ValueTree currentValueTree = stack.back();
-        juce::ValueTree nodeParentValueTree = graphState.getNodeParent(currentValueTree.getProperty(ValueTreeIdentifiers::Id));
 
-        juce::ValueTree nodeValueTreeChildren = currentValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-        juce::ValueTree nodeValueTreeTraversals = currentValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
-
-        juce::ValueTree nodeMidiNotes   = currentValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
-        juce::ValueTree publishedFigure = processor.ornamentLibraries.findOrnament(currentValueTree.getProperty(ValueTreeIdentifiers::OrnamentUid).toString())
-                                                                     .getChildWithName(ValueTreeIdentifiers::PublishedFigure);
-
-        juce::Identifier nodeType = currentValueTree.getType();
+        int nodeId = currentValueTree.getProperty(ValueTreeIdentifiers::Id);
 
         stack.pop_back();
 
-        int nodeId      = currentValueTree.getProperty(ValueTreeIdentifiers::Id);
-        int graphId     = currentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
-
-        int countLimit       = currentValueTree.getProperty(ValueTreeIdentifiers::CountLimit);
-        int triggerLimit     = currentValueTree.getProperty(ValueTreeIdentifiers::TriggerLimit, GraphState::defaultTriggerLimit);
-        int switchCountLimit = currentValueTree.getProperty(ValueTreeIdentifiers::SwitchCountLimit);
-        int subLoopLimit     = currentValueTree.getProperty(ValueTreeIdentifiers::SubLoopCountLimit);
-        int loopLimit        = currentValueTree.getProperty(ValueTreeIdentifiers::LoopLimit, GraphState::defaultRootLoopLimit);
-
-        int repeatValue = currentValueTree.getProperty(ValueTreeIdentifiers::RepeatValue, GraphState::defaultRepeatValue);
-        int probability = currentValueTree.getProperty(ValueTreeIdentifiers::Probability, GraphState::defaultProbability);
-        int modAmount   = currentValueTree.getProperty(ValueTreeIdentifiers::ModAmount, GraphState::defaultModAmount);
-
-        bool isAlternativeNode = (nodeType == ValueTreeIdentifiers::AlternativeNodeData
-                              || nodeType == ValueTreeIdentifiers::AlternativeModulatorData);
-
-        if (nodeType == ValueTreeIdentifiers::RootNodeData) {
-            subLoopLimit = loopLimit;
+        if (tempNodeMap.count(nodeId) != 0) {
+            continue;
         }
 
-        if (isAlternativeNode) {
-            subLoopLimit = GraphState::defaultSubLoopCountLimit;
+        juce::ValueTree nodeValueTreeChildren   = currentValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+        juce::ValueTree nodeValueTreeTraversals = currentValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
+        juce::ValueTree nodeMidiNotes           = currentValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
+        juce::ValueTree publishedFigure         = processor.ornamentLibraries.findOrnament(currentValueTree.getProperty(ValueTreeIdentifiers::OrnamentUid).toString())
+                                                                             .getChildWithName(ValueTreeIdentifiers::PublishedFigure);
+
+        int loopLimit = currentValueTree.getProperty(ValueTreeIdentifiers::LoopLimit, GraphState::defaultRootLoopLimit);
+
+        RTNode rtNode;
+
+        tempNodeMap[nodeId] = currentValueTree;
+
+        rtNode.graphID  = currentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
+        rtNode.nodeID   = nodeId;
+        rtNode.nodeType = rtNodeTypeFor(currentValueTree.getType());
+
+        rtNode.countLimit        = currentValueTree.getProperty(ValueTreeIdentifiers::CountLimit);
+        rtNode.triggerLimit      = currentValueTree.getProperty(ValueTreeIdentifiers::TriggerLimit, GraphState::defaultTriggerLimit);
+        rtNode.switchCountLimit  = currentValueTree.getProperty(ValueTreeIdentifiers::SwitchCountLimit);
+        rtNode.subLoopCountLimit = currentValueTree.getProperty(ValueTreeIdentifiers::SubLoopCountLimit);
+        rtNode.repeatValue       = currentValueTree.getProperty(ValueTreeIdentifiers::RepeatValue, GraphState::defaultRepeatValue);
+        rtNode.probability       = currentValueTree.getProperty(ValueTreeIdentifiers::Probability, GraphState::defaultProbability);
+
+        rtNode.isAlternativeNode = rtNode.nodeType == RTNode::NodeType::Alternative || rtNode.nodeType == RTNode::NodeType::AlternativeModulator;
+
+        if (rtNode.nodeType == RTNode::NodeType::RootNode) {
+            rtNode.subLoopCountLimit = loopLimit;
+            rtNode.graphLoopLimit    = loopLimit;
         }
 
-        if(tempNodeMap.count(nodeId) == false) {
-
-            tempNodeMap[nodeId] = currentValueTree;
-
-            RTNode rtNode;
-            RTNode* parentNode = nullptr;
-
-            rtNode.graphID = graphId;
-            rtNode.nodeID  = nodeId;
-
-            rtNode.countLimit        =  countLimit;
-            rtNode.triggerLimit      = triggerLimit;
-            rtNode.subLoopCountLimit = subLoopLimit;
-            rtNode.switchCountLimit  = switchCountLimit;
-            rtNode.repeatValue       = repeatValue;
-            rtNode.probability       = probability;
-
-            rtNode.isAlternativeNode = isAlternativeNode;
-
-            for (int i = 0; i < nodeValueTreeTraversals.getNumChildren(); i++) {
-                juce::ValueTree traversalIdTree = nodeValueTreeTraversals.getChild(i);
-
-                const TraversalKey key { static_cast<int>(traversalIdTree.getProperty(ValueTreeIdentifiers::TraversalId)),
-                                         static_cast<int>(traversalIdTree.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) };
-
-                rtNode.traversals.push_back(buildRTtraversal(key));
-            }
-
-            if (nodeParentValueTree.isValid()) {
-                int candidateParentId = nodeParentValueTree.getProperty(ValueTreeIdentifiers::Id);
-                auto parentIt = builtNodes.find(candidateParentId);
-
-                if (parentIt != builtNodes.end()) {
-                    rtNode.parentId = candidateParentId;
-                    parentNode = &parentIt->second;
-
-                    if (isAlternativeNode) {
-                        if (parentNode->nodeType != RTNode::NodeType::Alternative
-                            && parentNode->nodeType != RTNode::NodeType::AlternativeModulator) {
-                            parentNode->alternativeRootId = nodeId;
-                            rtNode.alternativeRootId      = nodeId;
-                        }
-                        else {
-                            rtNode.alternativeRootId = parentNode->alternativeRootId;
-                        }
-                    }
-                }
-            }
-
-            fillDurationMap(currentValueTree, rtNode);
-            fillEncapsulation(currentValueTree, rtNode);
-
-            rtNode.nodeType = rtNodeTypeFor(nodeType);
-
-            if (rtNode.nodeType == RTNode::NodeType::RootNode) {
-                rtNode.graphLoopLimit = loopLimit;
-            }
-            if (rtNode.nodeType == RTNode::NodeType::ModulatorRoot || rtNode.nodeType == RTNode::NodeType::Modulator
-                || rtNode.nodeType == RTNode::NodeType::AlternativeModulator) {
-                rtNode.pitchOffset = modAmount;
-            }
-            if (rtNode.nodeType == RTNode::NodeType::TraversalFlagData) {
-                int flagValue = currentValueTree.getProperty(ValueTreeIdentifiers::TraversalFlagValue, 0);
-                if (flagValue != 0) {
-                    int traversalNumber = flagValue;
-
-                    if (flagValue < 0) {
-                        traversalNumber = -flagValue;
-                    }
-
-                    const int flagInstance = currentValueTree.getProperty(ValueTreeIdentifiers::TraversalInstance, 0);
-
-                    rtNode.flagTraversal        = buildRTtraversal({ traversalNumber, flagInstance });
-                    rtNode.flagRemovesTraversal = (flagValue < 0);
-
-                    if (nodeValueTreeChildren.getNumChildren() > 0) {
-                        rtNode.flagTargetId = nodeValueTreeChildren.getChild(0).getProperty(ValueTreeIdentifiers::Id);
-                    }
-                    else if (!rtNode.flagRemovesTraversal) {
-                        rtNode.flagTargetId = rtNode.parentId;
-                    }
-                }
-            }
-
-            if (rtNode.nodeType != RTNode::NodeType::TraversalFlagData) {
-                for (int i = 0; i < nodeValueTreeChildren.getNumChildren(); i++) {
-                    juce::ValueTree childIdTree = nodeValueTreeChildren.getChild(i);
-                    int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
-                    juce::ValueTree childDataTree = graphState.getNode(childId);
-
-                    jassert(childDataTree.isValid());
-                    stack.push_back(childDataTree);
-                }
-            }
-
-
-            for (int i = 0; i < nodeMidiNotes.getNumChildren(); i++) {
-                juce::ValueTree note = nodeMidiNotes.getChild(i);
-                RTNote rtNote;
-
-                int pitch       = note.getProperty(ValueTreeIdentifiers::MidiPitch);
-                int velocity    = note.getProperty(ValueTreeIdentifiers::MidiVelocity);
-                int duration    = note.getProperty(ValueTreeIdentifiers::MidiDuration);
-                int midiChannel = note.getProperty(ValueTreeIdentifiers::MidiChannel, GraphState::defaultMidiChannel);
-
-                rtNote.pitch       = pitch;
-                rtNote.velocity    = velocity;
-                rtNote.duration    = duration;
-                rtNote.midiChannel = juce::jlimit(1, 16, midiChannel);
-                rtNode.notes.push_back(std::move(rtNote));
-            }
-
-            rtNode.ornament = processor.ornamentLibraries.figureSteps(publishedFigure);
-
-            builtNodes[nodeId] = std::move(rtNode);
+        if (rtNode.isAlternativeNode) {
+            rtNode.subLoopCountLimit = GraphState::defaultSubLoopCountLimit;
         }
+
+        if (rtNode.nodeType == RTNode::NodeType::ModulatorRoot || rtNode.nodeType == RTNode::NodeType::Modulator
+            || rtNode.nodeType == RTNode::NodeType::AlternativeModulator) {
+            rtNode.pitchOffset = currentValueTree.getProperty(ValueTreeIdentifiers::ModAmount, GraphState::defaultModAmount);
+        }
+
+        for (int i = 0; i < nodeValueTreeTraversals.getNumChildren(); i++) {
+            juce::ValueTree traversalIdTree = nodeValueTreeTraversals.getChild(i);
+
+            const TraversalKey key { static_cast<int>(traversalIdTree.getProperty(ValueTreeIdentifiers::TraversalId)),
+                                     static_cast<int>(traversalIdTree.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) };
+
+            rtNode.traversals.push_back(buildRTtraversal(key));
+        }
+
+        juce::ValueTree parentValueTree = graphState.getNodeParent(rtNode.nodeID);
+
+        if (parentValueTree.isValid()) {
+            const int parentId = parentValueTree.getProperty(ValueTreeIdentifiers::Id);
+
+            auto parentIt = builtNodes.find(parentId);
+
+            if (parentIt != builtNodes.end()) {
+                RTNode& parentNode = parentIt->second;
+
+                rtNode.parentId = parentId;
+
+                if (rtNode.isAlternativeNode && !parentNode.isAlternativeNode) {
+                    parentNode.alternativeRootId = rtNode.nodeID;
+                    rtNode.alternativeRootId     = rtNode.nodeID;
+                }
+                else if (rtNode.isAlternativeNode) {
+                    rtNode.alternativeRootId = parentNode.alternativeRootId;
+                }
+            }
+        }
+
+        fillDurationMap(currentValueTree, rtNode);
+        fillEncapsulation(currentValueTree, rtNode);
+
+        if (rtNode.nodeType == RTNode::NodeType::TraversalFlagData) {
+            fillTraversalFlag(currentValueTree, rtNode);
+        }
+        else {
+            for (int i = 0; i < nodeValueTreeChildren.getNumChildren(); i++) {
+                juce::ValueTree childIdTree = nodeValueTreeChildren.getChild(i);
+                int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
+                juce::ValueTree childDataTree = graphState.getNode(childId);
+
+                jassert(childDataTree.isValid());
+                stack.push_back(childDataTree);
+            }
+        }
+
+        for (int i = 0; i < nodeMidiNotes.getNumChildren(); i++) {
+            juce::ValueTree note = nodeMidiNotes.getChild(i);
+            RTNote rtNote;
+
+            rtNote.pitch       = note.getProperty(ValueTreeIdentifiers::MidiPitch);
+            rtNote.velocity    = note.getProperty(ValueTreeIdentifiers::MidiVelocity);
+            rtNote.duration    = note.getProperty(ValueTreeIdentifiers::MidiDuration);
+            rtNote.midiChannel = juce::jlimit(1, 16, static_cast<int>(note.getProperty(ValueTreeIdentifiers::MidiChannel, GraphState::defaultMidiChannel)));
+            rtNode.notes.push_back(std::move(rtNote));
+        }
+
+        rtNode.ornament = processor.ornamentLibraries.figureSteps(publishedFigure);
+
+        builtNodes[nodeId] = std::move(rtNode);
     }
 }
 
@@ -643,6 +598,28 @@ void RTGraphBuilder::fillEncapsulation(const juce::ValueTree& nodeValueTree, RTN
     }
 
     rtNode.encapsulationEntryId = memberNodeIds.front();
+}
+
+void RTGraphBuilder::fillTraversalFlag(const juce::ValueTree& nodeValueTree, RTNode& rtNode)
+{
+    const int flagValue    = nodeValueTree.getProperty(ValueTreeIdentifiers::TraversalFlagValue, 0);
+    const int flagInstance = nodeValueTree.getProperty(ValueTreeIdentifiers::TraversalInstance, 0);
+
+    juce::ValueTree flagChildren = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+
+    if (flagValue == 0) {
+        return;
+    }
+
+    rtNode.flagTraversal        = buildRTtraversal({ std::abs(flagValue), flagInstance });
+    rtNode.flagRemovesTraversal = flagValue < 0;
+
+    if (flagChildren.getNumChildren() > 0) {
+        rtNode.flagTargetId = flagChildren.getChild(0).getProperty(ValueTreeIdentifiers::Id);
+    }
+    else if (!rtNode.flagRemovesTraversal) {
+        rtNode.flagTargetId = rtNode.parentId;
+    }
 }
 
 void RTGraphBuilder::rememberStructureChange(const juce::ValueTree& parent, const juce::ValueTree& child)

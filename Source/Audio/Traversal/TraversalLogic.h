@@ -1,11 +1,30 @@
 #pragma once
 
-#include "../Graph/RTData.h"
+#include "../../Graph/RTData.h"
 #include "ScriptRun.h"
 #include "TraversalRule.h"
 #include <unordered_map>
 #include <vector>
 
+/*
+    A single traversal: the state of one walk through the graph and the step that moves it from
+    node to node. The state is the root it started from, the node it is on and its counts; the step
+    decides which node comes next each time the current note ends. It only decides the path.
+    TraversalDispatcher turns that into MIDI and canvas updates, and since it uses no JUCE, the
+    tests can run it on its own.
+
+    reset and begin start the walk at a root. Each handleNodeEvent moves it forward and returns a
+    StepResult: the node it left, the node it entered, and whether it went back to the root, jumped
+    to another tree or ended. The note walk (primary) and the modulator walk under it (mod) follow
+    the same rules and keep separate counts in nodeState.
+
+    The next node comes from the script when one is set, and from rule otherwise. peekNextTarget and
+    peekCrossTreeNode ask where the walk would go next without moving it. Mode::Preview is the note
+    preview, started by beginPreview.
+
+    TraversalPool holds one in each slot, and TraversalSession starts and stops them. It runs on the
+    audio thread and never allocates. peekCrossTreeNode fills a vector TraversalDispatcher reserved.
+*/
 
 class TraversalLogic {
 

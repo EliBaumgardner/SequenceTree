@@ -2,13 +2,31 @@
 
 #include "TraversalLogic.h"
 
-#include <juce_audio_basics/juce_audio_basics.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <ranges>
 #include <utility>
 #include <vector>
+
+/*
+    The container for a group of running traversals: a fixed number of slots, each holding one
+    traversal under its run id, reserved ahead of time so a traversal can start during playback
+    without allocating.
+
+    prepare reserves the slots. acquire puts a new traversal in a free slot under a run id from
+    nextRunId and sets it up with the pool's choices, mode, script and shared variables, so the
+    same type serves playback and note preview. erase removes one, and clear removes them all.
+    find and findRunFor look a traversal up by run id, or by its root and traversal key. Next to
+    each traversal, a TraversalRuntime records whether a traversal flag or a jump from another tree
+    started it, where it came from, and whether it is waiting to be removed. epoch goes up whenever
+    a traversal starts or stops, so TraversalSession::syncWithGraph can skip its work when nothing
+    changed.
+
+    TraversalSession owns two: traversals for playback and previewTraversals for note preview. Each
+    pool has its own shared script variables (ScriptGlobals), reset by clear. Before a jump starts
+    traversals on another tree, TraversalDispatcher calls hasAllRegisteredRunsOnTree and skips the
+    trees whose traversals are all running already.
+*/
 
 struct TraversalRuntime
 {
@@ -219,16 +237,4 @@ private:
     std::vector<Slot> slots;
 
     int activeCount = 0;
-};
-
-struct DispatchContext
-{
-    const NodeMap&    nodes;
-    TraversalPool&    traversalMap;
-    juce::MidiBuffer& midiMessages;
-
-    double sampleRate      = 44100.0;
-    double tempoMultiplier = 1.0;
-    int    transpose       = 0;
-    double velocityScale   = 1.0;
 };

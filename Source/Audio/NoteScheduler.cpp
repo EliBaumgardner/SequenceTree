@@ -1,4 +1,6 @@
 #include "NoteScheduler.h"
+#include <algorithm>
+#include <functional>
 
 NoteScheduler::NoteScheduler()
 {
@@ -18,6 +20,7 @@ void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, d
     const double lengthInSamples = juce::jmax(1.0, (duration / 1000.0) * sampleRate / tempoMultiplier);
 
     ActiveNote newNote;
+
     newNote.role                = role;
     newNote.runId               = runId;
     newNote.event.pitch         = 63;
@@ -104,6 +107,46 @@ void NoteScheduler::removeNote(int index)
 {
     activeNotes[index] = std::move(activeNotes.back());
     activeNotes.pop_back();
+
+    orderedNotes = 0;
+}
+
+void NoteScheduler::clear()
+{
+    activeNotes.clear();
+
+    orderedNotes = 0;
+}
+
+const NoteScheduler::ActiveNote* NoteScheduler::nextToExpire()
+{
+    while (orderedNotes < activeNotes.size()) {
+        ++orderedNotes;
+
+        std::ranges::push_heap(activeNotes.begin(), activeNotes.begin() + static_cast<std::ptrdiff_t>(orderedNotes),
+                               std::ranges::greater {}, &ActiveNote::remainingSamples);
+    }
+
+    if (activeNotes.empty()) {
+        return nullptr;
+    }
+
+    return &activeNotes.front();
+}
+
+NoteScheduler::ActiveNote NoteScheduler::expireNext(juce::MidiBuffer& midiMessages, int sample)
+{
+    sendNoteOff(activeNotes.front(), midiMessages, sample);
+
+    std::ranges::pop_heap(activeNotes, std::ranges::greater {}, &ActiveNote::remainingSamples);
+
+    const ActiveNote expiredNote = activeNotes.back();
+
+    activeNotes.pop_back();
+
+    --orderedNotes;
+
+    return expiredNote;
 }
 
 bool NoteScheduler::isNoteSounding(const ActiveNote& note)

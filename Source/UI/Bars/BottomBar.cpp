@@ -84,6 +84,7 @@ BottomBar::~BottomBar()
 void BottomBar::resized()
 {
     auto                 bounds          = getContentBounds();
+
     const int            height          = bounds.getHeight();
     const int            spacing         = contentSpacing;
     const int            toolPaneWidth   = toolPane.idealWidth(height);
@@ -95,6 +96,7 @@ void BottomBar::resized()
     const int            buttonSlotWidth = juce::roundToInt(paneWidth * quaverButtonWidthRatio);
     const int            buttonWidth     = juce::jlimit(0, innerHeight, buttonSlotWidth - paneInset * 2);
     const int            labelWidth      = juce::roundToInt(paneWidth * countsLabelWidthRatio);
+
     const float          textHeight      = ArsNovaUI::Theme::textHeight;
     const juce::Font     textFont        = ArsNovaUI::CustomLookAndFeel::get(*this).font(ArsNovaUI::Theme::FontStyle::Regular, textHeight);
 

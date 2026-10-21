@@ -6,6 +6,25 @@
 
 #include <span>
 
+/*
+    The functions that create nodes and arrows with their starting values. GraphState adds a node
+    or a connection; NodeFactory calls it and then sets everything a new one begins with, so every
+    gesture, paste and test creates nodes and arrows the same way.
+
+    A new root gets its position, a default note and the default traversal. A new child gets its
+    position and copies its parent's count limits, repeat value and notes. create chooses the
+    create function from the NodeCreationMode, the parent's node type and whether the new node is
+    an alternative. applyArrowInfo sets a newly connected arrow's ArrowInfo from the toolbar, with
+    its type chosen from the nodes it joins: a traversal arrow only between two trees. It and
+    createDanglingArrow both copy the bindings of an arrow already leaving the same parent.
+    setDanglingArrowTip moves a dangling arrow's tip, clears its duration override and reapplies
+    pitch bindings, and destroyDanglingArrow removes one.
+
+    NodeGestures, ArrowGestures, EncapsulationGestures, ArrowManager and Clipboard call it inside
+    their own undo transactions, and the tests build graphs with it. It only writes GraphState; the
+    canvas and RTGraphBuilder react to the changes.
+*/
+
 enum class NodeCreationMode { Node, Modulator, TraversalFlag };
 
 class NodeFactory

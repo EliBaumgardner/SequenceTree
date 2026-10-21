@@ -6,6 +6,23 @@
 
 #include <vector>
 
+/*
+    The store of traversal settings. A traversal is a walk through the graph that plays the notes
+    it reaches; its traversal id is its type, and a TraversalKey adds an instance number so one
+    type can be equipped several times, each instance walking on its own. map holds one
+    TraversalData tree per traversal id with the settings all its instances play with: tempo
+    multiplier, colour, MIDI channel, transpose and velocity multiplier.
+
+    addTraversalData creates the settings for a traversal id with default values, or returns the
+    existing ones. collectKeys returns every key the graph uses, once each: the keys nodes list in
+    their TraversalChildrenIds and the keys traversal flag nodes name. unusedInstance returns the
+    smallest instance number of a traversal id that none of those keys has, and findReference
+    finds a key's entry in a node's TraversalChildrenIds.
+
+    GraphState owns one as traversals and saves map with nodeMap. TraversalMenu and
+    AllowedTraversalsMenu edit the settings, and RTGraphBuilder copies them into each RTtraversal.
+*/
+
 class GraphState;
 
 class TraversalState {

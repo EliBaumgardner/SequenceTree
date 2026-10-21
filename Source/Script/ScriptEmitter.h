@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "ScriptParser.h"
+#include "ScriptSyntaxTree.h"
 
 struct LoopFrame
 {

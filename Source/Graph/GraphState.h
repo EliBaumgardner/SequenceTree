@@ -12,6 +12,24 @@
 #include <unordered_map>
 #include <vector>
 
+/*
+    The owner of the graph's ValueTree. nodeMap holds one tree per node (root, node, alternative,
+    modulator, traversal flag or encapsulation group) with its position, limits, MIDI notes and a
+    NodeChildrenIds list whose entries are the arrows to its children. Every edit to the graph goes
+    through this class or the parts it owns (encapsulation, arrows, traversals), so node ids, root
+    ids and parent links stay consistent.
+
+    The add functions create each kind of node with the next id. connectNodes and disconnectNodes
+    add and remove an arrow, removeNode deletes a node and the arrows into and out of it, and setNodePosition
+    moves a node and updates the arrow durations and pitch bindings the move affects. getNode,
+    getNodeParent and parentIdsOf find nodes by id without searching nodeMap, using an index this
+    class's listener on nodeMap keeps current, so undo, redo and paste update it too. replaceState
+    loads a saved graph and traversal map.
+
+    The processor owns it, and it is used on the message thread only. NodeFactory, Clipboard and
+    the input gestures edit it; NodeCanvasTreeListener and RTGraphBuilder listen to nodeMap.
+*/
+
 class GraphState : public juce::ValueTree::Listener {
 
 public:

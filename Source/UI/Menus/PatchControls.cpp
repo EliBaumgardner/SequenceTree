@@ -31,7 +31,14 @@ PatchControls::PatchControls(juce::AudioProcessor& processor, juce::ValueTree pa
 
 void PatchControls::paint(juce::Graphics& graphics)
 {
-    ArsNovaUI::CustomLookAndFeel::get(*this).drawPane(graphics, getLocalBounds().toFloat());
+    ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
+    const float                   separatorX  = resetButton.getX() - separatorGap * 0.5f - ArsNovaUI::Theme::borderThickness * 0.5f;
+    const auto                    separator   = resetButton.getBounds().toFloat().reduced(0.0f, resetButton.getHeight() * separatorInsetRatio).withX(separatorX).withWidth(ArsNovaUI::Theme::borderThickness);
+
+    lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
+
+    graphics.setColour(lookAndFeel.borderColour);
+    graphics.fillRect(separator);
 }
 
 void PatchControls::resized()
@@ -40,9 +47,11 @@ void PatchControls::resized()
     const int buttonWidth   = juce::roundToInt(contentBounds.getHeight() * ArsNovaUI::Theme::buttonAspectRatio);
 
     resetButton.setBounds(contentBounds.removeFromRight(buttonWidth));
-    contentBounds.removeFromRight(ArsNovaUI::Theme::buttonGap);
+    contentBounds.removeFromRight(separatorGap);
 
     openButton.setBounds(contentBounds.removeFromRight(buttonWidth));
+
+    contentBounds.removeFromLeft(juce::roundToInt(ArsNovaUI::Theme::fieldTextInset));
 
     nameEditor.setBounds(contentBounds);
 }
@@ -52,7 +61,7 @@ int PatchControls::idealWidth(int height) const
     const int inset       = juce::roundToInt(height * ArsNovaUI::Theme::contentInsetRatio);
     const int buttonWidth = juce::roundToInt((height - inset * 2) * ArsNovaUI::Theme::buttonAspectRatio);
 
-    return inset * 2 + nameWidth + buttonWidth * 2 + ArsNovaUI::Theme::buttonGap;
+    return inset * 2 + juce::roundToInt(ArsNovaUI::Theme::fieldTextInset) + nameWidth + buttonWidth * 2 + separatorGap;
 }
 
 void PatchControls::chooseFileToOpen()

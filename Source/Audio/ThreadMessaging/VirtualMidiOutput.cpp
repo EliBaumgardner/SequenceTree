@@ -1,5 +1,5 @@
 #include "VirtualMidiOutput.h"
-#include "../Util/NodeInfo.h"
+#include "../../Util/NodeInfo.h"
 #include <algorithm>
 
 VirtualMidiOutput::VirtualMidiOutput()
