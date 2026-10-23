@@ -15,6 +15,27 @@
 #include "../../Util/ArrowInfo.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
+/*
+    The component that draws the graph: every Node and Arrow is a child of it, and it holds what
+    those children share: the view and model transforms of the pan and zoom, the snap grid
+    (gridOrigin, gridSpacing and whether it is visible), the selection rectangle, the active
+    tool and the queue of pending updates. The parts that do its work are members: NodeManager
+    and ArrowManager for the components, NodeCanvasTreeListener for the queue, AudioCommandDrainer
+    for the audio thread's commands, CanvasHitTester for picking, EncapsulationView, OrnamentMarks
+    and ValueField.
+
+    NodeCanvasTreeListener adds an AsyncUpdate for each change to the graph's tree, and
+    handleAsyncUpdate applies them on the message thread and drains the audio commands; the
+    editor's per-frame poll and SelectionGestures call it. The canvas never changes the graph
+    itself. Only setActiveTool changes the CanvasTool (none, paint, span, note preview or
+    ornament): it sets the cursor, stops a note preview that was running and tells the bar
+    through onActiveToolChanged. rebuildFromNodeMap clears the canvas and builds every node and
+    arrow from a restored graph. setProcessorPlayback stores the play state for the processor and
+    starts or pauses the arrows' progress animation.
+
+    NodeController routes mouse events on it; the editor and the bars hold it by reference.
+*/
+
 class Node;
 class RootNode;
 class Arrow;
@@ -105,7 +126,7 @@ public:
     int quaverTraversalId = 1;
     int spanAnchorNodeId  = -1;
 
-    juce::Value quaverCount { minimumCountLimit };
+    juce::Value quaverCount { NodeInfo::minimumCountLimit };
 
     static constexpr int spanCursorSize   = 16;
     static constexpr int quaverCursorSize = 24;

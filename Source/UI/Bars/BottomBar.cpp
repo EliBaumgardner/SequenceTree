@@ -58,7 +58,7 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, TraversalSession& traversalSession,
 
     countsField.label.setText("counts", juce::dontSendNotification);
 
-    countsField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumCountLimit, maximumCountLimit));
+    countsField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit));
 
     countsField.editor.wheelResponse = ArsNovaUI::ValueEditor::WheelResponse::StepValue;
 
@@ -137,11 +137,11 @@ void BottomBar::resized()
     countsField.setBounds(quaverPaneBounds);
 }
 
-void BottomBar::applyDisplayMode(NodeDisplayMode mode)
+void BottomBar::applyDisplayMode(NodeInfo::DisplayMode mode)
 {
     switch (mode) {
-        case NodeDisplayMode::Pitch:    paintPanel.setPaintMode(ValueField::PaintLayer::Pitch);    break;
-        case NodeDisplayMode::Velocity: paintPanel.setPaintMode(ValueField::PaintLayer::Velocity); break;
+        case NodeInfo::DisplayMode::Pitch:    paintPanel.setPaintMode(ValueField::PaintLayer::Pitch);    break;
+        case NodeInfo::DisplayMode::Velocity: paintPanel.setPaintMode(ValueField::PaintLayer::Velocity); break;
         default: break;
     }
 }
@@ -207,7 +207,7 @@ void BottomBar::showActiveOrnamentName()
 
 void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
 {
-    const ArrowInfo& arrowInfo = nodeCanvas.arrowManager.currentArrowInfo;
+    const ArrowInfo::Settings& arrowInfo = nodeCanvas.arrowManager.currentArrowInfo;
 
     axis.button = &bindPane.addButton(nullptr, text + " Binding", [this, &axis]() { toggleAxis(axis); });
 
@@ -216,7 +216,7 @@ void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
 
     axis.button->setText(text);
 
-    if (arrowInfo.*axis.binding != ArrowBinding::NoBind) {
+    if (arrowInfo.*axis.binding != ArrowInfo::Binding::NoBind) {
         axis.target = arrowInfo.*axis.binding;
     }
 
@@ -230,27 +230,27 @@ void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
         nodeCanvas.arrowManager.currentArrowInfo.*axis.multiplier = static_cast<double>(axis.multiplierSlider.boundValue.getValue());
     };
 
-    axis.button->setSelected(arrowInfo.*axis.binding != ArrowBinding::NoBind);
+    axis.button->setSelected(arrowInfo.*axis.binding != ArrowInfo::Binding::NoBind);
 }
 
 void BottomBar::toggleAxis(BindAxis& axis)
 {
-    ArrowInfo& arrowInfo = nodeCanvas.arrowManager.currentArrowInfo;
+    ArrowInfo::Settings& arrowInfo = nodeCanvas.arrowManager.currentArrowInfo;
 
-    if (arrowInfo.*axis.binding == ArrowBinding::NoBind) {
+    if (arrowInfo.*axis.binding == ArrowInfo::Binding::NoBind) {
         arrowInfo.*axis.binding = axis.target;
     }
     else {
-        arrowInfo.*axis.binding = ArrowBinding::NoBind;
+        arrowInfo.*axis.binding = ArrowInfo::Binding::NoBind;
     }
 
-    axis.button->setSelected(arrowInfo.*axis.binding != ArrowBinding::NoBind);
+    axis.button->setSelected(arrowInfo.*axis.binding != ArrowInfo::Binding::NoBind);
 }
 
 void BottomBar::showAxisMenu(BindAxis& axis)
 {
-    const ArrowBinding     binding = nodeCanvas.arrowManager.currentArrowInfo.*axis.binding;
-    ArsNovaUI::ContextMenu menu;
+    const ArrowInfo::Binding binding = nodeCanvas.arrowManager.currentArrowInfo.*axis.binding;
+    ArsNovaUI::ContextMenu   menu;
 
     for (const BindTarget& target : bindTargets) {
         menu.addItem(target.label, ArsNovaUI::ContextMenu::ItemKind::Toggle, [this, &axis, bound = target.binding]() {

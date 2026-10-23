@@ -122,7 +122,7 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
     encapsulationView.collapseAll();
 
     if (!gridOriginSet && !rootNodeMap.empty()) {
-        const NodePosition rootPosition = graphState.getNodePosition(rootNodeMap.begin()->first);
+        const NodeInfo::Position rootPosition = graphState.getNodePosition(rootNodeMap.begin()->first);
 
         gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
         gridSpacing   = ArrowInfo::pixelsPerGridSpace;

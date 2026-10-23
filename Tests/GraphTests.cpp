@@ -37,7 +37,7 @@ static const NodeMap& rebuildAndPublish(SequenceTreeAudioProcessor& processor)
 
 static int createRoot(GraphState& graph, int x, int y)
 {
-    NodeFactory::createRootNode(graph, NodePosition { x, y, 25 }, nullptr);
+    NodeFactory::createRootNode(graph, NodeInfo::Position { x, y, 25 }, nullptr);
 
     const juce::ValueTree root = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1);
 
@@ -49,7 +49,7 @@ static int createRoot(GraphState& graph, int x, int y)
 static int createChild(GraphState& graph, int parentId, int x, int y)
 {
     const juce::ValueTree child = NodeFactory::createNode(graph, parentId, ValueTreeIdentifiers::NodeData,
-                                                          NodePosition { x, y, 25 }, nullptr);
+                                                          NodeInfo::Position { x, y, 25 }, nullptr);
 
     return child.getProperty(ValueTreeIdentifiers::Id);
 }
@@ -67,7 +67,7 @@ TEST_CASE("arrow length sets the connection duration, and moving a node retimes 
     REQUIRE(built.find(rootId)->findConnection(childId) != nullptr);
     CHECK(built.find(rootId)->findConnection(childId)->duration == 500);
 
-    graph.setNodePosition(graph.getNode(childId), NodePosition { 200, 0, 25 }, nullptr);
+    graph.setNodePosition(graph.getNode(childId), NodeInfo::Position { 200, 0, 25 }, nullptr);
     const std::vector<int> movedIds { childId };
     processor.rtGraphBuilder.updateDurationMaps(movedIds);
 
@@ -94,7 +94,7 @@ TEST_CASE("moving a node retimes the arrow from every one of its parents", "[gra
     CHECK(built.find(firstParentId) ->findConnection(sharedChildId)->duration == 500);
     CHECK(built.find(secondParentId)->findConnection(sharedChildId)->duration == 500);
 
-    graph.setNodePosition(graph.getNode(sharedChildId), NodePosition { 300, 0, 25 }, nullptr);
+    graph.setNodePosition(graph.getNode(sharedChildId), NodeInfo::Position { 300, 0, 25 }, nullptr);
     const std::vector<int> movedIds { sharedChildId };
     processor.rtGraphBuilder.updateDurationMaps(movedIds);
 
@@ -237,13 +237,13 @@ TEST_CASE("a modulator chain built through the graph walks like a node chain", "
     const int middleId = createChild(graph, rootId, 100, 0);
     const int leafId   = createChild(graph, middleId, 200, 0);
 
-    const juce::ValueTree modulatorRoot = NodeFactory::createModulatorRoot(graph, rootId, NodePosition { 0, 200, 25 }, nullptr);
+    const juce::ValueTree modulatorRoot = NodeFactory::createModulatorRoot(graph, rootId, NodeInfo::Position { 0, 200, 25 }, nullptr);
     const int modulatorRootId = modulatorRoot.getProperty(ValueTreeIdentifiers::Id);
 
-    const juce::ValueTree modulatorMiddle = NodeFactory::createModulator(graph, modulatorRootId, NodePosition { 100, 200, 25 }, nullptr);
+    const juce::ValueTree modulatorMiddle = NodeFactory::createModulator(graph, modulatorRootId, NodeInfo::Position { 100, 200, 25 }, nullptr);
     const int modulatorMiddleId = modulatorMiddle.getProperty(ValueTreeIdentifiers::Id);
 
-    const juce::ValueTree modulatorLeaf = NodeFactory::createModulator(graph, modulatorMiddleId, NodePosition { 200, 200, 25 }, nullptr);
+    const juce::ValueTree modulatorLeaf = NodeFactory::createModulator(graph, modulatorMiddleId, NodeInfo::Position { 200, 200, 25 }, nullptr);
     const int modulatorLeafId = modulatorLeaf.getProperty(ValueTreeIdentifiers::Id);
 
     const NodeMap& nodes = rebuildAndPublish(processor);
@@ -282,13 +282,13 @@ TEST_CASE("only a note node's arrow into another tree's root is a root connectio
     const int nodeId        = createChild(graph, rootId, 100, 0);
     const int foreignRootId = createRoot(graph, 0, 400);
 
-    const juce::ValueTree modulatorRoot = NodeFactory::createModulatorRoot(graph, nodeId, NodePosition { 100, 200, 25 }, nullptr);
+    const juce::ValueTree modulatorRoot = NodeFactory::createModulatorRoot(graph, nodeId, NodeInfo::Position { 100, 200, 25 }, nullptr);
     const int modulatorRootId = modulatorRoot.getProperty(ValueTreeIdentifiers::Id);
 
-    const juce::ValueTree modulator = NodeFactory::createModulator(graph, modulatorRootId, NodePosition { 200, 200, 25 }, nullptr);
+    const juce::ValueTree modulator = NodeFactory::createModulator(graph, modulatorRootId, NodeInfo::Position { 200, 200, 25 }, nullptr);
     const int modulatorId = modulator.getProperty(ValueTreeIdentifiers::Id);
 
-    const juce::ValueTree alternativeModulator = NodeFactory::createAlternativeModulator(graph, modulatorId, NodePosition { 200, 300, 25 }, nullptr);
+    const juce::ValueTree alternativeModulator = NodeFactory::createAlternativeModulator(graph, modulatorId, NodeInfo::Position { 200, 300, 25 }, nullptr);
     const int alternativeModulatorId = alternativeModulator.getProperty(ValueTreeIdentifiers::Id);
 
     CHECK(graph.connectsToOtherTreeRoot(nodeId, foreignRootId));
@@ -336,13 +336,13 @@ TEST_CASE("moving a pitch-bound node transposes around the pitch last typed", "[
 
     const int startPitch = childNote.getProperty(ValueTreeIdentifiers::MidiPitch);
 
-    graph.setNodePosition(graph.getNode(childId), NodePosition { 100, -100, 25 }, nullptr);
+    graph.setNodePosition(graph.getNode(childId), NodeInfo::Position { 100, -100, 25 }, nullptr);
 
     CHECK(static_cast<int>(childNote.getProperty(ValueTreeIdentifiers::MidiPitch)) == startPitch + 2);
 
     childNote.setProperty(ValueTreeIdentifiers::MidiPitch, 70, nullptr);
 
-    graph.setNodePosition(graph.getNode(childId), NodePosition { 100, 0, 25 }, nullptr);
+    graph.setNodePosition(graph.getNode(childId), NodeInfo::Position { 100, 0, 25 }, nullptr);
 
     CHECK(static_cast<int>(childNote.getProperty(ValueTreeIdentifiers::MidiPitch)) == 68);
 
@@ -363,7 +363,7 @@ TEST_CASE("undo and redo keep the node index, parent links and published graph i
     undoManager.beginNewTransaction();
 
     const juce::ValueTree child = NodeFactory::createNode(graph, rootId, ValueTreeIdentifiers::NodeData,
-                                                          NodePosition { 100, 0, 25 }, &undoManager);
+                                                          NodeInfo::Position { 100, 0, 25 }, &undoManager);
     const int childId = child.getProperty(ValueTreeIdentifiers::Id);
 
     const std::vector<int> rootOnly { rootId };
@@ -414,7 +414,7 @@ TEST_CASE("undoing a move restores the arrow's duration and keeps the move redoa
     connection.setProperty(ValueTreeIdentifiers::ArrowDuration, 700, &undoManager);
 
     undoManager.beginNewTransaction();
-    graph.setNodePosition(graph.getNode(childId), NodePosition { 200, 0, 25 }, &undoManager);
+    graph.setNodePosition(graph.getNode(childId), NodeInfo::Position { 200, 0, 25 }, &undoManager);
 
     CHECK(static_cast<int>(connection.getProperty(ValueTreeIdentifiers::ArrowDuration)) == ArrowInfo::noDurationOverride);
 
@@ -522,10 +522,10 @@ TEST_CASE("a node's parent is found through a chain of traversal flags", "[graph
     const int rootId = createRoot(graph, 0, 0);
     const int noteId = createChild(graph, rootId, 100, 0);
 
-    const juce::ValueTree firstFlag = NodeFactory::createTraversalFlagNode(graph, noteId, NodePosition { 200, 0, 25 }, nullptr);
+    const juce::ValueTree firstFlag = NodeFactory::createTraversalFlagNode(graph, noteId, NodeInfo::Position { 200, 0, 25 }, nullptr);
     const int firstFlagId = firstFlag.getProperty(ValueTreeIdentifiers::Id);
 
-    const juce::ValueTree secondFlag = NodeFactory::createTraversalFlagNode(graph, firstFlagId, NodePosition { 300, 0, 25 }, nullptr);
+    const juce::ValueTree secondFlag = NodeFactory::createTraversalFlagNode(graph, firstFlagId, NodeInfo::Position { 300, 0, 25 }, nullptr);
     const int secondFlagId = secondFlag.getProperty(ValueTreeIdentifiers::Id);
 
     CHECK(static_cast<int>(graph.getNodeParent(secondFlagId).getProperty(ValueTreeIdentifiers::Id)) == noteId);

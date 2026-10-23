@@ -8,6 +8,22 @@
 #include <ArsNovaUI/Editors/LabeledEditor.h>
 #include "../../Graph/OrnamentLibraries.h"
 
+/*
+    The drawing surface for an ornament's symbol, the small picture shown on the canvas where the
+    ornament is applied. The symbol is stored on the ornament's tree as the OrnamentSymbol
+    property, as a set of strokes in a square whose side counts as 1. The editor shows a square
+    drawing area with the current symbol and has a pencil, an eraser, a size for both and a button
+    that clears the symbol.
+
+    With the pencil, a drag draws a stroke that is only shown on screen while the mouse is down;
+    mouseUp scales it into the square's units and stores it with OrnamentLibraries::addSymbolStroke.
+    With the eraser, each step of a drag calls OrnamentLibraries::eraseSymbol on the symbol under
+    the eraser's circle. The size is the brush width as a percentage of the square, from 1 to 20.
+    Each edit is an undo transaction.
+
+    OrnamentBuildPanel owns it, shows it in place of the figure and sets ornament.
+*/
+
 class OrnamentSymbolEditor : public juce::Component
 {
 public:

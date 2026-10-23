@@ -111,7 +111,7 @@ void ArrowGestures::finishTip()
         graphState.connectNodes(sourceNode->nodeId, targetNode->nodeId, &undoManager);
 
         NodeFactory::applyArrowInfo(graphState, sourceNode->nodeId, targetNode->nodeId, nodeCanvas.arrowManager.currentArrowInfo,
-                                    ArrowType::StepIntoTree, &undoManager);
+                                    ArrowInfo::Type::StepIntoTree, &undoManager);
 
         nodeCanvas.arrowManager.connectWithSnapAnimation(sourceNode->nodeId, targetNode->nodeId);
     }
@@ -130,7 +130,7 @@ void ArrowGestures::updateHover(juce::Point<float> cursor)
             continue;
         }
 
-        if (arrow->startNode->nodeType != NodeType::TraversalFlag) {
+        if (arrow->startNode->nodeType != NodeInfo::Type::TraversalFlag) {
             continue;
         }
 
@@ -206,11 +206,11 @@ void ArrowGestures::showArrowContextMenu(Arrow* arrow)
 
     menu.addItem("traversal arrow", ArsNovaUI::ContextMenu::ItemKind::Toggle, [this, arrow]() {
         if (arrow->isTraversalArrow()) {
-            setArrowType(arrow, ArrowType::Node);
+            setArrowType(arrow, ArrowInfo::Type::Node);
             return;
         }
 
-        setArrowType(arrow, ArrowType::Traversal);
+        setArrowType(arrow, ArrowInfo::Type::Traversal);
     }, canBeTraversalArrow(arrow), arrow->isTraversalArrow());
 
     if (connectsToModulatorRoot(arrow)) {
@@ -235,7 +235,7 @@ bool ArrowGestures::beginTipFromNode(Node& node)
 {
     auto* const collapsedEncapsulator = dynamic_cast<Encapsulator*>(&node);
 
-    if (node.nodeType == NodeType::TraversalFlag && ! arrowMode) {
+    if (node.nodeType == NodeInfo::Type::TraversalFlag && ! arrowMode) {
         tipGesture         = TipGesture::ConnectingFlag;
         newArrowSourceNode = &node;
         return true;
@@ -290,7 +290,7 @@ Node* ArrowGestures::findTipSnapTarget(const Node& startNode, juce::Point<int> t
     return snapTarget;
 }
 
-void ArrowGestures::setArrowType(const Arrow* arrow, ArrowType arrowType)
+void ArrowGestures::setArrowType(const Arrow* arrow, ArrowInfo::Type arrowType)
 {
     if (! canBeTraversalArrow(arrow)) {
         return;
@@ -300,8 +300,8 @@ void ArrowGestures::setArrowType(const Arrow* arrow, ArrowType arrowType)
 
     const juce::ValueTree connection = graphState.getConnection(ownerNodeId, childNodeId);
 
-    ArrowInfo arrowInfo = ArrowBindingOps::getArrowInfo(connection);
-    arrowInfo.type      = arrowType;
+    ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(connection);
+    arrowInfo.type                = arrowType;
 
     undoManager.beginNewTransaction();
     ArrowBindingOps::setArrowInfo(connection, arrowInfo, &undoManager);
@@ -317,8 +317,8 @@ void ArrowGestures::setArrowSync(const Arrow* arrow, bool shouldSync)
 
     const juce::ValueTree connection = graphState.getConnection(ownerNodeId, childNodeId);
 
-    ArrowInfo arrowInfo = ArrowBindingOps::getArrowInfo(connection);
-    arrowInfo.isSynced  = shouldSync;
+    ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(connection);
+    arrowInfo.isSynced            = shouldSync;
 
     undoManager.beginNewTransaction();
     ArrowBindingOps::setArrowInfo(connection, arrowInfo, &undoManager);

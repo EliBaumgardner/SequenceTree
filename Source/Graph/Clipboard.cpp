@@ -186,7 +186,7 @@ bool Clipboard::wasChordMember(const juce::ValueTree& source) const
     const juce::ValueTree connection =
         graphState.getConnection(static_cast<int>(parent.getProperty(ValueTreeIdentifiers::Id)), static_cast<int>(source.getProperty(ValueTreeIdentifiers::Id)));
 
-    return ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(connection), deltaX, deltaY) == 0;
+    return ArrowInfo::Settings::durationFromDelta(ArrowBindingOps::getArrowInfo(connection), deltaX, deltaY) == 0;
 }
 
 bool Clipboard::hasParentOutsideCopy(int nodeId) const

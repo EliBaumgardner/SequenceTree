@@ -31,9 +31,9 @@ Node::Node(juce::UndoManager& undoManager)
     subLoopLimitEditor.backdrop       = ArsNovaUI::ValueEditor::Backdrop::Badge;
 
     nodeValueEditor   .setFormat(std::make_unique<ArsNovaUI::PitchFormat>());
-    countEditor       .setFormat(std::make_unique<ArsNovaUI::DualIntFormat>(minimumCountLimit, maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
-    subLoopLimitEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumSubLoopLimit, maximumSubLoopLimit));
-    switchCountEditor .setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumCountLimit, maximumCountLimit));
+    countEditor       .setFormat(std::make_unique<ArsNovaUI::DualIntFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
+    subLoopLimitEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumSubLoopLimit, NodeInfo::maximumSubLoopLimit));
+    switchCountEditor .setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit));
 
     nodeValueEditor.editable = false;
 
@@ -104,7 +104,7 @@ void Node::refreshValueDisplay()
     repaint();
 }
 
-void Node::setDisplayMode(NodeDisplayMode newMode)
+void Node::setDisplayMode(NodeInfo::DisplayMode newMode)
 {
     mode = newMode;
 
@@ -118,7 +118,7 @@ void Node::setHoverVisual(bool isHovered)
 {
     this->isHovered = isHovered;
 
-    if (nodeType == NodeType::TraversalFlag) {
+    if (nodeType == NodeInfo::Type::TraversalFlag) {
         for (auto& [childId, arrow] : nodeArrows) {
             if (arrow != nullptr) {
                 arrow->sourceHovered = isHovered;
@@ -271,28 +271,28 @@ void Node::bindValueEditorForMode()
     nodeValueEditor.editable = true;
 
     switch (mode) {
-        case NodeDisplayMode::Pitch:
+        case NodeInfo::DisplayMode::Pitch:
             nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::PitchFormat>());
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
             break;
 
-        case NodeDisplayMode::Velocity:
-            nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumMidiVelocity, maximumMidiVelocity));
+        case NodeInfo::DisplayMode::Velocity:
+            nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumMidiVelocity, NodeInfo::maximumMidiVelocity));
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiVelocity);
             break;
 
-        case NodeDisplayMode::CountLimit:
-            nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::DualIntFormat>(minimumCountLimit, maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
+        case NodeInfo::DisplayMode::CountLimit:
+            nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::DualIntFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
             nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
             break;
 
-        case NodeDisplayMode::Channel:
-            nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumMidiChannel, maximumMidiChannel));
+        case NodeInfo::DisplayMode::Channel:
+            nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumMidiChannel, NodeInfo::maximumMidiChannel));
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiChannel);
             break;
 
-        case NodeDisplayMode::RepeatValue: {
-            auto repeatFormat = std::make_unique<ArsNovaUI::NumberFormat>(minimumRepeatValue, maximumRepeatValue);
+        case NodeInfo::DisplayMode::RepeatValue: {
+            auto repeatFormat = std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumRepeatValue, NodeInfo::maximumRepeatValue);
 
             repeatFormat->prefix = "x";
 
@@ -301,8 +301,8 @@ void Node::bindValueEditorForMode()
             break;
         }
 
-        case NodeDisplayMode::Probability: {
-            auto probabilityFormat = std::make_unique<ArsNovaUI::NumberFormat>(minimumProbability, maximumProbability);
+        case NodeInfo::DisplayMode::Probability: {
+            auto probabilityFormat = std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumProbability, NodeInfo::maximumProbability);
 
             probabilityFormat->suffix = "%";
 
@@ -311,7 +311,7 @@ void Node::bindValueEditorForMode()
             break;
         }
 
-        case NodeDisplayMode::Duration:
+        case NodeInfo::DisplayMode::Duration:
             nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(0.0, ArrowInfo::maximumDurationMs));
             nodeValueEditor.editable = false;
             break;

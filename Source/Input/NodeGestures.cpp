@@ -17,7 +17,7 @@ NodeGestures::NodeGestures(NodeCanvas& nodeCanvas, GraphState& graphState, juce:
 
 void NodeGestures::createRootNode(juce::Point<float> clickPoint)
 {
-    NodePosition nodePosition;
+    NodeInfo::Position nodePosition;
 
     nodePosition.xPosition = juce::roundToInt(clickPoint.x);
     nodePosition.yPosition = juce::roundToInt(clickPoint.y);
@@ -32,7 +32,7 @@ void NodeGestures::respondToDrag(Node& node, juce::Point<int> cursor, const juce
 {
     const int nodeId = node.nodeId;
 
-    NodePosition newPosition;
+    NodeInfo::Position newPosition;
 
     newPosition.xPosition = cursor.x;
     newPosition.yPosition = cursor.y;
@@ -77,7 +77,7 @@ void NodeGestures::finishDrag()
 
 void NodeGestures::dragArrowHead(juce::Point<int> cursor)
 {
-    NodePosition newPosition;
+    NodeInfo::Position newPosition;
 
     if (arrowHeadNode == nullptr) {
         return;
@@ -106,7 +106,7 @@ void NodeGestures::finishArrowHeadDrag()
     nodeCanvas.arrowManager.triggerSnapForNode(headNode->nodeId);
 }
 
-void NodeGestures::handleNodeDrag(int nodeId, NodePosition newPosition)
+void NodeGestures::handleNodeDrag(int nodeId, NodeInfo::Position newPosition)
 {
     if (isDragStart) {
         isDragStart                           = false;
@@ -117,8 +117,8 @@ void NodeGestures::handleNodeDrag(int nodeId, NodePosition newPosition)
         nodeCanvas.showGrid();
     }
 
-    juce::ValueTree nodeValueTree = graphState.getNode(nodeId);
-    NodePosition    oldPosition   = graphState.getNodePosition(nodeId);
+    juce::ValueTree    nodeValueTree = graphState.getNode(nodeId);
+    NodeInfo::Position oldPosition   = graphState.getNodePosition(nodeId);
 
     snapToGrid(newPosition, nodeValueTree);
 
@@ -128,7 +128,7 @@ void NodeGestures::handleNodeDrag(int nodeId, NodePosition newPosition)
     nodeCanvas.nodeManager.moveDescendants(nodeValueTree, deltaX, deltaY);
 }
 
-void NodeGestures::handleNodeDragStart(Node* node, int nodeId, NodePosition newPosition, const juce::ModifierKeys& mods)
+void NodeGestures::handleNodeDragStart(Node* node, int nodeId, NodeInfo::Position newPosition, const juce::ModifierKeys& mods)
 {
     int parentNodeId = nodeId;
 
@@ -153,8 +153,8 @@ void NodeGestures::handleNodeDragStart(Node* node, int nodeId, NodePosition newP
     snapSourceNodeId                      = parentNodeId;
     nodeCanvas.arrowManager.nodesDragging = true;
 
-    const NodePosition     parentPosition = graphState.getNodePosition(parentNodeId);
-    const juce::Point<int> parentCentre   = parentNode->getNodeCentre();
+    const NodeInfo::Position parentPosition = graphState.getNodePosition(parentNodeId);
+    const juce::Point<int>   parentCentre   = parentNode->getNodeCentre();
 
     newPosition.xPosition += parentPosition.xPosition - parentCentre.x;
     newPosition.yPosition += parentPosition.yPosition - parentCentre.y;
@@ -166,7 +166,7 @@ void NodeGestures::handleNodeDragStart(Node* node, int nodeId, NodePosition newP
     }
 
     NodeFactory::applyArrowInfo(graphState, parentNodeId, draggedNodeTree.getProperty(ValueTreeIdentifiers::Id), nodeCanvas.arrowManager.currentArrowInfo,
-                                ArrowType::StepIntoTree, &undoManager);
+                                ArrowInfo::Type::StepIntoTree, &undoManager);
 
     const int owningEncapsulatorId = parentNode->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
@@ -183,7 +183,7 @@ void NodeGestures::handleNodeDragStart(Node* node, int nodeId, NodePosition newP
     graphState.encapsulation.insertNodeAfter(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id), parentNodeId, &undoManager);
 }
 
-void NodeGestures::snapToGrid(NodePosition& newPosition, juce::ValueTree draggedNodeTree)
+void NodeGestures::snapToGrid(NodeInfo::Position& newPosition, juce::ValueTree draggedNodeTree)
 {
     const int              draggedNodeId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
     const juce::Point<int> collapseShift = nodeCanvas.encapsulationView.collapsedSpanShift(draggedNodeId);
@@ -252,7 +252,7 @@ void NodeGestures::connectDraggedNodeToRoot()
 
     graphState.connectNodes(parentNodeId, rootNodeId, &undoManager);
 
-    NodeFactory::applyArrowInfo(graphState, parentNodeId, rootNodeId, nodeCanvas.arrowManager.currentArrowInfo, ArrowType::CrossRootTree, &undoManager);
+    NodeFactory::applyArrowInfo(graphState, parentNodeId, rootNodeId, nodeCanvas.arrowManager.currentArrowInfo, ArrowInfo::Type::CrossRootTree, &undoManager);
 
     nodeCanvas.arrowManager.connectWithSnapAnimation(parentNodeId, rootNodeId);
 }

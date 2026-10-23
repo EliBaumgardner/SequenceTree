@@ -527,7 +527,7 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
         const int deltaX = static_cast<int>(other.getProperty(ValueTreeIdentifiers::XPosition)) - centreX;
         const int deltaY = static_cast<int>(other.getProperty(ValueTreeIdentifiers::YPosition)) - centreY;
 
-        return ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(connection), deltaX, deltaY);
+        return ArrowInfo::Settings::durationFromDelta(ArrowBindingOps::getArrowInfo(connection), deltaX, deltaY);
     };
 
     if (isAlternative) {
@@ -572,7 +572,7 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
 
         RTNode::DanglingArrow dangling;
 
-        dangling.duration   = ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(arrowTree), tipX, tipY);
+        dangling.duration   = ArrowInfo::Settings::durationFromDelta(ArrowBindingOps::getArrowInfo(arrowTree), tipX, tipY);
         dangling.countLimit = arrowTree.getProperty(ValueTreeIdentifiers::CountLimit, GraphState::defaultNodeCountLimit);
 
         collectDisabledTraversals(arrowTree, dangling.disabledTraversals);
@@ -707,11 +707,11 @@ void RTGraphBuilder::classifyRootConnection(const juce::ValueTree& parentValueTr
         return;
     }
 
-    const int arrowType = childIdTree.getProperty(ValueTreeIdentifiers::ArrowType, static_cast<int>(ArrowType::Node));
+    const int arrowType = childIdTree.getProperty(ValueTreeIdentifiers::ArrowType, static_cast<int>(ArrowInfo::Type::Node));
 
-    connection.isTreeJump  = arrowType == static_cast<int>(ArrowType::Traversal);
-    connection.isCrossRoot = arrowType == static_cast<int>(ArrowType::CrossRootTree)
-                          || arrowType == static_cast<int>(ArrowType::Node);
+    connection.isTreeJump  = arrowType == static_cast<int>(ArrowInfo::Type::Traversal);
+    connection.isCrossRoot = arrowType == static_cast<int>(ArrowInfo::Type::CrossRootTree)
+                          || arrowType == static_cast<int>(ArrowInfo::Type::Node);
 }
 
 RTConnection& RTGraphBuilder::connectionFor(RTNode& node, int childId)

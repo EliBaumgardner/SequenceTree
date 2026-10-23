@@ -8,7 +8,7 @@
 Encapsulator::Encapsulator(juce::UndoManager& undoManager, GraphState& graphState, NodeCanvas& nodeCanvas)
     : Node(undoManager), graphState(graphState), nodeCanvas(nodeCanvas)
 {
-    nodeType    = NodeType::Encapsulator;
+    nodeType    = NodeInfo::Type::Encapsulator;
     hasInnerRim = true;
 
     countEditor.setVisible(false);

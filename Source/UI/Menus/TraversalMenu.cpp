@@ -20,7 +20,7 @@ TraversalMenu::TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, Tra
       undoManager(undoManager)
 {
     const juce::ValueTree traversalMap     = graphState.traversals.map;
-    auto                  transposeFormat  = std::make_unique<ArsNovaUI::NumberFormat>(minimumTraversalTranspose, maximumTraversalTranspose);
+    auto                  transposeFormat  = std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumTraversalTranspose, NodeInfo::maximumTraversalTranspose);
     int                   firstTraversalId = -1;
 
     editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
@@ -36,9 +36,9 @@ TraversalMenu::TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, Tra
     velocityField.label.setText("Velocity", juce::dontSendNotification);
     colourLabel.setText("Colour", juce::dontSendNotification);
 
-    multiplierField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumTraversalMultiplier, RTtraversal::maximumTempoMultiplier,
+    multiplierField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumTraversalMultiplier, RTtraversal::maximumTempoMultiplier,
                                                                                ArsNovaUI::ValueFormat::editableDecimalPlaces));
-    channelField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumMidiChannel, maximumMidiChannel));
+    channelField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumMidiChannel, NodeInfo::maximumMidiChannel));
     transposeField.editor.setFormat(std::move(transposeFormat));
     velocityField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(0.0, 1.0, ArsNovaUI::ValueFormat::editableDecimalPlaces));
 

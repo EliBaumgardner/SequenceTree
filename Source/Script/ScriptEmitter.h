@@ -7,6 +7,21 @@
 
 #include "ScriptSyntaxTree.h"
 
+/*
+    The last phase of the compiler: it walks the ClassDeclaration and writes the RTScript, the only
+    thing that leaves Source/Script. run declares the globals, members and functions, emits each
+    function's instructions, and then emits the two functions that set the variables' starting
+    values (globalInitFunction and memberInitFunction). While emitting it checks what the Parser
+    could not: every name is declared, types agree (it inserts a conversion between int, float and
+    double where one is allowed), Node properties exist and are only assigned where they are
+    writable (nodeFieldTable), and calls are valid: advance, playNote, user functions with the
+    right arguments, and core::random after 'import core'.
+
+    Each error becomes a ScriptDiagnostic that marks the text it concerns. The Emitter also
+    counts the deepest stack and most locals a function uses, and rejects a script that would
+    exceed RTScript's limits. An Emitter lives for one compile, made by compileTraversalScript.
+*/
+
 struct LoopFrame
 {
     std::vector<int> breakJumps;
@@ -61,29 +76,29 @@ private:
     void declareMembers  (std::span<const MemberDeclaration> declarations, std::vector<LocalBinding>& bindings, std::vector<double>& defaults);
     void declareFunctions(const ClassDeclaration& declaration);
 
-    void emitFunction(const FunctionDeclaration& declaration, const FunctionSignature& signature);
+    void emitFunction   (const FunctionDeclaration& declaration, const FunctionSignature& signature);
 
-    void emitSequence(std::span<const StatementPtr> statements);
-    void emitBlock   (std::span<const StatementPtr> body);
+    void emitSequence   (std::span<const StatementPtr> statements);
+    void emitBlock      (std::span<const StatementPtr> body);
 
     void emitStatement  (const Statement& statement);
     void emitDeclare    (const Statement& statement);
     void emitAssign     (const Statement& statement);
     void emitAssignField(const Statement& statement);
 
-    void emitIf   (const Statement& statement);
-    void emitFor  (const Statement& statement);
-    void emitWhile(const Statement& statement);
+    void emitIf         (const Statement& statement);
+    void emitFor        (const Statement& statement);
+    void emitWhile      (const Statement& statement);
 
-    void emitBreak   (const Statement& statement);
-    void emitContinue(const Statement& statement);
-    void emitReturn  (const Statement& statement);
+    void emitBreak      (const Statement& statement);
+    void emitContinue   (const Statement& statement);
+    void emitReturn     (const Statement& statement);
 
     void openScope ();
     void closeScope();
 
-    void patch         (int jumpIndex, int target);
-    void patchLoopFrame(const LoopFrame& frame, int continueTarget, int exitTarget);
+    void patch          (int jumpIndex, int target);
+    void patchLoopFrame (const LoopFrame& frame, int continueTarget, int exitTarget);
 
     [[noreturn]] void fail(const std::string& message, const Expression& expression);
     [[noreturn]] void fail(const std::string& message, const Statement& statement);

@@ -24,7 +24,7 @@ void OrnamentApplier::respondToClick(juce::Component* clickedComponent)
         return;
     }
 
-    if ((clickedNode->nodeType != NodeType::Node && clickedNode->nodeType != NodeType::Root) || status == OrnamentStatus::Draft) {
+    if ((clickedNode->nodeType != NodeInfo::Type::Node && clickedNode->nodeType != NodeInfo::Type::Root) || status == OrnamentStatus::Draft) {
         return;
     }
 

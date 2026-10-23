@@ -57,18 +57,18 @@ TEST_CASE("processBlock stays realtime-safe while playing, editing, retiming, re
     ornaments.toggleHost(ornament, host.getProperty(ValueTreeIdentifiers::Id), nullptr);
     ornaments.publish(ornament, nullptr);
 
-    NodeFactory::createRootNode(graph, NodePosition { 0, 0, 25 }, nullptr);
+    NodeFactory::createRootNode(graph, NodeInfo::Position { 0, 0, 25 }, nullptr);
 
     const int rootId = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1)
                                     .getProperty(ValueTreeIdentifiers::Id);
 
     juce::ValueTree first = NodeFactory::createNode(graph, rootId, ValueTreeIdentifiers::NodeData,
-                                                    NodePosition { 100, 0, 25 }, nullptr);
+                                                    NodeInfo::Position { 100, 0, 25 }, nullptr);
 
     const int firstId = first.getProperty(ValueTreeIdentifiers::Id);
 
-    NodeFactory::createNode(graph, rootId, ValueTreeIdentifiers::NodeData, NodePosition { 150, 50, 25 }, nullptr);
-    NodeFactory::createNode(graph, firstId, ValueTreeIdentifiers::NodeData, NodePosition { 200, 0, 25 }, nullptr);
+    NodeFactory::createNode(graph, rootId, ValueTreeIdentifiers::NodeData, NodeInfo::Position { 150, 50, 25 }, nullptr);
+    NodeFactory::createNode(graph, firstId, ValueTreeIdentifiers::NodeData, NodeInfo::Position { 200, 0, 25 }, nullptr);
 
     first.setProperty(ValueTreeIdentifiers::OrnamentUid, ornament.getProperty(ValueTreeIdentifiers::OrnamentUid), nullptr);
     graph.getNode(rootId).setProperty(ValueTreeIdentifiers::OrnamentUid, ornament.getProperty(ValueTreeIdentifiers::OrnamentUid), nullptr);
@@ -106,14 +106,14 @@ TEST_CASE("processBlock stays realtime-safe while playing, editing, retiming, re
 
     playBlocks(200);
 
-    graph.setNodePosition(first, NodePosition { 300, 100, 25 }, nullptr);
+    graph.setNodePosition(first, NodeInfo::Position { 300, 100, 25 }, nullptr);
     processor.rtGraphBuilder.rebuildAllGraphs();
     playBlocks(100);
 
     playHead.position.setBpm(187.0);
     playBlocks(100);
 
-    NodeFactory::createNode(graph, firstId, ValueTreeIdentifiers::NodeData, NodePosition { 400, -50, 25 }, nullptr);
+    NodeFactory::createNode(graph, firstId, ValueTreeIdentifiers::NodeData, NodeInfo::Position { 400, -50, 25 }, nullptr);
     processor.rtGraphBuilder.rebuildAllGraphs();
     playBlocks(100);
 
@@ -157,19 +157,19 @@ TEST_CASE("starting a walk stays realtime-safe with more root-bound arrows than 
     int                      noteOns = 0;
     double                   ppq     = 0.0;
 
-    NodeFactory::createRootNode(graph, NodePosition { 0, 0, 25 }, nullptr);
+    NodeFactory::createRootNode(graph, NodeInfo::Position { 0, 0, 25 }, nullptr);
 
     const int sourceRootId = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1)
                                           .getProperty(ValueTreeIdentifiers::Id);
 
-    NodeFactory::createRootNode(graph, NodePosition { 0, 600, 25 }, nullptr);
+    NodeFactory::createRootNode(graph, NodeInfo::Position { 0, 600, 25 }, nullptr);
 
     const int targetRootId = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1)
                                           .getProperty(ValueTreeIdentifiers::Id);
 
     for (int i = 0; i < rootBoundArrows; ++i) {
         const juce::ValueTree child = NodeFactory::createNode(graph, sourceRootId, ValueTreeIdentifiers::NodeData,
-                                                              NodePosition { 100 + 10 * i, 40 * (i % 8) - 140, 25 },
+                                                              NodeInfo::Position { 100 + 10 * i, 40 * (i % 8) - 140, 25 },
                                                               nullptr);
 
         graph.connectNodes(child.getProperty(ValueTreeIdentifiers::Id), targetRootId, nullptr);

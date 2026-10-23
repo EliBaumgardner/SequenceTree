@@ -10,6 +10,21 @@
 #include <memory>
 #include <vector>
 
+/*
+    The part of the ornament list that shows one library: a header with the library's editable
+    name (its LibraryName property) and a button that folds the section, and below it a grid of
+    OrnamentTiles, one for each ornament in the library, ending with a card that adds a new
+    ornament to the library and makes it the active one. Right-clicking the header opens a menu
+    to reveal the library's folder in the file manager or to remove the library, which asks first
+    and moves its folder to the Trash.
+
+    syncTiles makes the tiles match the library's ornaments, and heightForWidth gives the height
+    the section needs at a width, which depends on how many tiles fit in a row and whether it is
+    folded. onFoldChanged tells the OrnamentSelectionPanel to lay its sections out again.
+
+    OrnamentSelectionPanel owns one for each library.
+*/
+
 class OrnamentLibraries;
 
 class OrnamentLibrarySection : public juce::Component

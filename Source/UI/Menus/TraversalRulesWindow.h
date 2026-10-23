@@ -10,6 +10,26 @@
 #include <ArsNovaUI/Editors/FilePage.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
+/*
+    The window for writing traversal rule scripts. A side panel lists the rules by name and has an
+    add button, and the rest of the window is a code editor (a FilePage) for the rule that is
+    selected, with a status bar along the bottom. A rule is a script in TraversalRuleState's rules
+    tree, and one of them is the live rule that the audio thread runs.
+
+    Typing in a page stores its text in TraversalRuleState at once and starts a 250 ms timer.
+    When the timer fires, compileViewedPage compiles the text with compileTraversalScript, marks
+    the error lines, and reports either the first error or the instruction count. If the viewed
+    rule is the live one, a successful compile is published through
+    AudioSnapshotPublisher::publishScript; a failed one leaves the last good script playing. The
+    play button in the title bar makes the viewed rule the live one. Removing a rule drops its
+    page, and republishes the live rule if the removed one was live. The window listens to the
+    rules tree and refreshes its pages and list when it changes from elsewhere, for example by a
+    restored patch.
+
+    TraversalMenu and NodeMenu open it in a pop-up window, so it takes the CustomLookAndFeel in
+    its constructor and sets it on itself.
+*/
+
 class TraversalRuleState;
 class AudioSnapshotPublisher;
 

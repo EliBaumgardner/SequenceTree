@@ -33,7 +33,7 @@ VirtualMidiOutput::~VirtualMidiOutput()
 
     port->stopBackgroundThread();
 
-    for (int channel = minimumMidiChannel; channel <= maximumMidiChannel; ++channel) {
+    for (int channel = NodeInfo::minimumMidiChannel; channel <= NodeInfo::maximumMidiChannel; ++channel) {
         port->sendMessageNow(juce::MidiMessage::allNotesOff(channel));
     }
 }

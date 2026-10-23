@@ -14,7 +14,7 @@
     A new root gets its position, a default note and the default traversal. A new child gets its
     position and copies its parent's count limits, repeat value and notes. create chooses the
     create function from the NodeCreationMode, the parent's node type and whether the new node is
-    an alternative. applyArrowInfo sets a newly connected arrow's ArrowInfo from the toolbar, with
+    an alternative. applyArrowInfo sets a newly connected arrow's ArrowInfo::Settings from the toolbar, with
     its type chosen from the nodes it joins: a traversal arrow only between two trees. It and
     createDanglingArrow both copy the bindings of an arrow already leaving the same parent.
     setDanglingArrowTip moves a dangling arrow's tip, clears its duration override and reapplies
@@ -31,27 +31,27 @@ class NodeFactory
 {
 public:
 
-    static void createRootNode(GraphState& state, const NodePosition& nodePosition, juce::UndoManager* undoManager);
+    static void createRootNode(GraphState& state, const NodeInfo::Position& nodePosition, juce::UndoManager* undoManager);
 
-    static void createDanglingArrow (GraphState& state, juce::ValueTree nodeTree, const juce::Point<int>& tipOffset, ArrowInfo arrowInfo,
+    static void createDanglingArrow (GraphState& state, juce::ValueTree nodeTree, const juce::Point<int>& tipOffset, ArrowInfo::Settings arrowInfo,
                                      juce::UndoManager* undoManager);
     static void setDanglingArrowTip (GraphState& state, juce::ValueTree arrowTree, const juce::Point<int>& tipOffset, juce::UndoManager* undoManager);
     static void destroyDanglingArrow(juce::ValueTree arrowTree, juce::UndoManager* undoManager);
 
-    static void applyArrowInfo(GraphState& state, int parentNodeId, int childNodeId, ArrowInfo arrowInfo, ArrowType rootConnectionType,
+    static void applyArrowInfo(GraphState& state, int parentNodeId, int childNodeId, ArrowInfo::Settings arrowInfo, ArrowInfo::Type rootConnectionType,
                                juce::UndoManager* undoManager);
 
     static juce::ValueTree create(NodeCreationMode mode, GraphState& state, int parentNodeId, const juce::Identifier& parentType, bool makeAlternative,
-                                  const NodePosition& position, juce::UndoManager* undoManager);
+                                  const NodeInfo::Position& position, juce::UndoManager* undoManager);
 
-    static juce::ValueTree createNode             (GraphState& state, int parentNodeId, const juce::Identifier& nodeType, const NodePosition& nodePosition,
+    static juce::ValueTree createNode             (GraphState& state, int parentNodeId, const juce::Identifier& nodeType, const NodeInfo::Position& nodePosition,
                                                    juce::UndoManager* undoManager);
-    static juce::ValueTree createTraversalFlagNode(GraphState& state, int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager);
+    static juce::ValueTree createTraversalFlagNode(GraphState& state, int parentNodeId, const NodeInfo::Position& nodePosition, juce::UndoManager* undoManager);
     static juce::ValueTree createEncapsulator     (GraphState& state, std::span<const int> memberNodeIds, juce::UndoManager* undoManager);
 
-    static juce::ValueTree createModulatorRoot       (GraphState& state, int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager);
-    static juce::ValueTree createModulator           (GraphState& state, int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager);
-    static juce::ValueTree createAlternativeModulator(GraphState& state, int parentNodeId, const NodePosition& nodePosition, juce::UndoManager* undoManager);
+    static juce::ValueTree createModulatorRoot       (GraphState& state, int parentNodeId, const NodeInfo::Position& nodePosition, juce::UndoManager* undoManager);
+    static juce::ValueTree createModulator           (GraphState& state, int parentNodeId, const NodeInfo::Position& nodePosition, juce::UndoManager* undoManager);
+    static juce::ValueTree createAlternativeModulator(GraphState& state, int parentNodeId, const NodeInfo::Position& nodePosition, juce::UndoManager* undoManager);
 
 private:
 
@@ -60,5 +60,5 @@ private:
 
     static void inheritFromParent(GraphState& state, int parentNodeId, int newNodeId, juce::ValueTree newNode, juce::UndoManager* undoManager);
 
-    static void inheritArrowBindings(const GraphState& state, ArrowInfo& arrowInfo, int nodeId, const juce::ValueTree& newArrow);
+    static void inheritArrowBindings(const GraphState& state, ArrowInfo::Settings& arrowInfo, int nodeId, const juce::ValueTree& newArrow);
 };

@@ -82,7 +82,7 @@ void OrnamentCanvas::handleAsyncUpdate()
             node->nodeColour    = nodeColour;
 
             node->bindToTree();
-            node->setDisplayMode(NodeDisplayMode::Pitch);
+            node->setDisplayMode(NodeInfo::DisplayMode::Pitch);
             node->setMouseCursor(juce::MouseCursor::ParentCursor);
 
             addAndMakeVisible(*node);

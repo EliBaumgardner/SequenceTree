@@ -156,7 +156,7 @@ void Titlebar::configureUndoRedoPane()
 
 void Titlebar::configureDisplaySelector()
 {
-    auto addDisplayMode = [this](int itemId, juce::String label, NodeDisplayMode mode) {
+    auto addDisplayMode = [this](int itemId, juce::String label, NodeInfo::DisplayMode mode) {
         displaySelector.addItem(itemId, std::move(label), [this, mode]() {
             nodeCanvas.nodeManager.setDisplayMode(mode);
 
@@ -169,12 +169,12 @@ void Titlebar::configureDisplaySelector()
     displaySelector.labelEditor.autoFitText = false;
     displaySelector.leadingIcon             = &ArsNovaUI::CustomLookAndFeel::drawEyeIcon;
 
-    addDisplayMode(1, "pitch",       NodeDisplayMode::Pitch);
-    addDisplayMode(2, "velocity",    NodeDisplayMode::Velocity);
-    addDisplayMode(3, "countLimit",  NodeDisplayMode::CountLimit);
-    addDisplayMode(4, "channel",     NodeDisplayMode::Channel);
-    addDisplayMode(5, "repeatValue", NodeDisplayMode::RepeatValue);
-    addDisplayMode(6, "probability", NodeDisplayMode::Probability);
+    addDisplayMode(1, "pitch",       NodeInfo::DisplayMode::Pitch);
+    addDisplayMode(2, "velocity",    NodeInfo::DisplayMode::Velocity);
+    addDisplayMode(3, "countLimit",  NodeInfo::DisplayMode::CountLimit);
+    addDisplayMode(4, "channel",     NodeInfo::DisplayMode::Channel);
+    addDisplayMode(5, "repeatValue", NodeInfo::DisplayMode::RepeatValue);
+    addDisplayMode(6, "probability", NodeInfo::DisplayMode::Probability);
 
     displaySelector.setSelectedItem(1);
 }

@@ -10,6 +10,22 @@
 #include <ArsNovaUI/PopupWindow.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
+/*
+    The panel that edits the settings of one traversal at a time (see TraversalState). A selector
+    at the top lists every traversal id in the graph's traversal map, and below it are fields for
+    the chosen traversal's tempo multiplier, MIDI channel, transpose and velocity multiplier, a
+    colour selector, and a button that opens the TraversalRulesWindow. Each field is bound to a
+    property of the traversal's TraversalData tree, so editing writes the graph through the
+    UndoManager. Until a traversal exists the panel shows a hint instead.
+
+    selectTraversal binds the fields to a traversal and also makes it the traversal that
+    NodeCanvas::quaverTraversalId uses for note preview. It listens to the traversal map, adding
+    or removing an item when a traversal is created or removed and moving the selection if the
+    chosen traversal is the one removed.
+
+    MenuArea owns it and shows it when the traversal icon is selected.
+*/
+
 class NodeCanvas;
 class GraphState;
 class TraversalRuleState;

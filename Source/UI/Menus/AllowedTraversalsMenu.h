@@ -8,6 +8,21 @@
 #include <ArsNovaUI/Editors/LabeledEditor.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
+/*
+    The list of switches that decides which traversals may follow one arrow. It has a row for
+    every traversal key in the graph (a traversal id and an instance number, see TraversalState),
+    each with an on or off switch. A key is on unless the arrow's connection tree lists it in its
+    DisabledTraversalIds child. Turning a switch off adds an entry for the key to that child, and
+    turning it on removes the entry, each as its own undo transaction.
+
+    ArrowGestures opens it in a pop-up from the arrow's context menu and sizes it with
+    getIdealHeight. RTGraphBuilder copies the disabled keys into the arrow's RTConnection for the
+    audio thread.
+
+    The menu is a pop-up root with no parent, so it takes the CustomLookAndFeel in its constructor
+    and sets it on itself.
+*/
+
 class GraphState;
 
 class AllowedTraversalsMenu : public juce::Component

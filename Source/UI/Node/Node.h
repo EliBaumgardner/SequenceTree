@@ -10,6 +10,27 @@
 #include <ArsNovaUI/Editors/ValueEditor.h>
 #include <ArsNovaUI/Theme/Visuals.h>
 
+/*
+    The component that shows one node of the graph on the canvas, drawn as a circle. It holds the
+    node's tree (nodeValueTree) and the tree of its MIDI note (midiNoteData), which its editors
+    are bound to: a main editor for the property the NodeInfo::DisplayMode picks (pitch, velocity, count
+    limit, channel, repeat value or probability; bindValueEditorForMode binds it), and small
+    badge editors for the count limit, the switch count limit and the sub-loop limit. nodeArrows
+    lists the Arrows that start at this node, by the id of the node they end at.
+
+    It also holds how the node looks right now: hovered, selected, outlined, in an encapsulation
+    group, and highlighted. activeHighlights maps the id of each traversal run that is on the
+    node to its colour, and while a highlight begins, advancePulse animates a pulse once per
+    display frame. incomingAngle is the direction the arrow into the node arrives from.
+    getNodeCentre, getVisualRadius and getBodyExtent say where the node's body is, which is what
+    Arrow uses to stop its shaft at the edge. respondToClick starts editing the editor under a
+    click.
+
+    RootNode, Modulator, TraversalFlagNode and Encapsulator derive from it and change the shape
+    or the editors. NodeManager creates every node and sets its id, trees and colour;
+    NodeController and the gesture classes route the mouse to it.
+*/
+
 class Arrow;
 class NodeCanvas;
 
@@ -31,7 +52,7 @@ public:
 
     void incrementNodeValue (int incrementValue);
     void refreshValueDisplay();
-    void setDisplayMode     (NodeDisplayMode mode);
+    void setDisplayMode     (NodeInfo::DisplayMode mode);
 
     void setHoverVisual    (bool isHovered);
     void setSelectVisual   (bool isSelected);
@@ -61,7 +82,7 @@ public:
     juce::ValueTree nodeValueTree;
     juce::ValueTree midiNoteData;
 
-    NodeDisplayMode mode = NodeDisplayMode::Pitch;
+    NodeInfo::DisplayMode mode = NodeInfo::DisplayMode::Pitch;
 
     ArsNovaUI::ValueEditor nodeValueEditor;
     ArsNovaUI::IconButton  upButton;
@@ -73,9 +94,9 @@ public:
     juce::Colour nodeColour;
     juce::Colour encapsulationRingColour;
 
-    int      nodeId        = -1;
-    NodeType nodeType      = NodeType::Node;
-    float    incomingAngle = 0.0f;
+    int            nodeId        = -1;
+    NodeInfo::Type nodeType      = NodeInfo::Type::Node;
+    float          incomingAngle = 0.0f;
 
     bool isHovered     = false;
     bool isSelected    = false;

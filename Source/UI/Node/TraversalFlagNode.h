@@ -2,6 +2,18 @@
 
 #include "Node.h"
 
+/*
+    The Node for a traversal flag, drawn as a triangle that points along the arrow arriving at it
+    (incomingAngle). Its editor takes a traversal as TraversalFlagFormat text: "+2" spawns
+    traversal 2, "-2" removes it, and a letter after the number picks the instance. The value is
+    stored as TraversalFlagValue in the flag's tree, and typing a traversal id creates that
+    traversal's settings in GraphState's traversals if they do not exist. It shows the count limit
+    and switch count limit badges and no sub-loop badge.
+
+    hitTest accepts the triangle and the visible badges. NodeManager creates it for a
+    TraversalFlagData tree, and the arrows leaving it fade in only while it is hovered.
+*/
+
 class GraphState;
 
 class TraversalFlagNode : public Node

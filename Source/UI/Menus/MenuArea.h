@@ -10,6 +10,21 @@
 #include <ArsNovaUI/Menus/SettingsMenu.h>
 #include <ArsNovaUI/ScaledView.h>
 
+/*
+    The panel along the side of the editor that holds the MenuBar of icons and the two menus the
+    icons open. It lays out a settings button above the MenuBar, a bar across the top of the menu
+    column, a resizer on its inner edge, and the TraversalMenu and NodeMenu in the space beside
+    the MenuBar. It draws frosted glass over the NodeCanvas behind them.
+
+    Clicking the traversal icon or the node icon calls togglePanel, which shows that menu and
+    hides the other, or hides it when it was already shown, and marks the icon as selected. The
+    settings button opens a SettingsMenu in a pop-up window. narrowestHeight is the least height
+    that fits the icons and both menus, and the resizer's onWidthDragged is how PluginEditor
+    changes the panel's width.
+
+    PluginEditor owns it and hands it the objects its two menus need.
+*/
+
 class MenuBar;
 class NodeCanvas;
 class GraphState;

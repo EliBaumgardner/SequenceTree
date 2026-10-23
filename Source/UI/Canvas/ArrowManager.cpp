@@ -42,7 +42,7 @@ Arrow* ArrowManager::connect(Node* parentNode, Node* childNode)
 
     createdArrow->arrowTree = connectionTreeFor(parentNode->nodeId, childNode->nodeId);
 
-    if (parentNode->nodeType == NodeType::TraversalFlag) {
+    if (parentNode->nodeType == NodeInfo::Type::TraversalFlag) {
         createdArrow->sourceHovered = parentNode->isHovered;
 
         createdArrow->initHoverState(parentNode->isHovered);

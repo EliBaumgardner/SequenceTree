@@ -6,6 +6,20 @@
 
 #include <memory>
 
+/*
+    The controls for the patch, the saved state of the plugin kept in a file: an editor showing
+    the patch's name, a button that opens another patch file, and a button that resets the patch.
+    The name and the file path are the PatchName and PatchFile properties of the patch tree.
+
+    Editing the name renames the patch file on disk, adding a number if the new name is taken, and
+    stores the name the file ended up with. Opening a file asks for one in the patch folder,
+    loads it with the processor's setStateInformation and records its name and path. Resetting
+    asks for confirmation, then loads an empty state and returns every parameter to its default.
+
+    Titlebar owns it and asks idealWidth how wide it needs to be. It acts on the processor from
+    the message thread.
+*/
+
 class PatchControls : public juce::Component
 {
 public:

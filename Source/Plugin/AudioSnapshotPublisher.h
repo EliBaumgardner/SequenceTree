@@ -8,6 +8,28 @@
 #include <memory>
 #include <vector>
 
+/*
+    The hand-off of everything the audio thread reads from the message thread that builds it.
+    Playback reads the graph's nodes and the compiled traversal script from one immutable
+    Snapshot behind an atomic pointer: beginBlock loads that pointer once per block and endBlock
+    ends the block, and the audio thread never writes to a snapshot.
+
+    To change what playback sees, a caller takes a copy with beginEdit, replaces one member and
+    calls publish. publishGraph merges a rebuilt graph into the published nodes, drops that
+    graph's stale nodes and sets firstUnlinkedRootId, the root the audio thread starts walking
+    from. publishScript publishes a compiled script, and publishActiveTraversalRule compiles the
+    active rule's source first and returns the compile result so its errors can be shown.
+
+    The audio thread must never free a snapshot. blockEpoch is odd while a block runs, so publish
+    frees the snapshot it replaces on the spot when the epoch is even, and otherwise parks it in
+    retiredSnapshots until a later publish finds the epoch has moved on. releaseRetiredSnapshots
+    empties that list once playback has stopped.
+
+    SequenceTreeAudioProcessor owns it and brackets each processBlock with BlockScope.
+    RTGraphBuilder publishes graphs, and the rules window publishes scripts. Publishing happens
+    on the message thread only.
+*/
+
 class TraversalRuleState;
 
 class AudioSnapshotPublisher

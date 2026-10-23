@@ -1,10 +1,3 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin editor.
-
-  ==============================================================================
-*/
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
@@ -38,7 +31,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, p.traversalSession, p.colourPresets, p.undoManager, p.ornamentLibraries, p.ornamentUndoManager);
     canvasFrame    = std::make_unique<CanvasFrame>(*nodeCanvas, *menuArea, *titleBar, *bottomBar);
 
-    titleBar->onDisplayModeChanged = [this](NodeDisplayMode mode) { bottomBar->applyDisplayMode(mode); };
+    titleBar->onDisplayModeChanged = [this](NodeInfo::DisplayMode mode) { bottomBar->applyDisplayMode(mode); };
 
     port->onTransformChanged = [this](const juce::AffineTransform& viewTransform, float zoom) { nodeCanvas->applyViewTransform(viewTransform, zoom); };
 

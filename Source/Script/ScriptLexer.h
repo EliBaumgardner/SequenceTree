@@ -6,6 +6,18 @@
 
 #include "ScriptCompiler.h"
 
+/*
+    The first phase of the compiler: it splits script text into tokens, the words and symbols the
+    Parser reads. A Token has a TokenKind (a keyword, name, number, bracket or operator), its text
+    or value, and the line, column and length it came from, so errors can mark it. run drops
+    whitespace and comments, which start at // and end at the next // or the end of the line, and
+    ends the list with an End token. A character the language does not use, or a number too large,
+    is reported as a ScriptDiagnostic. An unknown character stops the run with no tokens.
+
+    A Lexer lives for one compile, made by compileTraversalScript. Parser also uses Token and
+    TokenKind.
+*/
+
 enum class TokenKind
 {
     Null,

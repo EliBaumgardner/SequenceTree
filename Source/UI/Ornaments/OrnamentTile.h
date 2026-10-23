@@ -4,6 +4,19 @@
 
 #include <ArsNovaUI/Editors/ValueEditor.h>
 
+/*
+    The card for one ornament in a library: the ornament's symbol, an editable name under it (its
+    OrnamentName property) and a note in the corner saying "draft" or "unpublished" when the
+    ornament has no published figure, or has changes that are not published yet. The card of the
+    active ornament is drawn highlighted.
+
+    Clicking it sets ActiveOrnamentUid on the libraries tree, which makes the ornament the one
+    OrnamentBuildPanel edits and the one the ornament tool applies. Right-clicking opens a menu to
+    duplicate the ornament or to delete it, which asks first. Both are done as undo transactions.
+
+    OrnamentLibrarySection owns one for each ornament in its library.
+*/
+
 class OrnamentLibraries;
 
 class OrnamentTile : public juce::Component

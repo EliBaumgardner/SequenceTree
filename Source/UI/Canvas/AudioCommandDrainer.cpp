@@ -102,8 +102,8 @@ void AudioCommandDrainer::drainArrows()
                 continue;
             }
 
-            const bool startsAtFlag = arrow->startNode != nullptr && arrow->startNode->nodeType == NodeType::TraversalFlag;
-            const bool endsAtFlag   = arrow->endNode   != nullptr && arrow->endNode->nodeType   == NodeType::TraversalFlag;
+            const bool startsAtFlag = arrow->startNode != nullptr && arrow->startNode->nodeType == NodeInfo::Type::TraversalFlag;
+            const bool endsAtFlag   = arrow->endNode   != nullptr && arrow->endNode->nodeType   == NodeInfo::Type::TraversalFlag;
 
             if (startsAtFlag || endsAtFlag) {
                 continue;
