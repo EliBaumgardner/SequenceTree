@@ -24,9 +24,7 @@ A polyphonic, generative MIDI sequencer. You draw trees of notes, and traversals
 
 ## What it is
 
-Most sequencers store a pattern and play it back. SequenceTree stores **rules** for a pattern. Every node is a note, every arrow is a path the music can take, and a small set of counters on each node decides which path is taken on which pass. A graph of a dozen nodes can play for minutes before it repeats, and several graphs, or several voices in one graph, play at the same time.
-
-SequenceTree **makes no sound of its own**. It only sends MIDI, so you pair it with a synth or sampler: inside a DAW as an AU or VST3 instrument, or from the standalone app over a MIDI port.
+A music sequencer is a device which generates and modifies a musical pattern (sequence) over time. SequenceTree displays musical information on an editable graph which allows the user to create complex sequences.
 
 ## Getting started
 
