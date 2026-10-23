@@ -149,7 +149,7 @@ An **ornament** is a short figure, such as a turn, a trill or a run of grace not
 
 ## What's under the hood
 
-### Audio that never stutters
+### Real Time Safe Audio
 
 Audio software has a strict deadline. Every few milliseconds the computer asks the plugin for the next slice of sound. If the plugin is even slightly late, the listener hears a click or a dropout.
 
