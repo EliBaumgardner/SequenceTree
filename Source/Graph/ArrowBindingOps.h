@@ -11,7 +11,7 @@
     node's NodeChildrenIds or DanglingArrows list, and its settings are properties of that entry.
 
     getArrowInfo reads an arrow's type, X and Y bindings, X and Y multipliers, sync and duration
-    override into an ArrowInfo, and setArrowInfo writes one back. A pitch-bound arrow shifts its
+    override into an ArrowInfo::Settings, and setArrowInfo writes one back. A pitch-bound arrow shifts its
     target's pitch by an amount computed from the arrow's X or Y length, and records the shift it
     has applied in ArrowPitchOffset. When a node moves, syncPitchBindings recomputes that amount
     for every arrow into, out of and dangling from the node, and changes the target's pitch only by
@@ -35,8 +35,8 @@ public:
     void syncPitchBindings  (int nodeId, juce::UndoManager* undoManager);
     void clearArrowDurations(int nodeId, juce::UndoManager* undoManager);
 
-    static void      setArrowInfo(juce::ValueTree arrowTree, const ArrowInfo& arrowInfo, juce::UndoManager* undoManager);
-    static ArrowInfo getArrowInfo(const juce::ValueTree& arrowTree);
+    static void                setArrowInfo(juce::ValueTree arrowTree, const ArrowInfo::Settings& arrowInfo, juce::UndoManager* undoManager);
+    static ArrowInfo::Settings getArrowInfo(const juce::ValueTree& arrowTree);
 
 private:
 

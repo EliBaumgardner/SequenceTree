@@ -11,6 +11,23 @@
 #include <ArsNovaUI/PopupWindow.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
+/*
+    The panel that edits the node selected on the canvas. It shows a colour selector and one
+    labelled number field for each of the node's settings: count limit, repeat value, switch
+    count limit, sub-loop count limit, probability, and the velocity, pitch and channel of its
+    MIDI note. Each field is bound to a property of the node's tree or of its note, with the
+    limits NodeInfo.h gives, so editing a field writes the graph through the UndoManager. A
+    button opens the TraversalRulesWindow. With nothing selected the panel shows a hint instead.
+
+    It registers a listener with NodeManager::nodeSelectedListeners. When a node is selected it
+    binds the fields to that node and shows only those the node has: a node without a MIDI note
+    shows no note fields, and an alternative node has no sub-loop field. When a node is
+    deselected it hides them all. The colour selector sets the node's colour through
+    GraphState::setNodeColour.
+
+    MenuArea owns it and shows it when the node icon is selected.
+*/
+
 class Node;
 class NodeCanvas;
 class GraphState;
@@ -68,14 +85,14 @@ private:
     ArsNovaUI::LabeledEditor channelField           { undoManager };
 
     std::array<LabeledRow, 8> labeledRows {{
-        { countLimitField,        "CNT", "Count Limit",          ValueTreeIdentifiers::CountLimit,        RowSource::NodeTree, minimumCountLimit,   maximumCountLimit,   "",  ""  },
-        { repeatField,            "RPT", "Repeat Value",         ValueTreeIdentifiers::RepeatValue,       RowSource::NodeTree, minimumRepeatValue,  maximumRepeatValue,  "x", ""  },
-        { switchCountLimitField,  "SW",  "Switch Count Limit",   ValueTreeIdentifiers::SwitchCountLimit,  RowSource::NodeTree, minimumCountLimit,   maximumCountLimit,   "",  ""  },
-        { subLoopCountLimitField, "SUB", "Sub Loop Count Limit", ValueTreeIdentifiers::SubLoopCountLimit, RowSource::SubLoop,  minimumCountLimit,   maximumCountLimit,   "",  ""  },
-        { probabilityField,       "PRB", "Probability",          ValueTreeIdentifiers::Probability,       RowSource::NodeTree, minimumProbability,  maximumProbability,  "",  "%" },
-        { velocityField,          "VEL", "Velocity",             ValueTreeIdentifiers::MidiVelocity,      RowSource::MidiNote, minimumMidiVelocity, maximumMidiVelocity, "",  ""  },
-        { pitchField,             "PIT", "Pitch",                ValueTreeIdentifiers::MidiPitch,         RowSource::MidiNote, minimumMidiPitch,    maximumMidiPitch,    "",  ""  },
-        { channelField,           "CH",  "Channel",              ValueTreeIdentifiers::MidiChannel,       RowSource::MidiNote, minimumMidiChannel,  maximumMidiChannel,  "",  ""  }
+        { countLimitField,        "CNT", "Count Limit",          ValueTreeIdentifiers::CountLimit,        RowSource::NodeTree, NodeInfo::minimumCountLimit,   NodeInfo::maximumCountLimit,   "",  ""  },
+        { repeatField,            "RPT", "Repeat Value",         ValueTreeIdentifiers::RepeatValue,       RowSource::NodeTree, NodeInfo::minimumRepeatValue,  NodeInfo::maximumRepeatValue,  "x", ""  },
+        { switchCountLimitField,  "SW",  "Switch Count Limit",   ValueTreeIdentifiers::SwitchCountLimit,  RowSource::NodeTree, NodeInfo::minimumCountLimit,   NodeInfo::maximumCountLimit,   "",  ""  },
+        { subLoopCountLimitField, "SUB", "Sub Loop Count Limit", ValueTreeIdentifiers::SubLoopCountLimit, RowSource::SubLoop,  NodeInfo::minimumCountLimit,   NodeInfo::maximumCountLimit,   "",  ""  },
+        { probabilityField,       "PRB", "Probability",          ValueTreeIdentifiers::Probability,       RowSource::NodeTree, NodeInfo::minimumProbability,  NodeInfo::maximumProbability,  "",  "%" },
+        { velocityField,          "VEL", "Velocity",             ValueTreeIdentifiers::MidiVelocity,      RowSource::MidiNote, NodeInfo::minimumMidiVelocity, NodeInfo::maximumMidiVelocity, "",  ""  },
+        { pitchField,             "PIT", "Pitch",                ValueTreeIdentifiers::MidiPitch,         RowSource::MidiNote, NodeInfo::minimumMidiPitch,    NodeInfo::maximumMidiPitch,    "",  ""  },
+        { channelField,           "CH",  "Channel",              ValueTreeIdentifiers::MidiChannel,       RowSource::MidiNote, NodeInfo::minimumMidiChannel,  NodeInfo::maximumMidiChannel,  "",  ""  }
     }};
 
     ArsNovaUI::IconButton editTraversalRulesButton;

@@ -1,13 +1,3 @@
-/*
-  ==============================================================================
-
-    ObjectObjectController
-    Created: 6 May 2025 8:38:35pm
-    Author:  Eli Baumgardner
-
-  ==============================================================================
-*/
-
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_data_structures/juce_data_structures.h>
@@ -17,6 +7,22 @@
 #include "NodeGestures.h"
 #include "EncapsulationGestures.h"
 
+/*
+    The router for every mouse event on the canvas and its nodes. On mouseDown it works out which
+    feature the press belongs to: the active canvas tool first (paint, span, note preview,
+    ornament), then an ornament mark, then the arrow hit tests, then the node or the empty canvas.
+    It hands the press to the class that implements that feature and records the choice in
+    gesture, so mouseDrag and mouseUp go to the same class.
+
+    The features are the members it owns: selectionGestures, ornamentApplier, arrowGestures,
+    nodeGestures and encapsulationGestures. A new canvas feature is another such class and another
+    branch here. What it does itself is small: forwarding paint-tool strokes to
+    NodeCanvas::valueField, pushing note preview requests to TraversalSession::previewRequests,
+    the Ctrl-drag that changes a node's value (dragValue), and node hover.
+
+    PluginEditor builds it after the canvas. Titlebar sets arrowGestures.arrowMode and
+    nodeGestures.creationMode, and PluginEditor's key handler calls selectionGestures.
+*/
 
 class NodeCanvas;
 

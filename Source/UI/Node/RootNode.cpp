@@ -13,7 +13,7 @@ RootNode::RootNode(juce::UndoManager& undoManager, GraphState& graphState)
       rootRectangle(undoManager),
       graphState(graphState)
 {
-    nodeType          = NodeType::Root;
+    nodeType          = NodeInfo::Type::Root;
     interiorLeftInset = loopLimitRectangleWidth;
 
     setPaintingIsUnclipped(true);

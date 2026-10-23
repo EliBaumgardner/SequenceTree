@@ -32,7 +32,7 @@ Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, juce::UndoManager& und
 
     valueEditor->setInterceptsMouseClicks(true, false);
     valueEditor->setTooltip("Count Limit");
-    valueEditor->setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minimumCountLimit, maximumCountLimit));
+    valueEditor->setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit));
     addAndMakeVisible(*valueEditor);
 
     durationEditor = std::make_unique<ArsNovaUI::ValueEditor>(undoManager);
@@ -85,7 +85,7 @@ void Arrow::setArrowBounds()
         const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
         endNode->incomingAngle = std::atan2(static_cast<float>(delta.y), static_cast<float>(delta.x));
 
-        if (endNode->nodeType == NodeType::TraversalFlag) {
+        if (endNode->nodeType == NodeInfo::Type::TraversalFlag) {
             endNode->resized();
             endNode->repaint();
         }
@@ -120,7 +120,7 @@ void Arrow::beginDurationEdit()
         return;
     }
 
-    const bool percentDuration = (startNode->nodeType == NodeType::Modulator);
+    const bool percentDuration = (startNode->nodeType == NodeInfo::Type::Modulator);
 
     auto durationFormat = std::make_unique<ArsNovaUI::NumberFormat>(0.0, ArrowInfo::maximumDurationMs);
 
@@ -266,7 +266,7 @@ bool Arrow::isTraversalArrow() const
         return false;
     }
 
-    return ArrowBindingOps::getArrowInfo(arrowTree).type == ArrowType::Traversal;
+    return ArrowBindingOps::getArrowInfo(arrowTree).type == ArrowInfo::Type::Traversal;
 }
 
 bool Arrow::isSyncArrow() const
@@ -276,13 +276,13 @@ bool Arrow::isSyncArrow() const
 
 bool Arrow::showsDurationLabel() const
 {
-    const ArrowInfo arrowInfo = ArrowBindingOps::getArrowInfo(arrowTree);
+    const ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(arrowTree);
 
-    if (ArrowInfo::bindsTo(arrowInfo, ArrowBinding::DurationBind)) {
+    if (ArrowInfo::Settings::bindsTo(arrowInfo, ArrowInfo::Binding::DurationBind)) {
         return true;
     }
 
-    return ! ArrowInfo::bindsTo(arrowInfo, ArrowBinding::PitchBind);
+    return ! ArrowInfo::Settings::bindsTo(arrowInfo, ArrowInfo::Binding::PitchBind);
 }
 
 int Arrow::getDuration() const
@@ -293,7 +293,7 @@ int Arrow::getDuration() const
 
     const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
 
-    return ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(arrowTree), delta.x, delta.y);
+    return ArrowInfo::Settings::durationFromDelta(ArrowBindingOps::getArrowInfo(arrowTree), delta.x, delta.y);
 }
 
 juce::String Arrow::getDurationLabel() const
@@ -310,13 +310,13 @@ juce::String Arrow::getDurationLabel() const
         }
 
         if (pitchedNode != nullptr) {
-            return juce::String(static_cast<int>(pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch, defaultMidiPitch)));
+            return juce::String(static_cast<int>(pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch, NodeInfo::defaultMidiPitch)));
         }
     }
 
     const int duration = getDuration();
 
-    if (startNode->nodeType == NodeType::Modulator) {
+    if (startNode->nodeType == NodeInfo::Type::Modulator) {
         return juce::String(duration / ArrowInfo::millisecondsPerDurationPercent) + "%";
     }
 
@@ -398,7 +398,7 @@ ArsNovaUI::ArrowGeometry Arrow::getGeometry(float animationProgress) const
     juce::Point<float> start = centre;
     juce::Point<float> tip   = centre + delta;
 
-    const bool endIsTraversalFlag = endNode != nullptr && endNode->nodeType == NodeType::TraversalFlag;
+    const bool endIsTraversalFlag = endNode != nullptr && endNode->nodeType == NodeInfo::Type::TraversalFlag;
 
     if (isDangling()) {
         start += direction * startNode->getVisualRadius();
@@ -574,17 +574,17 @@ ArsNovaUI::ArrowVisual::ShaftStyle Arrow::shaftStyle() const
         return ArsNovaUI::ArrowVisual::ShaftStyle::Solid;
     }
 
-    if (startNode->nodeType == NodeType::TraversalFlag) {
+    if (startNode->nodeType == NodeInfo::Type::TraversalFlag) {
         return ArsNovaUI::ArrowVisual::ShaftStyle::Dashed;
     }
 
-    if (endNode == nullptr || endNode->nodeType != NodeType::Root || startNode->isAlternativeNode) {
+    if (endNode == nullptr || endNode->nodeType != NodeInfo::Type::Root || startNode->isAlternativeNode) {
         return ArsNovaUI::ArrowVisual::ShaftStyle::Solid;
     }
 
-    const ArrowType arrowType = ArrowBindingOps::getArrowInfo(arrowTree).type;
+    const ArrowInfo::Type arrowType = ArrowBindingOps::getArrowInfo(arrowTree).type;
 
-    if (arrowType == ArrowType::Traversal || arrowType == ArrowType::StepIntoTree) {
+    if (arrowType == ArrowInfo::Type::Traversal || arrowType == ArrowInfo::Type::StepIntoTree) {
         return ArsNovaUI::ArrowVisual::ShaftStyle::Solid;
     }
 

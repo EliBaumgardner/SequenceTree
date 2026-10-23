@@ -205,7 +205,7 @@ void SequenceTreeAudioProcessor::driveWalk(const AudioSnapshotPublisher::Snapsho
         tempoInfo.currentSampleRate,
         tempoParameter.load() * hostTempoScale,
         juce::roundToInt(transposeParameter.load()),
-        velocityParameter.load() / static_cast<double>(maximumMidiVelocity)
+        velocityParameter.load() / static_cast<double>(NodeInfo::maximumMidiVelocity)
     };
 
     const DispatchContext previewContext { context.nodes, traversalSession.previewTraversals, context.midiMessages,
@@ -461,10 +461,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::
                                                            })));
 
     layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { velocityParameterId, parameterVersion },
-                                                         "Velocity", 0, maximumMidiVelocity, maximumMidiVelocity));
+                                                         "Velocity", 0, NodeInfo::maximumMidiVelocity, NodeInfo::maximumMidiVelocity));
 
     layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { transposeParameterId, parameterVersion },
-                                                         "Transpose", minimumGlobalTranspose, maximumGlobalTranspose, 0));
+                                                         "Transpose", NodeInfo::minimumGlobalTranspose, NodeInfo::maximumGlobalTranspose, 0));
 
     layout.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID { hostSyncParameterId, parameterVersion }, "Sync To Host", true));
 

@@ -17,6 +17,26 @@
 #include "../Audio/ThreadMessaging/VirtualMidiOutput.h"
 #include "AudioSnapshotPublisher.h"
 
+/*
+    The plugin itself, as the host sees it, and the root that owns everything the sound depends on:
+    the document (graphState, traversalRuleState, ornamentLibraries, undoManager, the host
+    parameters in valueTreeState, patch), the audio model (rtGraphBuilder, snapshots), playback
+    (traversalSession and the two EventManagers) and the output channels (bridge,
+    virtualMidiOutput). The editor window is separate and optional, so closing it loses nothing.
+
+    processBlock runs on the audio thread and outputs MIDI only; the audio buffer is cleared. Each
+    block it takes the current snapshot, follows the host's play state, tempo and position
+    (followHostTransport; a jump to a new position becomes pendingRelocationSamples, which makes
+    TraversalSession replay silently to it), sends any pending note-offs, then driveWalk builds the
+    DispatchContexts for playback and note preview and runs TraversalSession and EventManager. It
+    ends by copying the block's MIDI to virtualMidiOutput.
+
+    getStateInformation and setStateInformation save and restore the graph, traversal map, rules,
+    colour presets, parameters and patch as one ValueTree. A load is applied on the message thread
+    by applyRestoredState, which rebuilds the audio model and refreshes an open editor's canvas.
+    The editor controls playback through the atomics isPlaying and resetRequested.
+*/
+
 class SequenceTreeAudioProcessorEditor;
 
 class SequenceTreeAudioProcessor  : public juce::AudioProcessor

@@ -6,6 +6,27 @@
 
 #include "../../Util/ArrowInfo.h"
 
+/*
+    The owner of the canvas's Arrow components: one Arrow for each connection between two nodes in
+    the graph and one for each dangling arrow (an arrow with a loose tip that is not connected to
+    a node yet), added to the NodeCanvas as children. Each arrow is also entered in its start
+    node's nodeArrows, by the end node's id (dangling arrows by a negative index), so the audio
+    commands can find it.
+
+    connect and connectParentToChild create the component for a connection, and an alternative
+    child gets the arrow drawn from the child to its parent. refreshFor re-lays-out every arrow of
+    a node that moved or changed, and rebuildDanglingForNode rebuilds a node's dangling arrows
+    from its tree. updatePreview shows the arrow being drawn and commitPreview writes it into the
+    graph as a dangling arrow with the toolbar's currentArrowInfo. The snap-ghost functions show
+    and remove the arrow that previews a connection to a root. The progress functions start,
+    pause, resume and reset the trails that show the walk moving along arrows. setSelected
+    selects one arrow.
+
+    NodeCanvas::handleAsyncUpdate calls it for arrow updates, AudioCommandDrainer for the audio
+    thread's trail commands, and BottomBar edits currentArrowInfo. NodeManager is its partner for
+    nodes; each calls into the other.
+*/
+
 class NodeCanvas;
 class Node;
 class Arrow;
@@ -58,7 +79,7 @@ public:
     void resumeAllProgress();
     void resetTrail       (int trailId);
 
-    ArrowInfo              currentArrowInfo;
+    ArrowInfo::Settings    currentArrowInfo;
     std::unique_ptr<Arrow> preview;
     bool                   nodesDragging = false;
 

@@ -1,13 +1,28 @@
 #ifndef SEQUENCETREE_NODEPOSITION_H
 #define SEQUENCETREE_NODEPOSITION_H
 
-struct NodePosition {
+/*
+    The plain values that describe a node, shared by the graph, the input layer and the UI: where
+    a node sits on the canvas (Position, with its radius), one MIDI note it plays (Note), the
+    lowest and highest value each editable property may hold (pitch, velocity, channel,
+    probability, count limit, sub-loop limit, repeat value and the two transposes), the kinds a
+    node comes in (Type) and which of its properties a node shows as its value (DisplayMode).
+
+    GraphState reads and writes Position and Note as it stores them in a node's tree. The
+    editors in the UI and the menus use the limits to clamp what the user types, and Titlebar
+    sets the DisplayMode through NodeManager::setDisplayMode.
+*/
+
+namespace NodeInfo
+{
+
+struct Position {
     int xPosition;
     int yPosition;
     int radius;
 };
 
-struct NodeNote {
+struct Note {
     int pitch;
     int velocity;
     int duration;
@@ -44,7 +59,9 @@ inline constexpr int maximumTraversalTranspose =  24;
 inline constexpr int minimumGlobalTranspose = -48;
 inline constexpr int maximumGlobalTranspose =  48;
 
-enum class NodeType        { Node, Root, Modulator, TraversalFlag, Encapsulator};
-enum class NodeDisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue, Probability};
+enum class Type        { Node, Root, Modulator, TraversalFlag, Encapsulator};
+enum class DisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue, Probability};
+
+}
 
 #endif //SEQUENCETREE_NODEPOSITION_H

@@ -131,7 +131,7 @@ void NodeManager::add(int nodeId)
     }
 
     if (!nodeCanvas.gridOriginSet && nodeChildTree.getType() == ValueTreeIdentifiers::RootNodeData) {
-        const NodePosition rootPosition = graphState.getNodePosition(nodeId);
+        const NodeInfo::Position rootPosition = graphState.getNodePosition(nodeId);
 
         nodeCanvas.gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
         nodeCanvas.gridSpacing   = ArrowInfo::pixelsPerGridSpace;
@@ -178,13 +178,13 @@ void NodeManager::setPosition(int nodeId)
         return;
     }
 
-    const NodePosition     nodePosition       = graphState.getNodePosition(nodeId);
-    const int              radius             = ArsNovaUI::Theme::nodeRadius;
-    const int              encapsulatorId     = nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-    const juce::ValueTree  encapsulator       = graphState.getNode(encapsulatorId);
-    auto* const            owningEncapsulator = dynamic_cast<Encapsulator*>(find(encapsulatorId));
-    const juce::Point<int> collapseShift      = nodeCanvas.encapsulationView.collapsedSpanShift(nodeId);
-    const bool             isDrawnAtOwner     = encapsulator.isValid()
+    const NodeInfo::Position nodePosition       = graphState.getNodePosition(nodeId);
+    const int                radius             = ArsNovaUI::Theme::nodeRadius;
+    const int                encapsulatorId     = nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+    const juce::ValueTree    encapsulator       = graphState.getNode(encapsulatorId);
+    auto* const              owningEncapsulator = dynamic_cast<Encapsulator*>(find(encapsulatorId));
+    const juce::Point<int>   collapseShift      = nodeCanvas.encapsulationView.collapsedSpanShift(nodeId);
+    const bool               isDrawnAtOwner     = encapsulator.isValid()
                                              && (owningEncapsulator == nullptr || ! owningEncapsulator->isExpanded);
     int                    xPosition          = nodePosition.xPosition;
     int                    yPosition          = nodePosition.yPosition;
@@ -197,13 +197,13 @@ void NodeManager::setPosition(int nodeId)
     xPosition += collapseShift.x;
     yPosition += collapseShift.y;
 
-    if (node->nodeType == NodeType::Root) {
+    if (node->nodeType == NodeInfo::Type::Root) {
         const int loopLimitWidth = RootNode::loopLimitRectangleWidth;
 
         node->setSize(radius * 2 + loopLimitWidth, radius * 2);
         node->setTopLeftPosition(xPosition - radius - loopLimitWidth, yPosition - radius);
     }
-    else if (node->nodeType == NodeType::TraversalFlag) {
+    else if (node->nodeType == NodeInfo::Type::TraversalFlag) {
         node->setBounds(juce::Rectangle<int>(radius * 4, radius * 4).withCentre({ xPosition, yPosition }));
     }
     else {
@@ -255,7 +255,7 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
     moveDescendants(nodeValueTree, deltaX, deltaY, visited, rootId);
 }
 
-void NodeManager::setDisplayMode(NodeDisplayMode mode)
+void NodeManager::setDisplayMode(NodeInfo::DisplayMode mode)
 {
     displayMode = mode;
 
@@ -361,7 +361,7 @@ void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int
         }
 
         const juce::ValueTree childNodeTree = graphState.getNode(childId);
-        NodePosition          childPosition = graphState.getNodePosition(childId);
+        NodeInfo::Position    childPosition = graphState.getNodePosition(childId);
 
         childPosition.xPosition += deltaX;
         childPosition.yPosition += deltaY;
@@ -384,7 +384,7 @@ void NodeManager::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId,
         return;
     }
 
-    NodePosition encapsulatorPosition = graphState.getNodePosition(encapsulatorId);
+    NodeInfo::Position encapsulatorPosition = graphState.getNodePosition(encapsulatorId);
 
     encapsulatorPosition.xPosition += deltaX;
     encapsulatorPosition.yPosition += deltaY;

@@ -6,6 +6,21 @@
 #include "../Canvas/ValueField.h"
 #include <ArsNovaUI/Buttons/IconButton.h>
 
+/*
+    The control strip for the paint tool: a button that turns paint mode on and off, a colour
+    selector for the brush, and a size field and a rate field for it. It holds one brush colour
+    for each of ValueField's paint layers (pitch, velocity, duration) and shows the colour of the
+    layer that is current.
+
+    The paint button toggles NodeCanvas::activeTool between Paint and None. The colour selector
+    sets the colour of the current layer and passes it to NodeCanvas::valueField as brushColour.
+    The two fields each hold a 0 to 1 value that is scaled into valueField's brushRadius or
+    brushFlow. setPaintMode switches the layer and the colour shown with it; BottomBar's
+    applyDisplayMode calls it when the display mode changes to pitch or velocity.
+
+    BottomBar owns it and lays it out as the left end of the bar.
+*/
+
 class NodeCanvas;
 
 class PaintToolSettings : public juce::Component

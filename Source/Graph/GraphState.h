@@ -56,13 +56,13 @@ public:
     void disconnectNodes(int parentNodeId, int childNodeId, juce::UndoManager* undoManager);
     void removeNode     (int nodeId, juce::UndoManager* undoManager);
 
-    void addMidiNote    (int nodeId, NodeNote note, juce::UndoManager* undoManager);
+    void addMidiNote    (int nodeId, NodeInfo::Note note, juce::UndoManager* undoManager);
     void setNodeColour  (int nodeId, const juce::String& colourText, juce::UndoManager* undoManager);
-    void setNodePosition(juce::ValueTree node, NodePosition nodePosition, juce::UndoManager* undoManager);
+    void setNodePosition(juce::ValueTree node, NodeInfo::Position nodePosition, juce::UndoManager* undoManager);
 
     void replaceState(const juce::ValueTree& restoredNodeMap, const juce::ValueTree& restoredTraversalMap);
 
-    NodePosition getNodePosition(int nodeId) const;
+    NodeInfo::Position getNodePosition(int nodeId) const;
 
     bool connectsToOtherTreeRoot(int parentNodeId, int childNodeId) const;
 

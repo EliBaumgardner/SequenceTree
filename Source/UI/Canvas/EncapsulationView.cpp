@@ -199,8 +199,8 @@ juce::Point<int> EncapsulationView::collapsedSpanShift(int nodeId) const
                     continue;
                 }
 
-                const NodePosition exitPosition         = graphState.getNodePosition(parentId);
-                const NodePosition encapsulatorPosition = graphState.getNodePosition(encapsulatorId);
+                const NodeInfo::Position exitPosition         = graphState.getNodePosition(parentId);
+                const NodeInfo::Position encapsulatorPosition = graphState.getNodePosition(encapsulatorId);
 
                 shift.x -= exitPosition.xPosition - encapsulatorPosition.xPosition;
                 shift.y -= exitPosition.yPosition - encapsulatorPosition.yPosition;

@@ -8,6 +8,19 @@
 #include "ScriptLexer.h"
 #include "ScriptSyntaxTree.h"
 
+/*
+    The second phase of the compiler: it checks that the tokens follow the language's grammar and
+    builds the ClassDeclaration they describe. run reads the imports, any variables before the
+    class, the class with its members and functions, and any variables after it. Inside functions,
+    parseStatement reads declarations, assignments, calls, if / else, for, while, break, continue
+    and return, and parseExpression reads operators in order of precedence (precedenceOf).
+
+    It reports a break in the grammar as a ScriptDiagnostic, then recover skips to the end of the
+    broken member or statement and carries on, so one compile can list several errors. It does not
+    check that names exist or that types agree; the Emitter does. A Parser lives for one compile,
+    made by compileTraversalScript.
+*/
+
 struct ParseFailure {};
 
 class Parser

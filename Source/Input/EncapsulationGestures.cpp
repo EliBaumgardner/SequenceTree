@@ -17,7 +17,7 @@ void EncapsulationGestures::selectSpanNode(Node& node)
 {
     const int nodeId = node.nodeId;
 
-    if (node.nodeType == NodeType::Encapsulator) {
+    if (node.nodeType == NodeInfo::Type::Encapsulator) {
         nodeCanvas.nodeManager.clearOutlines();
         nodeCanvas.spanAnchorNodeId = -1;
 
@@ -27,7 +27,7 @@ void EncapsulationGestures::selectSpanNode(Node& node)
         return;
     }
 
-    if (node.nodeType != NodeType::Node && node.nodeType != NodeType::Root) {
+    if (node.nodeType != NodeInfo::Type::Node && node.nodeType != NodeInfo::Type::Root) {
         return;
     }
 
@@ -63,7 +63,7 @@ bool EncapsulationGestures::toggleEncapsulationExpansion(Node& node)
 {
     const int nodeId = node.nodeId;
 
-    if (node.nodeType == NodeType::Encapsulator) {
+    if (node.nodeType == NodeInfo::Type::Encapsulator) {
         nodeCanvas.encapsulationView.expand(nodeId);
         return true;
     }

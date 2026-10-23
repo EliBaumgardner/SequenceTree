@@ -10,6 +10,22 @@
 #include <ArsNovaUI/Canvas/DynamicPort.h>
 #include <ArsNovaUI/Editors/ValueEditor.h>
 
+/*
+    The editing area of the OrnamentWindow, for the active ornament (the one named by
+    ActiveOrnamentUid on the libraries tree). Under a title bar of buttons it shows one of two
+    views, chosen with the symbol button: the figure view, an OrnamentCanvas inside a zoomable
+    port with an OrnamentFigureController doing the editing and an editor for the ornament's name,
+    or the symbol view, an OrnamentSymbolEditor. With no ornament active it shows a hint.
+
+    The title bar has buttons to pick the host node, to turn on arrow mode, to undo and redo, to
+    publish the ornament, and to switch views. Publish calls OrnamentLibraries::publish and is
+    enabled only when isPublishable accepts the figure and it is not already published.
+
+    It listens to the libraries tree: when the active ornament changes it hands the new ornament
+    to the controller, the canvas and the symbol editor, and when the figure changes it redraws
+    the canvas. OrnamentWindow owns it and asks for minimumWidth.
+*/
+
 class OrnamentLibraries;
 
 class OrnamentBuildPanel : public juce::Component, private juce::ValueTree::Listener

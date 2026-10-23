@@ -11,7 +11,7 @@ TraversalFlagNode::TraversalFlagNode(juce::UndoManager& undoManager, GraphState&
       traversalNumEditor(undoManager),
       graphState(graphState)
 {
-    nodeType = NodeType::TraversalFlag;
+    nodeType = NodeInfo::Type::TraversalFlag;
 
     traversalNumEditor.setFormat(std::make_unique<TraversalFlagFormat>());
     traversalNumEditor.setInterceptsMouseClicks(false, true);

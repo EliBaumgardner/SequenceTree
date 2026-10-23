@@ -3,7 +3,7 @@
 
 #include <utility>
 
-void NodeFactory::createRootNode(GraphState& state, const NodePosition& nodePosition, juce::UndoManager* undoManager)
+void NodeFactory::createRootNode(GraphState& state, const NodeInfo::Position& nodePosition, juce::UndoManager* undoManager)
 {
     const juce::ValueTree rootNodeValueTree = state.addRootNode(undoManager);
     const int             rootId            = rootNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
@@ -15,7 +15,7 @@ void NodeFactory::createRootNode(GraphState& state, const NodePosition& nodePosi
 }
 
 void NodeFactory::createDanglingArrow(GraphState& state, juce::ValueTree nodeTree, const juce::Point<int>& tipOffset,
-                                      ArrowInfo arrowInfo, juce::UndoManager* undoManager)
+                                      ArrowInfo::Settings arrowInfo, juce::UndoManager* undoManager)
 {
     if (!nodeTree.isValid()) {
         return;
@@ -66,18 +66,18 @@ void NodeFactory::destroyDanglingArrow(juce::ValueTree arrowTree, juce::UndoMana
     }
 }
 
-void NodeFactory::applyArrowInfo(GraphState& state, int parentNodeId, int childNodeId, ArrowInfo arrowInfo, ArrowType rootConnectionType,
+void NodeFactory::applyArrowInfo(GraphState& state, int parentNodeId, int childNodeId, ArrowInfo::Settings arrowInfo, ArrowInfo::Type rootConnectionType,
                                  juce::UndoManager* undoManager)
 {
     const bool            connectsToOtherRoot  = state.connectsToOtherTreeRoot(parentNodeId, childNodeId);
     const bool            ownedByTraversalFlag = state.getNode(parentNodeId).getType() == ValueTreeIdentifiers::TraversalFlagData;
     const juce::ValueTree connection           = state.getConnection(parentNodeId, childNodeId);
 
-    if (arrowInfo.type == ArrowType::Traversal && ! connectsToOtherRoot) {
-        arrowInfo.type = ArrowType::Node;
+    if (arrowInfo.type == ArrowInfo::Type::Traversal && ! connectsToOtherRoot) {
+        arrowInfo.type = ArrowInfo::Type::Node;
     }
 
-    if (connectsToOtherRoot && ! ownedByTraversalFlag && arrowInfo.type != ArrowType::Traversal) {
+    if (connectsToOtherRoot && ! ownedByTraversalFlag && arrowInfo.type != ArrowInfo::Type::Traversal) {
         arrowInfo.type = rootConnectionType;
     }
 
@@ -89,7 +89,7 @@ void NodeFactory::applyArrowInfo(GraphState& state, int parentNodeId, int childN
 }
 
 juce::ValueTree NodeFactory::create(NodeCreationMode mode, GraphState& state, int parentNodeId, const juce::Identifier& parentType, bool makeAlternative,
-                                    const NodePosition& position, juce::UndoManager* undoManager)
+                                    const NodeInfo::Position& position, juce::UndoManager* undoManager)
 {
     switch (mode)
     {
@@ -128,7 +128,7 @@ juce::ValueTree NodeFactory::create(NodeCreationMode mode, GraphState& state, in
 }
 
 juce::ValueTree NodeFactory::createNode(GraphState& state, int parentNodeId, const juce::Identifier& nodeType,
-                                        const NodePosition& nodePosition, juce::UndoManager* undoManager)
+                                        const NodeInfo::Position& nodePosition, juce::UndoManager* undoManager)
 {
     const juce::ValueTree childNodeValueTree = state.addChildNode(parentNodeId, nodeType, undoManager);
     const int             nodeId             = childNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
@@ -140,7 +140,7 @@ juce::ValueTree NodeFactory::createNode(GraphState& state, int parentNodeId, con
     return childNodeValueTree;
 }
 
-juce::ValueTree NodeFactory::createTraversalFlagNode(GraphState& state, int parentNodeId, const NodePosition& nodePosition,
+juce::ValueTree NodeFactory::createTraversalFlagNode(GraphState& state, int parentNodeId, const NodeInfo::Position& nodePosition,
                                                      juce::UndoManager* undoManager)
 {
     const juce::ValueTree childNodeValueTree = state.addTraversalFlagNode(parentNodeId, undoManager);
@@ -162,7 +162,7 @@ juce::ValueTree NodeFactory::createEncapsulator(GraphState& state, std::span<con
     return encapsulatorValueTree;
 }
 
-juce::ValueTree NodeFactory::createModulatorRoot(GraphState& state, int parentNodeId, const NodePosition& nodePosition,
+juce::ValueTree NodeFactory::createModulatorRoot(GraphState& state, int parentNodeId, const NodeInfo::Position& nodePosition,
                                                  juce::UndoManager* undoManager)
 {
     const juce::ValueTree modulatorRootValueTree = state.addModulatorRoot(parentNodeId, undoManager);
@@ -172,7 +172,7 @@ juce::ValueTree NodeFactory::createModulatorRoot(GraphState& state, int parentNo
     return modulatorRootValueTree;
 }
 
-juce::ValueTree NodeFactory::createModulator(GraphState& state, int parentNodeId, const NodePosition& nodePosition,
+juce::ValueTree NodeFactory::createModulator(GraphState& state, int parentNodeId, const NodeInfo::Position& nodePosition,
                                              juce::UndoManager* undoManager)
 {
     const juce::ValueTree modulatorValueTree = state.addModulator(parentNodeId, undoManager);
@@ -182,7 +182,7 @@ juce::ValueTree NodeFactory::createModulator(GraphState& state, int parentNodeId
     return modulatorValueTree;
 }
 
-juce::ValueTree NodeFactory::createAlternativeModulator(GraphState& state, int parentNodeId, const NodePosition& nodePosition,
+juce::ValueTree NodeFactory::createAlternativeModulator(GraphState& state, int parentNodeId, const NodeInfo::Position& nodePosition,
                                                         juce::UndoManager* undoManager)
 {
     const juce::ValueTree alternativeModulatorValueTree = state.addAlternativeModulator(parentNodeId, undoManager);
@@ -194,7 +194,7 @@ juce::ValueTree NodeFactory::createAlternativeModulator(GraphState& state, int p
 
 void NodeFactory::setDefaultNodeNote(GraphState& state, int nodeId, juce::UndoManager* undoManager)
 {
-    NodeNote note;
+    NodeInfo::Note note;
 
     note.pitch       = 60;
     note.velocity    = 60;
@@ -259,7 +259,7 @@ void NodeFactory::inheritFromParent(GraphState& state, int parentNodeId, int new
     }
 }
 
-void NodeFactory::inheritArrowBindings(const GraphState& state, ArrowInfo& arrowInfo, int nodeId, const juce::ValueTree& newArrow)
+void NodeFactory::inheritArrowBindings(const GraphState& state, ArrowInfo::Settings& arrowInfo, int nodeId, const juce::ValueTree& newArrow)
 {
     const juce::ValueTree node = state.getNode(nodeId);
 
@@ -299,7 +299,7 @@ void NodeFactory::inheritArrowBindings(const GraphState& state, ArrowInfo& arrow
     }
 
     if (establishedArrow.isValid()) {
-        const ArrowInfo establishedInfo = ArrowBindingOps::getArrowInfo(establishedArrow);
+        const ArrowInfo::Settings establishedInfo = ArrowBindingOps::getArrowInfo(establishedArrow);
 
         arrowInfo.xBinding    = establishedInfo.xBinding;
         arrowInfo.yBinding    = establishedInfo.yBinding;
@@ -311,12 +311,12 @@ void NodeFactory::inheritArrowBindings(const GraphState& state, ArrowInfo& arrow
         std::swap(arrowInfo.xBinding,    arrowInfo.yBinding);
         std::swap(arrowInfo.xMultiplier, arrowInfo.yMultiplier);
 
-        if (arrowInfo.xBinding == ArrowBinding::PitchBind) {
-            arrowInfo.xBinding = ArrowBinding::NoBind;
+        if (arrowInfo.xBinding == ArrowInfo::Binding::PitchBind) {
+            arrowInfo.xBinding = ArrowInfo::Binding::NoBind;
         }
 
-        if (arrowInfo.yBinding == ArrowBinding::PitchBind) {
-            arrowInfo.yBinding = ArrowBinding::NoBind;
+        if (arrowInfo.yBinding == ArrowInfo::Binding::PitchBind) {
+            arrowInfo.yBinding = ArrowInfo::Binding::NoBind;
         }
     }
 }

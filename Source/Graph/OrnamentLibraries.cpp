@@ -119,7 +119,7 @@ void OrnamentLibraries::addDanglingArrow(juce::ValueTree ornament, int nodeId, j
     juce::ValueTree       node           = figure.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId);
     juce::ValueTree       danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
     juce::ValueTree       danglingArrow  {ValueTreeIdentifiers::DanglingArrow};
-    ArrowInfo             arrowInfo;
+    ArrowInfo::Settings   arrowInfo;
 
     if (! node.isValid()) {
         return;
@@ -138,8 +138,8 @@ void OrnamentLibraries::addDanglingArrow(juce::ValueTree ornament, int nodeId, j
         return;
     }
 
-    arrowInfo.xBinding = ArrowBinding::DurationBind;
-    arrowInfo.yBinding = ArrowBinding::NoBind;
+    arrowInfo.xBinding = ArrowInfo::Binding::DurationBind;
+    arrowInfo.yBinding = ArrowInfo::Binding::NoBind;
 
     danglingArrow.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, nullptr);
     danglingArrow.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, nullptr);
@@ -538,11 +538,11 @@ juce::ValueTree OrnamentLibraries::findOrnament(const juce::String& uid) const
 
 juce::ValueTree OrnamentLibraries::addFigureNode(juce::ValueTree ornament, int parentNodeId, juce::Point<int> position, juce::UndoManager* undoManager)
 {
-    juce::ValueTree figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    juce::ValueTree parent = figure.getChildWithProperty(ValueTreeIdentifiers::Id, parentNodeId);
-    const int       nodeId = ornament.getProperty(ValueTreeIdentifiers::NextFigureNodeId, 1);
-    juce::ValueTree node   {ValueTreeIdentifiers::OrnamentNoteData};
-    ArrowInfo       arrowInfo;
+    juce::ValueTree     figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
+    juce::ValueTree     parent = figure.getChildWithProperty(ValueTreeIdentifiers::Id, parentNodeId);
+    const int           nodeId = ornament.getProperty(ValueTreeIdentifiers::NextFigureNodeId, 1);
+    juce::ValueTree     node   {ValueTreeIdentifiers::OrnamentNoteData};
+    ArrowInfo::Settings arrowInfo;
 
     if (! figure.isValid() || (parentNodeId == -1 && figure.getNumChildren() > 0)) {
         return {};
@@ -552,8 +552,8 @@ juce::ValueTree OrnamentLibraries::addFigureNode(juce::ValueTree ornament, int p
         return {};
     }
 
-    arrowInfo.xBinding = ArrowBinding::DurationBind;
-    arrowInfo.yBinding = ArrowBinding::NoBind;
+    arrowInfo.xBinding = ArrowInfo::Binding::DurationBind;
+    arrowInfo.yBinding = ArrowInfo::Binding::NoBind;
 
     node.setProperty(ValueTreeIdentifiers::Id,               nodeId,                 nullptr);
     node.setProperty(ValueTreeIdentifiers::XPosition,        position.x,             nullptr);
@@ -634,14 +634,14 @@ std::vector<OrnamentStep> OrnamentLibraries::figureSteps(const juce::ValueTree& 
         }
 
         if (next.isValid()) {
-            step.durationWeight = ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(connection),
+            step.durationWeight = ArrowInfo::Settings::durationFromDelta(ArrowBindingOps::getArrowInfo(connection),
                                                                static_cast<int>(next.getProperty(ValueTreeIdentifiers::XPosition)) - nodeX,
                                                                static_cast<int>(next.getProperty(ValueTreeIdentifiers::YPosition)) - nodeY);
 
             previousDurationWeight = step.durationWeight;
         }
         else if (danglingArrow.isValid()) {
-            step.durationWeight = ArrowInfo::durationFromDelta(ArrowBindingOps::getArrowInfo(danglingArrow),
+            step.durationWeight = ArrowInfo::Settings::durationFromDelta(ArrowBindingOps::getArrowInfo(danglingArrow),
                                                                danglingArrow.getProperty(ValueTreeIdentifiers::ArrowTipX),
                                                                danglingArrow.getProperty(ValueTreeIdentifiers::ArrowTipY));
         }

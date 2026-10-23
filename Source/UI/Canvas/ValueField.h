@@ -5,6 +5,25 @@
 #include <optional>
 #include <vector>
 
+/*
+    The paint mode of the canvas: a coloured glow over the canvas that shows one value of every
+    node (pitch, duration or velocity, the PaintLayer) as brightness around the node, and a brush
+    that changes those values by painting. For each of the three layers it keeps paintDensity, a
+    number from 0 to 1 for every pixel of the canvas, which the brush raises or, when erasing,
+    lowers.
+
+    paintStroke applies the brush between two points: it adds to the density under the brush and
+    sets the value of each node the stroke touches to the highest (or, erasing, lowest) density
+    under that node, scaled to 0..127, written to the node's first MIDI note without an undo
+    transaction. endStroke finishes the stroke. While a stroke is held still, a timer keeps
+    painting at the same point. refresh redraws the glow into image, which NodeCanvas::paint
+    draws while the Paint tool is active, and setActivePaintLayer switches layers.
+
+    NodeController calls paintStroke and endStroke from mouse events, PaintToolSettings sets the
+    brush colour, radius and flow, and NodeCanvas owns it and refreshes it after changes to the
+    graph and the view.
+*/
+
 class NodeCanvas;
 class Node;
 

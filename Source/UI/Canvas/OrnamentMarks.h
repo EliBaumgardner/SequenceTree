@@ -6,6 +6,22 @@
 
 #include "OrnamentMarkView.h"
 
+/*
+    The record of the ornament marks on the canvas: for each node that carries an ornament, an
+    OrnamentMarkView placed on the top edge of the node, added to the NodeCanvas as a child. A
+    node counts as ornamented when its tree has an OrnamentUid. Its mark shows the ornament's
+    symbol, or a missing marker when the library has no such ornament or it is still a draft
+    that has not been published.
+
+    refresh creates, updates or removes the mark for one node. It listens to the ornament
+    libraries tree and refreshes every node when an ornament is added, removed or has its symbol
+    changed, and it listens to each marked node's component so the mark follows it when the node
+    moves, resizes, hides or is deleted.
+
+    NodeCanvas owns it. NodeManager calls refresh for a new node and NodeCanvas::handleAsyncUpdate
+    for an OrnamentChanged update.
+*/
+
 class NodeCanvas;
 class Node;
 class OrnamentLibraries;

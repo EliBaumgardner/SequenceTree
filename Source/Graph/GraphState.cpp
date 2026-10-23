@@ -220,12 +220,12 @@ void GraphState::connectNodes(int parentNodeId, int childNodeId, juce::UndoManag
     juce::ValueTree childId {ValueTreeIdentifiers::NodeId};
     childId.setProperty(ValueTreeIdentifiers::Id, childNodeId, undoManager);
 
-    ArrowInfo arrowInfo;
+    ArrowInfo::Settings arrowInfo;
 
     if (parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData
         || parentNode.getType() == ValueTreeIdentifiers::AlternativeModulatorData) {
-        arrowInfo.xBinding = ArrowBinding::NoBind;
-        arrowInfo.yBinding = ArrowBinding::DurationBind;
+        arrowInfo.xBinding = ArrowInfo::Binding::NoBind;
+        arrowInfo.yBinding = ArrowInfo::Binding::DurationBind;
     }
 
     ArrowBindingOps::setArrowInfo(childId, arrowInfo, undoManager);
@@ -290,7 +290,7 @@ void GraphState::removeNode(int nodeId, juce::UndoManager* undoManager)
     encapsulation.removeMember(nodeId, encapsulatorId, undoManager);
 }
 
-void GraphState::addMidiNote(int nodeId, NodeNote note, juce::UndoManager* undoManager)
+void GraphState::addMidiNote(int nodeId, NodeInfo::Note note, juce::UndoManager* undoManager)
 {
     juce::ValueTree node = getNode(nodeId);
 
@@ -354,7 +354,7 @@ void GraphState::setNodeColour(int nodeId, const juce::String& colourText, juce:
     }
 }
 
-void GraphState::setNodePosition(juce::ValueTree node, NodePosition nodePosition, juce::UndoManager* undoManager)
+void GraphState::setNodePosition(juce::ValueTree node, NodeInfo::Position nodePosition, juce::UndoManager* undoManager)
 {
     jassert(node.isValid());
 
@@ -393,12 +393,12 @@ void GraphState::replaceState(const juce::ValueTree& restoredNodeMap,
     }
 }
 
-NodePosition GraphState::getNodePosition(int nodeId) const
+NodeInfo::Position GraphState::getNodePosition(int nodeId) const
 {
     juce::ValueTree node = getNode(nodeId);
     jassert(node.isValid());
 
-    NodePosition nodePosition;
+    NodeInfo::Position nodePosition;
 
     nodePosition.xPosition = node.getProperty(ValueTreeIdentifiers::XPosition);
     nodePosition.yPosition = node.getProperty(ValueTreeIdentifiers::YPosition);

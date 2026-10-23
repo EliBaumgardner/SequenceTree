@@ -7,7 +7,7 @@
 
 Modulator::Modulator(juce::UndoManager& undoManager) : Node(undoManager)
 {
-    nodeType = NodeType::Modulator;
+    nodeType = NodeInfo::Type::Modulator;
 }
 
 void Modulator::paint(juce::Graphics& graphics)
@@ -19,7 +19,7 @@ void Modulator::bindValueEditorForMode()
 {
     Node::bindValueEditorForMode();
 
-    if (mode != NodeDisplayMode::Pitch || ! nodeValueTree.isValid()) {
+    if (mode != NodeInfo::DisplayMode::Pitch || ! nodeValueTree.isValid()) {
         return;
     }
 

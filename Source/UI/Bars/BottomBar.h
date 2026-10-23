@@ -15,6 +15,24 @@
 
 #include <array>
 
+/*
+    The bar along the bottom of the editor, holding the controls for the canvas tools: the paint
+    settings, a note preview button with a counts field, a span tool button, an ornament tool
+    button, and two buttons that bind an arrow's x and y extent to pitch or duration. It is a
+    Bar drawn as frosted glass over the NodeCanvas.
+
+    Each tool button toggles NodeCanvas::activeTool, and the bar sets which of them looks selected
+    from NodeCanvas::onActiveToolChanged. Right-clicking the note preview button opens a menu to
+    repeat the preview, which goes to the audio thread as a preview request on TraversalSession.
+    Right-clicking the ornament button rescans the OrnamentLibraries and opens the OrnamentWindow;
+    the button shows the active ornament's symbol and name, updated when the libraries tree
+    changes. Each bind button turns its axis of ArrowManager::currentArrowInfo on or off, and its
+    right-click menu picks pitch or duration and a multiplier from 0.25x to 4x. applyDisplayMode
+    sets the paint layer when Titlebar changes the display mode.
+
+    PluginEditor owns it and asks narrowestWidth for the smallest window the controls fit in.
+*/
+
 class NodeCanvas;
 class TraversalSession;
 class OrnamentLibraries;
@@ -31,7 +49,7 @@ public:
 
     void resized() override;
 
-    void applyDisplayMode(NodeDisplayMode mode);
+    void applyDisplayMode(NodeInfo::DisplayMode mode);
 
     int narrowestWidth() const;
 
@@ -52,22 +70,22 @@ private:
 
     struct BindAxis
     {
-        ArsNovaUI::IconButton*              button;
-        ArrowBinding             target;
-        ArrowBinding ArrowInfo::* binding;
-        double ArrowInfo::*       multiplier;
-        ArsNovaUI::ValueSlider              multiplierSlider;
+        ArsNovaUI::IconButton*                    button;
+        ArrowInfo::Binding                        target;
+        ArrowInfo::Binding ArrowInfo::Settings::* binding;
+        double ArrowInfo::Settings::*             multiplier;
+        ArsNovaUI::ValueSlider                    multiplierSlider;
     };
 
     struct BindTarget
     {
-        const char*  label;
-        ArrowBinding binding;
+        const char*        label;
+        ArrowInfo::Binding binding;
     };
 
     static constexpr std::array<BindTarget, 2> bindTargets {{
-        { "pitch",    ArrowBinding::PitchBind },
-        { "duration", ArrowBinding::DurationBind }
+        { "pitch",    ArrowInfo::Binding::PitchBind },
+        { "duration", ArrowInfo::Binding::DurationBind }
     }};
 
     static constexpr float quaverButtonWidthRatio = 0.28f;
@@ -111,6 +129,6 @@ private:
         }
     };
 
-    BindAxis xAxis { nullptr, ArrowBinding::DurationBind, &ArrowInfo::xBinding, &ArrowInfo::xMultiplier };
-    BindAxis yAxis { nullptr, ArrowBinding::PitchBind,    &ArrowInfo::yBinding, &ArrowInfo::yMultiplier };
+    BindAxis xAxis { nullptr, ArrowInfo::Binding::DurationBind, &ArrowInfo::Settings::xBinding, &ArrowInfo::Settings::xMultiplier };
+    BindAxis yAxis { nullptr, ArrowInfo::Binding::PitchBind,    &ArrowInfo::Settings::yBinding, &ArrowInfo::Settings::yMultiplier };
 };
