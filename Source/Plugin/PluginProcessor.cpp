@@ -377,6 +377,12 @@ void SequenceTreeAudioProcessor::setStateInformation (const void* data, int size
 
         if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
 
+        const juce::ValueTree restoredParameters = restoredTree.getChildWithName(valueTreeState.state.getType());
+
+        if (restoredTree.getType() == ValueTreeIdentifiers::PluginState && restoredParameters.isValid()) {
+            valueTreeState.replaceState(restoredParameters);
+        }
+
         pendingRestoreState = restoredTree;
     }
 
@@ -414,12 +420,6 @@ void SequenceTreeAudioProcessor::applyRestoredState()
         restoredRules        = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalRules);
         restoredPresets      = restoredTree.getChildWithName(ArsNovaUI::InterfaceIdentifiers::ColourPresets);
         restoredPatch        = restoredTree.getChildWithName(ValueTreeIdentifiers::Patch);
-
-        const juce::ValueTree restoredParameters = restoredTree.getChildWithName(valueTreeState.state.getType());
-
-        if (restoredParameters.isValid()) {
-            valueTreeState.replaceState(restoredParameters);
-        }
     }
 
     graphState.replaceState(restoredNodeMap, restoredTraversalMap);
