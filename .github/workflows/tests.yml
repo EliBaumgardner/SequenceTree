@@ -62,7 +62,16 @@ jobs:
         run: build/SequenceTree_RealtimeTests
 
   pluginval:
+    name: pluginval ${{ matrix.format }}
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - format: AU
+            plugin: Components/SequenceTree.component
+          - format: VST3
+            plugin: VST3/SequenceTree.vst3
     env:
       PLUGINVAL_VERSION: v1.0.4
       VST3SDK_TAG: v3.8.1_build_84
@@ -73,14 +82,14 @@ jobs:
 
       - uses: hendrikmuhs/ccache-action@v1.2.24
         with:
-          key: pluginval
+          key: pluginval-${{ matrix.format }}
           max-size: 1G
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
-      - name: Build and install the AU and VST3
-        run: cmake --build build --target SequenceTree_AU SequenceTree_VST3 --parallel "$(sysctl -n hw.ncpu)"
+      - name: Build and install the ${{ matrix.format }}
+        run: cmake --build build --target SequenceTree_${{ matrix.format }} --parallel "$(sysctl -n hw.ncpu)"
 
       - name: Download pluginval
         run: |
@@ -88,6 +97,7 @@ jobs:
           unzip -q "$RUNNER_TEMP/pluginval.zip" -d "$RUNNER_TEMP/pluginval"
 
       - name: Restore the VST3 validator
+        if: matrix.format == 'VST3'
         id: vst3validator
         uses: actions/cache@v4
         with:
@@ -95,7 +105,7 @@ jobs:
           key: vst3validator-${{ env.VST3SDK_TAG }}-${{ runner.os }}-${{ runner.arch }}
 
       - name: Build the VST3 validator
-        if: steps.vst3validator.outputs.cache-hit != 'true'
+        if: matrix.format == 'VST3' && steps.vst3validator.outputs.cache-hit != 'true'
         run: |
           git clone --depth 1 --branch "$VST3SDK_TAG" --recurse-submodules --shallow-submodules https://github.com/steinbergmedia/vst3sdk.git "$RUNNER_TEMP/vst3sdk"
           cmake -S "$RUNNER_TEMP/vst3sdk" -B "$RUNNER_TEMP/vst3sdk-build" -DCMAKE_BUILD_TYPE=Release \
@@ -105,30 +115,33 @@ jobs:
           cp "$(find "$RUNNER_TEMP/vst3sdk-build" -name validator -type f -perm +111 | head -1)" "$RUNNER_TEMP/vst3validator/validator"
 
       - name: Register the AU
+        if: matrix.format == 'AU'
         run: |
           killall -9 AudioComponentRegistrar || true
           auval -a | grep "ST01 ANON"
 
       - name: Validate the AU with auval
+        if: matrix.format == 'AU'
         run: auval -strict -v aumu ST01 ANON
 
+      - name: Validate the AU with pluginval
+        if: matrix.format == 'AU' && (success() || failure())
+        run: |
+          "$RUNNER_TEMP/pluginval/pluginval.app/Contents/MacOS/pluginval" --strictness-level 10 \
+            --output-dir "$RUNNER_TEMP/pluginval-logs" \
+            --validate ~/Library/Audio/Plug-Ins/${{ matrix.plugin }}
+
       - name: Validate the VST3 with pluginval
+        if: matrix.format == 'VST3'
         run: |
           "$RUNNER_TEMP/pluginval/pluginval.app/Contents/MacOS/pluginval" --strictness-level 10 \
             --vst3validator "$RUNNER_TEMP/vst3validator/validator" \
             --output-dir "$RUNNER_TEMP/pluginval-logs" \
-            --validate ~/Library/Audio/Plug-Ins/VST3/SequenceTree.vst3
-
-      - name: Validate the AU with pluginval
-        if: success() || failure()
-        run: |
-          "$RUNNER_TEMP/pluginval/pluginval.app/Contents/MacOS/pluginval" --strictness-level 10 \
-            --output-dir "$RUNNER_TEMP/pluginval-logs" \
-            --validate ~/Library/Audio/Plug-Ins/Components/SequenceTree.component
+            --validate ~/Library/Audio/Plug-Ins/${{ matrix.plugin }}
 
       - name: Upload the pluginval logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pluginval-logs
+          name: pluginval-logs-${{ matrix.format }}
           path: ${{ runner.temp }}/pluginval-logs
