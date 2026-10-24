@@ -27,7 +27,7 @@ jobs:
         run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build the test targets
-        run: cmake --build build --target SequenceTree_Tests SequenceTree_GraphTests --parallel
+        run: cmake --build build --target SequenceTree_Tests SequenceTree_GraphTests --parallel "$(sysctl -n hw.ncpu)"
 
       - name: Run the tests
         run: cd build && ctest --output-on-failure
@@ -56,7 +56,7 @@ jobs:
             -DSEQUENCETREE_REALTIME_SANITIZER=ON
 
       - name: Build the realtime tests
-        run: cmake --build build --target SequenceTree_RealtimeTests --parallel
+        run: cmake --build build --target SequenceTree_RealtimeTests --parallel "$(sysctl -n hw.ncpu)"
 
       - name: Run the realtime tests
         run: build/SequenceTree_RealtimeTests
@@ -80,7 +80,7 @@ jobs:
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build and install the AU and VST3
-        run: cmake --build build --target SequenceTree_AU SequenceTree_VST3 --parallel
+        run: cmake --build build --target SequenceTree_AU SequenceTree_VST3 --parallel "$(sysctl -n hw.ncpu)"
 
       - name: Download pluginval
         run: |
@@ -100,7 +100,7 @@ jobs:
           git clone --depth 1 --branch "$VST3SDK_TAG" --recurse-submodules --shallow-submodules https://github.com/steinbergmedia/vst3sdk.git "$RUNNER_TEMP/vst3sdk"
           cmake -S "$RUNNER_TEMP/vst3sdk" -B "$RUNNER_TEMP/vst3sdk-build" -DCMAKE_BUILD_TYPE=Release \
             -DSMTG_ENABLE_VST3_PLUGIN_EXAMPLES=OFF -DSMTG_ENABLE_VST3_HOSTING_EXAMPLES=OFF -DSMTG_ENABLE_VSTGUI_SUPPORT=OFF
-          cmake --build "$RUNNER_TEMP/vst3sdk-build" --target validator --parallel
+          cmake --build "$RUNNER_TEMP/vst3sdk-build" --target validator --parallel "$(sysctl -n hw.ncpu)"
           mkdir -p "$RUNNER_TEMP/vst3validator"
           cp "$(find "$RUNNER_TEMP/vst3sdk-build" -name validator -type f -perm +111 | head -1)" "$RUNNER_TEMP/vst3validator/validator"
 
