@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   tests:
@@ -13,11 +18,117 @@ jobs:
         with:
           submodules: true
 
+      - uses: hendrikmuhs/ccache-action@v1.2.24
+        with:
+          key: tests
+          max-size: 1G
+
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build the test targets
-        run: cmake --build build --target SequenceTree_Tests SequenceTree_GraphTests
+        run: cmake --build build --target SequenceTree_Tests SequenceTree_GraphTests --parallel
 
       - name: Run the tests
         run: cd build && ctest --output-on-failure
+
+  realtime:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: hendrikmuhs/ccache-action@v1.2.24
+        with:
+          key: realtime
+          max-size: 1G
+
+      - name: Install LLVM
+        run: brew install llvm
+
+      - name: Configure
+        run: |
+          llvm="$(brew --prefix llvm)"
+          cmake -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER="$llvm/bin/clang" -DCMAKE_CXX_COMPILER="$llvm/bin/clang++" \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DSEQUENCETREE_REALTIME_SANITIZER=ON
+
+      - name: Build the realtime tests
+        run: cmake --build build --target SequenceTree_RealtimeTests --parallel
+
+      - name: Run the realtime tests
+        run: build/SequenceTree_RealtimeTests
+
+  pluginval:
+    runs-on: macos-latest
+    env:
+      PLUGINVAL_VERSION: v1.0.4
+      VST3SDK_TAG: v3.8.1_build_84
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: hendrikmuhs/ccache-action@v1.2.24
+        with:
+          key: pluginval
+          max-size: 1G
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build and install the AU and VST3
+        run: cmake --build build --target SequenceTree_AU SequenceTree_VST3 --parallel
+
+      - name: Download pluginval
+        run: |
+          curl -sSL -o "$RUNNER_TEMP/pluginval.zip" "https://github.com/Tracktion/pluginval/releases/download/$PLUGINVAL_VERSION/pluginval_macOS.zip"
+          unzip -q "$RUNNER_TEMP/pluginval.zip" -d "$RUNNER_TEMP/pluginval"
+
+      - name: Restore the VST3 validator
+        id: vst3validator
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/vst3validator
+          key: vst3validator-${{ env.VST3SDK_TAG }}-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Build the VST3 validator
+        if: steps.vst3validator.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch "$VST3SDK_TAG" --recurse-submodules --shallow-submodules https://github.com/steinbergmedia/vst3sdk.git "$RUNNER_TEMP/vst3sdk"
+          cmake -S "$RUNNER_TEMP/vst3sdk" -B "$RUNNER_TEMP/vst3sdk-build" -DCMAKE_BUILD_TYPE=Release \
+            -DSMTG_ENABLE_VST3_PLUGIN_EXAMPLES=OFF -DSMTG_ENABLE_VST3_HOSTING_EXAMPLES=OFF -DSMTG_ENABLE_VSTGUI_SUPPORT=OFF
+          cmake --build "$RUNNER_TEMP/vst3sdk-build" --target validator --parallel
+          mkdir -p "$RUNNER_TEMP/vst3validator"
+          cp "$(find "$RUNNER_TEMP/vst3sdk-build" -name validator -type f -perm +111 | head -1)" "$RUNNER_TEMP/vst3validator/validator"
+
+      - name: Register the AU
+        run: |
+          killall -9 AudioComponentRegistrar || true
+          auval -a | grep "ST01 ANON"
+
+      - name: Validate the AU with auval
+        run: auval -strict -v aumu ST01 ANON
+
+      - name: Validate the VST3 with pluginval
+        run: |
+          "$RUNNER_TEMP/pluginval/pluginval.app/Contents/MacOS/pluginval" --strictness-level 10 \
+            --vst3validator "$RUNNER_TEMP/vst3validator/validator" \
+            --output-dir "$RUNNER_TEMP/pluginval-logs" \
+            --validate ~/Library/Audio/Plug-Ins/VST3/SequenceTree.vst3
+
+      - name: Validate the AU with pluginval
+        if: success() || failure()
+        run: |
+          "$RUNNER_TEMP/pluginval/pluginval.app/Contents/MacOS/pluginval" --strictness-level 10 \
+            --output-dir "$RUNNER_TEMP/pluginval-logs" \
+            --validate ~/Library/Audio/Plug-Ins/Components/SequenceTree.component
+
+      - name: Upload the pluginval logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pluginval-logs
+          path: ${{ runner.temp }}/pluginval-logs
