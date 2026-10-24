@@ -31,7 +31,7 @@ Verify changes by building (`SequenceTree_Standalone` is the fastest full-link t
 
 ## Tests
 
-Catch2 v3 is a submodule at `Catch2/`, next to `JUCE/`, and `Tests/` holds two test targets that build into the same `cmake-build-debug` tree:
+Catch2 v3 is a submodule at `Catch2/`, next to `JUCE/`. `Tests/Unit/` holds the unit tests, which `SequenceTree_Tests` builds, and `Tests/Integration/` the integration tests, which `SequenceTree_GraphTests` builds (and `SequenceTree_RealtimeTests`, below). The two main targets build into the same `cmake-build-debug` tree:
 
 ```bash
 cmake --build cmake-build-debug --target SequenceTree_Tests SequenceTree_GraphTests
