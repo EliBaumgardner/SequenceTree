@@ -149,8 +149,8 @@ include(Catch)
 enable_testing()
 
 add_executable(SequenceTree_Tests
-        Tests/TraversalTests.cpp
-        Tests/ScriptCompilerTests.cpp
+        Tests/Unit/TraversalTests.cpp
+        Tests/Unit/ScriptCompilerTests.cpp
         Source/Audio/Traversal/TraversalLogic.cpp
         Source/Audio/Traversal/TraversalRule.cpp
         Source/Audio/Traversal/ScriptRun.cpp
@@ -170,8 +170,8 @@ target_link_libraries(SequenceTree_Tests PRIVATE Catch2::Catch2WithMain)
 catch_discover_tests(SequenceTree_Tests)
 
 add_executable(SequenceTree_GraphTests
-        Tests/GraphTests.cpp
-        Tests/OrnamentTests.cpp
+        Tests/Integration/GraphTests.cpp
+        Tests/Integration/OrnamentTests.cpp
 )
 
 target_compile_features(SequenceTree_GraphTests PRIVATE cxx_std_20)
@@ -185,7 +185,7 @@ catch_discover_tests(SequenceTree_GraphTests DISCOVERY_MODE PRE_TEST)
 
 if(SEQUENCETREE_REALTIME_SANITIZER)
     add_executable(SequenceTree_RealtimeTests
-            Tests/RealtimeTests.cpp
+            Tests/Integration/RealtimeTests.cpp
     )
 
     target_compile_features(SequenceTree_RealtimeTests PRIVATE cxx_std_20)

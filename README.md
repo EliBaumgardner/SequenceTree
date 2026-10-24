@@ -172,7 +172,7 @@ Note traversals, modulators, alternatives and trees that are stepped into all mo
 
 ### Tested
 
-About 120 automated tests ([Catch2](https://github.com/catchorg/Catch2)) cover how traversals move through a graph, the script language, how a graph's shape becomes timing and pitch, and ornaments. The core that walks the graph is independent of the plugin framework, so its tests build in seconds.
+Unit tests in `Tests/Unit/` check how traversals move through a graph and the script language on their own, without the plugin framework. Integration tests in `Tests/Integration/` check the parts working together: how a graph's shape becomes timing and pitch, ornaments, and the audio code staying real-time safe while a graph is played and edited.
 
 The [architecture guide](documentation/Architecture.md) covers the code itself: the threads, how an edit reaches the audio, how the source is laid out, and what each test covers.
 

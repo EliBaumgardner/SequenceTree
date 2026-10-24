@@ -161,6 +161,8 @@ The lower rows depend on the upper ones. The exceptions are `.cpp` files that in
 
 ## 6. Tests
 
+Unit tests, which check the traversal core and the script compiler on their own, are in `Tests/Unit/`. Integration tests, which build graphs through the plugin's shared code or play them through `processBlock`, are in `Tests/Integration/`.
+
 | Target | Files | What it covers |
 |---|---|---|
 | `SequenceTree_Tests` | `TraversalTests`, `ScriptCompilerTests` | `Source/Audio/Traversal/` and `Source/Script/`, compiled without JUCE. Includes walk parity (a node tree and the same shape built as modulators unfold the same sequence), compiler diagnostics, the step budget, and the default script matching the native rule. |
