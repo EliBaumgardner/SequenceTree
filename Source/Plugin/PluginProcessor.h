@@ -32,8 +32,10 @@
     ends by copying the block's MIDI to virtualMidiOutput.
 
     getStateInformation and setStateInformation save and restore the graph, traversal map, rules,
-    colour presets, parameters and patch as one ValueTree. A load is applied on the message thread
-    by applyRestoredState, which rebuilds the audio model and refreshes an open editor's canvas.
+    colour presets, parameters and patch as one ValueTree. setStateInformation restores the
+    parameters at once, on whichever thread the host calls it from, so the host reads them back
+    straight away; the rest of a load is applied on the message thread by applyRestoredState, which
+    rebuilds the audio model and refreshes an open editor's canvas.
     The editor controls playback through the atomics isPlaying and resetRequested.
 */
 
