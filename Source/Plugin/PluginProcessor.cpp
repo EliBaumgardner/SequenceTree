@@ -322,7 +322,7 @@ void SequenceTreeAudioProcessor::setCurrentProgram (int index)
 
 const juce::String SequenceTreeAudioProcessor::getProgramName (int index)
 {
-    return {};
+    return "Default";
 }
 
 void SequenceTreeAudioProcessor::changeProgramName (int index, const juce::String& newName)
