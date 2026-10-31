@@ -44,7 +44,7 @@ void SelectionGestures::pasteAt(juce::Point<int> canvasPoint)
 
     nodeCanvas.handleAsyncUpdate();
 
-    clearAll();
+    nodeCanvas.nodeManager.clearAll();
 
     for (const int nodeId : pastedIds) {
         Node* const node = nodeCanvas.nodeManager.find(nodeId);
@@ -61,7 +61,7 @@ void SelectionGestures::beginBoxSelection(const juce::Point<int>& clickPoint)
 
     nodeCanvas.selectionBounds = {};
 
-    clearAll();
+    nodeCanvas.nodeManager.clearAll();
 }
 
 void SelectionGestures::updateBoxSelection(const juce::MouseEvent& e)
@@ -101,32 +101,6 @@ void SelectionGestures::showSelectionMenu(juce::Point<int> canvasPoint)
     menu.show(nodeCanvas);
 }
 
-void SelectionGestures::selectAll() const
-{
-    for (auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
-        if (node->isVisible() && ! node->isSelected) {
-            node->setSelectVisual(true);
-        }
-    }
-}
-
-void SelectionGestures::clearAll() const
-{
-    for (auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
-        if (node->isSelected) {
-            node->setSelectVisual(false);
-        }
-    }
-}
-
-void SelectionGestures::deselectAllExcept(const Node& keptNode) const
-{
-    for (auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
-        if (node.get() != &keptNode && node->isSelected) {
-            node->setSelectVisual(false);
-        }
-    }
-}
 
 std::vector<int> SelectionGestures::selectedNodeIds() const
 {

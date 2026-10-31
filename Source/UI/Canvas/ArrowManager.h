@@ -6,34 +6,33 @@
 
 /*
     The owner of the canvas's Arrow components: one Arrow for each connection between two nodes in
-    the graph and one for each dangling arrow (an arrow with a loose tip that is not connected to
-    a node yet), added to the NodeCanvas as children. Each arrow is also entered in its start
+    the canvas's document and one for each dangling arrow (an arrow with a loose tip that is not
+    connected to a node yet), added to the EditCanvas as children. Each arrow is also entered in its start
     node's nodeArrows, by the end node's id (dangling arrows by a negative index), so the audio
     commands can find it.
 
     connect and connectParentToChild create the component for a connection, and an alternative
     child gets the arrow drawn from the child to its parent. refreshFor re-lays-out every arrow of
     a node that moved or changed, and rebuildDanglingForNode rebuilds a node's dangling arrows
-    from its tree. updatePreview shows the arrow being drawn and commitPreview writes it into the
-    document as a dangling arrow (GraphDocument::addDanglingArrow). The snap-ghost functions show
+    from its tree, set up by EditCanvas::prepareArrow. updatePreview shows the arrow being drawn and
+    commitPreview writes it into the document as a dangling arrow. The snap-ghost functions show
     and remove the arrow that previews a connection to a root. The progress functions start,
     pause, resume and reset the trails that show the walk moving along arrows. setSelected
     selects one arrow.
 
-    NodeCanvas::handleAsyncUpdate calls it for arrow updates and AudioCommandDrainer for the audio
+    EditCanvas::handleAsyncUpdate calls it for arrow updates and AudioCommandDrainer for the audio
     thread's trail commands. NodeManager is its partner for nodes; each calls into the other.
 */
 
-class NodeCanvas;
+class EditCanvas;
 class Node;
 class Arrow;
-class GraphState;
 
 class ArrowManager
 {
 public:
 
-    ArrowManager(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager);
+    ArrowManager(EditCanvas& canvas, juce::UndoManager& undoManager);
     ~ArrowManager();
 
     const juce::OwnedArray<Arrow>& all() const
@@ -87,8 +86,7 @@ private:
 
     static int arrowKey(const Arrow& arrow);
 
-    NodeCanvas&        nodeCanvas;
-    GraphState&        graphState;
+    EditCanvas&        canvas;
     juce::UndoManager& undoManager;
 
     juce::OwnedArray<Arrow> arrows;

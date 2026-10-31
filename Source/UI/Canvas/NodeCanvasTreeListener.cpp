@@ -1,14 +1,15 @@
 #include "NodeCanvasTreeListener.h"
-#include "NodeCanvas.h"
+#include "EditCanvas.h"
+#include "../../Input/CanvasDocument.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
-NodeCanvasTreeListener::NodeCanvasTreeListener(NodeCanvas& nodeCanvas) : nodeCanvas(nodeCanvas)
+NodeCanvasTreeListener::NodeCanvasTreeListener(EditCanvas& canvas) : canvas(canvas)
 {
 }
 
 void NodeCanvasTreeListener::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
 {
-    if (parent.getType() == ValueTreeIdentifiers::NodeMap) {
+    if (parent == canvas.document.nodes) {
         jassert(child.getType() == ValueTreeIdentifiers::NodeData
             || child.getType() == ValueTreeIdentifiers::AlternativeNodeData
             || child.getType() == ValueTreeIdentifiers::RootNodeData
@@ -16,14 +17,15 @@ void NodeCanvasTreeListener::valueTreeChildAdded(juce::ValueTree& parent, juce::
             || child.getType() == ValueTreeIdentifiers::ModulatorData
             || child.getType() == ValueTreeIdentifiers::AlternativeModulatorData
             || child.getType() == ValueTreeIdentifiers::TraversalFlagData
-            || child.getType() == ValueTreeIdentifiers::EncapsulatorData);
+            || child.getType() == ValueTreeIdentifiers::EncapsulatorData
+            || child.getType() == ValueTreeIdentifiers::OrnamentNoteData);
 
-        nodeCanvas.asyncUpdates.push_back({ .type       = NodeCanvas::AsyncUpdateType::NodeAdded,
+        canvas.asyncUpdates.push_back({ .type       = EditCanvas::AsyncUpdateType::NodeAdded,
                                             .nodeId     = child.getProperty(ValueTreeIdentifiers::Id),
                                             .rootNodeId = child.getProperty(ValueTreeIdentifiers::RootNodeId) });
     }
     else if (parent.getType() == ValueTreeIdentifiers::NodeChildrenIds) {
-        nodeCanvas.asyncUpdates.push_back({ .type       = NodeCanvas::AsyncUpdateType::ArrowAdded,
+        canvas.asyncUpdates.push_back({ .type       = EditCanvas::AsyncUpdateType::ArrowAdded,
                                             .nodeId     = parent.getParent().getProperty(ValueTreeIdentifiers::Id),
                                             .rootNodeId = child.getProperty(ValueTreeIdentifiers::Id) });
     }
@@ -37,13 +39,13 @@ void NodeCanvasTreeListener::valueTreeChildAdded(juce::ValueTree& parent, juce::
 
 void NodeCanvasTreeListener::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex)
 {
-    if (parent.getType() == ValueTreeIdentifiers::NodeMap) {
-        nodeCanvas.asyncUpdates.push_back({ .type       = NodeCanvas::AsyncUpdateType::NodeRemoved,
+    if (parent == canvas.document.nodes) {
+        canvas.asyncUpdates.push_back({ .type       = EditCanvas::AsyncUpdateType::NodeRemoved,
                                             .nodeId     = child.getProperty(ValueTreeIdentifiers::Id),
                                             .rootNodeId = child.getProperty(ValueTreeIdentifiers::RootNodeId) });
     }
     else if (parent.getType() == ValueTreeIdentifiers::NodeChildrenIds) {
-        nodeCanvas.asyncUpdates.push_back({ .type       = NodeCanvas::AsyncUpdateType::ArrowRemoved,
+        canvas.asyncUpdates.push_back({ .type       = EditCanvas::AsyncUpdateType::ArrowRemoved,
                                             .nodeId     = parent.getParent().getProperty(ValueTreeIdentifiers::Id),
                                             .rootNodeId = child.getProperty(ValueTreeIdentifiers::Id) });
     }
@@ -69,14 +71,15 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
             || nodeType == ValueTreeIdentifiers::ModulatorData
             || nodeType == ValueTreeIdentifiers::AlternativeModulatorData
             || nodeType == ValueTreeIdentifiers::TraversalFlagData
-            || nodeType == ValueTreeIdentifiers::EncapsulatorData);
+            || nodeType == ValueTreeIdentifiers::EncapsulatorData
+            || nodeType == ValueTreeIdentifiers::OrnamentNoteData);
 
-        nodeCanvas.asyncUpdates.push_back({ .type   = NodeCanvas::AsyncUpdateType::NodeMoved,
+        canvas.asyncUpdates.push_back({ .type   = EditCanvas::AsyncUpdateType::NodeMoved,
                                             .nodeId = tree.getProperty(ValueTreeIdentifiers::Id) });
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::MidiPitch
         || propertyIdentifier == ValueTreeIdentifiers::MidiVelocity) {
-        nodeCanvas.asyncUpdates.push_back({ .type   = NodeCanvas::AsyncUpdateType::ValueChanged,
+        canvas.asyncUpdates.push_back({ .type   = EditCanvas::AsyncUpdateType::ValueChanged,
                                             .nodeId = tree.getParent().getParent().getProperty(ValueTreeIdentifiers::Id) });
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::ArrowTipX
@@ -84,15 +87,15 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
         enqueueDanglingArrowsChanged(tree.getParent().getParent());
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::NodeColour) {
-        nodeCanvas.asyncUpdates.push_back({ .type   = NodeCanvas::AsyncUpdateType::NodeColourChanged,
+        canvas.asyncUpdates.push_back({ .type   = EditCanvas::AsyncUpdateType::NodeColourChanged,
                                             .nodeId = tree.getProperty(ValueTreeIdentifiers::Id) });
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::OrnamentUid) {
-        nodeCanvas.asyncUpdates.push_back({ .type   = NodeCanvas::AsyncUpdateType::OrnamentChanged,
+        canvas.asyncUpdates.push_back({ .type   = EditCanvas::AsyncUpdateType::OrnamentChanged,
                                             .nodeId = tree.getProperty(ValueTreeIdentifiers::Id) });
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::ArrowDuration) {
-        nodeCanvas.asyncUpdates.push_back({ .type   = NodeCanvas::AsyncUpdateType::ArrowDurationChanged,
+        canvas.asyncUpdates.push_back({ .type   = EditCanvas::AsyncUpdateType::ArrowDurationChanged,
                                             .nodeId = tree.getParent().getParent().getProperty(ValueTreeIdentifiers::Id) });
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::ArrowType
@@ -101,7 +104,7 @@ void NodeCanvasTreeListener::valueTreePropertyChanged(juce::ValueTree& tree, con
         || propertyIdentifier == ValueTreeIdentifiers::ArrowYBinding
         || propertyIdentifier == ValueTreeIdentifiers::ArrowXMultiplier
         || propertyIdentifier == ValueTreeIdentifiers::ArrowYMultiplier) {
-        nodeCanvas.asyncUpdates.push_back({ .type       = NodeCanvas::AsyncUpdateType::ArrowInfoChanged,
+        canvas.asyncUpdates.push_back({ .type       = EditCanvas::AsyncUpdateType::ArrowInfoChanged,
                                             .nodeId     = tree.getParent().getParent().getProperty(ValueTreeIdentifiers::Id),
                                             .rootNodeId = tree.getProperty(ValueTreeIdentifiers::Id) });
     }
@@ -113,6 +116,6 @@ void NodeCanvasTreeListener::enqueueDanglingArrowsChanged(const juce::ValueTree&
         return;
     }
 
-    nodeCanvas.asyncUpdates.push_back({ .type   = NodeCanvas::AsyncUpdateType::DanglingArrowsChanged,
+    canvas.asyncUpdates.push_back({ .type   = EditCanvas::AsyncUpdateType::DanglingArrowsChanged,
                                         .nodeId = nodeTree.getProperty(ValueTreeIdentifiers::Id) });
 }

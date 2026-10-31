@@ -3,6 +3,10 @@
 #include "../Node/Node.h"
 #include "../Node/Arrow.h"
 #include "../Node/Encapsulator.h"
+#include "../Node/RootNode.h"
+#include "../Node/Modulator.h"
+#include "../Node/TraversalFlagNode.h"
+#include "../../Input/GraphDocument.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/RTGraphBuilder.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
@@ -11,13 +15,11 @@
 #include <cmath>
 
 NodeCanvas::NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, GraphDocument& graphDocument, RTGraphBuilder& rtGraphBuilder,
-                       juce::UndoManager& undoManager, ArsNovaUI::CustomLookAndFeel& lookAndFeel)
-    : processor(processor),
+                       ArsNovaUI::CustomLookAndFeel& lookAndFeel)
+    : EditCanvas(graphDocument),
+      processor(processor),
       graphState(graphState),
-      graphDocument(graphDocument),
       rtGraphBuilder(rtGraphBuilder),
-      nodeManager(*this, graphState, undoManager),
-      arrowManager(*this, graphState, undoManager),
       drainer(*this, processor.eventManager.bridge, graphState),
       encapsulationView(*this, graphState),
       ornamentMarks(*this, processor.ornamentLibraries)
@@ -34,9 +36,7 @@ NodeCanvas::~NodeCanvas()
 
 void NodeCanvas::paint(juce::Graphics& graphics)
 {
-    const ArsNovaUI::CanvasGrid grid { getLocalBounds().toFloat(), modelTransform, viewTransform, gridOrigin, gridSpacing, gridVisible, gridOriginSet };
-
-    ArsNovaUI::CustomLookAndFeel::get(*this).drawCanvas(graphics, grid);
+    EditCanvas::paint(graphics);
 
     if (activeTool == CanvasTool::Paint && valueField.image.isValid()) {
         graphics.setImageResamplingQuality(juce::Graphics::mediumResamplingQuality);
@@ -56,68 +56,16 @@ void NodeCanvas::paint(juce::Graphics& graphics)
     }
 }
 
-void NodeCanvas::clearCanvas()
-{
-    arrowManager.clear();
-    nodeManager .clear();
-
-    gridOriginSet = false;
-    gridVisible   = false;
-}
-
 void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
 {
     std::unordered_map<int, juce::ValueTree> rootNodeMap;
 
-    std::vector<NodePair> nodePairs;
+    EditCanvas::rebuildFromNodeMap(stateTree);
 
-    asyncUpdates.clear();
-
-    clearCanvas();
-
-    for (int nodeIndex = 0; nodeIndex < stateTree.getNumChildren(); ++nodeIndex) {
-        const juce::ValueTree nodeValueTree = stateTree.getChild(nodeIndex);
-        const juce::ValueTree childIds      = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-
-        const int nodeId = nodeValueTree.getProperty(ValueTreeIdentifiers::Id);
-
-        if (nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
-            rootNodeMap[nodeId] = nodeValueTree;
+    for (const juce::ValueTree& nodeTree : stateTree) {
+        if (nodeTree.getType() == ValueTreeIdentifiers::RootNodeData) {
+            rootNodeMap[static_cast<int>(nodeTree.getProperty(ValueTreeIdentifiers::Id))] = nodeTree;
         }
-
-        for (int childIndex = 0; childIndex < childIds.getNumChildren(); ++childIndex) {
-            nodePairs.push_back({ nodeId, childIds.getChild(childIndex).getProperty(ValueTreeIdentifiers::Id) });
-        }
-
-        nodeManager.instantiateFromTree(nodeValueTree);
-    }
-
-    for (auto [parentNodeId, childNodeId] : nodePairs) {
-        Node* const parentNode = nodeManager.find(parentNodeId);
-        Node* const childNode  = nodeManager.find(childNodeId);
-        Node*       startNode  = parentNode;
-        Node*       endNode    = childNode;
-
-        if (parentNode == nullptr || childNode == nullptr) {
-            continue;
-        }
-
-        if (childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData
-            || childNode->nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeModulatorData) {
-            startNode = childNode;
-            endNode   = parentNode;
-        }
-
-        if (startNode->nodeArrows.count(endNode->nodeId) > 0) {
-            continue;
-        }
-
-        arrowManager.connect(startNode, endNode);
-        arrowManager.refreshFor(endNode);
-    }
-
-    for (auto& [nodeId, node] : nodeManager.all()) {
-        arrowManager.rebuildDanglingForNode(nodeId);
     }
 
     encapsulationView.collapseAll();
@@ -131,97 +79,102 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
     }
 }
 
-void NodeCanvas::childrenChanged()
-{
-    for (juce::Component* child : getChildren()) {
-        child->setTransform(viewTransform);
-    }
-}
-
 void NodeCanvas::handleAsyncUpdate()
 {
-    std::vector<AsyncUpdate> pendingUpdates;
-
     drainer.drainAll();
 
-    pendingUpdates.swap(asyncUpdates);
+    const bool hasQueuedUpdates = ! asyncUpdates.empty();
 
-    for (const AsyncUpdate& asyncUpdate : pendingUpdates) {
-        const int nodeId = asyncUpdate.nodeId;
+    EditCanvas::handleAsyncUpdate();
 
-        switch (asyncUpdate.type) {
-            case AsyncUpdateType::NodeAdded:
-                nodeManager.add(nodeId);
-                break;
-
-            case AsyncUpdateType::NodeRemoved:
-                nodeManager.remove(nodeId);
-                break;
-
-            case AsyncUpdateType::NodeMoved:
-                nodeManager.setPosition(nodeId);
-                break;
-
-            case AsyncUpdateType::ValueChanged:
-
-            case AsyncUpdateType::ArrowDurationChanged:
-                if (Node* const changedNode = nodeManager.find(nodeId)) {
-                    arrowManager.refreshFor(changedNode);
-                }
-                break;
-
-            case AsyncUpdateType::DanglingArrowsChanged:
-                arrowManager.rebuildDanglingForNode(nodeId);
-                break;
-
-            case AsyncUpdateType::ArrowAdded:
-                arrowManager.handleArrowAdded(nodeId, asyncUpdate.rootNodeId);
-                break;
-
-            case AsyncUpdateType::ArrowRemoved:
-                arrowManager.remove(arrowManager.find(nodeId, asyncUpdate.rootNodeId));
-                break;
-
-            case AsyncUpdateType::ArrowInfoChanged:
-                arrowManager.handleArrowInfoChanged(nodeId, asyncUpdate.rootNodeId);
-                break;
-
-            case AsyncUpdateType::NodeColourChanged:
-                if (Node* const recolouredNode = nodeManager.find(nodeId)) {
-                    const juce::var colourText = recolouredNode->nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour.toString());
-
-                    recolouredNode->nodeColour = juce::Colour::fromString(colourText.toString());
-
-                    recolouredNode->repaint();
-
-                    if (const auto* const encapsulator = dynamic_cast<const Encapsulator*>(recolouredNode)) {
-                        encapsulationView.recolourGroup(*encapsulator);
-                    }
-                }
-                break;
-
-            case AsyncUpdateType::OrnamentChanged:
-                if (Node* const ornamentedNode = nodeManager.find(nodeId)) {
-                    ornamentMarks.refresh(*ornamentedNode);
-                }
-                break;
-
-            case AsyncUpdateType::None:
-                break;
-        }
-    }
-
-    if (activeTool == CanvasTool::Paint && !pendingUpdates.empty()) {
+    if (activeTool == CanvasTool::Paint && hasQueuedUpdates) {
         valueField.refresh();
     }
 }
 
-void NodeCanvas::cancelPendingUpdatesFor(int nodeId)
+void NodeCanvas::nodeCreated(Node& node)
 {
-    std::erase_if(asyncUpdates, [nodeId](const AsyncUpdate& update) {
-        return update.nodeId == nodeId
-            && update.type != AsyncUpdateType::NodeRemoved;
-    });
+    const juce::ValueTree midiNotes = node.nodeValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
+
+    const juce::var colourText = node.nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour.toString());
+
+    node.midiNoteData = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+    node.nodeColour   = juce::Colour::fromString(colourText.toString());
+
+    node.bindToTree();
+    node.setDisplayMode(nodeManager.displayMode);
+    node.setInterceptsMouseClicks(activeTool != CanvasTool::Paint, activeTool != CanvasTool::Paint && activeTool != CanvasTool::Span);
+
+    ornamentMarks.refresh(node);
+}
+
+void NodeCanvas::nodeAdded(Node& node)
+{
+    const juce::ValueTree nodeTree = node.nodeValueTree;
+
+    const int owningEncapsulatorId = nodeTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    if (nodeTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
+        encapsulationView.collapse(node.nodeId);
+    }
+
+    if (auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(nodeManager.find(owningEncapsulatorId))) {
+        if (owningEncapsulator->isExpanded) {
+            encapsulationView.refreshMembership(owningEncapsulatorId);
+        }
+        else {
+            encapsulationView.collapse(owningEncapsulatorId);
+        }
+    }
+
+    if (!gridOriginSet && nodeTree.getType() == ValueTreeIdentifiers::RootNodeData) {
+        const NodeInfo::Position rootPosition = graphState.getNodePosition(node.nodeId);
+
+        gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
+        gridSpacing   = ArrowInfo::pixelsPerGridSpace;
+        gridOriginSet = true;
+    }
+}
+
+void NodeCanvas::nodeRemoving(Node& node)
+{
+    const int encapsulatorId = node.nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    if (auto* const encapsulator = dynamic_cast<Encapsulator*>(&node)) {
+        encapsulationView.showMembers(encapsulator->memberNodeIds);
+    }
+
+    encapsulationView.refreshMembership(encapsulatorId);
+}
+
+void NodeCanvas::prepareArrow(Arrow& arrow)
+{
+    arrow.valueEditor->bindEditor(arrow.arrowTree, ValueTreeIdentifiers::CountLimit);
+}
+
+void NodeCanvas::updateApplied(const AsyncUpdate& update)
+{
+    Node* const node = nodeManager.find(update.nodeId);
+
+    if (node == nullptr) {
+        return;
+    }
+
+    if (update.type == AsyncUpdateType::NodeColourChanged) {
+        const juce::var colourText = node->nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour.toString());
+
+        node->nodeColour = juce::Colour::fromString(colourText.toString());
+
+        node->repaint();
+
+        if (const auto* const encapsulator = dynamic_cast<const Encapsulator*>(node)) {
+            encapsulationView.recolourGroup(*encapsulator);
+        }
+    }
+
+    if (update.type == AsyncUpdateType::OrnamentChanged) {
+        ornamentMarks.refresh(*node);
+    }
 }
 
 void NodeCanvas::setActiveTool(CanvasTool tool)
@@ -268,24 +221,6 @@ void NodeCanvas::setActiveTool(CanvasTool tool)
     }
 }
 
-void NodeCanvas::showGrid()
-{
-    if (gridOriginSet) {
-        gridVisible = true;
-
-        repaint();
-    }
-}
-
-void NodeCanvas::hideGrid()
-{
-    if (gridVisible) {
-        gridVisible = false;
-
-        repaint();
-    }
-}
-
 void NodeCanvas::applyViewTransform(const juce::AffineTransform& newViewTransform, float zoom)
 {
     viewTransform       = newViewTransform;
@@ -315,29 +250,61 @@ void NodeCanvas::setProcessorPlayback(bool isPlaying)
     rtGraphBuilder.handleUpdateNowIfNeeded();
 }
 
-juce::Point<int> NodeCanvas::snapPointToGrid(juce::Point<int> point) const
+juce::Point<int> NodeCanvas::drawnPosition(const juce::ValueTree& nodeTree) const
 {
-    const float snapThreshold = 5.0f;
-    const float snappedX      = gridOrigin.x + std::round((static_cast<float>(point.x) - gridOrigin.x) / gridSpacing) * gridSpacing;
-    const float snappedY      = gridOrigin.y + std::round((static_cast<float>(point.y) - gridOrigin.y) / gridSpacing) * gridSpacing;
+    const int nodeId         = nodeTree.getProperty(ValueTreeIdentifiers::Id);
+    const int encapsulatorId = nodeTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
-    juce::Point<int> result = point;
+    const juce::ValueTree encapsulator = graphState.getNode(encapsulatorId);
 
-    if (!gridOriginSet) {
-        return point;
+    auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(nodeManager.find(encapsulatorId));
+
+    const bool isDrawnAtOwner = encapsulator.isValid() && (owningEncapsulator == nullptr || ! owningEncapsulator->isExpanded);
+
+    juce::Point<int> position = EditCanvas::drawnPosition(nodeTree);
+
+    if (isDrawnAtOwner) {
+        position = EditCanvas::drawnPosition(encapsulator);
     }
 
-    if (std::abs(static_cast<float>(point.x) - snappedX) < snapThreshold) {
-        result.x = static_cast<int>(snappedX);
-    }
-
-    if (std::abs(static_cast<float>(point.y) - snappedY) < snapThreshold) {
-        result.y = static_cast<int>(snappedY);
-    }
-
-    return result;
+    return position + encapsulationView.collapsedSpanShift(nodeId);
 }
 
+std::unique_ptr<Node> NodeCanvas::makeNode(const juce::ValueTree& nodeTree)
+{
+    const juce::Identifier treeType = nodeTree.getType();
+
+    juce::UndoManager& undoManager = document.undoManager;
+
+    std::unique_ptr<Node> node;
+
+    if (treeType == ValueTreeIdentifiers::RootNodeData) {
+        node = std::make_unique<RootNode>(undoManager, graphState);
+    }
+    else if (treeType == ValueTreeIdentifiers::NodeData) {
+        node = std::make_unique<Node>(undoManager);
+    }
+    else if (treeType == ValueTreeIdentifiers::AlternativeNodeData) {
+        node = std::make_unique<Node>(undoManager);
+        node->isAlternativeNode = true;
+    }
+    else if (treeType == ValueTreeIdentifiers::TraversalFlagData) {
+        node = std::make_unique<TraversalFlagNode>(undoManager, graphState);
+    }
+    else if (treeType == ValueTreeIdentifiers::ModulatorData
+          || treeType == ValueTreeIdentifiers::ModulatorRootData) {
+        node = std::make_unique<Modulator>(undoManager);
+    }
+    else if (treeType == ValueTreeIdentifiers::AlternativeModulatorData) {
+        node = std::make_unique<Modulator>(undoManager);
+        node->isAlternativeNode = true;
+    }
+    else if (treeType == ValueTreeIdentifiers::EncapsulatorData) {
+        node = std::make_unique<Encapsulator>(undoManager, graphState, *this);
+    }
+
+    return node;
+}
 juce::MouseCursor NodeCanvas::spanCursor() const
 {
     juce::Image cursorImage(juce::Image::ARGB, spanCursorSize, spanCursorSize, true);

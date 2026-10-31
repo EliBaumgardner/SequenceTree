@@ -83,6 +83,7 @@ target_sources(SequenceTree PRIVATE
         Source/Input/GraphDocument.cpp
         Source/Input/ArrowMenu.cpp
         Source/UI/Canvas/CanvasFrame.cpp
+        Source/UI/Canvas/EditCanvas.cpp
         Source/UI/Canvas/NodeCanvas.cpp
         Source/UI/Canvas/NodeCanvasTreeListener.cpp
         Source/UI/Canvas/ValueField.cpp

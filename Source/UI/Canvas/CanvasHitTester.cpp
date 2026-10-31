@@ -1,5 +1,5 @@
 #include "CanvasHitTester.h"
-#include "NodeCanvas.h"
+#include "EditCanvas.h"
 #include "../Node/Node.h"
 #include "../Node/Arrow.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
@@ -55,22 +55,22 @@ Node* nodeOf(const std::pair<const int, std::unique_ptr<Node>>& entry)
 
 Arrow* CanvasHitTester::arrowNear(juce::Point<float> point, float radius) const
 {
-    return nearest(nodeCanvas.arrowManager.all(), identity, [](Arrow* arrow) { return arrow->startNode != nullptr && arrow->isVisible(); }, [point](Arrow* arrow) { return distanceToSegment(point, arrow->startNode->getNodeCentre().toFloat(), arrow->getTip().toFloat()); }, radius);
+    return nearest(canvas.arrowManager.all(), identity, [](Arrow* arrow) { return arrow->startNode != nullptr && arrow->isVisible(); }, [point](Arrow* arrow) { return distanceToSegment(point, arrow->startNode->getNodeCentre().toFloat(), arrow->getTip().toFloat()); }, radius);
 }
 
 Arrow* CanvasHitTester::arrowHeadNear(juce::Point<float> point, float radius) const
 {
-    return nearest(nodeCanvas.arrowManager.all(), identity, [](Arrow* arrow) { return !arrow->isDangling() && arrow->startNode != nullptr && arrow->isVisible(); }, [point](Arrow* arrow) { return point.getDistanceFrom(arrow->getHeadAnchor()); }, radius);
+    return nearest(canvas.arrowManager.all(), identity, [](Arrow* arrow) { return !arrow->isDangling() && arrow->startNode != nullptr && arrow->isVisible(); }, [point](Arrow* arrow) { return point.getDistanceFrom(arrow->getHeadAnchor()); }, radius);
 }
 
 Arrow* CanvasHitTester::danglingHeadNear(juce::Point<float> point, float radius) const
 {
-    return nearest(nodeCanvas.arrowManager.all(), identity, [](Arrow* arrow) { return arrow->isDangling() && arrow->startNode != nullptr && arrow->isVisible(); }, [point](Arrow* arrow) { return point.getDistanceFrom(arrow->getTip().toFloat()); }, radius);
+    return nearest(canvas.arrowManager.all(), identity, [](Arrow* arrow) { return arrow->isDangling() && arrow->startNode != nullptr && arrow->isVisible(); }, [point](Arrow* arrow) { return point.getDistanceFrom(arrow->getTip().toFloat()); }, radius);
 }
 
 Arrow* CanvasHitTester::arrowLabelNear(juce::Point<float> point, float radius) const
 {
-    return nearest(nodeCanvas.arrowManager.all(), identity, [](Arrow* arrow) { return arrow->startNode != nullptr && arrow->isVisible() && arrow->showsDurationLabel(); }, [point](Arrow* arrow) {
+    return nearest(canvas.arrowManager.all(), identity, [](Arrow* arrow) { return arrow->startNode != nullptr && arrow->isVisible() && arrow->showsDurationLabel(); }, [point](Arrow* arrow) {
             const ArsNovaUI::ArrowLabel label = arrow->getLabel(arrow->getGeometry(1.0f), Arrow::arrowHeadLength);
 
             return point.getDistanceFrom(label.centre); }, radius);
@@ -78,17 +78,17 @@ Arrow* CanvasHitTester::arrowLabelNear(juce::Point<float> point, float radius) c
 
 Node* CanvasHitTester::nodeNear(juce::Point<float> point, float radius, int excludeId) const
 {
-    return nearest(nodeCanvas.nodeManager.all(), nodeOf, [excludeId](Node* node) { return node->nodeId != excludeId && node->isVisible(); }, [point](Node* node) { return point.getDistanceFrom(node->getNodeCentre().toFloat()); }, radius);
+    return nearest(canvas.nodeManager.all(), nodeOf, [excludeId](Node* node) { return node->nodeId != excludeId && node->isVisible(); }, [point](Node* node) { return point.getDistanceFrom(node->getNodeCentre().toFloat()); }, radius);
 }
 
 Node* CanvasHitTester::rootNear(juce::Point<float> point, float radius, int excludeId) const
 {
-    return nearest(nodeCanvas.nodeManager.all(), nodeOf, [excludeId](Node* node) { return node->nodeId != excludeId && node->isVisible() && node->nodeType != NodeInfo::Type::Encapsulator && node->nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData; }, [point](Node* node) { return point.getDistanceFrom(node->getNodeCentre().toFloat()); }, radius);
+    return nearest(canvas.nodeManager.all(), nodeOf, [excludeId](Node* node) { return node->nodeId != excludeId && node->isVisible() && node->nodeType != NodeInfo::Type::Encapsulator && node->nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData; }, [point](Node* node) { return point.getDistanceFrom(node->getNodeCentre().toFloat()); }, radius);
 }
 
 Node* CanvasHitTester::nodeContaining(juce::Point<float> point, int excludeId) const
 {
-    return nearest(nodeCanvas.nodeManager.all(), nodeOf, [point, excludeId](Node* node) {
+    return nearest(canvas.nodeManager.all(), nodeOf, [point, excludeId](Node* node) {
             const bool isConnectableType = node->nodeValueTree.getType() == ValueTreeIdentifiers::NodeData
                                         || node->nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData;
 

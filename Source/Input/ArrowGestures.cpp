@@ -1,11 +1,11 @@
 #include "ArrowGestures.h"
-#include "../UI/Canvas/NodeCanvas.h"
+#include "../UI/Canvas/EditCanvas.h"
 #include "../UI/Node/Node.h"
 #include "../UI/Node/Arrow.h"
-#include "GraphDocument.h"
+#include "CanvasDocument.h"
 
-ArrowGestures::ArrowGestures(NodeCanvas& nodeCanvas, GraphDocument& document, juce::UndoManager& undoManager)
-    : nodeCanvas(nodeCanvas),
+ArrowGestures::ArrowGestures(EditCanvas& canvas, CanvasDocument& document, juce::UndoManager& undoManager)
+    : canvas(canvas),
       document(document),
       undoManager(undoManager)
 {
@@ -16,7 +16,7 @@ void ArrowGestures::beginMovingTip(Arrow& danglingArrow)
     draggingDanglingArrow = &danglingArrow;
     tipGesture            = TipGesture::MovingDanglingTip;
 
-    nodeCanvas.showGrid();
+    canvas.showGrid();
 }
 
 void ArrowGestures::dragTip(juce::Point<int> cursor)
@@ -37,7 +37,7 @@ void ArrowGestures::dragTip(juce::Point<int> cursor)
 
     tipSnapTarget = findTipSnapTarget(*sourceNode, cursor);
 
-    juce::Point <int> tip = nodeCanvas.snapPointToGrid(cursor);
+    juce::Point <int> tip = canvas.snapPointToGrid(cursor);
     const juce::Point<int> centre = sourceNode->getNodeCentre();
 
     if (tipSnapTarget != nullptr) {
@@ -52,17 +52,17 @@ void ArrowGestures::dragTip(juce::Point<int> cursor)
     }
 
     if (tipGesture == TipGesture::CreatingDanglingArrow) {
-        nodeCanvas.showGrid();
+        canvas.showGrid();
     }
 
-    nodeCanvas.arrowManager.updatePreview(sourceNode, { tip.x - centre.x, tip.y - centre.y });
+    canvas.arrowManager.updatePreview(sourceNode, { tip.x - centre.x, tip.y - centre.y });
 }
 
 void ArrowGestures::finishTip()
 {
     const TipGesture finishedGesture = tipGesture;
     Node* const      targetNode      = tipSnapTarget;
-    Arrow*           draggedArrow    = nodeCanvas.arrowManager.preview.get();
+    Arrow*           draggedArrow    = canvas.arrowManager.preview.get();
 
     if (finishedGesture == TipGesture::MovingDanglingTip) {
         draggedArrow = draggingDanglingArrow;
@@ -73,7 +73,7 @@ void ArrowGestures::finishTip()
     newArrowSourceNode    = nullptr;
     tipSnapTarget         = nullptr;
 
-    nodeCanvas.hideGrid();
+    canvas.hideGrid();
 
     if (draggedArrow == nullptr) {
         return;
@@ -93,18 +93,18 @@ void ArrowGestures::finishTip()
     if (targetNode == nullptr && finishedGesture != TipGesture::ConnectingFlag) {
         undoManager.beginNewTransaction();
 
-        nodeCanvas.arrowManager.commitPreview();
+        canvas.arrowManager.commitPreview();
         return;
     }
 
-    nodeCanvas.arrowManager.preview.reset();
+    canvas.arrowManager.preview.reset();
 
     if (targetNode != nullptr && sourceNode != nullptr && sourceNode->nodeArrows.count(targetNode->nodeId) == 0) {
         undoManager.beginNewTransaction();
 
         document.connect(sourceNode->nodeId, targetNode->nodeId, CanvasDocument::ConnectionGesture::TipOntoNode);
 
-        nodeCanvas.arrowManager.connectWithSnapAnimation(sourceNode->nodeId, targetNode->nodeId);
+        canvas.arrowManager.connectWithSnapAnimation(sourceNode->nodeId, targetNode->nodeId);
     }
 
     if (targetNode != nullptr && finishedGesture == TipGesture::MovingDanglingTip) {
@@ -114,9 +114,9 @@ void ArrowGestures::finishTip()
 
 void ArrowGestures::updateHover(juce::Point<float> cursor)
 {
-    Arrow* const hoveredArrow = nodeCanvas.hitTester.arrowNear(cursor, arrowHoverRadius);
+    Arrow* const hoveredArrow = canvas.hitTester.arrowNear(cursor, arrowHoverRadius);
 
-    for (Arrow* arrow : nodeCanvas.arrowManager.all()) {
+    for (Arrow* arrow : canvas.arrowManager.all()) {
         if (arrow->startNode == nullptr || arrow->endNode == nullptr) {
             continue;
         }
@@ -135,7 +135,7 @@ void ArrowGestures::updateHover(juce::Point<float> cursor)
         }
     }
 
-    for (Arrow* arrow : nodeCanvas.arrowManager.all()) {
+    for (Arrow* arrow : canvas.arrowManager.all()) {
         const bool shouldBold = (arrow == hoveredArrow);
 
         if (shouldBold != arrow->hovered) {
@@ -170,7 +170,7 @@ void ArrowGestures::setArrowMode(bool enabled)
     arrowMode = enabled;
 
     if (! enabled) {
-        nodeCanvas.arrowManager.preview.reset();
+        canvas.arrowManager.preview.reset();
     }
 }
 
@@ -189,7 +189,7 @@ bool ArrowGestures::beginTipFromNode(Node& node)
     }
 
     tipGesture         = TipGesture::CreatingDanglingArrow;
-    newArrowSourceNode = nodeCanvas.nodeManager.find(growthNodeId);
+    newArrowSourceNode = canvas.nodeManager.find(growthNodeId);
 
     return true;
 }
@@ -199,10 +199,10 @@ Node* ArrowGestures::findTipSnapTarget(const Node& startNode, juce::Point<int> t
     const int startNodeId = startNode.nodeId;
 
     if (tipGesture == TipGesture::ConnectingFlag) {
-        return nodeCanvas.hitTester.nodeNear(tip.toFloat(), flagSnapThreshold, startNodeId);
+        return canvas.hitTester.nodeNear(tip.toFloat(), flagSnapThreshold, startNodeId);
     }
 
-    Node* const snapTarget = nodeCanvas.hitTester.nodeContaining(tip.toFloat(), startNodeId);
+    Node* const snapTarget = canvas.hitTester.nodeContaining(tip.toFloat(), startNodeId);
 
     if (snapTarget == nullptr || ! document.canConnect(startNode, *snapTarget)) {
         return nullptr;
