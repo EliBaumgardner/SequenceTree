@@ -14,8 +14,8 @@
 <text x="332" y="98" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">ValueTree document;</text>
 <text x="332" y="112" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">every edit is undoable</text>
 <rect x="600" y="62" width="210" height="60" rx="8" fill="#ffffff" stroke="#5f8a3a" stroke-width="1.4"/>
-<text x="612" y="82" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="700" fill="#1f1f1f" text-anchor="start">NodeCanvasTreeListener</text>
-<text x="612" y="98" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">queues NodeCanvas::AsyncUpdate</text>
+<text x="612" y="82" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="700" fill="#1f1f1f" text-anchor="start">CanvasTreeListener</text>
+<text x="612" y="98" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">queues EditCanvas::AsyncUpdate</text>
 <rect x="880" y="62" width="240" height="60" rx="8" fill="#ffffff" stroke="#5f8a3a" stroke-width="1.4"/>
 <text x="892" y="82" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" font-weight="700" fill="#1f1f1f" text-anchor="start">NodeCanvas::handleAsyncUpdate</text>
 <text x="892" y="98" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">NodeManager / ArrowManager add,</text>
