@@ -22,7 +22,7 @@
     bindsTo asks whether either axis uses a binding.
 
     ArrowBindingOps stores it in an arrow's ValueTree and reads it back. BottomBar edits the copy
-    in ArrowManager::currentArrowInfo that new arrows start from, and Arrow, RTGraphBuilder and
+    in GraphDocument::currentArrowInfo that new arrows start from, and Arrow, RTGraphBuilder and
     Clipboard call the two conversions.
 */
 

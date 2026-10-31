@@ -13,10 +13,10 @@
     root snaps to it, and finishDrag replaces the new child with a cross-root arrow to that root.
     The document's growFrom names the node a child grows from (on the graph, a collapsed group's
     last member); where it names none, a Shift drag moves the node instead. onChildCreated
-    reports each new child, which NodeController uses to add it to its parent's group.
+    reports each new child, which NodeController uses to add it to its parent's group on the graph.
 
     dragArrowHead and finishArrowHeadDrag do the same moving for the node an arrow points at,
-    when the arrow's head is grabbed. NodeController routes to it. Every edit goes through
+    when the arrow's head is grabbed. CanvasController owns it and routes to it. Every edit goes through
     CanvasDocument in an undo transaction.
 */
 

@@ -95,34 +95,42 @@ One block, in order:
 
 ### 3.1 `NodeCanvas`
 
-The canvas is a component that owns, by value, the parts that do its work:
+`NodeCanvas` is an `EditCanvas`, the component every node canvas derives from. `EditCanvas` shows a `CanvasDocument`'s tree of nodes and owns, by value, the parts every canvas shares:
 
-- `NodeManager` creates, positions and removes `Node` components and keeps them in `nodes`. `Node` has three subclasses: `RootNode`, `Modulator` and `TraversalFlagNode`.
+- `NodeManager` creates, positions and removes `Node` components and keeps them in `nodes`.
 - `ArrowManager` does the same for `Arrow` components, kept in `arrows`.
-- `NodeCanvasTreeListener` turns `nodeMap` changes into `AsyncUpdate` records on the canvas's queue.
-- `AudioCommandDrainer` empties the bridge's FIFOs into node highlights, arrow trails and counts.
-- `CanvasHitTester` answers picking queries. `ValueField` draws paint mode. `EncapsulationView` and `OrnamentMarks` draw groups and ornament marks.
+- `NodeCanvasTreeListener` turns changes to the document's tree into `AsyncUpdate` records on the canvas's queue.
+- `CanvasHitTester` answers picking queries.
 
-`handleAsyncUpdate` is the canvas's one entry point for change. It applies the queued tree updates and calls `drainer.drainAll()`. The canvas also holds what is shared across tools: the snap grid and `activeTool`, which only `setActiveTool` changes.
+It also holds the pan and zoom and the snap grid, and asks its subclass through hooks (`makeNode`, `nodeCreated`, `nodeAdded`, `nodeRemoving`, `drawnPosition`, `prepareArrow`, `updateApplied`) for what is particular to its document. `NodeCanvas`'s hooks build `RootNode`, `Modulator`, `TraversalFlagNode` and `Encapsulator` components and keep groups and ornament marks up to date, and it adds the graph's own parts:
+
+- `AudioCommandDrainer` empties the bridge's FIFOs into node highlights, arrow trails and counts.
+- `ValueField` draws paint mode. `EncapsulationView` and `OrnamentMarks` draw groups and ornament marks.
+
+`handleAsyncUpdate` is the canvas's one entry point for change. `NodeCanvas`'s version calls `drainer.drainAll()` and then applies the queued tree updates. It also holds `activeTool`, which only `setActiveTool` changes.
 
 ### 3.2 `NodeController`
 
-`NodeController` is a `MouseListener` on the canvas that routes events. It does no editing itself. On `mouseDown` it decides which feature the gesture belongs to: the active canvas tool first, then the arrow hit tests, then the node or the empty canvas. It records the owner in its `Gesture` enum, so `mouseDrag` and `mouseUp` go to the same place. Each feature is a class it owns:
+`NodeController` is a `CanvasController`, the `MouseListener` every node canvas's router derives from. Neither edits anything itself. `CanvasController` routes the presses every canvas handles alike (arrow tips, labels, heads and shafts, panning, root creation, the value scrub, drawing arrows, removing and selecting nodes) and records the owner in its `Gesture` enum, so `mouseDrag` and `mouseUp` go to the same place. Its features are the classes it owns:
 
 - `NodeGestures`: root creation, moving nodes, drag-to-create a child.
-- `ArrowGestures`: drawing, moving and connecting arrows, and the arrow context menu.
-- `EncapsulationGestures`: the span tool, and expanding or collapsing groups.
+- `ArrowGestures`: drawing, moving and connecting arrows.
+
+Every edit they make goes through a `CanvasDocument`; for the graph that is `GraphDocument`, which calls `GraphState` and `NodeFactory`. `NodeController` handles the graph's own presses first (the active canvas tool, ornament marks, the right-click menus, group expansion and box selection) and passes the rest on. Each graph feature is a class it owns:
+
+- `ArrowMenu`: the arrow context menu, which sets an arrow's type and sync.
+- `EncapsulationGestures`: the span tool, expanding or collapsing groups, and adding a dragged-out child to its parent's group.
 - `SelectionGestures`: box selection, copy, delete and paste (owns the `Clipboard`).
 - `OrnamentApplier`: applying and removing ornaments.
 
-A new canvas feature becomes one more class here and one more branch in the routing.
+A new graph feature becomes one more class here and one more branch in the routing. A feature for every canvas goes into `CanvasController` or one of its gesture classes.
 
 ### 3.3 Bars and menus
 
 `Titlebar`, `BottomBar`, `MenuBar` and the menu panels derive from ArsNovaUI's `Bar` and are built from its generic components (`ButtonPane`, `IconButton`, `ItemSelector`, `ValueSlider`, `LabeledEditor`). Two windows open as pop-ups and exist only while shown:
 
 - `TraversalRulesWindow`, the script editor, opened from `TraversalMenu` or `NodeMenu`.
-- `OrnamentWindow`, opened from `BottomBar`.
+- `OrnamentWindow`, opened from `BottomBar`. Its figure editor is built from the same parts as the graph canvas: `OrnamentCanvas` is an `EditCanvas` and `OrnamentFigureController` a `CanvasController`, both over a `FigureDocument` that calls `OrnamentLibraries`.
 
 ### 3.4 ArsNovaUI
 
@@ -136,7 +144,7 @@ The two threads never call into each other. Each crossing goes through a lock-fr
 
 *Figure 2. The paths between the message thread and the audio thread.*
 
-1. **Edit → screen** (message thread only). A gesture class edits `GraphState`, usually through `NodeFactory`, inside an undo transaction. `NodeCanvasTreeListener` queues an `AsyncUpdate`, and `NodeCanvas::handleAsyncUpdate` has `NodeManager` and `ArrowManager` add, move or remove components. Undo and redo take the same path, because the listener reacts to the tree, not to the gesture.
+1. **Edit → screen** (message thread only). A gesture class edits the graph through `GraphDocument`, which calls `GraphState` and `NodeFactory`, inside an undo transaction. `NodeCanvasTreeListener` queues an `AsyncUpdate`, and `EditCanvas::handleAsyncUpdate` has `NodeManager` and `ArrowManager` add, move or remove components. Undo and redo take the same path, because the listener reacts to the tree, not to the gesture.
 2. **Edit → sound.** The same tree change reaches `RTGraphBuilder`'s listener. Its `handleAsyncUpdate` rebuilds the touched trees, and `AudioSnapshotPublisher::publishGraph` stores a new `Snapshot*`. The next block's `beginBlock` loads it.
 3. **Script → sound.** `TraversalRulesWindow` writes the source into `TraversalRuleState` and, after a 250 ms debounce, calls `publishActiveTraversalRule`. That compiles the source and publishes the `RTScript` the same way. A failed compile returns diagnostics to the editor, and the last good script keeps playing.
 4. **Sound → screen.** `TraversalDispatcher` pushes highlight, arrow and count commands into `AudioUIBridge`. The editor's `audioCommandFrames` (a `VBlankAttachment`) fires once per display frame, applies transport changes to the `Titlebar` and calls `NodeCanvas::handleAsyncUpdate`, which drains the FIFOs. With no editor open the FIFOs overflow, and the drainer resyncs the canvas on its first drain.

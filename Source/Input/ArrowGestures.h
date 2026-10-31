@@ -16,8 +16,8 @@
     disconnect. A tip snaps only to a node the document's canConnect accepts, and a new arrow
     starts from the node its growFrom names.
 
-    NodeController decides when a press belongs here and uses the grab radii for its hit tests;
-    Titlebar sets arrowMode. Every edit goes through CanvasDocument in its own undo transaction.
+    CanvasController owns it, decides when a press belongs here and uses the grab radii for its
+    hit tests; Titlebar and OrnamentFigureController set arrowMode. Every edit goes through CanvasDocument in its own undo transaction.
 */
 
 class Node;
