@@ -18,8 +18,8 @@
     changed, and it listens to each marked node's component so the mark follows it when the node
     moves, resizes, hides or is deleted.
 
-    NodeCanvas owns it. NodeManager calls refresh for a new node and NodeCanvas::handleAsyncUpdate
-    for an OrnamentChanged update.
+    NodeCanvas owns it, and calls refresh from its nodeCreated hook for a new node and from its
+    updateApplied hook for an OrnamentChanged update.
 */
 
 class NodeCanvas;
