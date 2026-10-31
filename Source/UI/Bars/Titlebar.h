@@ -19,7 +19,7 @@
     NodeCanvas::setProcessorPlayback; in a plugin host it only follows the host transport. Reset
     sets the processor's resetRequested flag and clears the arrows' progress. The tempo editor and
     the sync button are connected to the processor's parameters through ParameterAttachments. The
-    creation buttons set NodeController::nodeGestures.creationMode and switch arrow mode through
+    creation buttons set GraphDocument::creationMode and switch arrow mode through
     arrowGestures. The undo and redo buttons use the UndoManager and are enabled to match it. The
     display selector sets NodeManager's display mode and then calls onDisplayModeChanged.
 
@@ -27,13 +27,15 @@
 */
 
 class NodeCanvas;
+class GraphDocument;
 class SequenceTreeAudioProcessor;
 
 class Titlebar : public ArsNovaUI::Bar, private juce::ChangeListener
 {
 public:
 
-    Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas, NodeController& nodeController, juce::UndoManager& undoManager);
+    Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas, NodeController& nodeController, GraphDocument& graphDocument,
+             juce::UndoManager& undoManager);
     ~Titlebar() override;
 
     void resized() override;
@@ -63,6 +65,7 @@ private:
     SequenceTreeAudioProcessor& processor;
     NodeCanvas&                 nodeCanvas;
     NodeController&             nodeController;
+    GraphDocument&              graphDocument;
     juce::UndoManager&          undoManager;
 
     ArsNovaUI::ButtonPane   transportPane;

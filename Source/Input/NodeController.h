@@ -30,6 +30,8 @@ class Node;
 
 class GraphState;
 
+class GraphDocument;
+
 class TraversalSession;
 
 class RTGraphBuilder;
@@ -42,8 +44,8 @@ class NodeController : public juce::MouseListener {
 
 public:
 
-    NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager, TraversalSession& traversalSession,
-                   RTGraphBuilder& rtGraphBuilder, OrnamentLibraries& ornamentLibraries);
+    NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& graphDocument, juce::UndoManager& undoManager,
+                   TraversalSession& traversalSession, RTGraphBuilder& rtGraphBuilder, OrnamentLibraries& ornamentLibraries);
     ~NodeController() override;
 
     void mouseDown (const juce::MouseEvent& e) override;
@@ -81,6 +83,7 @@ private:
     static constexpr int dragThreshold = 5;
 
     GraphState&        graphState;
+    GraphDocument&     graphDocument;
     juce::UndoManager& undoManager;
     TraversalSession&  traversalSession;
     RTGraphBuilder&    rtGraphBuilder;

@@ -12,6 +12,7 @@
 #include "../UI/Bars/BottomBar.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Graph/GraphState.h"
+#include "../Input/GraphDocument.h"
 #include "../UI/Menus/MenuArea.h"
 #include <ArsNovaUI/ScaledView.h>
 
@@ -65,6 +66,7 @@ private:
     juce::Component                        workspace;
     std::unique_ptr<ArsNovaUI::ScaledView> scaledView;
     juce::TooltipWindow                    tooltipWindow { &workspace, 400 };
+    GraphDocument                          graphDocument;
 
 public:
     std::unique_ptr<NodeCanvas> nodeCanvas = nullptr;

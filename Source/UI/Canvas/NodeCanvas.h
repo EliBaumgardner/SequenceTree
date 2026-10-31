@@ -41,6 +41,7 @@ class RootNode;
 class Arrow;
 class SequenceTreeAudioProcessor;
 class GraphState;
+class GraphDocument;
 class RTGraphBuilder;
 
 class NodeCanvas : public juce::Component
@@ -49,8 +50,8 @@ public:
 
     enum class CanvasTool;
 
-    NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, RTGraphBuilder& rtGraphBuilder, juce::UndoManager& undoManager,
-               ArsNovaUI::CustomLookAndFeel& lookAndFeel);
+    NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, GraphDocument& graphDocument, RTGraphBuilder& rtGraphBuilder,
+               juce::UndoManager& undoManager, ArsNovaUI::CustomLookAndFeel& lookAndFeel);
 
     ~NodeCanvas() override;
 
@@ -107,6 +108,7 @@ public:
 
     SequenceTreeAudioProcessor& processor;
     GraphState&                 graphState;
+    GraphDocument&              graphDocument;
     RTGraphBuilder&             rtGraphBuilder;
 
     juce::Colour canvasColour = juce::Colours::white;

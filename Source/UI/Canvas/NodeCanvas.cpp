@@ -10,10 +10,11 @@
 
 #include <cmath>
 
-NodeCanvas::NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, RTGraphBuilder& rtGraphBuilder, juce::UndoManager& undoManager,
-                       ArsNovaUI::CustomLookAndFeel& lookAndFeel)
+NodeCanvas::NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, GraphDocument& graphDocument, RTGraphBuilder& rtGraphBuilder,
+                       juce::UndoManager& undoManager, ArsNovaUI::CustomLookAndFeel& lookAndFeel)
     : processor(processor),
       graphState(graphState),
+      graphDocument(graphDocument),
       rtGraphBuilder(rtGraphBuilder),
       nodeManager(*this, graphState, undoManager),
       arrowManager(*this, graphState, undoManager),

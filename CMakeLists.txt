@@ -80,6 +80,7 @@ target_sources(SequenceTree PRIVATE
         Source/Graph/NodeFactory.cpp
         Source/Graph/Clipboard.cpp
         Source/Input/NodeController.cpp
+        Source/Input/GraphDocument.cpp
         Source/UI/Canvas/CanvasFrame.cpp
         Source/UI/Canvas/NodeCanvas.cpp
         Source/UI/Canvas/NodeCanvasTreeListener.cpp
