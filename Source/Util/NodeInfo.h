@@ -1,5 +1,4 @@
-#ifndef SEQUENCETREE_NODEPOSITION_H
-#define SEQUENCETREE_NODEPOSITION_H
+#pragma once
 
 /*
     The plain values that describe a node, shared by the graph, the input layer and the UI: where
@@ -10,7 +9,7 @@
 
     GraphState reads and writes Position and Note as it stores them in a node's tree. The
     editors in the UI and the menus use the limits to clamp what the user types, and Titlebar
-    sets the DisplayMode through NodeManager::setDisplayMode.
+    sets the DisplayMode through NodeCanvas::setDisplayMode.
 */
 
 namespace NodeInfo
@@ -63,5 +62,3 @@ enum class Type        { Node, Root, Modulator, TraversalFlag, Encapsulator};
 enum class DisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue, Probability};
 
 }
-
-#endif //SEQUENCETREE_NODEPOSITION_H

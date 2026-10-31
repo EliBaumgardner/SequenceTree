@@ -29,10 +29,12 @@ public:
 
     struct PendingStart
     {
-        int          flagNodeId       = -1;
+        int flagNodeId          = -1;
+        double remainingSamples = 0.0;
+
         TraversalKey hostKey;
-        double       remainingSamples = 0.0;
-        bool         active           = false;
+
+        bool active = false;
     };
 
 

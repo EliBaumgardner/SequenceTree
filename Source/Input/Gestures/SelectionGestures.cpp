@@ -1,7 +1,7 @@
 #include "SelectionGestures.h"
-#include "../UI/Canvas/NodeCanvas.h"
-#include "../UI/Node/Node.h"
-#include "../Graph/GraphState.h"
+#include "../../UI/Canvas/NodeCanvas.h"
+#include "../../UI/Node/Node.h"
+#include "../../Graph/GraphState.h"
 #include <ArsNovaUI/Menus/ContextMenu.h>
 
 void SelectionGestures::copySelection()
@@ -47,7 +47,7 @@ void SelectionGestures::pasteAt(juce::Point<int> canvasPoint)
     nodeCanvas.nodeManager.clearAll();
 
     for (const int nodeId : pastedIds) {
-        Node* const node = nodeCanvas.nodeManager.find(nodeId);
+        Node* const node = static_cast<Node*>(nodeCanvas.nodeManager.find(nodeId));
 
         if (node != nullptr && node->isVisible()) {
             node->setSelectVisual(true);

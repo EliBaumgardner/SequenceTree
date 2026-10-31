@@ -4,15 +4,11 @@
 #include "../Canvas/NodeCanvas.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
-#include <algorithm>
-#include <cmath>
-
 Node::Node(juce::UndoManager& undoManager)
-    : nodeValueEditor(undoManager),
+    : ArsNovaUI::CanvasNode(undoManager),
       countEditor(undoManager),
       switchCountEditor(undoManager),
-      subLoopLimitEditor(undoManager),
-      undoManager(undoManager)
+      subLoopLimitEditor(undoManager)
 {
     upButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState&) {
         ArsNovaUI::CustomLookAndFeel::get(*this).drawIncrementIcon(graphics, bounds, true);
@@ -98,11 +94,6 @@ void Node::incrementNodeValue(int incrementValue)
     refreshValueDisplay();
 }
 
-void Node::refreshValueDisplay()
-{
-    nodeValueEditor.repaint();
-    repaint();
-}
 
 void Node::setDisplayMode(NodeInfo::DisplayMode newMode)
 {
@@ -116,41 +107,19 @@ void Node::setDisplayMode(NodeInfo::DisplayMode newMode)
 
 void Node::setHoverVisual(bool isHovered)
 {
-    this->isHovered = isHovered;
+    ArsNovaUI::CanvasNode::setHoverVisual(isHovered);
 
     if (nodeType == NodeInfo::Type::TraversalFlag) {
         for (auto& [childId, arrow] : nodeArrows) {
             if (arrow != nullptr) {
-                arrow->sourceHovered = isHovered;
+                Arrow* const flagArrow = static_cast<Arrow*>(arrow);
 
-                arrow->setHoverFade(arrow->sourceHovered || arrow->proximityHovered);
+                flagArrow->sourceHovered = isHovered;
+
+                flagArrow->setHoverFade(flagArrow->sourceHovered || flagArrow->proximityHovered);
             }
         }
     }
-
-    repaint();
-}
-
-void Node::setSelectVisual(bool isSelected)
-{
-    this->isSelected = isSelected;
-
-    if (onSelected) {
-        onSelected(this, isSelected);
-    }
-
-    repaint();
-}
-
-void Node::setSelectVisual()
-{
-    isSelected = !isSelected;
-
-    if (onSelected) {
-        onSelected(this, isSelected);
-    }
-
-    repaint();
 }
 
 void Node::setHighlightVisual(int runId, bool shouldHighlight, juce::Colour colour)
@@ -337,34 +306,7 @@ void Node::respondToClick(juce::Point<int> localPoint)
         return;
     }
 
-    if (nodeValueEditor.isVisible() && nodeValueEditor.getBounds().contains(localPoint)) {
-        nodeValueEditor.beginEditing();
-    }
-}
-
-juce::Point<int> Node::getNodeCentre() const
-{
-    return getBounds().getCentre();
-}
-
-float Node::getVisualRadius() const
-{
-    return getHeight() * 0.5f;
-}
-
-float Node::getBodyExtent(juce::Point<float> approachDirection) const
-{
-    const juce::Rectangle<float> circle    = ArsNovaUI::CustomLookAndFeel::getNodeCircleBounds(getLocalBounds().toFloat());
-    const float                  radius    = std::max(0.0f, circle.getWidth() * 0.5f);
-    const juce::Point<float>     toCircle  = circle.getCentre() - (getNodeCentre() - getPosition()).toFloat();
-    const float                  along     = approachDirection.getDotProduct(toCircle);
-    const float                  clearance = along * along - toCircle.getDistanceSquaredFromOrigin() + radius * radius;
-
-    if (clearance <= 0.0f) {
-        return radius;
-    }
-
-    return std::max(0.0f, std::sqrt(clearance) - along);
+    ArsNovaUI::CanvasNode::respondToClick(localPoint);
 }
 
 ArsNovaUI::NodeVisual Node::getNodeVisual(juce::Rectangle<float> bounds) const

@@ -1,5 +1,6 @@
 #include "TraversalRuleState.h"
 #include "ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "../Script/ScriptCompiler.h"
 
 TraversalRuleState::TraversalRuleState()
@@ -13,7 +14,7 @@ juce::ValueTree TraversalRuleState::addRule(juce::UndoManager* undoManager)
 
     juce::ValueTree rule {ValueTreeIdentifiers::TraversalRuleData};
 
-    rule.setProperty(ValueTreeIdentifiers::Id,         ruleIdIncrement, undoManager);
+    rule.setProperty(ArsNovaUI::CanvasIdentifiers::Id,         ruleIdIncrement, undoManager);
     rule.setProperty(ValueTreeIdentifiers::RuleName,   "rule " + juce::String(ruleIdIncrement), undoManager);
     rule.setProperty(ValueTreeIdentifiers::RuleSource, defaultTraversalScriptSource(), undoManager);
 
@@ -24,7 +25,7 @@ juce::ValueTree TraversalRuleState::addRule(juce::UndoManager* undoManager)
 
 void TraversalRuleState::removeRule(int ruleId, juce::UndoManager* undoManager)
 {
-    juce::ValueTree rule = rules.getChildWithProperty(ValueTreeIdentifiers::Id, ruleId);
+    juce::ValueTree rule = rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId);
 
     if (! rule.isValid()) {
         return;
@@ -41,7 +42,7 @@ void TraversalRuleState::removeRule(int ruleId, juce::UndoManager* undoManager)
     const juce::ValueTree replacement = rules.getChild(0);
 
     if (replacement.isValid()) {
-        replacementId = replacement.getProperty(ValueTreeIdentifiers::Id);
+        replacementId = replacement.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
     }
 
     rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, replacementId, undoManager);
@@ -50,7 +51,7 @@ void TraversalRuleState::removeRule(int ruleId, juce::UndoManager* undoManager)
 void TraversalRuleState::setRuleSource(int ruleId, const juce::String& source,
                                        juce::UndoManager* undoManager)
 {
-    juce::ValueTree rule = rules.getChildWithProperty(ValueTreeIdentifiers::Id, ruleId);
+    juce::ValueTree rule = rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId);
 
     if (rule.isValid()) {
         rule.setProperty(ValueTreeIdentifiers::RuleSource, source, undoManager);
@@ -60,7 +61,7 @@ void TraversalRuleState::setRuleSource(int ruleId, const juce::String& source,
 void TraversalRuleState::reorderRules(std::span<const int> ruleIds, juce::UndoManager* undoManager)
 {
     for (int index = 0; index < static_cast<int>(ruleIds.size()); ++index) {
-        const juce::ValueTree rule = rules.getChildWithProperty(ValueTreeIdentifiers::Id, ruleIds[static_cast<size_t>(index)]);
+        const juce::ValueTree rule = rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleIds[static_cast<size_t>(index)]);
 
         if (! rule.isValid()) {
             continue;
@@ -81,10 +82,10 @@ void TraversalRuleState::ensureDefaultRule()
     }
 
     const juce::ValueTree activeRule =
-        rules.getChildWithProperty(ValueTreeIdentifiers::Id, rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
+        rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
 
     if (! activeRule.isValid()) {
-        rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, rules.getChild(0).getProperty(ValueTreeIdentifiers::Id), nullptr);
+        rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, rules.getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id), nullptr);
     }
 }
 
@@ -104,7 +105,7 @@ void TraversalRuleState::replaceState(const juce::ValueTree& restoredRules)
     ruleIdIncrement = 0;
 
     for (int i = 0; i < rules.getNumChildren(); ++i) {
-        const int id = rules.getChild(i).getProperty(ValueTreeIdentifiers::Id);
+        const int id = rules.getChild(i).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
         if (id > ruleIdIncrement) {
             ruleIdIncrement = id;
@@ -115,7 +116,7 @@ void TraversalRuleState::replaceState(const juce::ValueTree& restoredRules)
 juce::String TraversalRuleState::activeRuleSource() const
 {
     const juce::ValueTree rule =
-        rules.getChildWithProperty(ValueTreeIdentifiers::Id, rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
+        rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
 
     if (! rule.isValid()) {
         return {};

@@ -5,29 +5,14 @@
 #include "Node.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
-Arrow::Arrow(Node* startNode, Node* endNode, juce::UndoManager& undoManager)
-    : startNode(startNode), endNode(endNode)
+Arrow::Arrow(ArsNovaUI::CanvasNode* startNode, ArsNovaUI::CanvasNode* endNode, juce::UndoManager& undoManager)
+    : ArsNovaUI::CanvasArrow(startNode, endNode, undoManager)
 {
-    durationEditor = std::make_unique<ArsNovaUI::ValueEditor>(undoManager);
-
-    durationEditor->setInterceptsMouseClicks(true, false);
-    durationEditor->setTooltip("Arrow Duration");
-
-    durationEditor->onEditFinished = [this] {
-        editingDuration = false;
-
-        durationEditor->setVisible(false);
-        repaint();
-    };
-
-    addChildComponent(*durationEditor);
 }
 
-Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, juce::UndoManager& undoManager)
-    : startNode(startNode), tipOffset(tipOffset)
+Arrow::Arrow(ArsNovaUI::CanvasNode* startNode, juce::Point<int> tipOffset, juce::UndoManager& undoManager)
+    : ArsNovaUI::CanvasArrow(startNode, tipOffset, undoManager)
 {
-    setInterceptsMouseClicks(false, true);
-
     valueEditor = std::make_unique<ArsNovaUI::ValueEditor>(undoManager);
 
     valueEditor->setInterceptsMouseClicks(true, false);
@@ -35,19 +20,7 @@ Arrow::Arrow(Node* startNode, juce::Point<int> tipOffset, juce::UndoManager& und
     valueEditor->setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit));
     addAndMakeVisible(*valueEditor);
 
-    durationEditor = std::make_unique<ArsNovaUI::ValueEditor>(undoManager);
-
-    durationEditor->setInterceptsMouseClicks(true, false);
-    durationEditor->setTooltip("Arrow Duration");
-
-    durationEditor->onEditFinished = [this] {
-        editingDuration = false;
-
-        durationEditor->setVisible(false);
-        repaint();
-    };
-
-    addChildComponent(*durationEditor);
+    durationEditor->toFront(false);
 }
 
 void Arrow::paint(juce::Graphics& graphics)
@@ -57,16 +30,7 @@ void Arrow::paint(juce::Graphics& graphics)
 
 void Arrow::resized()
 {
-    const ArsNovaUI::ArrowGeometry geometry = getGeometry(1.0f);
-
-    if (geometry.valid) {
-        const ArsNovaUI::ArrowLabel label = getLabel(geometry, arrowHeadLength);
-
-        const juce::Point<int> editorCentre = (label.centre - getPosition().toFloat()).roundToInt()
-                                            - juce::Point<int>(0, valueEditorHeight / 2);
-
-        durationEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight).withCentre(editorCentre));
-    }
+    ArsNovaUI::CanvasArrow::resized();
 
     if (valueEditor == nullptr) {
         return;
@@ -75,52 +39,13 @@ void Arrow::resized()
     valueEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight).withCentre(getTip() - getPosition()));
 }
 
-void Arrow::setArrowBounds()
-{
-    if (startNode == nullptr) {
-        return;
-    }
-
-    if (endNode != nullptr) {
-        const juce::Point<int> delta = getTip() - startNode->getNodeCentre();
-        endNode->incomingAngle = std::atan2(static_cast<float>(delta.y), static_cast<float>(delta.x));
-
-        if (endNode->nodeType == NodeInfo::Type::TraversalFlag) {
-            endNode->resized();
-            endNode->repaint();
-        }
-    }
-
-    const ArsNovaUI::ArrowGeometry geometry = getGeometry(1.0f);
-
-    if (! geometry.valid) {
-        const juce::Point<int> centre = startNode->getNodeCentre();
-        setBounds(juce::Rectangle<int>(centre, centre).expanded(arrowBoundsPadding));
-        repaint();
-        return;
-    }
-
-    const juce::Path shaft = buildShaftPath(geometry, 0.0f, {});
-
-    setBounds(shaft.getBounds().expanded(static_cast<float>(arrowBoundsPadding)).toNearestInt());
-
-    repaint();
-}
-
-void Arrow::setTipOffset(juce::Point<int> offset)
-{
-    tipOffset = offset;
-
-    setArrowBounds();
-}
-
 void Arrow::beginDurationEdit()
 {
     if (startNode == nullptr || ! arrowTree.isValid() || ! showsDurationLabel()) {
         return;
     }
 
-    const bool percentDuration = (startNode->nodeType == NodeInfo::Type::Modulator);
+    const bool percentDuration = (static_cast<const Node*>(startNode)->nodeType == NodeInfo::Type::Modulator);
 
     auto durationFormat = std::make_unique<ArsNovaUI::NumberFormat>(0.0, ArrowInfo::maximumDurationMs);
 
@@ -150,114 +75,111 @@ void Arrow::beginDurationEdit()
     repaint();
 }
 
-void Arrow::endDrag()
+void Arrow::startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot, BridgeCommands::TrailSource source)
 {
-    dragging            = false;
-    animation.rulerFade = 1.0f;
+    Trail& trail = trails[trailId];
 
-    if (animationFrames.isEmpty()) {
-        animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
-    }
-}
+    double originMs = juce::Time::getMillisecondCounterHiRes();
 
-void Arrow::triggerSnapAnimation()
-{
-    animation.snapProgress = 0.0f;
-    animation.snapVelocity = 0.0f;
-
-    if (dragging) {
-        animation.rulerFade = 1.0f;
+    if (trailsPaused && source == BridgeCommands::TrailSource::Live) {
+        originMs = pausedAtMs;
     }
 
-    if (animationFrames.isEmpty()) {
-        animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
-    }
-}
-
-void Arrow::advanceAnimation(double frameSec)
-{
-    const bool stillAnimating = animation.advance(frameSec);
-
-    setAlpha(animation.alpha);
-
-    if (animation.alpha <= 0.0f && isVisible()) {
-        setVisible(false);
-    }
-
-    repaint();
-
-    if (! stillAnimating) {
-        animationFrames = {};
-    }
-}
-
-void Arrow::setHoverFade(bool shouldBeVisible)
-{
-    animation.alphaTarget = 0.0f;
-
-    if (shouldBeVisible) {
-        animation.alphaTarget = 1.0f;
-    }
-
-    if (shouldBeVisible && ! isVisible()) {
-        setVisible(true);
-    }
-
-    if (animationFrames.isEmpty()) {
-        animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
-    }
-}
-
-void Arrow::initHoverState(bool visibleNow)
-{
-    animation.alpha = 0.0f;
-
-    if (visibleNow) {
-        animation.alpha = 1.0f;
-    }
-
-    animation.alphaTarget = animation.alpha;
-
-    setAlpha(animation.alpha);
-    setVisible(visibleNow);
-}
-
-void Arrow::startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot,
-                          BridgeCommands::TrailSource source)
-{
-    animation.startTrail(trailId, durationMs, elapsedMs, colour, oneShot, source);
+    trail.durationMs = juce::jmax(1, durationMs);
+    trail.startMs    = originMs - elapsedMs;
+    trail.progress   = static_cast<float>(juce::jlimit(0.0, 1.0, elapsedMs / static_cast<double>(trail.durationMs)));
+    trail.colour     = colour;
+    trail.active     = durationMs > 0;
+    trail.oneShot    = oneShot;
+    trail.source     = source;
 
     if (animationFrames.isEmpty()) {
         animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
     }
 
-    repaint();
-}
-
-void Arrow::resetProgress()
-{
-    if (animation.trails.empty()) {
-        return;
-    }
-
-    animation.trails.clear();
     repaint();
 }
 
 void Arrow::resetProgress(int trailId)
 {
-    if (animation.trails.erase(trailId) > 0) {
+    if (trails.erase(trailId) > 0) {
         repaint();
     }
 }
 
+void Arrow::resetProgress()
+{
+    if (trails.empty()) {
+        return;
+    }
+
+    trails.clear();
+    repaint();
+}
+
 void Arrow::resumeProgress()
 {
-    animation.resumeTrails();
+    if (trailsPaused) {
+        const double pausedForMs = juce::Time::getMillisecondCounterHiRes() - pausedAtMs;
 
-    if (! animation.trails.empty() && animationFrames.isEmpty()) {
+        for (auto& [trailId, trail] : trails) {
+            if (trail.source == BridgeCommands::TrailSource::Live) {
+                trail.startMs += pausedForMs;
+            }
+        }
+
+        trailsPaused = false;
+    }
+
+    if (! trails.empty() && animationFrames.isEmpty()) {
         animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
     }
+}
+
+bool Arrow::advanceExtraAnimation()
+{
+    const double nowMs     = juce::Time::getMillisecondCounterHiRes();
+    bool         anyActive = false;
+
+    for (auto entry = trails.begin(); entry != trails.end(); ) {
+        Trail& trail = entry->second;
+
+        if (! trail.active || (trailsPaused && trail.source == BridgeCommands::TrailSource::Live)) {
+            ++entry;
+            continue;
+        }
+
+        const double normalised = (nowMs - trail.startMs) / static_cast<double>(trail.durationMs);
+
+        if (normalised >= 1.0) {
+            if (trail.oneShot) {
+                entry = trails.erase(entry);
+                continue;
+            }
+
+            trail.progress = 1.0f;
+            trail.active   = false;
+        }
+        else {
+            trail.progress = static_cast<float>(juce::jlimit(0.0, 1.0, normalised));
+            anyActive      = true;
+        }
+
+        ++entry;
+    }
+
+    return anyActive;
+}
+
+bool Arrow::showsDurationLabel() const
+{
+    const ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(arrowTree);
+
+    if (ArrowInfo::Settings::bindsTo(arrowInfo, ArrowInfo::Binding::DurationBind)) {
+        return true;
+    }
+
+    return ! ArrowInfo::Settings::bindsTo(arrowInfo, ArrowInfo::Binding::PitchBind);
 }
 
 bool Arrow::isTraversalArrow() const
@@ -272,17 +194,6 @@ bool Arrow::isTraversalArrow() const
 bool Arrow::isSyncArrow() const
 {
     return ArrowBindingOps::getArrowInfo(arrowTree).isSynced;
-}
-
-bool Arrow::showsDurationLabel() const
-{
-    const ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(arrowTree);
-
-    if (ArrowInfo::Settings::bindsTo(arrowInfo, ArrowInfo::Binding::DurationBind)) {
-        return true;
-    }
-
-    return ! ArrowInfo::Settings::bindsTo(arrowInfo, ArrowInfo::Binding::PitchBind);
 }
 
 int Arrow::getDuration() const
@@ -303,10 +214,10 @@ juce::String Arrow::getDurationLabel() const
     }
 
     if (! showsDurationLabel()) {
-        const Node* pitchedNode = endNode;
+        const Node* pitchedNode = static_cast<const Node*>(endNode);
 
         if (isDangling() || startNode->isAlternativeNode) {
-            pitchedNode = startNode;
+            pitchedNode = static_cast<const Node*>(startNode);
         }
 
         if (pitchedNode != nullptr) {
@@ -316,7 +227,7 @@ juce::String Arrow::getDurationLabel() const
 
     const int duration = getDuration();
 
-    if (startNode->nodeType == NodeInfo::Type::Modulator) {
+    if (static_cast<const Node*>(startNode)->nodeType == NodeInfo::Type::Modulator) {
         return juce::String(duration / ArrowInfo::millisecondsPerDurationPercent) + "%";
     }
 
@@ -361,9 +272,9 @@ ArsNovaUI::ArrowVisual Arrow::getArrowVisual() const
         visual.label = getLabel(visual.geometry, visual.headLength);
     }
 
-    for (const auto& entry : animation.trails) {
-        const ArrowAnimation::Trail& trail = entry.second;
-        ArsNovaUI::ArrowTrail        drawnTrail { trail.colour, trail.progress };
+    for (const auto& entry : trails) {
+        const Trail&          trail = entry.second;
+        ArsNovaUI::ArrowTrail drawnTrail { trail.colour, trail.progress };
 
         if (trail.source == BridgeCommands::TrailSource::Preview) {
             drawnTrail.stroke = ArsNovaUI::ArrowTrail::Stroke::Dashed;
@@ -373,191 +284,6 @@ ArsNovaUI::ArrowVisual Arrow::getArrowVisual() const
     }
 
     return visual;
-}
-
-ArsNovaUI::ArrowGeometry Arrow::getGeometry(float animationProgress) const
-{
-    ArsNovaUI::ArrowGeometry geometry;
-
-    if (startNode == nullptr) {
-        return geometry;
-    }
-
-    const juce::Point<float> centre = startNode->getNodeCentre().toFloat();
-    const juce::Point<float> target = getTip().toFloat();
-
-    const juce::Point<float> delta = (target - centre) * animationProgress;
-    const float length = delta.getDistanceFromOrigin();
-
-    if (length < 1.0f) {
-        return geometry;
-    }
-
-    const juce::Point<float> direction = delta / length;
-
-    juce::Point<float> start = centre;
-    juce::Point<float> tip   = centre + delta;
-
-    const bool endIsTraversalFlag = endNode != nullptr && endNode->nodeType == NodeInfo::Type::TraversalFlag;
-
-    if (isDangling()) {
-        start += direction * startNode->getVisualRadius();
-    }
-    else if (endIsTraversalFlag) {
-        const float endHalf        = std::min(endNode->getWidth(), endNode->getHeight()) * 0.5f;
-        const float baseHalfHeight = (endHalf - 4.0f) * 0.7f * 0.5f;
-        tip += direction * baseHalfHeight;
-    }
-    else {
-        tip -= direction * endNode->getBodyExtent(direction);
-    }
-
-    const juce::Point<float> shaft = tip - start;
-    const float shaftLength = shaft.getDistanceFromOrigin();
-
-    geometry.centre    = centre;
-    geometry.start     = start;
-    geometry.tip       = tip;
-    geometry.direction = direction;
-    geometry.chord     = direction;
-
-    if (shaftLength > 0.0f) {
-        geometry.chord = shaft / shaftLength;
-    }
-
-    geometry.length   = length;
-    geometry.drawHead = ! endIsTraversalFlag && animationProgress > headVisibleThreshold;
-    geometry.straight = isDangling() || endIsTraversalFlag
-                      || std::abs(shaft.x) < 1.0f || std::abs(shaft.y) < 1.0f;
-    geometry.valid     = true;
-
-    if (geometry.straight) {
-        return geometry;
-    }
-
-    float sign = -1.0f;
-
-    if (shaft.x >= 0.0f) {
-        sign = 1.0f;
-    }
-
-    const juce::Point<float> perpendicular { -direction.y * curvePerpScale * sign,
-                                              direction.x * curvePerpScale * sign };
-
-    const float offset = shaftLength * curveOffsetFactor;
-
-    geometry.control1 = start + shaft * 0.33f + perpendicular * offset;
-    geometry.control2 = start + shaft * 0.67f - perpendicular * offset;
-
-    const juce::Point<float> neck       = tip - geometry.control2;
-    const float              neckLength = neck.getDistanceFromOrigin();
-
-    if (neckLength > 0.0f) {
-        geometry.direction = neck / neckLength;
-    }
-
-    return geometry;
-}
-
-ArsNovaUI::ArrowLabel Arrow::getLabel(const ArsNovaUI::ArrowGeometry& geometry, float headLength) const
-{
-    ArsNovaUI::ArrowLabel label;
-
-    if (startNode == nullptr) {
-        return label;
-    }
-
-    const juce::Point<float> delta = geometry.tip - geometry.centre;
-
-    juce::Point<float> shaftStart = geometry.centre;
-    juce::Point<float> shaftEnd   = geometry.tip;
-
-    const float length = delta.getDistanceFromOrigin();
-
-    if (length > 0.0f) {
-        const juce::Point<float> unit = delta / length;
-
-        shaftStart += unit * startNode->getVisualRadius();
-        shaftEnd   -= unit * headLength;
-    }
-
-    label.centre = (shaftStart + shaftEnd) * 0.5f;
-
-    float angle = std::atan2(delta.y, delta.x);
-
-    const float halfPi = juce::MathConstants<float>::halfPi;
-
-    while (angle > halfPi) {
-        angle -= juce::MathConstants<float>::pi;
-    }
-
-    while (angle <= -halfPi) {
-        angle += juce::MathConstants<float>::pi;
-    }
-
-    if (std::abs(delta.x) < std::abs(delta.y) * verticalLabelThreshold) {
-        angle = 0.0f;
-    }
-
-    label.angle = angle;
-
-    return label;
-}
-
-juce::Path Arrow::buildShaftPath(const ArsNovaUI::ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const
-{
-    juce::Path path;
-
-    if (! geometry.valid) {
-        return path;
-    }
-
-    const juce::Point<float> start = geometry.start - origin;
-    const juce::Point<float> tip   = geometry.tip   - origin;
-
-    juce::Point<float> shaftEnd = tip;
-
-    if (geometry.drawHead) {
-        shaftEnd = tip - geometry.direction * headLength;
-    }
-
-    path.startNewSubPath(start);
-
-    if (geometry.straight) {
-        path.lineTo(shaftEnd);
-        return path;
-    }
-
-    path.cubicTo(geometry.control1 - origin, geometry.control2 - origin, shaftEnd);
-    return path;
-}
-
-juce::Point<int> Arrow::getTip() const
-{
-    if (endNode != nullptr) {
-        return endNode->getNodeCentre();
-    }
-
-    if (startNode == nullptr) {
-        return tipOffset;
-    }
-
-    return startNode->getNodeCentre() + tipOffset;
-}
-
-juce::Point<float> Arrow::getHeadAnchor() const
-{
-    if (isDangling()) {
-        return getTip().toFloat();
-    }
-
-    const ArsNovaUI::ArrowGeometry geometry = getGeometry(1.0f);
-    if (! geometry.valid) {
-        return getTip().toFloat();
-    }
-
-    const float endExtent = endNode->getBodyExtent(geometry.chord);
-    return endNode->getNodeCentre().toFloat() - geometry.chord * (endExtent + headAnchorInset);
 }
 
 ArsNovaUI::ArrowVisual::ShaftStyle Arrow::shaftStyle() const
@@ -574,11 +300,11 @@ ArsNovaUI::ArrowVisual::ShaftStyle Arrow::shaftStyle() const
         return ArsNovaUI::ArrowVisual::ShaftStyle::Solid;
     }
 
-    if (startNode->nodeType == NodeInfo::Type::TraversalFlag) {
+    if (static_cast<const Node*>(startNode)->nodeType == NodeInfo::Type::TraversalFlag) {
         return ArsNovaUI::ArrowVisual::ShaftStyle::Dashed;
     }
 
-    if (endNode == nullptr || endNode->nodeType != NodeInfo::Type::Root || startNode->isAlternativeNode) {
+    if (endNode == nullptr || static_cast<const Node*>(endNode)->nodeType != NodeInfo::Type::Root || startNode->isAlternativeNode) {
         return ArsNovaUI::ArrowVisual::ShaftStyle::Solid;
     }
 

@@ -96,7 +96,7 @@ private:
 
     MainRun mainRun;
 
-    NodeRowMap                       chordVisits;
+    NodeRowMap chordVisits;
     std::vector<std::pair<int, int>> chordFrontier;
 
     std::vector<int> crossTreeScratch;

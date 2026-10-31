@@ -5,9 +5,10 @@
 #include "Graph/NodeFactory.h"
 #include "Graph/OrnamentLibraries.h"
 #include "Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "Input/GraphDocument.h"
 #include "Input/FigureDocument.h"
-#include "UI/Canvas/EditCanvas.h"
+#include "UI/Canvas/NodeArrowCanvas.h"
 #include "UI/Node/Node.h"
 #include "UI/Ornaments/OrnamentCanvas.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
@@ -24,11 +25,11 @@ struct CanvasTestFolder
     }
 };
 
-struct PlainCanvas : public EditCanvas
+struct PlainCanvas : public NodeArrowCanvas
 {
-    using EditCanvas::EditCanvas;
+    using NodeArrowCanvas::NodeArrowCanvas;
 
-    std::unique_ptr<Node> makeNode(const juce::ValueTree&) override
+    std::unique_ptr<ArsNovaUI::CanvasNode> makeNode(const juce::ValueTree&) override
     {
         return std::make_unique<Node>(document.undoManager);
     }
@@ -42,17 +43,17 @@ TEST_CASE("moving a graph node carries its descendants and the group its first m
     GraphDocument              document(graph, processor.undoManager);
 
     const auto storedPosition = [](const juce::ValueTree& nodeTree) {
-        return juce::Point<int> { nodeTree.getProperty(ValueTreeIdentifiers::XPosition), nodeTree.getProperty(ValueTreeIdentifiers::YPosition) };
+        return juce::Point<int> { nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition), nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition) };
     };
 
     NodeFactory::createRootNode(graph, { 0, 0, 25 }, nullptr);
 
     const juce::ValueTree root       = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1);
-    const juce::ValueTree first      = NodeFactory::createNode(graph, root.getProperty(ValueTreeIdentifiers::Id), ValueTreeIdentifiers::NodeData, { 100, 0, 25 }, nullptr);
-    const juce::ValueTree second     = NodeFactory::createNode(graph, root.getProperty(ValueTreeIdentifiers::Id), ValueTreeIdentifiers::NodeData, { 100, 100, 25 }, nullptr);
-    const juce::ValueTree grandchild = NodeFactory::createNode(graph, first.getProperty(ValueTreeIdentifiers::Id), ValueTreeIdentifiers::NodeData, { 200, 0, 25 }, nullptr);
+    const juce::ValueTree first      = NodeFactory::createNode(graph, root.getProperty(ArsNovaUI::CanvasIdentifiers::Id), ValueTreeIdentifiers::NodeData, { 100, 0, 25 }, nullptr);
+    const juce::ValueTree second     = NodeFactory::createNode(graph, root.getProperty(ArsNovaUI::CanvasIdentifiers::Id), ValueTreeIdentifiers::NodeData, { 100, 100, 25 }, nullptr);
+    const juce::ValueTree grandchild = NodeFactory::createNode(graph, first.getProperty(ArsNovaUI::CanvasIdentifiers::Id), ValueTreeIdentifiers::NodeData, { 200, 0, 25 }, nullptr);
 
-    const std::vector<int> members { first.getProperty(ValueTreeIdentifiers::Id), grandchild.getProperty(ValueTreeIdentifiers::Id) };
+    const std::vector<int> members { first.getProperty(ArsNovaUI::CanvasIdentifiers::Id), grandchild.getProperty(ArsNovaUI::CanvasIdentifiers::Id) };
 
     const juce::ValueTree group = NodeFactory::createEncapsulator(graph, members, nullptr);
 
@@ -89,9 +90,9 @@ TEST_CASE("an edit canvas builds, places and removes components as its document'
     NodeFactory::createRootNode(graph, { 0, 0, 25 }, nullptr);
 
     const juce::ValueTree root  = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1);
-    const juce::ValueTree child = NodeFactory::createNode(graph, root.getProperty(ValueTreeIdentifiers::Id), ValueTreeIdentifiers::NodeData, { 150, 50, 25 }, nullptr);
+    const juce::ValueTree child = NodeFactory::createNode(graph, root.getProperty(ArsNovaUI::CanvasIdentifiers::Id), ValueTreeIdentifiers::NodeData, { 150, 50, 25 }, nullptr);
 
-    const int childId = child.getProperty(ValueTreeIdentifiers::Id);
+    const int childId = child.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     NodeFactory::createDanglingArrow(graph, child, { 100, 0 }, ArrowInfo::Settings {}, nullptr);
 
@@ -124,7 +125,7 @@ TEST_CASE("the figure canvas shows one chain, grows only from its last node and 
     ArsNovaUI::CustomLookAndFeel lookAndFeel;
 
     const auto storedPosition = [](const juce::ValueTree& nodeTree) {
-        return juce::Point<int> { nodeTree.getProperty(ValueTreeIdentifiers::XPosition), nodeTree.getProperty(ValueTreeIdentifiers::YPosition) };
+        return juce::Point<int> { nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition), nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition) };
     };
 
     libraries.load(temporary.folder);
@@ -142,15 +143,15 @@ TEST_CASE("the figure canvas shows one chain, grows only from its last node and 
 
     document.addRootNode({ 0, 0 });
 
-    const int firstId = document.nodes.getChild(0).getProperty(ValueTreeIdentifiers::Id);
+    const int firstId = document.nodes.getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const juce::ValueTree middle = document.addChildNode(firstId, { 100, 0 }, {});
 
-    const int middleId = middle.getProperty(ValueTreeIdentifiers::Id);
+    const int middleId = middle.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const juce::ValueTree last = document.addChildNode(middleId, { 200, 0 }, {});
 
-    const int lastId = last.getProperty(ValueTreeIdentifiers::Id);
+    const int lastId = last.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     document.addDanglingArrow(last, { 100, 0 });
 
@@ -175,9 +176,9 @@ TEST_CASE("the figure canvas shows one chain, grows only from its last node and 
 
     canvas.refreshHost();
 
-    CHECK(canvas.nodeManager.find(middleId)->hasInnerRim);
-    CHECK_FALSE(canvas.nodeManager.find(firstId)->hasInnerRim);
-    CHECK_FALSE(canvas.nodeManager.find(lastId)->hasInnerRim);
+    CHECK(static_cast<Node*>(canvas.nodeManager.find(middleId))->hasInnerRim);
+    CHECK_FALSE(static_cast<Node*>(canvas.nodeManager.find(firstId))->hasInnerRim);
+    CHECK_FALSE(static_cast<Node*>(canvas.nodeManager.find(lastId))->hasInnerRim);
 
     document.nodes.removeListener(&canvas.treeListener);
 

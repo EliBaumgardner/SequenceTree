@@ -1,9 +1,4 @@
-//
-// Created by Eli Baumgardner on 8/26/26.
-//
-
-#ifndef SEQUENCETREE_ARROWINFO_H
-#define SEQUENCETREE_ARROWINFO_H
+#pragma once
 
 #include <algorithm>
 #include <cmath>
@@ -98,5 +93,3 @@ struct Settings {
 };
 
 }
-
-#endif //SEQUENCETREE_ARROWINFO_H

@@ -15,8 +15,8 @@
     keys into the text. getNodeCentre is the centre of the circle rather than of the whole
     component, and getBodyExtent counts the rectangle as part of the body.
 
-    NodeManager creates it for a RootNodeData tree and calls equipTraversals on every root when
-    playback starts.
+    NodeManager creates it for a RootNodeData tree and NodeCanvas calls equipTraversals on every
+    root when playback starts.
 */
 
 class GraphState;
@@ -34,6 +34,8 @@ public:
     void bindToTree     () override;
 
     juce::Point<int> getNodeCentre() const override;
+
+    juce::Rectangle<int> getBoundsAt(juce::Point<int> position) const override;
 
     float getBodyExtent(juce::Point<float> approachDirection) const override;
 

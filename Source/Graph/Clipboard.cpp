@@ -1,6 +1,7 @@
 #include "Clipboard.h"
 #include "NodeFactory.h"
 #include "ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "GraphState.h"
 
 #include <algorithm>
@@ -35,7 +36,7 @@ void Clipboard::copy(std::span<const int> selectedIds)
     copiedRootTraversals.clear();
 
     for (const juce::ValueTree& node : clipboardNodes()) {
-        const int nodeId     = node.getProperty(ValueTreeIdentifiers::Id);
+        const int nodeId     = node.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
         const int rootNodeId = node.getProperty(ValueTreeIdentifiers::RootNodeId);
 
         if (wasChordMember(node)) {
@@ -78,20 +79,20 @@ std::vector<int> Clipboard::pasteAt(juce::Point<int> canvasPoint)
 void Clipboard::insertClipboardNodes(const PasteLayout& layout, juce::Point<int> offset) const
 {
     for (const juce::ValueTree& source : pastedSources(layout)) {
-        const int originalId = source.getProperty(ValueTreeIdentifiers::Id);
+        const int originalId = source.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
         const int newId      = layout.idMap.at(originalId);
 
         juce::ValueTree node = buildPastedNode(source, layout.promotedToRoot.count(originalId) > 0);
 
-        node.setProperty(ValueTreeIdentifiers::Id, newId, nullptr);
+        node.setProperty(ArsNovaUI::CanvasIdentifiers::Id, newId, nullptr);
         node.setProperty(ValueTreeIdentifiers::RootNodeId, layout.rootIdOf.at(originalId), nullptr);
 
-        node.setProperty(ValueTreeIdentifiers::XPosition, static_cast<int>(node.getProperty(ValueTreeIdentifiers::XPosition)) + offset.x, nullptr);
-        node.setProperty(ValueTreeIdentifiers::YPosition, static_cast<int>(node.getProperty(ValueTreeIdentifiers::YPosition)) + offset.y, nullptr);
+        node.setProperty(ArsNovaUI::CanvasIdentifiers::XPosition, static_cast<int>(node.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition)) + offset.x, nullptr);
+        node.setProperty(ArsNovaUI::CanvasIdentifiers::YPosition, static_cast<int>(node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition)) + offset.y, nullptr);
 
-        node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).removeAllChildren(nullptr);
+        node.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).removeAllChildren(nullptr);
 
-        const juce::ValueTree danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+        const juce::ValueTree danglingArrows = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows);
         if (danglingArrows.isValid()) {
             node.removeChild(danglingArrows, nullptr);
         }
@@ -103,13 +104,13 @@ void Clipboard::insertClipboardNodes(const PasteLayout& layout, juce::Point<int>
 void Clipboard::connectClipboardNodes(const PasteLayout& layout) const
 {
     for (const juce::ValueTree& source : pastedSources(layout)) {
-        const int parentId = layout.idMap.at(static_cast<int>(source.getProperty(ValueTreeIdentifiers::Id)));
+        const int parentId = layout.idMap.at(static_cast<int>(source.getProperty(ArsNovaUI::CanvasIdentifiers::Id)));
 
-        const juce::ValueTree childrenIds = source.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+        const juce::ValueTree childrenIds = source.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
 
         for (int child = 0; child < childrenIds.getNumChildren(); ++child) {
             const juce::ValueTree childId = childrenIds.getChild(child);
-            const int  originalChildId    = childId.getProperty(ValueTreeIdentifiers::Id);
+            const int  originalChildId    = childId.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
             const auto copiedChild        = layout.idMap.find(originalChildId);
 
             if (copiedChild != layout.idMap.end()) {
@@ -124,12 +125,12 @@ void Clipboard::connectClipboardNodes(const PasteLayout& layout) const
 void Clipboard::restoreDanglingArrows(const PasteLayout& layout) const
 {
     for (const juce::ValueTree& source : pastedSources(layout)) {
-        const juce::ValueTree danglingArrows = source.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+        const juce::ValueTree danglingArrows = source.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows);
         if (!danglingArrows.isValid()) {
             continue;
         }
 
-        juce::ValueTree node = graphState.getNode(layout.idMap.at(static_cast<int>(source.getProperty(ValueTreeIdentifiers::Id))));
+        juce::ValueTree node = graphState.getNode(layout.idMap.at(static_cast<int>(source.getProperty(ArsNovaUI::CanvasIdentifiers::Id))));
         if (node.isValid()) {
             node.addChild(danglingArrows.createCopy(), -1, &undoManager);
         }
@@ -172,19 +173,19 @@ bool Clipboard::wasChordMember(const juce::ValueTree& source) const
         return false;
     }
 
-    const juce::ValueTree parent = graphState.getNodeParent(source.getProperty(ValueTreeIdentifiers::Id));
+    const juce::ValueTree parent = graphState.getNodeParent(source.getProperty(ArsNovaUI::CanvasIdentifiers::Id));
 
     if (!parent.isValid()) {
         return false;
     }
 
-    const int deltaX = static_cast<int>(source.getProperty(ValueTreeIdentifiers::XPosition))
-                     - static_cast<int>(parent.getProperty(ValueTreeIdentifiers::XPosition));
-    const int deltaY = static_cast<int>(source.getProperty(ValueTreeIdentifiers::YPosition))
-                     - static_cast<int>(parent.getProperty(ValueTreeIdentifiers::YPosition));
+    const int deltaX = static_cast<int>(source.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition))
+                     - static_cast<int>(parent.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition));
+    const int deltaY = static_cast<int>(source.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition))
+                     - static_cast<int>(parent.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition));
 
     const juce::ValueTree connection =
-        graphState.getConnection(static_cast<int>(parent.getProperty(ValueTreeIdentifiers::Id)), static_cast<int>(source.getProperty(ValueTreeIdentifiers::Id)));
+        graphState.getConnection(static_cast<int>(parent.getProperty(ArsNovaUI::CanvasIdentifiers::Id)), static_cast<int>(source.getProperty(ArsNovaUI::CanvasIdentifiers::Id)));
 
     return ArrowInfo::Settings::durationFromDelta(ArrowBindingOps::getArrowInfo(connection), deltaX, deltaY) == 0;
 }
@@ -193,7 +194,7 @@ bool Clipboard::hasParentOutsideCopy(int nodeId) const
 {
     const juce::ValueTree parent = graphState.getNodeParent(nodeId);
 
-    return !parent.isValid() || !contents.getChildWithProperty(ValueTreeIdentifiers::Id, parent.getProperty(ValueTreeIdentifiers::Id)).isValid();
+    return !parent.isValid() || !contents.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, parent.getProperty(ArsNovaUI::CanvasIdentifiers::Id)).isValid();
 }
 
 namespace {
@@ -224,7 +225,7 @@ int Clipboard::chooseComponentHead(const PasteLayout& layout, const std::set<int
     int firstPromotable = -1;
 
     for (const juce::ValueTree& node : pastedSources(layout)) {
-        const int nodeId = node.getProperty(ValueTreeIdentifiers::Id);
+        const int nodeId = node.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
         if (component.count(nodeId) == 0 || !canBecomeRoot(node)) {
             continue;
@@ -304,8 +305,8 @@ juce::Point<int> Clipboard::pastedCentre(const PasteLayout& layout) const
 
     for (const juce::ValueTree& node : pastedSources(layout)) {
         juce::Rectangle<int> nodeExtent {
-            static_cast<int>(node.getProperty(ValueTreeIdentifiers::XPosition)),
-            static_cast<int>(node.getProperty(ValueTreeIdentifiers::YPosition)),
+            static_cast<int>(node.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition)),
+            static_cast<int>(node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition)),
             1, 1
         };
 
@@ -356,7 +357,7 @@ std::vector<int> Clipboard::createPastedEncapsulators(const PasteLayout& layout)
         std::vector<int> pastedMemberIds;
 
         for (int member = 0; member < memberIds.getNumChildren(); ++member) {
-            const int  originalMemberId = memberIds.getChild(member).getProperty(ValueTreeIdentifiers::Id);
+            const int  originalMemberId = memberIds.getChild(member).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
             const auto pastedMember     = layout.idMap.find(originalMemberId);
 
             if (pastedMember != layout.idMap.end()) {
@@ -373,7 +374,7 @@ std::vector<int> Clipboard::createPastedEncapsulators(const PasteLayout& layout)
 
         const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graphState, pastedMemberIds, &undoManager);
 
-        encapsulatorIds.push_back(encapsulator.getProperty(ValueTreeIdentifiers::Id));
+        encapsulatorIds.push_back(encapsulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id));
     }
 
     return encapsulatorIds;
@@ -437,7 +438,7 @@ std::vector<juce::ValueTree> Clipboard::pastedSources(const PasteLayout& layout)
     std::vector<juce::ValueTree> sources;
 
     for (const juce::ValueTree& node : clipboardNodes()) {
-        if (layout.discarded.count(static_cast<int>(node.getProperty(ValueTreeIdentifiers::Id))) == 0) {
+        if (layout.discarded.count(static_cast<int>(node.getProperty(ArsNovaUI::CanvasIdentifiers::Id))) == 0) {
             sources.push_back(node);
         }
     }
@@ -451,18 +452,18 @@ std::map<int,int> Clipboard::mapClipboardParents() const
 
     std::set<int> clipboardIds;
     for (const juce::ValueTree& node : nodes) {
-        clipboardIds.insert(static_cast<int>(node.getProperty(ValueTreeIdentifiers::Id)));
+        clipboardIds.insert(static_cast<int>(node.getProperty(ArsNovaUI::CanvasIdentifiers::Id)));
     }
 
     std::map<int,int> parentOf;
 
     for (const juce::ValueTree& parent : nodes) {
-        const int parentId = parent.getProperty(ValueTreeIdentifiers::Id);
+        const int parentId = parent.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-        const juce::ValueTree childrenIds = parent.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+        const juce::ValueTree childrenIds = parent.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
 
         for (int child = 0; child < childrenIds.getNumChildren(); ++child) {
-            const int childId = childrenIds.getChild(child).getProperty(ValueTreeIdentifiers::Id);
+            const int childId = childrenIds.getChild(child).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
             if (clipboardIds.count(childId) > 0 && parentOf.count(childId) == 0) {
                 parentOf[childId] = parentId;
@@ -478,7 +479,7 @@ std::map<int,int> Clipboard::allocatePastedIds(const PasteLayout& layout) const
     std::map<int,int> idMap;
 
     for (const juce::ValueTree& node : pastedSources(layout)) {
-        const int originalId = node.getProperty(ValueTreeIdentifiers::Id);
+        const int originalId = node.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
         ++graphState.nodeIdIncrement;
 
@@ -493,13 +494,13 @@ std::map<int,int> Clipboard::resolvePastedRootIds(const PasteLayout& layout) con
     std::map<int,int> rootIdOf;
 
     for (const juce::ValueTree& node : pastedSources(layout)) {
-        const int nodeId = node.getProperty(ValueTreeIdentifiers::Id);
+        const int nodeId = node.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
         juce::ValueTree ancestor = node;
         std::set<int>   visited;
 
         while (true) {
-            const int ancestorId = ancestor.getProperty(ValueTreeIdentifiers::Id);
+            const int ancestorId = ancestor.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
             if (isRootNodeType(ancestor) || layout.promotedToRoot.count(ancestorId) > 0) {
                 rootIdOf[nodeId] = layout.idMap.at(ancestorId);
@@ -513,7 +514,7 @@ std::map<int,int> Clipboard::resolvePastedRootIds(const PasteLayout& layout) con
                 break;
             }
 
-            ancestor = contents.getChildWithProperty(ValueTreeIdentifiers::Id, parent->second);
+            ancestor = contents.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, parent->second);
         }
     }
 
@@ -530,7 +531,7 @@ std::set<int> Clipboard::findDiscardedOrphans(const std::map<int,int>& parentOf)
         foundMore = false;
 
         for (const juce::ValueTree& node : nodes) {
-            const int nodeId = node.getProperty(ValueTreeIdentifiers::Id);
+            const int nodeId = node.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
             if (discarded.count(nodeId) > 0 || isRootNodeType(node)) {
                 continue;
@@ -554,7 +555,7 @@ std::set<int> Clipboard::findOrphansToPromote(const PasteLayout& layout) const
     std::set<int> promoted;
 
     for (const juce::ValueTree& node : clipboardNodes()) {
-        const int nodeId = node.getProperty(ValueTreeIdentifiers::Id);
+        const int nodeId = node.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
         if (layout.discarded.count(nodeId) > 0 || isRootNodeType(node)) {
             continue;
@@ -581,7 +582,7 @@ std::set<int> Clipboard::findRootlessHeads(const PasteLayout& layout) const
     std::set<int> heads;
 
     for (const juce::ValueTree& node : pastedSources(layout)) {
-        const int startId = node.getProperty(ValueTreeIdentifiers::Id);
+        const int startId = node.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
         if (!visited.insert(startId).second) {
             continue;
@@ -605,7 +606,7 @@ std::set<int> Clipboard::findRootlessHeads(const PasteLayout& layout) const
         const bool alreadyRooted = std::ranges::any_of(component,
             [this, &layout](int memberId) {
                 return layout.promotedToRoot.count(memberId) > 0
-                    || isRootNodeType(contents.getChildWithProperty(ValueTreeIdentifiers::Id, memberId));
+                    || isRootNodeType(contents.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, memberId));
             });
 
         if (alreadyRooted) {

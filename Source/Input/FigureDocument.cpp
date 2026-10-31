@@ -1,15 +1,16 @@
 #include "FigureDocument.h"
 #include "../Graph/OrnamentLibraries.h"
 #include "../Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 FigureDocument::FigureDocument(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
-    : CanvasDocument({}, undoManager), ornamentLibraries(ornamentLibraries)
+    : ArsNovaUI::CanvasDocument({}, undoManager), ornamentLibraries(ornamentLibraries)
 {
 }
 
 juce::ValueTree FigureDocument::findNode(int nodeId) const
 {
-    return nodes.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId);
+    return nodes.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId);
 }
 
 juce::ValueTree FigureDocument::addChildNode(int parentNodeId, juce::Point<int> position, const juce::ModifierKeys&)
@@ -21,7 +22,7 @@ int FigureDocument::growFrom(int nodeId) const
 {
     const juce::ValueTree nodeTree = findNode(nodeId);
 
-    if (! nodeTree.isValid() || nodeTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getNumChildren() > 0) {
+    if (! nodeTree.isValid() || nodeTree.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getNumChildren() > 0) {
         return -1;
     }
 
@@ -35,7 +36,7 @@ void FigureDocument::addRootNode(juce::Point<int> position)
 
 void FigureDocument::moveNode(juce::ValueTree nodeTree, juce::Point<int> position)
 {
-    ornamentLibraries.setFigureNodePosition(ornament, nodeTree.getProperty(ValueTreeIdentifiers::Id), position, &undoManager);
+    ornamentLibraries.setFigureNodePosition(ornament, nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id), position, &undoManager);
 }
 
 void FigureDocument::removeNode(int nodeId)
@@ -45,7 +46,7 @@ void FigureDocument::removeNode(int nodeId)
 
 void FigureDocument::addDanglingArrow(juce::ValueTree nodeTree, juce::Point<int> tipOffset)
 {
-    ornamentLibraries.addDanglingArrow(ornament, nodeTree.getProperty(ValueTreeIdentifiers::Id), tipOffset, &undoManager);
+    ornamentLibraries.addDanglingArrow(ornament, nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id), tipOffset, &undoManager);
 }
 
 void FigureDocument::setDanglingArrowTip(juce::ValueTree, juce::Point<int> tipOffset)
@@ -66,7 +67,7 @@ void FigureDocument::disconnect(int, int)
 {
 }
 
-bool FigureDocument::canConnect(const Node&, const Node&) const
+bool FigureDocument::canConnect(const ArsNovaUI::CanvasNode&, const ArsNovaUI::CanvasNode&) const
 {
     return false;
 }

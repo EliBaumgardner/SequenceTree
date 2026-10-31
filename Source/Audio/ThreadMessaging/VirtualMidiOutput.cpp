@@ -5,8 +5,9 @@
 VirtualMidiOutput::VirtualMidiOutput()
 {
     const juce::Array<juce::MidiDeviceInfo> existingPorts = juce::MidiInput::getAvailableDevices();
-    juce::String                            portName      = JucePlugin_Name;
-    int                                     portNumber    = 2;
+    juce::String portName = JucePlugin_Name;
+
+    int portNumber = 2;
 
     while (std::any_of(existingPorts.begin(), existingPorts.end(), [&portName](const juce::MidiDeviceInfo& existing) { return existing.name == portName; })) {
         portName = juce::String(JucePlugin_Name) + " " + juce::String(portNumber++);

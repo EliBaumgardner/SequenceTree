@@ -1,13 +1,14 @@
-#ifndef SEQUENCETREE_VALUETREEIDENTIFIERS_H
-#define SEQUENCETREE_VALUETREEIDENTIFIERS_H
+#pragma once
 
 #include <juce_data_structures/juce_data_structures.h>
 
 /*
     The names used in the saved document. Each static member is a juce::Identifier used as a
-    ValueTree type (NodeData, TraversalData, OrnamentLibrary) or a property name (Id, XPosition,
-    MidiPitch) in the graph, traversal, rule, ornament and patch trees. Code uses these members
-    instead of string literals, so each name is spelled in one place.
+    ValueTree type (NodeData, TraversalData, OrnamentLibrary) or a property name (RootNodeId,
+    Radius, MidiPitch) in the graph, traversal, rule, ornament and patch trees. Code uses these
+    members instead of string literals, so each name is spelled in one place. The names the canvas
+    classes read - a node's Id, XPosition and YPosition, its NodeChildrenIds and its dangling arrows
+    - are ArsNovaUI::CanvasIdentifiers.
 
     The strings are written into every saved plugin state and ornament file, so changing one makes
     older saves load without that value.
@@ -32,7 +33,6 @@ public:
     static const juce::Identifier AlternativeModulatorData;
     static const juce::Identifier EncapsulatorData;
 
-    static const juce::Identifier NodeChildrenIds;
     static const juce::Identifier EncapsulatedIds;
     static const juce::Identifier EncapsulatorId;
     static const juce::Identifier EncapsulatorLabel;
@@ -41,11 +41,6 @@ public:
 
     static const juce::Identifier MidiNotesData;
     static const juce::Identifier MidiNoteData;
-
-    static const juce::Identifier DanglingArrows;
-    static const juce::Identifier DanglingArrow;
-    static const juce::Identifier ArrowTipX;
-    static const juce::Identifier ArrowTipY;
 
     static const juce::Identifier ArrowType;
     static const juce::Identifier ArrowDuration;
@@ -56,8 +51,6 @@ public:
     static const juce::Identifier ArrowXMultiplier;
     static const juce::Identifier ArrowYMultiplier;
     static const juce::Identifier ArrowPitchOffset;
-
-    static const juce::Identifier Id;
 
     static const juce::Identifier RootNodeId;
     static const juce::Identifier NodeId;
@@ -71,8 +64,6 @@ public:
     static const juce::Identifier RepeatValue;
     static const juce::Identifier Probability;
 
-    static const juce::Identifier XPosition;
-    static const juce::Identifier YPosition;
     static const juce::Identifier Radius;
     static const juce::Identifier NodeColour;
 
@@ -105,7 +96,6 @@ public:
     static const juce::Identifier TraversalTranspose;
     static const juce::Identifier TraversalVelocity;
 
-
     static const juce::Identifier OrnamentLibraries;
     static const juce::Identifier OrnamentLibrary;
     static const juce::Identifier LibraryUid;
@@ -129,5 +119,3 @@ public:
     static const juce::Identifier OrnamentIndex;
     static const juce::Identifier LegacyLibrariesImported;
 };
-
-#endif //SEQUENCETREE_VALUETREEIDENTIFIERS_H

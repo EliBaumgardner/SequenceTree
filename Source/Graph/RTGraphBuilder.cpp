@@ -18,6 +18,7 @@
 #include "../Plugin/PluginProcessor.h"
 #include "GraphState.h"
 #include "ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 RTGraphBuilder::RTGraphBuilder(SequenceTreeAudioProcessor& processorRef, GraphState& valueTreeStateRef)
     : processor(processorRef), graphState(valueTreeStateRef)
@@ -45,7 +46,7 @@ void RTGraphBuilder::makeRTGraph(const juce::ValueTree& nodeValueTree)
         return;
     }
 
-    if (nodeValueTree.getType() == ValueTreeIdentifiers::DanglingArrow) {
+    if (nodeValueTree.getType() == ArsNovaUI::CanvasIdentifiers::DanglingArrow) {
         makeRTGraph(nodeValueTree.getParent().getParent());
         return;
     }
@@ -106,7 +107,7 @@ void RTGraphBuilder::rebuildAllGraphs()
 void RTGraphBuilder::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
 {
     if (parent.getType() == ValueTreeIdentifiers::NodeMap) {
-        pending.addedNodeIds.insert(static_cast<int>(child.getProperty(ValueTreeIdentifiers::Id)));
+        pending.addedNodeIds.insert(static_cast<int>(child.getProperty(ArsNovaUI::CanvasIdentifiers::Id)));
         triggerAsyncUpdate();
         return;
     }
@@ -139,14 +140,14 @@ void RTGraphBuilder::valueTreePropertyChanged(juce::ValueTree& tree, const juce:
         return;
     }
 
-    if (propertyIdentifier == ValueTreeIdentifiers::XPosition
-        || propertyIdentifier == ValueTreeIdentifiers::YPosition
+    if (propertyIdentifier == ArsNovaUI::CanvasIdentifiers::XPosition
+        || propertyIdentifier == ArsNovaUI::CanvasIdentifiers::YPosition
         || propertyIdentifier == ValueTreeIdentifiers::Radius) {
         reshapedNode = tree;
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::MidiDuration) {
         graphOwner = tree.getParent().getParent();
-        pending.durationRefreshNodeIds.push_back(graphOwner.getProperty(ValueTreeIdentifiers::Id));
+        pending.durationRefreshNodeIds.push_back(graphOwner.getProperty(ArsNovaUI::CanvasIdentifiers::Id));
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::MidiPitch
         || propertyIdentifier == ValueTreeIdentifiers::MidiVelocity) {
@@ -173,12 +174,12 @@ void RTGraphBuilder::valueTreePropertyChanged(juce::ValueTree& tree, const juce:
          || propertyIdentifier == ValueTreeIdentifiers::TraversalVelocity)) {
         pending.traversalIds.insert(static_cast<int>(tree.getProperty(ValueTreeIdentifiers::TraversalId)));
     }
-    else if (propertyIdentifier == ValueTreeIdentifiers::ArrowTipX
-        || propertyIdentifier == ValueTreeIdentifiers::ArrowTipY) {
+    else if (propertyIdentifier == ArsNovaUI::CanvasIdentifiers::ArrowTipX
+        || propertyIdentifier == ArsNovaUI::CanvasIdentifiers::ArrowTipY) {
         reshapedNode = tree.getParent().getParent();
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::ArrowDuration) {
-        pending.durationRefreshNodeIds.push_back(tree.getParent().getParent().getProperty(ValueTreeIdentifiers::Id));
+        pending.durationRefreshNodeIds.push_back(tree.getParent().getParent().getProperty(ArsNovaUI::CanvasIdentifiers::Id));
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::ArrowType
         || propertyIdentifier == ValueTreeIdentifiers::ArrowSync
@@ -366,7 +367,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
 
         juce::ValueTree currentValueTree = stack.back();
 
-        int nodeId = currentValueTree.getProperty(ValueTreeIdentifiers::Id);
+        int nodeId = currentValueTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
         stack.pop_back();
 
@@ -374,7 +375,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
             continue;
         }
 
-        juce::ValueTree nodeValueTreeChildren   = currentValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+        juce::ValueTree nodeValueTreeChildren   = currentValueTree.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
         juce::ValueTree nodeValueTreeTraversals = currentValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
         juce::ValueTree nodeMidiNotes           = currentValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
         juce::ValueTree publishedFigure         = processor.ornamentLibraries.findOrnament(currentValueTree.getProperty(ValueTreeIdentifiers::OrnamentUid).toString())
@@ -425,7 +426,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
         juce::ValueTree parentValueTree = graphState.getNodeParent(rtNode.nodeID);
 
         if (parentValueTree.isValid()) {
-            const int parentId = parentValueTree.getProperty(ValueTreeIdentifiers::Id);
+            const int parentId = parentValueTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
             auto parentIt = builtNodes.find(parentId);
 
@@ -453,7 +454,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
         else {
             for (int i = 0; i < nodeValueTreeChildren.getNumChildren(); i++) {
                 juce::ValueTree childIdTree = nodeValueTreeChildren.getChild(i);
-                int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
+                int childId = childIdTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
                 juce::ValueTree childDataTree = graphState.getNode(childId);
 
                 jassert(childDataTree.isValid());
@@ -485,11 +486,11 @@ void RTGraphBuilder::createRTNodeConnections(NodeBuildMap& builtNodes, std::unor
             continue;
         }
 
-        juce::ValueTree nodeChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+        juce::ValueTree nodeChildrenIds = nodeValueTree.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
 
         for (int i = 0; i < nodeChildrenIds.getNumChildren(); i++) {
             juce::ValueTree childIdTree = nodeChildrenIds.getChild(i);
-            int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
+            int childId = childIdTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
             juce::ValueTree childDataTree = graphState.getNode(childId);
 
@@ -520,12 +521,12 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
     const bool isAlternative = (nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeNodeData
                              || nodeValueTree.getType() == ValueTreeIdentifiers::AlternativeModulatorData);
 
-    const int centreX = nodeValueTree.getProperty(ValueTreeIdentifiers::XPosition);
-    const int centreY = nodeValueTree.getProperty(ValueTreeIdentifiers::YPosition);
+    const int centreX = nodeValueTree.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition);
+    const int centreY = nodeValueTree.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition);
 
     auto durationTo = [&](const juce::ValueTree& connection, const juce::ValueTree& other) {
-        const int deltaX = static_cast<int>(other.getProperty(ValueTreeIdentifiers::XPosition)) - centreX;
-        const int deltaY = static_cast<int>(other.getProperty(ValueTreeIdentifiers::YPosition)) - centreY;
+        const int deltaX = static_cast<int>(other.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition)) - centreX;
+        const int deltaY = static_cast<int>(other.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition)) - centreY;
 
         return ArrowInfo::Settings::durationFromDelta(ArrowBindingOps::getArrowInfo(connection), deltaX, deltaY);
     };
@@ -534,19 +535,19 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
         juce::ValueTree parent = graphState.getNodeParent(rtNode.nodeID);
 
         if (parent.isValid()) {
-            const int parentId = parent.getProperty(ValueTreeIdentifiers::Id);
+            const int parentId = parent.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
             rtNode.alternativeArrowDuration = durationTo(graphState.getConnection(parentId, rtNode.nodeID), parent);
         }
     }
 
     if (nodeValueTree.getType() != ValueTreeIdentifiers::TraversalFlagData) {
-        juce::ValueTree childIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+        juce::ValueTree childIds = nodeValueTree.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
 
         for (int i = 0; i < childIds.getNumChildren(); i++) {
             juce::ValueTree childIdTree = childIds.getChild(i);
 
-            const int childId = childIdTree.getProperty(ValueTreeIdentifiers::Id);
+            const int childId = childIdTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
             juce::ValueTree childTree = graphState.getNode(childId);
 
             if (!childTree.isValid()) {
@@ -562,13 +563,13 @@ void RTGraphBuilder::fillDurationMap(const juce::ValueTree& nodeValueTree, RTNod
         }
     }
 
-    juce::ValueTree danglingArrows = nodeValueTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+    juce::ValueTree danglingArrows = nodeValueTree.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows);
 
     for (int i = 0; i < danglingArrows.getNumChildren(); i++) {
         juce::ValueTree arrowTree = danglingArrows.getChild(i);
 
-        const int tipX = arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX);
-        const int tipY = arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY);
+        const int tipX = arrowTree.getProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipX);
+        const int tipY = arrowTree.getProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipY);
 
         RTNode::DanglingArrow dangling;
 
@@ -605,7 +606,7 @@ void RTGraphBuilder::fillTraversalFlag(const juce::ValueTree& nodeValueTree, RTN
     const int flagValue    = nodeValueTree.getProperty(ValueTreeIdentifiers::TraversalFlagValue, 0);
     const int flagInstance = nodeValueTree.getProperty(ValueTreeIdentifiers::TraversalInstance, 0);
 
-    juce::ValueTree flagChildren = nodeValueTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+    juce::ValueTree flagChildren = nodeValueTree.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
 
     if (flagValue == 0) {
         return;
@@ -615,7 +616,7 @@ void RTGraphBuilder::fillTraversalFlag(const juce::ValueTree& nodeValueTree, RTN
     rtNode.flagRemovesTraversal = flagValue < 0;
 
     if (flagChildren.getNumChildren() > 0) {
-        rtNode.flagTargetId = flagChildren.getChild(0).getProperty(ValueTreeIdentifiers::Id);
+        rtNode.flagTargetId = flagChildren.getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
     }
     else if (!rtNode.flagRemovesTraversal) {
         rtNode.flagTargetId = rtNode.parentId;
@@ -639,17 +640,17 @@ void RTGraphBuilder::rememberStructureChange(const juce::ValueTree& parent, cons
         return;
     }
 
-    if (parent.getType() == ValueTreeIdentifiers::NodeChildrenIds) {
+    if (parent.getType() == ArsNovaUI::CanvasIdentifiers::NodeChildrenIds) {
         graphOwner = parent.getParent();
     }
     else if (parent.getType() == ValueTreeIdentifiers::TraversalChildrenIds
           || parent.getType() == ValueTreeIdentifiers::DisabledTraversalIds) {
         graphOwner = parent;
     }
-    else if (child.getType() == ValueTreeIdentifiers::DanglingArrows) {
+    else if (child.getType() == ArsNovaUI::CanvasIdentifiers::DanglingArrows) {
         reshapedNode = parent;
     }
-    else if (child.getType() == ValueTreeIdentifiers::DanglingArrow) {
+    else if (child.getType() == ArsNovaUI::CanvasIdentifiers::DanglingArrow) {
         reshapedNode = parent.getParent();
     }
 
@@ -663,11 +664,11 @@ void RTGraphBuilder::rememberOwners(juce::ValueTree graphOwner, const juce::Valu
     }
 
     if (graphOwner.isValid()) {
-        pending.rebuildNodeIds.insert(static_cast<int>(graphOwner.getProperty(ValueTreeIdentifiers::Id)));
+        pending.rebuildNodeIds.insert(static_cast<int>(graphOwner.getProperty(ArsNovaUI::CanvasIdentifiers::Id)));
     }
 
     if (reshapedNode.isValid()) {
-        pending.durationRefreshNodeIds.push_back(reshapedNode.getProperty(ValueTreeIdentifiers::Id));
+        pending.durationRefreshNodeIds.push_back(reshapedNode.getProperty(ArsNovaUI::CanvasIdentifiers::Id));
     }
 
     triggerAsyncUpdate();
@@ -701,7 +702,7 @@ void RTGraphBuilder::classifyRootConnection(const juce::ValueTree& parentValueTr
         return;
     }
 
-    const int childId = childValueTree.getProperty(ValueTreeIdentifiers::Id);
+    const int childId = childValueTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     if (static_cast<int>(parentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId)) == childId) {
         return;

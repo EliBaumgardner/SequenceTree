@@ -6,28 +6,19 @@
 #include "NodeMenu.h"
 
 MenuArea::MenuArea(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-                   juce::PropertiesFile& interfaceSettings, ArsNovaUI::ScaledView& scaledView, juce::ValueTree colourPresets, juce::UndoManager& undoManager)
+                   juce::ValueTree colourPresets, juce::UndoManager& undoManager)
     : resizer(ArsNovaUI::PanelResizer::Edge::Right),
       topBar(nodeCanvas, ArsNovaUI::Bar::Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
-      nodeCanvas(nodeCanvas),
-      interfaceSettings(interfaceSettings),
-      scaledView(scaledView),
-      colourPresets(colourPresets),
-      undoManager(undoManager)
+      nodeCanvas(nodeCanvas)
 {
     menuBar       = std::make_unique<MenuBar>(nodeCanvas);
     traversalMenu = std::make_unique<TraversalMenu>(nodeCanvas, graphState, traversalRuleState, snapshots, colourPresets, undoManager);
     nodeMenu      = std::make_unique<NodeMenu>(nodeCanvas, graphState, traversalRuleState, snapshots, colourPresets, undoManager);
 
-    settingsLauncher.openingScale = ArsNovaUI::SettingsMenu::openingScale;
-
     menuBar->traversalIcon.onClick = [this] { togglePanel(ActivePanel::Traversal); };
     menuBar->nodeIcon.onClick      = [this] { togglePanel(ActivePanel::Node); };
 
-    settingsPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawSettingsIcon, "Settings", [this]() { settingsLauncher.show(*this); });
-
     addAndMakeVisible(topBar);
-    addAndMakeVisible(settingsPane);
     addAndMakeVisible(menuBar.get());
 
     addChildComponent(traversalMenu.get());
@@ -43,22 +34,19 @@ void MenuArea::paint(juce::Graphics& graphics)
     ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
 
     lookAndFeel.drawFrostedGlass(graphics, *this, nodeCanvas, resizer.getBounds());
-    lookAndFeel.drawFrostedGlass(graphics, *this, nodeCanvas, menuBar->getBounds().withTop(0).withBottom(menuBar->getY()));
     lookAndFeel.drawFrostedGlass(graphics, *this, nodeCanvas, getLocalBounds().withRight(menuBar->getX()).withTrimmedTop(topBar.getBottom()));
 }
 
 void MenuArea::resized()
 {
     const int barHeight = ArsNovaUI::Theme::barHeight;
-    const int barInset  = juce::roundToInt(barHeight * ArsNovaUI::Theme::contentInsetRatio);
-    auto      bounds    = getLocalBounds();
+
+    auto bounds = getLocalBounds();
 
     resizer.setBounds(bounds.removeFromRight(juce::roundToInt(barHeight * resizerWidthRatio)));
 
-    auto menuColumn  = bounds.removeFromRight(juce::roundToInt(barHeight * menuBarWidthRatio));
-    auto settingsRow = menuColumn.removeFromTop(barHeight + ArsNovaUI::Theme::windowGutter).withTrimmedBottom(ArsNovaUI::Theme::windowGutter).reduced(barInset);
+    auto menuColumn = bounds.removeFromRight(juce::roundToInt(barHeight * menuBarWidthRatio));
 
-    settingsPane.setBounds(settingsRow.withSizeKeepingCentre(settingsPane.idealWidth(settingsRow.getHeight()), settingsRow.getHeight()));
     menuBar->setBounds(menuColumn);
     topBar.setBounds(bounds.withHeight(barHeight));
     traversalMenu->setBounds(bounds);
@@ -72,7 +60,7 @@ int MenuArea::narrowestHeight() const
     const int iconInset    = juce::roundToInt(menuBarWidth * MenuBar::iconInsetRatio);
     const int iconSize     = menuBarWidth - iconInset * 2;
     const int iconGap      = juce::roundToInt(iconSize * ArsNovaUI::Theme::iconGapRatio);
-    const int columnHeight = barHeight + ArsNovaUI::Theme::windowGutter + iconInset * 2 + iconSize * 3 + iconGap * 2;
+    const int columnHeight = iconInset * 2 + iconSize * 3 + iconGap * 2;
 
     return juce::jmax(columnHeight, traversalMenu->narrowestHeight(), nodeMenu->narrowestHeight());
 }

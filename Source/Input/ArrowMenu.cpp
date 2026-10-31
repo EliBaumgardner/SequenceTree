@@ -6,6 +6,7 @@
 #include "../UI/Menus/AllowedTraversalsMenu.h"
 #include "../Graph/GraphState.h"
 #include "../Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include <ArsNovaUI/Menus/ContextMenu.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
@@ -130,7 +131,7 @@ juce::ValueTree ArrowMenu::connectionTreeFor(const Arrow* arrow) const
     const auto [ownerNodeId, childNodeId] = graphDocument.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
 
     juce::ValueTree ownerTree     = graphState.getNode(ownerNodeId);
-    juce::ValueTree ownerChildren = ownerTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+    juce::ValueTree ownerChildren = ownerTree.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
 
-    return ownerChildren.getChildWithProperty(ValueTreeIdentifiers::Id, childNodeId);
+    return ownerChildren.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, childNodeId);
 }

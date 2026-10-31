@@ -10,13 +10,14 @@
 #include "../../Graph/GraphState.h"
 #include "../../Graph/RTGraphBuilder.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "../../Plugin/PluginProcessor.h"
 
 #include <cmath>
 
 NodeCanvas::NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, GraphDocument& graphDocument, RTGraphBuilder& rtGraphBuilder,
                        ArsNovaUI::CustomLookAndFeel& lookAndFeel)
-    : EditCanvas(graphDocument),
+    : NodeArrowCanvas(graphDocument),
       processor(processor),
       graphState(graphState),
       rtGraphBuilder(rtGraphBuilder),
@@ -36,7 +37,7 @@ NodeCanvas::~NodeCanvas()
 
 void NodeCanvas::paint(juce::Graphics& graphics)
 {
-    EditCanvas::paint(graphics);
+    ArsNovaUI::EditCanvas::paint(graphics);
 
     if (activeTool == CanvasTool::Paint && valueField.image.isValid()) {
         graphics.setImageResamplingQuality(juce::Graphics::mediumResamplingQuality);
@@ -60,11 +61,11 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
 {
     std::unordered_map<int, juce::ValueTree> rootNodeMap;
 
-    EditCanvas::rebuildFromNodeMap(stateTree);
+    ArsNovaUI::EditCanvas::rebuildFromNodeMap(stateTree);
 
     for (const juce::ValueTree& nodeTree : stateTree) {
         if (nodeTree.getType() == ValueTreeIdentifiers::RootNodeData) {
-            rootNodeMap[static_cast<int>(nodeTree.getProperty(ValueTreeIdentifiers::Id))] = nodeTree;
+            rootNodeMap[static_cast<int>(nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id))] = nodeTree;
         }
     }
 
@@ -85,15 +86,17 @@ void NodeCanvas::handleAsyncUpdate()
 
     const bool hasQueuedUpdates = ! asyncUpdates.empty();
 
-    EditCanvas::handleAsyncUpdate();
+    ArsNovaUI::EditCanvas::handleAsyncUpdate();
 
     if (activeTool == CanvasTool::Paint && hasQueuedUpdates) {
         valueField.refresh();
     }
 }
 
-void NodeCanvas::nodeCreated(Node& node)
+void NodeCanvas::nodeCreated(ArsNovaUI::CanvasNode& canvasNode)
 {
+    Node& node = static_cast<Node&>(canvasNode);
+
     const juce::ValueTree midiNotes = node.nodeValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
 
     const juce::var colourText = node.nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour.toString());
@@ -102,13 +105,13 @@ void NodeCanvas::nodeCreated(Node& node)
     node.nodeColour   = juce::Colour::fromString(colourText.toString());
 
     node.bindToTree();
-    node.setDisplayMode(nodeManager.displayMode);
+    node.setDisplayMode(displayMode);
     node.setInterceptsMouseClicks(activeTool != CanvasTool::Paint, activeTool != CanvasTool::Paint && activeTool != CanvasTool::Span);
 
     ornamentMarks.refresh(node);
 }
 
-void NodeCanvas::nodeAdded(Node& node)
+void NodeCanvas::nodeAdded(ArsNovaUI::CanvasNode& node)
 {
     const juce::ValueTree nodeTree = node.nodeValueTree;
 
@@ -136,7 +139,7 @@ void NodeCanvas::nodeAdded(Node& node)
     }
 }
 
-void NodeCanvas::nodeRemoving(Node& node)
+void NodeCanvas::nodeRemoving(ArsNovaUI::CanvasNode& node)
 {
     const int encapsulatorId = node.nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
@@ -147,14 +150,25 @@ void NodeCanvas::nodeRemoving(Node& node)
     encapsulationView.refreshMembership(encapsulatorId);
 }
 
-void NodeCanvas::prepareArrow(Arrow& arrow)
+void NodeCanvas::prepareArrow(ArsNovaUI::CanvasArrow& arrow)
 {
-    arrow.valueEditor->bindEditor(arrow.arrowTree, ValueTreeIdentifiers::CountLimit);
+    static_cast<Arrow&>(arrow).valueEditor->bindEditor(arrow.arrowTree, ValueTreeIdentifiers::CountLimit);
+}
+
+void NodeCanvas::connectionCreated(ArsNovaUI::CanvasArrow& arrow)
+{
+    const Node* const startNode = static_cast<const Node*>(arrow.startNode);
+
+    if (startNode->nodeType == NodeInfo::Type::TraversalFlag) {
+        static_cast<Arrow&>(arrow).sourceHovered = startNode->isHovered;
+
+        arrow.initHoverState(startNode->isHovered);
+    }
 }
 
 void NodeCanvas::updateApplied(const AsyncUpdate& update)
 {
-    Node* const node = nodeManager.find(update.nodeId);
+    Node* const node = static_cast<Node*>(nodeManager.find(update.nodeId));
 
     if (node == nullptr) {
         return;
@@ -172,7 +186,7 @@ void NodeCanvas::updateApplied(const AsyncUpdate& update)
         }
     }
 
-    if (update.type == AsyncUpdateType::OrnamentChanged) {
+    if (update.type == AsyncUpdateType::NodeMarkChanged) {
         ornamentMarks.refresh(*node);
     }
 }
@@ -184,8 +198,8 @@ void NodeCanvas::setActiveTool(CanvasTool tool)
     activeTool       = tool;
     spanAnchorNodeId = -1;
 
-    nodeManager.setInterceptsClicks(tool != CanvasTool::Paint, tool != CanvasTool::Paint && tool != CanvasTool::Span);
-    nodeManager.clearOutlines();
+    setInterceptsClicks(tool != CanvasTool::Paint, tool != CanvasTool::Paint && tool != CanvasTool::Span);
+    clearOutlines();
 
     if (previousTool == CanvasTool::NotePreview) {
         processor.traversalSession.previewRequests.push({ RTPreviewRequest::Kind::Stop });
@@ -239,20 +253,137 @@ void NodeCanvas::setProcessorPlayback(bool isPlaying)
     processor.isPlaying.store(start);
 
     if (isPlaying) {
-        nodeManager.equipRootTraversals();
+        equipRootTraversals();
 
-        arrowManager.resumeAllProgress();
+        resumeAllProgress();
     }
     else {
-        arrowManager.pauseAllProgress();
+        pauseAllProgress();
     }
 
     rtGraphBuilder.handleUpdateNowIfNeeded();
 }
 
+void NodeCanvas::setDisplayMode(NodeInfo::DisplayMode mode)
+{
+    displayMode = mode;
+
+    for (auto& [nodeId, node] : nodeManager.all()) {
+        static_cast<Node*>(node.get())->setDisplayMode(mode);
+    }
+}
+
+void NodeCanvas::setInterceptsClicks(bool shouldIntercept, bool shouldChildrenIntercept)
+{
+    for (auto& [nodeId, node] : nodeManager.all()) {
+        if (node != nullptr) {
+            node->setInterceptsMouseClicks(shouldIntercept, shouldChildrenIntercept);
+        }
+    }
+}
+
+void NodeCanvas::resetTrail(int trailId)
+{
+    for (ArsNovaUI::CanvasArrow* const arrow : arrowManager.all()) {
+        if (arrow != nullptr) {
+            static_cast<Arrow*>(arrow)->resetProgress(trailId);
+        }
+    }
+}
+
+void NodeCanvas::fadeFlagArrows(juce::Point<float> cursor)
+{
+    for (ArsNovaUI::CanvasArrow* const arrow : arrowManager.all()) {
+        if (arrow->startNode == nullptr || arrow->endNode == nullptr) {
+            continue;
+        }
+
+        if (static_cast<const Node*>(arrow->startNode)->nodeType != NodeInfo::Type::TraversalFlag) {
+            continue;
+        }
+
+        Arrow* const flagArrow = static_cast<Arrow*>(arrow);
+
+        const float distance = ArsNovaUI::CanvasHitTester::distanceToSegment(cursor, arrow->startNode->getNodeCentre().toFloat(), arrow->endNode->getNodeCentre().toFloat());
+
+        const bool nearby = distance < flagProximityRadius;
+
+        if (nearby != flagArrow->proximityHovered) {
+            flagArrow->proximityHovered = nearby;
+
+            flagArrow->setHoverFade(flagArrow->sourceHovered || flagArrow->proximityHovered);
+        }
+    }
+}
+
+void NodeCanvas::clearHighlights()
+{
+    for (auto& [nodeId, node] : nodeManager.all()) {
+        if (node != nullptr) {
+            static_cast<Node*>(node.get())->setHighlightVisual(-1, false, juce::Colours::white);
+        }
+    }
+}
+
+void NodeCanvas::clearOutlines()
+{
+    for (auto& [nodeId, node] : nodeManager.all()) {
+        if (node != nullptr) {
+            Node* const outlinedNode = static_cast<Node*>(node.get());
+
+            outlinedNode->isOutlined = false;
+
+            outlinedNode->repaint();
+        }
+    }
+}
+
+void NodeCanvas::equipRootTraversals()
+{
+    for (auto& [nodeId, node] : nodeManager.all()) {
+        if (auto* rootNode = dynamic_cast<RootNode*>(node.get())) {
+            rootNode->equipTraversals();
+        }
+    }
+}
+
+void NodeCanvas::resetAllProgress()
+{
+    for (ArsNovaUI::CanvasArrow* const arrow : arrowManager.all()) {
+        if (arrow != nullptr) {
+            static_cast<Arrow*>(arrow)->resetProgress();
+        }
+    }
+}
+
+void NodeCanvas::pauseAllProgress()
+{
+    const double nowMs = juce::Time::getMillisecondCounterHiRes();
+
+    for (ArsNovaUI::CanvasArrow* const arrow : arrowManager.all()) {
+        Arrow* const trailArrow = static_cast<Arrow*>(arrow);
+
+        if (trailArrow == nullptr || trailArrow->trailsPaused) {
+            continue;
+        }
+
+        trailArrow->trailsPaused = true;
+        trailArrow->pausedAtMs   = nowMs;
+    }
+}
+
+void NodeCanvas::resumeAllProgress()
+{
+    for (ArsNovaUI::CanvasArrow* const arrow : arrowManager.all()) {
+        if (arrow != nullptr) {
+            static_cast<Arrow*>(arrow)->resumeProgress();
+        }
+    }
+}
+
 juce::Point<int> NodeCanvas::drawnPosition(const juce::ValueTree& nodeTree) const
 {
-    const int nodeId         = nodeTree.getProperty(ValueTreeIdentifiers::Id);
+    const int nodeId         = nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
     const int encapsulatorId = nodeTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
     const juce::ValueTree encapsulator = graphState.getNode(encapsulatorId);
@@ -261,16 +392,16 @@ juce::Point<int> NodeCanvas::drawnPosition(const juce::ValueTree& nodeTree) cons
 
     const bool isDrawnAtOwner = encapsulator.isValid() && (owningEncapsulator == nullptr || ! owningEncapsulator->isExpanded);
 
-    juce::Point<int> position = EditCanvas::drawnPosition(nodeTree);
+    juce::Point<int> position = ArsNovaUI::EditCanvas::drawnPosition(nodeTree);
 
     if (isDrawnAtOwner) {
-        position = EditCanvas::drawnPosition(encapsulator);
+        position = ArsNovaUI::EditCanvas::drawnPosition(encapsulator);
     }
 
     return position + encapsulationView.collapsedSpanShift(nodeId);
 }
 
-std::unique_ptr<Node> NodeCanvas::makeNode(const juce::ValueTree& nodeTree)
+std::unique_ptr<ArsNovaUI::CanvasNode> NodeCanvas::makeNode(const juce::ValueTree& nodeTree)
 {
     const juce::Identifier treeType = nodeTree.getType();
 
@@ -283,6 +414,7 @@ std::unique_ptr<Node> NodeCanvas::makeNode(const juce::ValueTree& nodeTree)
     }
     else if (treeType == ValueTreeIdentifiers::NodeData) {
         node = std::make_unique<Node>(undoManager);
+        node->takesArrows = true;
     }
     else if (treeType == ValueTreeIdentifiers::AlternativeNodeData) {
         node = std::make_unique<Node>(undoManager);

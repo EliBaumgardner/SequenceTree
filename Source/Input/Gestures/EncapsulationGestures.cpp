@@ -1,10 +1,11 @@
 #include "EncapsulationGestures.h"
-#include "../UI/Canvas/NodeCanvas.h"
-#include "../UI/Node/Node.h"
-#include "../UI/Node/Encapsulator.h"
-#include "../Graph/NodeFactory.h"
-#include "../Graph/GraphState.h"
-#include "../Graph/ValueTreeIdentifiers.h"
+#include "../../UI/Canvas/NodeCanvas.h"
+#include "../../UI/Node/Node.h"
+#include "../../UI/Node/Encapsulator.h"
+#include "../../Graph/NodeFactory.h"
+#include "../../Graph/GraphState.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 EncapsulationGestures::EncapsulationGestures(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager)
     : nodeCanvas(nodeCanvas),
@@ -18,7 +19,7 @@ void EncapsulationGestures::selectSpanNode(Node& node)
     const int nodeId = node.nodeId;
 
     if (node.nodeType == NodeInfo::Type::Encapsulator) {
-        nodeCanvas.nodeManager.clearOutlines();
+        nodeCanvas.clearOutlines();
         nodeCanvas.spanAnchorNodeId = -1;
 
         undoManager.beginNewTransaction();
@@ -35,7 +36,7 @@ void EncapsulationGestures::selectSpanNode(Node& node)
     const int anchorRootId = graphState.getNode(nodeCanvas.spanAnchorNodeId).getProperty(ValueTreeIdentifiers::RootNodeId);
 
     if (nodeCanvas.spanAnchorNodeId < 0 || anchorRootId != nodeRootId) {
-        nodeCanvas.nodeManager.clearOutlines();
+        nodeCanvas.clearOutlines();
 
         nodeCanvas.spanAnchorNodeId = nodeId;
 
@@ -52,7 +53,7 @@ void EncapsulationGestures::selectSpanNode(Node& node)
         return;
     }
 
-    nodeCanvas.nodeManager.clearOutlines();
+    nodeCanvas.clearOutlines();
 
     undoManager.beginNewTransaction();
 
@@ -73,7 +74,7 @@ void EncapsulationGestures::adoptCreatedChild(int parentNodeId, const juce::Valu
         return;
     }
 
-    graphState.encapsulation.insertNodeAfter(child.getProperty(ValueTreeIdentifiers::Id), parentNodeId, &undoManager);
+    graphState.encapsulation.insertNodeAfter(child.getProperty(ArsNovaUI::CanvasIdentifiers::Id), parentNodeId, &undoManager);
 }
 
 bool EncapsulationGestures::toggleEncapsulationExpansion(Node& node)

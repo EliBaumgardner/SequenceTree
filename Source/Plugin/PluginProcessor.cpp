@@ -35,7 +35,6 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
     ornamentLibraries.importLegacyLibraries(applicationSupport.getChildFile(JucePlugin_Name).getChildFile("Ornament Libraries"));
 }
 
-//==============================================================================
 void SequenceTreeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     tempoInfo.currentSampleRate = sampleRate;
@@ -204,13 +203,13 @@ void SequenceTreeAudioProcessor::driveWalk(const AudioSnapshotPublisher::Snapsho
         midiMessages,
         tempoInfo.currentSampleRate,
         tempoParameter.load() * hostTempoScale,
-        juce::roundToInt(transposeParameter.load()),
-        velocityParameter.load() / static_cast<double>(NodeInfo::maximumMidiVelocity)
+        velocityParameter.load() / static_cast<double>(NodeInfo::maximumMidiVelocity),
+        juce::roundToInt(transposeParameter.load())
     };
 
     const DispatchContext previewContext { context.nodes, traversalSession.previewTraversals, context.midiMessages,
                                            context.sampleRate, context.tempoMultiplier,
-                                           context.transpose, context.velocityScale };
+                                           context.velocityScale, context.transpose };
 
     traversalSession.playPreview(previewContext, numSamples);
 
@@ -295,7 +294,6 @@ bool SequenceTreeAudioProcessor::isMidiEffect() const
    #endif
 }
 
-//==============================================================================
 const juce::String SequenceTreeAudioProcessor::getName() const
 {
     return JucePlugin_Name;
@@ -329,7 +327,6 @@ void SequenceTreeAudioProcessor::changeProgramName (int index, const juce::Strin
 {
 }
 
-//==============================================================================
 void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     if (pendingRestoreState.isValid()
@@ -358,7 +355,7 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
 
     copyXmlToBinary(*xml, destData);
 
-    if (stateIsLive) {
+    if (stateIsLive && (graphState.nodeMap.getNumChildren() > 0 || patchFile.existsAsFile())) {
         patchFile.replaceWithData(destData.getData(), destData.getSize());
     }
 }

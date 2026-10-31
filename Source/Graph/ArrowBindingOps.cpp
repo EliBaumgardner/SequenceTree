@@ -1,6 +1,7 @@
 #include "ArrowBindingOps.h"
 #include "GraphState.h"
 #include "ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 #include <algorithm>
 
@@ -12,8 +13,8 @@ void ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManager* undoManag
         return;
     }
 
-    const int centreX = node.getProperty(ValueTreeIdentifiers::XPosition);
-    const int centreY = node.getProperty(ValueTreeIdentifiers::YPosition);
+    const int centreX = node.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition);
+    const int centreY = node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition);
 
     const auto parents = graphState.parentIdsOf.find(nodeId);
 
@@ -25,19 +26,19 @@ void ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManager* undoManag
                 continue;
             }
 
-            const int parentX = parent.getProperty(ValueTreeIdentifiers::XPosition);
-            const int parentY = parent.getProperty(ValueTreeIdentifiers::YPosition);
+            const int parentX = parent.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition);
+            const int parentY = parent.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition);
 
             applyArrowPitchOffset(graphState.getConnection(parentId, nodeId), nodeId, centreX - parentX, centreY - parentY, undoManager);
         }
     }
 
-    const juce::ValueTree childIds = node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+    const juce::ValueTree childIds = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
 
     for (int i = 0; i < childIds.getNumChildren(); ++i) {
         juce::ValueTree arrowTree = childIds.getChild(i);
 
-        const int childId = arrowTree.getProperty(ValueTreeIdentifiers::Id);
+        const int childId = arrowTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
         const juce::ValueTree child = graphState.getNode(childId);
 
@@ -45,19 +46,19 @@ void ArrowBindingOps::syncPitchBindings(int nodeId, juce::UndoManager* undoManag
             continue;
         }
 
-        const int childX = child.getProperty(ValueTreeIdentifiers::XPosition);
-        const int childY = child.getProperty(ValueTreeIdentifiers::YPosition);
+        const int childX = child.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition);
+        const int childY = child.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition);
 
         applyArrowPitchOffset(arrowTree, childId, childX - centreX, childY - centreY, undoManager);
     }
 
-    const juce::ValueTree danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+    const juce::ValueTree danglingArrows = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows);
 
     for (int i = 0; i < danglingArrows.getNumChildren(); ++i) {
         juce::ValueTree arrowTree = danglingArrows.getChild(i);
 
-        applyArrowPitchOffset(arrowTree, nodeId, static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipX)),
-                              static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowTipY)), undoManager);
+        applyArrowPitchOffset(arrowTree, nodeId, static_cast<int>(arrowTree.getProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipX)),
+                              static_cast<int>(arrowTree.getProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipY)), undoManager);
     }
 }
 
@@ -89,7 +90,7 @@ void ArrowBindingOps::clearArrowDurations(int nodeId, juce::UndoManager* undoMan
         }
     }
 
-    const juce::ValueTree childIds = node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+    const juce::ValueTree childIds = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
 
     for (int i = 0; i < childIds.getNumChildren(); ++i) {
         clearOverride(childIds.getChild(i));

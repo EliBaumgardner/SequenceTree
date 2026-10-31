@@ -19,11 +19,14 @@
 struct DispatchContext
 {
     const NodeMap&    nodes;
+
     TraversalPool&    traversalMap;
     juce::MidiBuffer& midiMessages;
 
     double sampleRate      = 44100.0;
     double tempoMultiplier = 1.0;
-    int    transpose       = 0;
     double velocityScale   = 1.0;
+
+    int transpose = 0;
+
 };

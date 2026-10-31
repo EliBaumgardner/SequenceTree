@@ -3,6 +3,7 @@
 
 #include "Graph/OrnamentLibraries.h"
 #include "Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 #include <vector>
 
@@ -20,7 +21,7 @@ static juce::ValueTree buildLowerGrace(OrnamentLibraries& libraries)
 {
     juce::ValueTree ornament = libraries.addOrnament({}, nullptr);
     juce::ValueTree note     = libraries.addFigureNode(ornament, -1, { 0, 0 }, nullptr);
-    const int       noteId   = note.getProperty(ValueTreeIdentifiers::Id);
+    const int       noteId   = note.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     note.setProperty(ValueTreeIdentifiers::OrnamentOffset,   -1, nullptr);
     note.setProperty(ValueTreeIdentifiers::OrnamentVelocity, 70, nullptr);
@@ -29,7 +30,7 @@ static juce::ValueTree buildLowerGrace(OrnamentLibraries& libraries)
 
     REQUIRE(host.isValid());
 
-    libraries.toggleHost(ornament, host.getProperty(ValueTreeIdentifiers::Id), nullptr);
+    libraries.toggleHost(ornament, host.getProperty(ArsNovaUI::CanvasIdentifiers::Id), nullptr);
     libraries.setLastNodeLength(ornament, { 200, 0 }, nullptr);
 
     return ornament;
@@ -67,14 +68,14 @@ TEST_CASE("a node added to the chain does not get a dangling arrow and assumes t
 
     juce::ValueTree       ornament = libraries.addOrnament({}, nullptr);
     const juce::ValueTree first    = libraries.addFigureNode(ornament, -1, { 0, 0 }, nullptr);
-    const int             firstId  = first.getProperty(ValueTreeIdentifiers::Id);
+    const int             firstId  = first.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    CHECK(! first.getChildWithName(ValueTreeIdentifiers::DanglingArrows).isValid());
+    CHECK(! first.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows).isValid());
 
     const juce::ValueTree second   = libraries.addFigureNode(ornament, firstId, { 150, 50 }, nullptr);
-    const int             secondId = second.getProperty(ValueTreeIdentifiers::Id);
+    const int             secondId = second.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    CHECK(! second.getChildWithName(ValueTreeIdentifiers::DanglingArrows).isValid());
+    CHECK(! second.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows).isValid());
 
     const std::vector<OrnamentStep> initialSteps = libraries.figureSteps(ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure));
 
@@ -111,8 +112,8 @@ TEST_CASE("a figure stays one chain", "[ornament]")
 
     juce::ValueTree       ornament = buildLowerGrace(libraries);
     const juce::ValueTree figure   = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    const int             noteId   = figure.getChild(0).getProperty(ValueTreeIdentifiers::Id);
-    const int             hostId   = figure.getChild(1).getProperty(ValueTreeIdentifiers::Id);
+    const int             noteId   = figure.getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    const int             hostId   = figure.getChild(1).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     CHECK(! libraries.addFigureNode(ornament, noteId, { 50, 0 }, nullptr).isValid());
     CHECK(! libraries.addFigureNode(ornament, -1, { 0, 100 }, nullptr).isValid());
@@ -130,8 +131,8 @@ TEST_CASE("the host is a mark one node carries: picking another node moves it, p
 
     juce::ValueTree       ornament = buildLowerGrace(libraries);
     juce::ValueTree       figure   = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    const int             noteId   = figure.getChild(0).getProperty(ValueTreeIdentifiers::Id);
-    const int             hostId   = figure.getChild(1).getProperty(ValueTreeIdentifiers::Id);
+    const int             noteId   = figure.getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    const int             hostId   = figure.getChild(1).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     libraries.toggleHost(ornament, noteId, nullptr);
 
@@ -168,17 +169,17 @@ TEST_CASE("removing the middle of three nodes joins its neighbours", "[ornament]
 
     juce::ValueTree       ornament = libraries.addOrnament({}, nullptr);
     const juce::ValueTree first    = libraries.addFigureNode(ornament, -1, { 0, 0 }, nullptr);
-    const juce::ValueTree middle   = libraries.addFigureNode(ornament, first.getProperty(ValueTreeIdentifiers::Id), { 100, 0 }, nullptr);
-    const juce::ValueTree last     = libraries.addFigureNode(ornament, middle.getProperty(ValueTreeIdentifiers::Id), { 300, 0 }, nullptr);
+    const juce::ValueTree middle   = libraries.addFigureNode(ornament, first.getProperty(ArsNovaUI::CanvasIdentifiers::Id), { 100, 0 }, nullptr);
+    const juce::ValueTree last     = libraries.addFigureNode(ornament, middle.getProperty(ArsNovaUI::CanvasIdentifiers::Id), { 300, 0 }, nullptr);
 
-    libraries.toggleHost(ornament, last.getProperty(ValueTreeIdentifiers::Id), nullptr);
-    libraries.removeFigureNode(ornament, middle.getProperty(ValueTreeIdentifiers::Id), nullptr);
+    libraries.toggleHost(ornament, last.getProperty(ArsNovaUI::CanvasIdentifiers::Id), nullptr);
+    libraries.removeFigureNode(ornament, middle.getProperty(ArsNovaUI::CanvasIdentifiers::Id), nullptr);
 
     const std::vector<OrnamentStep> steps = libraries.figureSteps(ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure));
 
     REQUIRE(steps.size() == 2);
 
-    CHECK(first.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChild(0).getProperty(ValueTreeIdentifiers::Id) == last.getProperty(ValueTreeIdentifiers::Id));
+    CHECK(first.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id) == last.getProperty(ArsNovaUI::CanvasIdentifiers::Id));
     CHECK(steps[0].durationWeight == 1500);
     CHECK(steps[1].kind           == OrnamentNodeKind::Host);
     CHECK(steps[1].durationWeight == 1500);
@@ -195,13 +196,13 @@ TEST_CASE("removing the last node hands its length to the node before it", "[orn
     const juce::ValueTree figure   = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
     const juce::ValueTree note     = figure.getChild(0);
 
-    libraries.removeFigureNode(ornament, figure.getChild(1).getProperty(ValueTreeIdentifiers::Id), nullptr);
+    libraries.removeFigureNode(ornament, figure.getChild(1).getProperty(ArsNovaUI::CanvasIdentifiers::Id), nullptr);
 
     const std::vector<OrnamentStep> steps = libraries.figureSteps(figure);
 
     REQUIRE(steps.size() == 1);
 
-    CHECK(note.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getNumChildren() == 0);
+    CHECK(note.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getNumChildren() == 0);
     CHECK(steps[0].durationWeight == 1000);
 }
 
@@ -215,7 +216,7 @@ TEST_CASE("moving the host sideways retimes the arrow that reaches it", "[orname
     juce::ValueTree       ornament = buildLowerGrace(libraries);
     const juce::ValueTree figure   = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
 
-    libraries.setFigureNodePosition(ornament, figure.getChild(1).getProperty(ValueTreeIdentifiers::Id), { 150, 0 }, nullptr);
+    libraries.setFigureNodePosition(ornament, figure.getChild(1).getProperty(ArsNovaUI::CanvasIdentifiers::Id), { 150, 0 }, nullptr);
 
     const std::vector<OrnamentStep> steps = libraries.figureSteps(figure);
 
@@ -237,11 +238,11 @@ TEST_CASE("moving a node to another row shifts only its own offset", "[ornament]
     const juce::ValueTree note     = figure.getChild(0);
     const juce::ValueTree host     = figure.getChild(1);
 
-    libraries.setFigureNodePosition(ornament, note.getProperty(ValueTreeIdentifiers::Id), { 0, -10 }, nullptr);
+    libraries.setFigureNodePosition(ornament, note.getProperty(ArsNovaUI::CanvasIdentifiers::Id), { 0, -10 }, nullptr);
 
     CHECK(note.getProperty(ValueTreeIdentifiers::OrnamentOffset) == juce::var(-1));
 
-    libraries.setFigureNodePosition(ornament, note.getProperty(ValueTreeIdentifiers::Id), { 0, -100 }, nullptr);
+    libraries.setFigureNodePosition(ornament, note.getProperty(ArsNovaUI::CanvasIdentifiers::Id), { 0, -100 }, nullptr);
 
     CHECK(note.getProperty(ValueTreeIdentifiers::OrnamentOffset) == juce::var(1));
     CHECK(host.getProperty(ValueTreeIdentifiers::OrnamentOffset) == juce::var(0));
@@ -258,14 +259,14 @@ TEST_CASE("moving a node carries the nodes after it, so the arrows after it keep
     const juce::ValueTree figure   = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
     const juce::ValueTree host     = figure.getChild(1);
 
-    libraries.setFigureNodePosition(ornament, figure.getChild(0).getProperty(ValueTreeIdentifiers::Id), { 50, -100 }, nullptr);
+    libraries.setFigureNodePosition(ornament, figure.getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id), { 50, -100 }, nullptr);
 
     const std::vector<OrnamentStep> steps = libraries.figureSteps(figure);
 
     REQUIRE(steps.size() == 2);
 
-    CHECK(host.getProperty(ValueTreeIdentifiers::XPosition)      == juce::var(150));
-    CHECK(host.getProperty(ValueTreeIdentifiers::YPosition)      == juce::var(-100));
+    CHECK(host.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition)      == juce::var(150));
+    CHECK(host.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition)      == juce::var(-100));
     CHECK(host.getProperty(ValueTreeIdentifiers::OrnamentOffset) == juce::var(0));
     CHECK(steps[0].durationWeight == 500);
     CHECK(steps[1].durationWeight == 1000);
@@ -280,13 +281,13 @@ TEST_CASE("moving a node clears a typed duration on the arrow into it", "[orname
 
     juce::ValueTree       ornament   = buildLowerGrace(libraries);
     const juce::ValueTree figure     = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    juce::ValueTree       connection = figure.getChild(0).getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChild(0);
+    juce::ValueTree       connection = figure.getChild(0).getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getChild(0);
 
     connection.setProperty(ValueTreeIdentifiers::ArrowDuration, 300, nullptr);
 
     REQUIRE(libraries.figureSteps(figure)[0].durationWeight == 300);
 
-    libraries.setFigureNodePosition(ornament, figure.getChild(1).getProperty(ValueTreeIdentifiers::Id), { 150, 0 }, nullptr);
+    libraries.setFigureNodePosition(ornament, figure.getChild(1).getProperty(ArsNovaUI::CanvasIdentifiers::Id), { 150, 0 }, nullptr);
 
     CHECK(libraries.figureSteps(figure)[0].durationWeight == 750);
 }
@@ -306,15 +307,15 @@ TEST_CASE("publishing needs a connected host, and an unpublishable edit keeps th
     libraries.addFigureNode(hostOnly,    -1, { 0, 0 }, nullptr);
     libraries.addFigureNode(withoutHost, -1, { 0, 0 }, nullptr);
 
-    libraries.toggleHost(hostOnly, hostOnly.getChildWithName(ValueTreeIdentifiers::OrnamentFigure).getChild(0).getProperty(ValueTreeIdentifiers::Id), nullptr);
+    libraries.toggleHost(hostOnly, hostOnly.getChildWithName(ValueTreeIdentifiers::OrnamentFigure).getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id), nullptr);
 
     CHECK(! libraries.isPublishable(hostOnly));
     CHECK(! libraries.isPublishable(withoutHost));
 
     juce::ValueTree       ornament = buildLowerGrace(libraries);
     const juce::ValueTree figure   = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    const int             noteId   = figure.getChild(0).getProperty(ValueTreeIdentifiers::Id);
-    const int             hostId   = figure.getChild(1).getProperty(ValueTreeIdentifiers::Id);
+    const int             noteId   = figure.getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    const int             hostId   = figure.getChild(1).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     REQUIRE(libraries.isPublishable(ornament));
     CHECK(libraries.statusOf(ornament) == OrnamentStatus::Draft);
@@ -332,7 +333,7 @@ TEST_CASE("publishing needs a connected host, and an unpublishable edit keeps th
 
     const juce::ValueTree newHost = libraries.addFigureNode(ornament, noteId, { 100, 0 }, nullptr);
 
-    libraries.toggleHost(ornament, newHost.getProperty(ValueTreeIdentifiers::Id), nullptr);
+    libraries.toggleHost(ornament, newHost.getProperty(ArsNovaUI::CanvasIdentifiers::Id), nullptr);
     libraries.publish(ornament, nullptr);
 
     CHECK(libraries.statusOf(ornament) == OrnamentStatus::Published);

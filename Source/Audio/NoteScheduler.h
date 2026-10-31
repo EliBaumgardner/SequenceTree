@@ -63,6 +63,7 @@ public:
         int    step             = 0;
         int    basePitch        = 0;
         int    baseVelocity     = 0;
+
         double remainingSamples = 0.0;
     };
 
@@ -70,26 +71,30 @@ public:
     {
         MidiEvent event;
         NoteRole  role  = NoteRole::Stepping;
-        int       runId = 0;
+        RTNode::NodeType nodeType = RTNode::NodeType::Node;
 
-        double           remainingSamples = 0.0;
-        int              nodeId           = 0;
-        RTNode::NodeType nodeType         = RTNode::NodeType::Node;
+        int runId  = 0;
+        int nodeId = 0;
+
+        double remainingSamples = 0.0;
 
         bool  isConnectionTrigger = false;
-        Sound sound               = Sound::Audible;
+
+        Sound sound  = Sound::Audible;
 
         OrnamentProgress ornament;
     };
 
     struct NoteVoicing
     {
-        int    channel            = -1;
-        int    transpose          = 0;
+        int channel          = -1;
+        int transpose        = 0;
+        int pitchOverride    = -1;
+        int velocityOverride = -1;
+
         double velocityMultiplier = 1.0;
-        int    pitchOverride      = -1;
-        int    velocityOverride   = -1;
-        Sound  sound              = Sound::Audible;
+
+        Sound  sound = Sound::Audible;
     };
 
     static constexpr int maxExpectedActiveNotes = 1024;

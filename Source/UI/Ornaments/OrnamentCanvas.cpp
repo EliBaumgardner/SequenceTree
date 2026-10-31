@@ -7,7 +7,7 @@
 #include "../../Util/ArrowInfo.h"
 
 OrnamentCanvas::OrnamentCanvas(FigureDocument& document)
-    : EditCanvas(document)
+    : NodeArrowCanvas(document)
 {
     gridDisplay = GridDisplay::Always;
 
@@ -52,7 +52,7 @@ void OrnamentCanvas::paint(juce::Graphics& graphics)
 
 void OrnamentCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
 {
-    EditCanvas::rebuildFromNodeMap(stateTree);
+    ArsNovaUI::EditCanvas::rebuildFromNodeMap(stateTree);
 
     gridOrigin    = { 0.0f, 0.0f };
     gridSpacing   = ArrowInfo::pixelsPerGridSpace;
@@ -60,8 +60,10 @@ void OrnamentCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
     gridVisible   = true;
 }
 
-void OrnamentCanvas::nodeCreated(Node& node)
+void OrnamentCanvas::nodeCreated(ArsNovaUI::CanvasNode& canvasNode)
 {
+    Node& node = static_cast<Node&>(canvasNode);
+
     const int hostId = document.nodes.getProperty(ValueTreeIdentifiers::OrnamentHostId, OrnamentLibraries::noHostId);
 
     node.nodeColour  = ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour;
@@ -71,9 +73,9 @@ void OrnamentCanvas::nodeCreated(Node& node)
     node.setDisplayMode(NodeInfo::DisplayMode::Pitch);
 }
 
-void OrnamentCanvas::prepareArrow(Arrow& arrow)
+void OrnamentCanvas::prepareArrow(ArsNovaUI::CanvasArrow& arrow)
 {
-    arrow.valueEditor->setVisible(false);
+    static_cast<Arrow&>(arrow).valueEditor->setVisible(false);
 }
 
 void OrnamentCanvas::refreshHost()
@@ -81,15 +83,17 @@ void OrnamentCanvas::refreshHost()
     const int hostId = document.nodes.getProperty(ValueTreeIdentifiers::OrnamentHostId, OrnamentLibraries::noHostId);
 
     for (const auto& [nodeId, node] : nodeManager.all()) {
-        if (node->hasInnerRim != (nodeId == hostId)) {
-            node->hasInnerRim = nodeId == hostId;
+        Node* const figureNode = static_cast<Node*>(node.get());
 
-            node->repaint();
+        if (figureNode->hasInnerRim != (nodeId == hostId)) {
+            figureNode->hasInnerRim = nodeId == hostId;
+
+            figureNode->repaint();
         }
     }
 }
 
-std::unique_ptr<Node> OrnamentCanvas::makeNode(const juce::ValueTree&)
+std::unique_ptr<ArsNovaUI::CanvasNode> OrnamentCanvas::makeNode(const juce::ValueTree&)
 {
     return std::make_unique<OrnamentNode>(document.undoManager);
 }

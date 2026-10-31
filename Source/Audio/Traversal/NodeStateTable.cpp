@@ -1,10 +1,12 @@
 #include "NodeStateTable.h"
 
+#include <algorithm>
 #include <cassert>
 
 void NodeStateTable::prepare()
 {
     if (values.size() == valueCount) {
+        clear();
         return;
     }
 
@@ -12,28 +14,29 @@ void NodeStateTable::prepare()
     rows.prepare();
 
     for (int row = 0; row < maxNodeIds; ++row) {
-        for (int slot = 0; slot < slotCount; ++slot) {
-            values[static_cast<std::size_t>(indexOf(static_cast<NodeStateSlot>(slot), row))] = defaultValue(static_cast<NodeStateSlot>(slot));
-        }
+        const std::size_t offset = static_cast<std::size_t>(row * slotCount);
+        std::copy_n(defaultRowValues.data(), slotCount, values.data() + offset);
     }
+
+    outOfRangeSinks = defaultRowValues;
 }
 
-void NodeStateTable::clear()
+void NodeStateTable::clear() noexcept
 {
     if (values.empty()) {
         return;
     }
 
-    for (int row = 0; row < rows.rowCount; ++row) {
-        for (int slot = 0; slot < slotCount; ++slot) {
-            values[static_cast<std::size_t>(indexOf(static_cast<NodeStateSlot>(slot), row))] = defaultValue(static_cast<NodeStateSlot>(slot));
-        }
+    for (int row = 0; row < rows.getRowCount(); ++row) {
+        const std::size_t offset = static_cast<std::size_t>(row * slotCount);
+        std::copy_n(defaultRowValues.data(), slotCount, values.data() + offset);
     }
 
     rows.clear();
+    outOfRangeSinks = defaultRowValues;
 }
 
-int NodeStateTable::increment(NodeStateSlot slot, int nodeId)
+int NodeStateTable::increment(NodeStateSlot slot, int nodeId) noexcept
 {
     if (!isAddressable(nodeId)) {
         return defaultValue(slot);
@@ -50,7 +53,7 @@ int NodeStateTable::increment(NodeStateSlot slot, int nodeId)
     return ++values[static_cast<std::size_t>(indexOf(slot, row))];
 }
 
-int NodeStateTable::get(NodeStateSlot slot, int nodeId) const
+int NodeStateTable::get(NodeStateSlot slot, int nodeId) const noexcept
 {
     if (!isAddressable(nodeId)) {
         return defaultValue(slot);
@@ -65,11 +68,13 @@ int NodeStateTable::get(NodeStateSlot slot, int nodeId) const
     return values[static_cast<std::size_t>(indexOf(slot, row))];
 }
 
-int& NodeStateTable::ref(NodeStateSlot slot, int nodeId)
+int& NodeStateTable::ref(NodeStateSlot slot, int nodeId) noexcept
 {
+    const auto slotIndex = static_cast<std::size_t>(slot);
+
     if (!isAddressable(nodeId)) {
-        outOfRangeSink = defaultValue(slot);
-        return outOfRangeSink;
+        outOfRangeSinks[slotIndex] = defaultValue(slot);
+        return outOfRangeSinks[slotIndex];
     }
 
     const int row = rows.claim(nodeId);
@@ -77,14 +82,14 @@ int& NodeStateTable::ref(NodeStateSlot slot, int nodeId)
     assert(row >= 0 && "more than NodeStateTable::maxNodeIds distinct nodes in one traversal");
 
     if (row < 0) {
-        outOfRangeSink = defaultValue(slot);
-        return outOfRangeSink;
+        outOfRangeSinks[slotIndex] = defaultValue(slot);
+        return outOfRangeSinks[slotIndex];
     }
 
     return values[static_cast<std::size_t>(indexOf(slot, row))];
 }
 
-void NodeStateTable::set(NodeStateSlot slot, int nodeId, int value)
+void NodeStateTable::set(NodeStateSlot slot, int nodeId, int value) noexcept
 {
     if (!isAddressable(nodeId)) {
         return;
@@ -101,20 +106,7 @@ void NodeStateTable::set(NodeStateSlot slot, int nodeId, int value)
     values[static_cast<std::size_t>(indexOf(slot, row))] = value;
 }
 
-int NodeStateTable::defaultValue(NodeStateSlot slot)
-{
-    switch (slot) {
-        case NodeStateSlot::ActiveAlternative:
-        case NodeStateSlot::LastNode:
-        case NodeStateSlot::SwitchCandidate:
-            return -1;
-
-        default:
-            return 0;
-    }
-}
-
-bool NodeStateTable::isAddressable(int nodeId) const
+bool NodeStateTable::isAddressable(int nodeId) const noexcept
 {
     if (values.empty()) {
         return false;
@@ -125,9 +117,4 @@ bool NodeStateTable::isAddressable(int nodeId) const
     assert(inRange && "node id is negative");
 
     return inRange;
-}
-
-int NodeStateTable::indexOf(NodeStateSlot slot, int row)
-{
-    return row * slotCount + static_cast<int>(slot);
 }

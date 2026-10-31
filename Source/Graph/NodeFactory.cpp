@@ -1,12 +1,13 @@
 #include "NodeFactory.h"
 #include "ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 #include <utility>
 
 void NodeFactory::createRootNode(GraphState& state, const NodeInfo::Position& nodePosition, juce::UndoManager* undoManager)
 {
     const juce::ValueTree rootNodeValueTree = state.addRootNode(undoManager);
-    const int             rootId            = rootNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+    const int             rootId            = rootNodeValueTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     state.setNodePosition(rootNodeValueTree, nodePosition, undoManager);
 
@@ -21,26 +22,26 @@ void NodeFactory::createDanglingArrow(GraphState& state, juce::ValueTree nodeTre
         return;
     }
 
-    juce::ValueTree arrowList = nodeTree.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
-    juce::ValueTree arrowTree(ValueTreeIdentifiers::DanglingArrow);
+    juce::ValueTree arrowList = nodeTree.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows);
+    juce::ValueTree arrowTree(ArsNovaUI::CanvasIdentifiers::DanglingArrow);
 
-    inheritArrowBindings(state, arrowInfo, nodeTree.getProperty(ValueTreeIdentifiers::Id), {});
+    inheritArrowBindings(state, arrowInfo, nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id), {});
 
     if (!arrowList.isValid()) {
-        arrowList = juce::ValueTree(ValueTreeIdentifiers::DanglingArrows);
+        arrowList = juce::ValueTree(ArsNovaUI::CanvasIdentifiers::DanglingArrows);
 
         nodeTree.addChild(arrowList, -1, undoManager);
     }
 
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
+    arrowTree.setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipX, tipOffset.x, undoManager);
+    arrowTree.setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipY, tipOffset.y, undoManager);
     arrowTree.setProperty(ValueTreeIdentifiers::CountLimit, GraphState::defaultNodeCountLimit, undoManager);
 
     ArrowBindingOps::setArrowInfo(arrowTree, arrowInfo, undoManager);
 
     arrowList.addChild(arrowTree, -1, undoManager);
 
-    state.arrows.syncPitchBindings(nodeTree.getProperty(ValueTreeIdentifiers::Id), undoManager);
+    state.arrows.syncPitchBindings(nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id), undoManager);
 }
 
 void NodeFactory::setDanglingArrowTip(GraphState& state, juce::ValueTree arrowTree, const juce::Point<int>& tipOffset,
@@ -50,11 +51,11 @@ void NodeFactory::setDanglingArrowTip(GraphState& state, juce::ValueTree arrowTr
         return;
     }
 
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
+    arrowTree.setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipX, tipOffset.x, undoManager);
+    arrowTree.setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipY, tipOffset.y, undoManager);
     arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride, undoManager);
 
-    state.arrows.syncPitchBindings(arrowTree.getParent().getParent().getProperty(ValueTreeIdentifiers::Id), undoManager);
+    state.arrows.syncPitchBindings(arrowTree.getParent().getParent().getProperty(ArsNovaUI::CanvasIdentifiers::Id), undoManager);
 }
 
 void NodeFactory::destroyDanglingArrow(juce::ValueTree arrowTree, juce::UndoManager* undoManager)
@@ -131,7 +132,7 @@ juce::ValueTree NodeFactory::createNode(GraphState& state, int parentNodeId, con
                                         const NodeInfo::Position& nodePosition, juce::UndoManager* undoManager)
 {
     const juce::ValueTree childNodeValueTree = state.addChildNode(parentNodeId, nodeType, undoManager);
-    const int             nodeId             = childNodeValueTree.getProperty(ValueTreeIdentifiers::Id);
+    const int             nodeId             = childNodeValueTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     state.setNodePosition(childNodeValueTree, nodePosition, undoManager);
 
@@ -268,11 +269,11 @@ void NodeFactory::inheritArrowBindings(const GraphState& state, ArrowInfo::Setti
     }
 
     auto targetsAlternative = [&state](const juce::ValueTree& arrowTree) {
-        if (! arrowTree.hasProperty(ValueTreeIdentifiers::Id)) {
+        if (! arrowTree.hasProperty(ArsNovaUI::CanvasIdentifiers::Id)) {
             return false;
         }
 
-        const int targetId = arrowTree.getProperty(ValueTreeIdentifiers::Id);
+        const int targetId = arrowTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
         const juce::Identifier targetType = state.getNode(targetId).getType();
 
@@ -282,7 +283,7 @@ void NodeFactory::inheritArrowBindings(const GraphState& state, ArrowInfo::Setti
 
     juce::ValueTree establishedArrow;
 
-    const juce::ValueTree childIds = node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+    const juce::ValueTree childIds = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
 
     for (int i = 0; i < childIds.getNumChildren() && ! establishedArrow.isValid(); ++i) {
         if (childIds.getChild(i) != newArrow && ! targetsAlternative(childIds.getChild(i))) {
@@ -290,7 +291,7 @@ void NodeFactory::inheritArrowBindings(const GraphState& state, ArrowInfo::Setti
         }
     }
 
-    const juce::ValueTree danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+    const juce::ValueTree danglingArrows = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows);
 
     for (int i = 0; i < danglingArrows.getNumChildren() && ! establishedArrow.isValid(); ++i) {
         if (danglingArrows.getChild(i) != newArrow) {

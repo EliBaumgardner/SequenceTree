@@ -15,6 +15,8 @@ RootNode::RootNode(juce::UndoManager& undoManager, GraphState& graphState)
 {
     nodeType          = NodeInfo::Type::Root;
     interiorLeftInset = loopLimitRectangleWidth;
+    isRoot            = true;
+    takesArrows       = true;
 
     setPaintingIsUnclipped(true);
 
@@ -103,6 +105,13 @@ void RootNode::bindToTree()
 juce::Point<int> RootNode::getNodeCentre() const
 {
     return { getBounds().getX() + loopLimitRectangleWidth + getHeight() / 2, getBounds().getCentreY() };
+}
+
+juce::Rectangle<int> RootNode::getBoundsAt(juce::Point<int> position) const
+{
+    const int radius = ArsNovaUI::Theme::nodeRadius;
+
+    return { position.x - radius - loopLimitRectangleWidth, position.y - radius, radius * 2 + loopLimitRectangleWidth, radius * 2 };
 }
 
 float RootNode::getBodyExtent(juce::Point<float> approachDirection) const

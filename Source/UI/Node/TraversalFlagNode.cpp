@@ -11,7 +11,9 @@ TraversalFlagNode::TraversalFlagNode(juce::UndoManager& undoManager, GraphState&
       traversalNumEditor(undoManager),
       graphState(graphState)
 {
-    nodeType = NodeInfo::Type::TraversalFlag;
+    nodeType        = NodeInfo::Type::TraversalFlag;
+    takesArrowHeads = false;
+    connectsByDrag  = true;
 
     traversalNumEditor.setFormat(std::make_unique<TraversalFlagFormat>());
     traversalNumEditor.setInterceptsMouseClicks(false, true);
@@ -78,6 +80,8 @@ void TraversalFlagNode::resized()
     const int   editorHeight   = juce::roundToInt(bladeLength * 0.30f);
     juce::Point<float> numEditorCentre(centreX + bladeLength / 3.0f, centreY);
 
+    arrowTipReach = bladeLength * 0.5f;
+
     numEditorCentre.applyTransform(juce::AffineTransform::rotation(incomingAngle + juce::MathConstants<float>::halfPi, centreX, centreY));
 
     traversalNumEditor.setBounds(juce::Rectangle<int>(0, 0, numEditorSize, numEditorSize).withCentre(numEditorCentre.roundToInt()));
@@ -107,6 +111,12 @@ void TraversalFlagNode::respondToClick(juce::Point<int> localPoint)
     Node::respondToClick(localPoint);
 }
 
+void TraversalFlagNode::incomingAngleChanged()
+{
+    resized();
+    repaint();
+}
+
 bool TraversalFlagNode::hitTest(int x, int y)
 {
     const juce::Point<int> point(x, y);
@@ -118,6 +128,13 @@ bool TraversalFlagNode::hitTest(int x, int y)
     }
 
     return buildTrianglePath().contains(static_cast<float>(x), static_cast<float>(y));
+}
+
+juce::Rectangle<int> TraversalFlagNode::getBoundsAt(juce::Point<int> position) const
+{
+    const int radius = ArsNovaUI::Theme::nodeRadius;
+
+    return juce::Rectangle<int>(radius * 4, radius * 4).withCentre(position);
 }
 
 juce::Path TraversalFlagNode::buildTrianglePath() const

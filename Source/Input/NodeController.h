@@ -1,10 +1,10 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_data_structures/juce_data_structures.h>
-#include "SelectionGestures.h"
+#include "Gestures/SelectionGestures.h"
 #include "OrnamentApplier.h"
-#include "CanvasController.h"
-#include "EncapsulationGestures.h"
+#include <ArsNovaUI/Canvas/CanvasController.h>
+#include "Gestures/EncapsulationGestures.h"
 #include "ArrowMenu.h"
 
 /*
@@ -42,7 +42,7 @@ class OrnamentLibraries;
 
 
 
-class NodeController : public CanvasController
+class NodeController : public ArsNovaUI::CanvasController
 {
 public:
 

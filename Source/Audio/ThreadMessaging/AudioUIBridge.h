@@ -75,7 +75,7 @@ private:
         double       recordedAtMs = 0.0;
     };
 
-    static constexpr int arrowCommandCapacity = 1024;
+    static constexpr int arrowCommandCapacity      = 1024;
 
     static constexpr int recordedHighlightCapacity = 256;
     static constexpr int recordedArrowCapacity     = 512;
@@ -88,11 +88,11 @@ private:
     double recordClockMs      = 0.0;
 
 
-    CommandFifo<BridgeCommands::HighlightCommand>                   highlights;
+    CommandFifo<BridgeCommands::HighlightCommand> highlights;
     CommandFifo<BridgeCommands::ArrowCommand, arrowCommandCapacity> arrows;
-    CommandFifo<BridgeCommands::CountCommand>                       counts;
+    CommandFifo<BridgeCommands::CountCommand> counts;
 
     std::array<BridgeCommands::HighlightCommand, recordedHighlightCapacity> recordedHighlights {};
-    std::array<RecordedArrow, recordedArrowCapacity>        recordedArrows     {};
-    std::array<BridgeCommands::CountCommand, recordedCountCapacity>         recordedCounts     {};
+    std::array<RecordedArrow, recordedArrowCapacity> recordedArrows {};
+    std::array<BridgeCommands::CountCommand, recordedCountCapacity> recordedCounts {};
 };

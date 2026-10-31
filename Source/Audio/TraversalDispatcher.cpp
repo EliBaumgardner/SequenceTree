@@ -239,9 +239,9 @@ void TraversalDispatcher::pushNote(const RTNode& node, int runId,
     const NoteScheduler::NoteVoicing voicing {
         traversalLogic.traversal.channel,
         transpose + context.transpose,
-        traversalLogic.traversal.velocityMultiplier * context.velocityScale,
         pitchOverride,
         velocityOverride,
+        traversalLogic.traversal.velocityMultiplier * context.velocityScale,
         sound
     };
 
@@ -713,6 +713,8 @@ void TraversalDispatcher::pushChordNotes(const NoteDispatch& dispatch, const Dis
         const NoteScheduler::NoteVoicing chordVoicing {
             dispatch.traversal.traversal.channel,
             transpose + context.transpose,
+            -1,
+            -1,
             dispatch.traversal.traversal.velocityMultiplier * context.velocityScale
         };
 
@@ -847,6 +849,8 @@ void TraversalDispatcher::dispatchCrossTree(const NoteDispatch& dispatch, const 
         const NoteScheduler::NoteVoicing crossTreeVoicing {
             traversal.traversal.channel,
             traversal.traversal.transpose + context.transpose,
+            -1,
+            -1,
             traversal.traversal.velocityMultiplier * context.velocityScale
         };
 
@@ -970,7 +974,7 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
 
 bool TraversalDispatcher::markChordVisited(int nodeId)
 {
-    if (chordVisits.find(nodeId) >= 0) {
+    if (chordVisits.contains(nodeId)) {
         return false;
     }
 

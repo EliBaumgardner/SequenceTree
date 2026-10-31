@@ -111,7 +111,7 @@ void OrnamentMarks::refreshAll()
 {
     for (const auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
         if (node != nullptr) {
-            refresh(*node);
+            refresh(static_cast<Node&>(*node));
         }
     }
 }

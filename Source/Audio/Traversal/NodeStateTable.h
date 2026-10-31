@@ -2,6 +2,7 @@
 
 #include "NodeRowMap.h"
 
+#include <array>
 #include <cstddef>
 #include <vector>
 
@@ -40,6 +41,19 @@ enum class NodeStateSlot
     Total
 };
 
+[[nodiscard]] constexpr int defaultNodeStateSlotValue(NodeStateSlot slot) noexcept
+{
+    switch (slot) {
+        case NodeStateSlot::ActiveAlternative:
+        case NodeStateSlot::LastNode:
+        case NodeStateSlot::SwitchCandidate:
+            return -1;
+
+        default:
+            return 0;
+    }
+}
+
 class NodeStateTable
 {
 public:
@@ -49,23 +63,38 @@ public:
     static constexpr std::size_t valueCount = static_cast<std::size_t>(slotCount) * maxNodeIds;
 
     void prepare();
-    void clear  ();
+    void clear  () noexcept;
 
-    int  increment(NodeStateSlot slot, int nodeId);
-    int  get      (NodeStateSlot slot, int nodeId) const;
-    int& ref      (NodeStateSlot slot, int nodeId);
-    void set      (NodeStateSlot slot, int nodeId, int value);
+    int                increment(NodeStateSlot slot, int nodeId) noexcept;
+    [[nodiscard]] int  get      (NodeStateSlot slot, int nodeId) const noexcept;
+    [[nodiscard]] int& ref      (NodeStateSlot slot, int nodeId) noexcept;
+    void               set      (NodeStateSlot slot, int nodeId, int value) noexcept;
 
-    static int defaultValue(NodeStateSlot slot);
+    [[nodiscard]] static constexpr int defaultValue(NodeStateSlot slot) noexcept
+    {
+        return defaultNodeStateSlotValue(slot);
+    }
+
+    [[nodiscard]] static constexpr int indexOf(NodeStateSlot slot, int row) noexcept
+    {
+        return row * slotCount + static_cast<int>(slot);
+    }
+
+    static constexpr std::array<int, slotCount> defaultRowValues = [] {
+        std::array<int, slotCount> defaults {};
+        for (int slot = 0; slot < slotCount; ++slot) {
+            defaults[static_cast<std::size_t>(slot)] = defaultNodeStateSlotValue(static_cast<NodeStateSlot>(slot));
+        }
+        return defaults;
+    }();
+
+    [[nodiscard]] bool isPrepared() const noexcept { return !values.empty(); }
 
 private:
 
-    bool isAddressable(int nodeId) const;
+    [[nodiscard]] bool isAddressable(int nodeId) const noexcept;
 
-    static int indexOf(NodeStateSlot slot, int row);
-
-    std::vector<int> values;
-    NodeRowMap       rows;
-
-    int outOfRangeSink = 0;
+    std::vector<int>           values;
+    NodeRowMap                 rows;
+    std::array<int, slotCount> outOfRangeSinks = defaultRowValues;
 };

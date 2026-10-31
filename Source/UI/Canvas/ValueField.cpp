@@ -307,7 +307,7 @@ void ValueField::applyPaintToNodes(juce::Point<float> from, juce::Point<float> t
             continue;
         }
 
-        const std::optional<float> sampled = densityUnderNode(*node);
+        const std::optional<float> sampled = densityUnderNode(static_cast<const Node&>(*node));
 
         if (!sampled.has_value()) {
             continue;

@@ -29,7 +29,7 @@
     loads a saved graph and traversal map.
 
     The processor owns it, and it is used on the message thread only. NodeFactory, Clipboard and
-    the input gestures edit it; NodeCanvasTreeListener and RTGraphBuilder listen to nodeMap.
+    the input gestures edit it; CanvasTreeListener and RTGraphBuilder listen to nodeMap.
 */
 
 class GraphState : public juce::ValueTree::Listener {

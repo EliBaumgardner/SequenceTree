@@ -1,6 +1,7 @@
 #include "EncapsulationOps.h"
 #include "GraphState.h"
 #include "ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 #include <unordered_set>
 
@@ -21,7 +22,7 @@ juce::ValueTree EncapsulationOps::create(std::span<const int> memberNodeIds, juc
 
     for (const int memberNodeId : memberNodeIds) {
         juce::ValueTree memberId {ValueTreeIdentifiers::NodeId};
-        memberId.setProperty(ValueTreeIdentifiers::Id, memberNodeId, undoManager);
+        memberId.setProperty(ArsNovaUI::CanvasIdentifiers::Id, memberNodeId, undoManager);
 
         encapsulatedIds.addChild(memberId, -1, undoManager);
 
@@ -31,7 +32,7 @@ juce::ValueTree EncapsulationOps::create(std::span<const int> memberNodeIds, juc
     encapsulator.addChild(encapsulatedIds, -1, undoManager);
 
     encapsulator.setProperty(ValueTreeIdentifiers::RootNodeId, firstMember.getProperty(ValueTreeIdentifiers::RootNodeId), undoManager);
-    encapsulator.setProperty(ValueTreeIdentifiers::Id, encapsulatorId, undoManager);
+    encapsulator.setProperty(ArsNovaUI::CanvasIdentifiers::Id, encapsulatorId, undoManager);
 
     graphState.nodeMap.addChild(encapsulator, -1, undoManager);
 
@@ -81,14 +82,14 @@ void EncapsulationOps::insertNodeAfter(int nodeId, int siblingNodeId, juce::Undo
         return;
     }
 
-    const juce::ValueTree siblingId = encapsulatedIds.getChildWithProperty(ValueTreeIdentifiers::Id, siblingNodeId);
+    const juce::ValueTree siblingId = encapsulatedIds.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, siblingNodeId);
 
-    if (! siblingId.isValid() || encapsulatedIds.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId).isValid()) {
+    if (! siblingId.isValid() || encapsulatedIds.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId).isValid()) {
         return;
     }
 
     juce::ValueTree memberId {ValueTreeIdentifiers::NodeId};
-    memberId.setProperty(ValueTreeIdentifiers::Id, nodeId, undoManager);
+    memberId.setProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId, undoManager);
 
     encapsulatedIds.addChild(memberId, encapsulatedIds.indexOf(siblingId) + 1, undoManager);
 
@@ -103,7 +104,7 @@ void EncapsulationOps::removeMember(int nodeId, int encapsulatorId, juce::UndoMa
         return;
     }
 
-    encapsulatedIds.removeChild(encapsulatedIds.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId), undoManager);
+    encapsulatedIds.removeChild(encapsulatedIds.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId), undoManager);
 
     if (encapsulatedIds.getNumChildren() == 0) {
         dissolve(encapsulatorId, undoManager);
@@ -118,7 +119,7 @@ std::vector<int> EncapsulationOps::memberIds(int encapsulatorId) const
     std::vector<int> memberNodeIds;
 
     for (int i = 0; i < encapsulatedIds.getNumChildren(); ++i) {
-        memberNodeIds.push_back(encapsulatedIds.getChild(i).getProperty(ValueTreeIdentifiers::Id));
+        memberNodeIds.push_back(encapsulatedIds.getChild(i).getProperty(ArsNovaUI::CanvasIdentifiers::Id));
     }
 
     return memberNodeIds;

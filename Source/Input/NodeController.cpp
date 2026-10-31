@@ -9,7 +9,7 @@
 
 NodeController::NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& graphDocument, juce::UndoManager& undoManager,
                                TraversalSession& traversalSession, RTGraphBuilder& rtGraphBuilder, OrnamentLibraries& ornamentLibraries)
-    : CanvasController(nodeCanvas, graphDocument, undoManager),
+    : ArsNovaUI::CanvasController(nodeCanvas, graphDocument, undoManager),
       selectionGestures(graphState, undoManager, nodeCanvas),
       ornamentApplier(nodeCanvas, ornamentLibraries, undoManager),
       encapsulationGestures(nodeCanvas, graphState, undoManager),
@@ -71,8 +71,8 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
 
     if (dynamic_cast<NodeCanvas*>(e.eventComponent) != nullptr) {
         if (!e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
-            if (Arrow* clickedArrow = nodeCanvas.hitTester.arrowNear(clickPoint, ArrowGestures::arrowHoverRadius)) {
-                arrowMenu.showArrowContextMenu(clickedArrow);
+            if (ArsNovaUI::CanvasArrow* clickedArrow = nodeCanvas.hitTester.arrowNear(clickPoint, ArsNovaUI::ArrowGestures::arrowHoverRadius)) {
+                arrowMenu.showArrowContextMenu(static_cast<Arrow*>(clickedArrow));
                 return;
             }
 
@@ -96,7 +96,7 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
         }
     }
 
-    CanvasController::mouseDown(e);
+    ArsNovaUI::CanvasController::mouseDown(e);
 }
 
 void NodeController::mouseUp(const juce::MouseEvent& e)
@@ -120,7 +120,7 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
         return;
     }
 
-    CanvasController::mouseUp(e);
+    ArsNovaUI::CanvasController::mouseUp(e);
 }
 
 void NodeController::mouseEnter(const juce::MouseEvent& e)
@@ -129,7 +129,7 @@ void NodeController::mouseEnter(const juce::MouseEvent& e)
         return;
     }
 
-    CanvasController::mouseEnter(e);
+    ArsNovaUI::CanvasController::mouseEnter(e);
 }
 
 void NodeController::mouseExit(const juce::MouseEvent& e)
@@ -138,7 +138,7 @@ void NodeController::mouseExit(const juce::MouseEvent& e)
         return;
     }
 
-    CanvasController::mouseExit(e);
+    ArsNovaUI::CanvasController::mouseExit(e);
 }
 
 void NodeController::mouseMove(const juce::MouseEvent& e)
@@ -147,7 +147,9 @@ void NodeController::mouseMove(const juce::MouseEvent& e)
         return;
     }
 
-    CanvasController::mouseMove(e);
+    nodeCanvas.fadeFlagArrows(e.getEventRelativeTo(&nodeCanvas).position.transformedBy(nodeCanvas.modelTransform));
+
+    ArsNovaUI::CanvasController::mouseMove(e);
 }
 
 void NodeController::mouseDrag(const juce::MouseEvent& e)
@@ -169,5 +171,5 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         return;
     }
 
-    CanvasController::mouseDrag(e);
+    ArsNovaUI::CanvasController::mouseDrag(e);
 }

@@ -3,10 +3,10 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <map>
 #include <set>
-#include <unordered_map>
 
 #include "../../Util/NodeInfo.h"
 #include <ArsNovaUI/Buttons/IconButton.h>
+#include <ArsNovaUI/Canvas/CanvasNode.h>
 #include <ArsNovaUI/Editors/ValueEditor.h>
 #include <ArsNovaUI/Theme/Visuals.h>
 
@@ -15,26 +15,23 @@
     node's tree (nodeValueTree) and the tree of its MIDI note (midiNoteData), which its editors
     are bound to: a main editor for the property the NodeInfo::DisplayMode picks (pitch, velocity, count
     limit, channel, repeat value or probability; bindValueEditorForMode binds it), and small
-    badge editors for the count limit, the switch count limit and the sub-loop limit. nodeArrows
-    lists the Arrows that start at this node, by the id of the node they end at.
+    badge editors for the count limit, the switch count limit and the sub-loop limit.
 
-    It also holds how the node looks right now: hovered, selected, outlined, in an encapsulation
-    group, and highlighted. activeHighlights maps the id of each traversal run that is on the
-    node to its colour, and while a highlight begins, advancePulse animates a pulse once per
-    display frame. incomingAngle is the direction the arrow into the node arrives from.
-    getNodeCentre, getVisualRadius and getBodyExtent say where the node's body is, which is what
-    Arrow uses to stop its shaft at the edge. respondToClick starts editing the editor under a
-    click.
+    It derives from ArsNovaUI::CanvasNode, which holds the node's id and tree, the arrows that
+    start at it, its hover and selection, and where its body is. Here it also holds how the node
+    looks right now: outlined, in an encapsulation group, and highlighted. activeHighlights maps
+    the id of each traversal run that is on the node to its colour, and while a highlight begins,
+    advancePulse animates a pulse once per display frame. setHoverVisual also fades in the arrows
+    that leave a traversal flag. respondToClick starts editing the editor under a click.
 
     RootNode, Modulator, TraversalFlagNode and Encapsulator derive from it and change the shape
     or the editors. NodeManager creates every node and sets its id, trees and colour;
     NodeController and the gesture classes route the mouse to it.
 */
 
-class Arrow;
 class NodeCanvas;
 
-class Node : public juce::Component
+class Node : public ArsNovaUI::CanvasNode
 {
 public:
 
@@ -50,13 +47,10 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
-    void incrementNodeValue (int incrementValue);
-    void refreshValueDisplay();
-    void setDisplayMode     (NodeInfo::DisplayMode mode);
+    void incrementNodeValue(int incrementValue);
+    void setDisplayMode    (NodeInfo::DisplayMode mode);
 
-    void setHoverVisual    (bool isHovered);
-    void setSelectVisual   (bool isSelected);
-    void setSelectVisual   ();
+    void setHoverVisual    (bool isHovered) override;
     void setHighlightVisual(int runId, bool isHighlighted, juce::Colour colour);
     void advancePulse      (double frameSec);
 
@@ -65,26 +59,16 @@ public:
 
     void lookAndFeelChanged() override;
 
-    virtual void bindToTree            ();
-    virtual void bindValueEditorForMode();
-    virtual void respondToClick        (juce::Point<int> localPoint);
-
-    virtual juce::Point<int> getNodeCentre  () const;
-    virtual float            getVisualRadius() const;
-    virtual float            getBodyExtent  (juce::Point<float> approachDirection) const;
+    virtual void bindToTree ();
+    virtual void bindValueEditorForMode ();
+    void         respondToClick(juce::Point<int> localPoint) override;
 
     ArsNovaUI::NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const;
 
-    std::function<void(Node*, bool)> onSelected;
-
-    std::unordered_multimap<int, Arrow*> nodeArrows;
-
-    juce::ValueTree nodeValueTree;
     juce::ValueTree midiNoteData;
 
     NodeInfo::DisplayMode mode = NodeInfo::DisplayMode::Pitch;
 
-    ArsNovaUI::ValueEditor nodeValueEditor;
     ArsNovaUI::IconButton  upButton;
     ArsNovaUI::IconButton  downButton;
     ArsNovaUI::ValueEditor countEditor;
@@ -94,22 +78,12 @@ public:
     juce::Colour nodeColour;
     juce::Colour encapsulationRingColour;
 
-    int            nodeId        = -1;
-    NodeInfo::Type nodeType      = NodeInfo::Type::Node;
-    float          incomingAngle = 0.0f;
+    NodeInfo::Type nodeType = NodeInfo::Type::Node;
 
-    bool isHovered     = false;
-    bool isSelected    = false;
-    bool isHighlighted = false;
-
-    bool isOutlined  = false;
-    bool hasInnerRim = false;
-
-    bool isEncapsulated        = false;
-    bool isEncapsulationExit   = false;
+    bool isHighlighted         = false;
+    bool isOutlined            = false;
+    bool hasInnerRim           = false;
     bool isEncapsulationRinged = false;
-
-    bool isAlternativeNode = false;
 
     std::map<int, juce::Colour> activeHighlights;
     std::set<int>               pendingHighlightOffIds;
@@ -122,8 +96,4 @@ public:
     int displayCountLimit   = 1;
 
     int interiorLeftInset = 0;
-
-protected:
-
-    juce::UndoManager& undoManager;
 };

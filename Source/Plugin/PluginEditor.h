@@ -56,6 +56,7 @@ public:
 private:
 
     void configureWindowSize();
+    void updateResizeLimits ();
     void toggleFullScreen   ();
 
     juce::Component* keyListenerTarget = nullptr;

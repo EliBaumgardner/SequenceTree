@@ -2,10 +2,11 @@
 #include "../UI/Node/Node.h"
 #include "../Graph/GraphState.h"
 #include "../Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include <ArsNovaUI/Theme/Theme.h>
 
 GraphDocument::GraphDocument(GraphState& graphState, juce::UndoManager& undoManager)
-    : CanvasDocument(graphState.nodeMap, undoManager), graphState(graphState)
+    : ArsNovaUI::CanvasDocument(graphState.nodeMap, undoManager), graphState(graphState)
 {
 }
 
@@ -21,7 +22,7 @@ juce::ValueTree GraphDocument::addChildNode(int parentNodeId, juce::Point<int> p
     const juce::ValueTree    child        = NodeFactory::create(creationMode, graphState, parentNodeId, parentType, mods.isCtrlDown() && mods.isShiftDown(), nodePosition, &undoManager);
 
     if (child.isValid()) {
-        NodeFactory::applyArrowInfo(graphState, parentNodeId, child.getProperty(ValueTreeIdentifiers::Id), currentArrowInfo, ArrowInfo::Type::StepIntoTree, &undoManager);
+        NodeFactory::applyArrowInfo(graphState, parentNodeId, child.getProperty(ArsNovaUI::CanvasIdentifiers::Id), currentArrowInfo, ArrowInfo::Type::StepIntoTree, &undoManager);
     }
 
     return child;
@@ -78,7 +79,7 @@ static std::unordered_set<int> collectAncestorIds(const GraphState& graphState, 
 
 void GraphDocument::moveNode(juce::ValueTree nodeTree, juce::Point<int> position)
 {
-    const int nodeId = nodeTree.getProperty(ValueTreeIdentifiers::Id);
+    const int nodeId = nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const NodeInfo::Position oldPosition = graphState.getNodePosition(nodeId);
     const NodeInfo::Position newPosition { position.x, position.y, ArsNovaUI::Theme::nodeRadius };
@@ -142,7 +143,7 @@ void GraphDocument::disconnect(int startNodeId, int endNodeId)
     graphState.disconnectNodes(ownerNodeId, childNodeId, &undoManager);
 }
 
-bool GraphDocument::canConnect(const Node& startNode, const Node& endNode) const
+bool GraphDocument::canConnect(const ArsNovaUI::CanvasNode& startNode, const ArsNovaUI::CanvasNode& endNode) const
 {
     const juce::Identifier startType = startNode.nodeValueTree.getType();
 
@@ -159,9 +160,9 @@ bool GraphDocument::canConnect(const Node& startNode, const Node& endNode) const
 
 GraphDocument::ArrowOwnership GraphDocument::ownershipOf(int startNodeId, int endNodeId) const
 {
-    const juce::ValueTree startChildren = graphState.getNode(startNodeId).getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
+    const juce::ValueTree startChildren = graphState.getNode(startNodeId).getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
 
-    if (startChildren.getChildWithProperty(ValueTreeIdentifiers::Id, endNodeId).isValid()) {
+    if (startChildren.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, endNodeId).isValid()) {
         return { startNodeId, endNodeId };
     }
 
@@ -170,7 +171,7 @@ GraphDocument::ArrowOwnership GraphDocument::ownershipOf(int startNodeId, int en
 
 void GraphDocument::moveDescendants(juce::ValueTree nodeTree, int deltaX, int deltaY, std::unordered_set<int>& visited, int draggedNodeId)
 {
-    juce::Identifier childIdListType = ValueTreeIdentifiers::NodeChildrenIds;
+    juce::Identifier childIdListType = ArsNovaUI::CanvasIdentifiers::NodeChildrenIds;
 
     if (nodeTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
         childIdListType = ValueTreeIdentifiers::EncapsulatedIds;
@@ -179,7 +180,7 @@ void GraphDocument::moveDescendants(juce::ValueTree nodeTree, int deltaX, int de
     const juce::ValueTree childIds = nodeTree.getChildWithName(childIdListType);
 
     for (int childIndex = 0; childIndex < childIds.getNumChildren(); ++childIndex) {
-        const int childId = childIds.getChild(childIndex).getProperty(ValueTreeIdentifiers::Id);
+        const int childId = childIds.getChild(childIndex).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
         if (! visited.insert(childId).second) {
             continue;

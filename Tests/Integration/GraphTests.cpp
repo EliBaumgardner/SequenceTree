@@ -5,6 +5,7 @@
 #include "Graph/GraphState.h"
 #include "Graph/RTGraphBuilder.h"
 #include "Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
 #include "Audio/Traversal/TraversalLogic.h"
 #include "Script/ScriptCompiler.h"
@@ -43,7 +44,7 @@ static int createRoot(GraphState& graph, int x, int y)
 
     REQUIRE(root.getType() == ValueTreeIdentifiers::RootNodeData);
 
-    return root.getProperty(ValueTreeIdentifiers::Id);
+    return root.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 }
 
 static int createChild(GraphState& graph, int parentId, int x, int y)
@@ -51,7 +52,7 @@ static int createChild(GraphState& graph, int parentId, int x, int y)
     const juce::ValueTree child = NodeFactory::createNode(graph, parentId, ValueTreeIdentifiers::NodeData,
                                                           NodeInfo::Position { x, y, 25 }, nullptr);
 
-    return child.getProperty(ValueTreeIdentifiers::Id);
+    return child.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 }
 
 TEST_CASE("arrow length sets the connection duration, and moving a node retimes it", "[graph]")
@@ -182,8 +183,11 @@ TEST_CASE("node colours and colour presets survive saving and restoring the plug
     SequenceTreeAudioProcessor restored;
     juce::MemoryBlock          savedState;
     juce::ValueTree            preset { ArsNovaUI::InterfaceIdentifiers::ColourPreset };
+    juce::TemporaryFile        patchFile { SequenceTreeAudioProcessor::patchExtension };
 
     const int rootId = createRoot(original.graphState, 0, 0);
+
+    original.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
 
     original.graphState.setNodeColour(rootId, "ff993300", nullptr);
 
@@ -238,13 +242,13 @@ TEST_CASE("a modulator chain built through the graph walks like a node chain", "
     const int leafId   = createChild(graph, middleId, 200, 0);
 
     const juce::ValueTree modulatorRoot = NodeFactory::createModulatorRoot(graph, rootId, NodeInfo::Position { 0, 200, 25 }, nullptr);
-    const int modulatorRootId = modulatorRoot.getProperty(ValueTreeIdentifiers::Id);
+    const int modulatorRootId = modulatorRoot.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const juce::ValueTree modulatorMiddle = NodeFactory::createModulator(graph, modulatorRootId, NodeInfo::Position { 100, 200, 25 }, nullptr);
-    const int modulatorMiddleId = modulatorMiddle.getProperty(ValueTreeIdentifiers::Id);
+    const int modulatorMiddleId = modulatorMiddle.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const juce::ValueTree modulatorLeaf = NodeFactory::createModulator(graph, modulatorMiddleId, NodeInfo::Position { 200, 200, 25 }, nullptr);
-    const int modulatorLeafId = modulatorLeaf.getProperty(ValueTreeIdentifiers::Id);
+    const int modulatorLeafId = modulatorLeaf.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const NodeMap& nodes = rebuildAndPublish(processor);
 
@@ -283,13 +287,13 @@ TEST_CASE("only a note node's arrow into another tree's root is a root connectio
     const int foreignRootId = createRoot(graph, 0, 400);
 
     const juce::ValueTree modulatorRoot = NodeFactory::createModulatorRoot(graph, nodeId, NodeInfo::Position { 100, 200, 25 }, nullptr);
-    const int modulatorRootId = modulatorRoot.getProperty(ValueTreeIdentifiers::Id);
+    const int modulatorRootId = modulatorRoot.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const juce::ValueTree modulator = NodeFactory::createModulator(graph, modulatorRootId, NodeInfo::Position { 200, 200, 25 }, nullptr);
-    const int modulatorId = modulator.getProperty(ValueTreeIdentifiers::Id);
+    const int modulatorId = modulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const juce::ValueTree alternativeModulator = NodeFactory::createAlternativeModulator(graph, modulatorId, NodeInfo::Position { 200, 300, 25 }, nullptr);
-    const int alternativeModulatorId = alternativeModulator.getProperty(ValueTreeIdentifiers::Id);
+    const int alternativeModulatorId = alternativeModulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     CHECK(graph.connectsToOtherTreeRoot(nodeId, foreignRootId));
     CHECK_FALSE(graph.connectsToOtherTreeRoot(nodeId, rootId));
@@ -364,7 +368,7 @@ TEST_CASE("undo and redo keep the node index, parent links and published graph i
 
     const juce::ValueTree child = NodeFactory::createNode(graph, rootId, ValueTreeIdentifiers::NodeData,
                                                           NodeInfo::Position { 100, 0, 25 }, &undoManager);
-    const int childId = child.getProperty(ValueTreeIdentifiers::Id);
+    const int childId = child.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const std::vector<int> rootOnly { rootId };
 
@@ -447,7 +451,7 @@ TEST_CASE("removing an encapsulator removes its members and every link to them",
 
     const std::vector<int> memberIds { firstId, lastId };
     const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, nullptr);
-    const int encapsulatorId = encapsulator.getProperty(ValueTreeIdentifiers::Id);
+    const int encapsulatorId = encapsulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     graph.removeNode(encapsulatorId, nullptr);
 
@@ -478,7 +482,7 @@ TEST_CASE("dissolving an encapsulator keeps its members and their arrows", "[gra
 
     const std::vector<int> memberIds { firstId, lastId };
     const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, nullptr);
-    const int encapsulatorId = encapsulator.getProperty(ValueTreeIdentifiers::Id);
+    const int encapsulatorId = encapsulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     CHECK(graph.encapsulation.memberIds(encapsulatorId) == std::vector<int> { firstId, lastId });
 
@@ -507,7 +511,7 @@ TEST_CASE("removing an encapsulator's last member dissolves it", "[graph][encaps
 
     const std::vector<int> memberIds { memberId };
     const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, nullptr);
-    const int encapsulatorId = encapsulator.getProperty(ValueTreeIdentifiers::Id);
+    const int encapsulatorId = encapsulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     graph.removeNode(memberId, nullptr);
 
@@ -523,14 +527,14 @@ TEST_CASE("a node's parent is found through a chain of traversal flags", "[graph
     const int noteId = createChild(graph, rootId, 100, 0);
 
     const juce::ValueTree firstFlag = NodeFactory::createTraversalFlagNode(graph, noteId, NodeInfo::Position { 200, 0, 25 }, nullptr);
-    const int firstFlagId = firstFlag.getProperty(ValueTreeIdentifiers::Id);
+    const int firstFlagId = firstFlag.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const juce::ValueTree secondFlag = NodeFactory::createTraversalFlagNode(graph, firstFlagId, NodeInfo::Position { 300, 0, 25 }, nullptr);
-    const int secondFlagId = secondFlag.getProperty(ValueTreeIdentifiers::Id);
+    const int secondFlagId = secondFlag.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    CHECK(static_cast<int>(graph.getNodeParent(secondFlagId).getProperty(ValueTreeIdentifiers::Id)) == noteId);
-    CHECK(static_cast<int>(graph.getNodeParent(firstFlagId).getProperty(ValueTreeIdentifiers::Id))  == noteId);
-    CHECK(static_cast<int>(graph.getNodeParent(noteId).getProperty(ValueTreeIdentifiers::Id))       == rootId);
+    CHECK(static_cast<int>(graph.getNodeParent(secondFlagId).getProperty(ArsNovaUI::CanvasIdentifiers::Id)) == noteId);
+    CHECK(static_cast<int>(graph.getNodeParent(firstFlagId).getProperty(ArsNovaUI::CanvasIdentifiers::Id))  == noteId);
+    CHECK(static_cast<int>(graph.getNodeParent(noteId).getProperty(ArsNovaUI::CanvasIdentifiers::Id))       == rootId);
     CHECK_FALSE(graph.getNodeParent(rootId).isValid());
 }
 
@@ -743,12 +747,12 @@ static std::vector<PlayedNote> playLowerGraceChain(bool ornamentsFirstNode)
     const juce::ValueTree library  = ornaments.addLibrary("Graph tests", nullptr);
     juce::ValueTree       ornament = ornaments.addOrnament(library, nullptr);
     juce::ValueTree       grace    = ornaments.addFigureNode(ornament, -1, { 0, 0 }, nullptr);
-    const juce::ValueTree host     = ornaments.addFigureNode(ornament, grace.getProperty(ValueTreeIdentifiers::Id), { 100, 0 }, nullptr);
+    const juce::ValueTree host     = ornaments.addFigureNode(ornament, grace.getProperty(ArsNovaUI::CanvasIdentifiers::Id), { 100, 0 }, nullptr);
 
     grace.setProperty(ValueTreeIdentifiers::OrnamentOffset,   -1, nullptr);
     grace.setProperty(ValueTreeIdentifiers::OrnamentVelocity, 70, nullptr);
 
-    ornaments.toggleHost(ornament, host.getProperty(ValueTreeIdentifiers::Id), nullptr);
+    ornaments.toggleHost(ornament, host.getProperty(ArsNovaUI::CanvasIdentifiers::Id), nullptr);
     ornaments.setLastNodeLength(ornament, { 200, 0 }, nullptr);
     ornaments.publish(ornament, nullptr);
 

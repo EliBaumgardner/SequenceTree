@@ -2,7 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../Input/CanvasController.h"
+#include <ArsNovaUI/Canvas/CanvasController.h>
 
 /*
     The mouse router of an OrnamentCanvas: a CanvasController over the figure's FigureDocument,
@@ -24,7 +24,7 @@ class OrnamentCanvas;
 class FigureDocument;
 class OrnamentLibraries;
 
-class OrnamentFigureController : public CanvasController
+class OrnamentFigureController : public ArsNovaUI::CanvasController
 {
 public:
 

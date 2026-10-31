@@ -2,12 +2,13 @@
 
 #include <unordered_set>
 
-#include "CanvasDocument.h"
+#include <ArsNovaUI/Canvas/CanvasDocument.h>
+#include <ArsNovaUI/Canvas/CanvasNode.h>
 #include "../Graph/NodeFactory.h"
 #include "../Util/ArrowInfo.h"
 
 /*
-    The CanvasDocument for the graph: each edit the canvas makes, carried out on GraphState's
+    The ArsNovaUI::CanvasDocument for the graph: each edit the canvas makes, carried out on GraphState's
     nodeMap through GraphState and NodeFactory. It also holds the two settings that shape what
     the user's edits create: creationMode, the kind of node a drag grows out of a node (set by
     Titlebar), and currentArrowInfo, the ArrowInfo::Settings every new arrow and dangling arrow
@@ -26,7 +27,7 @@
 
 class GraphState;
 
-class GraphDocument : public CanvasDocument
+class GraphDocument : public ArsNovaUI::CanvasDocument
 {
 public:
 
@@ -50,7 +51,7 @@ public:
     void connect   (int parentNodeId, int childNodeId, ConnectionGesture gesture) override;
     void disconnect(int startNodeId, int endNodeId) override;
 
-    bool canConnect(const Node& startNode, const Node& endNode) const override;
+    bool canConnect(const ArsNovaUI::CanvasNode& startNode, const ArsNovaUI::CanvasNode& endNode) const override;
 
     ArrowOwnership ownershipOf(int startNodeId, int endNodeId) const;
 
