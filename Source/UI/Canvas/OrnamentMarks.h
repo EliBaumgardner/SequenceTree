@@ -19,7 +19,7 @@
     moves, resizes, hides or is deleted.
 
     NodeCanvas owns it, and calls refresh from its nodeCreated hook for a new node and from its
-    updateApplied hook for an OrnamentChanged update.
+    updateApplied hook for a NodeMarkChanged update.
 */
 
 class NodeCanvas;

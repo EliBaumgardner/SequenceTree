@@ -104,13 +104,13 @@
 <text x="820" y="68" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#555" text-anchor="start">Source/Plugin · exists only while the window is open</text>
 <rect x="820" y="84" width="420" height="290" rx="10" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.4"/>
 <text x="836" y="104" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#5f8a3a" text-anchor="start">NodeCanvas · Source/UI/Canvas</text>
-<text x="836" y="120" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">the graph view; owns the parts that do its work, by value</text>
+<text x="836" y="120" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">the graph view; its EditCanvas base owns the managers</text>
 <rect x="836" y="132" width="192" height="26" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1"/>
 <text x="846" y="149.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" fill="#1f1f1f" text-anchor="start">NodeManager</text>
 <rect x="1032" y="132" width="192" height="26" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1"/>
 <text x="1042" y="149.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" fill="#1f1f1f" text-anchor="start">ArrowManager</text>
 <rect x="836" y="166" width="192" height="26" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1"/>
-<text x="846" y="183.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" fill="#1f1f1f" text-anchor="start">NodeCanvasTreeListener</text>
+<text x="846" y="183.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" fill="#1f1f1f" text-anchor="start">CanvasTreeListener</text>
 <rect x="1032" y="166" width="192" height="26" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1"/>
 <text x="1042" y="183.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" fill="#1f1f1f" text-anchor="start">AudioCommandDrainer</text>
 <rect x="836" y="200" width="192" height="26" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1"/>
@@ -123,7 +123,7 @@
 <text x="1042" y="251.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" fill="#1f1f1f" text-anchor="start">OrnamentMarks</text>
 <rect x="836" y="274" width="388" height="86" rx="6" fill="#ffffff" stroke="#5f8a3a" stroke-width="1.1"/>
 <text x="848" y="293" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="700" fill="#1f1f1f" text-anchor="start">Node · RootNode · Modulator · TraversalFlagNode</text>
-<text x="848" y="309" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="700" fill="#1f1f1f" text-anchor="start">Arrow (+ ArrowAnimation)</text>
+<text x="848" y="309" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="700" fill="#1f1f1f" text-anchor="start">Arrow (+ trails)</text>
 <text x="848" y="328" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">child components, one per node and arrow, held in</text>
 <text x="848" y="343" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">NodeManager::nodes and ArrowManager::arrows · Source/UI/Node</text>
 <rect x="820" y="390" width="420" height="150" rx="10" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.4"/>
