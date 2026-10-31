@@ -11,7 +11,9 @@
     GraphDocument::creationMode names (Ctrl+Shift makes an alternative), connects it with the
     toolbar's ArrowInfo::Settings, and then moves that child with the cursor. A child dragged onto another tree's
     root snaps to it, and finishDrag replaces the new child with a cross-root arrow to that root.
-    A collapsed group creates its child from the group's last member.
+    The document's growFrom names the node a child grows from (on the graph, a collapsed group's
+    last member); where it names none, a Shift drag moves the node instead. onChildCreated
+    reports each new child, which NodeController uses to add it to its parent's group.
 
     dragArrowHead and finishArrowHeadDrag do the same moving for the node an arrow points at,
     when the arrow's head is grabbed. NodeController routes to it. Every edit goes through
@@ -20,14 +22,13 @@
 
 class Node;
 class NodeCanvas;
-class GraphState;
 class GraphDocument;
 
 class NodeGestures
 {
 public:
 
-    NodeGestures(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& document, juce::UndoManager& undoManager);
+    NodeGestures(NodeCanvas& nodeCanvas, GraphDocument& document, juce::UndoManager& undoManager);
 
     void createRootNode(juce::Point<float> clickPoint);
 
@@ -37,12 +38,14 @@ public:
     void dragArrowHead      (juce::Point<int> cursor);
     void finishArrowHeadDrag();
 
+    std::function<void(int, const juce::ValueTree&)> onChildCreated;
+
     juce::Component::SafePointer<Node> arrowHeadNode;
 
 private:
 
     void handleNodeDrag     (int nodeId, juce::Point<int> cursor);
-    void handleNodeDragStart(Node* node, int nodeId, juce::Point<int> cursor, const juce::ModifierKeys& mods);
+    void handleNodeDragStart(int nodeId, juce::Point<int> cursor, const juce::ModifierKeys& mods);
 
     void checkRootNodeSnap       (juce::Point<int> canvasPoint);
     void connectDraggedNodeToRoot();
@@ -53,7 +56,6 @@ private:
     static constexpr float rootSnapThreshold = 20.0f;
 
     NodeCanvas&        nodeCanvas;
-    GraphState&        graphState;
     GraphDocument&     document;
     juce::UndoManager& undoManager;
 

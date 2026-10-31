@@ -2,17 +2,10 @@
 #include "../UI/Canvas/NodeCanvas.h"
 #include "../UI/Node/Node.h"
 #include "../UI/Node/Arrow.h"
-#include "../UI/Node/Encapsulator.h"
-#include "../UI/Menus/AllowedTraversalsMenu.h"
-#include "../Graph/GraphState.h"
 #include "GraphDocument.h"
-#include "../Graph/ValueTreeIdentifiers.h"
-#include <ArsNovaUI/Menus/ContextMenu.h>
-#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
-ArrowGestures::ArrowGestures(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& document, juce::UndoManager& undoManager)
+ArrowGestures::ArrowGestures(NodeCanvas& nodeCanvas, GraphDocument& document, juce::UndoManager& undoManager)
     : nodeCanvas(nodeCanvas),
-      graphState(graphState),
       document(document),
       undoManager(undoManager)
 {
@@ -171,47 +164,6 @@ void ArrowGestures::removeArrow(Arrow& arrow)
     document.disconnect(arrow.startNode->nodeId, arrow.endNode->nodeId);
 }
 
-void ArrowGestures::showArrowContextMenu(Arrow* arrow)
-{
-    ArsNovaUI::ContextMenu menu;
-
-    if (arrow == nullptr) {
-        return;
-    }
-
-    menu.addItem("edit allowed traversals", ArsNovaUI::ContextMenu::ItemKind::Action, [this, arrow]() {
-        juce::ValueTree connection = connectionTreeFor(arrow);
-
-        if (! connection.isValid()) {
-            return;
-        }
-
-        allowedTraversalsLauncher.show(nodeCanvas, [this, connection]() {
-            auto content = std::make_unique<AllowedTraversalsMenu>(ArsNovaUI::CustomLookAndFeel::get(nodeCanvas), graphState, undoManager, connection);
-
-            content->setSize(AllowedTraversalsMenu::defaultWidth, content->getIdealHeight());
-
-            return content;
-        });
-    });
-
-    menu.addItem("traversal arrow", ArsNovaUI::ContextMenu::ItemKind::Toggle, [this, arrow]() {
-        if (arrow->isTraversalArrow()) {
-            setArrowType(arrow, ArrowInfo::Type::Node);
-            return;
-        }
-
-        setArrowType(arrow, ArrowInfo::Type::Traversal);
-    }, canBeTraversalArrow(arrow), arrow->isTraversalArrow());
-
-    if (connectsToModulatorRoot(arrow)) {
-        menu.addItem("sync", ArsNovaUI::ContextMenu::ItemKind::Toggle, [this, arrow]() {
-            setArrowSync(arrow, ! arrow->isSyncArrow());
-        }, true, arrow->isSyncArrow());
-    }
-
-    menu.show(*arrow);
-}
 
 void ArrowGestures::setArrowMode(bool enabled)
 {
@@ -224,7 +176,7 @@ void ArrowGestures::setArrowMode(bool enabled)
 
 bool ArrowGestures::beginTipFromNode(Node& node)
 {
-    auto* const collapsedEncapsulator = dynamic_cast<Encapsulator*>(&node);
+    const int growthNodeId = document.growFrom(node.nodeId);
 
     if (node.nodeType == NodeInfo::Type::TraversalFlag && ! arrowMode) {
         tipGesture         = TipGesture::ConnectingFlag;
@@ -232,20 +184,12 @@ bool ArrowGestures::beginTipFromNode(Node& node)
         return true;
     }
 
-    if (! arrowMode) {
+    if (! arrowMode || growthNodeId < 0) {
         return false;
     }
 
     tipGesture         = TipGesture::CreatingDanglingArrow;
-    newArrowSourceNode = &node;
-
-    if (collapsedEncapsulator != nullptr && ! collapsedEncapsulator->memberNodeIds.empty()) {
-        Node* const exitMember = nodeCanvas.nodeManager.find(collapsedEncapsulator->memberNodeIds.back());
-
-        if (exitMember != nullptr) {
-            newArrowSourceNode = exitMember;
-        }
-    }
+    newArrowSourceNode = nodeCanvas.nodeManager.find(growthNodeId);
 
     return true;
 }
@@ -260,100 +204,9 @@ Node* ArrowGestures::findTipSnapTarget(const Node& startNode, juce::Point<int> t
 
     Node* const snapTarget = nodeCanvas.hitTester.nodeContaining(tip.toFloat(), startNodeId);
 
-    if (snapTarget == nullptr) {
-        return nullptr;
-    }
-
-    if (startNode.nodeArrows.count(snapTarget->nodeId) > 0) {
-        return nullptr;
-    }
-
-    const juce::Identifier startType = startNode.nodeValueTree.getType();
-
-    const bool startsOnModulator = startType == ValueTreeIdentifiers::ModulatorData
-                                || startType == ValueTreeIdentifiers::ModulatorRootData
-                                || startType == ValueTreeIdentifiers::AlternativeModulatorData;
-
-    if (startsOnModulator && snapTarget->nodeValueTree.getType() == ValueTreeIdentifiers::RootNodeData) {
+    if (snapTarget == nullptr || ! document.canConnect(startNode, *snapTarget)) {
         return nullptr;
     }
 
     return snapTarget;
 }
-
-void ArrowGestures::setArrowType(const Arrow* arrow, ArrowInfo::Type arrowType)
-{
-    if (! canBeTraversalArrow(arrow)) {
-        return;
-    }
-
-    const auto [ownerNodeId, childNodeId] = document.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
-
-    const juce::ValueTree connection = graphState.getConnection(ownerNodeId, childNodeId);
-
-    ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(connection);
-    arrowInfo.type                = arrowType;
-
-    undoManager.beginNewTransaction();
-    ArrowBindingOps::setArrowInfo(connection, arrowInfo, &undoManager);
-}
-
-void ArrowGestures::setArrowSync(const Arrow* arrow, bool shouldSync)
-{
-    if (! connectsToModulatorRoot(arrow)) {
-        return;
-    }
-
-    const auto [ownerNodeId, childNodeId] = document.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
-
-    const juce::ValueTree connection = graphState.getConnection(ownerNodeId, childNodeId);
-
-    ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(connection);
-    arrowInfo.isSynced            = shouldSync;
-
-    undoManager.beginNewTransaction();
-    ArrowBindingOps::setArrowInfo(connection, arrowInfo, &undoManager);
-}
-
-bool ArrowGestures::canBeTraversalArrow(const Arrow* arrow) const
-{
-    if (arrow == nullptr || arrow->startNode == nullptr || arrow->endNode == nullptr) {
-        return false;
-    }
-
-    const auto [ownerNodeId, childNodeId] = document.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
-
-    return graphState.connectsToOtherTreeRoot(ownerNodeId, childNodeId);
-}
-
-bool ArrowGestures::connectsToModulatorRoot(const Arrow* arrow) const
-{
-    if (arrow == nullptr || arrow->startNode == nullptr || arrow->endNode == nullptr) {
-        return false;
-    }
-
-    const auto [ownerNodeId, childNodeId] = document.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
-
-    const juce::ValueTree childTree = graphState.getNode(childNodeId);
-
-    return childTree.getType() == ValueTreeIdentifiers::ModulatorRootData;
-}
-
-juce::ValueTree ArrowGestures::connectionTreeFor(const Arrow* arrow) const
-{
-    if (arrow == nullptr || arrow->startNode == nullptr) {
-        return {};
-    }
-
-    if (arrow->isDangling()) {
-        return arrow->arrowTree;
-    }
-
-    const auto [ownerNodeId, childNodeId] = document.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
-
-    juce::ValueTree ownerTree     = graphState.getNode(ownerNodeId);
-    juce::ValueTree ownerChildren = ownerTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-
-    return ownerChildren.getChildWithProperty(ValueTreeIdentifiers::Id, childNodeId);
-}
-

@@ -2,14 +2,11 @@
 #include "../UI/Canvas/NodeCanvas.h"
 #include "../UI/Node/Node.h"
 #include "../UI/Node/Arrow.h"
-#include "../UI/Node/Encapsulator.h"
-#include "../Graph/GraphState.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "GraphDocument.h"
 
-NodeGestures::NodeGestures(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& document, juce::UndoManager& undoManager)
+NodeGestures::NodeGestures(NodeCanvas& nodeCanvas, GraphDocument& document, juce::UndoManager& undoManager)
     : nodeCanvas(nodeCanvas),
-      graphState(graphState),
       document(document),
       undoManager(undoManager)
 {
@@ -26,7 +23,7 @@ void NodeGestures::respondToDrag(Node& node, juce::Point<int> cursor, const juce
 {
     const int nodeId = node.nodeId;
 
-    if (! mods.isShiftDown() && ! draggedNodeTree.isValid()) {
+    if ((! mods.isShiftDown() || document.growFrom(nodeId) < 0) && ! draggedNodeTree.isValid()) {
         handleNodeDrag(nodeId, cursor);
         return;
     }
@@ -34,7 +31,7 @@ void NodeGestures::respondToDrag(Node& node, juce::Point<int> cursor, const juce
     if (isDragStart) {
         isDragStart = false;
 
-        handleNodeDragStart(&node, nodeId, cursor, mods);
+        handleNodeDragStart(nodeId, cursor, mods);
         return;
     }
 
@@ -105,17 +102,10 @@ void NodeGestures::handleNodeDrag(int nodeId, juce::Point<int> cursor)
     document.moveNode(nodeTree, snapToGrid(cursor, nodeTree));
 }
 
-void NodeGestures::handleNodeDragStart(Node* node, int nodeId, juce::Point<int> cursor, const juce::ModifierKeys& mods)
+void NodeGestures::handleNodeDragStart(int nodeId, juce::Point<int> cursor, const juce::ModifierKeys& mods)
 {
-    int parentNodeId = nodeId;
-
-    auto* const collapsedEncapsulator = dynamic_cast<Encapsulator*>(node);
-
-    if (collapsedEncapsulator != nullptr && ! collapsedEncapsulator->memberNodeIds.empty()) {
-        parentNodeId = collapsedEncapsulator->memberNodeIds.back();
-    }
-
-    Node* const parentNode = nodeCanvas.nodeManager.find(parentNodeId);
+    const int   parentNodeId = document.growFrom(nodeId);
+    Node* const parentNode   = nodeCanvas.nodeManager.find(parentNodeId);
 
     if (parentNode == nullptr) {
         return;
@@ -133,23 +123,9 @@ void NodeGestures::handleNodeDragStart(Node* node, int nodeId, juce::Point<int> 
 
     draggedNodeTree = document.addChildNode(parentNodeId, cursor + parentPosition - parentCentre, mods);
 
-    if (! draggedNodeTree.isValid()) {
-        return;
+    if (draggedNodeTree.isValid() && onChildCreated != nullptr) {
+        onChildCreated(parentNodeId, draggedNodeTree);
     }
-
-    const int owningEncapsulatorId = parentNode->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-
-    auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(nodeCanvas.nodeManager.find(owningEncapsulatorId));
-
-    if (owningEncapsulator == nullptr || ! owningEncapsulator->isExpanded || owningEncapsulator->memberNodeIds.empty()) {
-        return;
-    }
-
-    if (parentNodeId == owningEncapsulator->memberNodeIds.back()) {
-        return;
-    }
-
-    graphState.encapsulation.insertNodeAfter(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id), parentNodeId, &undoManager);
 }
 
 
@@ -159,15 +135,16 @@ void NodeGestures::checkRootNodeSnap(juce::Point<int> canvasPoint)
         return;
     }
 
-    const juce::Identifier sourceType = graphState.getNode(snapSourceNodeId).getType();
+    Node* const sourceNode  = nodeCanvas.nodeManager.find(snapSourceNodeId);
+    Node*       nearestRoot = nodeCanvas.hitTester.rootNear(canvasPoint.toFloat(), rootSnapThreshold, snapSourceNodeId);
 
-    if (sourceType == ValueTreeIdentifiers::ModulatorData
-        || sourceType == ValueTreeIdentifiers::ModulatorRootData
-        || sourceType == ValueTreeIdentifiers::AlternativeModulatorData) {
+    if (sourceNode == nullptr) {
         return;
     }
 
-    Node* nearestRoot = nodeCanvas.hitTester.rootNear(canvasPoint.toFloat(), rootSnapThreshold, snapSourceNodeId);
+    if (nearestRoot != nullptr && ! document.canConnect(*sourceNode, *nearestRoot)) {
+        nearestRoot = nullptr;
+    }
 
     if (nearestRoot != nullptr) {
         if (snapTargetRoot != nearestRoot) {
@@ -175,11 +152,7 @@ void NodeGestures::checkRootNodeSnap(juce::Point<int> canvasPoint)
 
             setDraggedNodeVisible(false);
 
-            Node* sourceNode = nodeCanvas.nodeManager.find(snapSourceNodeId);
-
-            if (sourceNode != nullptr) {
-                nodeCanvas.arrowManager.showSnapGhost(sourceNode, nearestRoot);
-            }
+            nodeCanvas.arrowManager.showSnapGhost(sourceNode, nearestRoot);
         }
     }
     else if (snapTargetRoot != nullptr) {
