@@ -1,7 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../Graph/Clipboard.h"
+#include "../../Graph/Clipboard.h"
 
 #include <vector>
 

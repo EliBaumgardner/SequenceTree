@@ -1,12 +1,13 @@
 #include "EncapsulationView.h"
 
 #include "NodeCanvas.h"
-#include "NodeManager.h"
-#include "ArrowManager.h"
+#include <ArsNovaUI/Canvas/NodeManager.h>
+#include <ArsNovaUI/Canvas/ArrowManager.h>
 #include "../Node/Node.h"
 #include "../Node/Encapsulator.h"
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 #include <unordered_set>
 
@@ -59,7 +60,7 @@ void EncapsulationView::refreshMembership(int encapsulatorId) const
     }
 
     for (const int memberNodeId : encapsulator->memberNodeIds) {
-        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
+        Node* const member = static_cast<Node*>(nodeCanvas.nodeManager.find(memberNodeId));
 
         if (member == nullptr) {
             continue;
@@ -81,7 +82,7 @@ void EncapsulationView::collapseAll() const
         const juce::ValueTree nodeValueTree = nodeMap.getChild(i);
 
         if (nodeValueTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-            applyCollapsedState(nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
+            applyCollapsedState(nodeValueTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id));
         }
     }
 
@@ -93,7 +94,7 @@ void EncapsulationView::collapseAll() const
 void EncapsulationView::showMembers(std::span<const int> memberNodeIds) const
 {
     for (const int memberNodeId : memberNodeIds) {
-        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
+        Node* const member = static_cast<Node*>(nodeCanvas.nodeManager.find(memberNodeId));
 
         if (member == nullptr) {
             continue;
@@ -126,7 +127,7 @@ void EncapsulationView::syncHighlights() const
 void EncapsulationView::recolourGroup(const Encapsulator& encapsulator) const
 {
     for (const int memberNodeId : encapsulator.memberNodeIds) {
-        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
+        Node* const member = static_cast<Node*>(nodeCanvas.nodeManager.find(memberNodeId));
 
         if (member == nullptr) {
             continue;
@@ -230,7 +231,7 @@ bool EncapsulationView::applyCollapsedState(int encapsulatorId) const
                                            nodeCanvas.activeTool != NodeCanvas::CanvasTool::Paint && nodeCanvas.activeTool != NodeCanvas::CanvasTool::Span);
 
     for (const int memberNodeId : encapsulator->memberNodeIds) {
-        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
+        Node* const member = static_cast<Node*>(nodeCanvas.nodeManager.find(memberNodeId));
 
         if (member == nullptr) {
             continue;

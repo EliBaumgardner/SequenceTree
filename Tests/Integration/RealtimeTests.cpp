@@ -5,6 +5,7 @@
 #include "Graph/GraphState.h"
 #include "Graph/RTGraphBuilder.h"
 #include "Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "Graph/NodeFactory.h"
 #include "Graph/OrnamentLibraries.h"
 
@@ -49,23 +50,23 @@ TEST_CASE("processBlock stays realtime-safe while playing, editing, retiming, re
 
     juce::ValueTree       ornament = ornaments.addOrnament(ornaments.addLibrary("Realtime tests", nullptr), nullptr);
     juce::ValueTree       grace    = ornaments.addFigureNode(ornament, -1, { 0, 0 }, nullptr);
-    const juce::ValueTree host     = ornaments.addFigureNode(ornament, grace.getProperty(ValueTreeIdentifiers::Id), { 100, 0 }, nullptr);
+    const juce::ValueTree host     = ornaments.addFigureNode(ornament, grace.getProperty(ArsNovaUI::CanvasIdentifiers::Id), { 100, 0 }, nullptr);
 
     grace.setProperty(ValueTreeIdentifiers::OrnamentOffset, -1, nullptr);
 
-    ornaments.addFigureNode(ornament, host.getProperty(ValueTreeIdentifiers::Id), { 150, 0 }, nullptr);
-    ornaments.toggleHost(ornament, host.getProperty(ValueTreeIdentifiers::Id), nullptr);
+    ornaments.addFigureNode(ornament, host.getProperty(ArsNovaUI::CanvasIdentifiers::Id), { 150, 0 }, nullptr);
+    ornaments.toggleHost(ornament, host.getProperty(ArsNovaUI::CanvasIdentifiers::Id), nullptr);
     ornaments.publish(ornament, nullptr);
 
     NodeFactory::createRootNode(graph, NodeInfo::Position { 0, 0, 25 }, nullptr);
 
     const int rootId = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1)
-                                    .getProperty(ValueTreeIdentifiers::Id);
+                                    .getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     juce::ValueTree first = NodeFactory::createNode(graph, rootId, ValueTreeIdentifiers::NodeData,
                                                     NodeInfo::Position { 100, 0, 25 }, nullptr);
 
-    const int firstId = first.getProperty(ValueTreeIdentifiers::Id);
+    const int firstId = first.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     NodeFactory::createNode(graph, rootId, ValueTreeIdentifiers::NodeData, NodeInfo::Position { 150, 50, 25 }, nullptr);
     NodeFactory::createNode(graph, firstId, ValueTreeIdentifiers::NodeData, NodeInfo::Position { 200, 0, 25 }, nullptr);
@@ -160,19 +161,19 @@ TEST_CASE("starting a walk stays realtime-safe with more root-bound arrows than 
     NodeFactory::createRootNode(graph, NodeInfo::Position { 0, 0, 25 }, nullptr);
 
     const int sourceRootId = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1)
-                                          .getProperty(ValueTreeIdentifiers::Id);
+                                          .getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     NodeFactory::createRootNode(graph, NodeInfo::Position { 0, 600, 25 }, nullptr);
 
     const int targetRootId = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1)
-                                          .getProperty(ValueTreeIdentifiers::Id);
+                                          .getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     for (int i = 0; i < rootBoundArrows; ++i) {
         const juce::ValueTree child = NodeFactory::createNode(graph, sourceRootId, ValueTreeIdentifiers::NodeData,
                                                               NodeInfo::Position { 100 + 10 * i, 40 * (i % 8) - 140, 25 },
                                                               nullptr);
 
-        graph.connectNodes(child.getProperty(ValueTreeIdentifiers::Id), targetRootId, nullptr);
+        graph.connectNodes(child.getProperty(ArsNovaUI::CanvasIdentifiers::Id), targetRootId, nullptr);
     }
 
     processor.rtGraphBuilder.rebuildAllGraphs();

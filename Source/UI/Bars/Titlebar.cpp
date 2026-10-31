@@ -6,23 +6,31 @@
 #include "Titlebar.h"
 
 Titlebar::Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas, NodeController& nodeController, GraphDocument& graphDocument,
-                   juce::UndoManager& undoManager)
+                   juce::PropertiesFile& interfaceSettings, ArsNovaUI::ScaledView& scaledView, juce::ValueTree colourPresets, juce::UndoManager& undoManager)
     : ArsNovaUI::Bar(nodeCanvas, Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
       processor(processor),
       nodeCanvas(nodeCanvas),
       nodeController(nodeController),
       graphDocument(graphDocument),
       undoManager(undoManager),
+      interfaceSettings(interfaceSettings),
+      scaledView(scaledView),
+      colourPresets(colourPresets),
       displaySelector(undoManager),
       tempoDisplay(undoManager),
       patchControls(processor, processor.patch, processor.patchFolder)
 {
+    settingsLauncher.openingScale = ArsNovaUI::SettingsMenu::openingScale;
+
+    settingsPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawSettingsIcon, "Settings", [this]() { settingsLauncher.show(*this); });
+
     addAndMakeVisible(transportPane);
     addAndMakeVisible(tempoDisplay);
     addAndMakeVisible(buttonPane);
     addAndMakeVisible(displaySelector);
     addAndMakeVisible(undoRedoPane);
     addAndMakeVisible(patchControls);
+    addAndMakeVisible(settingsPane);
 
     configureTransportPane();
     configureModePane();
@@ -42,9 +50,11 @@ void Titlebar::resized()
     auto bounds = getContentBounds();
 
     int transportPaneWidth = transportPane.idealWidth(bounds.getHeight());
-    int undoRedoPaneWidth = undoRedoPane.idealWidth(bounds.getHeight());
-    int patchPaneWidth = patchControls.idealWidth(bounds.getHeight());
-    int spacing = contentSpacing;
+    int undoRedoPaneWidth  = undoRedoPane.idealWidth(bounds.getHeight());
+    int patchPaneWidth     = patchControls.idealWidth(bounds.getHeight());
+    int settingsPaneWidth  = settingsPane.idealWidth(bounds.getHeight());
+    int spacing            = contentSpacing;
+
     float textHeight = ArsNovaUI::Theme::textHeight;
 
     tempoDisplay.editor.setFontHeight(textHeight);
@@ -62,6 +72,9 @@ void Titlebar::resized()
     patchControls.setBounds(bounds.removeFromLeft(patchPaneWidth));
     bounds.removeFromLeft(spacing);
 
+    settingsPane.setBounds(bounds.removeFromRight(settingsPaneWidth));
+    bounds.removeFromRight(spacing);
+
     displaySelector.setBounds(bounds.removeFromRight(displaySelectorWidth));
     bounds.removeFromRight(spacing);
 
@@ -78,10 +91,11 @@ void Titlebar::applyPlaybackState(bool shouldPlay)
 int Titlebar::narrowestWidth() const
 {
     const auto bounds = getContentBounds();
-    const int  height = bounds.getHeight();
+
+    const int height = bounds.getHeight();
 
     return getWidth() - bounds.getWidth() + transportPane.idealWidth(height) + tempoDisplayWidth + undoRedoPane.idealWidth(height) + patchControls.idealWidth(height)
-           + displaySelectorWidth + modePaneWidth + contentSpacing * 5;
+           + displaySelectorWidth + modePaneWidth + settingsPane.idealWidth(height) + contentSpacing * 6;
 }
 
 void Titlebar::configureTransportPane()
@@ -161,7 +175,7 @@ void Titlebar::configureDisplaySelector()
 {
     auto addDisplayMode = [this](int itemId, juce::String label, NodeInfo::DisplayMode mode) {
         displaySelector.addItem(itemId, std::move(label), [this, mode]() {
-            nodeCanvas.nodeManager.setDisplayMode(mode);
+            nodeCanvas.setDisplayMode(mode);
 
             if (onDisplayModeChanged) {
                 onDisplayModeChanged(mode);
@@ -199,7 +213,7 @@ void Titlebar::resetTraversals()
 {
     processor.resetRequested.store(true);
 
-    nodeCanvas.arrowManager.resetAllProgress();
+    nodeCanvas.resetAllProgress();
 }
 
 void Titlebar::changeListenerCallback(juce::ChangeBroadcaster*)

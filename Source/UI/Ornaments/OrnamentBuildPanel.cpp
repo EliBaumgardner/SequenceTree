@@ -1,6 +1,7 @@
 #include "OrnamentBuildPanel.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
+#include "../../Util/ArrowInfo.h"
 
 OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
     : document(ornamentLibraries, undoManager),

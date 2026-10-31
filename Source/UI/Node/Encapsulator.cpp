@@ -2,6 +2,7 @@
 
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "../Canvas/NodeCanvas.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
@@ -22,7 +23,7 @@ void Encapsulator::bindToTree()
 
     firstMemberValueTree = {};
 
-    memberNodeIds = graphState.encapsulation.memberIds(nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
+    memberNodeIds = graphState.encapsulation.memberIds(nodeValueTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id));
 
     if (! memberNodeIds.empty()) {
         firstMemberValueTree = graphState.getNode(memberNodeIds.front());
@@ -79,7 +80,7 @@ void Encapsulator::syncHighlightsFromMembers()
     std::vector<int>            endedRunIds;
 
     for (const int memberNodeId : memberNodeIds) {
-        Node* const member = nodeCanvas.nodeManager.find(memberNodeId);
+        Node* const member = static_cast<Node*>(nodeCanvas.nodeManager.find(memberNodeId));
 
         if (member == nullptr) {
             continue;

@@ -2,6 +2,7 @@
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/TraversalRuleState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "../../Plugin/AudioSnapshotPublisher.h"
 #include "../../Script/ScriptCompiler.h"
 
@@ -135,7 +136,7 @@ void TraversalRulesWindow::addRule()
 
     syncWithRuleState();
 
-    setActivePage(rule.getProperty(ValueTreeIdentifiers::Id));
+    setActivePage(rule.getProperty(ArsNovaUI::CanvasIdentifiers::Id));
 }
 
 void TraversalRulesWindow::removeRule(int ruleId)
@@ -183,7 +184,7 @@ void TraversalRulesWindow::syncWithRuleState()
 
     for (int i = 0; i < state.rules.getNumChildren(); ++i) {
         const juce::ValueTree rule   = state.rules.getChild(i);
-        const int             ruleId = rule.getProperty(ValueTreeIdentifiers::Id);
+        const int             ruleId = rule.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
         const juce::String    source = rule.getProperty(ValueTreeIdentifiers::RuleSource).toString();
         const auto            match  = filePages.find(ruleId);
 
@@ -202,7 +203,7 @@ void TraversalRulesWindow::syncWithRuleState()
     }
 
     for (auto page = filePages.begin(); page != filePages.end(); ) {
-        if (state.rules.getChildWithProperty(ValueTreeIdentifiers::Id, page->first).isValid()) {
+        if (state.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, page->first).isValid()) {
             ++page;
 
             continue;

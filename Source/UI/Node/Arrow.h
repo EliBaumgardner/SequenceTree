@@ -1,119 +1,96 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "ArrowAnimation.h"
+#include <map>
+#include <memory>
+#include <ArsNovaUI/Canvas/CanvasArrow.h>
 #include <ArsNovaUI/Editors/ValueEditor.h>
+#include "../../Audio/ThreadMessaging/BridgeCommands.h"
 #include "../../Util/ArrowInfo.h"
 #include <ArsNovaUI/Theme/Visuals.h>
 
 /*
-    The component that shows one arrow on the canvas. An arrow either connects two nodes, from
-    startNode to endNode, or is dangling: it starts at a node and ends at a loose tip at tipOffset
-    from it, with endNode null. arrowTree is the connection's tree, or the dangling arrow's tree,
-    which holds its ArrowInfo::Settings (see ArrowBindingOps).
+    The component that shows one arrow on the canvas. It derives from ArsNovaUI::CanvasArrow, which
+    holds the arrow's start and end nodes (or its start node and loose tip when it is dangling),
+    its tree, its shape and its snap and fade animation. arrowTree is the connection's tree, or
+    the dangling arrow's tree, which holds its ArrowInfo::Settings (see ArrowBindingOps).
 
     The arrow's length is its meaning. getDuration turns the offset from the start node's centre
-    to the tip into milliseconds with ArrowInfo::Settings::durationFromDelta, and getDurationLabel shows
-    it (as a percentage when the arrow starts at a modulator, or as the pitched node's pitch when
-    the arrow is bound to pitch alone). beginDurationEdit lets the user type a duration instead,
-    which is stored as the arrow's fixed duration. A dangling arrow also has an editor for its
-    count limit.
+    to the tip into milliseconds with ArrowInfo::Settings::durationFromDelta, and getDurationLabel
+    shows it (as a percentage when the arrow starts at a modulator, or as the pitched node's pitch
+    when the arrow is bound to pitch alone). beginDurationEdit lets the user type a duration
+    instead, which is stored as the arrow's fixed duration. A dangling arrow also has an editor for
+    its count limit.
 
-    getGeometry works out where the shaft starts and ends, stopping at the edge of the end node's
-    body, and whether it is a straight line or a curve. getArrowVisual puts that, the label and
-    the animation state into the ArsNovaUI::ArrowVisual that the look-and-feel draws. animation
-    (see ArrowAnimation) holds the snap, fade and trails that show the walk moving along the
-    arrow, and an animation frame callback runs only while something is moving.
+    getArrowVisual puts the geometry, the label and the animation state into the
+    ArsNovaUI::ArrowVisual that the look-and-feel draws. The trails are the marks that show a
+    traversal walking along the arrow: startProgress begins or restarts one under its trail id, and
+    it goes from 0 to 1 over its duration, a oneShot trail being removed when it finishes. A
+    trail's source is Live (from the playing audio) or Preview (from note preview). While
+    trailsPaused is set the Live trails stand still, and resumeProgress moves their start times
+    forward by the time spent paused. advanceExtraAnimation moves them on the display frames
+    CanvasArrow already runs. For an arrow that leaves a traversal flag, sourceHovered and
+    proximityHovered say whether the flag or the cursor is near enough to fade the arrow in.
 
-    ArrowManager creates and removes every arrow; AudioCommandDrainer starts its trails through
+    NodeArrowCanvas creates every arrow; AudioCommandDrainer starts its trails through
     startProgress, and the arrow gestures hit-test and drag it through CanvasHitTester.
 */
 
 class Node;
 
-class Arrow : public juce::Component
+class Arrow : public ArsNovaUI::CanvasArrow
 {
 public:
 
-    Arrow(Node* startNode, Node* endNode, juce::UndoManager& undoManager);
-    Arrow(Node* startNode, juce::Point<int> tipOffset, juce::UndoManager& undoManager);
+    Arrow(ArsNovaUI::CanvasNode* startNode, ArsNovaUI::CanvasNode* endNode, juce::UndoManager& undoManager);
+    Arrow(ArsNovaUI::CanvasNode* startNode, juce::Point<int> tipOffset, juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
-    void setArrowBounds();
-    void setTipOffset  (juce::Point<int> offset);
+    void beginDurationEdit() override;
 
-    void beginDurationEdit();
-    void endDrag          ();
-
-    void triggerSnapAnimation();
-    void advanceAnimation    (double frameSec);
-
-    void setHoverFade  (bool shouldBeVisible);
-    void initHoverState(bool visibleNow);
-
-    void startProgress (int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot, BridgeCommands::TrailSource source);
+    void startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot, BridgeCommands::TrailSource source);
+    void resetProgress(int trailId);
     void resetProgress ();
-    void resetProgress (int trailId);
-    void resumeProgress();
+    void resumeProgress ();
 
-    bool isDangling() const
-    {
-        return endNode == nullptr;
-    }
+    bool advanceExtraAnimation() override;
+    bool showsDurationLabel   () const override;
+    bool isTraversalArrow     () const;
+    bool isSyncArrow          () const;
 
-    bool isTraversalArrow  () const;
-    bool isSyncArrow       () const;
-    bool showsDurationLabel() const;
+    int getDuration() const;
 
-    int          getDuration     () const;
-    juce::String getDurationLabel() const;
+    juce::String getDurationLabel() const override;
 
-    ArsNovaUI::ArrowVisual   getArrowVisual () const;
-    ArsNovaUI::ArrowGeometry getGeometry    (float animationProgress) const;
-    ArsNovaUI::ArrowLabel    getLabel       (const ArsNovaUI::ArrowGeometry& geometry, float headLength) const;
-    juce::Path               buildShaftPath (const ArsNovaUI::ArrowGeometry& geometry, float headLength, juce::Point<float> origin) const;
-
-    juce::Point<int>   getTip       () const;
-    juce::Point<float> getHeadAnchor() const;
+    ArsNovaUI::ArrowVisual getArrowVisual() const;
 
     ArsNovaUI::ArrowVisual::ShaftStyle shaftStyle() const;
 
-    Node* const startNode = nullptr;
-    Node* const endNode   = nullptr;
+    struct Trail
+    {
+        float progress = 0.0f;
 
-    juce::Point<int> tipOffset;
+        double startMs = 0.0;
 
-    int danglingIndex = -1;
+        int durationMs = 1;
+
+        juce::Colour colour { juce::Colours::white };
+
+        bool active  = false;
+        bool oneShot = false;
+
+        BridgeCommands::TrailSource source = BridgeCommands::TrailSource::Live;
+    };
 
     std::unique_ptr<ArsNovaUI::ValueEditor> valueEditor;
-    std::unique_ptr<ArsNovaUI::ValueEditor> durationEditor;
 
-    juce::ValueTree arrowTree;
+    std::map<int, Trail> trails;
 
-    static constexpr float curvePerpScale         = 0.8f;
-    static constexpr float curveOffsetFactor      = 0.15f;
-    static constexpr float headVisibleThreshold   = 0.3f;
-    static constexpr float labelVisibleThreshold  = 0.8f;
-    static constexpr float headAnchorInset        = 8.0f;
-    static constexpr float arrowHeadLength        = 9.0f;
-    static constexpr float arrowHeadLengthHover   = 11.0f;
-    static constexpr float verticalLabelThreshold = 0.2f;
-    static constexpr int   arrowBoundsPadding     = 40;
-    static constexpr int   valueEditorWidth       = 30;
-    static constexpr int   valueEditorHeight      = 12;
-
-    ArrowAnimation         animation;
-    juce::VBlankAttachment animationFrames;
+    double pausedAtMs = 0.0;
 
     bool sourceHovered    = false;
     bool proximityHovered = false;
-
-    bool editingDuration = false;
-
-    bool isGhost  = false;
-    bool dragging = false;
-    bool hovered  = false;
-    bool selected = false;
+    bool trailsPaused     = false;
 };

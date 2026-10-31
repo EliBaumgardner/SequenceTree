@@ -95,14 +95,14 @@ One block, in order:
 
 ### 3.1 `NodeCanvas`
 
-`NodeCanvas` is an `EditCanvas`, the component every node canvas derives from. `EditCanvas` shows a `CanvasDocument`'s tree of nodes and owns, by value, the parts every canvas shares:
+`NodeCanvas` is a `NodeArrowCanvas`, which is an `ArsNovaUI::EditCanvas`, the component every node canvas derives from. `EditCanvas` shows a `CanvasDocument`'s tree of nodes as `CanvasNode` and `CanvasArrow` components and owns, by value, the parts every canvas shares:
 
-- `NodeManager` creates, positions and removes `Node` components and keeps them in `nodes`.
-- `ArrowManager` does the same for `Arrow` components, kept in `arrows`.
-- `NodeCanvasTreeListener` turns changes to the document's tree into `AsyncUpdate` records on the canvas's queue.
+- `NodeManager` creates, positions and removes node components and keeps them in `nodes`.
+- `ArrowManager` does the same for arrow components, kept in `arrows`.
+- `CanvasTreeListener` turns changes to the document's tree into `AsyncUpdate` records on the canvas's queue.
 - `CanvasHitTester` answers picking queries.
 
-It also holds the pan and zoom and the snap grid, and asks its subclass through hooks (`makeNode`, `nodeCreated`, `nodeAdded`, `nodeRemoving`, `drawnPosition`, `prepareArrow`, `updateApplied`) for what is particular to its document. `NodeCanvas`'s hooks build `RootNode`, `Modulator`, `TraversalFlagNode` and `Encapsulator` components and keep groups and ornament marks up to date, and it adds the graph's own parts:
+It also holds the pan and zoom and the snap grid, and asks its subclass through hooks (`makeNode`, `makeArrow`, `makeDanglingArrow`, `nodeCreated`, `nodeAdded`, `nodeRemoving`, `prepareArrow`, `connectionCreated`, `drawnPosition`, `treePropertyChanged`, `updateApplied`) for what is particular to its program. `NodeArrowCanvas` makes every arrow an `Arrow` and turns a change to a property the library does not know into an update. `NodeCanvas`'s hooks build `RootNode`, `Modulator`, `TraversalFlagNode` and `Encapsulator` components and keep groups and ornament marks up to date, and it adds the graph's own parts:
 
 - `AudioCommandDrainer` empties the bridge's FIFOs into node highlights, arrow trails and counts.
 - `ValueField` draws paint mode. `EncapsulationView` and `OrnamentMarks` draw groups and ornament marks.
@@ -111,7 +111,7 @@ It also holds the pan and zoom and the snap grid, and asks its subclass through 
 
 ### 3.2 `NodeController`
 
-`NodeController` is a `CanvasController`, the `MouseListener` every node canvas's router derives from. Neither edits anything itself. `CanvasController` routes the presses every canvas handles alike (arrow tips, labels, heads and shafts, panning, root creation, the value scrub, drawing arrows, removing and selecting nodes) and records the owner in its `Gesture` enum, so `mouseDrag` and `mouseUp` go to the same place. Its features are the classes it owns:
+`NodeController` is an `ArsNovaUI::CanvasController`, the `MouseListener` every node canvas's router derives from. Neither edits anything itself. `CanvasController` routes the presses every canvas handles alike (arrow tips, labels, heads and shafts, panning, root creation, the value scrub, drawing arrows, removing and selecting nodes) and records the owner in its `Gesture` enum, so `mouseDrag` and `mouseUp` go to the same place. Its features are the classes it owns:
 
 - `NodeGestures`: root creation, moving nodes, drag-to-create a child.
 - `ArrowGestures`: drawing, moving and connecting arrows.
@@ -123,18 +123,18 @@ Every edit they make goes through a `CanvasDocument`; for the graph that is `Gra
 - `SelectionGestures`: box selection, copy, delete and paste (owns the `Clipboard`).
 - `OrnamentApplier`: applying and removing ornaments.
 
-A new graph feature becomes one more class here and one more branch in the routing. A feature for every canvas goes into `CanvasController` or one of its gesture classes.
+A new graph feature becomes one more class here and one more branch in the routing. A feature for every canvas goes into `ArsNovaUI::CanvasController` or one of its gesture classes, in the ArsNovaUI repository.
 
 ### 3.3 Bars and menus
 
 `Titlebar`, `BottomBar`, `MenuBar` and the menu panels derive from ArsNovaUI's `Bar` and are built from its generic components (`ButtonPane`, `IconButton`, `ItemSelector`, `ValueSlider`, `LabeledEditor`). Two windows open as pop-ups and exist only while shown:
 
 - `TraversalRulesWindow`, the script editor, opened from `TraversalMenu` or `NodeMenu`.
-- `OrnamentWindow`, opened from `BottomBar`. Its figure editor is built from the same parts as the graph canvas: `OrnamentCanvas` is an `EditCanvas` and `OrnamentFigureController` a `CanvasController`, both over a `FigureDocument` that calls `OrnamentLibraries`.
+- `OrnamentWindow`, opened from `BottomBar`. Its figure editor is built from the same parts as the graph canvas: `OrnamentCanvas` is a `NodeArrowCanvas` and `OrnamentFigureController` an `ArsNovaUI::CanvasController`, both over a `FigureDocument` that calls `OrnamentLibraries`.
 
 ### 3.4 ArsNovaUI
 
-The theme (`Theme`, `CustomLookAndFeel`), the zoom and pan viewport (`DynamicPort`), `ScaledView`, `Bar` and the generic components come from the [ArsNovaUI](https://github.com/EliBaumgardner/ArsNovaUI) submodule, in `namespace ArsNovaUI`. The editor sets the look-and-feel on itself and JUCE passes it down to every child. Only pop-up roots, the canvas, and components that read the theme in their constructor take it explicitly.
+The theme (`Theme`, `CustomLookAndFeel`), the zoom and pan viewport (`DynamicPort`), the node canvas framework (`CanvasNode`, `CanvasArrow`, `EditCanvas`, `CanvasController`, `CanvasDocument`, the managers, the hit tester, the tree listener, the node and arrow gestures and the `CanvasIdentifiers` they read), `ScaledView`, `Bar` and the generic components come from the [ArsNovaUI](https://github.com/EliBaumgardner/ArsNovaUI) submodule, in `namespace ArsNovaUI`. The editor sets the look-and-feel on itself and JUCE passes it down to every child. Only pop-up roots, the canvas, and components that read the theme in their constructor take it explicitly.
 
 ## 4. How the parts talk
 
@@ -144,7 +144,7 @@ The two threads never call into each other. Each crossing goes through a lock-fr
 
 *Figure 2. The paths between the message thread and the audio thread.*
 
-1. **Edit → screen** (message thread only). A gesture class edits the graph through `GraphDocument`, which calls `GraphState` and `NodeFactory`, inside an undo transaction. `NodeCanvasTreeListener` queues an `AsyncUpdate`, and `EditCanvas::handleAsyncUpdate` has `NodeManager` and `ArrowManager` add, move or remove components. Undo and redo take the same path, because the listener reacts to the tree, not to the gesture.
+1. **Edit → screen** (message thread only). A gesture class edits the graph through `GraphDocument`, which calls `GraphState` and `NodeFactory`, inside an undo transaction. `CanvasTreeListener` queues an `AsyncUpdate`, and `EditCanvas::handleAsyncUpdate` has `NodeManager` and `ArrowManager` add, move or remove components. Undo and redo take the same path, because the listener reacts to the tree, not to the gesture.
 2. **Edit → sound.** The same tree change reaches `RTGraphBuilder`'s listener. Its `handleAsyncUpdate` rebuilds the touched trees, and `AudioSnapshotPublisher::publishGraph` stores a new `Snapshot*`. The next block's `beginBlock` loads it.
 3. **Script → sound.** `TraversalRulesWindow` writes the source into `TraversalRuleState` and, after a 250 ms debounce, calls `publishActiveTraversalRule`. That compiles the source and publishes the `RTScript` the same way. A failed compile returns diagnostics to the editor, and the last good script keeps playing.
 4. **Sound → screen.** `TraversalDispatcher` pushes highlight, arrow and count commands into `AudioUIBridge`. The editor's `audioCommandFrames` (a `VBlankAttachment`) fires once per display frame, applies transport changes to the `Titlebar` and calls `NodeCanvas::handleAsyncUpdate`, which drains the FIFOs. With no editor open the FIFOs overflow, and the drainer resyncs the canvas on its first drain.

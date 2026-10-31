@@ -26,8 +26,8 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     nodeCanvas     = std::make_unique<NodeCanvas>(p, p.graphState, graphDocument, p.rtGraphBuilder, lookAndFeel);
     nodeController = std::make_unique<NodeController>(*nodeCanvas, p.graphState, graphDocument, p.undoManager, p.traversalSession, p.rtGraphBuilder, p.ornamentLibraries);
     port           = std::make_unique<ArsNovaUI::DynamicPort>(*nodeCanvas);
-    menuArea       = std::make_unique<MenuArea>(*nodeCanvas, p.graphState, p.traversalRuleState, p.snapshots, *interfaceSettings, *scaledView, p.colourPresets, p.undoManager);
-    titleBar       = std::make_unique<Titlebar>(p, *nodeCanvas, *nodeController, graphDocument, p.undoManager);
+    menuArea       = std::make_unique<MenuArea>(*nodeCanvas, p.graphState, p.traversalRuleState, p.snapshots, p.colourPresets, p.undoManager);
+    titleBar       = std::make_unique<Titlebar>(p, *nodeCanvas, *nodeController, graphDocument, *interfaceSettings, *scaledView, p.colourPresets, p.undoManager);
     bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, graphDocument, p.traversalSession, p.colourPresets, p.undoManager, p.ornamentLibraries, p.ornamentUndoManager);
     canvasFrame    = std::make_unique<CanvasFrame>(*nodeCanvas, *menuArea, *titleBar, *bottomBar);
 
@@ -39,6 +39,8 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
         menuWidth = newWidth;
 
         resized();
+
+        updateResizeLimits();
 
         repaint();
     };
@@ -102,14 +104,13 @@ void SequenceTreeAudioProcessorEditor::resized()
     const auto windowArea    = workspace.getLocalBounds().reduced(ArsNovaUI::Theme::windowGutter);
     auto       bounds        = windowArea;
     const int  barHeight     = ArsNovaUI::Theme::barHeight;
-    const int  barsWidth     = juce::jmax(titleBar->narrowestWidth(), bottomBar->narrowestWidth());
     const int  panelSpacing  = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuSpacingRatio);
     const int  minMenuWidth  = juce::roundToInt(barHeight * (MenuArea::menuBarWidthRatio + MenuArea::resizerWidthRatio));
+
     const int  fullMenuWidth = juce::roundToInt(barHeight * MenuArea::menuBarWidthRatio) + juce::roundToInt(barHeight * MenuArea::resizerWidthRatio)
                                + ArsNovaUI::Theme::menuContentWidth + panelSpacing * 2;
-    const int  maxMenuWidth  = juce::jmin(fullMenuWidth, juce::jmax(minMenuWidth, bounds.getWidth() - ArsNovaUI::Theme::windowGutter - barsWidth));
 
-    menuWidth = juce::jlimit(minMenuWidth, maxMenuWidth, menuWidth);
+    menuWidth = juce::jlimit(minMenuWidth, fullMenuWidth, menuWidth);
 
     auto menuAreaBounds   = bounds.removeFromLeft(menuWidth + ArsNovaUI::Theme::windowGutter).withTrimmedRight(ArsNovaUI::Theme::windowGutter);
     auto titleArea        = bounds.removeFromTop(barHeight + ArsNovaUI::Theme::windowGutter).withTrimmedBottom(ArsNovaUI::Theme::windowGutter);
@@ -222,7 +223,6 @@ void SequenceTreeAudioProcessorEditor::configureWindowSize()
     scaledView->onZoomChanged = [this]() {
         const float                          zoom        = scaledView->zoom;
         const float                          zoomRatio   = scaledView->previousZoom / zoom;
-        const juce::Point<int>               minimumSize = scaledView->minimumContentSize;
         juce::Component* const               window      = getTopLevelComponent();
         const juce::Displays::Display* const display     = juce::Desktop::getInstance().getDisplays().getDisplayForRect(window->getScreenBounds());
 
@@ -230,7 +230,7 @@ void SequenceTreeAudioProcessorEditor::configureWindowSize()
 
         port->setZoom(port->zoom * zoomRatio, -port->getPosition().toFloat());
 
-        setResizeLimits(juce::roundToInt(minimumSize.x * zoom), juce::roundToInt(minimumSize.y * zoom), maximumWindowSide, maximumWindowSide);
+        updateResizeLimits();
 
         resized();
 
@@ -251,6 +251,23 @@ void SequenceTreeAudioProcessorEditor::configureWindowSize()
     scaledView->onZoomChanged();
 
     setSize(juce::roundToInt(getConstrainer()->getMinimumWidth() * openingScale), juce::roundToInt(getConstrainer()->getMinimumHeight() * openingScale));
+}
+
+void SequenceTreeAudioProcessorEditor::updateResizeLimits()
+{
+    const int minMenuWidth = juce::roundToInt(ArsNovaUI::Theme::barHeight * (MenuArea::menuBarWidthRatio + MenuArea::resizerWidthRatio));
+    const int barsWidth    = juce::jmax(titleBar->narrowestWidth(), bottomBar->narrowestWidth());
+
+    const float zoom = scaledView->zoom;
+
+    scaledView->minimumContentSize.x = ArsNovaUI::Theme::windowGutter * 3 + juce::jmax(menuWidth, minMenuWidth) + barsWidth;
+
+    setResizeLimits(juce::roundToInt(scaledView->minimumContentSize.x * zoom), juce::roundToInt(scaledView->minimumContentSize.y * zoom),
+                    maximumWindowSide, maximumWindowSide);
+
+    if (getWidth() < getConstrainer()->getMinimumWidth()) {
+        setSize(getConstrainer()->getMinimumWidth(), getHeight());
+    }
 }
 
 void SequenceTreeAudioProcessorEditor::toggleFullScreen()

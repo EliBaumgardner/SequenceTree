@@ -3,8 +3,8 @@
 /*
     The messages the audio thread sends to the canvas, as plain structs: each describes one change
     the canvas makes to show playback, which nodes are lit, how far each traversal has moved along
-    its arrow, and each node's count. They sit in a header of their own so Arrow and ArrowAnimation
-    can use them without including AudioUIBridge.
+    its arrow, and each node's count. They sit in a header of their own so Arrow can use them
+    without including AudioUIBridge.
 
     HighlightCommand turns a node's highlight on or off, or clears every node. ArrowCommand moves a
     traversal along an arrow, draws a jump to another tree (Connection), or erases a trail.

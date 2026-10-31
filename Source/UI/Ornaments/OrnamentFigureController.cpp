@@ -5,7 +5,7 @@
 
 OrnamentFigureController::OrnamentFigureController(OrnamentCanvas& ornamentCanvas, FigureDocument& figureDocument, OrnamentLibraries& ornamentLibraries,
                                                    juce::UndoManager& undoManager)
-    : CanvasController(ornamentCanvas, figureDocument, undoManager),
+    : ArsNovaUI::CanvasController(ornamentCanvas, figureDocument, undoManager),
       ornamentCanvas(ornamentCanvas),
       figureDocument(figureDocument),
       ornamentLibraries(ornamentLibraries),
@@ -43,7 +43,7 @@ void OrnamentFigureController::mouseDown(const juce::MouseEvent& event)
         return;
     }
 
-    CanvasController::mouseDown(event);
+    ArsNovaUI::CanvasController::mouseDown(event);
 }
 
 void OrnamentFigureController::switchClickMode(ClickMode mode)

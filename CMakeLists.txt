@@ -79,32 +79,24 @@ target_sources(SequenceTree PRIVATE
         Source/Graph/ValueTreeIdentifiers.cpp
         Source/Graph/NodeFactory.cpp
         Source/Graph/Clipboard.cpp
-        Source/Input/CanvasController.cpp
         Source/Input/NodeController.cpp
         Source/Input/GraphDocument.cpp
         Source/Input/FigureDocument.cpp
         Source/Input/ArrowMenu.cpp
         Source/UI/Canvas/CanvasFrame.cpp
-        Source/UI/Canvas/EditCanvas.cpp
+        Source/UI/Canvas/NodeArrowCanvas.cpp
         Source/UI/Canvas/NodeCanvas.cpp
-        Source/UI/Canvas/NodeCanvasTreeListener.cpp
         Source/UI/Canvas/ValueField.cpp
         Source/UI/Canvas/AudioCommandDrainer.cpp
-        Source/UI/Canvas/NodeManager.cpp
         Source/UI/Canvas/OrnamentMarks.cpp
         Source/UI/Canvas/OrnamentMarkView.cpp
-        Source/UI/Canvas/ArrowManager.cpp
-        Source/UI/Canvas/CanvasHitTester.cpp
         Source/UI/Canvas/EncapsulationView.cpp
         Source/Input/OrnamentApplier.cpp
-        Source/Input/SelectionGestures.cpp
-        Source/Input/ArrowGestures.cpp
-        Source/Input/NodeGestures.cpp
-        Source/Input/EncapsulationGestures.cpp
+        Source/Input/Gestures/SelectionGestures.cpp
+        Source/Input/Gestures/EncapsulationGestures.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
         Source/UI/Node/Arrow.cpp
-        Source/UI/Node/ArrowAnimation.cpp
         Source/UI/Editors/Formats/TraversalFlagFormat.cpp
         Source/UI/Node/Modulator.cpp
         Source/UI/Node/Encapsulator.cpp

@@ -3,10 +3,10 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "OrnamentNode.h"
-#include "../Canvas/EditCanvas.h"
+#include "../Canvas/NodeArrowCanvas.h"
 
 /*
-    The EditCanvas for an ornament's figure (see FigureDocument): an OrnamentNode for each figure
+    The NodeArrowCanvas for an ornament's figure (see FigureDocument): an OrnamentNode for each figure
     node and an Arrow for each connection and for the dangling arrow, over lines at the grid
     spacing and a line at zero. Its grid is always shown with its origin at zero, so positions
     snap to the lines the figure's rows are counted from. The node that is the host, standing
@@ -22,7 +22,7 @@
 
 class FigureDocument;
 
-class OrnamentCanvas : public EditCanvas
+class OrnamentCanvas : public NodeArrowCanvas
 {
 public:
 
@@ -31,12 +31,12 @@ public:
     void paint(juce::Graphics& graphics) override;
 
     void rebuildFromNodeMap(const juce::ValueTree& stateTree) override;
-    void nodeCreated       (Node& node) override;
-    void prepareArrow      (Arrow& arrow) override;
+    void nodeCreated       (ArsNovaUI::CanvasNode& node) override;
+    void prepareArrow      (ArsNovaUI::CanvasArrow& arrow) override;
 
     void refreshHost();
 
-    std::unique_ptr<Node> makeNode(const juce::ValueTree& nodeTree) override;
+    std::unique_ptr<ArsNovaUI::CanvasNode> makeNode(const juce::ValueTree& nodeTree) override;
 
     static constexpr int initialViewColumns = 4;
 

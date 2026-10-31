@@ -28,8 +28,8 @@ void AudioCommandDrainer::drainAll()
         bridge.highlights.drain([](const BridgeCommands::HighlightCommand&) {});
         bridge.arrows.drain([](const BridgeCommands::ArrowCommand&) {});
 
-        nodeCanvas.nodeManager.clearHighlights();
-        nodeCanvas.arrowManager.resetAllProgress();
+        nodeCanvas.clearHighlights();
+        nodeCanvas.resetAllProgress();
         nodeCanvas.encapsulationView.syncHighlights();
     }
     else {
@@ -49,11 +49,11 @@ void AudioCommandDrainer::drainHighlights()
 {
     bridge.highlights.drain([this](const BridgeCommands::HighlightCommand& command) {
         if (command.kind == BridgeCommands::HighlightKind::ClearEveryNode) {
-            nodeCanvas.nodeManager.clearHighlights();
+            nodeCanvas.clearHighlights();
             return;
         }
 
-        Node* const node = nodeCanvas.nodeManager.find(command.nodeId);
+        Node* const node = static_cast<Node*>(nodeCanvas.nodeManager.find(command.nodeId));
 
         if (node == nullptr) {
             return;
@@ -77,15 +77,15 @@ void AudioCommandDrainer::drainArrows()
     bridge.arrows.drain([this](const BridgeCommands::ArrowCommand& command) {
         if (command.kind == BridgeCommands::ArrowKind::TrailReset) {
             if (command.trailId == BridgeCommands::allTrails) {
-                nodeCanvas.arrowManager.resetAllProgress();
+                nodeCanvas.resetAllProgress();
                 return;
             }
 
-            nodeCanvas.arrowManager.resetTrail(command.trailId);
+            nodeCanvas.resetTrail(command.trailId);
             return;
         }
 
-        Node* const parentNode = nodeCanvas.nodeManager.find(command.parentNodeId);
+        ArsNovaUI::CanvasNode* const parentNode = nodeCanvas.nodeManager.find(command.parentNodeId);
 
         if (parentNode == nullptr) {
             return;
@@ -96,14 +96,17 @@ void AudioCommandDrainer::drainArrows()
         const auto         arrowRange     = parentNode->nodeArrows.equal_range(command.childNodeId);
 
         for (auto entry = arrowRange.first; entry != arrowRange.second; ++entry) {
-            Arrow* const arrow = entry->second;
+            Arrow* const arrow = static_cast<Arrow*>(entry->second);
 
             if (arrow == nullptr) {
                 continue;
             }
 
-            const bool startsAtFlag = arrow->startNode != nullptr && arrow->startNode->nodeType == NodeInfo::Type::TraversalFlag;
-            const bool endsAtFlag   = arrow->endNode   != nullptr && arrow->endNode->nodeType   == NodeInfo::Type::TraversalFlag;
+            const Node* const startNode = static_cast<const Node*>(arrow->startNode);
+            const Node* const endNode   = static_cast<const Node*>(arrow->endNode);
+
+            const bool startsAtFlag = startNode != nullptr && startNode->nodeType == NodeInfo::Type::TraversalFlag;
+            const bool endsAtFlag   = endNode   != nullptr && endNode->nodeType   == NodeInfo::Type::TraversalFlag;
 
             if (startsAtFlag || endsAtFlag) {
                 continue;
@@ -117,7 +120,7 @@ void AudioCommandDrainer::drainArrows()
 void AudioCommandDrainer::drainCounts()
 {
     bridge.counts.drain([this](const BridgeCommands::CountCommand& command) {
-        Node* const node = nodeCanvas.nodeManager.find(command.nodeId);
+        Node* const node = static_cast<Node*>(nodeCanvas.nodeManager.find(command.nodeId));
 
         if (node == nullptr) {
             return;

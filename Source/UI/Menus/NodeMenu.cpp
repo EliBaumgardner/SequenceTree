@@ -49,7 +49,9 @@ NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRule
     addChildComponent(colourSelector);
     addChildComponent(editTraversalRulesButton);
 
-    nodeCanvas.nodeManager.nodeSelectedListeners.push_back([this](Node* node, bool selected) {
+    nodeCanvas.nodeManager.nodeSelectedListeners.push_back([this](ArsNovaUI::CanvasNode* canvasNode, bool selected) {
+        Node* const node = static_cast<Node*>(canvasNode);
+
         if (selected && node != nullptr) {
             selectedNodeId        = node->nodeId;
             colourSelector.colour = node->nodeColour;
@@ -95,19 +97,31 @@ void NodeMenu::paint(juce::Graphics& graphics)
 
 void NodeMenu::resized()
 {
-    const int        barHeight       = ArsNovaUI::Theme::barHeight;
-    const int        spacing         = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuSpacingRatio);
-    const int        rowHeight       = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuRowHeightRatio);
-    const float      textHeight      = ArsNovaUI::Theme::textHeight;
-    const juce::Font textFont        = ArsNovaUI::CustomLookAndFeel::get(*this).font(ArsNovaUI::Theme::FontStyle::Regular, textHeight);
-    auto             bounds          = getLocalBounds().reduced(spacing).withWidth(ArsNovaUI::Theme::menuContentWidth);
+    const float textHeight = ArsNovaUI::Theme::textHeight;
+
+    const juce::Font textFont = ArsNovaUI::CustomLookAndFeel::get(*this).font(ArsNovaUI::Theme::FontStyle::Regular, textHeight);
+
+    const int barHeight      = ArsNovaUI::Theme::barHeight;
+    const int spacing        = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuSpacingRatio);
+    const int rowHeight      = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuRowHeightRatio);
+    const int valueWidth     = juce::GlyphArrangement::getStringWidthInt(textFont, "127") + juce::roundToInt(ArsNovaUI::Theme::fieldTextInset) * 2;
+    int       labelTextWidth = juce::GlyphArrangement::getStringWidthInt(textFont, colourLabel.getText());
+
+    for (const LabeledRow& row : labeledRows) {
+        labelTextWidth = juce::jmax(labelTextWidth, juce::GlyphArrangement::getStringWidthInt(textFont, row.labelText));
+    }
+
+    const int contentWidth = juce::jlimit(labelTextWidth + valueWidth, ArsNovaUI::Theme::menuContentWidth, getWidth() - spacing * 2);
+    const int labelWidth   = juce::jmax(labelTextWidth, contentWidth / 3);
+
+    auto bounds = getLocalBounds().reduced(spacing).withWidth(contentWidth);
 
     editTraversalRulesButton.setBounds(bounds.removeFromBottom(juce::roundToInt(barHeight * ArsNovaUI::Theme::menuButtonHeightRatio)));
 
     auto colourRowBounds = bounds.removeFromTop(rowHeight);
 
     colourLabel.setFont(textFont);
-    colourLabel.setBounds(colourRowBounds.removeFromLeft(colourRowBounds.getWidth() / 3));
+    colourLabel.setBounds(colourRowBounds.removeFromLeft(labelWidth));
     colourSelector.setBounds(colourRowBounds);
 
     bounds.removeFromTop(spacing);
@@ -122,7 +136,7 @@ void NodeMenu::resized()
 
         auto rowBounds = bounds.removeFromTop(rowHeight);
 
-        row.field.labelWidth = rowBounds.getWidth() / 3;
+        row.field.labelWidth = labelWidth;
 
         row.field.setBounds(rowBounds);
 

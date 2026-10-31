@@ -207,7 +207,7 @@ void TraversalSession::beginReplay(const DispatchContext& context, double target
 
     const DispatchContext replayContext { context.nodes, context.traversalMap, replayMidi,
                                           context.sampleRate, context.tempoMultiplier,
-                                          context.transpose, context.velocityScale };
+                                          context.velocityScale, context.transpose };
 
     replayMidi.clear();
     startTraversalsFromFirstRoot(replayContext);
@@ -239,7 +239,7 @@ TraversalSession::Playback TraversalSession::continueReplay(const DispatchContex
 
     const DispatchContext replayContext { context.nodes, context.traversalMap, replayMidi,
                                           context.sampleRate, context.tempoMultiplier,
-                                          context.transpose, context.velocityScale };
+                                          context.velocityScale, context.transpose };
 
     syncWithGraph(replayContext, graphGeneration);
 
@@ -454,7 +454,9 @@ void TraversalSession::startPreview(const RTPreviewRequest& request, const Dispa
     const RTNode* const clickedNode   = context.nodes.find(request.nodeId);
     const RTNode*       hostNode      = clickedNode;
     const RTNode*       rootNode      = nullptr;
+
     RTtraversal         traversal     = request.traversal;
+
     int                 alternativeId = -1;
 
     if (clickedNode == nullptr) {

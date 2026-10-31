@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <vector>
 
 /*
@@ -24,15 +25,23 @@ class NodeRowMap
 {
 public:
 
-    void prepare();
-    void clear  ();
-
-    int find (int nodeId) const;
-    int claim(int nodeId);
-
     static constexpr int maxRows     = 1024;
     static constexpr int keyCapacity = maxRows * 2;
     static constexpr int emptyKey    = -1;
+
+    void prepare();
+    void clear  () noexcept;
+
+    [[nodiscard]] int  find    (int nodeId) const noexcept;
+    [[nodiscard]] int  claim   (int nodeId) noexcept;
+    [[nodiscard]] bool contains(int nodeId) const noexcept { return find(nodeId) >= 0; }
+
+    [[nodiscard]] int  getRowCount() const noexcept { return rowCount; }
+    [[nodiscard]] bool isPrepared () const noexcept { return !keys.empty(); }
+
+private:
+
+    [[nodiscard]] std::size_t findSlot(int nodeId) const noexcept;
 
     std::vector<int> keys;
     std::vector<int> rowOfKey;

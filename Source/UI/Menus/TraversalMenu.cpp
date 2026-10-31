@@ -113,13 +113,25 @@ void TraversalMenu::paint(juce::Graphics& graphics)
 
 void TraversalMenu::resized()
 {
-    const int        barHeight  = ArsNovaUI::Theme::barHeight;
-    const int        spacing    = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuSpacingRatio);
-    const int        rowHeight  = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuRowHeightRatio);
-    const float      textHeight = ArsNovaUI::Theme::textHeight;
-    const juce::Font textFont   = ArsNovaUI::CustomLookAndFeel::get(*this).font(ArsNovaUI::Theme::FontStyle::Regular, textHeight);
-    auto             bounds     = getLocalBounds();
-    auto             barArea    = bounds.removeFromTop(barHeight);
+    const float textHeight = ArsNovaUI::Theme::textHeight;
+
+    const juce::Font textFont = ArsNovaUI::CustomLookAndFeel::get(*this).font(ArsNovaUI::Theme::FontStyle::Regular, textHeight);
+
+    const int barHeight      = ArsNovaUI::Theme::barHeight;
+    const int spacing        = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuSpacingRatio);
+    const int rowHeight      = juce::roundToInt(barHeight * ArsNovaUI::Theme::menuRowHeightRatio);
+    const int valueWidth     = juce::GlyphArrangement::getStringWidthInt(textFont, "127") + juce::roundToInt(ArsNovaUI::Theme::fieldTextInset) * 2;
+    int       labelTextWidth = juce::GlyphArrangement::getStringWidthInt(textFont, colourLabel.getText());
+
+    auto bounds  = getLocalBounds();
+    auto barArea = bounds.removeFromTop(barHeight);
+
+    for (ArsNovaUI::LabeledEditor* field : { &multiplierField, &channelField, &transposeField, &velocityField }) {
+        labelTextWidth = juce::jmax(labelTextWidth, juce::GlyphArrangement::getStringWidthInt(textFont, field->label.getText()));
+    }
+
+    const int contentWidth = juce::jlimit(labelTextWidth + valueWidth, ArsNovaUI::Theme::menuContentWidth, getWidth() - spacing * 2);
+    const int labelWidth   = juce::jmax(labelTextWidth, contentWidth / 2);
 
     displayMenu.labelEditor.setFontHeight(textHeight);
     multiplierField.editor.setFontHeight(textHeight);
@@ -127,9 +139,9 @@ void TraversalMenu::resized()
     transposeField.editor.setFontHeight(textHeight);
     velocityField.editor.setFontHeight(textHeight);
 
-    displayMenu.setBounds(barArea.reduced(juce::roundToInt(barHeight * ArsNovaUI::Theme::contentInsetRatio)).withWidth(ArsNovaUI::Theme::menuContentWidth));
+    displayMenu.setBounds(barArea.reduced(juce::roundToInt(barHeight * ArsNovaUI::Theme::contentInsetRatio)).withWidth(contentWidth));
 
-    bounds = bounds.reduced(spacing).withWidth(ArsNovaUI::Theme::menuContentWidth);
+    bounds = bounds.reduced(spacing).withWidth(contentWidth);
 
     editTraversalRulesButton.setBounds(bounds.removeFromBottom(juce::roundToInt(barHeight * ArsNovaUI::Theme::menuButtonHeightRatio)));
 
@@ -138,7 +150,7 @@ void TraversalMenu::resized()
 
         field->label.setFont(textFont);
 
-        field->labelWidth = rowArea.getWidth() / 2;
+        field->labelWidth = labelWidth;
 
         field->setBounds(rowArea);
 
@@ -149,7 +161,7 @@ void TraversalMenu::resized()
 
     colourLabel.setFont(textFont);
 
-    colourLabel.setBounds(colourRow.removeFromLeft(colourRow.getWidth() / 2));
+    colourLabel.setBounds(colourRow.removeFromLeft(labelWidth));
     colourSelector.setBounds(colourRow);
 }
 

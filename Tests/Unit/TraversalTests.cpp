@@ -1079,6 +1079,45 @@ TEST_CASE("an unprepared state table drops every write and reads defaults", "[st
     CHECK(table.get(NodeStateSlot::LastNode, 5) == -1);
 }
 
+TEST_CASE("ref on an unaddressable node does not alias between different slots", "[state]")
+{
+    NodeStateTable table;
+    int& count       = table.ref(NodeStateSlot::CrossTree, 5);
+    int& switchCount = table.ref(NodeStateSlot::CrossTreeSwitch, 5);
+
+    count       = 42;
+    switchCount = 99;
+
+    CHECK(count == 42);
+    CHECK(switchCount == 99);
+
+    CHECK(table.get(NodeStateSlot::CrossTree, 5) == 0);
+    CHECK(table.get(NodeStateSlot::CrossTreeSwitch, 5) == 0);
+}
+
+TEST_CASE("calling prepare on an already prepared state table resets it idempotently", "[state]")
+{
+    NodeStateTable table;
+    CHECK(!table.isPrepared());
+
+    table.prepare();
+    CHECK(table.isPrepared());
+
+    table.set(NodeStateSlot::Count, 10, 50);
+    CHECK(table.get(NodeStateSlot::Count, 10) == 50);
+
+    table.prepare();
+    CHECK(table.isPrepared());
+    CHECK(table.get(NodeStateSlot::Count, 10) == 0);
+}
+
+TEST_CASE("defaultValue and indexOf are constexpr", "[state]")
+{
+    static_assert(NodeStateTable::defaultValue(NodeStateSlot::Count) == 0);
+    static_assert(NodeStateTable::defaultValue(NodeStateSlot::ActiveAlternative) == -1);
+    static_assert(NodeStateTable::indexOf(NodeStateSlot::SwitchCount, 2) == 2 * NodeStateTable::slotCount + 1);
+}
+
 TEST_CASE("a script whose advance returns none sends the walker back to its root", "[traversal][script]")
 {
     const RTScript script = compileScript(

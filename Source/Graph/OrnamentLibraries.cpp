@@ -1,6 +1,7 @@
 #include "OrnamentLibraries.h"
 #include "ArrowBindingOps.h"
 #include "../Util/ArrowInfo.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 #include <algorithm>
 
@@ -19,9 +20,9 @@ OrnamentLibraries::~OrnamentLibraries()
 void OrnamentLibraries::setFigureNodePosition(juce::ValueTree ornament, int nodeId, juce::Point<int> position, juce::UndoManager* undoManager)
 {
     const juce::ValueTree  figure  = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    juce::ValueTree        node    = figure.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId);
-    const juce::Point<int> delta   = position - juce::Point<int> { node.getProperty(ValueTreeIdentifiers::XPosition), node.getProperty(ValueTreeIdentifiers::YPosition) };
-    const int              oldRow  = juce::roundToInt(static_cast<double>(node.getProperty(ValueTreeIdentifiers::YPosition)) / ArrowInfo::pixelsPerGridSpace);
+    juce::ValueTree        node    = figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId);
+    const juce::Point<int> delta   = position - juce::Point<int> { node.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition), node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition) };
+    const int              oldRow  = juce::roundToInt(static_cast<double>(node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition)) / ArrowInfo::pixelsPerGridSpace);
     const int              newRow  = juce::roundToInt(position.y / ArrowInfo::pixelsPerGridSpace);
     const int              shifted = static_cast<int>(node.getProperty(ValueTreeIdentifiers::OrnamentOffset))
                                      + juce::roundToInt((oldRow - newRow) * ArrowInfo::semitonesPerGridSpace);
@@ -40,26 +41,26 @@ void OrnamentLibraries::setFigureNodePosition(juce::ValueTree ornament, int node
     node.setProperty(ValueTreeIdentifiers::OrnamentOffset, std::clamp(shifted, -maximumOffset, maximumOffset), undoManager);
 
     for (const juce::ValueTree& candidate : figure) {
-        clearDurationOverride(candidate.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChildWithProperty(ValueTreeIdentifiers::Id, nodeId));
+        clearDurationOverride(candidate.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId));
     }
 
     while (moved.isValid()) {
-        const juce::ValueTree outgoing = moved.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChild(0);
+        const juce::ValueTree outgoing = moved.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getChild(0);
 
-        moved.setProperty(ValueTreeIdentifiers::XPosition, static_cast<int>(moved.getProperty(ValueTreeIdentifiers::XPosition)) + delta.x, undoManager);
-        moved.setProperty(ValueTreeIdentifiers::YPosition, static_cast<int>(moved.getProperty(ValueTreeIdentifiers::YPosition)) + delta.y, undoManager);
+        moved.setProperty(ArsNovaUI::CanvasIdentifiers::XPosition, static_cast<int>(moved.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition)) + delta.x, undoManager);
+        moved.setProperty(ArsNovaUI::CanvasIdentifiers::YPosition, static_cast<int>(moved.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition)) + delta.y, undoManager);
 
         clearDurationOverride(outgoing);
 
-        moved = figure.getChildWithProperty(ValueTreeIdentifiers::Id, outgoing.getProperty(ValueTreeIdentifiers::Id, -1));
+        moved = figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, outgoing.getProperty(ArsNovaUI::CanvasIdentifiers::Id, -1));
     }
 }
 
 void OrnamentLibraries::removeFigureNode(juce::ValueTree ornament, int nodeId, juce::UndoManager* undoManager)
 {
     juce::ValueTree       figure   = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    const juce::ValueTree node     = figure.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId);
-    const juce::ValueTree outgoing = node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChild(0);
+    const juce::ValueTree node     = figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId);
+    const juce::ValueTree outgoing = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getChild(0);
     juce::ValueTree       parent;
     juce::ValueTree       incoming;
 
@@ -72,7 +73,7 @@ void OrnamentLibraries::removeFigureNode(juce::ValueTree ornament, int nodeId, j
     }
 
     for (const juce::ValueTree& candidate : figure) {
-        const juce::ValueTree connection = candidate.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChildWithProperty(ValueTreeIdentifiers::Id, nodeId);
+        const juce::ValueTree connection = candidate.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId);
 
         if (connection.isValid()) {
             parent   = candidate;
@@ -81,13 +82,13 @@ void OrnamentLibraries::removeFigureNode(juce::ValueTree ornament, int nodeId, j
     }
 
     if (incoming.isValid() && outgoing.isValid()) {
-        incoming.setProperty(ValueTreeIdentifiers::Id, outgoing.getProperty(ValueTreeIdentifiers::Id), undoManager);
+        incoming.setProperty(ArsNovaUI::CanvasIdentifiers::Id, outgoing.getProperty(ArsNovaUI::CanvasIdentifiers::Id), undoManager);
     }
 
     if (incoming.isValid() && ! outgoing.isValid()) {
-        const juce::ValueTree danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+        const juce::ValueTree danglingArrows = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows);
 
-        parent.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).removeChild(incoming, undoManager);
+        parent.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).removeChild(incoming, undoManager);
 
         if (danglingArrows.isValid() && danglingArrows.getNumChildren() > 0) {
             parent.appendChild(danglingArrows.createCopy(), undoManager);
@@ -102,7 +103,7 @@ void OrnamentLibraries::toggleHost(juce::ValueTree ornament, int nodeId, juce::U
     juce::ValueTree figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
     int             hostId = nodeId;
 
-    if (! figure.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId).isValid()) {
+    if (! figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId).isValid()) {
         return;
     }
 
@@ -116,9 +117,9 @@ void OrnamentLibraries::toggleHost(juce::ValueTree ornament, int nodeId, juce::U
 void OrnamentLibraries::addDanglingArrow(juce::ValueTree ornament, int nodeId, juce::Point<int> tipOffset, juce::UndoManager* undoManager)
 {
     const juce::ValueTree figure         = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    juce::ValueTree       node           = figure.getChildWithProperty(ValueTreeIdentifiers::Id, nodeId);
-    juce::ValueTree       danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
-    juce::ValueTree       danglingArrow  {ValueTreeIdentifiers::DanglingArrow};
+    juce::ValueTree       node           = figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId);
+    juce::ValueTree       danglingArrows = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows);
+    juce::ValueTree       danglingArrow  {ArsNovaUI::CanvasIdentifiers::DanglingArrow};
     ArrowInfo::Settings   arrowInfo;
 
     if (! node.isValid()) {
@@ -126,14 +127,14 @@ void OrnamentLibraries::addDanglingArrow(juce::ValueTree ornament, int nodeId, j
     }
 
     if (! danglingArrows.isValid()) {
-        danglingArrows = juce::ValueTree(ValueTreeIdentifiers::DanglingArrows);
+        danglingArrows = juce::ValueTree(ArsNovaUI::CanvasIdentifiers::DanglingArrows);
 
         node.appendChild(danglingArrows, undoManager);
     }
 
     if (danglingArrows.getNumChildren() > 0) {
-        danglingArrows.getChild(0).setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
-        danglingArrows.getChild(0).setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
+        danglingArrows.getChild(0).setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipX, tipOffset.x, undoManager);
+        danglingArrows.getChild(0).setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipY, tipOffset.y, undoManager);
 
         return;
     }
@@ -141,8 +142,8 @@ void OrnamentLibraries::addDanglingArrow(juce::ValueTree ornament, int nodeId, j
     arrowInfo.xBinding = ArrowInfo::Binding::DurationBind;
     arrowInfo.yBinding = ArrowInfo::Binding::NoBind;
 
-    danglingArrow.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, nullptr);
-    danglingArrow.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, nullptr);
+    danglingArrow.setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipX, tipOffset.x, nullptr);
+    danglingArrow.setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipY, tipOffset.y, nullptr);
 
     ArrowBindingOps::setArrowInfo(danglingArrow, arrowInfo, nullptr);
 
@@ -154,7 +155,7 @@ void OrnamentLibraries::removeDanglingArrow(juce::ValueTree ornament, juce::Undo
     const juce::ValueTree figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
 
     for (juce::ValueTree node : figure) {
-        const juce::ValueTree danglingArrows = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows);
+        const juce::ValueTree danglingArrows = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows);
 
         if (danglingArrows.isValid()) {
             node.removeChild(danglingArrows, undoManager);
@@ -167,19 +168,19 @@ void OrnamentLibraries::setLastNodeLength(juce::ValueTree ornament, juce::Point<
     const juce::ValueTree figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
 
     for (const juce::ValueTree& node : figure) {
-        juce::ValueTree danglingArrow = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows).getChild(0);
+        juce::ValueTree danglingArrow = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows).getChild(0);
 
         if (danglingArrow.isValid()) {
-            danglingArrow.setProperty(ValueTreeIdentifiers::ArrowTipX, tipOffset.x, undoManager);
-            danglingArrow.setProperty(ValueTreeIdentifiers::ArrowTipY, tipOffset.y, undoManager);
+            danglingArrow.setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipX, tipOffset.x, undoManager);
+            danglingArrow.setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipY, tipOffset.y, undoManager);
 
             return;
         }
     }
 
     for (const juce::ValueTree& node : figure) {
-        if (node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getNumChildren() == 0) {
-            addDanglingArrow(ornament, node.getProperty(ValueTreeIdentifiers::Id), tipOffset, undoManager);
+        if (node.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getNumChildren() == 0) {
+            addDanglingArrow(ornament, node.getProperty(ArsNovaUI::CanvasIdentifiers::Id), tipOffset, undoManager);
 
             return;
         }
@@ -539,7 +540,7 @@ juce::ValueTree OrnamentLibraries::findOrnament(const juce::String& uid) const
 juce::ValueTree OrnamentLibraries::addFigureNode(juce::ValueTree ornament, int parentNodeId, juce::Point<int> position, juce::UndoManager* undoManager)
 {
     juce::ValueTree     figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    juce::ValueTree     parent = figure.getChildWithProperty(ValueTreeIdentifiers::Id, parentNodeId);
+    juce::ValueTree     parent = figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, parentNodeId);
     const int           nodeId = ornament.getProperty(ValueTreeIdentifiers::NextFigureNodeId, 1);
     juce::ValueTree     node   {ValueTreeIdentifiers::OrnamentNoteData};
     ArrowInfo::Settings arrowInfo;
@@ -548,30 +549,30 @@ juce::ValueTree OrnamentLibraries::addFigureNode(juce::ValueTree ornament, int p
         return {};
     }
 
-    if (parentNodeId != -1 && (! parent.isValid() || parent.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getNumChildren() > 0)) {
+    if (parentNodeId != -1 && (! parent.isValid() || parent.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getNumChildren() > 0)) {
         return {};
     }
 
     arrowInfo.xBinding = ArrowInfo::Binding::DurationBind;
     arrowInfo.yBinding = ArrowInfo::Binding::NoBind;
 
-    node.setProperty(ValueTreeIdentifiers::Id,               nodeId,                 nullptr);
-    node.setProperty(ValueTreeIdentifiers::XPosition,        position.x,             nullptr);
-    node.setProperty(ValueTreeIdentifiers::YPosition,        position.y,             nullptr);
+    node.setProperty(ArsNovaUI::CanvasIdentifiers::Id,               nodeId,                 nullptr);
+    node.setProperty(ArsNovaUI::CanvasIdentifiers::XPosition,        position.x,             nullptr);
+    node.setProperty(ArsNovaUI::CanvasIdentifiers::YPosition,        position.y,             nullptr);
     node.setProperty(ValueTreeIdentifiers::OrnamentOffset,   0,                      nullptr);
     node.setProperty(ValueTreeIdentifiers::OrnamentVelocity, defaultVelocityPercent, nullptr);
 
-    node.appendChild(juce::ValueTree(ValueTreeIdentifiers::NodeChildrenIds), nullptr);
+    node.appendChild(juce::ValueTree(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds), nullptr);
 
     if (parent.isValid()) {
         juce::ValueTree connection {ValueTreeIdentifiers::NodeId};
 
-        connection.setProperty(ValueTreeIdentifiers::Id, nodeId, nullptr);
+        connection.setProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId, nullptr);
 
         ArrowBindingOps::setArrowInfo(connection, arrowInfo, nullptr);
 
-        parent.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).appendChild(connection, undoManager);
-        parent.removeChild(parent.getChildWithName(ValueTreeIdentifiers::DanglingArrows), undoManager);
+        parent.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).appendChild(connection, undoManager);
+        parent.removeChild(parent.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows), undoManager);
     }
 
     ornament.setProperty(ValueTreeIdentifiers::NextFigureNodeId, nodeId + 1, undoManager);
@@ -590,7 +591,7 @@ bool OrnamentLibraries::isPublishable(const juce::ValueTree& ornament) const
         totalWeight += step.durationWeight;
     }
 
-    return figure.getChildWithProperty(ValueTreeIdentifiers::Id, figure.getProperty(ValueTreeIdentifiers::OrnamentHostId, noHostId)).isValid()
+    return figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, figure.getProperty(ValueTreeIdentifiers::OrnamentHostId, noHostId)).isValid()
            && figure.getNumChildren() > 1 && totalWeight > 0;
 }
 
@@ -603,13 +604,13 @@ std::vector<OrnamentStep> OrnamentLibraries::figureSteps(const juce::ValueTree& 
     int                       previousDurationWeight = 0;
 
     for (const juce::ValueTree& candidate : figure) {
-        for (const juce::ValueTree& connection : candidate.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds)) {
-            pointedAt.insert(static_cast<int>(connection.getProperty(ValueTreeIdentifiers::Id)));
+        for (const juce::ValueTree& connection : candidate.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds)) {
+            pointedAt.insert(static_cast<int>(connection.getProperty(ArsNovaUI::CanvasIdentifiers::Id)));
         }
     }
 
     for (const juce::ValueTree& candidate : figure) {
-        if (pointedAt.count(static_cast<int>(candidate.getProperty(ValueTreeIdentifiers::Id))) == 0) {
+        if (pointedAt.count(static_cast<int>(candidate.getProperty(ArsNovaUI::CanvasIdentifiers::Id))) == 0) {
             node = candidate;
 
             break;
@@ -617,33 +618,33 @@ std::vector<OrnamentStep> OrnamentLibraries::figureSteps(const juce::ValueTree& 
     }
 
     for (int visited = 0; node.isValid() && visited < figure.getNumChildren(); ++visited) {
-        const juce::ValueTree connection    = node.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds).getChild(0);
-        const juce::ValueTree danglingArrow = node.getChildWithName(ValueTreeIdentifiers::DanglingArrows).getChild(0);
-        const int             nodeX         = node.getProperty(ValueTreeIdentifiers::XPosition);
-        const int             nodeY         = node.getProperty(ValueTreeIdentifiers::YPosition);
+        const juce::ValueTree connection    = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getChild(0);
+        const juce::ValueTree danglingArrow = node.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows).getChild(0);
+        const int             nodeX         = node.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition);
+        const int             nodeY         = node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition);
         juce::ValueTree       next;
         OrnamentStep          step { OrnamentNodeKind::Note, node.getProperty(ValueTreeIdentifiers::OrnamentOffset),
                                      node.getProperty(ValueTreeIdentifiers::OrnamentVelocity), 0 };
 
         if (connection.isValid()) {
-            next = figure.getChildWithProperty(ValueTreeIdentifiers::Id, connection.getProperty(ValueTreeIdentifiers::Id));
+            next = figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, connection.getProperty(ArsNovaUI::CanvasIdentifiers::Id));
         }
 
-        if (static_cast<int>(node.getProperty(ValueTreeIdentifiers::Id)) == hostId) {
+        if (static_cast<int>(node.getProperty(ArsNovaUI::CanvasIdentifiers::Id)) == hostId) {
             step.kind = OrnamentNodeKind::Host;
         }
 
         if (next.isValid()) {
             step.durationWeight = ArrowInfo::Settings::durationFromDelta(ArrowBindingOps::getArrowInfo(connection),
-                                                               static_cast<int>(next.getProperty(ValueTreeIdentifiers::XPosition)) - nodeX,
-                                                               static_cast<int>(next.getProperty(ValueTreeIdentifiers::YPosition)) - nodeY);
+                                                               static_cast<int>(next.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition)) - nodeX,
+                                                               static_cast<int>(next.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition)) - nodeY);
 
             previousDurationWeight = step.durationWeight;
         }
         else if (danglingArrow.isValid()) {
             step.durationWeight = ArrowInfo::Settings::durationFromDelta(ArrowBindingOps::getArrowInfo(danglingArrow),
-                                                               danglingArrow.getProperty(ValueTreeIdentifiers::ArrowTipX),
-                                                               danglingArrow.getProperty(ValueTreeIdentifiers::ArrowTipY));
+                                                               danglingArrow.getProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipX),
+                                                               danglingArrow.getProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipY));
         }
         else {
             step.durationWeight = previousDurationWeight;

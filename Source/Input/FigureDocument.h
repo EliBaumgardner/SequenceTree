@@ -1,9 +1,10 @@
 #pragma once
 
-#include "CanvasDocument.h"
+#include <ArsNovaUI/Canvas/CanvasDocument.h>
+#include <ArsNovaUI/Canvas/CanvasNode.h>
 
 /*
-    The CanvasDocument for an ornament's figure: each edit the figure canvas makes, carried out on
+    The ArsNovaUI::CanvasDocument for an ornament's figure: each edit the figure canvas makes, carried out on
     the OrnamentFigure tree of ornament through OrnamentLibraries, which holds the figure's rules.
     A figure is one chain of nodes, each pointing at the next, and only its last node may grow a
     child (growFrom answers -1 for the others) or carry the one dangling arrow, whose tip sets
@@ -18,7 +19,7 @@
 
 class OrnamentLibraries;
 
-class FigureDocument : public CanvasDocument
+class FigureDocument : public ArsNovaUI::CanvasDocument
 {
 public:
 
@@ -40,7 +41,7 @@ public:
     void connect   (int parentNodeId, int childNodeId, ConnectionGesture gesture) override;
     void disconnect(int startNodeId, int endNodeId) override;
 
-    bool canConnect(const Node& startNode, const Node& endNode) const override;
+    bool canConnect(const ArsNovaUI::CanvasNode& startNode, const ArsNovaUI::CanvasNode& endNode) const override;
 
     juce::ValueTree ornament;
 

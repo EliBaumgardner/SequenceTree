@@ -15,7 +15,6 @@ const juce::Identifier ValueTreeIdentifiers::TraversalFlagData    {"TraversalFla
 const juce::Identifier ValueTreeIdentifiers::ModulatorData        {"ModulatorData"};
 const juce::Identifier ValueTreeIdentifiers::AlternativeModulatorData {"AlternativeModulatorData"};
 
-const juce::Identifier ValueTreeIdentifiers::NodeChildrenIds      {"NodeChildrenIds"};
 const juce::Identifier ValueTreeIdentifiers::EncapsulatedIds      {"EncapsulatedIds"};
 const juce::Identifier ValueTreeIdentifiers::EncapsulatorId       {"EncapsulatorId"};
 const juce::Identifier ValueTreeIdentifiers::EncapsulatorLabel    {"EncapsulatorLabel"};
@@ -25,10 +24,6 @@ const juce::Identifier ValueTreeIdentifiers::SelectionClipboard   {"SelectionCli
 const juce::Identifier ValueTreeIdentifiers::MidiNotesData        {"MidiNotesData"};
 const juce::Identifier ValueTreeIdentifiers::MidiNoteData         {"MidiNoteData"};
 
-const juce::Identifier ValueTreeIdentifiers::DanglingArrows       {"DanglingArrows"};
-const juce::Identifier ValueTreeIdentifiers::DanglingArrow        {"DanglingArrow"};
-const juce::Identifier ValueTreeIdentifiers::ArrowTipX            {"ArrowTipX"};
-const juce::Identifier ValueTreeIdentifiers::ArrowTipY            {"ArrowTipY"};
 const juce::Identifier ValueTreeIdentifiers::ArrowType            {"ArrowType"};
 const juce::Identifier ValueTreeIdentifiers::ArrowXBinding        {"ArrowXBinding"};
 const juce::Identifier ValueTreeIdentifiers::ArrowYBinding        {"ArrowYBinding"};
@@ -38,7 +33,6 @@ const juce::Identifier ValueTreeIdentifiers::ArrowPitchOffset     {"ArrowPitchOf
 const juce::Identifier ValueTreeIdentifiers::ArrowDuration         {"ArrowDuration"};
 const juce::Identifier ValueTreeIdentifiers::ArrowSync             {"ArrowSync"};
 
-const juce::Identifier ValueTreeIdentifiers::Id                   {"Id"};
 const juce::Identifier ValueTreeIdentifiers::RootNodeId           {"RootNodeId"};
 
 const juce::Identifier ValueTreeIdentifiers::NodeId               {"NodeId"};
@@ -52,8 +46,6 @@ const juce::Identifier ValueTreeIdentifiers::SubLoopCountLimit    {"SubLoopCount
 const juce::Identifier ValueTreeIdentifiers::RepeatValue          {"RepeatValue"};
 const juce::Identifier ValueTreeIdentifiers::Probability          {"Probability"};
 
-const juce::Identifier ValueTreeIdentifiers::XPosition            {"XPosition"};
-const juce::Identifier ValueTreeIdentifiers::YPosition            {"YPosition"};
 const juce::Identifier ValueTreeIdentifiers::Radius               {"Radius"};
 const juce::Identifier ValueTreeIdentifiers::NodeColour           {"NodeColour"};
 
