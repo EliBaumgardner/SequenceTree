@@ -4,15 +4,16 @@
 #include "../UI/Node/Arrow.h"
 #include "../UI/Node/Encapsulator.h"
 #include "../UI/Menus/AllowedTraversalsMenu.h"
-#include "../Graph/NodeFactory.h"
 #include "../Graph/GraphState.h"
+#include "GraphDocument.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Menus/ContextMenu.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
-ArrowGestures::ArrowGestures(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager)
+ArrowGestures::ArrowGestures(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& document, juce::UndoManager& undoManager)
     : nodeCanvas(nodeCanvas),
       graphState(graphState),
+      document(document),
       undoManager(undoManager)
 {
 }
@@ -92,7 +93,7 @@ void ArrowGestures::finishTip()
     if (targetNode == nullptr && finishedGesture == TipGesture::MovingDanglingTip) {
         undoManager.beginNewTransaction();
 
-        NodeFactory::setDanglingArrowTip(graphState, draggedArrow->arrowTree, draggedArrow->tipOffset, &undoManager);
+        document.setDanglingArrowTip(draggedArrow->arrowTree, draggedArrow->tipOffset);
         return;
     }
 
@@ -108,16 +109,13 @@ void ArrowGestures::finishTip()
     if (targetNode != nullptr && sourceNode != nullptr && sourceNode->nodeArrows.count(targetNode->nodeId) == 0) {
         undoManager.beginNewTransaction();
 
-        graphState.connectNodes(sourceNode->nodeId, targetNode->nodeId, &undoManager);
-
-        NodeFactory::applyArrowInfo(graphState, sourceNode->nodeId, targetNode->nodeId, nodeCanvas.arrowManager.currentArrowInfo,
-                                    ArrowInfo::Type::StepIntoTree, &undoManager);
+        document.connect(sourceNode->nodeId, targetNode->nodeId, CanvasDocument::ConnectionGesture::TipOntoNode);
 
         nodeCanvas.arrowManager.connectWithSnapAnimation(sourceNode->nodeId, targetNode->nodeId);
     }
 
     if (targetNode != nullptr && finishedGesture == TipGesture::MovingDanglingTip) {
-        NodeFactory::destroyDanglingArrow(draggedArrow->arrowTree, &undoManager);
+        document.removeDanglingArrow(draggedArrow->arrowTree);
     }
 }
 
@@ -160,7 +158,7 @@ void ArrowGestures::removeArrow(Arrow& arrow)
     if (arrow.isDangling()) {
         undoManager.beginNewTransaction();
 
-        NodeFactory::destroyDanglingArrow(arrow.arrowTree, &undoManager);
+        document.removeDanglingArrow(arrow.arrowTree);
         return;
     }
 
@@ -168,16 +166,9 @@ void ArrowGestures::removeArrow(Arrow& arrow)
         return;
     }
 
-    const auto [ownerNodeId, childNodeId] = resolveOwnership(&arrow);
-
     undoManager.beginNewTransaction();
 
-    if (graphState.getNode(childNodeId).getType() == ValueTreeIdentifiers::TraversalFlagData) {
-        graphState.removeNode(childNodeId, &undoManager);
-        return;
-    }
-
-    graphState.disconnectNodes(ownerNodeId, childNodeId, &undoManager);
+    document.disconnect(arrow.startNode->nodeId, arrow.endNode->nodeId);
 }
 
 void ArrowGestures::showArrowContextMenu(Arrow* arrow)
@@ -296,7 +287,7 @@ void ArrowGestures::setArrowType(const Arrow* arrow, ArrowInfo::Type arrowType)
         return;
     }
 
-    const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
+    const auto [ownerNodeId, childNodeId] = document.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
 
     const juce::ValueTree connection = graphState.getConnection(ownerNodeId, childNodeId);
 
@@ -313,7 +304,7 @@ void ArrowGestures::setArrowSync(const Arrow* arrow, bool shouldSync)
         return;
     }
 
-    const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
+    const auto [ownerNodeId, childNodeId] = document.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
 
     const juce::ValueTree connection = graphState.getConnection(ownerNodeId, childNodeId);
 
@@ -330,7 +321,7 @@ bool ArrowGestures::canBeTraversalArrow(const Arrow* arrow) const
         return false;
     }
 
-    const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
+    const auto [ownerNodeId, childNodeId] = document.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
 
     return graphState.connectsToOtherTreeRoot(ownerNodeId, childNodeId);
 }
@@ -341,7 +332,7 @@ bool ArrowGestures::connectsToModulatorRoot(const Arrow* arrow) const
         return false;
     }
 
-    const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
+    const auto [ownerNodeId, childNodeId] = document.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
 
     const juce::ValueTree childTree = graphState.getNode(childNodeId);
 
@@ -358,7 +349,7 @@ juce::ValueTree ArrowGestures::connectionTreeFor(const Arrow* arrow) const
         return arrow->arrowTree;
     }
 
-    const auto [ownerNodeId, childNodeId] = resolveOwnership(arrow);
+    const auto [ownerNodeId, childNodeId] = document.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
 
     juce::ValueTree ownerTree     = graphState.getNode(ownerNodeId);
     juce::ValueTree ownerChildren = ownerTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
@@ -366,18 +357,3 @@ juce::ValueTree ArrowGestures::connectionTreeFor(const Arrow* arrow) const
     return ownerChildren.getChildWithProperty(ValueTreeIdentifiers::Id, childNodeId);
 }
 
-ArrowGestures::ArrowOwnership ArrowGestures::resolveOwnership(const Arrow* arrow) const
-{
-    const int startId = arrow->startNode->nodeId;
-    const int endId   = arrow->endNode->nodeId;
-
-    juce::ValueTree startTree     = graphState.getNode(startId);
-    juce::ValueTree startChildren = startTree.getChildWithName(ValueTreeIdentifiers::NodeChildrenIds);
-    bool startOwnsEnd = startChildren.getChildWithProperty(ValueTreeIdentifiers::Id, endId).isValid();
-
-    if (startOwnsEnd) {
-        return { startId, endId };
-    }
-
-    return { endId, startId };
-}

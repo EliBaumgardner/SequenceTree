@@ -4,11 +4,13 @@
 #include "../../Audio/TraversalSession.h"
 #include "../../Util/NodeInfo.h"
 #include "../../Graph/OrnamentLibraries.h"
+#include "../../Input/GraphDocument.h"
 
-BottomBar::BottomBar(NodeCanvas& nodeCanvas, TraversalSession& traversalSession, juce::ValueTree colourPresets, juce::UndoManager& undoManager,
-                     OrnamentLibraries& ornamentLibraries, juce::UndoManager& ornamentUndoManager)
+BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, TraversalSession& traversalSession, juce::ValueTree colourPresets,
+                     juce::UndoManager& undoManager, OrnamentLibraries& ornamentLibraries, juce::UndoManager& ornamentUndoManager)
     : ArsNovaUI::Bar(nodeCanvas, Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
       nodeCanvas(nodeCanvas),
+      graphDocument(graphDocument),
       traversalSession(traversalSession),
       ornamentLibraries(ornamentLibraries),
       ornamentUndoManager(ornamentUndoManager),
@@ -207,7 +209,7 @@ void BottomBar::showActiveOrnamentName()
 
 void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
 {
-    const ArrowInfo::Settings& arrowInfo = nodeCanvas.arrowManager.currentArrowInfo;
+    const ArrowInfo::Settings& arrowInfo = graphDocument.currentArrowInfo;
 
     axis.button = &bindPane.addButton(nullptr, text + " Binding", [this, &axis]() { toggleAxis(axis); });
 
@@ -227,7 +229,7 @@ void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
     axis.multiplierSlider.boundValue.setValue(arrowInfo.*axis.multiplier);
 
     axis.multiplierSlider.onValueChange = [this, &axis]() {
-        nodeCanvas.arrowManager.currentArrowInfo.*axis.multiplier = static_cast<double>(axis.multiplierSlider.boundValue.getValue());
+        graphDocument.currentArrowInfo.*axis.multiplier = static_cast<double>(axis.multiplierSlider.boundValue.getValue());
     };
 
     axis.button->setSelected(arrowInfo.*axis.binding != ArrowInfo::Binding::NoBind);
@@ -235,7 +237,7 @@ void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
 
 void BottomBar::toggleAxis(BindAxis& axis)
 {
-    ArrowInfo::Settings& arrowInfo = nodeCanvas.arrowManager.currentArrowInfo;
+    ArrowInfo::Settings& arrowInfo = graphDocument.currentArrowInfo;
 
     if (arrowInfo.*axis.binding == ArrowInfo::Binding::NoBind) {
         arrowInfo.*axis.binding = axis.target;
@@ -249,13 +251,13 @@ void BottomBar::toggleAxis(BindAxis& axis)
 
 void BottomBar::showAxisMenu(BindAxis& axis)
 {
-    const ArrowInfo::Binding binding = nodeCanvas.arrowManager.currentArrowInfo.*axis.binding;
+    const ArrowInfo::Binding binding = graphDocument.currentArrowInfo.*axis.binding;
     ArsNovaUI::ContextMenu   menu;
 
     for (const BindTarget& target : bindTargets) {
         menu.addItem(target.label, ArsNovaUI::ContextMenu::ItemKind::Toggle, [this, &axis, bound = target.binding]() {
-            axis.target                                        = bound;
-            nodeCanvas.arrowManager.currentArrowInfo.*axis.binding = bound;
+            axis.target                            = bound;
+            graphDocument.currentArrowInfo.*axis.binding = bound;
 
             axis.button->setSelected(true);
         }, true, binding == target.binding);

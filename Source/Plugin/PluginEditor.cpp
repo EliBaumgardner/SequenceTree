@@ -3,7 +3,7 @@
 #include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
 
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
-: AudioProcessorEditor(p), audioProcessor(p)
+: AudioProcessorEditor(p), audioProcessor(p), graphDocument(p.graphState, p.undoManager)
 {
     juce::PropertiesFile::Options interfaceSettingsOptions;
 
@@ -23,12 +23,12 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     tooltipWindow.setOpaque(false);
 
     scaledView     = std::make_unique<ArsNovaUI::ScaledView>(workspace, *interfaceSettings);
-    nodeCanvas     = std::make_unique<NodeCanvas>(p, p.graphState, p.rtGraphBuilder, p.undoManager, lookAndFeel);
-    nodeController = std::make_unique<NodeController>(*nodeCanvas, p.graphState, p.undoManager, p.traversalSession, p.rtGraphBuilder, p.ornamentLibraries);
+    nodeCanvas     = std::make_unique<NodeCanvas>(p, p.graphState, graphDocument, p.rtGraphBuilder, p.undoManager, lookAndFeel);
+    nodeController = std::make_unique<NodeController>(*nodeCanvas, p.graphState, graphDocument, p.undoManager, p.traversalSession, p.rtGraphBuilder, p.ornamentLibraries);
     port           = std::make_unique<ArsNovaUI::DynamicPort>(*nodeCanvas);
     menuArea       = std::make_unique<MenuArea>(*nodeCanvas, p.graphState, p.traversalRuleState, p.snapshots, *interfaceSettings, *scaledView, p.colourPresets, p.undoManager);
-    titleBar       = std::make_unique<Titlebar>(p, *nodeCanvas, *nodeController, p.undoManager);
-    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, p.traversalSession, p.colourPresets, p.undoManager, p.ornamentLibraries, p.ornamentUndoManager);
+    titleBar       = std::make_unique<Titlebar>(p, *nodeCanvas, *nodeController, graphDocument, p.undoManager);
+    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, graphDocument, p.traversalSession, p.colourPresets, p.undoManager, p.ornamentLibraries, p.ornamentUndoManager);
     canvasFrame    = std::make_unique<CanvasFrame>(*nodeCanvas, *menuArea, *titleBar, *bottomBar);
 
     titleBar->onDisplayModeChanged = [this](NodeInfo::DisplayMode mode) { bottomBar->applyDisplayMode(mode); };

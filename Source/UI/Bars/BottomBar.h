@@ -26,7 +26,7 @@
     repeat the preview, which goes to the audio thread as a preview request on TraversalSession.
     Right-clicking the ornament button rescans the OrnamentLibraries and opens the OrnamentWindow;
     the button shows the active ornament's symbol and name, updated when the libraries tree
-    changes. Each bind button turns its axis of ArrowManager::currentArrowInfo on or off, and its
+    changes. Each bind button turns its axis of GraphDocument::currentArrowInfo on or off, and its
     right-click menu picks pitch or duration and a multiplier from 0.25x to 4x. applyDisplayMode
     sets the paint layer when Titlebar changes the display mode.
 
@@ -34,6 +34,7 @@
 */
 
 class NodeCanvas;
+class GraphDocument;
 class TraversalSession;
 class OrnamentLibraries;
 
@@ -42,8 +43,8 @@ class BottomBar : public ArsNovaUI::Bar, private juce::ValueTree::Listener
 {
 public:
 
-    BottomBar(NodeCanvas& nodeCanvas, TraversalSession& traversalSession, juce::ValueTree colourPresets, juce::UndoManager& undoManager,
-              OrnamentLibraries& ornamentLibraries, juce::UndoManager& ornamentUndoManager);
+    BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, TraversalSession& traversalSession, juce::ValueTree colourPresets,
+              juce::UndoManager& undoManager, OrnamentLibraries& ornamentLibraries, juce::UndoManager& ornamentUndoManager);
 
     ~BottomBar() override;
 
@@ -100,6 +101,7 @@ private:
     static constexpr int quaverPaneWidth       = 67;
 
     NodeCanvas&        nodeCanvas;
+    GraphDocument&     graphDocument;
     TraversalSession&  traversalSession;
     OrnamentLibraries& ornamentLibraries;
     juce::UndoManager& ornamentUndoManager;

@@ -4,16 +4,18 @@
 #include "../UI/Node/Arrow.h"
 #include "../Graph/GraphState.h"
 #include "../Plugin/PluginProcessor.h"
+#include "GraphDocument.h"
 #include <ArsNovaUI/Canvas/DynamicPort.h>
 
-NodeController::NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager, TraversalSession& traversalSession,
-                               RTGraphBuilder& rtGraphBuilder, OrnamentLibraries& ornamentLibraries)
+NodeController::NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& graphDocument, juce::UndoManager& undoManager,
+                               TraversalSession& traversalSession, RTGraphBuilder& rtGraphBuilder, OrnamentLibraries& ornamentLibraries)
     : selectionGestures(graphState, undoManager, nodeCanvas),
       ornamentApplier(nodeCanvas, ornamentLibraries, undoManager),
-      arrowGestures(nodeCanvas, graphState, undoManager),
-      nodeGestures(nodeCanvas, graphState, undoManager),
+      arrowGestures(nodeCanvas, graphState, graphDocument, undoManager),
+      nodeGestures(nodeCanvas, graphState, graphDocument, undoManager),
       encapsulationGestures(nodeCanvas, graphState, undoManager),
       graphState(graphState),
+      graphDocument(graphDocument),
       undoManager(undoManager),
       traversalSession(traversalSession),
       rtGraphBuilder(rtGraphBuilder),
@@ -316,7 +318,7 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
     if (e.mods.isRightButtonDown() && e.mods.isShiftDown()) {
         undoManager.beginNewTransaction();
 
-        graphState.removeNode(nodeId, &undoManager);
+        graphDocument.removeNode(nodeId);
     }
     else {
         node.setSelectVisual();

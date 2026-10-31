@@ -16,24 +16,25 @@
     updateHover bolds the arrow under the cursor and fades in the arrows of nearby flags.
     removeArrow deletes a dangling arrow, a flag, or the connection between two nodes. The context
     menu opens the allowed-traversals window and toggles an arrow's traversal type and sync,
-    through setArrowType and setArrowSync, after resolveOwnership finds which node the arrow
-    belongs to.
+    through setArrowType and setArrowSync, after GraphDocument::ownershipOf finds which node the
+    arrow belongs to.
 
     NodeController decides when a press belongs here and uses the grab radii for its hit tests;
-    Titlebar sets arrowMode. Every edit goes through GraphState and NodeFactory in its own undo
-    transaction.
+    Titlebar sets arrowMode. Every edit goes through GraphDocument, or GraphState for the menu's
+    arrow settings, in its own undo transaction.
 */
 
 class Node;
 class Arrow;
 class NodeCanvas;
 class GraphState;
+class GraphDocument;
 
 class ArrowGestures
 {
 public:
 
-    ArrowGestures(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager);
+    ArrowGestures(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& document, juce::UndoManager& undoManager);
 
     void beginMovingTip(Arrow& danglingArrow);
     void dragTip       (juce::Point<int> cursor);
@@ -55,8 +56,6 @@ public:
 
 private:
 
-    struct ArrowOwnership;
-
     Node* findTipSnapTarget(const Node& startNode, juce::Point<int> tip) const;
 
     void setArrowType(const Arrow* arrow, ArrowInfo::Type arrowType);
@@ -67,21 +66,14 @@ private:
 
     juce::ValueTree connectionTreeFor(const Arrow* arrow) const;
 
-    ArrowOwnership resolveOwnership(const Arrow* arrow) const;
-
     enum class TipGesture { None, MovingDanglingTip, CreatingDanglingArrow, ConnectingFlag };
-
-    struct ArrowOwnership
-    {
-        int ownerNodeId;
-        int childNodeId;
-    };
 
     static constexpr float flagProximityRadius = 28.0f;
     static constexpr float flagSnapThreshold   = 20.0f;
 
     NodeCanvas&                    nodeCanvas;
     GraphState&                    graphState;
+    GraphDocument&                 document;
     juce::UndoManager&             undoManager;
     ArsNovaUI::PopupWindowLauncher allowedTraversalsLauncher { "Allowed Traversals" };
 

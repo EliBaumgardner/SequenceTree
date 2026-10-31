@@ -3,55 +3,44 @@
 #include "../UI/Node/Node.h"
 #include "../UI/Node/Arrow.h"
 #include "../UI/Node/Encapsulator.h"
-#include "../Graph/NodeFactory.h"
 #include "../Graph/GraphState.h"
 #include "../Graph/ValueTreeIdentifiers.h"
-#include <ArsNovaUI/Theme/Theme.h>
+#include "GraphDocument.h"
 
-NodeGestures::NodeGestures(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager)
+NodeGestures::NodeGestures(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& document, juce::UndoManager& undoManager)
     : nodeCanvas(nodeCanvas),
       graphState(graphState),
+      document(document),
       undoManager(undoManager)
 {
 }
 
 void NodeGestures::createRootNode(juce::Point<float> clickPoint)
 {
-    NodeInfo::Position nodePosition;
-
-    nodePosition.xPosition = juce::roundToInt(clickPoint.x);
-    nodePosition.yPosition = juce::roundToInt(clickPoint.y);
-    nodePosition.radius    = ArsNovaUI::Theme::nodeRadius;
-
     undoManager.beginNewTransaction();
 
-    NodeFactory::createRootNode(graphState, nodePosition, &undoManager);
+    document.addRootNode(clickPoint.roundToInt());
 }
 
 void NodeGestures::respondToDrag(Node& node, juce::Point<int> cursor, const juce::ModifierKeys& mods)
 {
     const int nodeId = node.nodeId;
 
-    NodeInfo::Position newPosition;
-
-    newPosition.xPosition = cursor.x;
-    newPosition.yPosition = cursor.y;
-    newPosition.radius    = ArsNovaUI::Theme::nodeRadius;
-
     if (! mods.isShiftDown() && ! draggedNodeTree.isValid()) {
-        handleNodeDrag(nodeId, newPosition);
+        handleNodeDrag(nodeId, cursor);
         return;
     }
 
     if (isDragStart) {
         isDragStart = false;
 
-        handleNodeDragStart(&node, nodeId, newPosition, mods);
+        handleNodeDragStart(&node, nodeId, cursor, mods);
         return;
     }
 
     if (draggedNodeTree.isValid()) {
-        snapToGrid(newPosition, draggedNodeTree);
+        document.moveNode(draggedNodeTree, snapToGrid(cursor, draggedNodeTree));
+
         checkRootNodeSnap(cursor);
     }
 }
@@ -77,17 +66,11 @@ void NodeGestures::finishDrag()
 
 void NodeGestures::dragArrowHead(juce::Point<int> cursor)
 {
-    NodeInfo::Position newPosition;
-
     if (arrowHeadNode == nullptr) {
         return;
     }
 
-    newPosition.xPosition = cursor.x;
-    newPosition.yPosition = cursor.y;
-    newPosition.radius    = ArsNovaUI::Theme::nodeRadius;
-
-    handleNodeDrag(arrowHeadNode->nodeId, newPosition);
+    handleNodeDrag(arrowHeadNode->nodeId, cursor);
 }
 
 void NodeGestures::finishArrowHeadDrag()
@@ -106,8 +89,10 @@ void NodeGestures::finishArrowHeadDrag()
     nodeCanvas.arrowManager.triggerSnapForNode(headNode->nodeId);
 }
 
-void NodeGestures::handleNodeDrag(int nodeId, NodeInfo::Position newPosition)
+void NodeGestures::handleNodeDrag(int nodeId, juce::Point<int> cursor)
 {
+    const juce::ValueTree nodeTree = document.findNode(nodeId);
+
     if (isDragStart) {
         isDragStart                           = false;
         nodeCanvas.arrowManager.nodesDragging = true;
@@ -117,18 +102,10 @@ void NodeGestures::handleNodeDrag(int nodeId, NodeInfo::Position newPosition)
         nodeCanvas.showGrid();
     }
 
-    juce::ValueTree    nodeValueTree = graphState.getNode(nodeId);
-    NodeInfo::Position oldPosition   = graphState.getNodePosition(nodeId);
-
-    snapToGrid(newPosition, nodeValueTree);
-
-    int deltaX = newPosition.xPosition - oldPosition.xPosition;
-    int deltaY = newPosition.yPosition - oldPosition.yPosition;
-
-    nodeCanvas.nodeManager.moveDescendants(nodeValueTree, deltaX, deltaY);
+    document.moveNode(nodeTree, snapToGrid(cursor, nodeTree));
 }
 
-void NodeGestures::handleNodeDragStart(Node* node, int nodeId, NodeInfo::Position newPosition, const juce::ModifierKeys& mods)
+void NodeGestures::handleNodeDragStart(Node* node, int nodeId, juce::Point<int> cursor, const juce::ModifierKeys& mods)
 {
     int parentNodeId = nodeId;
 
@@ -144,8 +121,6 @@ void NodeGestures::handleNodeDragStart(Node* node, int nodeId, NodeInfo::Positio
         return;
     }
 
-    const juce::Identifier nodeType = parentNode->nodeValueTree.getType();
-
     undoManager.beginNewTransaction();
 
     nodeCanvas.showGrid();
@@ -153,20 +128,14 @@ void NodeGestures::handleNodeDragStart(Node* node, int nodeId, NodeInfo::Positio
     snapSourceNodeId                      = parentNodeId;
     nodeCanvas.arrowManager.nodesDragging = true;
 
-    const NodeInfo::Position parentPosition = graphState.getNodePosition(parentNodeId);
-    const juce::Point<int>   parentCentre   = parentNode->getNodeCentre();
+    const juce::Point<int> parentPosition { parentNode->nodeValueTree.getProperty(ValueTreeIdentifiers::XPosition), parentNode->nodeValueTree.getProperty(ValueTreeIdentifiers::YPosition) };
+    const juce::Point<int> parentCentre   = parentNode->getNodeCentre();
 
-    newPosition.xPosition += parentPosition.xPosition - parentCentre.x;
-    newPosition.yPosition += parentPosition.yPosition - parentCentre.y;
-
-    draggedNodeTree = NodeFactory::create(creationMode, graphState, parentNodeId, nodeType, mods.isCtrlDown() && mods.isShiftDown(), newPosition, &undoManager);
+    draggedNodeTree = document.addChildNode(parentNodeId, cursor + parentPosition - parentCentre, mods);
 
     if (! draggedNodeTree.isValid()) {
         return;
     }
-
-    NodeFactory::applyArrowInfo(graphState, parentNodeId, draggedNodeTree.getProperty(ValueTreeIdentifiers::Id), nodeCanvas.arrowManager.currentArrowInfo,
-                                ArrowInfo::Type::StepIntoTree, &undoManager);
 
     const int owningEncapsulatorId = parentNode->nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
@@ -183,17 +152,6 @@ void NodeGestures::handleNodeDragStart(Node* node, int nodeId, NodeInfo::Positio
     graphState.encapsulation.insertNodeAfter(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id), parentNodeId, &undoManager);
 }
 
-void NodeGestures::snapToGrid(NodeInfo::Position& newPosition, juce::ValueTree draggedNodeTree)
-{
-    const int              draggedNodeId = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
-    const juce::Point<int> collapseShift = nodeCanvas.encapsulationView.collapsedSpanShift(draggedNodeId);
-    const juce::Point<int> snapped       = nodeCanvas.snapPointToGrid({ newPosition.xPosition - collapseShift.x, newPosition.yPosition - collapseShift.y });
-
-    newPosition.xPosition = snapped.x;
-    newPosition.yPosition = snapped.y;
-
-    graphState.setNodePosition(draggedNodeTree, newPosition, &undoManager);
-}
 
 void NodeGestures::checkRootNodeSnap(juce::Point<int> canvasPoint)
 {
@@ -250,9 +208,7 @@ void NodeGestures::connectDraggedNodeToRoot()
 
     undoManager.beginNewTransaction();
 
-    graphState.connectNodes(parentNodeId, rootNodeId, &undoManager);
-
-    NodeFactory::applyArrowInfo(graphState, parentNodeId, rootNodeId, nodeCanvas.arrowManager.currentArrowInfo, ArrowInfo::Type::CrossRootTree, &undoManager);
+    document.connect(parentNodeId, rootNodeId, CanvasDocument::ConnectionGesture::NodeOntoRoot);
 
     nodeCanvas.arrowManager.connectWithSnapAnimation(parentNodeId, rootNodeId);
 }
@@ -279,4 +235,11 @@ void NodeGestures::setDraggedNodeVisible(bool shouldBeVisible)
     if (arrowIt != sourceNode->nodeArrows.end()) {
         arrowIt->second->setVisible(shouldBeVisible);
     }
+}
+
+juce::Point<int> NodeGestures::snapToGrid(juce::Point<int> position, const juce::ValueTree& nodeTree) const
+{
+    const juce::Point<int> collapseShift = nodeCanvas.encapsulationView.collapsedSpanShift(nodeTree.getProperty(ValueTreeIdentifiers::Id));
+
+    return nodeCanvas.snapPointToGrid(position - collapseShift);
 }

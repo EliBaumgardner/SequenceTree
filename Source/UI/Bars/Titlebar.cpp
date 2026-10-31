@@ -1,14 +1,17 @@
 #include "../Canvas/NodeCanvas.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Plugin/PluginProcessor.h"
+#include "../../Input/GraphDocument.h"
 
 #include "Titlebar.h"
 
-Titlebar::Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas, NodeController& nodeController, juce::UndoManager& undoManager)
+Titlebar::Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas, NodeController& nodeController, GraphDocument& graphDocument,
+                   juce::UndoManager& undoManager)
     : ArsNovaUI::Bar(nodeCanvas, Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
       processor(processor),
       nodeCanvas(nodeCanvas),
       nodeController(nodeController),
+      graphDocument(graphDocument),
       undoManager(undoManager),
       displaySelector(undoManager),
       tempoDisplay(undoManager),
@@ -122,13 +125,13 @@ void Titlebar::configureModePane()
     };
 
     ArsNovaUI::IconButton& nodeButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawCircleIcon, "Node Mode",
-        [this]() { nodeController.nodeGestures.creationMode = NodeCreationMode::Node; });
+        [this]() { graphDocument.creationMode = NodeCreationMode::Node; });
 
     ArsNovaUI::IconButton& modulatorButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRoundedSquareIcon, "Modulator Mode",
-        [this]() { nodeController.nodeGestures.creationMode = NodeCreationMode::Modulator; });
+        [this]() { graphDocument.creationMode = NodeCreationMode::Modulator; });
 
     ArsNovaUI::IconButton& flagButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawTriangleIcon, "Traversal Flag Mode",
-        [this]() { nodeController.nodeGestures.creationMode = NodeCreationMode::TraversalFlag; });
+        [this]() { graphDocument.creationMode = NodeCreationMode::TraversalFlag; });
 
     nodeButton.state.look      = ArsNovaUI::ButtonState::Look::Raised;
     modulatorButton.state.look = ArsNovaUI::ButtonState::Look::Raised;

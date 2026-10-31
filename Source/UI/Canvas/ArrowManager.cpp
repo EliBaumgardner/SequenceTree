@@ -7,7 +7,7 @@
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Graph/RTGraphBuilder.h"
-#include "../../Graph/NodeFactory.h"
+#include "../../Input/GraphDocument.h"
 
 ArrowManager::ArrowManager(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager)
     : nodeCanvas(nodeCanvas), graphState(graphState), undoManager(undoManager)
@@ -288,7 +288,7 @@ void ArrowManager::commitPreview()
         return;
     }
 
-    NodeFactory::createDanglingArrow(graphState, node->nodeValueTree, tipOffset, currentArrowInfo, &undoManager);
+    nodeCanvas.graphDocument.addDanglingArrow(node->nodeValueTree, tipOffset);
 }
 
 void ArrowManager::showSnapGhost(Node* from, Node* to)

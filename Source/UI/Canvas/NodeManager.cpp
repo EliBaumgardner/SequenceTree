@@ -213,47 +213,6 @@ void NodeManager::setPosition(int nodeId)
     nodeCanvas.arrowManager.refreshFor(node);
 }
 
-static std::unordered_set<int> collectAncestorIds(const GraphState& graphState, int nodeId)
-{
-    std::unordered_set<int> ancestors;
-    std::vector<int>        frontier { nodeId };
-
-    while (! frontier.empty()) {
-        const int currentId = frontier.back();
-
-        frontier.pop_back();
-
-        const auto parents = graphState.parentIdsOf.find(currentId);
-
-        if (parents == graphState.parentIdsOf.end()) {
-            continue;
-        }
-
-        for (const int parentId : parents->second) {
-            if (parentId == nodeId) {
-                continue;
-            }
-
-            if (ancestors.insert(parentId).second) {
-                frontier.push_back(parentId);
-            }
-        }
-    }
-
-    return ancestors;
-}
-
-void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY)
-{
-    const int               rootId  = static_cast<int>(nodeValueTree.getProperty(ValueTreeIdentifiers::Id));
-    std::unordered_set<int> visited = collectAncestorIds(graphState, rootId);
-
-    visited.insert(rootId);
-
-    moveEncapsulatorWithEntryMember(rootId, rootId, deltaX, deltaY);
-
-    moveDescendants(nodeValueTree, deltaX, deltaY, visited, rootId);
-}
 
 void NodeManager::setDisplayMode(NodeInfo::DisplayMode mode)
 {
@@ -342,52 +301,3 @@ void NodeManager::connectOutgoingArrows(const juce::ValueTree& nodeValueTree, No
     }
 }
 
-void NodeManager::moveDescendants(juce::ValueTree nodeValueTree, int deltaX, int deltaY,
-                                  std::unordered_set<int>& visited, int draggedNodeId)
-{
-    juce::Identifier childIdListType = ValueTreeIdentifiers::NodeChildrenIds;
-
-    if (nodeValueTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-        childIdListType = ValueTreeIdentifiers::EncapsulatedIds;
-    }
-
-    const juce::ValueTree childIds = nodeValueTree.getChildWithName(childIdListType);
-
-    for (int childIndex = 0; childIndex < childIds.getNumChildren(); ++childIndex) {
-        const int childId = childIds.getChild(childIndex).getProperty(ValueTreeIdentifiers::Id);
-
-        if (! visited.insert(childId).second) {
-            continue;
-        }
-
-        const juce::ValueTree childNodeTree = graphState.getNode(childId);
-        NodeInfo::Position    childPosition = graphState.getNodePosition(childId);
-
-        childPosition.xPosition += deltaX;
-        childPosition.yPosition += deltaY;
-
-        graphState.setNodePosition(childNodeTree, childPosition, &undoManager);
-
-        moveEncapsulatorWithEntryMember(childId, draggedNodeId, deltaX, deltaY);
-
-        moveDescendants(childNodeTree, deltaX, deltaY, visited, draggedNodeId);
-    }
-}
-
-void NodeManager::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY)
-{
-    const int              encapsulatorId = graphState.getNode(nodeId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-    const juce::ValueTree  encapsulator   = graphState.getNode(encapsulatorId);
-    const std::vector<int> memberNodeIds  = graphState.encapsulation.memberIds(encapsulatorId);
-
-    if (memberNodeIds.empty() || encapsulatorId == draggedNodeId || memberNodeIds.front() != nodeId) {
-        return;
-    }
-
-    NodeInfo::Position encapsulatorPosition = graphState.getNodePosition(encapsulatorId);
-
-    encapsulatorPosition.xPosition += deltaX;
-    encapsulatorPosition.yPosition += deltaY;
-
-    graphState.setNodePosition(encapsulator, encapsulatorPosition, &undoManager);
-}
