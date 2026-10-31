@@ -82,6 +82,7 @@ target_sources(SequenceTree PRIVATE
         Source/Input/CanvasController.cpp
         Source/Input/NodeController.cpp
         Source/Input/GraphDocument.cpp
+        Source/Input/FigureDocument.cpp
         Source/Input/ArrowMenu.cpp
         Source/UI/Canvas/CanvasFrame.cpp
         Source/UI/Canvas/EditCanvas.cpp

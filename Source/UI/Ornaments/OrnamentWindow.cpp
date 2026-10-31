@@ -58,7 +58,7 @@ bool OrnamentWindow::keyPressed(const juce::KeyPress& key)
             return true;
         }
 
-        if (buildPanel.controller.arrowMode) {
+        if (buildPanel.controller.arrowGestures.arrowMode) {
             buildPanel.controller.setArrowMode(false);
 
             return true;
