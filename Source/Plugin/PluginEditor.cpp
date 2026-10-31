@@ -23,7 +23,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     tooltipWindow.setOpaque(false);
 
     scaledView     = std::make_unique<ArsNovaUI::ScaledView>(workspace, *interfaceSettings);
-    nodeCanvas     = std::make_unique<NodeCanvas>(p, p.graphState, graphDocument, p.rtGraphBuilder, p.undoManager, lookAndFeel);
+    nodeCanvas     = std::make_unique<NodeCanvas>(p, p.graphState, graphDocument, p.rtGraphBuilder, lookAndFeel);
     nodeController = std::make_unique<NodeController>(*nodeCanvas, p.graphState, graphDocument, p.undoManager, p.traversalSession, p.rtGraphBuilder, p.ornamentLibraries);
     port           = std::make_unique<ArsNovaUI::DynamicPort>(*nodeCanvas);
     menuArea       = std::make_unique<MenuArea>(*nodeCanvas, p.graphState, p.traversalRuleState, p.snapshots, *interfaceSettings, *scaledView, p.colourPresets, p.undoManager);
@@ -208,7 +208,7 @@ bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, ju
     }
 
     if (key == juce::KeyPress('a', command, 0)) {
-        selectionGestures.selectAll();
+        nodeCanvas->nodeManager.selectAll();
         return true;
     }
 

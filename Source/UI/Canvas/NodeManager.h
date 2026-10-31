@@ -9,32 +9,31 @@
 #include "../../Util/NodeInfo.h"
 
 /*
-    The owner of the canvas's Node components: one Node for each node in the graph, kept in a map
-    by node id and added to the NodeCanvas as a child. Which class a node becomes (Node, RootNode,
-    Modulator, TraversalFlagNode or Encapsulator, and whether it is an alternative) follows the
-    type of its tree.
+    The owner of an EditCanvas's Node components: one Node for each node in the canvas's
+    document, kept in a map by node id and added to the canvas as a child. Which class a node
+    becomes is the canvas's choice (EditCanvas::makeNode), and EditCanvas::nodeCreated finishes
+    its setup.
 
     instantiateFromTree builds the component for a tree. add does that for a node just added to
-    the graph, connects its arrows to the nodes it already links to and updates the groups it
-    belongs to; remove undoes that. setPosition moves a component to where the graph says its node
-    is, drawing a node in a collapsed group at the group's position. setDisplayMode,
-    clearHighlights, clearOutlines and setInterceptsClicks
-    apply one change to every node, and equipRootTraversals asks each root to equip its
-    traversals.
+    the document, connects its arrows to the nodes it already links to and calls
+    EditCanvas::nodeAdded; remove calls EditCanvas::nodeRemoving and undoes it. setPosition moves
+    a component to EditCanvas::drawnPosition. setDisplayMode, clearHighlights, clearOutlines and
+    setInterceptsClicks apply one change to every node, equipRootTraversals asks each root to
+    equip its traversals, and selectAll, clearAll and deselectAllExcept change which nodes are
+    selected.
 
-    NodeCanvas::handleAsyncUpdate calls it for NodeAdded, NodeRemoved and NodeMoved updates.
+    EditCanvas::handleAsyncUpdate calls it for NodeAdded, NodeRemoved and NodeMoved updates.
     ArrowManager is its partner for arrows; each calls into the other.
 */
 
-class NodeCanvas;
+class EditCanvas;
 class Node;
-class GraphState;
 
 class NodeManager
 {
 public:
 
-    NodeManager(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager);
+    explicit NodeManager(EditCanvas& canvas);
     ~NodeManager();
 
     const std::unordered_map<int, std::unique_ptr<Node>>& all() const
@@ -58,6 +57,10 @@ public:
     void equipRootTraversals();
     void setInterceptsClicks(bool shouldIntercept, bool shouldChildrenIntercept);
 
+    void selectAll () const;
+    void clearAll () const;
+    void deselectAllExcept(const Node& keptNode) const;
+
     NodeInfo::DisplayMode displayMode = NodeInfo::DisplayMode::Pitch;
 
     std::vector<std::function<void(Node*, bool)>> nodeSelectedListeners;
@@ -67,9 +70,7 @@ private:
     void connectIncomingArrows(int nodeId, Node* node);
     void connectOutgoingArrows(const juce::ValueTree& nodeValueTree, Node* node);
 
-    NodeCanvas&        nodeCanvas;
-    GraphState&        graphState;
-    juce::UndoManager& undoManager;
+    EditCanvas& canvas;
 
     std::unordered_map<int, std::unique_ptr<Node>> nodes;
 };

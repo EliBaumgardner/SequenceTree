@@ -17,19 +17,19 @@
     starts from the node its growFrom names.
 
     NodeController decides when a press belongs here and uses the grab radii for its hit tests;
-    Titlebar sets arrowMode. Every edit goes through GraphDocument in its own undo transaction.
+    Titlebar sets arrowMode. Every edit goes through CanvasDocument in its own undo transaction.
 */
 
 class Node;
 class Arrow;
-class NodeCanvas;
-class GraphDocument;
+class EditCanvas;
+class CanvasDocument;
 
 class ArrowGestures
 {
 public:
 
-    ArrowGestures(NodeCanvas& nodeCanvas, GraphDocument& document, juce::UndoManager& undoManager);
+    ArrowGestures(EditCanvas& canvas, CanvasDocument& document, juce::UndoManager& undoManager);
 
     void beginMovingTip(Arrow& danglingArrow);
     void dragTip       (juce::Point<int> cursor);
@@ -57,8 +57,8 @@ private:
     static constexpr float flagProximityRadius = 28.0f;
     static constexpr float flagSnapThreshold   = 20.0f;
 
-    NodeCanvas&        nodeCanvas;
-    GraphDocument&     document;
+    EditCanvas&        canvas;
+    CanvasDocument&    document;
     juce::UndoManager& undoManager;
 
     TipGesture tipGesture = TipGesture::None;

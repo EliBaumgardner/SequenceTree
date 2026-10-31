@@ -11,11 +11,11 @@
     root nodes and nodeContaining only for nodes the point is inside (plain or root nodes, which
     are the ones an arrow may connect to). A node's id in excludeId is skipped.
 
-    It reads the nodes and arrows through NodeCanvas::nodeManager and arrowManager and changes
-    nothing. NodeCanvas owns it; ArrowGestures and OrnamentCanvas call it.
+    It reads the nodes and arrows through EditCanvas::nodeManager and arrowManager and changes
+    nothing. EditCanvas owns it; the gesture classes, NodeController and OrnamentCanvas call it.
 */
 
-class NodeCanvas;
+class EditCanvas;
 class Arrow;
 class Node;
 
@@ -23,7 +23,7 @@ class CanvasHitTester
 {
 public:
 
-    explicit CanvasHitTester(NodeCanvas& nodeCanvas) : nodeCanvas(nodeCanvas)
+    explicit CanvasHitTester(EditCanvas& canvas) : canvas(canvas)
     {
     }
 
@@ -40,5 +40,5 @@ public:
 
 private:
 
-    NodeCanvas& nodeCanvas;
+    EditCanvas& canvas;
 };

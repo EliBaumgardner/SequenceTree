@@ -248,7 +248,7 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
         }
 
         nodeCanvas.arrowManager.clearSelection();
-        selectionGestures.clearAll();
+        nodeCanvas.nodeManager.clearAll();
     }
 
     if (auto* dynamicPort = dynamic_cast<ArsNovaUI::DynamicPort*>(nodeCanvas.getParentComponent())) {
@@ -317,7 +317,7 @@ void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
     node.setHoverVisual(true);
     nodeCanvas.arrowManager.clearSelection();
 
-    selectionGestures.deselectAllExcept(node);
+    nodeCanvas.nodeManager.deselectAllExcept(node);
 
     if (e.mods.isRightButtonDown() && e.mods.isShiftDown()) {
         undoManager.beginNewTransaction();

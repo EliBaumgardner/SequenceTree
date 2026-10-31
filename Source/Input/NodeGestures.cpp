@@ -1,12 +1,12 @@
 #include "NodeGestures.h"
-#include "../UI/Canvas/NodeCanvas.h"
+#include "../UI/Canvas/EditCanvas.h"
 #include "../UI/Node/Node.h"
 #include "../UI/Node/Arrow.h"
 #include "../Graph/ValueTreeIdentifiers.h"
-#include "GraphDocument.h"
+#include "CanvasDocument.h"
 
-NodeGestures::NodeGestures(NodeCanvas& nodeCanvas, GraphDocument& document, juce::UndoManager& undoManager)
-    : nodeCanvas(nodeCanvas),
+NodeGestures::NodeGestures(EditCanvas& canvas, CanvasDocument& document, juce::UndoManager& undoManager)
+    : canvas(canvas),
       document(document),
       undoManager(undoManager)
 {
@@ -48,7 +48,7 @@ void NodeGestures::finishDrag()
         connectDraggedNodeToRoot();
     }
     else if (draggedNodeTree.isValid()) {
-        nodeCanvas.arrowManager.triggerSnapForNode(static_cast<int>(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id)));
+        canvas.arrowManager.triggerSnapForNode(static_cast<int>(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id)));
     }
 
     draggedNodeTree  = juce::ValueTree();
@@ -56,9 +56,9 @@ void NodeGestures::finishDrag()
     snapTargetRoot   = nullptr;
     snapSourceNodeId = -1;
 
-    nodeCanvas.hideGrid();
+    canvas.hideGrid();
 
-    nodeCanvas.arrowManager.endNodeDrag();
+    canvas.arrowManager.endNodeDrag();
 }
 
 void NodeGestures::dragArrowHead(juce::Point<int> cursor)
@@ -77,13 +77,13 @@ void NodeGestures::finishArrowHeadDrag()
     arrowHeadNode = nullptr;
     isDragStart   = true;
 
-    nodeCanvas.arrowManager.endNodeDrag();
+    canvas.arrowManager.endNodeDrag();
 
     if (headNode == nullptr) {
         return;
     }
 
-    nodeCanvas.arrowManager.triggerSnapForNode(headNode->nodeId);
+    canvas.arrowManager.triggerSnapForNode(headNode->nodeId);
 }
 
 void NodeGestures::handleNodeDrag(int nodeId, juce::Point<int> cursor)
@@ -92,11 +92,11 @@ void NodeGestures::handleNodeDrag(int nodeId, juce::Point<int> cursor)
 
     if (isDragStart) {
         isDragStart                           = false;
-        nodeCanvas.arrowManager.nodesDragging = true;
+        canvas.arrowManager.nodesDragging = true;
 
         undoManager.beginNewTransaction();
 
-        nodeCanvas.showGrid();
+        canvas.showGrid();
     }
 
     document.moveNode(nodeTree, snapToGrid(cursor, nodeTree));
@@ -105,7 +105,7 @@ void NodeGestures::handleNodeDrag(int nodeId, juce::Point<int> cursor)
 void NodeGestures::handleNodeDragStart(int nodeId, juce::Point<int> cursor, const juce::ModifierKeys& mods)
 {
     const int   parentNodeId = document.growFrom(nodeId);
-    Node* const parentNode   = nodeCanvas.nodeManager.find(parentNodeId);
+    Node* const parentNode   = canvas.nodeManager.find(parentNodeId);
 
     if (parentNode == nullptr) {
         return;
@@ -113,10 +113,10 @@ void NodeGestures::handleNodeDragStart(int nodeId, juce::Point<int> cursor, cons
 
     undoManager.beginNewTransaction();
 
-    nodeCanvas.showGrid();
+    canvas.showGrid();
 
     snapSourceNodeId                      = parentNodeId;
-    nodeCanvas.arrowManager.nodesDragging = true;
+    canvas.arrowManager.nodesDragging = true;
 
     const juce::Point<int> parentPosition { parentNode->nodeValueTree.getProperty(ValueTreeIdentifiers::XPosition), parentNode->nodeValueTree.getProperty(ValueTreeIdentifiers::YPosition) };
     const juce::Point<int> parentCentre   = parentNode->getNodeCentre();
@@ -135,8 +135,8 @@ void NodeGestures::checkRootNodeSnap(juce::Point<int> canvasPoint)
         return;
     }
 
-    Node* const sourceNode  = nodeCanvas.nodeManager.find(snapSourceNodeId);
-    Node*       nearestRoot = nodeCanvas.hitTester.rootNear(canvasPoint.toFloat(), rootSnapThreshold, snapSourceNodeId);
+    Node* const sourceNode  = canvas.nodeManager.find(snapSourceNodeId);
+    Node*       nearestRoot = canvas.hitTester.rootNear(canvasPoint.toFloat(), rootSnapThreshold, snapSourceNodeId);
 
     if (sourceNode == nullptr) {
         return;
@@ -152,7 +152,7 @@ void NodeGestures::checkRootNodeSnap(juce::Point<int> canvasPoint)
 
             setDraggedNodeVisible(false);
 
-            nodeCanvas.arrowManager.showSnapGhost(sourceNode, nearestRoot);
+            canvas.arrowManager.showSnapGhost(sourceNode, nearestRoot);
         }
     }
     else if (snapTargetRoot != nullptr) {
@@ -160,7 +160,7 @@ void NodeGestures::checkRootNodeSnap(juce::Point<int> canvasPoint)
 
         setDraggedNodeVisible(true);
 
-        nodeCanvas.arrowManager.hideSnapGhost();
+        canvas.arrowManager.hideSnapGhost();
     }
 }
 
@@ -170,26 +170,26 @@ void NodeGestures::connectDraggedNodeToRoot()
     const int parentNodeId  = snapSourceNodeId;
     const int draggedNodeId = static_cast<int>(draggedNodeTree.getProperty(ValueTreeIdentifiers::Id));
 
-    nodeCanvas.arrowManager.hideSnapGhost();
+    canvas.arrowManager.hideSnapGhost();
 
     snapTargetRoot   = nullptr;
     snapSourceNodeId = -1;
 
     undoManager.undo();
 
-    nodeCanvas.cancelPendingUpdatesFor(draggedNodeId);
+    canvas.cancelPendingUpdatesFor(draggedNodeId);
 
     undoManager.beginNewTransaction();
 
     document.connect(parentNodeId, rootNodeId, CanvasDocument::ConnectionGesture::NodeOntoRoot);
 
-    nodeCanvas.arrowManager.connectWithSnapAnimation(parentNodeId, rootNodeId);
+    canvas.arrowManager.connectWithSnapAnimation(parentNodeId, rootNodeId);
 }
 
 void NodeGestures::setDraggedNodeVisible(bool shouldBeVisible)
 {
     const int draggedId   = draggedNodeTree.getProperty(ValueTreeIdentifiers::Id);
-    Node*     draggedNode = nodeCanvas.nodeManager.find(draggedId);
+    Node*     draggedNode = canvas.nodeManager.find(draggedId);
 
     if (draggedNode == nullptr) {
         return;
@@ -197,7 +197,7 @@ void NodeGestures::setDraggedNodeVisible(bool shouldBeVisible)
 
     draggedNode->setVisible(shouldBeVisible);
 
-    Node* sourceNode = nodeCanvas.nodeManager.find(snapSourceNodeId);
+    Node* sourceNode = canvas.nodeManager.find(snapSourceNodeId);
 
     if (sourceNode == nullptr) {
         return;
@@ -212,7 +212,7 @@ void NodeGestures::setDraggedNodeVisible(bool shouldBeVisible)
 
 juce::Point<int> NodeGestures::snapToGrid(juce::Point<int> position, const juce::ValueTree& nodeTree) const
 {
-    const juce::Point<int> collapseShift = nodeCanvas.encapsulationView.collapsedSpanShift(nodeTree.getProperty(ValueTreeIdentifiers::Id));
+    const juce::Point<int> storedPosition { nodeTree.getProperty(ValueTreeIdentifiers::XPosition), nodeTree.getProperty(ValueTreeIdentifiers::YPosition) };
 
-    return nodeCanvas.snapPointToGrid(position - collapseShift);
+    return canvas.snapPointToGrid(position - (canvas.drawnPosition(nodeTree) - storedPosition));
 }
