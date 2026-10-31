@@ -3,26 +3,27 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include "SelectionGestures.h"
 #include "OrnamentApplier.h"
-#include "ArrowGestures.h"
-#include "NodeGestures.h"
+#include "CanvasController.h"
 #include "EncapsulationGestures.h"
 #include "ArrowMenu.h"
 
 /*
-    The router for every mouse event on the canvas and its nodes. On mouseDown it works out which
-    feature the press belongs to: the active canvas tool first (paint, span, note preview,
-    ornament), then an ornament mark, then the arrow hit tests, then the node or the empty canvas.
-    It hands the press to the class that implements that feature and records the choice in
-    gesture, so mouseDrag and mouseUp go to the same class.
+    The router for every mouse event on the graph canvas and its nodes: a CanvasController that
+    handles the graph's own presses before it passes the rest on. On mouseDown that is the active
+    canvas tool first (paint, span, note preview, ornament), then an ornament mark, then a plain
+    right-click (the arrow menu near an arrow, the selection menu elsewhere on the canvas, and
+    expanding or collapsing a group on a node), then a Shift drag in arrow mode on the empty
+    canvas, which draws a selection box. mouseDrag and mouseUp follow the same choice, and while
+    the paint tool is active there is no hover.
 
-    The features are the members it owns: selectionGestures, ornamentApplier, arrowGestures,
-    nodeGestures, encapsulationGestures and arrowMenu. A new canvas feature is another such class and another
-    branch here. What it does itself is small: forwarding paint-tool strokes to
-    NodeCanvas::valueField, pushing note preview requests to TraversalSession::previewRequests,
-    the Ctrl-drag that changes a node's value (dragValue), and node hover.
+    Its own features are the members it owns: selectionGestures, ornamentApplier,
+    encapsulationGestures and arrowMenu; the features every canvas shares come from
+    CanvasController. A new graph feature is another such class and another branch here; a
+    feature for every canvas goes into CanvasController. It forwards paint-tool strokes to
+    NodeCanvas::valueField and pushes note preview requests to TraversalSession::previewRequests.
 
-    PluginEditor builds it after the canvas. Titlebar sets arrowGestures.arrowMode and
-    nodeGestures.creationMode, and PluginEditor's key handler calls selectionGestures.
+    PluginEditor builds it after the canvas. Titlebar sets arrowGestures.arrowMode, and
+    PluginEditor's key handler calls selectionGestures.
 */
 
 class NodeCanvas;
@@ -41,8 +42,8 @@ class OrnamentLibraries;
 
 
 
-class NodeController : public juce::MouseListener {
-
+class NodeController : public CanvasController
+{
 public:
 
     NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& graphDocument, juce::UndoManager& undoManager,
@@ -58,43 +59,16 @@ public:
 
     SelectionGestures     selectionGestures;
     OrnamentApplier       ornamentApplier;
-    ArrowGestures         arrowGestures;
-    NodeGestures          nodeGestures;
     EncapsulationGestures encapsulationGestures;
     ArrowMenu             arrowMenu;
 
 private:
 
-    void dragValue(const juce::MouseEvent& e);
+    enum class GraphGesture { None, BoxSelecting };
 
-    void handleCanvasMouseDown(const juce::MouseEvent& e);
-    void handleCanvasMouseDrag(const juce::MouseEvent& e);
-    void handleNodeMouseDown  (const juce::MouseEvent& e, Node& node);
-    void handleNodeMouseDrag  (const juce::MouseEvent& e, Node& node);
+    TraversalSession& traversalSession;
+    RTGraphBuilder&   rtGraphBuilder;
+    NodeCanvas&       nodeCanvas;
 
-    enum class Gesture {
-        Idle,
-        EditingValue,
-        MovingArrowHead,
-        ArrowSelected,
-        MovingDanglingTip,
-        DrawingArrow,
-        BoxSelecting
-    };
-
-    static constexpr int dragThreshold = 5;
-
-    GraphState&        graphState;
-    GraphDocument&     graphDocument;
-    juce::UndoManager& undoManager;
-    TraversalSession&  traversalSession;
-    RTGraphBuilder&    rtGraphBuilder;
-    NodeCanvas&        nodeCanvas;
-
-
-    Gesture gesture = Gesture::Idle;
-
-    juce::Component::SafePointer<Node> draggingValueNode;
-
-    double dragStartValue = 0.0;
+    GraphGesture graphGesture = GraphGesture::None;
 };

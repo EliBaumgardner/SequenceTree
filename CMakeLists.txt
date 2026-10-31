@@ -79,6 +79,7 @@ target_sources(SequenceTree PRIVATE
         Source/Graph/ValueTreeIdentifiers.cpp
         Source/Graph/NodeFactory.cpp
         Source/Graph/Clipboard.cpp
+        Source/Input/CanvasController.cpp
         Source/Input/NodeController.cpp
         Source/Input/GraphDocument.cpp
         Source/Input/ArrowMenu.cpp

@@ -5,19 +5,15 @@
 #include "../Graph/GraphState.h"
 #include "../Plugin/PluginProcessor.h"
 #include "GraphDocument.h"
-#include <ArsNovaUI/Canvas/DynamicPort.h>
+
 
 NodeController::NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& graphDocument, juce::UndoManager& undoManager,
                                TraversalSession& traversalSession, RTGraphBuilder& rtGraphBuilder, OrnamentLibraries& ornamentLibraries)
-    : selectionGestures(graphState, undoManager, nodeCanvas),
+    : CanvasController(nodeCanvas, graphDocument, undoManager),
+      selectionGestures(graphState, undoManager, nodeCanvas),
       ornamentApplier(nodeCanvas, ornamentLibraries, undoManager),
-      arrowGestures(nodeCanvas, graphDocument, undoManager),
-      nodeGestures(nodeCanvas, graphDocument, undoManager),
       encapsulationGestures(nodeCanvas, graphState, undoManager),
       arrowMenu(nodeCanvas, graphState, graphDocument, undoManager),
-      graphState(graphState),
-      graphDocument(graphDocument),
-      undoManager(undoManager),
       traversalSession(traversalSession),
       rtGraphBuilder(rtGraphBuilder),
       nodeCanvas(nodeCanvas)
@@ -31,7 +27,10 @@ NodeController::~NodeController() = default;
 
 void NodeController::mouseDown(const juce::MouseEvent& e)
 {
+    const juce::Point<float> clickPoint = e.getEventRelativeTo(&nodeCanvas).position.transformedBy(nodeCanvas.modelTransform);
+
     gesture           = Gesture::Idle;
+    graphGesture      = GraphGesture::None;
     draggingValueNode = nullptr;
 
     if (nodeCanvas.activeTool == NodeCanvas::CanvasTool::Paint) {
@@ -71,37 +70,41 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     }
 
     if (dynamic_cast<NodeCanvas*>(e.eventComponent) != nullptr) {
-        handleCanvasMouseDown(e);
+        if (!e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
+            if (Arrow* clickedArrow = nodeCanvas.hitTester.arrowNear(clickPoint, ArrowGestures::arrowHoverRadius)) {
+                arrowMenu.showArrowContextMenu(clickedArrow);
+                return;
+            }
+
+            selectionGestures.showSelectionMenu(clickPoint.roundToInt());
+            return;
+        }
+
+        if (e.mods.isShiftDown() && e.mods.isLeftButtonDown() && arrowGestures.arrowMode) {
+            graphGesture = GraphGesture::BoxSelecting;
+
+            selectionGestures.beginBoxSelection(clickPoint.roundToInt());
+            return;
+        }
     }
-    else if (Node* clickedNode = dynamic_cast<Node*>(e.eventComponent)) {
-        handleNodeMouseDown(e, *clickedNode);
+
+    if (Node* clickedNode = dynamic_cast<Node*>(e.eventComponent)) {
+        const bool isValueScrub = clickedNode->nodeValueEditor.isVisible() && e.mods.isCtrlDown() && ! e.mods.isShiftDown();
+
+        if (! isValueScrub && e.mods.isRightButtonDown() && ! e.mods.isShiftDown() && encapsulationGestures.toggleEncapsulationExpansion(*clickedNode)) {
+            return;
+        }
     }
+
+    CanvasController::mouseDown(e);
 }
 
 void NodeController::mouseUp(const juce::MouseEvent& e)
 {
-    Node* const clickedNode  = dynamic_cast<Node*>(e.eventComponent);
-    const bool  isPlainClick = clickedNode != nullptr && gesture == Gesture::Idle && e.mods.isLeftButtonDown() && !e.mods.isAnyModifierKeyDown()
-                               && e.getDistanceFromDragStart() < dragThreshold && nodeCanvas.activeTool == NodeCanvas::CanvasTool::None;
-
-    if (gesture == Gesture::MovingArrowHead) {
-        gesture = Gesture::Idle;
-
-        nodeGestures.finishArrowHeadDrag();
-        return;
-    }
-
-    if (gesture == Gesture::BoxSelecting) {
-        gesture = Gesture::Idle;
+    if (graphGesture == GraphGesture::BoxSelecting) {
+        graphGesture = GraphGesture::None;
 
         selectionGestures.finishBoxSelection();
-        return;
-    }
-
-    if (gesture == Gesture::MovingDanglingTip || gesture == Gesture::DrawingArrow) {
-        gesture = Gesture::Idle;
-
-        arrowGestures.finishTip();
         return;
     }
 
@@ -110,14 +113,14 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
         return;
     }
 
-    gesture           = Gesture::Idle;
-    draggingValueNode = nullptr;
+    if (nodeCanvas.activeTool != NodeCanvas::CanvasTool::None && gesture == Gesture::Idle) {
+        draggingValueNode = nullptr;
 
-    nodeGestures.finishDrag();
-
-    if (isPlainClick) {
-        clickedNode->respondToClick(e.getEventRelativeTo(clickedNode).getPosition());
+        nodeGestures.finishDrag();
+        return;
     }
+
+    CanvasController::mouseUp(e);
 }
 
 void NodeController::mouseEnter(const juce::MouseEvent& e)
@@ -126,9 +129,7 @@ void NodeController::mouseEnter(const juce::MouseEvent& e)
         return;
     }
 
-    if (Node* node = dynamic_cast<Node*>(e.eventComponent)) {
-        node->setHoverVisual(true);
-    }
+    CanvasController::mouseEnter(e);
 }
 
 void NodeController::mouseExit(const juce::MouseEvent& e)
@@ -137,9 +138,7 @@ void NodeController::mouseExit(const juce::MouseEvent& e)
         return;
     }
 
-    if (Node* node = dynamic_cast<Node*>(e.eventComponent)) {
-        node->setHoverVisual(false);
-    }
+    CanvasController::mouseExit(e);
 }
 
 void NodeController::mouseMove(const juce::MouseEvent& e)
@@ -148,7 +147,7 @@ void NodeController::mouseMove(const juce::MouseEvent& e)
         return;
     }
 
-    arrowGestures.updateHover(e.getEventRelativeTo(&nodeCanvas).position.transformedBy(nodeCanvas.modelTransform));
+    CanvasController::mouseMove(e);
 }
 
 void NodeController::mouseDrag(const juce::MouseEvent& e)
@@ -165,182 +164,10 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
         return;
     }
 
-    if (gesture == Gesture::EditingValue && draggingValueNode != nullptr) {
-        dragValue(e);
-        return;
-    }
-
-    if (gesture == Gesture::MovingDanglingTip) {
-        arrowGestures.dragTip(e.getEventRelativeTo(&nodeCanvas).position.transformedBy(nodeCanvas.modelTransform).roundToInt());
-        return;
-    }
-
-    if (dynamic_cast<NodeCanvas*>(e.eventComponent) != nullptr) {
-        handleCanvasMouseDrag(e);
-        return;
-    }
-
-    if (Node* draggedNode = dynamic_cast<Node*>(e.eventComponent)) {
-        handleNodeMouseDrag(e, *draggedNode);
-    }
-}
-
-void NodeController::dragValue(const juce::MouseEvent& e)
-{
-    const int yOffset = e.getOffsetFromDragStart().y;
-    const int delta   = -yOffset / 3;
-
-    draggingValueNode->nodeValueEditor.setNumericValue(dragStartValue + delta);
-    draggingValueNode->refreshValueDisplay();
-}
-
-void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
-{
-    const juce::Point<float> clickPoint = e.getEventRelativeTo(&nodeCanvas).position.transformedBy(nodeCanvas.modelTransform);
-
-    if (e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
-        if (Arrow* arrow = nodeCanvas.hitTester.arrowNear(clickPoint, ArrowGestures::danglingArrowGrabRadius)) {
-            arrowGestures.removeArrow(*arrow);
-            return;
-        }
-    }
-
-    if (!e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
-        if (Arrow* clickedArrow = nodeCanvas.hitTester.arrowNear(clickPoint, ArrowGestures::arrowHoverRadius)) {
-            arrowMenu.showArrowContextMenu(clickedArrow);
-            return;
-        }
-
-        selectionGestures.showSelectionMenu(clickPoint.roundToInt());
-        return;
-    }
-
-    if (!e.mods.isShiftDown()) {
-        if (Arrow* arrow = nodeCanvas.hitTester.danglingHeadNear(clickPoint, ArrowGestures::danglingArrowGrabRadius)) {
-            gesture = Gesture::MovingDanglingTip;
-
-            arrowGestures.beginMovingTip(*arrow);
-            return;
-        }
-    }
-
-    if (!e.mods.isShiftDown() && e.mods.isLeftButtonDown()) {
-        if (Arrow* labelArrow = nodeCanvas.hitTester.arrowLabelNear(clickPoint, ArrowGestures::arrowLabelGrabRadius)) {
-            gesture = Gesture::EditingValue;
-
-            labelArrow->beginDurationEdit();
-            return;
-        }
-
-        if (Arrow* headArrow = nodeCanvas.hitTester.arrowHeadNear(clickPoint, ArrowGestures::arrowHeadGrabRadius)) {
-            gesture                    = Gesture::MovingArrowHead;
-            nodeGestures.arrowHeadNode = headArrow->endNode;
-
-            nodeCanvas.arrowManager.setSelected(headArrow);
-            return;
-        }
-
-        if (Arrow* clickedArrow = nodeCanvas.hitTester.arrowNear(clickPoint, ArrowGestures::arrowHoverRadius)) {
-            gesture = Gesture::ArrowSelected;
-
-            nodeCanvas.arrowManager.setSelected(clickedArrow);
-            return;
-        }
-
-        nodeCanvas.arrowManager.clearSelection();
-        nodeCanvas.nodeManager.clearAll();
-    }
-
-    if (auto* dynamicPort = dynamic_cast<ArsNovaUI::DynamicPort*>(nodeCanvas.getParentComponent())) {
-        dynamicPort->mouseDown(e.getEventRelativeTo(dynamicPort));
-    }
-
-    if (e.mods.isShiftDown() && e.mods.isLeftButtonDown() && arrowGestures.arrowMode) {
-        gesture = Gesture::BoxSelecting;
-
-        selectionGestures.beginBoxSelection(clickPoint.roundToInt());
-        return;
-    }
-
-    if (e.mods.isShiftDown() && e.mods.isLeftButtonDown()) {
-        nodeGestures.createRootNode(clickPoint);
-    }
-}
-
-void NodeController::handleCanvasMouseDrag(const juce::MouseEvent& e)
-{
-    const juce::Point<int> cursor = e.getEventRelativeTo(&nodeCanvas).position.transformedBy(nodeCanvas.modelTransform).roundToInt();
-
-    if (gesture == Gesture::MovingArrowHead) {
-        if (e.getDistanceFromDragStart() >= dragThreshold) {
-            nodeGestures.dragArrowHead(cursor);
-        }
-        return;
-    }
-
-    if (gesture == Gesture::BoxSelecting) {
+    if (graphGesture == GraphGesture::BoxSelecting) {
         selectionGestures.updateBoxSelection(e);
         return;
     }
 
-    if (gesture == Gesture::ArrowSelected || gesture == Gesture::EditingValue) {
-        return;
-    }
-
-    if (auto* dynamicPort = dynamic_cast<ArsNovaUI::DynamicPort*>(nodeCanvas.getParentComponent())) {
-        dynamicPort->mouseDrag(e.getEventRelativeTo(dynamicPort));
-    }
-}
-
-void NodeController::handleNodeMouseDown(const juce::MouseEvent& e, Node& node)
-{
-    const int  nodeId          = node.nodeId;
-    const bool isShiftLeftDrag = e.mods.isLeftButtonDown() && e.mods.isShiftDown();
-
-    if (node.nodeValueEditor.isVisible() && e.mods.isCtrlDown() && ! e.mods.isShiftDown()) {
-        undoManager.beginNewTransaction();
-
-        gesture           = Gesture::EditingValue;
-        dragStartValue    = static_cast<double>(node.nodeValueEditor.boundValue.getValue());
-        draggingValueNode = &node;
-        return;
-    }
-
-    if (e.mods.isRightButtonDown() && ! e.mods.isShiftDown() && encapsulationGestures.toggleEncapsulationExpansion(node)) {
-        return;
-    }
-
-    if (isShiftLeftDrag && arrowGestures.beginTipFromNode(node)) {
-        gesture = Gesture::DrawingArrow;
-    }
-
-    node.setHoverVisual(true);
-    nodeCanvas.arrowManager.clearSelection();
-
-    nodeCanvas.nodeManager.deselectAllExcept(node);
-
-    if (e.mods.isRightButtonDown() && e.mods.isShiftDown()) {
-        undoManager.beginNewTransaction();
-
-        graphDocument.removeNode(nodeId);
-    }
-    else {
-        node.setSelectVisual();
-    }
-}
-
-void NodeController::handleNodeMouseDrag(const juce::MouseEvent& e, Node& node)
-{
-    const juce::Point<int> cursor = e.getEventRelativeTo(&nodeCanvas).position.transformedBy(nodeCanvas.modelTransform).roundToInt();
-
-    if (e.getDistanceFromDragStart() < dragThreshold || !e.mods.isLeftButtonDown()) {
-        return;
-    }
-
-    if (gesture == Gesture::DrawingArrow) {
-        arrowGestures.dragTip(cursor);
-        return;
-    }
-
-    nodeGestures.respondToDrag(node, cursor, e.mods);
+    CanvasController::mouseDrag(e);
 }
