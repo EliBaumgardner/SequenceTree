@@ -2,76 +2,55 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../Graph/OrnamentLibraries.h"
-#include <ArsNovaUI/Canvas/DynamicPort.h>
+#include "../../Input/CanvasController.h"
 
 /*
-    The mouse listener that turns clicks and drags on an OrnamentCanvas into edits of the draft
-    figure of its ornament, each made through OrnamentLibraries in an undo transaction. Positions
-    snap to the 50 pixel grid when within a few pixels of a line.
+    The mouse router of an OrnamentCanvas: a CanvasController over the figure's FigureDocument,
+    so a figure is edited with the gestures every canvas shares (see CanvasController). Shift
+    dragging from the last node grows the chain with a new node that follows the cursor or, in
+    arrow mode, draws the dangling arrow; dragging a node moves it and the nodes after it;
+    dragging an arrow's head moves the node it points at; dragging the dangling tip sets the last
+    note's length; a Ctrl drag scrubs a node's value; and a Shift right-click removes a node or
+    the dangling arrow. What it handles itself is a Shift-click on the empty canvas, which adds
+    the first node snapped to the grid, and the click mode: in ClickMode::PickHost the next
+    click on a node makes it the host, or unmarks it, through OrnamentLibraries::toggleHost, and
+    the mode returns to Build.
 
-    In the normal ClickMode::Build, a Shift-click on empty canvas adds a figure node, and a drag on
-    a node moves it. Shift-dragging from the last node of the chain grows the chain with a new node
-    that follows the cursor; in arrow mode the same drag instead creates a dangling arrow from
-    that node, or moves the one it has. Dragging an arrow's head moves the node it points at,
-    and dragging a dangling tip changes the length of the last node's arrow. Clicking a duration
-    label edits it, Ctrl-Shift dragging a node scrubs its value, and dragging empty canvas pans
-    the port. A Shift right-click removes a node or the dangling arrow. In ClickMode::PickHost the
-    next click on a node makes it the host, or unmarks it, and the mode returns to Build.
-
-    OrnamentBuildPanel owns it, sets ornament when the active ornament changes, and shows its
-    click mode and arrow mode on the title bar through onClickModeChanged and onArrowModeChanged.
+    OrnamentBuildPanel owns it and shows its click mode and arrow mode on the title bar through
+    onClickModeChanged and onArrowModeChanged; OrnamentWindow leaves either mode on Escape.
 */
 
 class OrnamentCanvas;
-class OrnamentNode;
+class FigureDocument;
+class OrnamentLibraries;
 
-class OrnamentFigureController : public juce::MouseListener
+class OrnamentFigureController : public CanvasController
 {
 public:
 
     enum class ClickMode;
 
-    OrnamentFigureController(OrnamentCanvas& canvas, ArsNovaUI::DynamicPort& port, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
+    OrnamentFigureController(OrnamentCanvas& ornamentCanvas, FigureDocument& figureDocument, OrnamentLibraries& ornamentLibraries,
+                             juce::UndoManager& undoManager);
 
-    void mouseMove      (const juce::MouseEvent& event) override;
-    void mouseExit      (const juce::MouseEvent& event) override;
-    void mouseDown      (const juce::MouseEvent& event) override;
-    void mouseDrag      (const juce::MouseEvent& event) override;
-    void mouseUp        (const juce::MouseEvent& event) override;
+    void mouseDown(const juce::MouseEvent& event) override;
 
     void switchClickMode(ClickMode mode);
     void setArrowMode   (bool enabled);
 
-    enum class DragState { Idle, MovingNode, MovingArrowHead, GrowingChain, MovingDanglingTip, CreatingDanglingArrow, ScrubbingValue, Panning };
     enum class ClickMode { Build, PickHost };
 
-    static constexpr float arrowHoverRadius     = 8.0f;
-    static constexpr float arrowHeadGrabRadius  = 16.0f;
-    static constexpr float arrowLabelGrabRadius = 10.0f;
-    static constexpr int   dragThreshold        = 5;
-    static constexpr int   pixelsPerScrubStep   = 3;
-    static constexpr int   hostCursorSize       = 20;
-
-    juce::ValueTree ornament;
+    static constexpr int hostCursorSize = 20;
 
     ClickMode clickMode = ClickMode::Build;
-    bool      arrowMode = false;
 
     std::function<void()> onClickModeChanged;
     std::function<void()> onArrowModeChanged;
 
 private:
 
-    void handleNodeMouseDown  (const juce::MouseEvent& event, OrnamentNode& node);
-    void handleCanvasMouseDown(const juce::MouseEvent& event, juce::Point<int> point, juce::Point<int> snapped);
-
-    OrnamentCanvas&         canvas;
-    ArsNovaUI::DynamicPort& port;
-    OrnamentLibraries&      ornamentLibraries;
-    juce::UndoManager&      undoManager;
-
-    DragState dragState      = DragState::Idle;
-    int       draggedNodeId  = -1;
-    double    dragStartValue = 0.0;
+    OrnamentCanvas&    ornamentCanvas;
+    FigureDocument&    figureDocument;
+    OrnamentLibraries& ornamentLibraries;
+    juce::UndoManager& undoManager;
 };

@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "OrnamentCanvas.h"
+#include "../../Input/FigureDocument.h"
 #include "OrnamentFigureController.h"
 #include "OrnamentSymbolEditor.h"
 #include <ArsNovaUI/Bars/Bar.h>
@@ -22,8 +23,9 @@
     enabled only when isPublishable accepts the figure and it is not already published.
 
     It listens to the libraries tree: when the active ornament changes it hands the new ornament
-    to the controller, the canvas and the symbol editor, and when the figure changes it redraws
-    the canvas. OrnamentWindow owns it and asks for minimumWidth.
+    and its figure to the FigureDocument and the symbol editor, moves the canvas's tree listener
+    onto the new figure and asks the canvas to rebuild, and when the figure changes it refreshes
+    the canvas's host rim and the publish button. OrnamentWindow owns it and asks for minimumWidth.
 */
 
 class OrnamentLibraries;
@@ -68,6 +70,7 @@ public:
     static constexpr int   nameHeight         = 20;
     static constexpr int   nameInset          = 6;
 
+    FigureDocument           document;
     OrnamentCanvas           canvas;
     ArsNovaUI::DynamicPort   port;
     OrnamentFigureController controller;

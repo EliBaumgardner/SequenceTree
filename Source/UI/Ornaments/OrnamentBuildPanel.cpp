@@ -3,9 +3,10 @@
 #include "../../Graph/OrnamentLibraries.h"
 
 OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
-    : canvas(undoManager),
+    : document(ornamentLibraries, undoManager),
+      canvas(document),
       port(canvas),
-      controller(canvas, port, ornamentLibraries, undoManager),
+      controller(canvas, document, ornamentLibraries, undoManager),
       ornamentLibraries(ornamentLibraries),
       symbolEditor(ornamentLibraries, undoManager),
       nameEditor(undoManager)
@@ -20,7 +21,7 @@ OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juc
     };
 
     titlebar.arrowButton.onClick = [this]() {
-        controller.setArrowMode(! controller.arrowMode);
+        controller.setArrowMode(! controller.arrowGestures.arrowMode);
     };
 
     controller.onClickModeChanged = [this]() {
@@ -28,7 +29,7 @@ OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juc
     };
 
     controller.onArrowModeChanged = [this]() {
-        titlebar.arrowButton.setSelected(controller.arrowMode);
+        titlebar.arrowButton.setSelected(controller.arrowGestures.arrowMode);
     };
 
     titlebar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawUndoIcon, "Undo", [&undoManager]() { undoManager.undo(); });
@@ -81,6 +82,8 @@ OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juc
 OrnamentBuildPanel::~OrnamentBuildPanel()
 {
     ornamentLibraries.libraries.removeListener(this);
+
+    document.nodes.removeListener(&canvas.treeListener);
 
     canvas.removeMouseListener(&controller);
 }
@@ -141,9 +144,15 @@ void OrnamentBuildPanel::showActiveOrnament()
 {
     ornament = ornamentLibraries.findOrnament(ornamentLibraries.libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString());
 
-    controller.ornament   = ornament;
+    document.nodes.removeListener(&canvas.treeListener);
+
+    document.ornament     = ornament;
+    document.nodes        = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
     symbolEditor.ornament = ornament;
-    canvas.figure         = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
+
+    document.nodes.addListener(&canvas.treeListener);
+
+    canvas.rebuildRequested = true;
 
     titlebar.hostButton.setVisible(ornament.isValid());
     titlebar.arrowButton.setVisible(ornament.isValid());
@@ -167,7 +176,7 @@ void OrnamentBuildPanel::refreshFigure()
 
     titlebar.publishButton.setEnabled(ornament.isValid() && canPublish);
 
-    canvas.triggerAsyncUpdate();
+    canvas.refreshHost();
 }
 
 void OrnamentBuildPanel::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
