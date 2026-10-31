@@ -9,7 +9,9 @@
     on a second node in the same tree it creates a group of the nodes between them
     (GraphState::nodeIdsBetween). toggleEncapsulationExpansion handles a right-click: on a
     collapsed group it expands it, on the first or last member of an expanded group it collapses
-    it, and it returns whether it did either. NodeController routes to it. Group changes go
+    it, and it returns whether it did either. adoptCreatedChild adds a child just dragged out of a
+    member of an expanded group to that group, directly after its parent, unless the parent is
+    the group's last member. NodeController routes to it. Group changes go
     through GraphState and NodeFactory in an undo transaction; expanding and collapsing are
     EncapsulationView's.
 */
@@ -25,6 +27,8 @@ public:
     EncapsulationGestures(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager);
 
     void selectSpanNode(Node& node);
+
+    void adoptCreatedChild(int parentNodeId, const juce::ValueTree& child);
 
     bool toggleEncapsulationExpansion(Node& node);
 

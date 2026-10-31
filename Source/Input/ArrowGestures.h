@@ -1,12 +1,10 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <ArsNovaUI/PopupWindow.h>
-#include "../Util/ArrowInfo.h"
 
 /*
     The arrow features of the canvas: drawing a new arrow, moving a dangling arrow's tip,
-    removing an arrow, the right-click menu, and the hover highlight. Drawing and moving are one
+    removing an arrow, and the hover highlight. Drawing and moving are one
     drag in three calls. beginMovingTip or beginTipFromNode starts it, dragTip follows the cursor
     and snaps the tip to a nearby node, and finishTip ends it by connecting to the snapped node,
     fixing a dangling arrow's tip, or keeping the new arrow dangling. Arrows are drawn from a
@@ -14,36 +12,32 @@
     node.
 
     updateHover bolds the arrow under the cursor and fades in the arrows of nearby flags.
-    removeArrow deletes a dangling arrow, a flag, or the connection between two nodes. The context
-    menu opens the allowed-traversals window and toggles an arrow's traversal type and sync,
-    through setArrowType and setArrowSync, after GraphDocument::ownershipOf finds which node the
-    arrow belongs to.
+    removeArrow deletes a dangling arrow, or the arrow between two nodes through the document's
+    disconnect. A tip snaps only to a node the document's canConnect accepts, and a new arrow
+    starts from the node its growFrom names.
 
     NodeController decides when a press belongs here and uses the grab radii for its hit tests;
-    Titlebar sets arrowMode. Every edit goes through GraphDocument, or GraphState for the menu's
-    arrow settings, in its own undo transaction.
+    Titlebar sets arrowMode. Every edit goes through GraphDocument in its own undo transaction.
 */
 
 class Node;
 class Arrow;
 class NodeCanvas;
-class GraphState;
 class GraphDocument;
 
 class ArrowGestures
 {
 public:
 
-    ArrowGestures(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& document, juce::UndoManager& undoManager);
+    ArrowGestures(NodeCanvas& nodeCanvas, GraphDocument& document, juce::UndoManager& undoManager);
 
     void beginMovingTip(Arrow& danglingArrow);
     void dragTip       (juce::Point<int> cursor);
     void finishTip     ();
 
-    void updateHover         (juce::Point<float> cursor);
-    void removeArrow         (Arrow& arrow);
-    void showArrowContextMenu(Arrow* arrow);
-    void setArrowMode        (bool enabled);
+    void updateHover (juce::Point<float> cursor);
+    void removeArrow (Arrow& arrow);
+    void setArrowMode(bool enabled);
 
     bool beginTipFromNode(Node& node);
 
@@ -58,24 +52,14 @@ private:
 
     Node* findTipSnapTarget(const Node& startNode, juce::Point<int> tip) const;
 
-    void setArrowType(const Arrow* arrow, ArrowInfo::Type arrowType);
-    void setArrowSync(const Arrow* arrow, bool shouldSync);
-
-    bool canBeTraversalArrow    (const Arrow* arrow) const;
-    bool connectsToModulatorRoot(const Arrow* arrow) const;
-
-    juce::ValueTree connectionTreeFor(const Arrow* arrow) const;
-
     enum class TipGesture { None, MovingDanglingTip, CreatingDanglingArrow, ConnectingFlag };
 
     static constexpr float flagProximityRadius = 28.0f;
     static constexpr float flagSnapThreshold   = 20.0f;
 
-    NodeCanvas&                    nodeCanvas;
-    GraphState&                    graphState;
-    GraphDocument&                 document;
-    juce::UndoManager&             undoManager;
-    ArsNovaUI::PopupWindowLauncher allowedTraversalsLauncher { "Allowed Traversals" };
+    NodeCanvas&        nodeCanvas;
+    GraphDocument&     document;
+    juce::UndoManager& undoManager;
 
     TipGesture tipGesture = TipGesture::None;
 

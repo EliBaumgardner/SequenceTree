@@ -6,6 +6,7 @@
 #include "ArrowGestures.h"
 #include "NodeGestures.h"
 #include "EncapsulationGestures.h"
+#include "ArrowMenu.h"
 
 /*
     The router for every mouse event on the canvas and its nodes. On mouseDown it works out which
@@ -15,7 +16,7 @@
     gesture, so mouseDrag and mouseUp go to the same class.
 
     The features are the members it owns: selectionGestures, ornamentApplier, arrowGestures,
-    nodeGestures and encapsulationGestures. A new canvas feature is another such class and another
+    nodeGestures, encapsulationGestures and arrowMenu. A new canvas feature is another such class and another
     branch here. What it does itself is small: forwarding paint-tool strokes to
     NodeCanvas::valueField, pushing note preview requests to TraversalSession::previewRequests,
     the Ctrl-drag that changes a node's value (dragValue), and node hover.
@@ -60,6 +61,7 @@ public:
     ArrowGestures         arrowGestures;
     NodeGestures          nodeGestures;
     EncapsulationGestures encapsulationGestures;
+    ArrowMenu             arrowMenu;
 
 private:
 

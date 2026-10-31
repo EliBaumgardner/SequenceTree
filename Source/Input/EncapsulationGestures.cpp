@@ -59,6 +59,23 @@ void EncapsulationGestures::selectSpanNode(Node& node)
     NodeFactory::createEncapsulator(graphState, spanNodeIds, &undoManager);
 }
 
+void EncapsulationGestures::adoptCreatedChild(int parentNodeId, const juce::ValueTree& child)
+{
+    const int owningEncapsulatorId = graphState.getNode(parentNodeId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+
+    auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(nodeCanvas.nodeManager.find(owningEncapsulatorId));
+
+    if (owningEncapsulator == nullptr || ! owningEncapsulator->isExpanded || owningEncapsulator->memberNodeIds.empty()) {
+        return;
+    }
+
+    if (parentNodeId == owningEncapsulator->memberNodeIds.back()) {
+        return;
+    }
+
+    graphState.encapsulation.insertNodeAfter(child.getProperty(ValueTreeIdentifiers::Id), parentNodeId, &undoManager);
+}
+
 bool EncapsulationGestures::toggleEncapsulationExpansion(Node& node)
 {
     const int nodeId = node.nodeId;

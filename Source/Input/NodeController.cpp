@@ -11,9 +11,10 @@ NodeController::NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, G
                                TraversalSession& traversalSession, RTGraphBuilder& rtGraphBuilder, OrnamentLibraries& ornamentLibraries)
     : selectionGestures(graphState, undoManager, nodeCanvas),
       ornamentApplier(nodeCanvas, ornamentLibraries, undoManager),
-      arrowGestures(nodeCanvas, graphState, graphDocument, undoManager),
-      nodeGestures(nodeCanvas, graphState, graphDocument, undoManager),
+      arrowGestures(nodeCanvas, graphDocument, undoManager),
+      nodeGestures(nodeCanvas, graphDocument, undoManager),
       encapsulationGestures(nodeCanvas, graphState, undoManager),
+      arrowMenu(nodeCanvas, graphState, graphDocument, undoManager),
       graphState(graphState),
       graphDocument(graphDocument),
       undoManager(undoManager),
@@ -21,6 +22,9 @@ NodeController::NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, G
       rtGraphBuilder(rtGraphBuilder),
       nodeCanvas(nodeCanvas)
 {
+    nodeGestures.onChildCreated = [this](int parentNodeId, const juce::ValueTree& child) {
+        encapsulationGestures.adoptCreatedChild(parentNodeId, child);
+    };
 }
 
 NodeController::~NodeController() = default;
@@ -203,7 +207,7 @@ void NodeController::handleCanvasMouseDown(const juce::MouseEvent& e)
 
     if (!e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
         if (Arrow* clickedArrow = nodeCanvas.hitTester.arrowNear(clickPoint, ArrowGestures::arrowHoverRadius)) {
-            arrowGestures.showArrowContextMenu(clickedArrow);
+            arrowMenu.showArrowContextMenu(clickedArrow);
             return;
         }
 
