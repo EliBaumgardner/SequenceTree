@@ -177,6 +177,7 @@ catch_discover_tests(SequenceTree_Tests)
 add_executable(SequenceTree_GraphTests
         Tests/Integration/GraphTests.cpp
         Tests/Integration/OrnamentTests.cpp
+        Tests/Integration/CanvasTests.cpp
 )
 
 target_compile_features(SequenceTree_GraphTests PRIVATE cxx_std_20)
