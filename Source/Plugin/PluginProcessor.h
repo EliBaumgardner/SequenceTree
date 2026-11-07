@@ -147,7 +147,7 @@ public:
 
     AudioSnapshotPublisher snapshots { traversalRuleState };
 
-    RTGraphBuilder rtGraphBuilder { *this, graphState };
+    RTGraphBuilder rtGraphBuilder { graphState, ornamentLibraries, snapshots };
 
     TempoInfo tempoInfo;
 

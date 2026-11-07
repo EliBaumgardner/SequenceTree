@@ -7,13 +7,15 @@
 #include <cmath>
 
 TraversalFlagNode::TraversalFlagNode(juce::UndoManager& undoManager, GraphState& graphState)
-    : Node(undoManager),
+    : Node              (undoManager),
       traversalNumEditor(undoManager),
-      graphState(graphState)
+      graphState        (graphState)
 {
     nodeType        = NodeInfo::Type::TraversalFlag;
     takesArrowHeads = false;
     connectsByDrag  = true;
+
+    setTooltip("Traversal flag");
 
     traversalNumEditor.setFormat(std::make_unique<TraversalFlagFormat>());
     traversalNumEditor.setInterceptsMouseClicks(false, true);

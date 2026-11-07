@@ -15,24 +15,27 @@
 #include <unordered_set>
 #include <utility>
 
-#include "../Plugin/PluginProcessor.h"
+#include "../Plugin/AudioSnapshotPublisher.h"
 #include "GraphState.h"
+#include "OrnamentLibraries.h"
 #include "ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
-RTGraphBuilder::RTGraphBuilder(SequenceTreeAudioProcessor& processorRef, GraphState& valueTreeStateRef)
-    : processor(processorRef), graphState(valueTreeStateRef)
+RTGraphBuilder::RTGraphBuilder(GraphState& graphState, OrnamentLibraries& ornamentLibraries, AudioSnapshotPublisher& snapshots)
+    : graphState       (graphState),
+      ornamentLibraries(ornamentLibraries),
+      snapshots        (snapshots)
 {
     graphState.nodeMap.addListener(this);
     graphState.traversals.map.addListener(this);
-    processor.ornamentLibraries.libraries.addListener(this);
+    ornamentLibraries.libraries.addListener(this);
 }
 
 RTGraphBuilder::~RTGraphBuilder()
 {
     graphState.nodeMap.removeListener(this);
     graphState.traversals.map.removeListener(this);
-    processor.ornamentLibraries.libraries.removeListener(this);
+    ornamentLibraries.libraries.removeListener(this);
 }
 
 void RTGraphBuilder::makeRTGraph(const juce::ValueTree& nodeValueTree)
@@ -71,14 +74,14 @@ void RTGraphBuilder::makeRTGraph(const juce::ValueTree& nodeValueTree)
     createRTNodeConnections(builtNodes, tempNodeMap);
 
     builtGraphIds.insert(rootNodeId);
-    processor.snapshots.publishGraph(rootNodeId, freezeNodes(builtNodes));
+    snapshots.publishGraph(rootNodeId, freezeNodes(builtNodes));
 }
 
 void RTGraphBuilder::discardGraph(int graphId)
 {
     builtGraphIds.erase(graphId);
 
-    processor.snapshots.publishGraph(graphId, NodeMap{});
+    snapshots.publishGraph(graphId, NodeMap{});
 }
 
 void RTGraphBuilder::rebuildAllGraphs()
@@ -136,7 +139,7 @@ void RTGraphBuilder::valueTreePropertyChanged(juce::ValueTree& tree, const juce:
     juce::ValueTree graphOwner;
     juce::ValueTree reshapedNode;
 
-    if (tree.getRoot() == processor.ornamentLibraries.libraries) {
+    if (tree.getRoot() == ornamentLibraries.libraries) {
         return;
     }
 
@@ -199,7 +202,7 @@ void RTGraphBuilder::updateDurationMaps(std::span<const int> nodeIds)
         return;
     }
 
-    auto edit = processor.snapshots.beginEdit();
+    auto edit = snapshots.beginEdit();
 
     if (edit->globalNodes == nullptr) {
         return;
@@ -251,7 +254,7 @@ void RTGraphBuilder::updateDurationMaps(std::span<const int> nodeIds)
         return;
     }
 
-    processor.snapshots.publish(std::move(edit));
+    snapshots.publish(std::move(edit));
 }
 
 void RTGraphBuilder::handleAsyncUpdate()
@@ -378,7 +381,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
         juce::ValueTree nodeValueTreeChildren   = currentValueTree.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
         juce::ValueTree nodeValueTreeTraversals = currentValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
         juce::ValueTree nodeMidiNotes           = currentValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
-        juce::ValueTree publishedFigure         = processor.ornamentLibraries.findOrnament(currentValueTree.getProperty(ValueTreeIdentifiers::OrnamentUid).toString())
+        juce::ValueTree publishedFigure         = ornamentLibraries.findOrnament(currentValueTree.getProperty(ValueTreeIdentifiers::OrnamentUid).toString())
                                                                              .getChildWithName(ValueTreeIdentifiers::PublishedFigure);
 
         int loopLimit = currentValueTree.getProperty(ValueTreeIdentifiers::LoopLimit, GraphState::defaultRootLoopLimit);
@@ -389,7 +392,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
 
         rtNode.graphID  = currentValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
         rtNode.nodeID   = nodeId;
-        rtNode.nodeType = rtNodeTypeFor(currentValueTree.getType());
+        rtNode.nodeType = GraphState::kindOf(currentValueTree);
 
         rtNode.countLimit        = currentValueTree.getProperty(ValueTreeIdentifiers::CountLimit);
         rtNode.triggerLimit      = currentValueTree.getProperty(ValueTreeIdentifiers::TriggerLimit, GraphState::defaultTriggerLimit);
@@ -398,19 +401,19 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
         rtNode.repeatValue       = currentValueTree.getProperty(ValueTreeIdentifiers::RepeatValue, GraphState::defaultRepeatValue);
         rtNode.probability       = currentValueTree.getProperty(ValueTreeIdentifiers::Probability, GraphState::defaultProbability);
 
-        rtNode.isAlternativeNode = rtNode.nodeType == RTNode::NodeType::Alternative || rtNode.nodeType == RTNode::NodeType::AlternativeModulator;
+        const bool isAlternative = NodeInfo::alternativeKind[static_cast<int>(rtNode.nodeType)];
 
-        if (rtNode.nodeType == RTNode::NodeType::RootNode) {
+        if (rtNode.nodeType == NodeInfo::Kind::Root) {
             rtNode.subLoopCountLimit = loopLimit;
             rtNode.graphLoopLimit    = loopLimit;
         }
 
-        if (rtNode.isAlternativeNode) {
+        if (isAlternative) {
             rtNode.subLoopCountLimit = GraphState::defaultSubLoopCountLimit;
         }
 
-        if (rtNode.nodeType == RTNode::NodeType::ModulatorRoot || rtNode.nodeType == RTNode::NodeType::Modulator
-            || rtNode.nodeType == RTNode::NodeType::AlternativeModulator) {
+        if (rtNode.nodeType == NodeInfo::Kind::ModulatorRoot || rtNode.nodeType == NodeInfo::Kind::Modulator
+            || rtNode.nodeType == NodeInfo::Kind::AlternativeModulator) {
             rtNode.pitchOffset = currentValueTree.getProperty(ValueTreeIdentifiers::ModAmount, GraphState::defaultModAmount);
         }
 
@@ -435,11 +438,11 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
 
                 rtNode.parentId = parentId;
 
-                if (rtNode.isAlternativeNode && !parentNode.isAlternativeNode) {
+                if (isAlternative && !NodeInfo::alternativeKind[static_cast<int>(parentNode.nodeType)]) {
                     parentNode.alternativeRootId = rtNode.nodeID;
                     rtNode.alternativeRootId     = rtNode.nodeID;
                 }
-                else if (rtNode.isAlternativeNode) {
+                else if (isAlternative) {
                     rtNode.alternativeRootId = parentNode.alternativeRootId;
                 }
             }
@@ -448,7 +451,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
         fillDurationMap(currentValueTree, rtNode);
         fillEncapsulation(currentValueTree, rtNode);
 
-        if (rtNode.nodeType == RTNode::NodeType::TraversalFlagData) {
+        if (rtNode.nodeType == NodeInfo::Kind::TraversalFlag) {
             fillTraversalFlag(currentValueTree, rtNode);
         }
         else {
@@ -473,7 +476,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
             rtNode.notes.push_back(std::move(rtNote));
         }
 
-        rtNode.ornament = processor.ornamentLibraries.figureSteps(publishedFigure);
+        rtNode.ornament = ornamentLibraries.figureSteps(publishedFigure);
 
         builtNodes[nodeId] = std::move(rtNode);
     }
@@ -628,7 +631,7 @@ void RTGraphBuilder::rememberStructureChange(const juce::ValueTree& parent, cons
     juce::ValueTree graphOwner;
     juce::ValueTree reshapedNode;
 
-    if (parent.getRoot() == processor.ornamentLibraries.libraries) {
+    if (parent.getRoot() == ornamentLibraries.libraries) {
         if (child.getType() == ValueTreeIdentifiers::OrnamentLibrary
             || child.getType() == ValueTreeIdentifiers::OrnamentData
             || child.getType() == ValueTreeIdentifiers::PublishedFigure) {
@@ -729,29 +732,6 @@ RTConnection& RTGraphBuilder::connectionFor(RTNode& node, int childId)
     return node.connections.back();
 }
 
-RTNode::NodeType RTGraphBuilder::rtNodeTypeFor(const juce::Identifier& valueTreeType)
-{
-    if (valueTreeType == ValueTreeIdentifiers::AlternativeNodeData) {
-        return RTNode::NodeType::Alternative;
-    }
-    if (valueTreeType == ValueTreeIdentifiers::RootNodeData) {
-        return RTNode::NodeType::RootNode;
-    }
-    if (valueTreeType == ValueTreeIdentifiers::ModulatorRootData) {
-        return RTNode::NodeType::ModulatorRoot;
-    }
-    if (valueTreeType == ValueTreeIdentifiers::ModulatorData) {
-        return RTNode::NodeType::Modulator;
-    }
-    if (valueTreeType == ValueTreeIdentifiers::AlternativeModulatorData) {
-        return RTNode::NodeType::AlternativeModulator;
-    }
-    if (valueTreeType == ValueTreeIdentifiers::TraversalFlagData) {
-        return RTNode::NodeType::TraversalFlagData;
-    }
-
-    return RTNode::NodeType::Node;
-}
 
 NodeMap RTGraphBuilder::freezeNodes(NodeBuildMap& source)
 {

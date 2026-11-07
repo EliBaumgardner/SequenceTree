@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <vector>
 
-static RTNode makeNode(int id, int parentId, RTNode::NodeType type, int countLimit, const std::vector<int>& childIds)
+static RTNode makeNode(int id, int parentId, NodeInfo::Kind type, int countLimit, const std::vector<int>& childIds)
 {
     RTNode node;
 
@@ -46,16 +46,16 @@ static NodeMap mirrorAsModulators(const NodeMap& tree)
         RTNode modulator = node;
 
         switch (node.nodeType) {
-            case RTNode::NodeType::RootNode:
-                modulator.nodeType = RTNode::NodeType::ModulatorRoot;
+            case NodeInfo::Kind::Root:
+                modulator.nodeType = NodeInfo::Kind::ModulatorRoot;
                 break;
 
-            case RTNode::NodeType::Node:
-                modulator.nodeType = RTNode::NodeType::Modulator;
+            case NodeInfo::Kind::Node:
+                modulator.nodeType = NodeInfo::Kind::Modulator;
                 break;
 
-            case RTNode::NodeType::Alternative:
-                modulator.nodeType = RTNode::NodeType::AlternativeModulator;
+            case NodeInfo::Kind::Alternative:
+                modulator.nodeType = NodeInfo::Kind::AlternativeModulator;
                 break;
 
             default:
@@ -170,87 +170,87 @@ static std::vector<int> walkPreview(const NodeMap& nodes, int startId, int alter
 static NodeMap chainShape()
 {
     return makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
-        makeNode(2, 1, RTNode::NodeType::Node,     1, { 3 }),
-        makeNode(3, 2, RTNode::NodeType::Node,     1, {})
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
+        makeNode(2, 1, NodeInfo::Kind::Node,     1, { 3 }),
+        makeNode(3, 2, NodeInfo::Kind::Node,     1, {})
     });
 }
 
 static NodeMap countLimitShape()
 {
     return makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2, 3 }),
-        makeNode(2, 1, RTNode::NodeType::Node,     1, {}),
-        makeNode(3, 1, RTNode::NodeType::Node,     2, {})
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2, 3 }),
+        makeNode(2, 1, NodeInfo::Kind::Node,     1, {}),
+        makeNode(3, 1, NodeInfo::Kind::Node,     2, {})
     });
 }
 
 static NodeMap switchCountShape()
 {
-    RTNode held = makeNode(2, 1, RTNode::NodeType::Node, 2, {});
+    RTNode held = makeNode(2, 1, NodeInfo::Kind::Node, 2, {});
     held.switchCountLimit = 3;
 
     return makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2, 3 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2, 3 }),
         held,
-        makeNode(3, 1, RTNode::NodeType::Node,     1, {})
+        makeNode(3, 1, NodeInfo::Kind::Node,     1, {})
     });
 }
 
 static NodeMap subLoopShape()
 {
-    RTNode loopEntry = makeNode(2, 1, RTNode::NodeType::Node, 1, { 3 });
+    RTNode loopEntry = makeNode(2, 1, NodeInfo::Kind::Node, 1, { 3 });
     loopEntry.subLoopCountLimit = 2;
 
     return makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
         loopEntry,
-        makeNode(3, 2, RTNode::NodeType::Node,     1, {})
+        makeNode(3, 2, NodeInfo::Kind::Node,     1, {})
     });
 }
 
 static NodeMap subLoopWithAlternativeShape()
 {
-    RTNode loopEntry = makeNode(2, 1, RTNode::NodeType::Node, 1, { 3, 10 });
+    RTNode loopEntry = makeNode(2, 1, NodeInfo::Kind::Node, 1, { 3, 10 });
     loopEntry.subLoopCountLimit = 2;
     loopEntry.alternativeRootId = 10;
 
-    RTNode alternative = makeNode(10, 2, RTNode::NodeType::Alternative, 1, {});
+    RTNode alternative = makeNode(10, 2, NodeInfo::Kind::Alternative, 1, {});
     alternative.alternativeRootId = 10;
 
     return makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
         loopEntry,
-        makeNode(3, 2, RTNode::NodeType::Node,     1, {}),
+        makeNode(3, 2, NodeInfo::Kind::Node,     1, {}),
         alternative
     });
 }
 
 static NodeMap triggerLimitShape()
 {
-    RTNode spent = makeNode(2, 1, RTNode::NodeType::Node, 1, {});
+    RTNode spent = makeNode(2, 1, NodeInfo::Kind::Node, 1, {});
     spent.triggerLimit = 2;
 
     return makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
         spent
     });
 }
 
 static NodeMap alternativeShape(int firstAlternativeSwitchLimit)
 {
-    RTNode host = makeNode(2, 1, RTNode::NodeType::Node, 1, { 10 });
+    RTNode host = makeNode(2, 1, NodeInfo::Kind::Node, 1, { 10 });
     host.alternativeRootId = 10;
 
-    RTNode firstAlternative = makeNode(10, 2, RTNode::NodeType::Alternative, 1, { 11 });
+    RTNode firstAlternative = makeNode(10, 2, NodeInfo::Kind::Alternative, 1, { 11 });
     firstAlternative.alternativeRootId = 10;
     firstAlternative.switchCountLimit  = firstAlternativeSwitchLimit;
 
-    RTNode secondAlternative = makeNode(11, 10, RTNode::NodeType::Alternative, 1, {});
+    RTNode secondAlternative = makeNode(11, 10, NodeInfo::Kind::Alternative, 1, {});
     secondAlternative.alternativeRootId = 10;
 
     return makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
         host,
         firstAlternative,
         secondAlternative
@@ -259,51 +259,51 @@ static NodeMap alternativeShape(int firstAlternativeSwitchLimit)
 
 static NodeMap hostHoldWithAlternativeShape()
 {
-    RTNode host = makeNode(2, 1, RTNode::NodeType::Node, 1, { 3, 4, 10 });
+    RTNode host = makeNode(2, 1, NodeInfo::Kind::Node, 1, { 3, 4, 10 });
     host.alternativeRootId = 10;
 
-    RTNode held = makeNode(3, 2, RTNode::NodeType::Node, 2, {});
+    RTNode held = makeNode(3, 2, NodeInfo::Kind::Node, 2, {});
     held.switchCountLimit = 3;
 
-    RTNode alternative = makeNode(10, 2, RTNode::NodeType::Alternative, 1, {});
+    RTNode alternative = makeNode(10, 2, NodeInfo::Kind::Alternative, 1, {});
     alternative.alternativeRootId = 10;
 
     return makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
         host,
         held,
-        makeNode(4, 2, RTNode::NodeType::Node,     1, {}),
+        makeNode(4, 2, NodeInfo::Kind::Node,     1, {}),
         alternative
     });
 }
 
 static NodeMap encapsulationShape()
 {
-    RTNode entry = makeNode(2, 1, RTNode::NodeType::Node, 1, { 3 });
+    RTNode entry = makeNode(2, 1, NodeInfo::Kind::Node, 1, { 3 });
     entry.encapsulationEntryId = 2;
     entry.subLoopCountLimit    = 2;
 
-    RTNode member = makeNode(3, 2, RTNode::NodeType::Node, 1, { 4 });
+    RTNode member = makeNode(3, 2, NodeInfo::Kind::Node, 1, { 4 });
     member.encapsulationEntryId = 2;
 
     return makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
         entry,
         member,
-        makeNode(4, 3, RTNode::NodeType::Node,     1, {})
+        makeNode(4, 3, NodeInfo::Kind::Node,     1, {})
     });
 }
 
 static NodeMap stepIntoTreeShape(int foreignLoopLimit)
 {
-    RTNode foreignRoot = makeNode(5, 2, RTNode::NodeType::RootNode, 1, { 6 });
+    RTNode foreignRoot = makeNode(5, 2, NodeInfo::Kind::Root, 1, { 6 });
     foreignRoot.subLoopCountLimit = foreignLoopLimit;
 
     return makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
-        makeNode(2, 1, RTNode::NodeType::Node,     1, { 5 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
+        makeNode(2, 1, NodeInfo::Kind::Node,     1, { 5 }),
         foreignRoot,
-        makeNode(6, 5, RTNode::NodeType::Node,     1, {})
+        makeNode(6, 5, NodeInfo::Kind::Node,     1, {})
     });
 }
 
@@ -322,8 +322,8 @@ static NodeMap alternativeShapeWithTreeJump(int jumpOwnerId, int foreignRootLimi
         }
     }
 
-    withForeignTree.push_back(makeNode(5, 0, RTNode::NodeType::RootNode, foreignRootLimit, { 6 }));
-    withForeignTree.push_back(makeNode(6, 5, RTNode::NodeType::Node,     1,                {}));
+    withForeignTree.push_back(makeNode(5, 0, NodeInfo::Kind::Root, foreignRootLimit, { 6 }));
+    withForeignTree.push_back(makeNode(6, 5, NodeInfo::Kind::Node,     1,                {}));
 
     return makeMap(withForeignTree);
 }
@@ -372,13 +372,13 @@ TEST_CASE("a spent trigger limit makes the child ineligible", "[traversal]")
 
 TEST_CASE("the peeked target is the node the walk enters next", "[traversal]")
 {
-    RTNode heldOnSecondCount = makeNode(2, 1, RTNode::NodeType::Node, 2, {});
+    RTNode heldOnSecondCount = makeNode(2, 1, NodeInfo::Kind::Node, 2, {});
     heldOnSecondCount.switchCountLimit = 3;
 
     const NodeMap countGap = makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2, 3 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2, 3 }),
         heldOnSecondCount,
-        makeNode(3, 1, RTNode::NodeType::Node,     3, {})
+        makeNode(3, 1, NodeInfo::Kind::Node,     3, {})
     });
 
     const int steps = 64;
@@ -418,22 +418,22 @@ TEST_CASE("the peeked target is the node the walk enters next", "[traversal]")
 
 TEST_CASE("peeking at the next target leaves the walk unchanged", "[traversal]")
 {
-    RTNode heldOnSecondCount = makeNode(2, 1, RTNode::NodeType::Node, 2, {});
+    RTNode heldOnSecondCount = makeNode(2, 1, NodeInfo::Kind::Node, 2, {});
     heldOnSecondCount.switchCountLimit = 3;
 
     const NodeMap countGap = makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2, 3 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2, 3 }),
         heldOnSecondCount,
-        makeNode(3, 1, RTNode::NodeType::Node,     3, {})
+        makeNode(3, 1, NodeInfo::Kind::Node,     3, {})
     });
 
-    RTNode heldOnTie = makeNode(2, 1, RTNode::NodeType::Node, 1, {});
+    RTNode heldOnTie = makeNode(2, 1, NodeInfo::Kind::Node, 1, {});
     heldOnTie.switchCountLimit = 3;
 
     const NodeMap tiedLimits = makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2, 3 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2, 3 }),
         heldOnTie,
-        makeNode(3, 1, RTNode::NodeType::Node,     1, {})
+        makeNode(3, 1, NodeInfo::Kind::Node,     1, {})
     });
 
     const int steps = 64;
@@ -468,16 +468,16 @@ TEST_CASE("peeking at the next target leaves the walk unchanged", "[traversal]")
 
 TEST_CASE("zero duration and disabled arrows are never taken", "[traversal]")
 {
-    RTNode root = makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2, 3, 4 });
+    RTNode root = makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2, 3, 4 });
 
     root.connections[0].duration = 0;
     root.connections[1].disabledTraversals.push_back(TraversalKey {});
 
     const NodeMap nodes = makeMap({
         root,
-        makeNode(2, 1, RTNode::NodeType::Node, 1, {}),
-        makeNode(3, 1, RTNode::NodeType::Node, 1, {}),
-        makeNode(4, 1, RTNode::NodeType::Node, 1, {})
+        makeNode(2, 1, NodeInfo::Kind::Node, 1, {}),
+        makeNode(3, 1, NodeInfo::Kind::Node, 1, {}),
+        makeNode(4, 1, NodeInfo::Kind::Node, 1, {})
     });
 
     const std::vector<int> expected { 1, 4, 1, 4, 1 };
@@ -488,8 +488,8 @@ TEST_CASE("zero duration and disabled arrows are never taken", "[traversal]")
 TEST_CASE("the graph loop limit ends the traversal", "[traversal]")
 {
     const NodeMap nodes = makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
-        makeNode(2, 1, RTNode::NodeType::Node,     1, {})
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
+        makeNode(2, 1, NodeInfo::Kind::Node,     1, {})
     });
 
     TraversalLogic logic;
@@ -563,14 +563,14 @@ TEST_CASE("a stepped into tree loops as many times as its loop limit, then retur
 
 TEST_CASE("a traversal arrow relocates the walker onto the other tree for good", "[traversal]")
 {
-    RTNode leaving = makeNode(2, 1, RTNode::NodeType::Node, 1, { 5 });
+    RTNode leaving = makeNode(2, 1, NodeInfo::Kind::Node, 1, { 5 });
     leaving.connections[0].isTreeJump = true;
 
     const NodeMap nodes = makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
         leaving,
-        makeNode(5, 0, RTNode::NodeType::RootNode, 2, { 6 }),
-        makeNode(6, 5, RTNode::NodeType::Node,     1, {})
+        makeNode(5, 0, NodeInfo::Kind::Root, 2, { 6 }),
+        makeNode(6, 5, NodeInfo::Kind::Node,     1, {})
     });
 
     const std::vector<int> expected { 1, 2, 1, 2, 5, 6, 5, 6, 5 };
@@ -611,18 +611,18 @@ TEST_CASE("a host's traversal arrow waits while one of its alternatives is voice
 
 TEST_CASE("a cross root tree connection fires on its count limit and holds for its switch count", "[traversal]")
 {
-    RTNode host = makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 5, 7 });
+    RTNode host = makeNode(1, 0, NodeInfo::Kind::Root, 1, { 5, 7 });
     host.connections[0].isCrossRoot = true;
     host.connections[1].isCrossRoot = true;
     host.connections[1].disabledTraversals.push_back(TraversalKey {});
 
-    RTNode foreignRoot = makeNode(5, 0, RTNode::NodeType::RootNode, 2, {});
+    RTNode foreignRoot = makeNode(5, 0, NodeInfo::Kind::Root, 2, {});
     foreignRoot.switchCountLimit = 3;
 
     const NodeMap nodes = makeMap({
         host,
         foreignRoot,
-        makeNode(7, 0, RTNode::NodeType::RootNode, 1, {})
+        makeNode(7, 0, NodeInfo::Kind::Root, 1, {})
     });
 
     TraversalLogic logic;
@@ -654,25 +654,25 @@ TEST_CASE("a cross root tree connection fires on its count limit and holds for i
 
 TEST_CASE("a modulator root starts on its count limit, and an unsynced one is not restarted mid walk", "[traversal]")
 {
-    RTNode host = makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 20 });
+    RTNode host = makeNode(1, 0, NodeInfo::Kind::Root, 1, { 20 });
 
     const NodeMap synced = makeMap({
         host,
-        makeNode(20, 1, RTNode::NodeType::ModulatorRoot, 2, {})
+        makeNode(20, 1, NodeInfo::Kind::ModulatorRoot, 2, {})
     });
 
     host.connections[0].isSynced = false;
 
     const NodeMap unsynced = makeMap({
         host,
-        makeNode(20, 1, RTNode::NodeType::ModulatorRoot, 2, {})
+        makeNode(20, 1, NodeInfo::Kind::ModulatorRoot, 2, {})
     });
 
     host.connections[0].disabledTraversals.push_back(TraversalKey {});
 
     const NodeMap disabled = makeMap({
         host,
-        makeNode(20, 1, RTNode::NodeType::ModulatorRoot, 2, {})
+        makeNode(20, 1, NodeInfo::Kind::ModulatorRoot, 2, {})
     });
 
     TraversalLogic logic;
@@ -767,14 +767,14 @@ TEST_CASE("a modulator walk unfolds the same sequence as a node traversal", "[tr
     }
 
     SECTION("encapsulation entered from the root") {
-        RTNode entryRoot = makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 });
+        RTNode entryRoot = makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 });
         entryRoot.encapsulationEntryId = 1;
         entryRoot.subLoopCountLimit    = 2;
 
-        RTNode member = makeNode(2, 1, RTNode::NodeType::Node, 1, { 3 });
+        RTNode member = makeNode(2, 1, NodeInfo::Kind::Node, 1, { 3 });
         member.encapsulationEntryId = 1;
 
-        const NodeMap nodes = makeMap({ entryRoot, member, makeNode(3, 2, RTNode::NodeType::Node, 1, {}) });
+        const NodeMap nodes = makeMap({ entryRoot, member, makeNode(3, 2, NodeInfo::Kind::Node, 1, {}) });
 
         CHECK(walkModulator(mirrorAsModulators(nodes), 1, steps)
               == walkPrimary(nodes, 1, steps, NativeTraversalRule::instance()));
@@ -831,10 +831,10 @@ static const char* const countingAdvanceSource =
 
 static NodeMap weightedShape()
 {
-    RTNode weightedRoot = makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2, 3 });
+    RTNode weightedRoot = makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2, 3 });
 
-    RTNode heavy = makeNode(2, 1, RTNode::NodeType::Node, 1, {});
-    RTNode light = makeNode(3, 1, RTNode::NodeType::Node, 1, {});
+    RTNode heavy = makeNode(2, 1, NodeInfo::Kind::Node, 1, {});
+    RTNode light = makeNode(3, 1, NodeInfo::Kind::Node, 1, {});
 
     heavy.probability = 70;
     light.probability = 30;
@@ -923,10 +923,10 @@ TEST_CASE("peeking with a scripted advance leaves the walk unchanged", "[travers
 TEST_CASE("advancing two steps skips the node in between without counting it", "[traversal]")
 {
     const NodeMap nodes = makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
-        makeNode(2, 1, RTNode::NodeType::Node,     1, { 3 }),
-        makeNode(3, 2, RTNode::NodeType::Node,     1, { 4 }),
-        makeNode(4, 3, RTNode::NodeType::Node,     1, {})
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
+        makeNode(2, 1, NodeInfo::Kind::Node,     1, { 3 }),
+        makeNode(3, 2, NodeInfo::Kind::Node,     1, { 4 }),
+        makeNode(4, 3, NodeInfo::Kind::Node,     1, {})
     });
 
     TraversalLogic logic;
@@ -964,9 +964,9 @@ TEST_CASE("a scripted advance receives the number of steps to take", "[traversal
         "};\n");
 
     const NodeMap nodes = makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
-        makeNode(2, 1, RTNode::NodeType::Node,     1, { 3 }),
-        makeNode(3, 2, RTNode::NodeType::Node,     1, {})
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
+        makeNode(2, 1, NodeInfo::Kind::Node,     1, { 3 }),
+        makeNode(3, 2, NodeInfo::Kind::Node,     1, {})
     });
 
     TraversalLogic logic;
@@ -992,7 +992,7 @@ TEST_CASE("node ids past the state table size walk like small ones", "[traversal
 
         moved.nodeID = moved.nodeID + offset;
 
-        if (moved.nodeType != RTNode::NodeType::RootNode) {
+        if (moved.nodeType != NodeInfo::Kind::Root) {
             moved.parentId = moved.parentId + offset;
         }
 
@@ -1140,16 +1140,16 @@ TEST_CASE("a scripted advance never lands on an alternative, and alternatives st
         "    }\n"
         "};\n");
 
-    RTNode host = makeNode(2, 1, RTNode::NodeType::Node, 1, { 10, 3 });
+    RTNode host = makeNode(2, 1, NodeInfo::Kind::Node, 1, { 10, 3 });
     host.alternativeRootId = 10;
 
-    RTNode alternative = makeNode(10, 2, RTNode::NodeType::Alternative, 1, {});
+    RTNode alternative = makeNode(10, 2, NodeInfo::Kind::Alternative, 1, {});
     alternative.alternativeRootId = 10;
 
     const NodeMap nodes = makeMap({
-        makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 }),
+        makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 }),
         host,
-        makeNode(3, 2, RTNode::NodeType::Node,     1, {}),
+        makeNode(3, 2, NodeInfo::Kind::Node,     1, {}),
         alternative
     });
 
@@ -1284,12 +1284,12 @@ TEST_CASE("a repeating preview returns to the node it started on, not to the roo
     }
 
     SECTION("after a traversal arrow into another tree") {
-        RTNode leaving = makeNode(2, 1, RTNode::NodeType::Node, 1, { 5 });
+        RTNode leaving = makeNode(2, 1, NodeInfo::Kind::Node, 1, { 5 });
         leaving.connections[0].isTreeJump = true;
 
-        RTNode root = makeNode(1, 0, RTNode::NodeType::RootNode, 1, { 2 });
-        RTNode foreignRoot = makeNode(5, 0, RTNode::NodeType::RootNode, 1, { 6 });
-        RTNode foreignLeaf = makeNode(6, 5, RTNode::NodeType::Node, 1, {});
+        RTNode root = makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2 });
+        RTNode foreignRoot = makeNode(5, 0, NodeInfo::Kind::Root, 1, { 6 });
+        RTNode foreignLeaf = makeNode(6, 5, NodeInfo::Kind::Node, 1, {});
 
         root.graphID        = 1;
         leaving.graphID     = 1;

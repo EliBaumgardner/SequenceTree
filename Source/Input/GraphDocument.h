@@ -64,10 +64,10 @@ public:
     NodeCreationMode    creationMode = NodeCreationMode::Node;
     ArrowInfo::Settings currentArrowInfo;
 
+    GraphState& graphState;
+
 private:
 
     void moveDescendants                (juce::ValueTree nodeTree, int deltaX, int deltaY, std::unordered_set<int>& visited, int draggedNodeId);
     void moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY);
-
-    GraphState& graphState;
 };

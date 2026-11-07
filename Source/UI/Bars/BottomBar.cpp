@@ -1,25 +1,22 @@
 #include "BottomBar.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Canvas/NodeCanvas.h"
-#include "../../Audio/TraversalSession.h"
+
 #include "../../Util/NodeInfo.h"
 #include "../../Graph/OrnamentLibraries.h"
 #include "../../Input/GraphDocument.h"
+#include "../../Input/Gestures/NotePreviewGestures.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
 
-BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, TraversalSession& traversalSession, juce::ValueTree colourPresets,
-                     juce::UndoManager& undoManager, OrnamentLibraries& ornamentLibraries, juce::UndoManager& ornamentUndoManager)
-    : ArsNovaUI::Bar(nodeCanvas, Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
-      nodeCanvas(nodeCanvas),
-      graphDocument(graphDocument),
-      traversalSession(traversalSession),
-      ornamentLibraries(ornamentLibraries),
-      ornamentUndoManager(ornamentUndoManager),
-
-      paintPanel(nodeCanvas, colourPresets, undoManager),
-      countsField(undoManager)
+BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, juce::ValueTree colourPresets, OrnamentLibraries& ornamentLibraries)
+    : ArsNovaUI::Bar     (nodeCanvas, Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
+      nodeCanvas         (nodeCanvas),
+      graphDocument      (graphDocument),
+      notePreviewGestures(notePreviewGestures),
+      ornamentLibraries  (ornamentLibraries),
+      paintPanel         (nodeCanvas, colourPresets, graphDocument.undoManager),
+      countsField        (graphDocument.undoManager)
 {
-    ornamentLauncher.openingScale = OrnamentWindow::openingScale;
-
     quaverTool = &quaverPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawQuaverIcon, "Note",
         [this]() {
             if (this->nodeCanvas.activeTool == NodeCanvas::CanvasTool::NotePreview) {
@@ -52,8 +49,6 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, Trave
     configureAxis(xAxis, "X");
     configureAxis(yAxis, "Y");
 
-    countsField.editor.setTooltip("Counts");
-
     quaverTool->onRightClick = [this]() {
         showQuaverMenu();
     };
@@ -64,7 +59,7 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, Trave
 
     countsField.editor.wheelResponse = ArsNovaUI::ValueEditor::WheelResponse::StepValue;
 
-    countsField.editor.boundValue.referTo(nodeCanvas.quaverCount);
+    countsField.editor.boundValue.referTo(notePreviewGestures.count);
 
     addAndMakeVisible(paintPanel);
     addAndMakeVisible(toolPane);
@@ -168,12 +163,7 @@ void BottomBar::configureOrnamentButton()
         nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::Ornament);
     });
 
-    ornamentButton->onRightClick = [this]() {
-        ornamentLibraries.rescan(ornamentUndoManager);
-
-        ornamentLauncher.show(*this);
-    };
-
+    ornamentButton->onRightClick = [this]() { onOrnamentWindowRequested(); };
 
     ornamentButton->painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
         ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
@@ -211,10 +201,8 @@ void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
 {
     const ArrowInfo::Settings& arrowInfo = graphDocument.currentArrowInfo;
 
-    axis.button = &bindPane.addButton(nullptr, text + " Binding", [this, &axis]() { toggleAxis(axis); });
-
+    axis.button               = &bindPane.addButton(nullptr, text + " Binding", [this, &axis]() { toggleAxis(axis); });
     axis.button->onRightClick = [this, &axis]() { showAxisMenu(axis); };
-
 
     axis.button->setText(text);
 
@@ -272,13 +260,7 @@ void BottomBar::showQuaverMenu()
 {
     ArsNovaUI::ContextMenu menu;
 
-    menu.addItem("repeat", ArsNovaUI::ContextMenu::ItemKind::Toggle, [this]() {
-        nodeCanvas.quaverRepeat = ! nodeCanvas.quaverRepeat;
-
-        traversalSession.previewRequests.push({
-            .kind   = RTPreviewRequest::Kind::SetRepeat,
-            .repeat = nodeCanvas.quaverRepeat
-        }); }, true, nodeCanvas.quaverRepeat);
+    menu.addItem("repeat", ArsNovaUI::ContextMenu::ItemKind::Toggle, [this]() { notePreviewGestures.toggleRepeat(); }, true, notePreviewGestures.repeat);
 
     menu.show(*quaverTool);
 }

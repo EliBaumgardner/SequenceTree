@@ -2,8 +2,8 @@
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 OrnamentWindow::OrnamentWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
-    : undoManager(undoManager),
-      buildPanel(ornamentLibraries, undoManager),
+    : undoManager   (undoManager),
+      buildPanel    (ornamentLibraries, undoManager),
       selectionPanel(ornamentLibraries, undoManager)
 {
     setLookAndFeel(&lookAndFeel);

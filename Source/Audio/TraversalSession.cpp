@@ -4,7 +4,8 @@
 #include <algorithm>
 
 TraversalSession::TraversalSession(EventManager& eventManager, EventManager& previewEventManager)
-    : eventManager(eventManager), previewEventManager(previewEventManager)
+    : eventManager       (eventManager),
+      previewEventManager(previewEventManager)
 {
     activeRootIdScratch.reserve(scratchCapacity);
     restartRootScratch .reserve(scratchCapacity);
@@ -463,11 +464,11 @@ void TraversalSession::startPreview(const RTPreviewRequest& request, const Dispa
         return;
     }
 
-    if (clickedNode->nodeType == RTNode::NodeType::Alternative) {
+    if (clickedNode->nodeType == NodeInfo::Kind::Alternative) {
         alternativeId = clickedNode->nodeID;
         hostNode      = context.nodes.find(clickedNode->parentId);
     }
-    else if (clickedNode->nodeType != RTNode::NodeType::Node && clickedNode->nodeType != RTNode::NodeType::RootNode) {
+    else if (clickedNode->nodeType != NodeInfo::Kind::Node && clickedNode->nodeType != NodeInfo::Kind::Root) {
         return;
     }
 

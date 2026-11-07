@@ -18,14 +18,13 @@
 
 class Arrow;
 class NodeCanvas;
-class GraphState;
 class GraphDocument;
 
 class ArrowMenu
 {
 public:
 
-    ArrowMenu(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& graphDocument, juce::UndoManager& undoManager);
+    ArrowMenu(NodeCanvas& nodeCanvas, GraphDocument& graphDocument);
 
     void showArrowContextMenu(Arrow* arrow);
 
@@ -39,9 +38,8 @@ private:
 
     juce::ValueTree connectionTreeFor(const Arrow* arrow) const;
 
-    NodeCanvas&                    nodeCanvas;
-    GraphState&                    graphState;
-    GraphDocument&                 graphDocument;
-    juce::UndoManager&             undoManager;
+    NodeCanvas&    nodeCanvas;
+    GraphDocument& graphDocument;
+
     ArsNovaUI::PopupWindowLauncher allowedTraversalsLauncher { "Allowed Traversals" };
 };

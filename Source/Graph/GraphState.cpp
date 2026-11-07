@@ -525,6 +525,41 @@ std::vector<int> GraphState::nodeIdsBetween(int startNodeId, int endNodeId) cons
     return spanNodeIds;
 }
 
+NodeInfo::Kind GraphState::kindOf(const juce::ValueTree& node)
+{
+    const juce::Identifier type = node.getType();
+
+    if (type == ValueTreeIdentifiers::RootNodeData) {
+        return NodeInfo::Kind::Root;
+    }
+
+    if (type == ValueTreeIdentifiers::AlternativeNodeData) {
+        return NodeInfo::Kind::Alternative;
+    }
+
+    if (type == ValueTreeIdentifiers::ModulatorRootData) {
+        return NodeInfo::Kind::ModulatorRoot;
+    }
+
+    if (type == ValueTreeIdentifiers::ModulatorData) {
+        return NodeInfo::Kind::Modulator;
+    }
+
+    if (type == ValueTreeIdentifiers::AlternativeModulatorData) {
+        return NodeInfo::Kind::AlternativeModulator;
+    }
+
+    if (type == ValueTreeIdentifiers::TraversalFlagData) {
+        return NodeInfo::Kind::TraversalFlag;
+    }
+
+    if (type == ValueTreeIdentifiers::EncapsulatorData) {
+        return NodeInfo::Kind::Encapsulator;
+    }
+
+    return NodeInfo::Kind::Node;
+}
+
 void GraphState::setNodeLimitProperties(juce::ValueTree node, juce::UndoManager* undoManager)
 {
     node.setProperty(ValueTreeIdentifiers::CountLimit,        defaultNodeCountLimit,    undoManager);

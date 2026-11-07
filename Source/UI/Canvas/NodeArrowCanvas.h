@@ -14,13 +14,15 @@
     class a tree becomes is left to each subclass.
 */
 
-class NodeArrowCanvas : public ArsNovaUI::EditCanvas
+class NodeArrowCanvas : public ArsNovaUI::EditCanvas, public juce::TooltipClient
 {
 public:
 
     explicit NodeArrowCanvas(ArsNovaUI::CanvasDocument& document);
 
     void treePropertyChanged(const juce::ValueTree& tree, const juce::Identifier& propertyIdentifier) override;
+
+    juce::String getTooltip() override;
 
     std::unique_ptr<ArsNovaUI::CanvasArrow> makeArrow        (ArsNovaUI::CanvasNode* startNode, ArsNovaUI::CanvasNode* endNode) override;
     std::unique_ptr<ArsNovaUI::CanvasArrow> makeDanglingArrow(ArsNovaUI::CanvasNode* startNode, juce::Point<int> tipOffset) override;

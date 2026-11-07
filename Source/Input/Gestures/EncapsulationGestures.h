@@ -32,6 +32,8 @@ public:
 
     bool toggleEncapsulationExpansion(Node& node);
 
+    int spanAnchorNodeId = -1;
+
 private:
 
     NodeCanvas&        nodeCanvas;

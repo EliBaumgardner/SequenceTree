@@ -3,13 +3,12 @@
 #include "../../Input/FigureDocument.h"
 #include "../../Graph/OrnamentLibraries.h"
 
-OrnamentFigureController::OrnamentFigureController(OrnamentCanvas& ornamentCanvas, FigureDocument& figureDocument, OrnamentLibraries& ornamentLibraries,
-                                                   juce::UndoManager& undoManager)
-    : ArsNovaUI::CanvasController(ornamentCanvas, figureDocument, undoManager),
-      ornamentCanvas(ornamentCanvas),
-      figureDocument(figureDocument),
-      ornamentLibraries(ornamentLibraries),
-      undoManager(undoManager)
+OrnamentFigureController::OrnamentFigureController(OrnamentCanvas& ornamentCanvas, FigureDocument& figureDocument, OrnamentLibraries& ornamentLibraries)
+    : ArsNovaUI::CanvasController(ornamentCanvas, figureDocument),
+      ornamentCanvas             (ornamentCanvas),
+      figureDocument             (figureDocument),
+      ornamentLibraries          (ornamentLibraries),
+      undoManager                (figureDocument.undoManager)
 {
 }
 

@@ -16,7 +16,9 @@
     get, set, increment and ref read and write one value by slot and node id. A NodeRowMap gives
     each node id its row the first time it is written, and the values sit in one fixed block,
     a row per node and a column per slot. A node that was never written reads as its default: -1
-    for slots that hold a node id, 0 for counts. It can hold 1024 different nodes. Writes past that
+    for slots that hold a node id, 0 for counts. ActiveAlternative holds -1 until the host is first
+    reached, hostPlays while the host itself plays, and otherwise the playing alternative's id. It
+    can hold 1024 different nodes. Writes past that
     are thrown away, and assert in debug builds. clear puts every value back to its default.
 
     Each TraversalLogic owns one, so every traversal keeps its own counts, and clears it when the
@@ -58,6 +60,7 @@ class NodeStateTable
 {
 public:
 
+    static constexpr int         hostPlays  = -2;
     static constexpr int         slotCount  = static_cast<int>(NodeStateSlot::Total);
     static constexpr int         maxNodeIds = NodeRowMap::maxRows;
     static constexpr std::size_t valueCount = static_cast<std::size_t>(slotCount) * maxNodeIds;

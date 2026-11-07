@@ -9,6 +9,10 @@ MenuBar::MenuBar(NodeCanvas& nodeCanvas)
     nodeIcon.icon      = &ArsNovaUI::CustomLookAndFeel::drawRingDotIcon;
     traversalIcon.icon = &ArsNovaUI::CustomLookAndFeel::drawRouteIcon;
 
+    treeIcon.setTooltip("Tree");
+    nodeIcon.setTooltip("Node settings");
+    traversalIcon.setTooltip("Traversal settings");
+
     treeIcon.setEnabled(false);
 
     addAndMakeVisible(treeIcon);

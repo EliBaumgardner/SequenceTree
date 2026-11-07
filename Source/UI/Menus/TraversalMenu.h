@@ -6,8 +6,6 @@
 #include <ArsNovaUI/Editors/LabeledEditor.h>
 #include <ArsNovaUI/Menus/ColourSelector.h>
 #include <ArsNovaUI/Buttons/IconButton.h>
-#include "TraversalRulesWindow.h"
-#include <ArsNovaUI/PopupWindow.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 /*
@@ -19,24 +17,21 @@
     UndoManager. Until a traversal exists the panel shows a hint instead.
 
     selectTraversal binds the fields to a traversal and also makes it the traversal that
-    NodeCanvas::quaverTraversalId uses for note preview. It listens to the traversal map, adding
+    NotePreviewGestures::traversalId uses for note preview. It listens to the traversal map, adding
     or removing an item when a traversal is created or removed and moving the selection if the
     chosen traversal is the one removed.
 
-    MenuArea owns it and shows it when the traversal icon is selected.
+    PluginEditor owns it, and MenuArea shows it when the traversal icon is selected.
 */
 
-class NodeCanvas;
+class NotePreviewGestures;
 class GraphState;
-class TraversalRuleState;
-class AudioSnapshotPublisher;
 
 class TraversalMenu : public juce::Component, private juce::ValueTree::Listener
 {
 public:
 
-    TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-                  juce::ValueTree colourPresets, juce::UndoManager& undoManager);
+    TraversalMenu(NotePreviewGestures& notePreviewGestures, GraphState& graphState, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
     ~TraversalMenu() override;
 
@@ -59,27 +54,14 @@ public:
 
     ArsNovaUI::IconButton editTraversalRulesButton;
 
-    ArsNovaUI::PopupWindowLauncher traversalRulesLauncher {
-        "Traversal Rules",
-        [this]() {
-            auto content = std::make_unique<TraversalRulesWindow>(ArsNovaUI::CustomLookAndFeel::get(*this), traversalRuleState, snapshots, undoManager);
-
-            content->setSize(TraversalRulesWindow::defaultWidth, TraversalRulesWindow::defaultHeight);
-
-            return content;
-        }
-    };
-
 private:
 
     void valueTreeChildAdded  (juce::ValueTree& parent, juce::ValueTree& child) override;
     void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
 
-    NodeCanvas&             nodeCanvas;
-    GraphState&             graphState;
-    TraversalRuleState&     traversalRuleState;
-    AudioSnapshotPublisher& snapshots;
-    juce::UndoManager&      undoManager;
+    NotePreviewGestures& notePreviewGestures;
+    GraphState&          graphState;
+    juce::UndoManager&   undoManager;
 
     juce::ValueTree currentTraversalData;
 };

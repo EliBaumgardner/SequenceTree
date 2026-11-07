@@ -8,8 +8,8 @@
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 EncapsulationGestures::EncapsulationGestures(NodeCanvas& nodeCanvas, GraphState& graphState, juce::UndoManager& undoManager)
-    : nodeCanvas(nodeCanvas),
-      graphState(graphState),
+    : nodeCanvas (nodeCanvas),
+      graphState (graphState),
       undoManager(undoManager)
 {
 }
@@ -20,7 +20,8 @@ void EncapsulationGestures::selectSpanNode(Node& node)
 
     if (node.nodeType == NodeInfo::Type::Encapsulator) {
         nodeCanvas.clearOutlines();
-        nodeCanvas.spanAnchorNodeId = -1;
+
+        spanAnchorNodeId = -1;
 
         undoManager.beginNewTransaction();
 
@@ -33,21 +34,22 @@ void EncapsulationGestures::selectSpanNode(Node& node)
     }
 
     const int nodeRootId   = node.nodeValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
-    const int anchorRootId = graphState.getNode(nodeCanvas.spanAnchorNodeId).getProperty(ValueTreeIdentifiers::RootNodeId);
+    const int anchorRootId = graphState.getNode(spanAnchorNodeId).getProperty(ValueTreeIdentifiers::RootNodeId);
 
-    if (nodeCanvas.spanAnchorNodeId < 0 || anchorRootId != nodeRootId) {
+    if (spanAnchorNodeId < 0 || anchorRootId != nodeRootId) {
         nodeCanvas.clearOutlines();
 
-        nodeCanvas.spanAnchorNodeId = nodeId;
+        spanAnchorNodeId = nodeId;
+        node.isOutlined  = true;
 
-        node.isOutlined = true;
         node.repaint();
+
         return;
     }
 
-    const std::vector<int> spanNodeIds = graphState.nodeIdsBetween(nodeCanvas.spanAnchorNodeId, nodeId);
+    const std::vector<int> spanNodeIds = graphState.nodeIdsBetween(spanAnchorNodeId, nodeId);
 
-    nodeCanvas.spanAnchorNodeId = -1;
+    spanAnchorNodeId = -1;
 
     if (spanNodeIds.empty()) {
         return;

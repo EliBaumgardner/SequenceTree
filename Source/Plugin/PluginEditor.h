@@ -14,13 +14,23 @@
 #include "../Graph/GraphState.h"
 #include "../Input/GraphDocument.h"
 #include "../UI/Menus/MenuArea.h"
+#include "../UI/Menus/TraversalMenu.h"
+#include "../UI/Menus/NodeMenu.h"
+#include "../Input/Gestures/NotePreviewGestures.h"
+#include "../UI/Menus/TraversalRulesWindow.h"
+#include "../UI/Ornaments/OrnamentWindow.h"
+#include <ArsNovaUI/Menus/SettingsMenu.h>
+#include <ArsNovaUI/PopupWindow.h>
 #include <ArsNovaUI/ScaledView.h>
 
 /*
     The plugin's window, which exists only while it is open. Its constructor builds every UI part
     and gives each one the processor members it uses: the look-and-feel and interface settings, the
-    NodeCanvas, the NodeController that routes the canvas's mouse events, the DynamicPort that
-    zooms and pans it, the MenuArea, Titlebar and BottomBar, and the CanvasFrame that frames them.
+    NodeCanvas, the NodeController that routes the canvas's mouse events, the NotePreviewGestures
+    that the controller, TraversalMenu and BottomBar share, the DynamicPort that zooms and pans the
+    canvas, the TraversalMenu and NodeMenu, the MenuArea, Titlebar and BottomBar, and the
+    CanvasFrame that frames them. It owns the traversal-rules, settings and ornament windows and
+    wires the buttons that open them.
     It also attaches the canvas's tree listener to the graph, so edits reach the screen.
 
     audioCommandFrames, a VBlankAttachment, runs once per display frame: it applies a play or stop
@@ -58,6 +68,7 @@ private:
     void configureWindowSize();
     void updateResizeLimits ();
     void toggleFullScreen   ();
+    void wireCallbacks      ();
 
     juce::Component* keyListenerTarget = nullptr;
 
@@ -68,6 +79,44 @@ private:
     std::unique_ptr<ArsNovaUI::ScaledView> scaledView;
     juce::TooltipWindow                    tooltipWindow { &workspace, 400 };
     GraphDocument                          graphDocument;
+    NotePreviewGestures                    notePreviewGestures;
+
+    ArsNovaUI::PopupWindowLauncher traversalRulesLauncher {
+        "Traversal Rules",
+        [this]() {
+            auto content = std::make_unique<TraversalRulesWindow>(lookAndFeel, audioProcessor.traversalRuleState, audioProcessor.snapshots, audioProcessor.undoManager);
+
+            content->setSize(TraversalRulesWindow::defaultWidth, TraversalRulesWindow::defaultHeight);
+
+            return content;
+        }
+    };
+
+    ArsNovaUI::PopupWindowLauncher settingsLauncher {
+        "Settings",
+        [this]() {
+            auto content = std::make_unique<ArsNovaUI::SettingsMenu>(lookAndFeel, *scaledView, audioProcessor.colourPresets, audioProcessor.undoManager);
+
+            const juce::Point<int> size = content->narrowestSize();
+
+            content->setSize(size.x, size.y);
+
+            return content;
+        }
+    };
+
+    ArsNovaUI::PopupWindowLauncher ornamentLauncher {
+        "Ornaments",
+        [this]() {
+            auto content = std::make_unique<OrnamentWindow>(lookAndFeel, audioProcessor.ornamentLibraries, audioProcessor.ornamentUndoManager);
+
+            const juce::Point<int> size = content->narrowestSize();
+
+            content->setSize(size.x, size.y);
+
+            return content;
+        }
+    };
 
 public:
     std::unique_ptr<NodeCanvas> nodeCanvas = nullptr;
@@ -77,6 +126,8 @@ private:
     std::unique_ptr<NodeController>         nodeController = nullptr;
     std::unique_ptr<BottomBar>              bottomBar      = nullptr;
     std::unique_ptr<ArsNovaUI::DynamicPort> port           = nullptr;
+    std::unique_ptr<TraversalMenu>          traversalMenu  = nullptr;
+    std::unique_ptr<NodeMenu>               nodeMenu       = nullptr;
     std::unique_ptr<MenuArea>               menuArea       = nullptr;
     std::unique_ptr<CanvasFrame>            canvasFrame    = nullptr;
 

@@ -5,6 +5,7 @@
 #include "OrnamentApplier.h"
 #include <ArsNovaUI/Canvas/CanvasController.h>
 #include "Gestures/EncapsulationGestures.h"
+#include "Gestures/NotePreviewGestures.h"
 #include "ArrowMenu.h"
 
 /*
@@ -17,10 +18,12 @@
     the paint tool is active there is no hover.
 
     Its own features are the members it owns: selectionGestures, ornamentApplier,
-    encapsulationGestures and arrowMenu; the features every canvas shares come from
-    CanvasController. A new graph feature is another such class and another branch here; a
+    encapsulationGestures and arrowMenu. It also routes to notePreviewGestures, which PluginEditor
+    owns because BottomBar and TraversalMenu configure it. The features every canvas shares come
+    from CanvasController. A new graph feature is another such class and another branch here; a
     feature for every canvas goes into CanvasController. It forwards paint-tool strokes to
-    NodeCanvas::valueField and pushes note preview requests to TraversalSession::previewRequests.
+    NodeCanvas::valueField, and sets NodeCanvas::onToolLeft to clear the span anchor and stop a
+    note preview when the canvas leaves those tools.
 
     PluginEditor builds it after the canvas. Titlebar sets arrowGestures.arrowMode, and
     PluginEditor's key handler calls selectionGestures.
@@ -30,13 +33,9 @@ class NodeCanvas;
 
 class Node;
 
-class GraphState;
 
 class GraphDocument;
 
-class TraversalSession;
-
-class RTGraphBuilder;
 
 class OrnamentLibraries;
 
@@ -46,8 +45,7 @@ class NodeController : public ArsNovaUI::CanvasController
 {
 public:
 
-    NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& graphDocument, juce::UndoManager& undoManager,
-                   TraversalSession& traversalSession, RTGraphBuilder& rtGraphBuilder, OrnamentLibraries& ornamentLibraries);
+    NodeController(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, OrnamentLibraries& ornamentLibraries);
     ~NodeController() override;
 
     void mouseDown (const juce::MouseEvent& e) override;
@@ -58,17 +56,18 @@ public:
     void mouseDrag (const juce::MouseEvent& e) override;
 
     SelectionGestures     selectionGestures;
-    OrnamentApplier       ornamentApplier;
     EncapsulationGestures encapsulationGestures;
-    ArrowMenu             arrowMenu;
+
+    OrnamentApplier ornamentApplier;
+    ArrowMenu       arrowMenu;
+
+    NotePreviewGestures& notePreviewGestures;
 
 private:
 
     enum class GraphGesture { None, BoxSelecting };
 
-    TraversalSession& traversalSession;
-    RTGraphBuilder&   rtGraphBuilder;
-    NodeCanvas&       nodeCanvas;
+    NodeCanvas& nodeCanvas;
 
     GraphGesture graphGesture = GraphGesture::None;
 };

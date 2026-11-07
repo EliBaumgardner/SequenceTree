@@ -59,8 +59,8 @@ public:
 
     struct Walker
     {
-        int target = 0;
-        int last   = 0;
+        int target = -1;
+        int last   = -1;
 
         int subRootNode = -1;
 
@@ -98,28 +98,20 @@ public:
 
         void activate(int rootId, int hostId)
         {
-            gate.activeRootId        = rootId;
-            gate.hostId              = hostId;
-            gate.repeatCount         = 0;
-            walker.target            = rootId;
-            walker.last              = -1;
-            walker.subRootNode       = -1;
-            walker.alternativeTarget = -1;
-            walker.alternativeLast   = -1;
-            decidedTarget            = -1;
-            decidedRestart           = false;
+            gate.activeRootId = rootId;
+            gate.hostId       = hostId;
+            gate.repeatCount  = 0;
+            walker            = { .target = rootId };
+            decidedTarget     = -1;
+            decidedRestart    = false;
         }
 
         void deactivate()
         {
-            gate                     = {};
-            walker.target            = -1;
-            walker.last              = -1;
-            walker.subRootNode       = -1;
-            walker.alternativeTarget = -1;
-            walker.alternativeLast   = -1;
-            decidedTarget            = -1;
-            decidedRestart           = false;
+            gate           = {};
+            walker         = {};
+            decidedTarget  = -1;
+            decidedRestart = false;
         }
 
         bool tickRepeat(int repeatLimit)
@@ -216,6 +208,6 @@ private:
 
     const RTNode* eligibleModulatorRoot(const NodeMap& nodes, const RTConnection& connection, int hostCount) const;
 
-    int referenceTargetId   = 0;
+    int referenceTargetId   = -1;
     int pendingJumpTargetId = -1;
 };

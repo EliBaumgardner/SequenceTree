@@ -4,6 +4,8 @@
 #include <compare>
 #include <vector>
 
+#include "../Util/NodeInfo.h"
+
 /*
     The data types the audio thread reads. They are plain copies of the graph, made on the message
     thread, holding only numbers, bools and vectors and no ValueTree, String or other JUCE type, so
@@ -105,14 +107,13 @@ struct RTNode {
         std::vector<TraversalKey> disabledTraversals;
     };
 
-    enum class NodeType {RootNode, Node, Alternative, Modulator, ModulatorRoot, AlternativeModulator, TraversalFlagData};
-
     static constexpr int probabilityScale = 100;
 
-    int      nodeID   = 0;
-    int      parentId = 0;
-    int      graphID  = 0;
-    NodeType nodeType = NodeType::Node;
+    int nodeID   = 0;
+    int parentId = 0;
+    int graphID  = 0;
+
+    NodeInfo::Kind nodeType = NodeInfo::Kind::Node;
 
     int countLimit        = 0;
     int triggerLimit      = 0;
@@ -124,9 +125,8 @@ struct RTNode {
     int probability = probabilityScale;
     int pitchOffset = 0;
 
-    bool isAlternativeNode        = false;
-    int  alternativeRootId        = -1;
-    int  alternativeArrowDuration = -1;
+    int alternativeRootId        = -1;
+    int alternativeArrowDuration = -1;
 
     int encapsulationEntryId = -1;
 

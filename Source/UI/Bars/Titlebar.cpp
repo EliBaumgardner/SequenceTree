@@ -5,24 +5,18 @@
 
 #include "Titlebar.h"
 
-Titlebar::Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas, NodeController& nodeController, GraphDocument& graphDocument,
-                   juce::PropertiesFile& interfaceSettings, ArsNovaUI::ScaledView& scaledView, juce::ValueTree colourPresets, juce::UndoManager& undoManager)
-    : ArsNovaUI::Bar(nodeCanvas, Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
-      processor(processor),
-      nodeCanvas(nodeCanvas),
-      nodeController(nodeController),
-      graphDocument(graphDocument),
-      undoManager(undoManager),
-      interfaceSettings(interfaceSettings),
-      scaledView(scaledView),
-      colourPresets(colourPresets),
+Titlebar::Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas, NodeController& nodeController, GraphDocument& graphDocument)
+    : ArsNovaUI::Bar (nodeCanvas, Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
+      processor      (processor),
+      nodeCanvas     (nodeCanvas),
+      nodeController (nodeController),
+      graphDocument  (graphDocument),
+      undoManager    (processor.undoManager),
       displaySelector(undoManager),
-      tempoDisplay(undoManager),
-      patchControls(processor, processor.patch, processor.patchFolder)
+      tempoDisplay   (undoManager),
+      patchControls  (processor, processor.patch, processor.patchFolder)
 {
-    settingsLauncher.openingScale = ArsNovaUI::SettingsMenu::openingScale;
-
-    settingsPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawSettingsIcon, "Settings", [this]() { settingsLauncher.show(*this); });
+    settingsPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawSettingsIcon, "Settings", [this]() { onSettingsClicked(); });
 
     addAndMakeVisible(transportPane);
     addAndMakeVisible(tempoDisplay);
@@ -85,7 +79,11 @@ void Titlebar::applyPlaybackState(bool shouldPlay)
 {
     playButton->setSelected(shouldPlay);
 
-    nodeCanvas.setProcessorPlayback(shouldPlay);
+    processor.isPlaying.store(shouldPlay);
+
+    nodeCanvas.setPlaybackActive(shouldPlay);
+
+    processor.rtGraphBuilder.handleUpdateNowIfNeeded();
 }
 
 int Titlebar::narrowestWidth() const
@@ -101,7 +99,7 @@ int Titlebar::narrowestWidth() const
 void Titlebar::configureTransportPane()
 {
     playButton = &transportPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawPlayIcon, "Play / Pause",
-                                          [this]() { applyPlaybackState(!nodeCanvas.start); });
+                                          [this]() { applyPlaybackState(!processor.isPlaying.load()); });
 
     playButton->state.look = ArsNovaUI::ButtonState::Look::Accent;
 
@@ -138,13 +136,13 @@ void Titlebar::configureModePane()
         nodeController.arrowGestures.setArrowMode(selected == nullptr);
     };
 
-    ArsNovaUI::IconButton& nodeButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawCircleIcon, "Node Mode",
+    ArsNovaUI::IconButton& nodeButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawCircleIcon, "",
         [this]() { graphDocument.creationMode = NodeCreationMode::Node; });
 
-    ArsNovaUI::IconButton& modulatorButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRoundedSquareIcon, "Modulator Mode",
+    ArsNovaUI::IconButton& modulatorButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRoundedSquareIcon, "",
         [this]() { graphDocument.creationMode = NodeCreationMode::Modulator; });
 
-    ArsNovaUI::IconButton& flagButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawTriangleIcon, "Traversal Flag Mode",
+    ArsNovaUI::IconButton& flagButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawTriangleIcon, "",
         [this]() { graphDocument.creationMode = NodeCreationMode::TraversalFlag; });
 
     nodeButton.state.look      = ArsNovaUI::ButtonState::Look::Raised;

@@ -7,9 +7,9 @@
 #include "../Buttons/PaintToolSettings.h"
 #include <ArsNovaUI/Buttons/ValueSlider.h>
 #include <ArsNovaUI/Menus/ContextMenu.h>
-#include <ArsNovaUI/PopupWindow.h>
+
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
-#include "../Ornaments/OrnamentWindow.h"
+
 #include "../../Util/ArrowInfo.h"
 #include "../../Util/NodeInfo.h"
 
@@ -23,8 +23,9 @@
 
     Each tool button toggles NodeCanvas::activeTool, and the bar sets which of them looks selected
     from NodeCanvas::onActiveToolChanged. Right-clicking the note preview button opens a menu to
-    repeat the preview, which goes to the audio thread as a preview request on TraversalSession.
-    Right-clicking the ornament button rescans the OrnamentLibraries and opens the OrnamentWindow;
+    repeat the preview, which NotePreviewGestures::toggleRepeat sends to the audio thread.
+    Right-clicking the ornament button calls onOrnamentWindowRequested, which PluginEditor answers
+    by rescanning the OrnamentLibraries and opening the OrnamentWindow;
     the button shows the active ornament's symbol and name, updated when the libraries tree
     changes. Each bind button turns its axis of GraphDocument::currentArrowInfo on or off, and its
     right-click menu picks pitch or duration and a multiplier from 0.25x to 4x. applyDisplayMode
@@ -35,7 +36,8 @@
 
 class NodeCanvas;
 class GraphDocument;
-class TraversalSession;
+
+class NotePreviewGestures;
 class OrnamentLibraries;
 
 
@@ -43,8 +45,7 @@ class BottomBar : public ArsNovaUI::Bar, private juce::ValueTree::Listener
 {
 public:
 
-    BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, TraversalSession& traversalSession, juce::ValueTree colourPresets,
-              juce::UndoManager& undoManager, OrnamentLibraries& ornamentLibraries, juce::UndoManager& ornamentUndoManager);
+    BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, juce::ValueTree colourPresets, OrnamentLibraries& ornamentLibraries);
 
     ~BottomBar() override;
 
@@ -53,6 +54,8 @@ public:
     void applyDisplayMode(NodeInfo::DisplayMode mode);
 
     int narrowestWidth() const;
+
+    std::function<void()> onOrnamentWindowRequested;
 
 private:
 
@@ -100,12 +103,10 @@ private:
     static constexpr int paintPanelWidth       = 165;
     static constexpr int quaverPaneWidth       = 67;
 
-    NodeCanvas&        nodeCanvas;
-    GraphDocument&     graphDocument;
-    TraversalSession&  traversalSession;
-    OrnamentLibraries& ornamentLibraries;
-    juce::UndoManager& ornamentUndoManager;
-
+    NodeCanvas&          nodeCanvas;
+    GraphDocument&       graphDocument;
+    NotePreviewGestures& notePreviewGestures;
+    OrnamentLibraries&   ornamentLibraries;
 
     PaintToolSettings        paintPanel;
     ArsNovaUI::ButtonPane    toolPane;
@@ -117,19 +118,6 @@ private:
     ArsNovaUI::IconButton* quaverTool     = nullptr;
     ArsNovaUI::IconButton* spanTool       = nullptr;
     ArsNovaUI::IconButton* ornamentButton = nullptr;
-
-    ArsNovaUI::PopupWindowLauncher ornamentLauncher {
-        "Ornaments",
-        [this]() {
-            auto content = std::make_unique<OrnamentWindow>(ArsNovaUI::CustomLookAndFeel::get(*this), ornamentLibraries, ornamentUndoManager);
-
-            const juce::Point<int> size = content->narrowestSize();
-
-            content->setSize(size.x, size.y);
-
-            return content;
-        }
-    };
 
     BindAxis xAxis { nullptr, ArrowInfo::Binding::DurationBind, &ArrowInfo::Settings::xBinding, &ArrowInfo::Settings::xMultiplier };
     BindAxis yAxis { nullptr, ArrowInfo::Binding::PitchBind,    &ArrowInfo::Settings::yBinding, &ArrowInfo::Settings::yMultiplier };

@@ -154,10 +154,10 @@ bool NoteScheduler::isNoteSounding(const ActiveNote& note)
     return isNodeAudible(note.nodeType) && !note.isConnectionTrigger && note.sound == Sound::Audible;
 }
 
-bool NoteScheduler::isNodeAudible(RTNode::NodeType nodeType)
+bool NoteScheduler::isNodeAudible(NodeInfo::Kind nodeType)
 {
-    return nodeType != RTNode::NodeType::ModulatorRoot
-        && nodeType != RTNode::NodeType::TraversalFlagData;
+    return nodeType != NodeInfo::Kind::ModulatorRoot
+        && nodeType != NodeInfo::Kind::TraversalFlag;
 }
 
 void NoteScheduler::startOrnamentStep(ActiveNote& note, std::span<const OrnamentStep> figure, double sample)

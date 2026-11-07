@@ -31,7 +31,7 @@
 
 class NodeCanvas;
 
-class Node : public ArsNovaUI::CanvasNode
+class Node : public ArsNovaUI::CanvasNode, public juce::SettableTooltipClient
 {
 public:
 
@@ -62,6 +62,8 @@ public:
     virtual void bindToTree ();
     virtual void bindValueEditorForMode ();
     void         respondToClick(juce::Point<int> localPoint) override;
+
+    juce::String getTooltip() override;
 
     ArsNovaUI::NodeVisual getNodeVisual(juce::Rectangle<float> bounds) const;
 

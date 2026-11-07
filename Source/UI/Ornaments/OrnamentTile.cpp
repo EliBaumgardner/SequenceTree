@@ -4,16 +4,18 @@
 #include "../../Graph/OrnamentLibraries.h"
 
 OrnamentTile::OrnamentTile(OrnamentLibraries& ornamentLibraries, juce::ValueTree ornament, juce::UndoManager& undoManager)
-    : ornament(ornament),
+    : ornament         (ornament),
       ornamentLibraries(ornamentLibraries),
-      undoManager(undoManager),
-      nameTag(undoManager)
+      undoManager      (undoManager),
+      nameTag          (undoManager)
 {
     nameTag.autoFitText = true;
     nameTag.fontStyle   = ArsNovaUI::Theme::FontStyle::Regular;
 
     nameTag.setFormat(std::make_unique<ArsNovaUI::TextFormat>(ArsNovaUI::TextFormat::labelTextLength, ArsNovaUI::TextFormat::labelCharacters));
     nameTag.bindEditor(ornament, ValueTreeIdentifiers::OrnamentName);
+    nameTag.setTooltip("Ornament name");
+    setTooltip("Select ornament");
 
     setSize(tileWidth, tileHeight);
 

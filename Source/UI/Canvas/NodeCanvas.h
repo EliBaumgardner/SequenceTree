@@ -1,5 +1,6 @@
 #pragma once
 
+
 #include <unordered_set>
 
 #include "../../Graph/RTData.h"
@@ -15,7 +16,7 @@
 /*
     The NodeArrowCanvas for the graph: it shows GraphDocument's nodeMap and adds what only the
     graph has. That is the active tool (none, paint, span, note preview or ornament), which only
-    setActiveTool changes: it sets the cursor, stops a note preview that was running and tells
+    setActiveTool changes: it sets the cursor, tells onToolLeft which tool was left and tells
     the bar through onActiveToolChanged; the selection rectangle; and the parts AudioCommandDrainer
     for the audio thread's commands, EncapsulationView, OrnamentMarks and ValueField.
 
@@ -25,8 +26,8 @@
     refresh ornament marks and group colours. handleAsyncUpdate drains the audio commands before
     it applies the queued updates; the editor's per-frame poll and SelectionGestures call it.
     rebuildFromNodeMap also collapses every group and puts the grid origin on a root.
-    setProcessorPlayback stores the play state for the processor and starts or pauses the
-    arrows' progress animation. setDisplayMode, clearHighlights, clearOutlines, setInterceptsClicks
+    setPlaybackActive equips the roots' traversals and starts, or pauses, the arrows' progress
+    animation. setDisplayMode, clearHighlights, clearOutlines, setInterceptsClicks
     and equipRootTraversals apply one change to every node, resetAllProgress, resetTrail,
     pauseAllProgress and resumeAllProgress to the trails of every arrow, and fadeFlagArrows fades in
     the arrows of the traversal flags near the cursor.
@@ -35,10 +36,10 @@
 */
 
 class RootNode;
-class SequenceTreeAudioProcessor;
+class AudioUIBridge;
 class GraphState;
+class OrnamentLibraries;
 class GraphDocument;
-class RTGraphBuilder;
 
 class NodeCanvas : public NodeArrowCanvas
 {
@@ -46,8 +47,7 @@ public:
 
     enum class CanvasTool;
 
-    NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, GraphDocument& graphDocument, RTGraphBuilder& rtGraphBuilder,
-               ArsNovaUI::CustomLookAndFeel& lookAndFeel);
+    NodeCanvas(GraphDocument& graphDocument, AudioUIBridge& bridge, OrnamentLibraries& ornamentLibraries, ArsNovaUI::CustomLookAndFeel& lookAndFeel);
 
     ~NodeCanvas() override;
 
@@ -65,8 +65,8 @@ public:
 
     void setActiveTool(CanvasTool tool);
 
-    void applyViewTransform  (const juce::AffineTransform& newViewTransform, float zoom);
-    void setProcessorPlayback(bool isPlaying);
+    void applyViewTransform(const juce::AffineTransform& newViewTransform, float zoom);
+    void setPlaybackActive (bool shouldPlay);
 
     void setDisplayMode     (NodeInfo::DisplayMode mode);
     void setInterceptsClicks(bool shouldIntercept, bool shouldChildrenIntercept);
@@ -85,28 +85,18 @@ public:
 
     enum class CanvasTool { None, Paint, Span, NotePreview, Ornament };
 
-    SequenceTreeAudioProcessor& processor;
-    GraphState&                 graphState;
-    RTGraphBuilder&             rtGraphBuilder;
-
-    juce::Colour canvasColour = juce::Colours::white;
+    GraphState& graphState;
 
     CanvasTool activeTool = CanvasTool::None;
 
     NodeInfo::DisplayMode displayMode = NodeInfo::DisplayMode::Pitch;
 
     std::function<void(CanvasTool)> onActiveToolChanged;
+    std::function<void(CanvasTool)> onToolLeft;
 
-    bool start        = false;
-    bool quaverRepeat = false;
+    static constexpr int spanCursorSize        = 16;
+    static constexpr int notePreviewCursorSize = 24;
 
-    int quaverTraversalId = 1;
-    int spanAnchorNodeId  = -1;
-
-    juce::Value quaverCount { NodeInfo::minimumCountLimit };
-
-    static constexpr int   spanCursorSize      = 16;
-    static constexpr int   quaverCursorSize    = 24;
     static constexpr float flagProximityRadius = 28.0f;
 
     juce::Rectangle<int> selectionBounds;
@@ -119,6 +109,6 @@ public:
 
 private:
 
-    juce::MouseCursor spanCursor  () const;
-    juce::MouseCursor quaverCursor() const;
+    juce::MouseCursor spanCursor       () const;
+    juce::MouseCursor notePreviewCursor() const;
 };

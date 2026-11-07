@@ -3,7 +3,10 @@
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 CanvasFrame::CanvasFrame(NodeCanvas& nodeCanvas, juce::Component& menuArea, juce::Component& titleBar, juce::Component& bottomBar)
-    : nodeCanvas(nodeCanvas), menuArea(menuArea), titleBar(titleBar), bottomBar(bottomBar)
+    : nodeCanvas(nodeCanvas),
+      menuArea  (menuArea),
+      titleBar  (titleBar),
+      bottomBar (bottomBar)
 {
     setInterceptsMouseClicks(false, false);
 }

@@ -5,7 +5,8 @@
 #include <algorithm>
 
 FlagScheduler::FlagScheduler(TraversalDispatcher& owner, AudioUIBridge& bridgeRef)
-    : dispatcher(owner), bridge(bridgeRef)
+    : dispatcher(owner),
+      bridge    (bridgeRef)
 {
 }
 
@@ -22,7 +23,7 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostRunId, const Trave
         }
 
         const RTNode& flagNode = *childNode;
-        if (flagNode.nodeType != RTNode::NodeType::TraversalFlagData) {
+        if (flagNode.nodeType != NodeInfo::Kind::TraversalFlag) {
             continue;
         }
 
@@ -96,7 +97,7 @@ bool FlagScheduler::startNextDue(double before, const DispatchContext& context)
 
     const RTNode& flagNode = *flagEntry;
 
-    if (flagNode.nodeType != RTNode::NodeType::TraversalFlagData || flagNode.flagRemovesTraversal) {
+    if (flagNode.nodeType != NodeInfo::Kind::TraversalFlag || flagNode.flagRemovesTraversal) {
         return true;
     }
 

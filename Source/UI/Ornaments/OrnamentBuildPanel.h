@@ -18,9 +18,12 @@
     port with an OrnamentFigureController doing the editing and an editor for the ornament's name,
     or the symbol view, an OrnamentSymbolEditor. With no ornament active it shows a hint.
 
-    The title bar has buttons to pick the host node, to turn on arrow mode, to undo and redo, to
-    publish the ornament, and to switch views. Publish calls OrnamentLibraries::publish and is
-    enabled only when isPublishable accepts the figure and it is not already published.
+    The title bar has a pane of two tools, the host node and the regular node, and buttons to undo
+    and redo, to publish the ornament, and to switch views. With the host tool selected the next
+    click on a node makes it the host; with the node tool selected the figure is built as usual;
+    with neither selected the canvas is in arrow mode and Shift-drag adds a dangling arrow.
+    Publish calls OrnamentLibraries::publish and is enabled only when isPublishable accepts the
+    figure and it is not already published.
 
     It listens to the libraries tree: when the active ornament changes it hands the new ornament
     and its figure to the FigureDocument and the symbol editor, moves the canvas's tree listener
@@ -48,11 +51,15 @@ public:
 
         BuildTitlebar();
 
-        ArsNovaUI::IconButton hostButton;
-        ArsNovaUI::IconButton arrowButton;
+        ArsNovaUI::ButtonPane nodePane;
         ArsNovaUI::ButtonPane undoRedoPane;
-        ArsNovaUI::IconButton publishButton;
-        ArsNovaUI::IconButton symbolButton;
+        ArsNovaUI::ButtonPane symbolPane;
+        ArsNovaUI::ButtonPane publishPane;
+
+        ArsNovaUI::IconButton* hostButton    = nullptr;
+        ArsNovaUI::IconButton* nodeButton    = nullptr;
+        ArsNovaUI::IconButton* symbolButton  = nullptr;
+        ArsNovaUI::IconButton* publishButton = nullptr;
 
     private:
 
@@ -61,14 +68,13 @@ public:
 
     enum class BuildView { Figure, Symbol };
 
-    static constexpr int   titlebarHeight     = 28;
+    static constexpr int titlebarHeight  = 28;
+    static constexpr int titlebarGaps = 3;
+    static constexpr int nameHeight      = 20;
+    static constexpr int nameInset       = 6;
+
     static constexpr float titlebarInsetRatio = 0.143f;
     static constexpr float nameWidthRatio     = 0.22f;
-    static constexpr float buttonWidthRatio   = 3.2f;
-    static constexpr int   titlebarButtons    = 4;
-    static constexpr int   titlebarGaps       = 4;
-    static constexpr int   nameHeight         = 20;
-    static constexpr int   nameInset          = 6;
 
     FigureDocument           document;
     OrnamentCanvas           canvas;

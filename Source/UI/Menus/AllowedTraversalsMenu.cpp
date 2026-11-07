@@ -7,7 +7,8 @@
 #include <algorithm>
 
 AllowedTraversalsMenu::AllowedTraversalsMenu(ArsNovaUI::CustomLookAndFeel& lookAndFeel, GraphState& graphState, juce::UndoManager& undoManager, juce::ValueTree connection)
-    : undoManager(undoManager), connection(connection)
+    : undoManager(undoManager),
+      connection (connection)
 {
     const juce::ValueTree     traversalMap = graphState.traversals.map;
     std::vector<TraversalKey> keys;

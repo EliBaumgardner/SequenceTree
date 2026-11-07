@@ -8,9 +8,9 @@
 
 TraversalRulesWindow::TraversalRulesWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
                                            juce::UndoManager& undoManager)
-    : rulesPanel(undoManager),
+    : rulesPanel        (undoManager),
       traversalRuleState(traversalRuleState),
-      snapshots(snapshots)
+      snapshots         (snapshots)
 {
     setLookAndFeel(&lookAndFeel);
 
@@ -383,7 +383,7 @@ void TraversalRulesWindow::RulesTitlebar::resized()
 }
 
 TraversalRulesWindow::RulesPanel::RulesPanel(juce::UndoManager& undoManager)
-    : resizer(ArsNovaUI::PanelResizer::Edge::Right),
+    : resizer   (ArsNovaUI::PanelResizer::Edge::Right),
       labelPanel(undoManager)
 {
     addAndMakeVisible(panelTitlebar);

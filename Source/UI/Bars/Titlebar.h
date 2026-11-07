@@ -4,9 +4,6 @@
 #include <ArsNovaUI/Buttons/IconButton.h>
 #include <ArsNovaUI/Buttons/ButtonPane.h>
 #include <ArsNovaUI/Menus/ItemSelector.h>
-#include <ArsNovaUI/Menus/SettingsMenu.h>
-#include <ArsNovaUI/PopupWindow.h>
-#include <ArsNovaUI/ScaledView.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Menus/PatchControls.h"
 #include "../Buttons/TempoDisplay.h"
@@ -16,11 +13,13 @@
     The bar along the top of the editor, holding the controls for playback and for what new nodes
     are: play, reset and (in a plugin host) host sync buttons; the tempo multiplier; undo and redo;
     patch controls; three buttons that choose whether dragging creates a node, a modulator or a
-    traversal flag; a selector for which property nodes display; and a settings button that opens
-    a SettingsMenu in a pop-up window. It is a Bar drawn as frosted glass over the NodeCanvas.
+    traversal flag; a selector for which property nodes display; and a settings button, whose
+    click calls onSettingsClicked. It is a Bar drawn as frosted glass over the NodeCanvas.
 
-    The play button calls applyPlaybackState, which stores the processor's play state through
-    NodeCanvas::setProcessorPlayback; in a plugin host it only follows the host transport. Reset
+    The play button calls applyPlaybackState, which stores the processor's play state, has
+    NodeCanvas::setPlaybackActive equip the roots and start or pause the arrows' progress, and
+    then flushes RTGraphBuilder so the equipped traversals reach the audio thread before a block
+    plays; in a plugin host it only follows the host transport. Reset
     sets the processor's resetRequested flag and clears the arrows' progress. The tempo editor and
     the sync button are connected to the processor's parameters through ParameterAttachments. The
     creation buttons set GraphDocument::creationMode and switch arrow mode through
@@ -38,8 +37,7 @@ class Titlebar : public ArsNovaUI::Bar, private juce::ChangeListener
 {
 public:
 
-    Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas, NodeController& nodeController, GraphDocument& graphDocument,
-             juce::PropertiesFile& interfaceSettings, ArsNovaUI::ScaledView& scaledView, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
+    Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas, NodeController& nodeController, GraphDocument& graphDocument);
     ~Titlebar() override;
 
     void resized() override;
@@ -49,6 +47,7 @@ public:
     int narrowestWidth() const;
 
     std::function<void(NodeInfo::DisplayMode)> onDisplayModeChanged;
+    std::function<void()>                      onSettingsClicked;
 
 private:
 
@@ -71,10 +70,6 @@ private:
     NodeController&             nodeController;
     GraphDocument&              graphDocument;
     juce::UndoManager&          undoManager;
-    juce::PropertiesFile&       interfaceSettings;
-    ArsNovaUI::ScaledView&      scaledView;
-
-    juce::ValueTree colourPresets;
 
     ArsNovaUI::ButtonPane   transportPane;
     ArsNovaUI::ButtonPane   buttonPane;
@@ -83,19 +78,6 @@ private:
     ArsNovaUI::ButtonPane   undoRedoPane;
     PatchControls           patchControls;
     ArsNovaUI::ButtonPane   settingsPane;
-
-    ArsNovaUI::PopupWindowLauncher settingsLauncher {
-        "Settings",
-        [this]() {
-            auto content = std::make_unique<ArsNovaUI::SettingsMenu>(ArsNovaUI::CustomLookAndFeel::get(*this), interfaceSettings, scaledView, colourPresets, undoManager);
-
-            const juce::Point<int> size = content->narrowestSize();
-
-            content->setSize(size.x, size.y);
-
-            return content;
-        }
-    };
 
     ArsNovaUI::IconButton* playButton = nullptr;
     ArsNovaUI::IconButton* syncButton = nullptr;

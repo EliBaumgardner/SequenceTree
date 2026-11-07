@@ -28,8 +28,9 @@
     document and never writes it. NodeController calls buildRTtraversal for note preview.
 */
 
-class SequenceTreeAudioProcessor;
+class AudioSnapshotPublisher;
 class GraphState;
+class OrnamentLibraries;
 
 using NodeBuildMap = std::unordered_map<int, RTNode>;
 
@@ -38,7 +39,7 @@ class RTGraphBuilder : public juce::ValueTree::Listener,
 {
 public:
 
-    RTGraphBuilder(SequenceTreeAudioProcessor& processor, GraphState& graphState);
+    RTGraphBuilder(GraphState& graphState, OrnamentLibraries& ornamentLibraries, AudioSnapshotPublisher& snapshots);
     ~RTGraphBuilder() override;
 
     void makeRTGraph     (const juce::ValueTree& nodeValueTree);
@@ -72,7 +73,6 @@ private:
     static void             classifyRootConnection   (const juce::ValueTree& parentValueTree, const juce::ValueTree& childIdTree,
                                                       const juce::ValueTree& childValueTree, RTConnection& connection);
     static RTConnection&    connectionFor            (RTNode& node, int childId);
-    static RTNode::NodeType rtNodeTypeFor            (const juce::Identifier& valueTreeType);
     static NodeMap          freezeNodes              (NodeBuildMap& source);
 
     struct PendingChanges
@@ -85,8 +85,9 @@ private:
         bool                    ornamentsChanged = false;
     };
 
-    SequenceTreeAudioProcessor& processor;
-    GraphState&                 graphState;
+    GraphState&             graphState;
+    OrnamentLibraries&      ornamentLibraries;
+    AudioSnapshotPublisher& snapshots;
 
     std::unordered_set<int> builtGraphIds;
 

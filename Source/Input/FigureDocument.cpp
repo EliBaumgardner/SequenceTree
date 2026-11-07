@@ -4,7 +4,8 @@
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 FigureDocument::FigureDocument(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
-    : ArsNovaUI::CanvasDocument({}, undoManager), ornamentLibraries(ornamentLibraries)
+    : ArsNovaUI::CanvasDocument({}, undoManager),
+      ornamentLibraries        (ornamentLibraries)
 {
 }
 

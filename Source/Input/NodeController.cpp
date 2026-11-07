@@ -3,23 +3,31 @@
 #include "../UI/Node/Node.h"
 #include "../UI/Node/Arrow.h"
 #include "../Graph/GraphState.h"
-#include "../Plugin/PluginProcessor.h"
+
 #include "GraphDocument.h"
 
 
-NodeController::NodeController(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& graphDocument, juce::UndoManager& undoManager,
-                               TraversalSession& traversalSession, RTGraphBuilder& rtGraphBuilder, OrnamentLibraries& ornamentLibraries)
-    : ArsNovaUI::CanvasController(nodeCanvas, graphDocument, undoManager),
-      selectionGestures(graphState, undoManager, nodeCanvas),
-      ornamentApplier(nodeCanvas, ornamentLibraries, undoManager),
-      encapsulationGestures(nodeCanvas, graphState, undoManager),
-      arrowMenu(nodeCanvas, graphState, graphDocument, undoManager),
-      traversalSession(traversalSession),
-      rtGraphBuilder(rtGraphBuilder),
-      nodeCanvas(nodeCanvas)
+NodeController::NodeController(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, OrnamentLibraries& ornamentLibraries)
+    : ArsNovaUI::CanvasController(nodeCanvas, graphDocument),
+      selectionGestures          (graphDocument.graphState, graphDocument.undoManager, nodeCanvas),
+      encapsulationGestures      (nodeCanvas, graphDocument.graphState, graphDocument.undoManager),
+      ornamentApplier            (nodeCanvas, ornamentLibraries, graphDocument.undoManager),
+      arrowMenu                  (nodeCanvas, graphDocument),
+      notePreviewGestures        (notePreviewGestures),
+      nodeCanvas                 (nodeCanvas)
 {
     nodeGestures.onChildCreated = [this](int parentNodeId, const juce::ValueTree& child) {
         encapsulationGestures.adoptCreatedChild(parentNodeId, child);
+    };
+
+    nodeCanvas.onToolLeft = [this](NodeCanvas::CanvasTool previousTool) {
+        if (previousTool == NodeCanvas::CanvasTool::Span) {
+            encapsulationGestures.spanAnchorNodeId = -1;
+        }
+
+        if (previousTool == NodeCanvas::CanvasTool::NotePreview) {
+            this->notePreviewGestures.stopPreview();
+        }
     };
 }
 
@@ -49,13 +57,8 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     }
 
     if (nodeCanvas.activeTool == NodeCanvas::CanvasTool::NotePreview) {
-        if (Node* previewNode = dynamic_cast<Node*>(e.eventComponent)) {
-            traversalSession.previewRequests.push({ RTPreviewRequest::Kind::Start,
-                                                    previewNode->nodeId,
-                                                    static_cast<int>(nodeCanvas.quaverCount.getValue()),
-                                                    rtGraphBuilder.buildRTtraversal({ nodeCanvas.quaverTraversalId, 0 }),
-                                                    nodeCanvas.quaverRepeat });
-        }
+        notePreviewGestures.respondToClick(e.eventComponent);
+
         return;
     }
 

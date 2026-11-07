@@ -47,7 +47,7 @@ struct ScriptFixture
     ScriptRunContext context(const RTScript& script, ScriptWrites writes, ScriptHost* host)
     {
         return { script, nodes, nodeState, members, TraversalKey {}, 0, 1, NodeStateSlot::Count,
-                 [] (RTNode::NodeType) { return true; }, writes, host, &globals };
+                 [] (NodeInfo::Kind) { return true; }, writes, host, &globals };
     }
 };
 

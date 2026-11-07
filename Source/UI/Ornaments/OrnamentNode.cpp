@@ -2,7 +2,7 @@
 #include "../../Graph/OrnamentLibraries.h"
 
 OrnamentNode::OrnamentNode(juce::UndoManager& undoManager)
-    : Node(undoManager),
+    : Node          (undoManager),
       velocityEditor(undoManager)
 {
     auto velocityFormat = std::make_unique<ArsNovaUI::NumberFormat>(1, OrnamentLibraries::maximumVelocityPercent);
@@ -14,6 +14,8 @@ OrnamentNode::OrnamentNode(juce::UndoManager& undoManager)
     velocityEditor.setFormat(std::move(velocityFormat));
     velocityEditor.setTooltip("Velocity");
     velocityEditor.setInterceptsMouseClicks(false, true);
+
+    setTooltip("Ornament node");
 
     addAndMakeVisible(velocityEditor);
 }
@@ -44,6 +46,7 @@ void OrnamentNode::bindValueEditorForMode()
 
     nodeValueEditor.setFormat(std::move(offsetFormat));
     nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::OrnamentOffset);
+    nodeValueEditor.setTooltip("Pitch Offset");
 }
 
 void OrnamentNode::respondToClick(juce::Point<int> localPoint)

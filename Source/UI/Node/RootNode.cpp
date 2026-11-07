@@ -9,9 +9,9 @@
 #include <limits>
 
 RootNode::RootNode(juce::UndoManager& undoManager, GraphState& graphState)
-    : Node(undoManager),
+    : Node         (undoManager),
       rootRectangle(undoManager),
-      graphState(graphState)
+      graphState   (graphState)
 {
     nodeType          = NodeInfo::Type::Root;
     interiorLeftInset = loopLimitRectangleWidth;
@@ -20,6 +20,7 @@ RootNode::RootNode(juce::UndoManager& undoManager, GraphState& graphState)
 
     setPaintingIsUnclipped(true);
 
+    setTooltip("Root node");
     subLoopLimitEditor.setTooltip("Loop Limit");
 
     rootRectangle.traversalEditor.onValueChange = [this]() { equipTraversals(); };

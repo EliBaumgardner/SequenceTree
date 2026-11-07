@@ -3,9 +3,9 @@
 #include "../../Graph/OrnamentLibraries.h"
 
 OrnamentSymbolEditor::OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
-    : sizeField(undoManager),
+    : sizeField        (undoManager),
       ornamentLibraries(ornamentLibraries),
-      undoManager(undoManager)
+      undoManager      (undoManager)
 {
     ArsNovaUI::IconButton& pencilButton = toolPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawPencilIcon, "Pencil: draw the symbol", [this]() { tool = SymbolTool::Pencil; });
 
@@ -36,7 +36,6 @@ OrnamentSymbolEditor::OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries,
 
     sizeField.editor.setJustification(juce::Justification::centredLeft);
     sizeField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minBrushPercent, maxBrushPercent, brushDecimalPlaces));
-    sizeField.editor.setTooltip("Pencil and eraser size, in percent of the symbol: Ctrl-drag or scroll to change");
 
     sizeField.editor.boundValue = brushWidth * percent;
 

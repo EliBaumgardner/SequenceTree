@@ -30,8 +30,7 @@ public:
 
     enum class ClickMode;
 
-    OrnamentFigureController(OrnamentCanvas& ornamentCanvas, FigureDocument& figureDocument, OrnamentLibraries& ornamentLibraries,
-                             juce::UndoManager& undoManager);
+    OrnamentFigureController(OrnamentCanvas& ornamentCanvas, FigureDocument& figureDocument, OrnamentLibraries& ornamentLibraries);
 
     void mouseDown(const juce::MouseEvent& event) override;
 
