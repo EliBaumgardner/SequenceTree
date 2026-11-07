@@ -6,10 +6,10 @@
 #include <algorithm>
 
 OrnamentLibrarySection::OrnamentLibrarySection(OrnamentLibraries& ornamentLibraries, juce::ValueTree library, juce::UndoManager& undoManager)
-    : library(library),
+    : library          (library),
       ornamentLibraries(ornamentLibraries),
-      undoManager(undoManager),
-      nameEditor(undoManager)
+      undoManager      (undoManager),
+      nameEditor       (undoManager)
 {
     nameEditor.autoFitText = true;
     nameEditor.fontStyle   = ArsNovaUI::Theme::FontStyle::SemiBold;
@@ -17,10 +17,13 @@ OrnamentLibrarySection::OrnamentLibrarySection(OrnamentLibraries& ornamentLibrar
     nameEditor.setFormat(std::make_unique<ArsNovaUI::TextFormat>(ArsNovaUI::TextFormat::labelTextLength, ArsNovaUI::TextFormat::labelCharacters));
     nameEditor.setJustification(juce::Justification::centredLeft);
     nameEditor.bindEditor(library, ValueTreeIdentifiers::LibraryName);
+    nameEditor.setTooltip("Library name");
 
     foldButton.icon    = &ArsNovaUI::CustomLookAndFeel::drawChevronUpIcon;
     foldButton.onClick = [this]() { toggleFold(); };
-    addCard.onClick    = [this]() { addOrnament(); };
+    foldButton.setTooltip("Fold library");
+
+    addCard.onClick = [this]() { addOrnament(); };
 
     addCard.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
         ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);

@@ -4,45 +4,49 @@
 #include "../../Util/ArrowInfo.h"
 
 OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
-    : document(ornamentLibraries, undoManager),
-      canvas(document),
-      port(canvas),
-      controller(canvas, document, ornamentLibraries, undoManager),
+    : document         (ornamentLibraries, undoManager),
+      canvas           (document),
+      port             (canvas),
+      controller       (canvas, document, ornamentLibraries),
       ornamentLibraries(ornamentLibraries),
-      symbolEditor(ornamentLibraries, undoManager),
-      nameEditor(undoManager)
+      symbolEditor     (ornamentLibraries, undoManager),
+      nameEditor       (undoManager)
 {
-    titlebar.hostButton.onClick = [this]() {
-        if (controller.clickMode == OrnamentFigureController::ClickMode::PickHost) {
+    titlebar.nodePane.onSelectionChanged = [this](const ArsNovaUI::IconButton* selected) {
+        if (selected == titlebar.hostButton) {
+            controller.switchClickMode(OrnamentFigureController::ClickMode::PickHost);
+        }
+        else if (selected == titlebar.nodeButton) {
+            controller.setArrowMode(false);
             controller.switchClickMode(OrnamentFigureController::ClickMode::Build);
         }
         else {
-            controller.switchClickMode(OrnamentFigureController::ClickMode::PickHost);
+            controller.setArrowMode(true);
         }
     };
 
-    titlebar.arrowButton.onClick = [this]() {
-        controller.setArrowMode(! controller.arrowGestures.arrowMode);
-    };
-
     controller.onClickModeChanged = [this]() {
-        titlebar.hostButton.setSelected(controller.clickMode == OrnamentFigureController::ClickMode::PickHost);
-    };
-
-    controller.onArrowModeChanged = [this]() {
-        titlebar.arrowButton.setSelected(controller.arrowGestures.arrowMode);
+        if (controller.clickMode == OrnamentFigureController::ClickMode::PickHost) {
+            titlebar.nodePane.setSelectedButton(titlebar.hostButton);
+        }
+        else if (controller.arrowGestures.arrowMode) {
+            titlebar.nodePane.setSelectedButton(nullptr);
+        }
+        else {
+            titlebar.nodePane.setSelectedButton(titlebar.nodeButton);
+        }
     };
 
     titlebar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawUndoIcon, "Undo", [&undoManager]() { undoManager.undo(); });
     titlebar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRedoIcon, "Redo", [&undoManager]() { undoManager.redo(); });
 
-    titlebar.publishButton.onClick = [this, &undoManager]() {
+    titlebar.publishButton->onClick = [this, &undoManager]() {
         undoManager.beginNewTransaction();
 
         this->ornamentLibraries.publish(ornament, &undoManager);
     };
 
-    titlebar.symbolButton.onClick = [this]() {
+    titlebar.symbolButton->onClick = [this]() {
         if (view == BuildView::Figure) {
             view = BuildView::Symbol;
         }
@@ -53,14 +57,14 @@ OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juc
         applyView();
     };
 
-    nameEditor.autoFitText = true;
-    nameEditor.fontStyle   = ArsNovaUI::Theme::FontStyle::SemiBold;
+    nameEditor.autoFitText        = true;
+    nameEditor.fontStyle          = ArsNovaUI::Theme::FontStyle::SemiBold;
+    controller.onArrowModeChanged = controller.onClickModeChanged;
+    port.initialViewCentre        = { OrnamentCanvas::initialViewColumns * ArrowInfo::pixelsPerGridSpace, 0.0f };
 
     nameEditor.setFormat(std::make_unique<ArsNovaUI::TextFormat>(ArsNovaUI::TextFormat::labelTextLength, ArsNovaUI::TextFormat::labelCharacters));
     nameEditor.setJustification(juce::Justification::centredLeft);
     nameEditor.setTooltip("Ornament name");
-
-    port.initialViewCentre = { OrnamentCanvas::initialViewColumns * ArrowInfo::pixelsPerGridSpace, 0.0f };
 
     port.onTransformChanged = [this](const juce::AffineTransform& viewTransform, float) {
         canvas.viewTransform  = viewTransform;
@@ -119,23 +123,24 @@ void OrnamentBuildPanel::resized()
 
 int OrnamentBuildPanel::minimumWidth() const
 {
-    const int   barInset      = juce::roundToInt(titlebarHeight * titlebarInsetRatio);
-    const int   contentHeight = titlebarHeight - barInset * 2;
-    const int   buttonsWidth  = juce::roundToInt(contentHeight * buttonWidthRatio) * titlebarButtons + titlebar.undoRedoPane.idealWidth(contentHeight);
-    const float spacingShare  = 1.0f - ArsNovaUI::Theme::contentSpacingRatio * titlebarGaps;
+    const int barInset      = juce::roundToInt(titlebarHeight * titlebarInsetRatio);
+    const int contentHeight = titlebarHeight - barInset * 2;
+    const int paneWidths    = titlebar.undoRedoPane.idealWidth(contentHeight) + titlebar.nodePane.idealWidth(contentHeight);
+    const int buttonsWidth  = paneWidths + titlebar.symbolPane.idealWidth(contentHeight) + titlebar.publishPane.idealWidth(contentHeight);
+
+    const float spacingShare = 1.0f - ArsNovaUI::Theme::contentSpacingRatio * titlebarGaps;
 
     return barInset * 2 + static_cast<int>(std::ceil(buttonsWidth / spacingShare));
 }
 
 void OrnamentBuildPanel::applyView()
 {
-    titlebar.hostButton.setVisible(ornament.isValid() && view == BuildView::Figure);
-    titlebar.arrowButton.setVisible(ornament.isValid() && view == BuildView::Figure);
+    titlebar.nodePane.setVisible(ornament.isValid() && view == BuildView::Figure);
     port.setVisible(ornament.isValid() && view == BuildView::Figure);
     nameEditor.setVisible(ornament.isValid() && view == BuildView::Figure);
     symbolEditor.setVisible(ornament.isValid() && view == BuildView::Symbol);
 
-    titlebar.symbolButton.setSelected(view == BuildView::Symbol);
+    titlebar.symbolButton->setSelected(view == BuildView::Symbol);
 
     controller.switchClickMode(OrnamentFigureController::ClickMode::Build);
     controller.setArrowMode(false);
@@ -155,10 +160,8 @@ void OrnamentBuildPanel::showActiveOrnament()
 
     canvas.rebuildRequested = true;
 
-    titlebar.hostButton.setVisible(ornament.isValid());
-    titlebar.arrowButton.setVisible(ornament.isValid());
-    titlebar.publishButton.setVisible(ornament.isValid());
-    titlebar.symbolButton.setVisible(ornament.isValid());
+    titlebar.symbolPane.setVisible(ornament.isValid());
+    titlebar.publishPane.setVisible(ornament.isValid());
 
     applyView();
 
@@ -175,7 +178,7 @@ void OrnamentBuildPanel::refreshFigure()
 {
     const bool canPublish = ornamentLibraries.isPublishable(ornament) && ornamentLibraries.statusOf(ornament) != OrnamentStatus::Published;
 
-    titlebar.publishButton.setEnabled(ornament.isValid() && canPublish);
+    titlebar.publishButton->setEnabled(ornament.isValid() && canPublish);
 
     canvas.refreshHost();
 }
@@ -228,57 +231,35 @@ void OrnamentBuildPanel::valueTreeChildRemoved(juce::ValueTree& parent, juce::Va
 OrnamentBuildPanel::BuildTitlebar::BuildTitlebar()
     : ArsNovaUI::Bar(Orientation::Horizontal, titlebarInsetRatio)
 {
-    hostButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
-        ArsNovaUI::CustomLookAndFeel::get(*this).drawCircledHButton(graphics, bounds, state);
-    };
-
-    arrowButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
-        ArsNovaUI::CustomLookAndFeel::get(*this).drawArrowButton(graphics, bounds, state);
-    };
-
-    publishButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
-        ArsNovaUI::CustomLookAndFeel::get(*this).drawUploadButton(graphics, bounds, state);
-    };
-
-    symbolButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
-        ArsNovaUI::CustomLookAndFeel::get(*this).drawPencilButton(graphics, bounds, state);
-    };
-
-    hostButton.setText("Host");
-    arrowButton.setText("Arrow");
-    publishButton.setText("Publish");
-    symbolButton.setText("Draw");
-
-    hostButton.setTooltip("Choose the host: click a node to make it the host, or click the host to unmark it");
-    arrowButton.setTooltip("Arrow mode: Shift-drag from a node to add a dangling arrow");
-    publishButton.setTooltip("Publish this figure, so nodes play it");
-    symbolButton.setTooltip("Draw this ornament's symbol");
+    nodePane.selection     = ArsNovaUI::ButtonPane::Selection::ExclusiveOrNone;
+    hostButton             = &nodePane.addButton(&ArsNovaUI::CustomLookAndFeel::drawHostNodeIcon, "Host node");
+    nodeButton             = &nodePane.addButton(&ArsNovaUI::CustomLookAndFeel::drawCircleIcon, "Node (deselect for arrows)");
+    hostButton->state.look = ArsNovaUI::ButtonState::Look::Raised;
+    nodeButton->state.look = ArsNovaUI::ButtonState::Look::Raised;
+    symbolButton           = &symbolPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawPencilIcon, "Draw symbol");
+    publishButton          = &publishPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawUploadIcon, "Publish");
 
     addAndMakeVisible(undoRedoPane);
 
-    addChildComponent(hostButton);
-    addChildComponent(arrowButton);
-    addChildComponent(publishButton);
-    addChildComponent(symbolButton);
+    addChildComponent(nodePane);
+    addChildComponent(symbolPane);
+    addChildComponent(publishPane);
 }
 
 void OrnamentBuildPanel::BuildTitlebar::resized()
 {
-    auto      bounds      = getContentBounds();
-    const int width       = bounds.getWidth();
-    const int spacing     = juce::roundToInt(width * ArsNovaUI::Theme::contentSpacingRatio);
-    const int buttonWidth = juce::roundToInt(bounds.getHeight() * buttonWidthRatio);
+    auto bounds = getContentBounds();
 
-    hostButton.setBounds(bounds.removeFromLeft(buttonWidth));
-    bounds.removeFromLeft(spacing);
+    const int spacing = juce::roundToInt(bounds.getWidth() * ArsNovaUI::Theme::contentSpacingRatio);
 
-    arrowButton.setBounds(bounds.removeFromLeft(buttonWidth));
-
+    nodePane.setBounds(bounds.removeFromLeft(nodePane.idealWidth(bounds.getHeight())));
     undoRedoPane.setBounds(bounds.removeFromRight(undoRedoPane.idealWidth(bounds.getHeight())));
+
     bounds.removeFromRight(spacing);
 
-    publishButton.setBounds(bounds.removeFromRight(buttonWidth));
+    publishPane.setBounds(bounds.removeFromRight(publishPane.idealWidth(bounds.getHeight())));
+
     bounds.removeFromRight(spacing);
 
-    symbolButton.setBounds(bounds.removeFromRight(buttonWidth));
+    symbolPane.setBounds(bounds.removeFromRight(symbolPane.idealWidth(bounds.getHeight())));
 }

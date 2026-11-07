@@ -7,13 +7,17 @@
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 Encapsulator::Encapsulator(juce::UndoManager& undoManager, GraphState& graphState, NodeCanvas& nodeCanvas)
-    : Node(undoManager), graphState(graphState), nodeCanvas(nodeCanvas)
+    : Node      (undoManager),
+      graphState(graphState),
+      nodeCanvas(nodeCanvas)
 {
     nodeType    = NodeInfo::Type::Encapsulator;
     hasInnerRim = true;
 
-    countEditor.setVisible(false);
-    switchCountEditor.setVisible(false);
+    setTooltip("Group");
+
+    countEditor       .setVisible(false);
+    switchCountEditor .setVisible(false);
     subLoopLimitEditor.setVisible(false);
 }
 
@@ -37,8 +41,8 @@ void Encapsulator::bindToTree()
 
     juce::Identifier subLoopProperty = ValueTreeIdentifiers::SubLoopCountLimit;
 
-    countEditor.setVisible(hasFirstMember);
-    switchCountEditor.setVisible(hasFirstMember);
+    countEditor       .setVisible(hasFirstMember);
+    switchCountEditor .setVisible(hasFirstMember);
     subLoopLimitEditor.setVisible(hasFirstMember && ! firstMemberIsAlternative);
 
     if (! hasFirstMember) {
@@ -49,8 +53,8 @@ void Encapsulator::bindToTree()
         subLoopProperty = ValueTreeIdentifiers::LoopLimit;
     }
 
-    countEditor.bindEditor(firstMemberValueTree, ValueTreeIdentifiers::CountLimit);
-    switchCountEditor.bindEditor(firstMemberValueTree, ValueTreeIdentifiers::SwitchCountLimit);
+    countEditor       .bindEditor(firstMemberValueTree, ValueTreeIdentifiers::CountLimit);
+    switchCountEditor .bindEditor(firstMemberValueTree, ValueTreeIdentifiers::SwitchCountLimit);
     subLoopLimitEditor.bindEditor(firstMemberValueTree, subLoopProperty);
 
     countEditor.repaint();
@@ -65,6 +69,7 @@ void Encapsulator::bindValueEditorForMode()
     nodeValueEditor.editable = false;
 
     nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::EncapsulatorLabel);
+    nodeValueEditor.setTooltip("Group label");
 }
 
 void Encapsulator::lookAndFeelChanged()

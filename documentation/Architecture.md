@@ -91,6 +91,8 @@ One block, in order:
 | `titleBar` (`Titlebar`) | `Source/UI/Bars/` | transport, tempo, display mode, undo / redo, patches |
 | `bottomBar` (`BottomBar`) | `Source/UI/Bars/` | canvas tools, arrow bindings, note preview, ornament window |
 | `menuArea` (`MenuArea`) | `Source/UI/Menus/` | the `MenuBar` plus the `TraversalMenu` and `NodeMenu` panels |
+| `notePreviewGestures` (`NotePreviewGestures`) | `Source/Input/Gestures/` | note preview settings and requests, shared by `NodeController`, `BottomBar` and `TraversalMenu` |
+| `traversalRulesLauncher`, `settingsLauncher`, `ornamentLauncher` | ArsNovaUI | the pop-up windows |
 | `port`, `canvasFrame`, `scaledView`, `lookAndFeel`, `tooltipWindow`, `audioCommandFrames` | ArsNovaUI, JUCE, `Source/UI/Canvas/` | zoom and pan, framing, interface scale, theme, tooltips, the per-frame poll |
 
 ### 3.1 `NodeCanvas`
@@ -119,7 +121,8 @@ It also holds the pan and zoom and the snap grid, and asks its subclass through 
 Every edit they make goes through a `CanvasDocument`; for the graph that is `GraphDocument`, which calls `GraphState` and `NodeFactory`. `NodeController` handles the graph's own presses first (the active canvas tool, ornament marks, the right-click menus, group expansion and box selection) and passes the rest on. Each graph feature is a class it owns:
 
 - `ArrowMenu`: the arrow context menu, which sets an arrow's type and sync.
-- `EncapsulationGestures`: the span tool, expanding or collapsing groups, and adding a dragged-out child to its parent's group.
+- `EncapsulationGestures`: the span tool and its anchor, expanding or collapsing groups, and adding a dragged-out child to its parent's group.
+- `NotePreviewGestures`: the note preview tool's repeat, traversal and count settings, the click that starts a preview, and the stop and repeat requests. The editor owns it, because `BottomBar` and `TraversalMenu` set its settings, and `NodeController` routes the click to it by reference.
 - `SelectionGestures`: box selection, copy, delete and paste (owns the `Clipboard`).
 - `OrnamentApplier`: applying and removing ornaments.
 
@@ -129,8 +132,8 @@ A new graph feature becomes one more class here and one more branch in the routi
 
 `Titlebar`, `BottomBar`, `MenuBar` and the menu panels derive from ArsNovaUI's `Bar` and are built from its generic components (`ButtonPane`, `IconButton`, `ItemSelector`, `ValueSlider`, `LabeledEditor`). Two windows open as pop-ups and exist only while shown:
 
-- `TraversalRulesWindow`, the script editor, opened from `TraversalMenu` or `NodeMenu`.
-- `OrnamentWindow`, opened from `BottomBar`. Its figure editor is built from the same parts as the graph canvas: `OrnamentCanvas` is a `NodeArrowCanvas` and `OrnamentFigureController` an `ArsNovaUI::CanvasController`, both over a `FigureDocument` that calls `OrnamentLibraries`.
+- `TraversalRulesWindow`, the script editor, opened by the editor from `TraversalMenu`'s or `NodeMenu`'s button.
+- `OrnamentWindow`, opened by the editor from `BottomBar`'s ornament button. Its figure editor is built from the same parts as the graph canvas: `OrnamentCanvas` is a `NodeArrowCanvas` and `OrnamentFigureController` an `ArsNovaUI::CanvasController`, both over a `FigureDocument` that calls `OrnamentLibraries`.
 
 ### 3.4 ArsNovaUI
 
@@ -148,7 +151,7 @@ The two threads never call into each other. Each crossing goes through a lock-fr
 2. **Edit → sound.** The same tree change reaches `RTGraphBuilder`'s listener. Its `handleAsyncUpdate` rebuilds the touched trees, and `AudioSnapshotPublisher::publishGraph` stores a new `Snapshot*`. The next block's `beginBlock` loads it.
 3. **Script → sound.** `TraversalRulesWindow` writes the source into `TraversalRuleState` and, after a 250 ms debounce, calls `publishActiveTraversalRule`. That compiles the source and publishes the `RTScript` the same way. A failed compile returns diagnostics to the editor, and the last good script keeps playing.
 4. **Sound → screen.** `TraversalDispatcher` pushes highlight, arrow and count commands into `AudioUIBridge`. The editor's `audioCommandFrames` (a `VBlankAttachment`) fires once per display frame, applies transport changes to the `Titlebar` and calls `NodeCanvas::handleAsyncUpdate`, which drains the FIFOs. With no editor open the FIFOs overflow, and the drainer resyncs the canvas on its first drain.
-5. **Controls → sound.** The `Titlebar`'s transport buttons store the atomics `isPlaying` (through `NodeCanvas::setProcessorPlayback`) and `resetRequested`. Its tempo and sync controls set host parameters. `processBlock` loads all of them each block. Note preview requests from `BottomBar`, `NodeController` and `NodeCanvas` go through `previewRequests`, which `TraversalSession::playPreview` pops.
+5. **Controls → sound.** The `Titlebar`'s transport buttons store the atomics `isPlaying` (`Titlebar::applyPlaybackState`, which also has `NodeCanvas::setPlaybackActive` equip the roots and then flushes `RTGraphBuilder`) and `resetRequested`. Its tempo and sync controls set host parameters. `processBlock` loads all of them each block. Note preview requests all come from `NotePreviewGestures` and go through `previewRequests`, which `TraversalSession::playPreview` pops.
 
 Memory is reclaimed without the audio thread freeing anything. `blockEpoch` is odd while a block runs. When `publish` replaces a snapshot it reads the epoch: if it is even, the old snapshot is freed on the spot; if it is odd, the snapshot is parked in `retiredSnapshots` until the epoch moves on. The audio thread therefore never drops the last reference. A RealtimeSanitizer build enforces this (section 6).
 
@@ -165,7 +168,7 @@ Memory is reclaimed without the audio thread freeing anything. `blockEpoch` is o
 | `Source/UI/` | components | `Graph`, `Audio`, `Input`, `Util`, `Script` |
 | `Source/Plugin/` | the two roots and the publisher | everything |
 
-The lower rows depend on the upper ones. The exceptions are `.cpp` files that include `Source/Plugin/` headers to reach processor members: `RTGraphBuilder.cpp`, `NodeController.cpp`, `NodeCanvas.cpp`, `Titlebar.cpp` and `PatchControls.cpp` include `PluginProcessor.h`, and `TraversalRulesWindow.cpp` includes `AudioSnapshotPublisher.h`.
+The lower rows depend on the upper ones. The exceptions are `.cpp` files that include `Source/Plugin/` headers to reach processor members: `Titlebar.cpp` and `PatchControls.cpp` include `PluginProcessor.h`, and `TraversalRulesWindow.cpp` includes `AudioSnapshotPublisher.h`.
 
 ## 6. Tests
 

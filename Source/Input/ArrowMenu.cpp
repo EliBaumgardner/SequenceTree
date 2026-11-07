@@ -10,11 +10,9 @@
 #include <ArsNovaUI/Menus/ContextMenu.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
-ArrowMenu::ArrowMenu(NodeCanvas& nodeCanvas, GraphState& graphState, GraphDocument& graphDocument, juce::UndoManager& undoManager)
-    : nodeCanvas(nodeCanvas),
-      graphState(graphState),
-      graphDocument(graphDocument),
-      undoManager(undoManager)
+ArrowMenu::ArrowMenu(NodeCanvas& nodeCanvas, GraphDocument& graphDocument)
+    : nodeCanvas   (nodeCanvas),
+      graphDocument(graphDocument)
 {
 }
 
@@ -34,7 +32,7 @@ void ArrowMenu::showArrowContextMenu(Arrow* arrow)
         }
 
         allowedTraversalsLauncher.show(nodeCanvas, [this, connection]() {
-            auto content = std::make_unique<AllowedTraversalsMenu>(ArsNovaUI::CustomLookAndFeel::get(nodeCanvas), graphState, undoManager, connection);
+            auto content = std::make_unique<AllowedTraversalsMenu>(ArsNovaUI::CustomLookAndFeel::get(nodeCanvas), graphDocument.graphState, graphDocument.undoManager, connection);
 
             content->setSize(AllowedTraversalsMenu::defaultWidth, content->getIdealHeight());
 
@@ -68,13 +66,14 @@ void ArrowMenu::setArrowType(const Arrow* arrow, ArrowInfo::Type arrowType)
 
     const auto [ownerNodeId, childNodeId] = graphDocument.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
 
-    const juce::ValueTree connection = graphState.getConnection(ownerNodeId, childNodeId);
+    const juce::ValueTree connection = graphDocument.graphState.getConnection(ownerNodeId, childNodeId);
 
     ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(connection);
     arrowInfo.type                = arrowType;
 
-    undoManager.beginNewTransaction();
-    ArrowBindingOps::setArrowInfo(connection, arrowInfo, &undoManager);
+    graphDocument.undoManager.beginNewTransaction();
+
+    ArrowBindingOps::setArrowInfo(connection, arrowInfo, &graphDocument.undoManager);
 }
 
 void ArrowMenu::setArrowSync(const Arrow* arrow, bool shouldSync)
@@ -85,13 +84,14 @@ void ArrowMenu::setArrowSync(const Arrow* arrow, bool shouldSync)
 
     const auto [ownerNodeId, childNodeId] = graphDocument.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
 
-    const juce::ValueTree connection = graphState.getConnection(ownerNodeId, childNodeId);
+    const juce::ValueTree connection = graphDocument.graphState.getConnection(ownerNodeId, childNodeId);
 
     ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(connection);
     arrowInfo.isSynced            = shouldSync;
 
-    undoManager.beginNewTransaction();
-    ArrowBindingOps::setArrowInfo(connection, arrowInfo, &undoManager);
+    graphDocument.undoManager.beginNewTransaction();
+
+    ArrowBindingOps::setArrowInfo(connection, arrowInfo, &graphDocument.undoManager);
 }
 
 bool ArrowMenu::canBeTraversalArrow(const Arrow* arrow) const
@@ -102,7 +102,7 @@ bool ArrowMenu::canBeTraversalArrow(const Arrow* arrow) const
 
     const auto [ownerNodeId, childNodeId] = graphDocument.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
 
-    return graphState.connectsToOtherTreeRoot(ownerNodeId, childNodeId);
+    return graphDocument.graphState.connectsToOtherTreeRoot(ownerNodeId, childNodeId);
 }
 
 bool ArrowMenu::connectsToModulatorRoot(const Arrow* arrow) const
@@ -113,7 +113,7 @@ bool ArrowMenu::connectsToModulatorRoot(const Arrow* arrow) const
 
     const auto [ownerNodeId, childNodeId] = graphDocument.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
 
-    const juce::ValueTree childTree = graphState.getNode(childNodeId);
+    const juce::ValueTree childTree = graphDocument.graphState.getNode(childNodeId);
 
     return childTree.getType() == ValueTreeIdentifiers::ModulatorRootData;
 }
@@ -130,7 +130,7 @@ juce::ValueTree ArrowMenu::connectionTreeFor(const Arrow* arrow) const
 
     const auto [ownerNodeId, childNodeId] = graphDocument.ownershipOf(arrow->startNode->nodeId, arrow->endNode->nodeId);
 
-    juce::ValueTree ownerTree     = graphState.getNode(ownerNodeId);
+    juce::ValueTree ownerTree     = graphDocument.graphState.getNode(ownerNodeId);
     juce::ValueTree ownerChildren = ownerTree.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
 
     return ownerChildren.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, childNodeId);

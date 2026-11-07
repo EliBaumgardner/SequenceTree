@@ -42,6 +42,7 @@ public:
 private:
 
     struct NoteDispatch;
+    struct NotePlan;
 
     void applyStepResult(const TraversalLogic::StepResult& step, const NodeMap& nodes, int runId, int typeId);
     void applyTreeJump  (const TraversalLogic::StepResult& step, TraversalLogic& traversal, TraversalRuntime& runtime, const DispatchContext& context);
@@ -49,6 +50,14 @@ private:
 
     void dispatchModulator(const RTNode& node, int runId, const DispatchContext& context, TraversalLogic& traversalLogic, const RTNode*& modulatorNode,
                            bool isPrimaryRepeat);
+
+    void hideModulatorHighlight(const TraversalLogic::ModulatorWalk& mod, int runId, int typeId);
+    void scaleByModulator      (NotePlan& plan, TraversalLogic& traversalLogic, const NodeMap& nodes);
+    void overrideVoicing       (NotePlan& plan, const RTNode& node, const TraversalLogic& traversalLogic, const DispatchContext& context,
+                                const ScriptNote& scriptNote, ScriptNote::Kind scriptKind);
+
+    NotePlan planNote(const RTNode& node, int runId, const DispatchContext& context, TraversalLogic& traversalLogic, const ScriptNote& scriptNote,
+                      bool isPrimaryRepeat);
 
     void pushChordNotes(const NoteDispatch& dispatch, const DispatchContext& context, int parentCount, int transpose);
 
@@ -62,6 +71,8 @@ private:
     int resolveDuration(const RTNode& node, const RTNode* nextTarget, int lastTargetId, const NodeMap& nodes, int danglingIndex);
 
     bool markChordVisited(int nodeId);
+
+    static double traversalTempoMultiplier(const TraversalLogic& traversalLogic, const DispatchContext& context);
 
     struct NoteDispatch
     {
@@ -77,6 +88,27 @@ private:
         double tempoMultiplier = 1.0;
 
         BridgeCommands::TrailSource source = BridgeCommands::TrailSource::Live;
+    };
+
+    struct NotePlan
+    {
+        const RTNode* modulatorNode            = nullptr;
+        const RTNode* nextTarget               = nullptr;
+        const RTNode* nextModulatorTarget      = nullptr;
+        const RTNode* alternativeNode          = nullptr;
+        const RTNode* alternativeModulatorNode = nullptr;
+
+        int duration                 = 0;
+        int transpose                = 0;
+        int scriptTranspose          = 0;
+        int nodeCount                = 1;
+        int danglingIndex            = -1;
+        int alternativeDanglingIndex = -1;
+        int modulatorDanglingIndex   = -1;
+
+        double tempoMultiplier = 1.0;
+
+        NoteScheduler::NoteVoicing voicing;
     };
 
     struct MainRun

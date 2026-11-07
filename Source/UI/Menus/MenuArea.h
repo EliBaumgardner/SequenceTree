@@ -16,14 +16,11 @@
     narrowestHeight is the least height that fits the icons and both menus, and the resizer's
     onWidthDragged is how PluginEditor changes the panel's width.
 
-    PluginEditor owns it and hands it the objects its two menus need.
+    PluginEditor owns it, and owns the two menus it hands it.
 */
 
 class MenuBar;
 class NodeCanvas;
-class GraphState;
-class TraversalRuleState;
-class AudioSnapshotPublisher;
 class TraversalMenu;
 class NodeMenu;
 
@@ -31,8 +28,7 @@ class MenuArea : public juce::Component
 {
 public:
 
-    MenuArea(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-             juce::ValueTree colourPresets, juce::UndoManager& undoManager);
+    MenuArea(NodeCanvas& nodeCanvas, TraversalMenu& traversalMenu, NodeMenu& nodeMenu);
 
     ~MenuArea() override;
 
@@ -41,8 +37,8 @@ public:
 
     int narrowestHeight() const;
 
-    static constexpr float resizerWidthRatio = 0.4f;
-    static constexpr float menuBarWidthRatio = 1.12f;
+    static constexpr float resizerWidthRatio = 0.256f;
+    static constexpr float menuBarWidthRatio = 0.896f;
 
     ArsNovaUI::PanelResizer resizer;
 
@@ -56,11 +52,11 @@ private:
 
     ArsNovaUI::Bar topBar;
 
-    NodeCanvas& nodeCanvas;
+    NodeCanvas&    nodeCanvas;
+    TraversalMenu& traversalMenu;
+    NodeMenu&      nodeMenu;
 
-    std::unique_ptr<MenuBar>       menuBar;
-    std::unique_ptr<TraversalMenu> traversalMenu;
-    std::unique_ptr<NodeMenu>      nodeMenu;
+    std::unique_ptr<MenuBar> menuBar;
 
     ActivePanel activePanel = ActivePanel::None;
 };

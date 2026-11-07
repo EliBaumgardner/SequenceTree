@@ -125,7 +125,8 @@ struct ScriptInstruction
         : opcode(instructionOpcode) {}
 
     ScriptInstruction(ScriptOpcode instructionOpcode, int instructionOperand)
-        : opcode(instructionOpcode), operand(instructionOperand) {}
+        : opcode (instructionOpcode),
+          operand(instructionOperand) {}
 };
 
 struct ScriptFunction

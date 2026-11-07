@@ -3,10 +3,10 @@
 #include "../../Plugin/PluginProcessor.h"
 
 PatchControls::PatchControls(juce::AudioProcessor& processor, juce::ValueTree patch, const juce::File& patchFolder)
-    : processor(processor),
-      patch(patch),
+    : processor  (processor),
+      patch      (patch),
       patchFolder(patchFolder),
-      nameEditor(nameUndoManager)
+      nameEditor (nameUndoManager)
 {
     nameEditor.fontStyle = ArsNovaUI::Theme::FontStyle::Regular;
     openButton.icon      = &ArsNovaUI::CustomLookAndFeel::drawChevronDownIcon;

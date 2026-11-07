@@ -6,7 +6,7 @@
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 OrnamentMarks::OrnamentMarks(NodeCanvas& nodeCanvas, OrnamentLibraries& ornamentLibraries)
-    : nodeCanvas(nodeCanvas),
+    : nodeCanvas       (nodeCanvas),
       ornamentLibraries(ornamentLibraries)
 {
     ornamentLibraries.libraries.addListener(this);
@@ -59,6 +59,13 @@ void OrnamentMarks::refresh(Node& node)
     view->mark          = mark;
     view->symbol        = ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString();
     view->nodeValueTree = node.nodeValueTree;
+
+    if (mark == ArsNovaUI::SymbolMark::Symbol) {
+        view->setTooltip("Ornament");
+    }
+    else {
+        view->setTooltip("Unpublished ornament");
+    }
 
     place(node);
 

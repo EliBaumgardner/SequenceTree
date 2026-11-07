@@ -34,7 +34,9 @@ class Clipboard
 {
 public:
 
-    Clipboard(GraphState& graphState, juce::UndoManager& undoManager) : graphState(graphState), undoManager(undoManager) {}
+    Clipboard(GraphState& graphState, juce::UndoManager& undoManager)
+        : graphState (graphState),
+          undoManager(undoManager) {}
 
     void copy(std::span<const int> selectedIds);
 

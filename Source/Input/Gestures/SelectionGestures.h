@@ -30,7 +30,10 @@ class SelectionGestures
 public:
 
     SelectionGestures(GraphState& graphState, juce::UndoManager& undoManager, NodeCanvas& nodeCanvas)
-        : graphState(graphState), undoManager(undoManager), nodeCanvas(nodeCanvas), clipboard(graphState, undoManager)
+        : graphState (graphState),
+          undoManager(undoManager),
+          nodeCanvas (nodeCanvas),
+          clipboard  (graphState, undoManager)
     {}
 
     void copySelection  ();

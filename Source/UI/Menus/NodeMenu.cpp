@@ -5,12 +5,9 @@
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Node/Node.h"
 
-NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-                   juce::ValueTree colourPresets, juce::UndoManager& undoManager)
-    : graphState(graphState),
-      traversalRuleState(traversalRuleState),
-      snapshots(snapshots),
-      undoManager(undoManager),
+NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, juce::ValueTree colourPresets, juce::UndoManager& undoManager)
+    : graphState    (graphState),
+      undoManager   (undoManager),
       colourSelector(colourPresets, undoManager)
 {
     editTraversalRulesButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
@@ -26,7 +23,6 @@ NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRule
         format->suffix = row.suffix;
 
         row.field.editor.setFormat(std::move(format));
-        row.field.editor.setTooltip(row.tooltip);
 
         row.field.label.setText(row.labelText, juce::dontSendNotification);
 
@@ -34,8 +30,6 @@ NodeMenu::NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRule
     }
 
     editTraversalRulesButton.setText("edit traversal rules");
-
-    editTraversalRulesButton.onClick = [this]() { traversalRulesLauncher.show(*this); };
 
     colourSelector.onColourPicked = [this](juce::Colour pickedColour) {
         if (selectedNodeId < 0) {

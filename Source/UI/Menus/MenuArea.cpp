@@ -5,15 +5,14 @@
 #include "TraversalMenu.h"
 #include "NodeMenu.h"
 
-MenuArea::MenuArea(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-                   juce::ValueTree colourPresets, juce::UndoManager& undoManager)
-    : resizer(ArsNovaUI::PanelResizer::Edge::Right),
-      topBar(nodeCanvas, ArsNovaUI::Bar::Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
-      nodeCanvas(nodeCanvas)
+MenuArea::MenuArea(NodeCanvas& nodeCanvas, TraversalMenu& traversalMenu, NodeMenu& nodeMenu)
+    : resizer      (ArsNovaUI::PanelResizer::Edge::Right),
+      topBar       (nodeCanvas, ArsNovaUI::Bar::Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
+      nodeCanvas   (nodeCanvas),
+      traversalMenu(traversalMenu),
+      nodeMenu     (nodeMenu)
 {
-    menuBar       = std::make_unique<MenuBar>(nodeCanvas);
-    traversalMenu = std::make_unique<TraversalMenu>(nodeCanvas, graphState, traversalRuleState, snapshots, colourPresets, undoManager);
-    nodeMenu      = std::make_unique<NodeMenu>(nodeCanvas, graphState, traversalRuleState, snapshots, colourPresets, undoManager);
+    menuBar = std::make_unique<MenuBar>(nodeCanvas);
 
     menuBar->traversalIcon.onClick = [this] { togglePanel(ActivePanel::Traversal); };
     menuBar->nodeIcon.onClick      = [this] { togglePanel(ActivePanel::Node); };
@@ -21,8 +20,8 @@ MenuArea::MenuArea(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRule
     addAndMakeVisible(topBar);
     addAndMakeVisible(menuBar.get());
 
-    addChildComponent(traversalMenu.get());
-    addChildComponent(nodeMenu.get());
+    addChildComponent(traversalMenu);
+    addChildComponent(nodeMenu);
 
     addAndMakeVisible(resizer);
 }
@@ -49,8 +48,8 @@ void MenuArea::resized()
 
     menuBar->setBounds(menuColumn);
     topBar.setBounds(bounds.withHeight(barHeight));
-    traversalMenu->setBounds(bounds);
-    nodeMenu->setBounds(bounds);
+    traversalMenu.setBounds(bounds);
+    nodeMenu.setBounds(bounds);
 }
 
 int MenuArea::narrowestHeight() const
@@ -62,7 +61,7 @@ int MenuArea::narrowestHeight() const
     const int iconGap      = juce::roundToInt(iconSize * ArsNovaUI::Theme::iconGapRatio);
     const int columnHeight = iconInset * 2 + iconSize * 3 + iconGap * 2;
 
-    return juce::jmax(columnHeight, traversalMenu->narrowestHeight(), nodeMenu->narrowestHeight());
+    return juce::jmax(columnHeight, traversalMenu.narrowestHeight(), nodeMenu.narrowestHeight());
 }
 
 void MenuArea::togglePanel(ActivePanel panel)
@@ -74,8 +73,8 @@ void MenuArea::togglePanel(ActivePanel panel)
         activePanel = panel;
     }
 
-    traversalMenu->setVisible(activePanel == ActivePanel::Traversal);
-    nodeMenu->setVisible(activePanel == ActivePanel::Node);
+    traversalMenu.setVisible(activePanel == ActivePanel::Traversal);
+    nodeMenu.setVisible(activePanel == ActivePanel::Node);
 
     menuBar->traversalIcon.setSelected(activePanel == ActivePanel::Traversal);
     menuBar->nodeIcon.setSelected(activePanel == ActivePanel::Node);

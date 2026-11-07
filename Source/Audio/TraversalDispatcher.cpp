@@ -5,7 +5,9 @@
 #include <functional>
 
 TraversalDispatcher::TraversalDispatcher(NoteScheduler& s, AudioUIBridge& b)
-    : flagScheduler(*this, b), scheduler(s), bridge(b)
+    : flagScheduler(*this, b),
+      scheduler    (s),
+      bridge       (b)
 {
     chordVisits.prepare();
 
@@ -99,92 +101,11 @@ void TraversalDispatcher::pushNote(const RTNode& node, int runId,
 
     ++dispatchDepth;
 
-    TraversalLogic&   traversalLogic = traversalInstance->logic;
-    const ScriptNote& scriptNote     = traversalInstance->runtime.scriptNote;
+    TraversalLogic& traversalLogic = traversalInstance->logic;
 
-    ScriptNote::Kind     scriptKind      = ScriptNote::Kind::Default;
-    NoteScheduler::Sound sound           = NoteScheduler::Sound::Audible;
-    int                  scriptTranspose = 0;
+    const NotePlan plan = planNote(node, runId, context, traversalLogic, traversalInstance->runtime.scriptNote, isPrimaryRepeat);
 
-    if (scriptNote.nodeId == node.nodeID) {
-        scriptKind = scriptNote.kind;
-    }
-
-    if (scriptKind == ScriptNote::Kind::Silent) {
-        sound = NoteScheduler::Sound::Silent;
-    }
-
-    const RTNode* modulatorNode            = nullptr;
-    const RTNode* nextModulatorTarget      = nullptr;
-    const RTNode* alternativeNode          = nullptr;
-    const RTNode* alternativeModulatorNode = nullptr;
-
-    dispatchModulator(node, runId, context, traversalLogic, modulatorNode, isPrimaryRepeat);
-
-    if (traversalLogic.mod.walker.alternativeTarget != -1) {
-        alternativeModulatorNode = nodes.find(traversalLogic.mod.walker.alternativeTarget);
-    }
-
-    const RTNode* nextTarget = traversalLogic.peekNextTarget(nodes);
-
-    const double sampleRate = context.sampleRate;
-
-    double traversalMultiplier = traversalLogic.traversal.tempoMultiplier;
-    const RTNode* rootNode            = nodes.find(traversalLogic.rootId);
-
-    if (rootNode != nullptr) {
-        for (const RTtraversal& t : rootNode->traversals) {
-            if (t.key == traversalLogic.traversal.key) {
-                traversalMultiplier = t.tempoMultiplier;
-                break;
-            }
-        }
-    }
-
-    if (traversalMultiplier <= 0.0) {
-        traversalMultiplier = 1.0;
-    }
-
-    const double tempoMultiplier = juce::jlimit(RTtraversal::minimumTempoMultiplier, RTtraversal::maximumTempoMultiplier,
-                                                context.tempoMultiplier * traversalMultiplier);
-    jassert(sampleRate > 0.0);
-
-    int duration;
-
-    int pitchOverride    = -1;
-    int velocityOverride = -1;
-
-    if (traversalLogic.nodeState.get(NodeStateSlot::ActiveAlternative, node.nodeID) != -1 && !node.notes.empty()) {
-        const RTNode* altNode = nodes.find(traversalLogic.nodeState.get(NodeStateSlot::ActiveAlternative, node.nodeID));
-
-        if (altNode != nullptr) {
-            alternativeNode = altNode;
-
-            if (!alternativeNode->notes.empty()) {
-                pitchOverride    = alternativeNode->notes[0].pitch;
-                velocityOverride = alternativeNode->notes[0].velocity;
-            }
-        }
-    }
-
-    if (scriptKind == ScriptNote::Kind::Played) {
-        int voicedPitch = RTNote::fallbackValue;
-
-        if (!node.notes.empty()) {
-            voicedPitch = node.notes[0].pitch;
-        }
-
-        if (pitchOverride >= 0) {
-            voicedPitch = pitchOverride;
-        }
-
-        pitchOverride    = juce::jlimit(0, 127, scriptNote.pitch);
-        velocityOverride = juce::jlimit(0, 127, scriptNote.velocity);
-        scriptTranspose  = pitchOverride - voicedPitch;
-    }
-
-    const TraversalKey activeKey    = traversalLogic.traversal.key;
-    const int          activeTypeId = activeKey.typeId;
+    const TraversalKey activeKey = traversalLogic.traversal.key;
 
     BridgeCommands::TrailSource trailSource = BridgeCommands::TrailSource::Live;
 
@@ -192,101 +113,50 @@ void TraversalDispatcher::pushNote(const RTNode& node, int runId,
         trailSource = BridgeCommands::TrailSource::Preview;
     }
 
-    auto danglingArrowFor = [&](const RTNode& target) {
-        const int count = traversalLogic.nodeState.get(NodeStateSlot::Count, target.nodeID) + 1;
-
-        return traversalLogic.rule->selectDanglingArrow(target, count, activeKey);
-    };
-
-    const int nodeCount     = traversalLogic.nodeState.get(NodeStateSlot::Count, node.nodeID) + 1;
-    const int danglingIndex = danglingArrowFor(node);
-
-    int modulatorDanglingIndex = -1;
-
-    if (alternativeNode != nullptr) {
-        duration = resolveDuration(*alternativeNode, nextTarget, traversalLogic.primary.last, nodes, danglingArrowFor(*alternativeNode));
-    }
-    else {
-        duration = resolveDuration(node, nextTarget, traversalLogic.primary.last, nodes, danglingIndex);
-    }
-
-    if (scriptKind == ScriptNote::Kind::Played) {
-        duration = static_cast<int>(juce::jlimit(1.0, ArrowInfo::maximumDurationMs, static_cast<double>(scriptNote.duration)));
-    }
-
-    int transpose = traversalLogic.traversal.transpose;
-
-    if (modulatorNode != nullptr && traversalLogic.mod.walker.target != -1) {
-        const RTNode* modulatorValueNode = modulatorNode;
-
-        if (alternativeModulatorNode != nullptr) {
-            modulatorValueNode = alternativeModulatorNode;
-        }
-
-        const int modulatorCount = traversalLogic.nodeState.get(NodeStateSlot::ModulatorCount, modulatorValueNode->nodeID) + 1;
-
-        modulatorDanglingIndex = traversalLogic.rule->selectDanglingArrow(*modulatorValueNode, modulatorCount, activeKey);
-
-        nextModulatorTarget = traversalLogic.decideNextModulator(nodes);
-
-        int modulatorDuration = resolveDuration(*modulatorValueNode, nextModulatorTarget, traversalLogic.mod.walker.last, nodes, modulatorDanglingIndex);
-        duration = static_cast<int>(juce::jlimit(0.0, ArrowInfo::maximumDurationMs, duration * (0.001 * modulatorDuration)));
-
-        transpose += modulatorValueNode->pitchOffset;
-    }
-
-
-    const NoteScheduler::NoteVoicing voicing {
-        traversalLogic.traversal.channel,
-        transpose + context.transpose,
-        pitchOverride,
-        velocityOverride,
-        traversalLogic.traversal.velocityMultiplier * context.velocityScale,
-        sound
-    };
-
-    const int wallClockMs = static_cast<int>(juce::jlimit(0.0, ArrowInfo::maximumDurationMs, duration / tempoMultiplier));
+    const int wallClockMs = static_cast<int>(juce::jlimit(0.0, ArrowInfo::maximumDurationMs, plan.duration / plan.tempoMultiplier));
 
     const NoteDispatch dispatch {
         .node            = node,
         .traversal       = traversalLogic,
         .runId           = runId,
-        .duration        = duration,
+        .duration        = plan.duration,
         .wallClockMs     = wallClockMs,
-        .typeId          = activeTypeId,
+        .typeId          = activeKey.typeId,
         .sample          = sample,
-        .tempoMultiplier = tempoMultiplier,
+        .tempoMultiplier = plan.tempoMultiplier,
         .source          = trailSource
     };
 
-    scheduler.scheduleNote(node, NoteScheduler::NoteRole::Stepping, runId, sample, context.midiMessages, sampleRate, tempoMultiplier, duration, false, voicing);
+    scheduler.scheduleNote(node, NoteScheduler::NoteRole::Stepping, runId, sample, context.midiMessages, context.sampleRate, plan.tempoMultiplier,
+                           plan.duration, false, plan.voicing);
 
-    if (sound == NoteScheduler::Sound::Audible) {
-        pushChordNotes(dispatch, context, nodeCount, transpose + scriptTranspose);
+    if (plan.voicing.sound == NoteScheduler::Sound::Audible) {
+        pushChordNotes(dispatch, context, plan.nodeCount, plan.transpose + plan.scriptTranspose);
     }
 
-    if (alternativeNode != nullptr) {
-
-        const RTNode* alternativeNodeParent = nodes.find(alternativeNode->parentId);
+    if (plan.alternativeNode != nullptr) {
+        const RTNode* alternativeNodeParent = nodes.find(plan.alternativeNode->parentId);
 
         if (alternativeNodeParent != nullptr) {
-            dispatchPrimaryArrow(dispatch, *alternativeNode, nullptr, alternativeNodeParent, danglingArrowFor(*alternativeNode));
+            dispatchPrimaryArrow(dispatch, *plan.alternativeNode, nullptr, alternativeNodeParent, plan.alternativeDanglingIndex);
         }
     }
 
-    dispatchPrimaryArrow(dispatch, node, alternativeNode, nextTarget, danglingIndex);
-    dispatchModulatorArrow(dispatch, modulatorNode, nextModulatorTarget, modulatorDanglingIndex);
+    dispatchPrimaryArrow(dispatch, node, plan.alternativeNode, plan.nextTarget, plan.danglingIndex);
 
-    if (alternativeModulatorNode != nullptr) {
-        const RTNode* alternativeModulatorHost = nodes.find(alternativeModulatorNode->parentId);
+    dispatchModulatorArrow(dispatch, plan.modulatorNode, plan.nextModulatorTarget, plan.modulatorDanglingIndex);
+
+    if (plan.alternativeModulatorNode != nullptr) {
+        const RTNode* alternativeModulatorHost = nodes.find(plan.alternativeModulatorNode->parentId);
 
         if (alternativeModulatorHost != nullptr) {
-            dispatchModulatorArrow(dispatch, alternativeModulatorNode, alternativeModulatorHost, modulatorDanglingIndex);
+            dispatchModulatorArrow(dispatch, plan.alternativeModulatorNode, alternativeModulatorHost, plan.modulatorDanglingIndex);
         }
     }
 
     dispatchCrossTree(dispatch, context);
-    flagScheduler.dispatchFlags(node, runId, activeKey, nodeCount, sample, tempoMultiplier, context);
+
+    flagScheduler.dispatchFlags(node, runId, activeKey, plan.nodeCount, sample, plan.tempoMultiplier, context);
 
     --dispatchDepth;
 }
@@ -319,15 +189,7 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
         }
 
         if (traversal.mod.isActive()) {
-            int displayedModulatorId = traversal.mod.walker.target;
-
-            if (traversal.mod.walker.alternativeTarget != -1) {
-                displayedModulatorId = traversal.mod.walker.alternativeTarget;
-            }
-
-            if (displayedModulatorId != -1) {
-                bridge.highlightNode(displayedModulatorId, BridgeCommands::HighlightKind::Hide, runId, removedTypeId);
-            }
+            hideModulatorHighlight(traversal.mod, runId, removedTypeId);
         }
 
         bridge.pushArrowReset(BridgeCommands::primaryTrail(runId));
@@ -340,14 +202,14 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
 
     jassert(nodes.find(traversal.primary.target) != nullptr);
 
-    if (type == RTNode::NodeType::RootNode && expiredNote.isConnectionTrigger) {
+    if (type == NodeInfo::Kind::Root && expiredNote.isConnectionTrigger) {
         bridge.highlightNode(expiredNote.nodeId, BridgeCommands::HighlightKind::Hide, runId, traversal.traversal.key.typeId);
 
         if (traversal.shouldTraverse()) {
             pushRootNodeConnection(expiredNote.nodeId, context, expiryTime);
         }
     }
-    else if (type == RTNode::NodeType::RootNode|| type == RTNode::NodeType::Node) {
+    else if (type == NodeInfo::Kind::Root|| type == NodeInfo::Kind::Node) {
         const RTNode* currentEntry = nodes.find(traversal.primary.target);
         int  repeatValue = 1;
 
@@ -355,7 +217,7 @@ void TraversalDispatcher::handleExpiredNote(const NoteScheduler::ActiveNote& exp
             const RTNode& currentNode = *currentEntry;
             int           activeAltId = traversal.nodeState.get(NodeStateSlot::ActiveAlternative, currentNode.nodeID);
 
-            if (activeAltId != -1) {
+            if (activeAltId != -1 && activeAltId != NodeStateTable::hostPlays) {
                 const RTNode* altNode = nodes.find(activeAltId);
                 repeatValue = 1;
 
@@ -533,15 +395,7 @@ void TraversalDispatcher::stepTraversal(TraversalPool::Instance& instance, int r
     }
 
     if (traversal.mod.isActive()) {
-        int displayedModulatorId = traversal.mod.walker.target;
-
-        if (traversal.mod.walker.alternativeTarget != -1) {
-            displayedModulatorId = traversal.mod.walker.alternativeTarget;
-        }
-
-        if (displayedModulatorId != -1) {
-            bridge.highlightNode(displayedModulatorId, BridgeCommands::HighlightKind::Hide, runId, traversal.traversal.key.typeId);
-        }
+        hideModulatorHighlight(traversal.mod, runId, traversal.traversal.key.typeId);
 
         bridge.pushArrowReset(BridgeCommands::modulatorTrail(runId));
     }
@@ -559,16 +413,7 @@ void TraversalDispatcher::dispatchModulator(const RTNode& node, int runId, const
 
     if (triggeredRootId != -1) {
         if (mod.walker.target != -1) {
-            int previousDisplayedId = mod.walker.target;
-
-            if (mod.walker.alternativeTarget != -1) {
-                previousDisplayedId = mod.walker.alternativeTarget;
-            }
-
-            const RTNode* prevNode = nodes.find(previousDisplayedId);
-            if (prevNode != nullptr) {
-                bridge.highlightNode(*prevNode, BridgeCommands::HighlightKind::Hide, runId, typeId);
-            }
+            hideModulatorHighlight(mod, runId, typeId);
         }
 
         mod.activate(triggeredRootId, node.nodeID);
@@ -582,16 +427,7 @@ void TraversalDispatcher::dispatchModulator(const RTNode& node, int runId, const
         bool isDescendant = TraversalLogic::isDescendantOf(nodes, node.nodeID, mod.gate.hostId);
 
         if (!isHost && !isDescendant) {
-            int displayedId = mod.walker.target;
-
-            if (mod.walker.alternativeTarget != -1) {
-                displayedId = mod.walker.alternativeTarget;
-            }
-
-            const RTNode* targetNode = nodes.find(displayedId);
-            if (targetNode != nullptr) {
-                bridge.highlightNode(*targetNode, BridgeCommands::HighlightKind::Hide, runId, typeId);
-            }
+            hideModulatorHighlight(mod, runId, typeId);
 
             mod.deactivate();
 
@@ -679,6 +515,76 @@ void TraversalDispatcher::dispatchModulator(const RTNode& node, int runId, const
     }
 }
 
+void TraversalDispatcher::hideModulatorHighlight(const TraversalLogic::ModulatorWalk& mod, int runId, int typeId)
+{
+    int displayedId = mod.walker.target;
+
+    if (mod.walker.alternativeTarget != -1) {
+        displayedId = mod.walker.alternativeTarget;
+    }
+
+    if (displayedId != -1) {
+        bridge.highlightNode(displayedId, BridgeCommands::HighlightKind::Hide, runId, typeId);
+    }
+}
+
+void TraversalDispatcher::scaleByModulator(NotePlan& plan, TraversalLogic& traversalLogic, const NodeMap& nodes)
+{
+    const TraversalKey activeKey = traversalLogic.traversal.key;
+
+    const RTNode* modulatorValueNode = plan.modulatorNode;
+
+    if (plan.alternativeModulatorNode != nullptr) {
+        modulatorValueNode = plan.alternativeModulatorNode;
+    }
+
+    const int modulatorCount = traversalLogic.nodeState.get(NodeStateSlot::ModulatorCount, modulatorValueNode->nodeID) + 1;
+
+    plan.modulatorDanglingIndex = traversalLogic.rule->selectDanglingArrow(*modulatorValueNode, modulatorCount, activeKey);
+    plan.nextModulatorTarget    = traversalLogic.decideNextModulator(nodes);
+
+    const int modulatorDuration = resolveDuration(*modulatorValueNode, plan.nextModulatorTarget, traversalLogic.mod.walker.last, nodes,
+                                                  plan.modulatorDanglingIndex);
+
+    plan.duration = static_cast<int>(juce::jlimit(0.0, ArrowInfo::maximumDurationMs, plan.duration * (0.001 * modulatorDuration)));
+
+    plan.transpose += modulatorValueNode->pitchOffset;
+}
+
+void TraversalDispatcher::overrideVoicing(NotePlan& plan, const RTNode& node, const TraversalLogic& traversalLogic, const DispatchContext& context,
+                                          const ScriptNote& scriptNote, ScriptNote::Kind scriptKind)
+{
+    const int activeAlternativeId = traversalLogic.nodeState.get(NodeStateSlot::ActiveAlternative, node.nodeID);
+
+    if (activeAlternativeId != -1 && !node.notes.empty()) {
+        const RTNode* altNode = context.nodes.find(activeAlternativeId);
+
+        if (altNode != nullptr) {
+            plan.alternativeNode = altNode;
+
+            if (!altNode->notes.empty()) {
+                plan.voicing.pitchOverride    = altNode->notes[0].pitch;
+                plan.voicing.velocityOverride = altNode->notes[0].velocity;
+            }
+        }
+    }
+
+    if (scriptKind == ScriptNote::Kind::Played) {
+        int voicedPitch = RTNote::fallbackValue;
+
+        if (!node.notes.empty()) {
+            voicedPitch = node.notes[0].pitch;
+        }
+
+        if (plan.voicing.pitchOverride >= 0) {
+            voicedPitch = plan.voicing.pitchOverride;
+        }
+
+        plan.voicing.pitchOverride    = juce::jlimit(0, 127, scriptNote.pitch);
+        plan.voicing.velocityOverride = juce::jlimit(0, 127, scriptNote.velocity);
+        plan.scriptTranspose          = plan.voicing.pitchOverride - voicedPitch;
+    }
+}
 void TraversalDispatcher::pushChordNotes(const NoteDispatch& dispatch, const DispatchContext& context, int parentCount, int transpose)
 {
     const NodeMap& nodes = context.nodes;
@@ -702,7 +608,7 @@ void TraversalDispatcher::pushChordNotes(const NoteDispatch& dispatch, const Dis
         const RTNode& chordNode = *childNode;
 
         if (!(NoteScheduler::isNodeAudible(chordNode.nodeType)
-        && chordNode.nodeType != RTNode::NodeType::RootNode)) {
+        && chordNode.nodeType != NodeInfo::Kind::Root)) {
             return;
         }
 
@@ -746,10 +652,75 @@ void TraversalDispatcher::pushChordNotes(const NoteDispatch& dispatch, const Dis
             }
         }
 
-        if (chainNode.isAlternativeNode && chainNode.alternativeArrowDuration == 0) {
+        if (NodeInfo::alternativeKind[static_cast<int>(chainNode.nodeType)] && chainNode.alternativeArrowDuration == 0) {
             scheduleChordMember(chainNode.parentId, chainCount);
         }
     }
+}
+
+TraversalDispatcher::NotePlan TraversalDispatcher::planNote(const RTNode& node, int runId, const DispatchContext& context, TraversalLogic& traversalLogic,
+                                                            const ScriptNote& scriptNote, bool isPrimaryRepeat)
+{
+    const NodeMap&     nodes     = context.nodes;
+    const TraversalKey activeKey = traversalLogic.traversal.key;
+
+    ScriptNote::Kind scriptKind = ScriptNote::Kind::Default;
+
+    NotePlan plan;
+
+    auto danglingArrowFor = [&](const RTNode& target) {
+        const int count = traversalLogic.nodeState.get(NodeStateSlot::Count, target.nodeID) + 1;
+
+        return traversalLogic.rule->selectDanglingArrow(target, count, activeKey);
+    };
+
+    if (scriptNote.nodeId == node.nodeID) {
+        scriptKind = scriptNote.kind;
+    }
+
+    if (scriptKind == ScriptNote::Kind::Silent) {
+        plan.voicing.sound = NoteScheduler::Sound::Silent;
+    }
+
+    dispatchModulator(node, runId, context, traversalLogic, plan.modulatorNode, isPrimaryRepeat);
+
+    if (traversalLogic.mod.walker.alternativeTarget != -1) {
+        plan.alternativeModulatorNode = nodes.find(traversalLogic.mod.walker.alternativeTarget);
+    }
+
+    plan.nextTarget      = traversalLogic.peekNextTarget(nodes);
+    plan.tempoMultiplier = traversalTempoMultiplier(traversalLogic, context);
+
+    jassert(context.sampleRate > 0.0);
+
+    overrideVoicing(plan, node, traversalLogic, context, scriptNote, scriptKind);
+
+    plan.nodeCount     = traversalLogic.nodeState.get(NodeStateSlot::Count, node.nodeID) + 1;
+    plan.danglingIndex = danglingArrowFor(node);
+    plan.transpose     = traversalLogic.traversal.transpose;
+
+    if (plan.alternativeNode != nullptr) {
+        plan.alternativeDanglingIndex = danglingArrowFor(*plan.alternativeNode);
+
+        plan.duration = resolveDuration(*plan.alternativeNode, plan.nextTarget, traversalLogic.primary.last, nodes, plan.alternativeDanglingIndex);
+    }
+    else {
+        plan.duration = resolveDuration(node, plan.nextTarget, traversalLogic.primary.last, nodes, plan.danglingIndex);
+    }
+
+    if (scriptKind == ScriptNote::Kind::Played) {
+        plan.duration = static_cast<int>(juce::jlimit(1.0, ArrowInfo::maximumDurationMs, static_cast<double>(scriptNote.duration)));
+    }
+
+    if (plan.modulatorNode != nullptr && traversalLogic.mod.walker.target != -1) {
+        scaleByModulator(plan, traversalLogic, nodes);
+    }
+
+    plan.voicing.channel            = traversalLogic.traversal.channel;
+    plan.voicing.transpose          = plan.transpose + context.transpose;
+    plan.voicing.velocityMultiplier = traversalLogic.traversal.velocityMultiplier * context.velocityScale;
+
+    return plan;
 }
 
 void TraversalDispatcher::dispatchPrimaryArrow(const NoteDispatch& dispatch, const RTNode& arrowNode, const RTNode* voicedAlternative,
@@ -805,7 +776,7 @@ void TraversalDispatcher::dispatchCrossTree(const NoteDispatch& dispatch, const 
     TraversalLogic& traversal = dispatch.traversal;
     const NodeMap&  nodes     = context.nodes;
 
-    if (node.nodeType != RTNode::NodeType::Node && node.nodeType != RTNode::NodeType::RootNode) {
+    if (node.nodeType != NodeInfo::Kind::Node && node.nodeType != NodeInfo::Kind::Root) {
         return;
     }
 
@@ -925,11 +896,11 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
 
         int connectionDuration = -1;
 
-        if (node.isAlternativeNode) {
+        if (NodeInfo::alternativeKind[static_cast<int>(node.nodeType)]) {
             connectionDuration = node.alternativeArrowDuration;
         }
         else {
-            if (nextTarget->nodeType != RTNode::NodeType::TraversalFlagData) {
+            if (nextTarget->nodeType != NodeInfo::Kind::TraversalFlag) {
                 const RTConnection* const connection = node.findConnection(nextTarget->nodeID);
 
                 if (connection != nullptr) {
@@ -942,7 +913,7 @@ int TraversalDispatcher::resolveDuration(const RTNode& node, const RTNode* nextT
             duration = connectionDuration;
         }
     }
-    else if (node.isAlternativeNode) {
+    else if (NodeInfo::alternativeKind[static_cast<int>(node.nodeType)]) {
         if (node.alternativeArrowDuration > 0) {
             duration = node.alternativeArrowDuration;
         }
@@ -979,4 +950,27 @@ bool TraversalDispatcher::markChordVisited(int nodeId)
     }
 
     return chordVisits.claim(nodeId) >= 0;
+}
+
+double TraversalDispatcher::traversalTempoMultiplier(const TraversalLogic& traversalLogic, const DispatchContext& context)
+{
+    const RTNode* const rootNode = context.nodes.find(traversalLogic.rootId);
+
+    double traversalMultiplier = traversalLogic.traversal.tempoMultiplier;
+
+    if (rootNode != nullptr) {
+        for (const RTtraversal& rootTraversal : rootNode->traversals) {
+            if (rootTraversal.key == traversalLogic.traversal.key) {
+                traversalMultiplier = rootTraversal.tempoMultiplier;
+
+                break;
+            }
+        }
+    }
+
+    if (traversalMultiplier <= 0.0) {
+        traversalMultiplier = 1.0;
+    }
+
+    return juce::jlimit(RTtraversal::minimumTempoMultiplier, RTtraversal::maximumTempoMultiplier, context.tempoMultiplier * traversalMultiplier);
 }

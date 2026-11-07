@@ -94,6 +94,7 @@ target_sources(SequenceTree PRIVATE
         Source/Input/OrnamentApplier.cpp
         Source/Input/Gestures/SelectionGestures.cpp
         Source/Input/Gestures/EncapsulationGestures.cpp
+        Source/Input/Gestures/NotePreviewGestures.cpp
         Source/UI/Node/Node.cpp
         Source/UI/Node/RootNode.cpp
         Source/UI/Node/Arrow.cpp

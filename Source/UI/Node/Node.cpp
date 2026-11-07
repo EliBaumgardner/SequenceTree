@@ -6,9 +6,9 @@
 
 Node::Node(juce::UndoManager& undoManager)
     : ArsNovaUI::CanvasNode(undoManager),
-      countEditor(undoManager),
-      switchCountEditor(undoManager),
-      subLoopLimitEditor(undoManager)
+      countEditor          (undoManager),
+      switchCountEditor    (undoManager),
+      subLoopLimitEditor   (undoManager)
 {
     upButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState&) {
         ArsNovaUI::CustomLookAndFeel::get(*this).drawIncrementIcon(graphics, bounds, true);
@@ -35,6 +35,7 @@ Node::Node(juce::UndoManager& undoManager)
 
     nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
 
+    setTooltip("Node");
     countEditor       .setTooltip("Count Limit");
     subLoopLimitEditor.setTooltip("Sub Loop Count Limit");
     switchCountEditor .setTooltip("Switch Count Limit");
@@ -93,7 +94,6 @@ void Node::incrementNodeValue(int incrementValue)
 
     refreshValueDisplay();
 }
-
 
 void Node::setDisplayMode(NodeInfo::DisplayMode newMode)
 {
@@ -243,21 +243,25 @@ void Node::bindValueEditorForMode()
         case NodeInfo::DisplayMode::Pitch:
             nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::PitchFormat>());
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiPitch);
+            nodeValueEditor.setTooltip("Pitch");
             break;
 
         case NodeInfo::DisplayMode::Velocity:
             nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumMidiVelocity, NodeInfo::maximumMidiVelocity));
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiVelocity);
+            nodeValueEditor.setTooltip("Velocity");
             break;
 
         case NodeInfo::DisplayMode::CountLimit:
             nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::DualIntFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit, ValueTreeIdentifiers::TriggerLimit));
             nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
+            nodeValueEditor.setTooltip("Count Limit");
             break;
 
         case NodeInfo::DisplayMode::Channel:
             nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumMidiChannel, NodeInfo::maximumMidiChannel));
             nodeValueEditor.bindEditor(midiNoteData, ValueTreeIdentifiers::MidiChannel);
+            nodeValueEditor.setTooltip("MIDI Channel");
             break;
 
         case NodeInfo::DisplayMode::RepeatValue: {
@@ -267,6 +271,7 @@ void Node::bindValueEditorForMode()
 
             nodeValueEditor.setFormat(std::move(repeatFormat));
             nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::RepeatValue);
+            nodeValueEditor.setTooltip("Repeat");
             break;
         }
 
@@ -277,11 +282,13 @@ void Node::bindValueEditorForMode()
 
             nodeValueEditor.setFormat(std::move(probabilityFormat));
             nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::Probability);
+            nodeValueEditor.setTooltip("Probability");
             break;
         }
 
         case NodeInfo::DisplayMode::Duration:
             nodeValueEditor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(0.0, ArrowInfo::maximumDurationMs));
+            nodeValueEditor.setTooltip("Duration");
             nodeValueEditor.editable = false;
             break;
     }
@@ -307,6 +314,21 @@ void Node::respondToClick(juce::Point<int> localPoint)
     }
 
     ArsNovaUI::CanvasNode::respondToClick(localPoint);
+}
+
+juce::String Node::getTooltip()
+{
+    const juce::Point<int> mousePoint = getMouseXYRelative();
+
+    for (juce::Component* child : getChildren()) {
+        auto* const editor = dynamic_cast<ArsNovaUI::ValueEditor*>(child);
+
+        if (editor != nullptr && editor->isVisible() && editor->getBounds().contains(mousePoint) && editor->getTooltip().isNotEmpty()) {
+            return editor->getTooltip();
+        }
+    }
+
+    return juce::SettableTooltipClient::getTooltip();
 }
 
 ArsNovaUI::NodeVisual Node::getNodeVisual(juce::Rectangle<float> bounds) const

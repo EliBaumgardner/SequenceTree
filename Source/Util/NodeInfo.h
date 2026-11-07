@@ -59,6 +59,9 @@ inline constexpr int minimumGlobalTranspose = -48;
 inline constexpr int maximumGlobalTranspose =  48;
 
 enum class Type        { Node, Root, Modulator, TraversalFlag, Encapsulator};
+enum class Kind        { Root, Node, Alternative, TraversalFlag, Modulator, ModulatorRoot, AlternativeModulator, Encapsulator };
 enum class DisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue, Probability};
+
+inline constexpr bool alternativeKind[] = { false, false, true, false, false, false, true, false };
 
 }

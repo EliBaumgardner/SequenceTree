@@ -15,6 +15,7 @@ TempoDisplay::TempoDisplay(juce::UndoManager& undoManager)
 
     editor.setFormat(std::move(tempoFormat));
     editor.setJustification(juce::Justification::centredLeft);
+    editor.setTooltip("Tempo Multiplier");
 
     addAndMakeVisible(editor);
 }

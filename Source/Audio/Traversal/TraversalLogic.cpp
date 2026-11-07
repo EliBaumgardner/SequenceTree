@@ -5,47 +5,37 @@
 
 namespace {
 
-bool isModulatorChild(RTNode::NodeType t) {
-    return t == RTNode::NodeType::Modulator || t == RTNode::NodeType::ModulatorRoot;
+bool isModulatorChild(NodeInfo::Kind t) {
+    return t == NodeInfo::Kind::Modulator || t == NodeInfo::Kind::ModulatorRoot;
 }
 
-bool isAlternativeChild(RTNode::NodeType t) {
-    return t == RTNode::NodeType::Alternative;
+bool isAlternativeChild(NodeInfo::Kind t) {
+    return t == NodeInfo::Kind::Alternative;
 }
 
-bool isAlternativeModulatorChild(RTNode::NodeType t) {
-    return t == RTNode::NodeType::AlternativeModulator;
+bool isAlternativeModulatorChild(NodeInfo::Kind t) {
+    return t == NodeInfo::Kind::AlternativeModulator;
 }
 
-bool isAdvanceableChild(RTNode::NodeType t) {
-    return t == RTNode::NodeType::Node || t == RTNode::NodeType::Modulator
-        || t == RTNode::NodeType::RootNode;
+bool isAdvanceableChild(NodeInfo::Kind t) {
+    return t == NodeInfo::Kind::Node || t == NodeInfo::Kind::Modulator
+        || t == NodeInfo::Kind::Root;
 }
 
-bool isAudibleChild(RTNode::NodeType t) {
-    return t == RTNode::NodeType::Node || t == RTNode::NodeType::RootNode;
+bool isAudibleChild(NodeInfo::Kind t) {
+    return t == NodeInfo::Kind::Node || t == NodeInfo::Kind::Root;
 }
 
-bool isTreeJumpChild(RTNode::NodeType t) {
-    return t == RTNode::NodeType::RootNode;
+bool isTreeJumpChild(NodeInfo::Kind t) {
+    return t == NodeInfo::Kind::Root;
 }
 
-void resetWalker(TraversalLogic::Walker& walker)
-{
-    walker.target = 0;
-    walker.last   = 0;
-
-    walker.subRootNode = -1;
-
-    walker.alternativeTarget = -1;
-    walker.alternativeLast   = -1;
-}
 
 }
 
 void TraversalLogic::reset(int root, const RTtraversal& newTraversal)
 {
-    resetWalker(primary);
+    primary = {};
 
     nodeState.clear();
 
@@ -60,7 +50,7 @@ void TraversalLogic::reset(int root, const RTtraversal& newTraversal)
                        ^ 2463534242u) | 1u;
 
     rootId              = root;
-    referenceTargetId   = 0;
+    referenceTargetId   = -1;
     pendingJumpTargetId = -1;
     membersScript       = nullptr;
 
@@ -88,7 +78,7 @@ void TraversalLogic::begin(const NodeMap& nodes, int startNodeId, int graphLoopL
             nodeState.set(NodeStateSlot::ModulatorCount, node.nodeID, seededCount);
             nodeState.set(NodeStateSlot::Chord,          node.nodeID, seededCount);
 
-            if (node.nodeType != RTNode::NodeType::Alternative) {
+            if (node.nodeType != NodeInfo::Kind::Alternative) {
                 nodeState.set(NodeStateSlot::Count, node.nodeID, seededCount);
             }
 
@@ -97,7 +87,7 @@ void TraversalLogic::begin(const NodeMap& nodes, int startNodeId, int graphLoopL
             }
 
             if (node.alternativeRootId != -1 && seededCount > 0 && isModulatorChild(node.nodeType)) {
-                nodeState.set(NodeStateSlot::ActiveAlternative, node.nodeID, node.nodeID);
+                nodeState.set(NodeStateSlot::ActiveAlternative, node.nodeID, NodeStateTable::hostPlays);
             }
         }
 
@@ -210,8 +200,8 @@ void TraversalLogic::advanceAlternative(const NodeMap& nodes,int parentId) {
     const RTNode& parent = *parentNode;
 
     const bool modulatorWalkerEntered = mod.isActive() && parentId == mod.walker.target
-                                     && (parent.nodeType == RTNode::NodeType::Modulator
-                                      || parent.nodeType == RTNode::NodeType::ModulatorRoot);
+                                     && (parent.nodeType == NodeInfo::Kind::Modulator
+                                      || parent.nodeType == NodeInfo::Kind::ModulatorRoot);
 
     Walker*        walker        = &primary;
     ChildPredicate isAlternative = &isAlternativeChild;
@@ -232,12 +222,14 @@ void TraversalLogic::advanceAlternative(const NodeMap& nodes,int parentId) {
     const int currentAltId = nodeState.get(NodeStateSlot::ActiveAlternative, parentId);
 
     if (currentAltId == -1) {
-        nodeState.set(NodeStateSlot::ActiveAlternative, parentId, parentId);
-        walker->alternativeTarget  = -1;
+        nodeState.set(NodeStateSlot::ActiveAlternative, parentId, NodeStateTable::hostPlays);
+
+        walker->alternativeTarget = -1;
+
         return;
     }
 
-    if (currentAltId != parentId) {
+    if (currentAltId != NodeStateTable::hostPlays) {
         const RTNode* const currentAltNode = nodes.find(currentAltId);
 
         if (currentAltNode != nullptr) {
@@ -255,21 +247,25 @@ void TraversalLogic::advanceAlternative(const NodeMap& nodes,int parentId) {
     }
 
     int count;
-    if (currentAltId == parentId) {
-        count = nodeState.get(countSlot, parentId);
+    int selectingId = currentAltId;
+
+    if (currentAltId == NodeStateTable::hostPlays) {
+        count       = nodeState.get(countSlot, parentId);
+        selectingId = parentId;
     } else {
         count = nodeState.increment(countSlot, currentAltId);
     }
 
-    const int chosen = selectNextChild(nodes,currentAltId, count, isAlternative);
+    const int chosen = selectNextChild(nodes, selectingId, count, isAlternative);
 
-    if (currentAltId != parentId) {
+    if (currentAltId != NodeStateTable::hostPlays) {
         nodeState.set(NodeStateSlot::LastNode, currentAltId, chosen);
     }
 
     if (chosen == -1) {
-        nodeState.set(NodeStateSlot::ActiveAlternative, parentId, parentId);
-        walker->alternativeTarget  = -1;
+        nodeState.set(NodeStateSlot::ActiveAlternative, parentId, NodeStateTable::hostPlays);
+
+        walker->alternativeTarget = -1;
     } else {
         nodeState.set(NodeStateSlot::ActiveAlternative, parentId, chosen);
         walker->alternativeTarget  = chosen;
@@ -309,7 +305,7 @@ void TraversalLogic::peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& t
 
             const RTNode& childNode = *childEntry;
 
-            if (childNode.nodeType != RTNode::NodeType::RootNode) {
+            if (childNode.nodeType != NodeInfo::Kind::Root) {
                 continue;
             }
             if (childNode.nodeID == rootId) {
@@ -785,7 +781,7 @@ void TraversalLogic::skipAhead(const NodeMap& nodes, int steps)
     for (int skipped = 1; skipped < stepCount; ++skipped) {
         const RTNode* const skipTarget = peekNextTarget(nodes);
 
-        if (skipTarget == nullptr || skipTarget->nodeType == RTNode::NodeType::RootNode) {
+        if (skipTarget == nullptr || skipTarget->nodeType == NodeInfo::Kind::Root) {
             return;
         }
 
@@ -1005,7 +1001,7 @@ const RTNode* TraversalLogic::eligibleModulatorRoot(const NodeMap& nodes, const 
         return nullptr;
     }
 
-    if (childNode->nodeType != RTNode::NodeType::ModulatorRoot) {
+    if (childNode->nodeType != NodeInfo::Kind::ModulatorRoot) {
         return nullptr;
     }
 

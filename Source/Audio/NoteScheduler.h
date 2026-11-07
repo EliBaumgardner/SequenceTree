@@ -45,7 +45,7 @@ public:
     ActiveNote expireNext(juce::MidiBuffer& midiMessages, int sample);
 
     static bool isNoteSounding(const ActiveNote& note);
-    static bool isNodeAudible (RTNode::NodeType nodeType);
+    static bool isNodeAudible (NodeInfo::Kind nodeType);
 
     struct MidiEvent
     {
@@ -71,7 +71,7 @@ public:
     {
         MidiEvent event;
         NoteRole  role  = NoteRole::Stepping;
-        RTNode::NodeType nodeType = RTNode::NodeType::Node;
+        NodeInfo::Kind nodeType = NodeInfo::Kind::Node;
 
         int runId  = 0;
         int nodeId = 0;

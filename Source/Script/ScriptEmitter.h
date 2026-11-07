@@ -67,7 +67,8 @@ class Emitter
 public:
 
     Emitter(RTScript& target, std::vector<ScriptDiagnostic>& diagnosticList)
-        : script(target), diagnostics(diagnosticList) {}
+        : script     (target),
+          diagnostics(diagnosticList) {}
 
     void run(const ClassDeclaration& declaration);
 

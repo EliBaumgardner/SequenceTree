@@ -3,7 +3,10 @@
 #include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
 
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
-: AudioProcessorEditor(p), audioProcessor(p), graphDocument(p.graphState, p.undoManager)
+    : AudioProcessorEditor(p),
+      audioProcessor      (p),
+      graphDocument       (p.graphState, p.undoManager),
+      notePreviewGestures (p.traversalSession, p.rtGraphBuilder)
 {
     juce::PropertiesFile::Options interfaceSettingsOptions;
 
@@ -23,27 +26,17 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     tooltipWindow.setOpaque(false);
 
     scaledView     = std::make_unique<ArsNovaUI::ScaledView>(workspace, *interfaceSettings);
-    nodeCanvas     = std::make_unique<NodeCanvas>(p, p.graphState, graphDocument, p.rtGraphBuilder, lookAndFeel);
-    nodeController = std::make_unique<NodeController>(*nodeCanvas, p.graphState, graphDocument, p.undoManager, p.traversalSession, p.rtGraphBuilder, p.ornamentLibraries);
+    nodeCanvas     = std::make_unique<NodeCanvas>(graphDocument, p.bridge, p.ornamentLibraries, lookAndFeel);
+    nodeController = std::make_unique<NodeController>(*nodeCanvas, graphDocument, notePreviewGestures, p.ornamentLibraries);
     port           = std::make_unique<ArsNovaUI::DynamicPort>(*nodeCanvas);
-    menuArea       = std::make_unique<MenuArea>(*nodeCanvas, p.graphState, p.traversalRuleState, p.snapshots, p.colourPresets, p.undoManager);
-    titleBar       = std::make_unique<Titlebar>(p, *nodeCanvas, *nodeController, graphDocument, *interfaceSettings, *scaledView, p.colourPresets, p.undoManager);
-    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, graphDocument, p.traversalSession, p.colourPresets, p.undoManager, p.ornamentLibraries, p.ornamentUndoManager);
+    traversalMenu  = std::make_unique<TraversalMenu>(notePreviewGestures, p.graphState, p.colourPresets, p.undoManager);
+    nodeMenu       = std::make_unique<NodeMenu>(*nodeCanvas, p.graphState, p.colourPresets, p.undoManager);
+    menuArea       = std::make_unique<MenuArea>(*nodeCanvas, *traversalMenu, *nodeMenu);
+    titleBar       = std::make_unique<Titlebar>(p, *nodeCanvas, *nodeController, graphDocument);
+    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, graphDocument, notePreviewGestures, p.colourPresets, p.ornamentLibraries);
     canvasFrame    = std::make_unique<CanvasFrame>(*nodeCanvas, *menuArea, *titleBar, *bottomBar);
 
-    titleBar->onDisplayModeChanged = [this](NodeInfo::DisplayMode mode) { bottomBar->applyDisplayMode(mode); };
-
-    port->onTransformChanged = [this](const juce::AffineTransform& viewTransform, float zoom) { nodeCanvas->applyViewTransform(viewTransform, zoom); };
-
-    menuArea->resizer.onWidthDragged = [this](int newWidth) {
-        menuWidth = newWidth;
-
-        resized();
-
-        updateResizeLimits();
-
-        repaint();
-    };
+    wireCallbacks();
 
     if (audioProcessor.pendingRestoreState.isValid()) {
         audioProcessor.applyRestoredState();
@@ -173,7 +166,8 @@ bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, ju
     juce::UndoManager& undoManager       = audioProcessor.undoManager;
 
     if (key == juce::KeyPress::spaceKey) {
-        titleBar->applyPlaybackState(!nodeCanvas->start);
+        titleBar->applyPlaybackState(!audioProcessor.isPlaying.load());
+
         return true;
     }
 
@@ -280,4 +274,33 @@ void SequenceTreeAudioProcessorEditor::toggleFullScreen()
     else {
         desktop.setKioskModeComponent(nullptr);
     }
+}
+
+void SequenceTreeAudioProcessorEditor::wireCallbacks()
+{
+    settingsLauncher.openingScale = ArsNovaUI::SettingsMenu::openingScale;
+    ornamentLauncher.openingScale = OrnamentWindow::openingScale;
+
+    titleBar->onDisplayModeChanged                  = [this](NodeInfo::DisplayMode mode) { bottomBar->applyDisplayMode(mode); };
+    titleBar->onSettingsClicked                     = [this]() { settingsLauncher.show(*titleBar); };
+    traversalMenu->editTraversalRulesButton.onClick = [this]() { traversalRulesLauncher.show(*traversalMenu); };
+    nodeMenu->editTraversalRulesButton.onClick      = [this]() { traversalRulesLauncher.show(*nodeMenu); };
+
+    bottomBar->onOrnamentWindowRequested = [this]() {
+        audioProcessor.ornamentLibraries.rescan(audioProcessor.ornamentUndoManager);
+
+        ornamentLauncher.show(*bottomBar);
+    };
+
+    port->onTransformChanged = [this](const juce::AffineTransform& viewTransform, float zoom) { nodeCanvas->applyViewTransform(viewTransform, zoom); };
+
+    menuArea->resizer.onWidthDragged = [this](int newWidth) {
+        menuWidth = newWidth;
+
+        resized();
+
+        updateResizeLimits();
+
+        repaint();
+    };
 }

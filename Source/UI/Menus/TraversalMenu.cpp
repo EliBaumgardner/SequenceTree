@@ -3,21 +3,18 @@
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Util/NodeInfo.h"
-#include "../Canvas/NodeCanvas.h"
+#include "../../Input/Gestures/NotePreviewGestures.h"
 
-TraversalMenu::TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-                             juce::ValueTree colourPresets, juce::UndoManager& undoManager)
-    : displayMenu(undoManager),
-      multiplierField(undoManager),
-      channelField(undoManager),
-      transposeField(undoManager),
-      velocityField(undoManager),
-      colourSelector(colourPresets, undoManager),
-      nodeCanvas(nodeCanvas),
-      graphState(graphState),
-      traversalRuleState(traversalRuleState),
-      snapshots(snapshots),
-      undoManager(undoManager)
+TraversalMenu::TraversalMenu(NotePreviewGestures& notePreviewGestures, GraphState& graphState, juce::ValueTree colourPresets, juce::UndoManager& undoManager)
+    : displayMenu        (undoManager),
+      multiplierField    (undoManager),
+      channelField       (undoManager),
+      transposeField     (undoManager),
+      velocityField      (undoManager),
+      colourSelector     (colourPresets, undoManager),
+      notePreviewGestures(notePreviewGestures),
+      graphState         (graphState),
+      undoManager        (undoManager)
 {
     const juce::ValueTree traversalMap     = graphState.traversals.map;
     auto                  transposeFormat  = std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumTraversalTranspose, NodeInfo::maximumTraversalTranspose);
@@ -51,8 +48,6 @@ TraversalMenu::TraversalMenu(NodeCanvas& nodeCanvas, GraphState& graphState, Tra
     };
 
     displayMenu.onItemSelected = [this](int traversalId) { selectTraversal(traversalId); };
-
-    editTraversalRulesButton.onClick = [this]() { traversalRulesLauncher.show(*this); };
 
     addChildComponent(displayMenu);
     addChildComponent(multiplierField);
@@ -184,7 +179,7 @@ void TraversalMenu::selectTraversal(int traversalId)
     }
 
     currentTraversalData     = traversalData;
-    nodeCanvas.quaverTraversalId = traversalId;
+    notePreviewGestures.traversalId = traversalId;
 
     for (juce::Component* content : getChildren()) {
         content->setVisible(true);

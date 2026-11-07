@@ -103,7 +103,8 @@ class Lexer
 public:
 
     Lexer(const std::string& sourceText, std::vector<ScriptDiagnostic>& diagnosticList)
-        : source(sourceText), diagnostics(diagnosticList) {}
+        : source     (sourceText),
+          diagnostics(diagnosticList) {}
 
     std::vector<Token> run();
 

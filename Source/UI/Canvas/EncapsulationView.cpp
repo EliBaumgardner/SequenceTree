@@ -12,7 +12,8 @@
 #include <unordered_set>
 
 EncapsulationView::EncapsulationView(NodeCanvas& nodeCanvas, GraphState& graphState)
-    : nodeCanvas(nodeCanvas), graphState(graphState)
+    : nodeCanvas(nodeCanvas),
+      graphState(graphState)
 {
 }
 

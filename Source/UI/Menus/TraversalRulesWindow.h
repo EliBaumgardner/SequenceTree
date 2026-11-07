@@ -26,8 +26,8 @@
     rules tree and refreshes its pages and list when it changes from elsewhere, for example by a
     restored patch.
 
-    TraversalMenu and NodeMenu open it in a pop-up window, so it takes the CustomLookAndFeel in
-    its constructor and sets it on itself.
+    PluginEditor opens it in a pop-up window from TraversalMenu's and NodeMenu's buttons, so it
+    takes the CustomLookAndFeel in its constructor and sets it on itself.
 */
 
 class TraversalRuleState;

@@ -6,7 +6,8 @@
 #include <ArsNovaUI/Theme/Theme.h>
 
 GraphDocument::GraphDocument(GraphState& graphState, juce::UndoManager& undoManager)
-    : ArsNovaUI::CanvasDocument(graphState.nodeMap, undoManager), graphState(graphState)
+    : ArsNovaUI::CanvasDocument(graphState.nodeMap, undoManager),
+      graphState(graphState)
 {
 }
 

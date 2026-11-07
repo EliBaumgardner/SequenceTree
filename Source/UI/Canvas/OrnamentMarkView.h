@@ -14,7 +14,7 @@
     it to OrnamentApplier::respondToMarkClick, which uses nodeValueTree to find the node.
 */
 
-class OrnamentMarkView : public juce::Component
+class OrnamentMarkView : public juce::Component, public juce::SettableTooltipClient
 {
 public:
 

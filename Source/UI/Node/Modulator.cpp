@@ -8,6 +8,8 @@
 Modulator::Modulator(juce::UndoManager& undoManager) : Node(undoManager)
 {
     nodeType = NodeInfo::Type::Modulator;
+
+    setTooltip("Modulator");
 }
 
 void Modulator::paint(juce::Graphics& graphics)
@@ -29,7 +31,7 @@ void Modulator::bindValueEditorForMode()
 
     nodeValueEditor.setFormat(std::move(offsetFormat));
     nodeValueEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::ModAmount);
-
+    nodeValueEditor.setTooltip("Pitch Offset");
     nodeValueEditor.editable = true;
 }
 

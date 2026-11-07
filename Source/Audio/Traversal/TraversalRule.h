@@ -25,7 +25,7 @@
     dangling arrows.
 */
 
-using ChildPredicate = bool (*)(RTNode::NodeType);
+using ChildPredicate = bool (*)(NodeInfo::Kind);
 
 struct RuleContext
 {

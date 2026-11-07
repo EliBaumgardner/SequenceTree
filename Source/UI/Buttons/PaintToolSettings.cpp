@@ -3,7 +3,10 @@
 #include "../Canvas/NodeCanvas.h"
 
 PaintToolSettings::PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree colourPresets, juce::UndoManager& undoManager)
-    : nodeCanvas(nodeCanvas), colourSelector(colourPresets, undoManager), sizeField(undoManager), flowField(undoManager)
+    : nodeCanvas    (nodeCanvas),
+      colourSelector(colourPresets, undoManager),
+      sizeField     (undoManager),
+      flowField     (undoManager)
 {
     ValueField& valueField = nodeCanvas.valueField;
     const float brushFlow  = juce::jlimit(minBrushFlow, maxBrushFlow, valueField.brushFlow);
@@ -14,6 +17,7 @@ PaintToolSettings::PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree col
 
     configureValueFields(valueField, brushFlow);
 
+    paintTool.setTooltip("Brush");
     colourSelector.setTooltip("Brush colour");
 
     componentCallBack();
@@ -77,9 +81,6 @@ void PaintToolSettings::configureValueFields(ValueField &valueField, const float
 
     sizeField.label.setText("Size", juce::dontSendNotification);
     flowField.label.setText("Rate", juce::dontSendNotification);
-
-    sizeField.editor.setTooltip("Brush size");
-    flowField.editor.setTooltip("Brush rate");
 }
 
 void PaintToolSettings::setPaintMode(ValueField::PaintLayer layer)

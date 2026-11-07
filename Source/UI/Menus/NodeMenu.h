@@ -7,8 +7,6 @@
 #include "../../Util/NodeInfo.h"
 #include <ArsNovaUI/Menus/ColourSelector.h>
 #include <ArsNovaUI/Buttons/IconButton.h>
-#include "TraversalRulesWindow.h"
-#include <ArsNovaUI/PopupWindow.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 /*
@@ -25,26 +23,25 @@
     deselected it hides them all. The colour selector sets the node's colour through
     GraphState::setNodeColour.
 
-    MenuArea owns it and shows it when the node icon is selected.
+    PluginEditor owns it, and MenuArea shows it when the node icon is selected.
 */
 
 class Node;
 class NodeCanvas;
 class GraphState;
-class TraversalRuleState;
-class AudioSnapshotPublisher;
 
 class NodeMenu : public juce::Component
 {
 public:
 
-    NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-             juce::ValueTree colourPresets, juce::UndoManager& undoManager);
+    NodeMenu(NodeCanvas& nodeCanvas, GraphState& graphState, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
     int narrowestHeight() const;
+
+    ArsNovaUI::IconButton editTraversalRulesButton;
 
 private:
 
@@ -56,7 +53,7 @@ private:
     {
         ArsNovaUI::LabeledEditor& field;
         juce::String              labelText;
-        juce::String              tooltip;
+
         juce::Identifier          property;
         RowSource                 source;
         int                       minimum;
@@ -65,10 +62,8 @@ private:
         juce::String              suffix;
     };
 
-    GraphState&             graphState;
-    TraversalRuleState&     traversalRuleState;
-    AudioSnapshotPublisher& snapshots;
-    juce::UndoManager&      undoManager;
+    GraphState&        graphState;
+    juce::UndoManager& undoManager;
 
     ArsNovaUI::ColourSelector colourSelector;
     ArsNovaUI::CaptionLabel   colourLabel;
@@ -85,26 +80,13 @@ private:
     ArsNovaUI::LabeledEditor channelField           { undoManager };
 
     std::array<LabeledRow, 8> labeledRows {{
-        { countLimitField,        "CNT", "Count Limit",          ValueTreeIdentifiers::CountLimit,        RowSource::NodeTree, NodeInfo::minimumCountLimit,   NodeInfo::maximumCountLimit,   "",  ""  },
-        { repeatField,            "RPT", "Repeat Value",         ValueTreeIdentifiers::RepeatValue,       RowSource::NodeTree, NodeInfo::minimumRepeatValue,  NodeInfo::maximumRepeatValue,  "x", ""  },
-        { switchCountLimitField,  "SW",  "Switch Count Limit",   ValueTreeIdentifiers::SwitchCountLimit,  RowSource::NodeTree, NodeInfo::minimumCountLimit,   NodeInfo::maximumCountLimit,   "",  ""  },
-        { subLoopCountLimitField, "SUB", "Sub Loop Count Limit", ValueTreeIdentifiers::SubLoopCountLimit, RowSource::SubLoop,  NodeInfo::minimumCountLimit,   NodeInfo::maximumCountLimit,   "",  ""  },
-        { probabilityField,       "PRB", "Probability",          ValueTreeIdentifiers::Probability,       RowSource::NodeTree, NodeInfo::minimumProbability,  NodeInfo::maximumProbability,  "",  "%" },
-        { velocityField,          "VEL", "Velocity",             ValueTreeIdentifiers::MidiVelocity,      RowSource::MidiNote, NodeInfo::minimumMidiVelocity, NodeInfo::maximumMidiVelocity, "",  ""  },
-        { pitchField,             "PIT", "Pitch",                ValueTreeIdentifiers::MidiPitch,         RowSource::MidiNote, NodeInfo::minimumMidiPitch,    NodeInfo::maximumMidiPitch,    "",  ""  },
-        { channelField,           "CH",  "Channel",              ValueTreeIdentifiers::MidiChannel,       RowSource::MidiNote, NodeInfo::minimumMidiChannel,  NodeInfo::maximumMidiChannel,  "",  ""  }
+        { countLimitField,        "CNT", ValueTreeIdentifiers::CountLimit,        RowSource::NodeTree, NodeInfo::minimumCountLimit,   NodeInfo::maximumCountLimit,   "",  ""  },
+        { repeatField,            "RPT", ValueTreeIdentifiers::RepeatValue,       RowSource::NodeTree, NodeInfo::minimumRepeatValue,  NodeInfo::maximumRepeatValue,  "x", ""  },
+        { switchCountLimitField,  "SW",  ValueTreeIdentifiers::SwitchCountLimit,  RowSource::NodeTree, NodeInfo::minimumCountLimit,   NodeInfo::maximumCountLimit,   "",  ""  },
+        { subLoopCountLimitField, "SUB", ValueTreeIdentifiers::SubLoopCountLimit, RowSource::SubLoop,  NodeInfo::minimumCountLimit,   NodeInfo::maximumCountLimit,   "",  ""  },
+        { probabilityField,       "PRB", ValueTreeIdentifiers::Probability,       RowSource::NodeTree, NodeInfo::minimumProbability,  NodeInfo::maximumProbability,  "",  "%" },
+        { velocityField,          "VEL", ValueTreeIdentifiers::MidiVelocity,      RowSource::MidiNote, NodeInfo::minimumMidiVelocity, NodeInfo::maximumMidiVelocity, "",  ""  },
+        { pitchField,             "PIT", ValueTreeIdentifiers::MidiPitch,         RowSource::MidiNote, NodeInfo::minimumMidiPitch,    NodeInfo::maximumMidiPitch,    "",  ""  },
+        { channelField,           "CH",  ValueTreeIdentifiers::MidiChannel,       RowSource::MidiNote, NodeInfo::minimumMidiChannel,  NodeInfo::maximumMidiChannel,  "",  ""  }
     }};
-
-    ArsNovaUI::IconButton editTraversalRulesButton;
-
-    ArsNovaUI::PopupWindowLauncher traversalRulesLauncher {
-        "Traversal Rules",
-        [this]() {
-            auto content = std::make_unique<TraversalRulesWindow>(ArsNovaUI::CustomLookAndFeel::get(*this), traversalRuleState, snapshots, undoManager);
-
-            content->setSize(TraversalRulesWindow::defaultWidth, TraversalRulesWindow::defaultHeight);
-
-            return content;
-        }
-    };
 };

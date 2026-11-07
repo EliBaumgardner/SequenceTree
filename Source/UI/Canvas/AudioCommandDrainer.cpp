@@ -8,7 +8,9 @@
 #include "../../Audio/ThreadMessaging/AudioUIBridge.h"
 
 AudioCommandDrainer::AudioCommandDrainer(NodeCanvas& nodeCanvas, AudioUIBridge& bridge, GraphState& graphState)
-    : nodeCanvas(nodeCanvas), bridge(bridge), graphState(graphState)
+    : nodeCanvas(nodeCanvas),
+      bridge    (bridge),
+      graphState(graphState)
 {
     bridge.highlights.drain([](const BridgeCommands::HighlightCommand&) {});
     bridge.arrows.drain([](const BridgeCommands::ArrowCommand&) {});

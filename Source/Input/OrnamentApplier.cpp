@@ -6,9 +6,9 @@
 #include "../Graph/ValueTreeIdentifiers.h"
 
 OrnamentApplier::OrnamentApplier(NodeCanvas& nodeCanvas, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
-    : nodeCanvas(nodeCanvas),
+    : nodeCanvas       (nodeCanvas),
       ornamentLibraries(ornamentLibraries),
-      undoManager(undoManager)
+      undoManager      (undoManager)
 {
 }
 

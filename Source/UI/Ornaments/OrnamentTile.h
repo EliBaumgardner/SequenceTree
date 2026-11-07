@@ -19,7 +19,7 @@
 
 class OrnamentLibraries;
 
-class OrnamentTile : public juce::Component
+class OrnamentTile : public juce::Component, public juce::SettableTooltipClient
 {
 public:
 

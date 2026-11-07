@@ -5,9 +5,9 @@
 #include <algorithm>
 
 OrnamentSelectionPanel::OrnamentSelectionPanel(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
-    : resizer(ArsNovaUI::PanelResizer::Edge::Left),
+    : resizer          (ArsNovaUI::PanelResizer::Edge::Left),
       ornamentLibraries(ornamentLibraries),
-      undoManager(undoManager)
+      undoManager      (undoManager)
 {
     titlebar.newLibraryButton.onClick = [this]() {
         this->undoManager.beginNewTransaction();

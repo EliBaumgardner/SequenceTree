@@ -28,7 +28,8 @@ class Parser
 public:
 
     Parser(std::span<const Token> tokenList, std::vector<ScriptDiagnostic>& diagnosticList)
-        : tokens(tokenList), diagnostics(diagnosticList) {}
+        : tokens     (tokenList),
+          diagnostics(diagnosticList) {}
 
     ClassDeclaration run();
 

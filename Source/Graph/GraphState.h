@@ -68,6 +68,8 @@ public:
 
     std::vector<int> nodeIdsBetween(int startNodeId, int endNodeId) const;
 
+    static NodeInfo::Kind kindOf(const juce::ValueTree& node);
+
     juce::ValueTree nodeMap;
 
     EncapsulationOps encapsulation {*this};

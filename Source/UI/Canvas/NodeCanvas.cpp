@@ -8,22 +8,21 @@
 #include "../Node/TraversalFlagNode.h"
 #include "../../Input/GraphDocument.h"
 #include "../../Graph/GraphState.h"
-#include "../../Graph/RTGraphBuilder.h"
+
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
-#include "../../Plugin/PluginProcessor.h"
+
+#include "../../Audio/ThreadMessaging/AudioUIBridge.h"
+#include "../../Graph/OrnamentLibraries.h"
 
 #include <cmath>
 
-NodeCanvas::NodeCanvas(SequenceTreeAudioProcessor& processor, GraphState& graphState, GraphDocument& graphDocument, RTGraphBuilder& rtGraphBuilder,
-                       ArsNovaUI::CustomLookAndFeel& lookAndFeel)
-    : NodeArrowCanvas(graphDocument),
-      processor(processor),
-      graphState(graphState),
-      rtGraphBuilder(rtGraphBuilder),
-      drainer(*this, processor.eventManager.bridge, graphState),
+NodeCanvas::NodeCanvas(GraphDocument& graphDocument, AudioUIBridge& bridge, OrnamentLibraries& ornamentLibraries, ArsNovaUI::CustomLookAndFeel& lookAndFeel)
+    : NodeArrowCanvas  (graphDocument),
+      graphState       (graphDocument.graphState),
+      drainer          (*this, bridge, graphState),
       encapsulationView(*this, graphState),
-      ornamentMarks(*this, processor.ornamentLibraries)
+      ornamentMarks    (*this, ornamentLibraries)
 {
     setWantsKeyboardFocus(true);
 
@@ -148,6 +147,11 @@ void NodeCanvas::nodeRemoving(ArsNovaUI::CanvasNode& node)
     }
 
     encapsulationView.refreshMembership(encapsulatorId);
+
+    if (nodeManager.all().size() == 1) {
+        gridOriginSet = false;
+        gridVisible   = false;
+    }
 }
 
 void NodeCanvas::prepareArrow(ArsNovaUI::CanvasArrow& arrow)
@@ -195,14 +199,13 @@ void NodeCanvas::setActiveTool(CanvasTool tool)
 {
     const CanvasTool previousTool = activeTool;
 
-    activeTool       = tool;
-    spanAnchorNodeId = -1;
+    activeTool = tool;
 
     setInterceptsClicks(tool != CanvasTool::Paint, tool != CanvasTool::Paint && tool != CanvasTool::Span);
     clearOutlines();
 
-    if (previousTool == CanvasTool::NotePreview) {
-        processor.traversalSession.previewRequests.push({ RTPreviewRequest::Kind::Stop });
+    if (onToolLeft) {
+        onToolLeft(previousTool);
     }
 
     if (onActiveToolChanged) {
@@ -226,7 +229,7 @@ void NodeCanvas::setActiveTool(CanvasTool tool)
             break;
 
         case CanvasTool::NotePreview:
-            setMouseCursor(quaverCursor());
+            setMouseCursor(notePreviewCursor());
             break;
 
         case CanvasTool::Ornament:
@@ -246,13 +249,9 @@ void NodeCanvas::applyViewTransform(const juce::AffineTransform& newViewTransfor
     valueField.refresh();
 }
 
-void NodeCanvas::setProcessorPlayback(bool isPlaying)
+void NodeCanvas::setPlaybackActive(bool shouldPlay)
 {
-    start = isPlaying;
-
-    processor.isPlaying.store(start);
-
-    if (isPlaying) {
+    if (shouldPlay) {
         equipRootTraversals();
 
         resumeAllProgress();
@@ -260,8 +259,6 @@ void NodeCanvas::setProcessorPlayback(bool isPlaying)
     else {
         pauseAllProgress();
     }
-
-    rtGraphBuilder.handleUpdateNowIfNeeded();
 }
 
 void NodeCanvas::setDisplayMode(NodeInfo::DisplayMode mode)
@@ -449,9 +446,9 @@ juce::MouseCursor NodeCanvas::spanCursor() const
     return juce::MouseCursor(cursorImage, spanCursorSize / 2, spanCursorSize / 2);
 }
 
-juce::MouseCursor NodeCanvas::quaverCursor() const
+juce::MouseCursor NodeCanvas::notePreviewCursor() const
 {
-    juce::Image cursorImage(juce::Image::ARGB, quaverCursorSize, quaverCursorSize, true);
+    juce::Image cursorImage(juce::Image::ARGB, notePreviewCursorSize, notePreviewCursorSize, true);
 
     juce::Graphics cursorGraphics(cursorImage);
 
@@ -485,5 +482,5 @@ juce::MouseCursor NodeCanvas::quaverCursor() const
 
     cursorGraphics.fillPath(flag);
 
-    return juce::MouseCursor(cursorImage, quaverCursorSize / 2, quaverCursorSize / 2);
+    return juce::MouseCursor(cursorImage, notePreviewCursorSize / 2, notePreviewCursorSize / 2);
 }

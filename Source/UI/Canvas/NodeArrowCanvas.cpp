@@ -1,6 +1,7 @@
 #include "NodeArrowCanvas.h"
 #include "../Node/Arrow.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/ArrowGestures.h>
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 NodeArrowCanvas::NodeArrowCanvas(ArsNovaUI::CanvasDocument& document) : ArsNovaUI::EditCanvas(document)
@@ -37,6 +38,39 @@ void NodeArrowCanvas::treePropertyChanged(const juce::ValueTree& tree, const juc
                                  .nodeId      = tree.getParent().getParent().getProperty(ArsNovaUI::CanvasIdentifiers::Id),
                                  .childNodeId = tree.getProperty(ArsNovaUI::CanvasIdentifiers::Id) });
     }
+}
+
+juce::String NodeArrowCanvas::getTooltip()
+{
+    const juce::Point<float> mousePoint = getMouseXYRelative().toFloat().transformedBy(modelTransform);
+
+    Arrow* arrow = static_cast<Arrow*>(hitTester.danglingHeadNear(mousePoint, ArsNovaUI::ArrowGestures::danglingArrowGrabRadius));
+
+    if (arrow == nullptr) {
+        arrow = static_cast<Arrow*>(hitTester.arrowHeadNear(mousePoint, ArsNovaUI::ArrowGestures::arrowHeadGrabRadius));
+    }
+
+    if (arrow == nullptr) {
+        arrow = static_cast<Arrow*>(hitTester.arrowNear(mousePoint, ArsNovaUI::ArrowGestures::arrowHoverRadius));
+    }
+
+    if (arrow == nullptr) {
+        return {};
+    }
+
+    if (arrow->isDangling()) {
+        return "Dangling arrow";
+    }
+
+    if (arrow->isTraversalArrow()) {
+        return "Traversal arrow";
+    }
+
+    if (arrow->isSyncArrow()) {
+        return "Synced arrow";
+    }
+
+    return "Arrow";
 }
 
 std::unique_ptr<ArsNovaUI::CanvasArrow> NodeArrowCanvas::makeArrow(ArsNovaUI::CanvasNode* startNode, ArsNovaUI::CanvasNode* endNode)
