@@ -1,13 +1,15 @@
 #include "GraphDocument.h"
 #include "../UI/Node/Node.h"
 #include "../Graph/GraphState.h"
+#include "../Graph/ArrowBindingOps.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include <ArsNovaUI/Theme/Theme.h>
 
-GraphDocument::GraphDocument(GraphState& graphState, juce::UndoManager& undoManager)
+GraphDocument::GraphDocument(GraphState& graphState, juce::UndoManager& undoManager, juce::ValueTree canvasSettings)
     : ArsNovaUI::CanvasDocument(graphState.nodeMap, undoManager),
-      graphState(graphState)
+      graphState    (graphState),
+      canvasSettings(canvasSettings)
 {
 }
 
@@ -23,7 +25,9 @@ juce::ValueTree GraphDocument::addChildNode(int parentNodeId, juce::Point<int> p
     const juce::ValueTree    child        = NodeFactory::create(creationMode, graphState, parentNodeId, parentType, mods.isCtrlDown() && mods.isShiftDown(), nodePosition, &undoManager);
 
     if (child.isValid()) {
-        NodeFactory::applyArrowInfo(graphState, parentNodeId, child.getProperty(ArsNovaUI::CanvasIdentifiers::Id), currentArrowInfo, ArrowInfo::Type::StepIntoTree, &undoManager);
+        const ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(canvasSettings);
+
+        NodeFactory::applyArrowInfo(graphState, parentNodeId, child.getProperty(ArsNovaUI::CanvasIdentifiers::Id), arrowInfo, ArrowInfo::Type::StepIntoTree, &undoManager);
     }
 
     return child;
@@ -106,7 +110,9 @@ void GraphDocument::removeNode(int nodeId)
 
 void GraphDocument::addDanglingArrow(juce::ValueTree nodeTree, juce::Point<int> tipOffset)
 {
-    NodeFactory::createDanglingArrow(graphState, nodeTree, tipOffset, currentArrowInfo, &undoManager);
+    const ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(canvasSettings);
+
+    NodeFactory::createDanglingArrow(graphState, nodeTree, tipOffset, arrowInfo, &undoManager);
 }
 
 void GraphDocument::setDanglingArrowTip(juce::ValueTree arrowTree, juce::Point<int> tipOffset)
@@ -121,6 +127,8 @@ void GraphDocument::removeDanglingArrow(juce::ValueTree arrowTree)
 
 void GraphDocument::connect(int parentNodeId, int childNodeId, ConnectionGesture gesture)
 {
+    const ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(canvasSettings);
+
     ArrowInfo::Type rootConnectionType = ArrowInfo::Type::StepIntoTree;
 
     if (gesture == ConnectionGesture::NodeOntoRoot) {
@@ -129,7 +137,7 @@ void GraphDocument::connect(int parentNodeId, int childNodeId, ConnectionGesture
 
     graphState.connectNodes(parentNodeId, childNodeId, &undoManager);
 
-    NodeFactory::applyArrowInfo(graphState, parentNodeId, childNodeId, currentArrowInfo, rootConnectionType, &undoManager);
+    NodeFactory::applyArrowInfo(graphState, parentNodeId, childNodeId, arrowInfo, rootConnectionType, &undoManager);
 }
 
 void GraphDocument::disconnect(int startNodeId, int endNodeId)

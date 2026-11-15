@@ -111,7 +111,8 @@ private:
 
     int emitInitializer(std::span<const MemberDeclaration> declarations, std::span<const LocalBinding> bindings, ScriptOpcode storeOpcode);
 
-    int emit(ScriptOpcode opcode, int operand = 0);
+    template <typename Operand = int>
+    int emit(ScriptOpcode opcode, Operand operand = 0);
     int here() const;
 
     int declareLocal(const std::string& name, ValueType type);

@@ -37,6 +37,10 @@ private:
 
     juce::Path buildTrianglePath() const;
 
+    static constexpr float bladeInset       = 4.0f;
+    static constexpr float bladeLengthRatio = 0.7f;
+    static constexpr float pulseDepth       = 0.1f;
+
     ArsNovaUI::ValueEditor traversalNumEditor;
     GraphState& graphState;
 };

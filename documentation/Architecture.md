@@ -40,7 +40,7 @@ The document is the state that is saved. All of it is `juce::ValueTree` data, ed
   - `TraversalState traversals`: the traversal map.
 
   `GraphState` also listens to its own `nodeMap` to keep an id index (`getNode`, `getNodeParent`, `parentIdsOf`), so undo, redo and paste keep the index current without any extra code.
-- **`TraversalRuleState`** holds the traversal-rule scripts and which one is active. It is a separate document from the graph and shares only the save file.
+- **`TraversalRuleState`** holds the traversal-rule scripts, the folders they are sorted into, and which script is active. It is a separate document from the graph and shares only the save file.
 - **`OrnamentLibraries`** holds the ornament figures.
 - **`valueTreeState`** (`AudioProcessorValueTreeState`) holds the host-automatable parameters: tempo multiplier, velocity, transpose and host sync.
 
@@ -61,7 +61,7 @@ Playback runs entirely inside `processBlock` on the audio thread. Three levels o
 1. **`TraversalSession`** decides which traversals exist. It starts them from roots, removes those whose root or assignment was deleted (`syncWithGraph`), restarts them, and replays the walk silently after a host relocation (`beginReplay` / `continueReplay`). It owns:
    - `TraversalPool traversals` (128 slots) and `TraversalPool previewTraversals` (16 slots). Each slot holds an `Instance { TraversalLogic logic; TraversalRuntime runtime; }`, allocated in `prepare` so that starting a traversal never allocates.
    - `CommandFifo previewRequests`, through which the UI asks for note preview.
-2. **`TraversalLogic`** (`Source/Audio/Traversal/`) is one walk. It holds the node it is on and its counts, kept in a `NodeStateTable`, and on each `handleNodeEvent` it picks the next node through the active `TraversalRule`, or through the script when one is set (run by `ScriptRun`). It returns a `StepResult` and produces no MIDI. This folder uses no JUCE, which is what lets `SequenceTree_Tests` compile it on its own.
+2. **`TraversalLogic`** (`Source/Audio/Traversal/`) is one walk. It holds the node it is on, and on each `handleNodeEvent` it picks the next node through the script when one is set (run by `ScriptRun`), or otherwise through its `ChildSelector`, which keeps the counts in a `NodeStateTable` and asks the active `TraversalRule`. The modulator walk under it is a `ModulatorWalk`: it starts when the main walk enters the modulator's host, steps while the main walk stays under the host, stops when it leaves, and chooses through the same `ChildSelector`. It returns a `StepResult` and produces no MIDI. This folder uses no JUCE, which is what lets `SequenceTree_Tests` compile it on its own.
 3. **`EventManager`** (one for playback, one for preview) moves time forward. `processEvents` finds each note ending inside the block and handles it at its exact sample. It owns:
    - `NoteScheduler`: the sounding notes (`activeNotes`), note-ons on `scheduleNote` and note-offs on `expireNext`.
    - `TraversalDispatcher`: turns a step into output. `handleExpiredNote` steps the `TraversalLogic`, and `pushNote` plays the node it entered, with its chord, modulator, cross-tree jumps and traversal flags, and pushes canvas commands into the bridge. It owns `FlagScheduler`, which fires traversal flags and holds delayed traversal starts.
@@ -132,7 +132,7 @@ A new graph feature becomes one more class here and one more branch in the routi
 
 `Titlebar`, `BottomBar`, `MenuBar` and the menu panels derive from ArsNovaUI's `Bar` and are built from its generic components (`ButtonPane`, `IconButton`, `ItemSelector`, `ValueSlider`, `LabeledEditor`). Two windows open as pop-ups and exist only while shown:
 
-- `TraversalRulesWindow`, the script editor, opened by the editor from `TraversalMenu`'s or `NodeMenu`'s button.
+- `TraversalRulesWindow`, the script editor, opened by the editor from `TraversalMenu`'s or `NodeMenu`'s button. It is laid out like a code editor from the parts in `Source/UI/Rules/`: a side panel holding `RuleTreePanel` (the rules in their folders) with a `PanelResizer` on its inner edge, a `RuleTabBar` of open rules, a `RulePathBar`, and a `FilePage` for the open rule. Those parts are assembled from `ArsNovaUI` components rather than drawn by hand: the tab bar is a `Bar` holding `ButtonPane`s, the tabs are a `TabBar`, the side-panel list is a `RowList` (`RuleTreeView` extends it with folders, renaming and its menu, and hands dragging to `RuleReorderGestures`), menus are a `ContextMenu` and a name is edited in a `ValueEditor`. `ArsNovaUI` is where a generic, reusable component lives, whether or not this app uses it at the moment; `Source/UI/` holds only what is specific to SequenceTree.
 - `OrnamentWindow`, opened by the editor from `BottomBar`'s ornament button. Its figure editor is built from the same parts as the graph canvas: `OrnamentCanvas` is a `NodeArrowCanvas` and `OrnamentFigureController` an `ArsNovaUI::CanvasController`, both over a `FigureDocument` that calls `OrnamentLibraries`.
 
 ### 3.4 ArsNovaUI

@@ -15,14 +15,17 @@
 #include "../../Audio/ThreadMessaging/AudioUIBridge.h"
 #include "../../Graph/OrnamentLibraries.h"
 
+#include <algorithm>
 #include <cmath>
 
-NodeCanvas::NodeCanvas(GraphDocument& graphDocument, AudioUIBridge& bridge, OrnamentLibraries& ornamentLibraries, ArsNovaUI::CustomLookAndFeel& lookAndFeel)
+NodeCanvas::NodeCanvas(GraphDocument& graphDocument, AudioUIBridge& bridge, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings,
+                       ArsNovaUI::CustomLookAndFeel& lookAndFeel)
     : NodeArrowCanvas  (graphDocument),
       graphState       (graphDocument.graphState),
       drainer          (*this, bridge, graphState),
       encapsulationView(*this, graphState),
-      ornamentMarks    (*this, ornamentLibraries)
+      ornamentMarks    (*this, ornamentLibraries),
+      gridMultiplier   (*this, canvasSettings, ValueTreeIdentifiers::GraphGridMultiplier)
 {
     setWantsKeyboardFocus(true);
 
@@ -40,7 +43,7 @@ void NodeCanvas::paint(juce::Graphics& graphics)
 
     if (activeTool == CanvasTool::Paint && valueField.image.isValid()) {
         graphics.setImageResamplingQuality(juce::Graphics::mediumResamplingQuality);
-        graphics.drawImage(valueField.image, getLocalBounds().toFloat());
+        graphics.drawImageTransformed(valueField.image, valueField.imageToGraph.followedBy(viewTransform));
     }
 
     if (!selectionBounds.isEmpty()) {
@@ -48,7 +51,7 @@ void NodeCanvas::paint(juce::Graphics& graphics)
 
         graphics.addTransform(viewTransform);
 
-        graphics.setColour(theme.selectionBoxColour.withAlpha(0.15f));
+        graphics.setColour(theme.selectionBoxColour.withAlpha(selectionFillAlpha));
         graphics.fillRect(selectionBounds);
 
         graphics.setColour(theme.selectionBoxColour);
@@ -74,21 +77,41 @@ void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
         const NodeInfo::Position rootPosition = graphState.getNodePosition(rootNodeMap.begin()->first);
 
         gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
-        gridSpacing   = ArrowInfo::pixelsPerGridSpace;
         gridOriginSet = true;
     }
 }
 
 void NodeCanvas::handleAsyncUpdate()
 {
+    std::vector<int> changedValueIds;
+
+    bool fieldLayoutChanged = false;
+
     drainer.drainAll();
 
-    const bool hasQueuedUpdates = ! asyncUpdates.empty();
+    for (const AsyncUpdate& update : asyncUpdates) {
+        if (update.type == AsyncUpdateType::ValueChanged && std::ranges::find(changedValueIds, update.nodeId) == changedValueIds.end()) {
+            changedValueIds.push_back(update.nodeId);
+        }
+        else if (update.type == AsyncUpdateType::NodeAdded || update.type == AsyncUpdateType::NodeRemoved || update.type == AsyncUpdateType::NodeMoved) {
+            fieldLayoutChanged = true;
+        }
+    }
 
     ArsNovaUI::EditCanvas::handleAsyncUpdate();
 
-    if (activeTool == CanvasTool::Paint && hasQueuedUpdates) {
+    if (activeTool != CanvasTool::Paint) {
+        return;
+    }
+
+    if (fieldLayoutChanged) {
         valueField.refresh();
+
+        return;
+    }
+
+    for (const int nodeId : changedValueIds) {
+        valueField.refreshAround(nodeId);
     }
 }
 
@@ -133,7 +156,6 @@ void NodeCanvas::nodeAdded(ArsNovaUI::CanvasNode& node)
         const NodeInfo::Position rootPosition = graphState.getNodePosition(node.nodeId);
 
         gridOrigin    = { static_cast<float>(rootPosition.xPosition), static_cast<float>(rootPosition.yPosition) };
-        gridSpacing   = ArrowInfo::pixelsPerGridSpace;
         gridOriginSet = true;
     }
 }
@@ -240,13 +262,15 @@ void NodeCanvas::setActiveTool(CanvasTool tool)
 
 void NodeCanvas::applyViewTransform(const juce::AffineTransform& newViewTransform, float zoom)
 {
+    const bool zoomChanged = !juce::exactlyEqual(zoom, valueField.viewZoom);
+
     viewTransform       = newViewTransform;
     modelTransform      = newViewTransform.inverted();
     valueField.viewZoom = zoom;
 
-    valueField.updateBrushCursor();
-
-    valueField.refresh();
+    if (zoomChanged) {
+        valueField.updateBrushCursor();
+    }
 }
 
 void NodeCanvas::setPlaybackActive(bool shouldPlay)
@@ -436,14 +460,17 @@ std::unique_ptr<ArsNovaUI::CanvasNode> NodeCanvas::makeNode(const juce::ValueTre
 }
 juce::MouseCursor NodeCanvas::spanCursor() const
 {
+    const int borderWidth = 1;
+    const int hotspot     = spanCursorSize / 2;
+
     juce::Image cursorImage(juce::Image::ARGB, spanCursorSize, spanCursorSize, true);
 
     juce::Graphics cursorGraphics(cursorImage);
 
     cursorGraphics.setColour(juce::Colours::black);
-    cursorGraphics.drawRect(cursorImage.getBounds().reduced(1), 1);
+    cursorGraphics.drawRect(cursorImage.getBounds().reduced(borderWidth), borderWidth);
 
-    return juce::MouseCursor(cursorImage, spanCursorSize / 2, spanCursorSize / 2);
+    return juce::MouseCursor(cursorImage, hotspot, hotspot);
 }
 
 juce::MouseCursor NodeCanvas::notePreviewCursor() const
@@ -454,11 +481,30 @@ juce::MouseCursor NodeCanvas::notePreviewCursor() const
 
     const auto square = cursorImage.getBounds().toFloat().reduced(1.0f);
 
-    const float side     = square.getWidth();
-    const float headX    = square.getX() + side * 0.34f;
-    const float headY    = square.getBottom() - side * 0.2f;
-    const float stemX    = headX + side * 0.19f;
-    const float stemTopY = square.getY() + side * 0.04f;
+    const float side          = square.getWidth();
+    const float headX         = square.getX() + side * 0.34f;
+    const float headY         = square.getBottom() - side * 0.2f;
+    const float headWidth     = side * 0.44f;
+    const float headHeight    = side * 0.3f;
+    const float headTilt      = -0.35f;
+    const float stemX         = headX + side * 0.19f;
+    const float stemTopY      = square.getY() + side * 0.04f;
+    const float stemBottomY   = headY - side * 0.04f;
+    const float stemThickness = juce::jmax(1.0f, side * 0.08f);
+
+    const int hotspot = notePreviewCursorSize / 2;
+
+    const juce::Point<float> flagStart          { stemX, stemTopY };
+    const juce::Point<float> flagOuterControl   { stemX + side * 0.08f, stemTopY + side * 0.18f };
+    const juce::Point<float> flagOuterBulge     { stemX + side * 0.36f, stemTopY + side * 0.24f };
+    const juce::Point<float> flagTip            { stemX + side * 0.26f, stemTopY + side * 0.56f };
+    const juce::Point<float> flagInnerControl   { stemX + side * 0.28f, stemTopY + side * 0.34f };
+    const juce::Point<float> flagInnerBulge     { stemX + side * 0.12f, stemTopY + side * 0.3f };
+    const juce::Point<float> flagJoin           { stemX, stemTopY + side * 0.26f };
+
+    const juce::Rectangle<float> headBounds = juce::Rectangle<float>(headWidth, headHeight).withCentre({ headX, headY });
+
+    const juce::Line<float> stemLine { stemX, stemBottomY, stemX, stemTopY };
 
     juce::Path head;
     juce::Path stem;
@@ -466,21 +512,21 @@ juce::MouseCursor NodeCanvas::notePreviewCursor() const
 
     cursorGraphics.setColour(juce::Colours::black);
 
-    head.addEllipse(juce::Rectangle<float>(side * 0.44f, side * 0.3f).withCentre({ headX, headY }));
-    head.applyTransform(juce::AffineTransform::rotation(-0.35f, headX, headY));
+    head.addEllipse(headBounds);
+    head.applyTransform(juce::AffineTransform::rotation(headTilt, headX, headY));
 
     cursorGraphics.fillPath(head);
 
-    stem.addLineSegment({ stemX, headY - side * 0.04f, stemX, stemTopY }, juce::jmax(1.0f, side * 0.08f));
+    stem.addLineSegment(stemLine, stemThickness);
 
     cursorGraphics.fillPath(stem);
 
-    flag.startNewSubPath(stemX, stemTopY);
-    flag.cubicTo(stemX + side * 0.08f, stemTopY + side * 0.18f, stemX + side * 0.36f, stemTopY + side * 0.24f, stemX + side * 0.26f, stemTopY + side * 0.56f);
-    flag.cubicTo(stemX + side * 0.28f, stemTopY + side * 0.34f, stemX + side * 0.12f, stemTopY + side * 0.3f, stemX, stemTopY + side * 0.26f);
+    flag.startNewSubPath(flagStart);
+    flag.cubicTo(flagOuterControl, flagOuterBulge, flagTip);
+    flag.cubicTo(flagInnerControl, flagInnerBulge, flagJoin);
     flag.closeSubPath();
 
     cursorGraphics.fillPath(flag);
 
-    return juce::MouseCursor(cursorImage, notePreviewCursorSize / 2, notePreviewCursorSize / 2);
+    return juce::MouseCursor(cursorImage, hotspot, hotspot);
 }

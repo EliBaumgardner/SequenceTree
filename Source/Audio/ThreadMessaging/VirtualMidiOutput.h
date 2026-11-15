@@ -33,16 +33,21 @@ private:
 
     struct TimedMessage
     {
-        std::array<juce::uint8, 3> bytes  {};
-        int                        size   = 0;
-        double                     timeMs = 0.0;
+        static constexpr std::size_t maximumBytes = 3;
+
+        std::array<juce::uint8, maximumBytes> bytes {};
+
+        int size = 0;
+
+        double timeMs = 0.0;
     };
 
-    static constexpr int    capacity              = 4096;
-    static constexpr int    drainIntervalMs       = 1;
-    static constexpr double millisecondsPerSecond = 1000.0;
+    static constexpr int capacity        = 4096;
+    static constexpr int drainIntervalMs = 1;
 
-    std::unique_ptr<juce::MidiOutput>   port;
+    std::unique_ptr<juce::MidiOutput> port;
+
     CommandFifo<TimedMessage, capacity> messages;
-    juce::MidiBuffer                    outgoing;
+
+    juce::MidiBuffer outgoing;
 };

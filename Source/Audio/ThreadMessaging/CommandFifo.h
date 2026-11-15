@@ -49,11 +49,15 @@ public:
         const auto scope = fifo.read(fifo.getNumReady());
 
         for (int i = 0; i < scope.blockSize1; ++i) {
-            apply(buffer[static_cast<size_t>(scope.startIndex1 + i)]);
+            const size_t index = static_cast<size_t>(scope.startIndex1 + i);
+
+            apply(buffer[index]);
         }
 
         for (int i = 0; i < scope.blockSize2; ++i) {
-            apply(buffer[static_cast<size_t>(scope.startIndex2 + i)]);
+            const size_t index = static_cast<size_t>(scope.startIndex2 + i);
+
+            apply(buffer[index]);
         }
     }
 
@@ -66,6 +70,7 @@ public:
 
 private:
 
-    juce::AbstractFifo            fifo { Capacity };
+    juce::AbstractFifo fifo { Capacity };
+
     std::array<Command, Capacity> buffer {};
 };

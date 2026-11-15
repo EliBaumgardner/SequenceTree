@@ -10,7 +10,7 @@ ScriptRun::ScriptRun(const ScriptRunContext& runContext)
 {
     memberValues = &context.members;
     globalValues = &trialGlobals;
-    randomState  = (static_cast<unsigned int>(context.randomValue) * 2654435761u ^ 2463534242u) | 1u;
+    randomState  = (static_cast<unsigned int>(context.randomValue) * randomSeedMultiplier ^ randomSeedOffset) | 1u;
 
     if (context.globals != nullptr) {
         trialGlobals = context.globals->values;
@@ -89,12 +89,15 @@ bool ScriptRun::enterFunction(int functionIndex, int returnAddress, int& program
     stackTop -= function.parameterCount;
 
     for (int parameter = 0; parameter < function.parameterCount; ++parameter) {
-        locals[static_cast<std::size_t>(localBase + parameter)] = stack[static_cast<std::size_t>(stackTop + parameter)];
+        const std::size_t localSlot = static_cast<std::size_t>(localBase + parameter);
+        const std::size_t stackSlot = static_cast<std::size_t>(stackTop + parameter);
+
+        locals[localSlot] = stack[stackSlot];
     }
 
     frames[static_cast<std::size_t>(frameCount++)] = { returnAddress, localBase, stackTop };
-
     programCounter = function.entry;
+
     return true;
 }
 
@@ -160,7 +163,9 @@ ScriptRun::Progress ScriptRun::execute(const ScriptInstruction& instruction, int
 
             double& value = stack[static_cast<std::size_t>(stackTop - 1)];
 
-            value = convert(static_cast<ScriptNumber>(instruction.operand), value);
+            const ScriptNumber targetNumber = static_cast<ScriptNumber>(instruction.operand);
+
+            value = convert(targetNumber, value);
             return Progress::Running;
         }
 
@@ -176,9 +181,11 @@ ScriptRun::Progress ScriptRun::execute(const ScriptInstruction& instruction, int
     }
 
     const double right = stack[static_cast<std::size_t>(--stackTop)];
-    double&      left  = stack[static_cast<std::size_t>(stackTop - 1)];
+
+    double& left = stack[static_cast<std::size_t>(stackTop - 1)];
 
     left = calculate(instruction, left, right);
+
     return Progress::Running;
 }
 
@@ -229,6 +236,7 @@ ScriptRun::Progress ScriptRun::popValue(const ScriptInstruction& instruction, in
 
         if (frameCount == 0) {
             result = static_cast<int>(convert(ScriptNumber::Int, value));
+
             return Progress::Returned;
         }
 
@@ -283,10 +291,13 @@ ScriptRun::Progress ScriptRun::pushValue(const ScriptInstruction& instruction)
     }
 
     if (instruction.opcode == ScriptOpcode::PushContext) {
-        value = readContext(static_cast<ScriptContextValue>(operand));
+        const ScriptContextValue contextValue = static_cast<ScriptContextValue>(operand);
+
+        value = readContext(contextValue);
     }
 
     stack[static_cast<std::size_t>(stackTop++)] = value;
+
     return Progress::Running;
 }
 
@@ -302,7 +313,9 @@ ScriptRun::Progress ScriptRun::executeNodeOpcode(const ScriptInstruction& instru
 
             double& top = stack[static_cast<std::size_t>(stackTop - 1)];
 
-            top = readField(field, static_cast<int>(top));
+            const int nodeId = static_cast<int>(top);
+
+            top = readField(field, nodeId);
             return Progress::Running;
         }
 
@@ -324,9 +337,12 @@ ScriptRun::Progress ScriptRun::executeNodeOpcode(const ScriptInstruction& instru
             }
 
             const int childIndex = static_cast<int>(stack[static_cast<std::size_t>(--stackTop)]);
-            double&   top        = stack[static_cast<std::size_t>(stackTop - 1)];
 
-            top = childAt(static_cast<int>(top), childIndex);
+            double& top = stack[static_cast<std::size_t>(stackTop - 1)];
+
+            const int parentId = static_cast<int>(top);
+
+            top = childAt(parentId, childIndex);
             return Progress::Running;
         }
 
@@ -339,27 +355,33 @@ ScriptRun::Progress ScriptRun::executeNodeOpcode(const ScriptInstruction& instru
 
             if (context.host == nullptr) {
                 top = -1;
+
                 return Progress::Running;
             }
 
-            context.currentNodeId = context.host->advance(static_cast<int>(top));
+            const int chosenId = static_cast<int>(top);
+
+            context.currentNodeId = context.host->advance(chosenId);
             top                   = context.currentNodeId;
             return Progress::Running;
         }
 
         case ScriptOpcode::PlayNote: {
-            if (stackTop < 4) {
+            if (stackTop < playNoteArgumentCount) {
                 return Progress::Faulted;
             }
 
-            stackTop -= 4;
+            stackTop -= playNoteArgumentCount;
+
+            const std::size_t argumentStart = static_cast<std::size_t>(stackTop);
+
+            const int nodeId   = static_cast<int>(stack[argumentStart]);
+            const int pitch    = static_cast<int>(stack[argumentStart + 1]);
+            const int duration = static_cast<int>(stack[argumentStart + 2]);
+            const int velocity = static_cast<int>(stack[argumentStart + 3]);
 
             if (context.host != nullptr) {
-                context.host->playNote({ ScriptNote::Kind::Played,
-                                         static_cast<int>(stack[static_cast<std::size_t>(stackTop)]),
-                                         static_cast<int>(stack[static_cast<std::size_t>(stackTop + 1)]),
-                                         static_cast<int>(stack[static_cast<std::size_t>(stackTop + 2)]),
-                                         static_cast<int>(stack[static_cast<std::size_t>(stackTop + 3)]) });
+                context.host->playNote({ ScriptNote::Kind::Played, nodeId, pitch, duration, velocity });
             }
 
             stack[static_cast<std::size_t>(stackTop++)] = 0;
@@ -380,13 +402,17 @@ ScriptRun::Progress ScriptRun::drawRandom()
     }
 
     const double spread = stack[static_cast<std::size_t>(--stackTop)];
-    double&      centre = stack[static_cast<std::size_t>(stackTop - 1)];
 
-    randomState ^= randomState << 13;
-    randomState ^= randomState >> 17;
-    randomState ^= randomState << 5;
+    double& centre = stack[static_cast<std::size_t>(stackTop - 1)];
 
-    centre += centre * spread * (2.0 * static_cast<double>(randomState >> 8) * unitScale - 1.0);
+    randomState ^= randomState << xorshiftFirstShift;
+    randomState ^= randomState >> xorshiftSecondShift;
+    randomState ^= randomState << xorshiftThirdShift;
+
+    const double randomUnit = static_cast<double>(randomState >> randomDiscardedBits) * unitScale;
+
+    centre += centre * spread * (2.0 * randomUnit - 1.0);
+
     return Progress::Running;
 }
 
@@ -444,11 +470,12 @@ int ScriptRun::readField(ScriptField field, int nodeId)
 
 int ScriptRun::noteValue(ScriptField field, const RTNode& node) const
 {
-    const int           alternativeId = readState(NodeStateSlot::ActiveAlternative, node.nodeID);
-    const RTNode* const alternative   = context.nodes.find(alternativeId);
+    const int alternativeId = readState(NodeStateSlot::ActiveAlternative, node.nodeID);
 
-    const RTNode* voiced   = &node;
-    int           velocity = 0;
+    int velocity = 0;
+
+    const RTNode* const alternative = context.nodes.find(alternativeId);
+    const RTNode*       voiced      = &node;
 
     if (node.notes.empty()) {
         return RTNote::fallbackValue;
@@ -523,11 +550,11 @@ void ScriptRun::writeField(ScriptField field, int nodeId, int value)
     }
 
     switch (field) {
-        case ScriptField::Count:        writeState(context.countSlot, nodeId, value);            break;
+        case ScriptField::Count:        writeState(context.countSlot, nodeId, value);           break;
         case ScriptField::SwitchCount:  writeState(NodeStateSlot::SwitchCount, nodeId, value);  break;
         case ScriptField::TriggerCount: writeState(NodeStateSlot::Trigger, nodeId, value);      break;
         case ScriptField::SubLoopCount: writeState(NodeStateSlot::SubRootCount, nodeId, value); break;
-        default:                                                                                 break;
+        default:                                                                                break;
     }
 }
 
@@ -535,6 +562,7 @@ void ScriptRun::writeState(NodeStateSlot slot, int nodeId, int value)
 {
     if (context.writes == ScriptWrites::Commit) {
         context.nodeState.set(slot, nodeId, value);
+
         return;
     }
 
@@ -543,6 +571,7 @@ void ScriptRun::writeState(NodeStateSlot slot, int nodeId, int value)
 
         if (write.slot == slot && write.nodeId == nodeId) {
             write.value = value;
+
             return;
         }
     }
@@ -564,7 +593,9 @@ double ScriptRun::convert(ScriptNumber number, double value)
                 return 0.0;
             }
 
-            return std::trunc(std::clamp(value, intLowest, intHighest));
+            const double clampedValue = std::clamp(value, intLowest, intHighest);
+
+            return std::trunc(clampedValue);
         }
 
         case ScriptNumber::Float: {
@@ -590,11 +621,18 @@ double ScriptRun::calculate(const ScriptInstruction& instruction, double left, d
     const ScriptNumber number = static_cast<ScriptNumber>(instruction.operand);
 
     if (number == ScriptNumber::Int) {
-        return arithmetic(instruction.opcode, static_cast<int>(left), static_cast<int>(right));
+        const int intLeft  = static_cast<int>(left);
+        const int intRight = static_cast<int>(right);
+
+        return arithmetic(instruction.opcode, intLeft, intRight);
     }
 
     if (number == ScriptNumber::Float) {
-        return convert(ScriptNumber::Float, realArithmetic(instruction.opcode, convert(ScriptNumber::Float, left), convert(ScriptNumber::Float, right)));
+        const double floatLeft   = convert(ScriptNumber::Float, left);
+        const double floatRight  = convert(ScriptNumber::Float, right);
+        const double floatResult = realArithmetic(instruction.opcode, floatLeft, floatRight);
+
+        return convert(ScriptNumber::Float, floatResult);
     }
 
     return realArithmetic(instruction.opcode, left, right);

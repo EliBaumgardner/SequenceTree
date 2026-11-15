@@ -29,7 +29,8 @@ public:
     void followTempo  (double tempoMultiplier);
     void processEvents(int numSamples, const DispatchContext& context);
 
-    AudioUIBridge&      bridge;
+    AudioUIBridge& bridge;
+
     NoteScheduler       scheduler;
     TraversalDispatcher dispatcher { scheduler, bridge };
 

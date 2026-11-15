@@ -41,8 +41,10 @@ void OrnamentSelectionPanel::paint(juce::Graphics& graphics)
     graphics.setColour(lookAndFeel.windowColour);
     graphics.fillRect(getLocalBounds());
 
+    const float lineBottom = static_cast<float>(getHeight());
+
     graphics.setColour(lookAndFeel.borderColour);
-    graphics.drawVerticalLine(0, 0.0f, static_cast<float>(getHeight()));
+    graphics.drawVerticalLine(0, 0.0f, lineBottom);
 
     lookAndFeel.drawPane(graphics, viewport.getBounds().toFloat());
 }

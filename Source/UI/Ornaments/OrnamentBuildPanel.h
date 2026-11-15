@@ -37,7 +37,7 @@ class OrnamentBuildPanel : public juce::Component, private juce::ValueTree::List
 {
 public:
 
-    OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
+    OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings, juce::UndoManager& undoManager);
     ~OrnamentBuildPanel() override;
 
     void paint  (juce::Graphics& graphics) override;

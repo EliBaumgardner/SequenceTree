@@ -1,4 +1,5 @@
 #include "FlagScheduler.h"
+#include "../Util/ArrowInfo.h"
 #include "TraversalDispatcher.h"
 #include "ThreadMessaging/AudioUIBridge.h"
 
@@ -18,11 +19,13 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostRunId, const Trave
         const int childId = connection.childId;
 
         const RTNode* childNode = context.nodes.find(childId);
+
         if (childNode == nullptr) {
             continue;
         }
 
         const RTNode& flagNode = *childNode;
+
         if (flagNode.nodeType != NodeInfo::Kind::TraversalFlag) {
             continue;
         }
@@ -32,12 +35,14 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostRunId, const Trave
         }
 
         const std::vector<TraversalKey>& disabled = connection.disabledTraversals;
+
         if (std::ranges::find(disabled, hostKey) != disabled.end()) {
             continue;
         }
 
         if (flagNode.flagRemovesTraversal) {
             queueRemoval(flagNode, hostRunId, hostKey, context.traversalMap);
+
             continue;
         }
 
@@ -45,6 +50,7 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostRunId, const Trave
 
         if (delayMs <= 0) {
             startFlagTraversal(flagNode, hostKey, sample, context);
+
             continue;
         }
 
@@ -87,6 +93,7 @@ bool FlagScheduler::startNextDue(double before, const DispatchContext& context)
     }
 
     const PendingStart due = *earliest;
+
     earliest->active       = false;
 
     const RTNode* flagEntry = context.nodes.find(due.flagNodeId);
@@ -101,7 +108,9 @@ bool FlagScheduler::startNextDue(double before, const DispatchContext& context)
         return true;
     }
 
-    startFlagTraversal(flagNode, due.hostKey, juce::jmax(0.0, due.remainingSamples), context);
+    const double startSample = juce::jmax(0.0, due.remainingSamples);
+
+    startFlagTraversal(flagNode, due.hostKey, startSample, context);
 
     return true;
 }
@@ -120,6 +129,7 @@ void FlagScheduler::queueRemoval(const RTNode& flagNode, int hostRunId, const Tr
     }
 
     TraversalPool::Instance* const hostInstance = traversalMap.find(hostRunId);
+
     if (hostInstance == nullptr) {
         return;
     }
@@ -131,20 +141,23 @@ void FlagScheduler::queueStart(const RTNode& flagNode, const TraversalKey& hostK
                                int delayMs, double sample, double tempoMultiplier,
                                const DispatchContext& context)
 {
-    const double delaySamples = (delayMs / 1000.0) * context.sampleRate / tempoMultiplier;
+    const double delaySamples = (delayMs / ArrowInfo::millisecondsPerSecond) * context.sampleRate / tempoMultiplier;
 
     PendingStart* slot = nullptr;
 
     for (PendingStart& pending : pendingStarts) {
         if (!pending.active) {
             slot = &pending;
+
             break;
         }
     }
 
     if (slot == nullptr) {
         jassertfalse;
+
         startFlagTraversal(flagNode, hostKey, sample, context);
+
         return;
     }
 
@@ -168,12 +181,14 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKe
     }
 
     const RTNode* startEntry = context.nodes.find(flagNode.flagTargetId);
+
     if (startEntry == nullptr) {
         return;
     }
 
     const RTNode& startNode = *startEntry;
-    const int     rootId    = startNode.graphID;
+
+    const int rootId = startNode.graphID;
 
     int runId = context.traversalMap.findRunFor(rootId, spawnKey);
 
@@ -198,5 +213,6 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKe
     instance->runtime.sourceNodeId = flagNode.nodeID;
 
     bridge.highlightNode(startNode, BridgeCommands::HighlightKind::Show, runId, instance->logic.traversal.key.typeId);
+
     dispatcher.pushNote(startNode, runId, context, sample);
 }

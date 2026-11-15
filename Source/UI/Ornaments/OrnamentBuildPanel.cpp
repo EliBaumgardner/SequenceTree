@@ -3,9 +3,9 @@
 #include "../../Graph/OrnamentLibraries.h"
 #include "../../Util/ArrowInfo.h"
 
-OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
+OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings, juce::UndoManager& undoManager)
     : document         (ornamentLibraries, undoManager),
-      canvas           (document),
+      canvas           (document, canvasSettings),
       port             (canvas),
       controller       (canvas, document, ornamentLibraries),
       ornamentLibraries(ornamentLibraries),
@@ -96,7 +96,8 @@ OrnamentBuildPanel::~OrnamentBuildPanel()
 void OrnamentBuildPanel::paint(juce::Graphics& graphics)
 {
     const ArsNovaUI::Theme& theme = ArsNovaUI::CustomLookAndFeel::get(*this);
-    const auto              body  = getLocalBounds().withTrimmedTop(titlebarHeight);
+
+    const auto body = getLocalBounds().withTrimmedTop(titlebarHeight);
 
     graphics.setColour(theme.canvasColour);
     graphics.fillRect(body);
@@ -112,25 +113,31 @@ void OrnamentBuildPanel::paint(juce::Graphics& graphics)
 
 void OrnamentBuildPanel::resized()
 {
-    auto      bounds    = getLocalBounds();
+    auto bounds = getLocalBounds();
+
     const int nameWidth = juce::roundToInt(bounds.getWidth() * nameWidthRatio);
 
     titlebar.setBounds(bounds.removeFromTop(titlebarHeight));
+
+    const int nameX = bounds.getX() + nameInset;
+    const int nameY = bounds.getBottom() - nameInset - nameHeight;
+
     port.setBounds(bounds);
     symbolEditor.setBounds(bounds);
-    nameEditor.setBounds(bounds.getX() + nameInset, bounds.getBottom() - nameInset - nameHeight, nameWidth, nameHeight);
+    nameEditor.setBounds(nameX, nameY, nameWidth, nameHeight);
 }
 
 int OrnamentBuildPanel::minimumWidth() const
 {
-    const int barInset      = juce::roundToInt(titlebarHeight * titlebarInsetRatio);
-    const int contentHeight = titlebarHeight - barInset * 2;
-    const int paneWidths    = titlebar.undoRedoPane.idealWidth(contentHeight) + titlebar.nodePane.idealWidth(contentHeight);
-    const int buttonsWidth  = paneWidths + titlebar.symbolPane.idealWidth(contentHeight) + titlebar.publishPane.idealWidth(contentHeight);
-
     const float spacingShare = 1.0f - ArsNovaUI::Theme::contentSpacingRatio * titlebarGaps;
 
-    return barInset * 2 + static_cast<int>(std::ceil(buttonsWidth / spacingShare));
+    const int barInset           = juce::roundToInt(titlebarHeight * titlebarInsetRatio);
+    const int contentHeight      = titlebarHeight - barInset * 2;
+    const int paneWidths         = titlebar.undoRedoPane.idealWidth(contentHeight) + titlebar.nodePane.idealWidth(contentHeight);
+    const int buttonsWidth       = paneWidths + titlebar.symbolPane.idealWidth(contentHeight) + titlebar.publishPane.idealWidth(contentHeight);
+    const int spacedButtonsWidth = static_cast<int>(std::ceil(buttonsWidth / spacingShare));
+
+    return barInset * 2 + spacedButtonsWidth;
 }
 
 void OrnamentBuildPanel::applyView()
@@ -250,16 +257,21 @@ void OrnamentBuildPanel::BuildTitlebar::resized()
 {
     auto bounds = getContentBounds();
 
-    const int spacing = juce::roundToInt(bounds.getWidth() * ArsNovaUI::Theme::contentSpacingRatio);
+    const int spacing          = juce::roundToInt(bounds.getWidth() * ArsNovaUI::Theme::contentSpacingRatio);
+    const int paneHeight       = bounds.getHeight();
+    const int nodePaneWidth    = nodePane.idealWidth(paneHeight);
+    const int undoRedoWidth    = undoRedoPane.idealWidth(paneHeight);
+    const int publishPaneWidth = publishPane.idealWidth(paneHeight);
+    const int symbolPaneWidth  = symbolPane.idealWidth(paneHeight);
 
-    nodePane.setBounds(bounds.removeFromLeft(nodePane.idealWidth(bounds.getHeight())));
-    undoRedoPane.setBounds(bounds.removeFromRight(undoRedoPane.idealWidth(bounds.getHeight())));
+    nodePane.setBounds(bounds.removeFromLeft(nodePaneWidth));
+    undoRedoPane.setBounds(bounds.removeFromRight(undoRedoWidth));
 
     bounds.removeFromRight(spacing);
 
-    publishPane.setBounds(bounds.removeFromRight(publishPane.idealWidth(bounds.getHeight())));
+    publishPane.setBounds(bounds.removeFromRight(publishPaneWidth));
 
     bounds.removeFromRight(spacing);
 
-    symbolPane.setBounds(bounds.removeFromRight(symbolPane.idealWidth(bounds.getHeight())));
+    symbolPane.setBounds(bounds.removeFromRight(symbolPaneWidth));
 }

@@ -40,6 +40,8 @@ public:
     static constexpr int rowHeight    = 26;
     static constexpr int toggleWidth  = 40;
     static constexpr int contentInset = 8;
+    static constexpr int rowInset     = 2;
+    static constexpr int toggleGap    = 6;
 
 private:
 

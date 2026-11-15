@@ -58,7 +58,9 @@ void OrnamentTile::paint(juce::Graphics& graphics)
 
     graphics.setColour(lookAndFeel.textColour);
 
-    lookAndFeel.drawStrokeSymbol(graphics, symbol, OrnamentLibraries::readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString()));
+    const std::vector<ArsNovaUI::SymbolStroke> symbolStrokes = OrnamentLibraries::readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString());
+
+    lookAndFeel.drawStrokeSymbol(graphics, symbol, symbolStrokes);
 }
 
 void OrnamentTile::mouseDown(const juce::MouseEvent& event)

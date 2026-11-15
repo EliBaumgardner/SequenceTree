@@ -16,9 +16,9 @@
     number of semitones from every axis bound to pitch, where moving up raises the pitch.
     bindsTo asks whether either axis uses a binding.
 
-    ArrowBindingOps stores it in an arrow's ValueTree and reads it back. BottomBar edits the copy
-    in GraphDocument::currentArrowInfo that new arrows start from, and Arrow, RTGraphBuilder and
-    Clipboard call the two conversions.
+    ArrowBindingOps stores it in an arrow's ValueTree and reads it back, and also reads the one
+    new arrows start from out of the processor's canvasSettings, which BottomBar edits. Arrow,
+    RTGraphBuilder and Clipboard call the two conversions.
 */
 
 namespace ArrowInfo
@@ -32,18 +32,21 @@ inline constexpr float  pixelsPerGridSpace             = 50.0f;
 inline constexpr double millisecondsPerGridSpace       = 250.0;
 inline constexpr double semitonesPerGridSpace          = 1.0;
 inline constexpr double maximumDurationMs              = 3600000.0;
+inline constexpr double millisecondsPerSecond          = 1000.0;
 inline constexpr int    millisecondsPerDurationPercent = 10;
 inline constexpr int    maximumDurationPercent         = 100;
 inline constexpr double maximumSemitoneOffset          = 127.0;
 
 struct Settings {
-    Type    type        = Type::Node;
-    Binding xBinding    = Binding::DurationBind;
-    Binding yBinding    = Binding::PitchBind;
+    Type type = Type::Node;
 
-    double  xMultiplier = 1.0;
-    double  yMultiplier = 1.0;
-    bool    isSynced    = true;
+    Binding xBinding = Binding::DurationBind;
+    Binding yBinding = Binding::PitchBind;
+
+    double xMultiplier = 1.0;
+    double yMultiplier = 1.0;
+
+    bool isSynced = true;
 
     int durationOverride = noDurationOverride;
 
@@ -54,6 +57,9 @@ struct Settings {
 
     static int durationFromDelta(const Settings& info, int deltaX, int deltaY)
     {
+        const double offsetX = deltaX;
+        const double offsetY = deltaY;
+
         if (info.durationOverride != noDurationOverride) {
             return info.durationOverride;
         }
@@ -61,34 +67,40 @@ struct Settings {
         double gridSpaces = 0.0;
 
         if (info.xBinding == Binding::DurationBind) {
-            gridSpaces += std::abs(static_cast<double>(deltaX)) * info.xMultiplier / pixelsPerGridSpace;
+            gridSpaces += std::abs(offsetX) * info.xMultiplier / pixelsPerGridSpace;
         }
 
         if (info.yBinding == Binding::DurationBind) {
-            gridSpaces += std::abs(static_cast<double>(deltaY)) * info.yMultiplier / pixelsPerGridSpace;
+            gridSpaces += std::abs(offsetY) * info.yMultiplier / pixelsPerGridSpace;
         }
 
-        return static_cast<int>(std::min(gridSpaces * millisecondsPerGridSpace, maximumDurationMs));
+        const double durationMs = std::min(gridSpaces * millisecondsPerGridSpace, maximumDurationMs);
+
+        return static_cast<int>(durationMs);
     }
 
     static int pitchOffsetFromDelta(const Settings& info, int deltaX, int deltaY)
     {
+        const double offsetX = deltaX;
+        const double offsetY = deltaY;
+
         double semitones = 0.0;
 
         if (info.xBinding == Binding::PitchBind) {
-            const double wholeGridSpaces = std::round(static_cast<double>(deltaX) / pixelsPerGridSpace);
+            const double wholeGridSpaces = std::round(offsetX / pixelsPerGridSpace);
 
             semitones += wholeGridSpaces * semitonesPerGridSpace * info.xMultiplier;
         }
 
         if (info.yBinding == Binding::PitchBind) {
-            const double wholeGridSpaces = std::round(static_cast<double>(deltaY) / pixelsPerGridSpace);
+            const double wholeGridSpaces = std::round(offsetY / pixelsPerGridSpace);
 
             semitones -= wholeGridSpaces * semitonesPerGridSpace * info.yMultiplier;
         }
 
-        return static_cast<int>(std::round(std::clamp(semitones,
-                                                     -maximumSemitoneOffset, maximumSemitoneOffset)));
+        const double clampedSemitones = std::clamp(semitones, -maximumSemitoneOffset, maximumSemitoneOffset);
+
+        return static_cast<int>(std::round(clampedSemitones));
     }
 };
 

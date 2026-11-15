@@ -60,9 +60,10 @@ class NodeStateTable
 {
 public:
 
-    static constexpr int         hostPlays  = -2;
-    static constexpr int         slotCount  = static_cast<int>(NodeStateSlot::Total);
-    static constexpr int         maxNodeIds = NodeRowMap::maxRows;
+    static constexpr int hostPlays  = -2;
+    static constexpr int slotCount  = static_cast<int>(NodeStateSlot::Total);
+    static constexpr int maxNodeIds = NodeRowMap::maxRows;
+
     static constexpr std::size_t valueCount = static_cast<std::size_t>(slotCount) * maxNodeIds;
 
     void prepare();
@@ -86,7 +87,10 @@ public:
     static constexpr std::array<int, slotCount> defaultRowValues = [] {
         std::array<int, slotCount> defaults {};
         for (int slot = 0; slot < slotCount; ++slot) {
-            defaults[static_cast<std::size_t>(slot)] = defaultNodeStateSlotValue(static_cast<NodeStateSlot>(slot));
+            const std::size_t   slotIndex = static_cast<std::size_t>(slot);
+            const NodeStateSlot slotKind  = static_cast<NodeStateSlot>(slot);
+
+            defaults[slotIndex] = defaultNodeStateSlotValue(slotKind);
         }
         return defaults;
     }();
@@ -97,7 +101,9 @@ private:
 
     [[nodiscard]] bool isAddressable(int nodeId) const noexcept;
 
-    std::vector<int>           values;
-    NodeRowMap                 rows;
+    std::vector<int> values;
+
+    NodeRowMap rows;
+
     std::array<int, slotCount> outOfRangeSinks = defaultRowValues;
 };

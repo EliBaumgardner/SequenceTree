@@ -73,10 +73,10 @@ static std::vector<int> walkPrimary(const NodeMap& nodes, int rootId, int steps,
 {
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(rootId, RTtraversal {});
-    logic.rule   = &rule;
-    logic.script = script;
+    logic.childSelector.rule = &rule;
+    logic.script             = script;
     logic.begin(nodes, rootId, 0);
 
     std::vector<int> visited { logic.primary.target };
@@ -105,11 +105,11 @@ static std::vector<int> walkModulator(const NodeMap& nodes, int modulatorRootId,
 
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(hostId, RTtraversal {});
     logic.script = script;
     logic.mod.activate(modulatorRootId, hostId);
-    logic.advanceAlternative(nodes, modulatorRootId);
+    logic.childSelector.advanceAlternative(nodes, logic.mod.walker, Walk::Modulator, modulatorRootId);
 
     std::vector<int> visited { logic.mod.walker.target };
 
@@ -120,7 +120,7 @@ static std::vector<int> walkModulator(const NodeMap& nodes, int modulatorRootId,
     for (int step = 0; step < steps; ++step) {
         logic.decideNextModulator(nodes);
         logic.mod.step();
-        logic.advanceAlternative(nodes, logic.mod.walker.target);
+        logic.childSelector.advanceAlternative(nodes, logic.mod.walker, Walk::Modulator, logic.mod.walker.target);
 
         visited.push_back(logic.mod.walker.target);
 
@@ -138,9 +138,9 @@ static std::vector<int> walkPreview(const NodeMap& nodes, int startId, int alter
 {
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(1, RTtraversal {});
-    logic.mode              = TraversalLogic::Mode::Preview;
+    logic.mode              = TraversalMode::Preview;
     logic.previewVisitCount = visitCount;
     logic.beginPreview(nodes, startId, alternativeId);
 
@@ -386,7 +386,7 @@ TEST_CASE("the peeked target is the node the walk enters next", "[traversal]")
     for (const NodeMap& nodes : { countGap, switchCountShape(), hostHoldWithAlternativeShape(), alternativeShape(3), encapsulationShape() }) {
         TraversalLogic logic;
 
-        logic.nodeState.prepare();
+        logic.childSelector.nodeState.prepare();
         logic.reset(1, RTtraversal {});
         logic.begin(nodes, 1, 0);
 
@@ -444,7 +444,7 @@ TEST_CASE("peeking at the next target leaves the walk unchanged", "[traversal]")
         TraversalLogic peeked;
 
         for (TraversalLogic* logic : { &stepped, &peeked }) {
-            logic->nodeState.prepare();
+            logic->childSelector.nodeState.prepare();
             logic->reset(1, RTtraversal {});
             logic->begin(nodes, 1, 0);
         }
@@ -456,10 +456,10 @@ TEST_CASE("peeking at the next target leaves the walk unchanged", "[traversal]")
             peeked.peekNextTarget(nodes);
 
             steppedWalk.push_back(stepped.handleNodeEvent(nodes).enteredId);
-            steppedWalk.push_back(stepped.nodeState.get(NodeStateSlot::Count, 1));
+            steppedWalk.push_back(stepped.childSelector.nodeState.get(NodeStateSlot::Count, 1));
 
             peekedWalk.push_back(peeked.handleNodeEvent(nodes).enteredId);
-            peekedWalk.push_back(peeked.nodeState.get(NodeStateSlot::Count, 1));
+            peekedWalk.push_back(peeked.childSelector.nodeState.get(NodeStateSlot::Count, 1));
         }
 
         CHECK(peekedWalk == steppedWalk);
@@ -494,7 +494,7 @@ TEST_CASE("the graph loop limit ends the traversal", "[traversal]")
 
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(1, RTtraversal {});
     logic.begin(nodes, 1, 2);
 
@@ -579,7 +579,7 @@ TEST_CASE("a traversal arrow relocates the walker onto the other tree for good",
 
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(1, RTtraversal {});
     logic.begin(nodes, 1, 0);
 
@@ -627,7 +627,7 @@ TEST_CASE("a cross root tree connection fires on its count limit and holds for i
 
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(1, RTtraversal {});
     logic.begin(nodes, 1, 0);
 
@@ -635,7 +635,7 @@ TEST_CASE("a cross root tree connection fires on its count limit and holds for i
     std::vector<int> spawnedPerVisit;
 
     for (int visit = 0; visit < 8; ++visit) {
-        logic.peekCrossTreeNode(nodes, spawned);
+        logic.advanceCrossTreeCounts(nodes, spawned);
         spawnedPerVisit.push_back(static_cast<int>(spawned.size()));
 
         if (!spawned.empty()) {
@@ -677,21 +677,53 @@ TEST_CASE("a modulator root starts on its count limit, and an unsynced one is no
 
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(1, RTtraversal {});
 
-    CHECK(logic.findActiveModulatorRoot(synced, 1) == -1);
+    CHECK(logic.mod.findActiveModulatorRoot(synced, logic.childSelector, 1) == -1);
 
-    logic.nodeState.set(NodeStateSlot::Count, 1, 1);
+    logic.childSelector.nodeState.set(NodeStateSlot::Count, 1, 1);
 
-    CHECK(logic.findActiveModulatorRoot(synced,   1) == 20);
-    CHECK(logic.findActiveModulatorRoot(unsynced, 1) == 20);
-    CHECK(logic.findActiveModulatorRoot(disabled, 1) == -1);
+    CHECK(logic.mod.findActiveModulatorRoot(synced, logic.childSelector,   1) == 20);
+    CHECK(logic.mod.findActiveModulatorRoot(unsynced, logic.childSelector, 1) == 20);
+    CHECK(logic.mod.findActiveModulatorRoot(disabled, logic.childSelector, 1) == -1);
 
     logic.mod.activate(20, 1);
 
-    CHECK(logic.findActiveModulatorRoot(synced,   1) == 20);
-    CHECK(logic.findActiveModulatorRoot(unsynced, 1) == -1);
+    CHECK(logic.mod.findActiveModulatorRoot(synced, logic.childSelector,   1) == 20);
+    CHECK(logic.mod.findActiveModulatorRoot(unsynced, logic.childSelector, 1) == -1);
+}
+
+TEST_CASE("the modulator walk starts on its host, steps under it and stops outside it", "[traversal]")
+{
+    const RTNode host       = makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2, 20 });
+    const RTNode descendant = makeNode(2, 1, NodeInfo::Kind::Node, 1, {});
+    const RTNode outside    = makeNode(3, 0, NodeInfo::Kind::Node, 1, {});
+
+    const NodeMap nodes = makeMap({
+        host,
+        descendant,
+        outside,
+        makeNode(20, 1, NodeInfo::Kind::ModulatorRoot, 1, { 21 }),
+        makeNode(21, 20, NodeInfo::Kind::Modulator, 1, {})
+    });
+
+    TraversalLogic logic;
+
+    logic.childSelector.nodeState.prepare();
+
+    logic.reset(1, RTtraversal {});
+
+    CHECK(logic.mod.followMainWalk(nodes, logic.childSelector, host, false) == ModulatorWalk::Change::Started);
+    CHECK(logic.mod.walker.target == 20);
+    CHECK(logic.mod.gate.hostId == 1);
+
+    logic.decideNextModulator(nodes);
+
+    CHECK(logic.mod.followMainWalk(nodes, logic.childSelector, descendant, false) == ModulatorWalk::Change::Advanced);
+    CHECK(logic.mod.walker.target == 21);
+    CHECK(logic.mod.followMainWalk(nodes, logic.childSelector, outside, false) == ModulatorWalk::Change::Stopped);
+    CHECK(! logic.mod.isActive());
 }
 
 TEST_CASE("the largest dangling arrow limit that divides the count wins", "[traversal]")
@@ -895,7 +927,7 @@ TEST_CASE("peeking with a scripted advance leaves the walk unchanged", "[travers
         std::vector<int> peekedWalk;
 
         for (TraversalLogic* logic : { &stepped, &peeked }) {
-            logic->nodeState.prepare();
+            logic->childSelector.nodeState.prepare();
             logic->reset(1, RTtraversal {});
             logic->script = &script;
             logic->begin(nodes, 1, 0);
@@ -906,10 +938,10 @@ TEST_CASE("peeking with a scripted advance leaves the walk unchanged", "[travers
             const TraversalLogic::StepResult peekedStep = peeked.handleNodeEvent(nodes);
 
             steppedWalk.push_back(stepped.handleNodeEvent(nodes).enteredId);
-            steppedWalk.push_back(stepped.nodeState.get(NodeStateSlot::Count, 1));
+            steppedWalk.push_back(stepped.childSelector.nodeState.get(NodeStateSlot::Count, 1));
 
             peekedWalk.push_back(peekedStep.enteredId);
-            peekedWalk.push_back(peeked.nodeState.get(NodeStateSlot::Count, 1));
+            peekedWalk.push_back(peeked.childSelector.nodeState.get(NodeStateSlot::Count, 1));
 
             if (peekedTarget != nullptr) {
                 CHECK(peekedTarget->nodeID == peekedStep.enteredId);
@@ -931,7 +963,7 @@ TEST_CASE("advancing two steps skips the node in between without counting it", "
 
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(1, RTtraversal {});
     logic.begin(nodes, 1, 0);
 
@@ -939,8 +971,8 @@ TEST_CASE("advancing two steps skips the node in between without counting it", "
 
     CHECK(skipped.leftId == 1);
     CHECK(skipped.enteredId == 3);
-    CHECK(logic.nodeState.get(NodeStateSlot::Count, 1) == 1);
-    CHECK(logic.nodeState.get(NodeStateSlot::Count, 2) == 0);
+    CHECK(logic.childSelector.nodeState.get(NodeStateSlot::Count, 1) == 1);
+    CHECK(logic.childSelector.nodeState.get(NodeStateSlot::Count, 2) == 0);
     CHECK(logic.handleNodeEvent(nodes).enteredId == 4);
 }
 
@@ -971,7 +1003,7 @@ TEST_CASE("a scripted advance receives the number of steps to take", "[traversal
 
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(1, RTtraversal {});
     logic.script = &script;
     logic.begin(nodes, 1, 0);
@@ -1157,7 +1189,7 @@ TEST_CASE("a scripted advance never lands on an alternative, and alternatives st
 
     bool alternativeVoiced = false;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(1, RTtraversal {});
     logic.script = &script;
     logic.begin(nodes, 1, 0);
@@ -1193,7 +1225,7 @@ TEST_CASE("a preview at count N voices the alternative the live walk voices on i
 
     TraversalLogic live;
 
-    live.nodeState.prepare();
+    live.childSelector.nodeState.prepare();
     live.reset(1, RTtraversal {});
     live.begin(nodes, 1, 0);
 
@@ -1235,9 +1267,9 @@ TEST_CASE("a preview ends at its leaf and pushes no counts", "[traversal][previe
 
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(1, RTtraversal {});
-    logic.mode = TraversalLogic::Mode::Preview;
+    logic.mode = TraversalMode::Preview;
     logic.beginPreview(nodes, 1, -1);
 
     CHECK_FALSE(logic.handleNodeEvent(nodes).pushCounts);
@@ -1268,9 +1300,9 @@ TEST_CASE("a repeating preview returns to the node it started on, not to the roo
         TraversalLogic   logic;
         std::vector<int> visited;
 
-        logic.nodeState.prepare();
+        logic.childSelector.nodeState.prepare();
         logic.reset(1, RTtraversal {});
-        logic.mode = TraversalLogic::Mode::Preview;
+        logic.mode = TraversalMode::Preview;
         logic.beginPreview(nodes, 2, -1);
         logic.loop.limit = 0;
 
@@ -1302,9 +1334,9 @@ TEST_CASE("a repeating preview returns to the node it started on, not to the roo
         TraversalLogic   logic;
         std::vector<int> visited;
 
-        logic.nodeState.prepare();
+        logic.childSelector.nodeState.prepare();
         logic.reset(1, RTtraversal {});
-        logic.mode = TraversalLogic::Mode::Preview;
+        logic.mode = TraversalMode::Preview;
         logic.beginPreview(nodes, 2, -1);
         logic.loop.limit = 0;
 
@@ -1325,9 +1357,9 @@ TEST_CASE("a repeating preview returns to the node it started on, not to the roo
         TraversalLogic   logic;
         std::vector<int> visited;
 
-        logic.nodeState.prepare();
+        logic.childSelector.nodeState.prepare();
         logic.reset(1, RTtraversal {});
-        logic.mode = TraversalLogic::Mode::Preview;
+        logic.mode = TraversalMode::Preview;
         logic.beginPreview(nodes, 2, -1);
         logic.loop.limit = 0;
 

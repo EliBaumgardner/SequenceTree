@@ -66,11 +66,11 @@ void AllowedTraversalsMenu::resized()
     auto bounds = getLocalBounds().reduced(contentInset);
 
     for (auto& row : rows) {
-        auto rowArea = bounds.removeFromTop(rowHeight).reduced(0, 2);
+        auto rowArea = bounds.removeFromTop(rowHeight).reduced(0, rowInset);
 
         row.toggle->setBounds(rowArea.removeFromRight(toggleWidth));
 
-        rowArea.removeFromRight(6);
+        rowArea.removeFromRight(toggleGap);
 
         row.label->setBounds(rowArea);
     }
@@ -78,7 +78,10 @@ void AllowedTraversalsMenu::resized()
 
 int AllowedTraversalsMenu::getIdealHeight() const
 {
-    return contentInset * 2 + rowHeight * juce::jmax(1, static_cast<int>(rows.size()));
+    const int rowCount  = static_cast<int>(rows.size());
+    const int shownRows = juce::jmax(1, rowCount);
+
+    return contentInset * 2 + rowHeight * shownRows;
 }
 
 bool AllowedTraversalsMenu::isTraversalEnabled(const TraversalKey& key) const

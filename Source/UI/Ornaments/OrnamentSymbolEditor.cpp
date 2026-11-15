@@ -53,9 +53,11 @@ OrnamentSymbolEditor::OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries,
 void OrnamentSymbolEditor::paint(juce::Graphics& graphics)
 {
     ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
-    const float                   strokeWidth = drawingArea.getWidth() * brushWidth;
-    const float                   dashes[]    = { dashLength, dashLength };
-    juce::Path                    toolOutline;
+
+    const float strokeWidth = drawingArea.getWidth() * brushWidth;
+    const float dashes[]    = { dashLength, dashLength };
+
+    juce::Path toolOutline;
 
     graphics.setColour(lookAndFeel.canvasColour);
     graphics.fillRect(getLocalBounds());
@@ -65,7 +67,9 @@ void OrnamentSymbolEditor::paint(juce::Graphics& graphics)
 
     graphics.setColour(lookAndFeel.textColour);
 
-    lookAndFeel.drawStrokeSymbol(graphics, drawingArea, OrnamentLibraries::readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString()));
+    const std::vector<ArsNovaUI::SymbolStroke> symbolStrokes = OrnamentLibraries::readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString());
+
+    lookAndFeel.drawStrokeSymbol(graphics, drawingArea, symbolStrokes);
 
     graphics.strokePath(stroke, juce::PathStrokeType(strokeWidth, juce::PathStrokeType::curved, juce::PathStrokeType::butt));
 
@@ -83,16 +87,21 @@ void OrnamentSymbolEditor::paint(juce::Graphics& graphics)
 
 void OrnamentSymbolEditor::resized()
 {
-    const auto  bounds = getLocalBounds().toFloat();
-    const float side   = juce::jmin(bounds.getWidth(), bounds.getHeight()) * (1.0f - drawingInsetRatio * 2.0f);
-    auto        topRow = getLocalBounds().reduced(toolPaneInset).removeFromTop(toolPaneHeight);
+    const auto bounds = getLocalBounds().toFloat();
+
+    const float side = juce::jmin(bounds.getWidth(), bounds.getHeight()) * (1.0f - drawingInsetRatio * 2.0f);
+
+    auto topRow = getLocalBounds().reduced(toolPaneInset).removeFromTop(toolPaneHeight);
+
+    const int toolPaneWidth  = toolPane.idealWidth(toolPaneHeight);
+    const int sizeFieldWidth = sizeLabelWidth + sizeFieldGap + sizeEditorWidth;
 
     drawingArea = bounds.withSizeKeepingCentre(side, side);
 
-    toolPane.setBounds(topRow.removeFromLeft(toolPane.idealWidth(toolPaneHeight)));
+    toolPane.setBounds(topRow.removeFromLeft(toolPaneWidth));
     topRow.removeFromLeft(sizeFieldGap);
 
-    sizeField.setBounds(topRow.removeFromLeft(sizeLabelWidth + sizeFieldGap + sizeEditorWidth));
+    sizeField.setBounds(topRow.removeFromLeft(sizeFieldWidth));
     clearButton.setBounds(getLocalBounds().reduced(clearButtonInset).removeFromTop(clearButtonSize).removeFromRight(clearButtonSize));
 }
 
@@ -148,7 +157,9 @@ void OrnamentSymbolEditor::mouseUp(const juce::MouseEvent& event)
         return;
     }
 
-    normalised.applyTransform(juce::AffineTransform::translation(-drawingArea.getX(), -drawingArea.getY()).scaled(1.0f / drawingArea.getWidth()));
+    const float unitScale = 1.0f / drawingArea.getWidth();
+
+    normalised.applyTransform(juce::AffineTransform::translation(-drawingArea.getX(), -drawingArea.getY()).scaled(unitScale));
 
     undoManager.beginNewTransaction();
 
@@ -182,10 +193,14 @@ juce::MouseCursor OrnamentSymbolEditor::getMouseCursor()
 
 void OrnamentSymbolEditor::eraseAlong(juce::Point<float> target)
 {
-    const float distance = lastPoint.getDistanceFrom(target);
-    const float radius   = drawingArea.getWidth() * brushWidth * 0.5f;
-    const int   steps    = juce::jmax(1, static_cast<int>(std::ceil(distance / juce::jmax(radius * eraserStepRatio, pointSpacing))));
-    const float scale    = 1.0f / drawingArea.getWidth();
+    const float distance    = lastPoint.getDistanceFrom(target);
+    const float radius      = drawingArea.getWidth() * brushWidth * 0.5f;
+    const float stepLength  = juce::jmax(radius * eraserStepRatio, pointSpacing);
+    const float scale       = 1.0f / drawingArea.getWidth();
+    const float eraseRadius = brushWidth * 0.5f;
+
+    const int stepsNeeded = static_cast<int>(std::ceil(distance / stepLength));
+    const int steps       = juce::jmax(1, stepsNeeded);
 
     repaint();
 
@@ -196,7 +211,7 @@ void OrnamentSymbolEditor::eraseAlong(juce::Point<float> target)
     for (int step = 1; step <= steps; ++step) {
         const auto centre = (lastPoint + (target - lastPoint) * (static_cast<float>(step) / steps) - drawingArea.getPosition()) * scale;
 
-        ornamentLibraries.eraseSymbol(ornament, centre, brushWidth * 0.5f, &undoManager);
+        ornamentLibraries.eraseSymbol(ornament, centre, eraseRadius, &undoManager);
     }
 
     lastPoint = target;

@@ -7,15 +7,20 @@ void NodeStateTable::prepare()
 {
     if (values.size() == valueCount) {
         clear();
+
         return;
     }
 
     values.resize(valueCount);
+
     rows.prepare();
 
     for (int row = 0; row < maxNodeIds; ++row) {
         const std::size_t offset = static_cast<std::size_t>(row * slotCount);
-        std::copy_n(defaultRowValues.data(), slotCount, values.data() + offset);
+
+        int* const rowStart = values.data() + offset;
+
+        std::copy_n(defaultRowValues.data(), slotCount, rowStart);
     }
 
     outOfRangeSinks = defaultRowValues;
@@ -29,10 +34,14 @@ void NodeStateTable::clear() noexcept
 
     for (int row = 0; row < rows.getRowCount(); ++row) {
         const std::size_t offset = static_cast<std::size_t>(row * slotCount);
-        std::copy_n(defaultRowValues.data(), slotCount, values.data() + offset);
+
+        int* const rowStart = values.data() + offset;
+
+        std::copy_n(defaultRowValues.data(), slotCount, rowStart);
     }
 
     rows.clear();
+
     outOfRangeSinks = defaultRowValues;
 }
 
@@ -74,6 +83,7 @@ int& NodeStateTable::ref(NodeStateSlot slot, int nodeId) noexcept
 
     if (!isAddressable(nodeId)) {
         outOfRangeSinks[slotIndex] = defaultValue(slot);
+
         return outOfRangeSinks[slotIndex];
     }
 
@@ -83,6 +93,7 @@ int& NodeStateTable::ref(NodeStateSlot slot, int nodeId) noexcept
 
     if (row < 0) {
         outOfRangeSinks[slotIndex] = defaultValue(slot);
+
         return outOfRangeSinks[slotIndex];
     }
 

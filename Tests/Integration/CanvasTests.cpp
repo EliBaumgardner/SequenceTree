@@ -40,7 +40,7 @@ TEST_CASE("moving a graph node carries its descendants and the group its first m
 {
     SequenceTreeAudioProcessor processor;
     GraphState&                graph = processor.graphState;
-    GraphDocument              document(graph, processor.undoManager);
+    GraphDocument              document(graph, processor.undoManager, processor.canvasSettings);
 
     const auto storedPosition = [](const juce::ValueTree& nodeTree) {
         return juce::Point<int> { nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition), nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition) };
@@ -79,7 +79,7 @@ TEST_CASE("an edit canvas builds, places and removes components as its document'
 {
     SequenceTreeAudioProcessor   processor;
     GraphState&                  graph = processor.graphState;
-    GraphDocument                document(graph, processor.undoManager);
+    GraphDocument                document(graph, processor.undoManager, processor.canvasSettings);
     ArsNovaUI::CustomLookAndFeel lookAndFeel;
     PlainCanvas                  canvas(document);
 
@@ -124,6 +124,8 @@ TEST_CASE("the figure canvas shows one chain, grows only from its last node and 
     FigureDocument               document(libraries, undoManager);
     ArsNovaUI::CustomLookAndFeel lookAndFeel;
 
+    juce::ValueTree canvasSettings { ValueTreeIdentifiers::CanvasSettings };
+
     const auto storedPosition = [](const juce::ValueTree& nodeTree) {
         return juce::Point<int> { nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition), nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition) };
     };
@@ -133,7 +135,7 @@ TEST_CASE("the figure canvas shows one chain, grows only from its last node and 
     document.ornament = libraries.addOrnament({}, nullptr);
     document.nodes    = document.ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
 
-    OrnamentCanvas canvas(document);
+    OrnamentCanvas canvas(document, canvasSettings);
 
     canvas.setLookAndFeel(&lookAndFeel);
 
@@ -184,4 +186,33 @@ TEST_CASE("the figure canvas shows one chain, grows only from its last node and 
 
     canvas.clearCanvas();
     canvas.setLookAndFeel(nullptr);
+}
+
+TEST_CASE("the grid multiplier spaces a canvas's grid lines and snap points", "[canvas][ornament]")
+{
+    CanvasTestFolder  temporary;
+    OrnamentLibraries libraries;
+    juce::UndoManager undoManager;
+    FigureDocument    document(libraries, undoManager);
+
+    juce::ValueTree canvasSettings { ValueTreeIdentifiers::CanvasSettings };
+
+    libraries.load(temporary.folder);
+
+    document.ornament = libraries.addOrnament({}, nullptr);
+    document.nodes    = document.ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
+
+    canvasSettings.setProperty(ValueTreeIdentifiers::OrnamentGridMultiplier, 2.0, nullptr);
+
+    OrnamentCanvas canvas(document, canvasSettings);
+
+    canvas.rebuildFromNodeMap(document.nodes);
+
+    CHECK(canvas.gridSpacing == 100.0f);
+    CHECK(canvas.snapPointToGrid({ 148, 102 }) == juce::Point<int> { 148, 100 });
+
+    canvasSettings.setProperty(ValueTreeIdentifiers::OrnamentGridMultiplier, 3.0, nullptr);
+
+    CHECK(canvas.gridSpacing == 150.0f);
+    CHECK(canvas.snapPointToGrid({ 148, 102 }) == juce::Point<int> { 150, 102 });
 }

@@ -38,7 +38,7 @@ public:
     void sendNoteOff     (const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
 
     void removeNote(int index);
-    void clear     ();
+    void clear ();
 
     const ActiveNote* nextToExpire();
 
@@ -104,6 +104,8 @@ public:
 private:
 
     static void startOrnamentStep(ActiveNote& note, std::span<const OrnamentStep> figure, double sample);
+
+    static constexpr double velocityPercentScale = 100.0;
 
     std::size_t orderedNotes = 0;
 };

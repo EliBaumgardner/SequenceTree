@@ -32,8 +32,12 @@ inline constexpr int defaultMidiPitch = 60;
 inline constexpr int minimumMidiPitch = 0;
 inline constexpr int maximumMidiPitch = 127;
 
+inline constexpr int silentMidiVelocity  = 0;
 inline constexpr int minimumMidiVelocity = 1;
+inline constexpr int defaultMidiVelocity = 60;
 inline constexpr int maximumMidiVelocity = 127;
+
+inline constexpr int defaultNoteDurationMs = 1000;
 
 inline constexpr int minimumMidiChannel = 1;
 inline constexpr int maximumMidiChannel = 16;

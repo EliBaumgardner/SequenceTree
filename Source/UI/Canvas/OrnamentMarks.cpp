@@ -91,12 +91,16 @@ void OrnamentMarks::valueTreePropertyChanged(juce::ValueTree&, const juce::Ident
 
 void OrnamentMarks::componentMovedOrResized(juce::Component& component, bool, bool)
 {
-    place(static_cast<Node&>(component));
+    Node& node = static_cast<Node&>(component);
+
+    place(node);
 }
 
 void OrnamentMarks::componentVisibilityChanged(juce::Component& component)
 {
-    place(static_cast<Node&>(component));
+    Node& node = static_cast<Node&>(component);
+
+    place(node);
 }
 
 void OrnamentMarks::componentBeingDeleted(juce::Component& component)
@@ -108,7 +112,7 @@ void OrnamentMarks::place(Node& node)
 {
     OrnamentMarkView* const    view       = views[&node].get();
     const juce::Rectangle<int> nodeSquare = node.getBounds().withTrimmedLeft(node.interiorLeftInset);
-    const int                  markHeight = juce::roundToInt(static_cast<float>(nodeSquare.getHeight()) * markHeightRatio);
+    const int                  markHeight = juce::roundToInt(nodeSquare.getHeight() * markHeightRatio);
 
     view->setBounds(nodeSquare.withHeight(markHeight).withBottomY(nodeSquare.getY()));
     view->setVisible(node.isVisible());
@@ -118,7 +122,9 @@ void OrnamentMarks::refreshAll()
 {
     for (const auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
         if (node != nullptr) {
-            refresh(static_cast<Node&>(*node));
+            Node& graphNode = static_cast<Node&>(*node);
+
+            refresh(graphNode);
         }
     }
 }

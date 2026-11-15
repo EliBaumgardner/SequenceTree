@@ -53,15 +53,18 @@ public:
     void prepare(int capacity, const TraversalRule& rule)
     {
         if (slotCount() != capacity) {
-            slots.assign(static_cast<std::size_t>(capacity), Slot{});
+            const std::size_t slotTotal = static_cast<std::size_t>(capacity);
+
+            slots.assign(slotTotal, Slot{});
 
             activeCount = 0;
             ++epoch;
         }
 
         for (auto& slot : slots) {
-            slot.entry.second.logic.nodeState.prepare();
-            slot.entry.second.logic.rule = &rule;
+            slot.entry.second.logic.childSelector.nodeState.prepare();
+
+            slot.entry.second.logic.childSelector.rule = &rule;
         }
     }
 
@@ -106,18 +109,19 @@ public:
 
             slot.active      = true;
             slot.entry.first = runId;
+
             slot.entry.second.logic.reset(rootId, traversal);
+            slot.entry.second.logic.mode              = mode;
+
             slot.entry.second.runtime = {};
 
             if (choices == Choices::Fixed) {
-                slot.entry.second.logic.selectionRandom = 0;
+                slot.entry.second.logic.childSelector.selectionRandom = 0;
             }
 
-            slot.entry.second.logic.mode              = mode;
             slot.entry.second.logic.previewVisitCount = previewVisitCount;
             slot.entry.second.logic.script            = script;
             slot.entry.second.logic.sharedGlobals     = &globals;
-
             ++activeCount;
             ++epoch;
 
@@ -201,15 +205,17 @@ public:
     struct Slot
     {
         Entry entry;
-        bool  active = false;
+
+        bool active = false;
     };
 
     std::uint64_t epoch = 0;
 
     Choices choices = Choices::Random;
 
-    TraversalLogic::Mode mode              = TraversalLogic::Mode::Live;
-    int                  previewVisitCount = 1;
+    TraversalMode mode = TraversalMode::Live;
+
+    int previewVisitCount = 1;
 
     const RTScript* script = nullptr;
 

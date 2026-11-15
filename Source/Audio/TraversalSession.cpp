@@ -1,4 +1,5 @@
 #include "TraversalSession.h"
+#include "../Util/ArrowInfo.h"
 #include "EventManager.h"
 
 #include <algorithm>
@@ -23,15 +24,16 @@ void TraversalSession::prepare()
 
     traversals.prepare(maxConcurrentTraversals, rule);
     previewTraversals.prepare(maxPreviewTraversals, rule);
-
-    previewTraversals.mode         = TraversalLogic::Mode::Preview;
+    previewTraversals.mode         = TraversalMode::Preview;
     previewTraversals.runIdCounter = juce::jmax(previewTraversals.runIdCounter, previewRunIdBase);
 }
 
 void TraversalSession::clearTraversals()
 {
     eventManager.dispatcher.flagScheduler.clear();
+
     eventManager.bridge.pushArrowReset(BridgeCommands::allTrails);
+
     traversals.clear();
 }
 
@@ -63,6 +65,7 @@ void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
 
     eventManager.bridge.clearAllHighlights();
     eventManager.bridge.pushArrowReset(BridgeCommands::allTrails);
+
     eventManager.scheduler.clear();
 
     if (playback == Playback::Suspended) {
@@ -87,7 +90,11 @@ void TraversalSession::resumeSuspendedNotes(juce::MidiBuffer& midiMessages)
 {
     for (const auto& note : eventManager.scheduler.activeNotes) {
         if (NoteScheduler::isNoteSounding(note)) {
-            midiMessages.addEvent(juce::MidiMessage::noteOn(note.event.midiChannel, note.event.pitch, static_cast<juce::uint8>(note.event.velocity)), 0);
+            const juce::uint8 noteOnVelocity = static_cast<juce::uint8>(note.event.velocity);
+
+            const juce::MidiMessage noteOn = juce::MidiMessage::noteOn(note.event.midiChannel, note.event.pitch, noteOnVelocity);
+
+            midiMessages.addEvent(noteOn, 0);
         }
     }
 
@@ -95,7 +102,6 @@ void TraversalSession::resumeSuspendedNotes(juce::MidiBuffer& midiMessages)
 }
 
 namespace {
-
 int homeRootId(const TraversalPool::Instance& instance)
 {
     if (instance.runtime.originRootId != -1) {
@@ -104,13 +110,11 @@ int homeRootId(const TraversalPool::Instance& instance)
 
     return instance.logic.rootId;
 }
-
 }
 
 void TraversalSession::restartActiveTraversals(const DispatchContext& context)
 {
     restartRootScratch.clear();
-
     eventManager.dispatcher.flagScheduler.clear();
 
     for (const auto& [runId, instance] : traversals.entries()) {
@@ -126,10 +130,12 @@ void TraversalSession::restartActiveTraversals(const DispatchContext& context)
     }
 
     eventManager.bridge.pushArrowReset(BridgeCommands::allTrails);
+
     traversals.clear();
 
     for (int rootId : restartRootScratch) {
         const RTNode* rootNode = context.nodes.find(rootId);
+
         if (rootNode == nullptr) {
             continue;
         }
@@ -148,8 +154,11 @@ void TraversalSession::syncWithGraph(const DispatchContext& context, std::uint64
     }
 
     syncActiveTraversals(context.nodes);
+
     removeDeletedTraversals(context.nodes, context.midiMessages);
+
     startMissingTraversals(context);
+
     syncTraversalLoopLimits(context);
 
     syncedGraphGeneration = graphGeneration;
@@ -199,6 +208,7 @@ void TraversalSession::playPreview(const DispatchContext& context, int numSample
 void TraversalSession::beginReplay(const DispatchContext& context, double targetSamples)
 {
     silenceAllNotes(context.midiMessages);
+
     clearTraversals();
 
     eventManager.bridge.beginRecording();
@@ -211,12 +221,14 @@ void TraversalSession::beginReplay(const DispatchContext& context, double target
                                           context.velocityScale, context.transpose };
 
     replayMidi.clear();
+
     startTraversalsFromFirstRoot(replayContext);
 }
 
 bool TraversalSession::startTraversalsFromFirstRoot(const DispatchContext& context)
 {
-    const int           rootId   = context.nodes.firstUnlinkedRootId;
+    const int rootId = context.nodes.startRootId;
+
     const RTNode* const rootNode = context.nodes.find(rootId);
 
     if (rootNode == nullptr) {
@@ -244,17 +256,19 @@ TraversalSession::Playback TraversalSession::continueReplay(const DispatchContex
 
     syncWithGraph(replayContext, graphGeneration);
 
-    const double budgetMs  = 1000.0 * replayShareOfBlock * numSamples / context.sampleRate;
+    const double budgetMs  = ArrowInfo::millisecondsPerSecond * replayShareOfBlock * numSamples / context.sampleRate;
     const double startedMs = juce::Time::getMillisecondCounterHiRes();
 
     while (replayRemainingSamples >= 1.0
            && juce::Time::getMillisecondCounterHiRes() - startedMs < budgetMs) {
-        const int chunkSamples = static_cast<int>(juce::jmin(replayRemainingSamples, static_cast<double>(replayChunkSamples)));
-        eventManager.processEvents(chunkSamples, replayContext);
-        replayMidi.clear();
-        replayRemainingSamples -= chunkSamples;
+        const int chunkSamples = static_cast<int>(juce::jmin(replayRemainingSamples, replayChunkSamples));
 
-        eventManager.bridge.recordClockMs += 1000.0 * chunkSamples / context.sampleRate;
+        eventManager.processEvents(chunkSamples, replayContext);
+
+        replayMidi.clear();
+
+        replayRemainingSamples -= chunkSamples;
+        eventManager.bridge.recordClockMs += ArrowInfo::millisecondsPerSecond * chunkSamples / context.sampleRate;
     }
 
     if (replayRemainingSamples >= 1.0) {
@@ -274,6 +288,7 @@ TraversalSession::Playback TraversalSession::continueReplay(const DispatchContex
     replayMidi.clear();
 
     playback = Playback::Live;
+
     return Playback::Live;
 }
 
@@ -284,13 +299,16 @@ void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
 
         if (instance.runtime.asFlag) {
             const RTNode* flagNode = nodes.find(instance.runtime.sourceNodeId);
+
             if (flagNode != nullptr && flagNode->flagTraversal.key == logic.traversal.key) {
                 logic.traversal = flagNode->flagTraversal;
             }
+
             continue;
         }
 
         const RTNode* rootNode = nodes.find(homeRootId(instance));
+
         if (rootNode == nullptr) {
             continue;
         }
@@ -298,6 +316,7 @@ void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
         for (const RTtraversal& assigned : rootNode->traversals) {
             if (assigned.key == logic.traversal.key) {
                 logic.traversal = assigned;
+
                 break;
             }
         }
@@ -312,7 +331,8 @@ void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiB
         const TraversalLogic& traverser = instance.logic;
 
         bool stillAssigned = false;
-        const RTNode* rootNode      = nodes.find(homeRootId(instance));
+
+        const RTNode* rootNode = nodes.find(homeRootId(instance));
 
         if (rootNode != nullptr) {
             if (instance.runtime.asFlag) {
@@ -322,6 +342,7 @@ void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiB
                 for (const RTtraversal& assigned : rootNode->traversals) {
                     if (assigned.key == traverser.traversal.key) {
                         stillAssigned = true;
+
                         break;
                     }
                 }
@@ -335,6 +356,7 @@ void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiB
 
     for (int runId : removedRunIdScratch) {
         stopTraversalNotes(runId, midiMessages);
+
         traversals.erase(runId);
     }
 }
@@ -359,11 +381,13 @@ void TraversalSession::startMissingTraversals(const DispatchContext& context)
                 return true;
             }
         }
+
         return false;
     };
 
     for (int rootId : activeRootIdScratch) {
         const RTNode* rootNode = context.nodes.find(rootId);
+
         if (rootNode == nullptr) {
             continue;
         }
@@ -385,6 +409,7 @@ void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
         TraversalLogic& traversal = instance.logic;
 
         const RTNode* rootEntry = context.nodes.find(traversal.rootId);
+
         if (rootEntry == nullptr) {
             continue;
         }
@@ -392,6 +417,7 @@ void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
         const RTNode& rootNode = *rootEntry;
 
         int newLoopLimit = rootNode.graphLoopLimit;
+
         if (newLoopLimit == traversal.loop.limit) {
             continue;
         }
@@ -402,9 +428,11 @@ void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
             if (newLoopLimit == 0 || traversal.loop.count < newLoopLimit) {
                 traversal.primary.target = traversal.rootId;
                 traversal.state          = TraversalLogic::TraversalState::Active;
-                traversal.advanceAlternative(context.nodes, traversal.rootId);
+
+                traversal.childSelector.advanceAlternative(context.nodes, traversal.primary, Walk::Primary, traversal.rootId);
 
                 eventManager.bridge.highlightNode(rootNode, BridgeCommands::HighlightKind::Show, runId, traversal.traversal.key.typeId);
+
                 eventManager.dispatcher.pushNote(rootNode, runId, context, 0);
             }
         }
@@ -426,6 +454,7 @@ void TraversalSession::startTraversal(const RTNode& rootNode, const RTtraversal&
     acquired->logic.begin(context.nodes, rootId, rootNode.graphLoopLimit);
 
     eventManager.bridge.highlightNode(rootNode, BridgeCommands::HighlightKind::Show, runId, traversal.key.typeId);
+
     eventManager.dispatcher.pushNote(rootNode, runId, context, 0);
 }
 
@@ -436,14 +465,17 @@ void TraversalSession::stopTraversalNotes(int runId, juce::MidiBuffer& midiMessa
     for (int i = static_cast<int>(activeNotes.size()) - 1; i >= 0; --i) {
         auto& note = activeNotes[i];
 
+        const int stoppedNodeId = note.nodeId;
+
         if (note.runId != runId || note.role != NoteScheduler::NoteRole::Stepping) {
             continue;
         }
 
         eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
 
-        eventManager.bridge.highlightNode(note.nodeId, BridgeCommands::HighlightKind::Hide, runId);
         eventManager.scheduler.removeNote(i);
+
+        eventManager.bridge.highlightNode(stoppedNodeId, BridgeCommands::HighlightKind::Hide, runId);
     }
 
     eventManager.bridge.pushArrowReset(BridgeCommands::primaryTrail(runId));
@@ -482,6 +514,7 @@ void TraversalSession::startPreview(const RTPreviewRequest& request, const Dispa
         for (const RTtraversal& equipped : rootNode->traversals) {
             if (equipped.key.typeId == traversal.key.typeId) {
                 traversal = equipped;
+
                 break;
             }
         }
@@ -489,18 +522,20 @@ void TraversalSession::startPreview(const RTPreviewRequest& request, const Dispa
 
     previewTraversals.previewVisitCount = juce::jmax(1, request.visitCount);
 
-    const int                      runId    = previewTraversals.nextRunId();
+    const int runId = previewTraversals.nextRunId();
+
     TraversalPool::Instance* const instance = previewTraversals.acquire(runId, hostNode->graphID, traversal);
 
     if (instance == nullptr) {
         return;
     }
 
-    instance->logic.selectionRandom = (instance->logic.selectionRandom ^ static_cast<unsigned int>(runId) * 2246822519u) | 1u;
+    instance->logic.childSelector.selectionRandom = (instance->logic.childSelector.selectionRandom ^ static_cast<unsigned int>(runId) * TraversalLogic::seedInstanceMultiplier) | 1u;
 
     instance->logic.beginPreview(context.nodes, hostNode->nodeID, alternativeId);
 
     previewEventManager.bridge.highlightNode(*clickedNode, BridgeCommands::HighlightKind::Show, runId, traversal.key.typeId);
+
     previewEventManager.dispatcher.pushNote(*hostNode, runId, context, 0);
 }
 
@@ -510,6 +545,7 @@ void TraversalSession::stopPreview(juce::MidiBuffer& midiMessages)
 
     for (const auto& note : previewEventManager.scheduler.activeNotes) {
         previewEventManager.scheduler.sendNoteOff(note, midiMessages, 0);
+
         bridge.highlightNode(note.nodeId, BridgeCommands::HighlightKind::Hide, note.runId);
     }
 
@@ -518,7 +554,6 @@ void TraversalSession::stopPreview(juce::MidiBuffer& midiMessages)
         bridge.highlightNode(instance.logic.primary.alternativeTarget,    BridgeCommands::HighlightKind::Hide, runId);
         bridge.highlightNode(instance.logic.mod.walker.target,            BridgeCommands::HighlightKind::Hide, runId);
         bridge.highlightNode(instance.logic.mod.walker.alternativeTarget, BridgeCommands::HighlightKind::Hide, runId);
-
         bridge.pushArrowReset(BridgeCommands::primaryTrail(runId));
         bridge.pushArrowReset(BridgeCommands::modulatorTrail(runId));
     }

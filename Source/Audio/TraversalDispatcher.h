@@ -51,7 +51,7 @@ private:
     void dispatchModulator(const RTNode& node, int runId, const DispatchContext& context, TraversalLogic& traversalLogic, const RTNode*& modulatorNode,
                            bool isPrimaryRepeat);
 
-    void hideModulatorHighlight(const TraversalLogic::ModulatorWalk& mod, int runId, int typeId);
+    void hideModulatorHighlight(const Walker& walker, int runId, int typeId);
     void scaleByModulator      (NotePlan& plan, TraversalLogic& traversalLogic, const NodeMap& nodes);
     void overrideVoicing       (NotePlan& plan, const RTNode& node, const TraversalLogic& traversalLogic, const DispatchContext& context,
                                 const ScriptNote& scriptNote, ScriptNote::Kind scriptKind);
@@ -76,7 +76,8 @@ private:
 
     struct NoteDispatch
     {
-        const RTNode&   node;
+        const RTNode& node;
+
         TraversalLogic& traversal;
 
         int runId       = -1;
@@ -114,9 +115,12 @@ private:
     struct MainRun
     {
         TraversalPool::Instance* instance = nullptr;
-        const DispatchContext*   context  = nullptr;
-        int                      runId    = -1;
-        ScriptNote               note;
+
+        const DispatchContext* context = nullptr;
+
+        int runId = -1;
+
+        ScriptNote note;
     };
 
     static constexpr int maxDispatchDepth = 32;
@@ -129,7 +133,7 @@ private:
     MainRun mainRun;
 
     NodeRowMap chordVisits;
-    std::vector<std::pair<int, int>> chordFrontier;
 
-    std::vector<int> crossTreeScratch;
+    std::vector<std::pair<int, int>> chordFrontier;
+    std::vector<int>                 crossTreeScratch;
 };

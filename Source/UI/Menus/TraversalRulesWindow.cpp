@@ -1,74 +1,95 @@
 #include "TraversalRulesWindow.h"
-#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/TraversalRuleState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "../../Plugin/AudioSnapshotPublisher.h"
-#include "../../Script/ScriptCompiler.h"
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 TraversalRulesWindow::TraversalRulesWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
                                            juce::UndoManager& undoManager)
-    : rulesPanel        (undoManager),
+    : resizer           (ArsNovaUI::PanelResizer::Edge::Right),
+      panelBar          (ArsNovaUI::Bar::Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
+      treePanel         (traversalRuleState, undoManager),
       traversalRuleState(traversalRuleState),
-      snapshots         (snapshots)
+      snapshots         (snapshots),
+      undoManager       (undoManager)
 {
-    setLookAndFeel(&lookAndFeel);
+    resizer.onWidthDragged             = [this](int newWidth) { setPanelWidth(newWidth); };
+    treePanel.treeView.onRuleOpened    = [this](int ruleId) { openRule(ruleId); };
+    treePanel.treeView.onRuleAdded     = [this](int folderId) { addRule(folderId); };
+    treePanel.treeView.onRuleRemoved   = [this](int ruleId) { removeRule(ruleId); };
+    treePanel.treeView.onFolderRemoved = [this](int folderId) { removeFolder(folderId); };
+    treePanel.treeView.onRuleMadeLive  = [this](int ruleId) { makeRuleLive(ruleId); };
+    tabBar.tabStrip.onTabClicked       = [this](int ruleId) { viewRule(ruleId); };
+    tabBar.tabStrip.onTabClosed        = [this](int ruleId) { closeTab(ruleId); };
 
-    rulesPanel.resizer.onWidthDragged          = [this](int newWidth) { setPanelWidth(newWidth); };
-    rulesPanel.labelPanel.onLabelClicked       = [this](ArsNovaUI::FileLabel* label) { setActivePage(label->fileId); };
-    rulesPanel.panelTitlebar.addButton.onClick = [this] { addRule(); };
-    titlebar.playButton.onClick                = [this] { makeViewedRuleActive(); };
+    tabBar.transportPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawPlayIcon, "Make this the live traversal rule", [this] { makeRuleLive(viewedRuleId); });
 
-    titlebar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawUndoIcon, "Undo", [this] {
+    tabBar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawUndoIcon, "Undo", [this] {
         if (activePage != nullptr) {
             activePage->juce::CodeEditorComponent::undo();
         }
     });
 
-    titlebar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRedoIcon, "Redo", [this] {
+    tabBar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRedoIcon, "Redo", [this] {
         if (activePage != nullptr) {
             activePage->juce::CodeEditorComponent::redo();
         }
     });
 
-    rulesPanel.labelPanel.onLabelsReordered = [this](std::vector<int> fileIds) {
-        this->traversalRuleState.reorderRules(fileIds, nullptr);
-    };
+    panelTitle.setFont(lookAndFeel.font(ArsNovaUI::Theme::FontStyle::SemiBold, ArsNovaUI::Theme::labelFontHeight));
+    panelTitle.setInterceptsMouseClicks(false, false);
+    panelTitle.setText("Rules", juce::dontSendNotification);
 
-    rulesPanel.labelPanel.onLabelRemoved = [this](int fileId) {
-        juce::MessageManager::callAsync(
-            [safeThis = juce::Component::SafePointer<TraversalRulesWindow>(this), fileId] {
-                if (safeThis != nullptr) {
-                    safeThis->removeRule(fileId);
-                }
-            });
-    };
+    panelBar.addAndMakeVisible(panelTitle);
+    sidePanel.addAndMakeVisible(panelBar);
+    sidePanel.addAndMakeVisible(treePanel);
+    sidePanel.addAndMakeVisible(resizer);
 
-    addAndMakeVisible(titlebar);
-    addAndMakeVisible(rulesPanel);
+    addAndMakeVisible(sidePanel);
+    addAndMakeVisible(tabBar);
+    addAndMakeVisible(pathBar);
+
+    setLookAndFeel(&lookAndFeel);
 
     traversalRuleState.rules.addListener(this);
+    traversalRuleState.folders.addListener(this);
 
     syncWithRuleState();
+
+    openRule(traversalRuleState.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
 }
 
 TraversalRulesWindow::~TraversalRulesWindow()
 {
     traversalRuleState.rules.removeListener(this);
-
-    setLookAndFeel(nullptr);
+    traversalRuleState.folders.removeListener(this);
 }
 
 void TraversalRulesWindow::paint(juce::Graphics& graphics)
 {
-    const ArsNovaUI::Theme&    theme        = ArsNovaUI::CustomLookAndFeel::get(*this);
-    const juce::Rectangle<int> statusBounds = getLocalBounds().removeFromBottom(statusBarHeight);
+    const ArsNovaUI::Theme& theme = ArsNovaUI::CustomLookAndFeel::get(*this);
+
+    const juce::Rectangle<int> statusBounds = getLocalBounds().removeFromBottom(statusBarHeight).reduced(ArsNovaUI::Theme::menuEdgeInset, 0);
+
+    const juce::Font statusFont = theme.font(ArsNovaUI::Theme::FontStyle::Mono, ArsNovaUI::Theme::labelFontHeight);
+    const juce::Font hintFont   = theme.font(ArsNovaUI::Theme::FontStyle::Regular, ArsNovaUI::RowList::rowFontHeight);
 
     graphics.setColour(theme.surfaceColour);
     graphics.fillRect(getLocalBounds());
 
     graphics.setColour(theme.raisedColour);
-    graphics.fillRect(statusBounds);
+    graphics.fillRect(getLocalBounds().removeFromBottom(statusBarHeight));
+
+    if (activePage == nullptr) {
+        graphics.setColour(theme.mutedTextColour);
+        graphics.setFont(hintFont);
+        graphics.drawFittedText("No rule open. Pick one in the Rules panel.", editorArea.reduced(ArsNovaUI::Theme::windowGutter), juce::Justification::centred, 2);
+    }
+
+    graphics.setFont(statusFont);
+
+    graphics.setColour(theme.mutedTextColour);
+    graphics.drawText(caretText, statusBounds, juce::Justification::centredRight, false);
 
     if (statusIsError) {
         graphics.setColour(theme.errorColour);
@@ -77,98 +98,121 @@ void TraversalRulesWindow::paint(juce::Graphics& graphics)
         graphics.setColour(theme.successColour);
     }
 
-    graphics.setFont(theme.font(ArsNovaUI::Theme::FontStyle::Mono, ArsNovaUI::Theme::labelFontHeight));
-    graphics.drawText(statusText, statusBounds.reduced(ArsNovaUI::Theme::menuEdgeInset, 0), juce::Justification::centredLeft, true);
+    const int caretReserve = juce::GlyphArrangement::getStringWidthInt(statusFont, caretText) + ArsNovaUI::Theme::windowGutter;
+
+    graphics.drawText(statusText, statusBounds.withTrimmedRight(caretReserve), juce::Justification::centredLeft, true);
 
     graphics.setColour(theme.borderColour);
     graphics.drawRect(getLocalBounds(), 1);
 }
 
+void TraversalRulesWindow::paintOverChildren(juce::Graphics& graphics)
+{
+    const int separatorWidth = 1;
+    const int separatorX     = sidePanel.getRight() - separatorWidth;
+
+    graphics.setColour(ArsNovaUI::CustomLookAndFeel::get(*this).borderColour);
+    graphics.fillRect(separatorX, sidePanel.getY(), separatorWidth, sidePanel.getHeight());
+}
+
 void TraversalRulesWindow::resized()
 {
-    auto bounds = getLocalBounds();
+    const int resizerWidth = juce::roundToInt(ArsNovaUI::Theme::barHeight * resizerWidthRatio);
 
-    panelWidth = clampPanelWidth(panelWidth);
+    auto bounds = getLocalBounds();
 
     bounds.removeFromBottom(statusBarHeight);
 
-    rulesPanel.setBounds(bounds.removeFromLeft(panelWidth));
-    titlebar.setBounds(bounds.removeFromTop(RulesTitlebar::preferredHeight));
+    panelWidth = clampPanelWidth(panelWidth);
+
+    sidePanel.setBounds(bounds.removeFromLeft(panelWidth));
+
+    auto side = sidePanel.getLocalBounds();
+
+    resizer.setBounds(side.removeFromRight(resizerWidth));
+    panelBar.setBounds(side.withHeight(ArsNovaUI::Theme::barHeight));
+    panelTitle.setBounds(panelBar.getLocalBounds().reduced(ArsNovaUI::Theme::windowGutter, 0));
+    treePanel.setBounds(side);
+
+    tabBar.setBounds(bounds.removeFromTop(RuleTabBar::preferredHeight));
+    pathBar.setBounds(bounds.removeFromTop(RulePathBar::preferredHeight));
+
+    editorArea = bounds;
 
     if (activePage != nullptr) {
         activePage->setBounds(bounds);
     }
 }
 
-void TraversalRulesWindow::setActivePage(int id)
+void TraversalRulesWindow::openRule(int ruleId)
 {
-    const auto match = filePages.find(id);
+    const juce::ValueTree rule = traversalRuleState.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId);
 
-    if (match == filePages.end()) {
+    const bool isOpen = std::ranges::find(tabBar.tabStrip.tabs, ruleId, &ArsNovaUI::TabBar::Tab::id) != tabBar.tabStrip.tabs.end();
+
+    if (! rule.isValid()) {
         return;
     }
 
-    ArsNovaUI::FilePage* page = match->second.get();
-
-    if (page == activePage) {
-        return;
+    if (! isOpen) {
+        tabBar.tabStrip.tabs.push_back({ ruleId, rule.getProperty(ValueTreeIdentifiers::RuleName).toString(), false });
     }
 
-    if (activePage != nullptr) {
-        removeChildComponent(activePage);
-    }
-
-    activePage   = page;
-    viewedRuleId = id;
-
-    addAndMakeVisible(page);
-
-    rulesPanel.selectLabel(id);
-
-    resized();
-
-    compileViewedPage();
+    viewRule(ruleId);
 }
 
-void TraversalRulesWindow::addRule()
+void TraversalRulesWindow::addRule(int folderId)
 {
-    const juce::ValueTree rule = traversalRuleState.addRule(nullptr);
+    undoManager.beginNewTransaction();
+
+    const juce::ValueTree rule = traversalRuleState.addRule(folderId, &undoManager);
+
+    const int ruleId = rule.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     syncWithRuleState();
 
-    setActivePage(rule.getProperty(ArsNovaUI::CanvasIdentifiers::Id));
+    openRule(ruleId);
+
+    if (treePanel.isShowing()) {
+        treePanel.treeView.beginRename(RuleItemKind::Rule, ruleId);
+    }
 }
 
 void TraversalRulesWindow::removeRule(int ruleId)
 {
-    TraversalRuleState& state       = traversalRuleState;
-    const bool          wasLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == ruleId;
+    const bool wasLiveRule = static_cast<int>(traversalRuleState.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == ruleId;
 
-    state.removeRule(ruleId, nullptr);
+    undoManager.beginNewTransaction();
 
-    if (state.rules.getNumChildren() == 0) {
-        addRule();
+    traversalRuleState.removeRule(ruleId, &undoManager);
 
-        state.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
-    }
-    else {
-        syncWithRuleState();
-    }
+    syncWithRuleState();
 
     if (wasLiveRule) {
         snapshots.publishActiveTraversalRule();
     }
-
-    compileViewedPage();
 }
 
-void TraversalRulesWindow::makeViewedRuleActive()
+void TraversalRulesWindow::removeFolder(int folderId)
 {
-    if (viewedRuleId < 0) {
+    undoManager.beginNewTransaction();
+
+    traversalRuleState.removeFolder(folderId, &undoManager);
+
+    syncWithRuleState();
+}
+
+void TraversalRulesWindow::makeRuleLive(int ruleId)
+{
+    if (ruleId < 0) {
         return;
     }
 
-    traversalRuleState.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, viewedRuleId, nullptr);
+    traversalRuleState.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, ruleId, nullptr);
+
+    if (ruleId != viewedRuleId) {
+        snapshots.publishActiveTraversalRule();
+    }
 
     compileViewedPage();
 }
@@ -176,23 +220,21 @@ void TraversalRulesWindow::makeViewedRuleActive()
 void TraversalRulesWindow::syncWithRuleState()
 {
     TraversalRuleState& state = traversalRuleState;
-    std::vector<int>    ruleOrder;
+
+    bool viewedRuleRemoved = false;
 
     state.ensureDefaultRule();
 
-    ruleOrder.reserve(static_cast<size_t>(state.rules.getNumChildren()));
-
     for (int i = 0; i < state.rules.getNumChildren(); ++i) {
-        const juce::ValueTree rule   = state.rules.getChild(i);
-        const int             ruleId = rule.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
-        const juce::String    source = rule.getProperty(ValueTreeIdentifiers::RuleSource).toString();
-        const auto            match  = filePages.find(ruleId);
+        const juce::ValueTree rule = state.rules.getChild(i);
 
-        ruleOrder.push_back(ruleId);
+        const int ruleId = rule.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+        const juce::String source = rule.getProperty(ValueTreeIdentifiers::RuleSource).toString();
+
+        const auto match = filePages.find(ruleId);
 
         if (match == filePages.end()) {
-            rulesPanel.addLabel(ruleId, rule.getProperty(ValueTreeIdentifiers::RuleName).toString());
-
             createPage(ruleId, source);
         }
         else if (match->second->getDocument().getAllContent() != source) {
@@ -203,38 +245,148 @@ void TraversalRulesWindow::syncWithRuleState()
     }
 
     for (auto page = filePages.begin(); page != filePages.end(); ) {
-        if (state.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, page->first).isValid()) {
+        const int ruleId = page->first;
+
+        if (state.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId).isValid()) {
             ++page;
 
             continue;
         }
 
         if (activePage == page->second.get()) {
-            activePage   = nullptr;
-            viewedRuleId = -1;
+            removeChildComponent(activePage);
+
+            activePage        = nullptr;
+            viewedRuleId      = -1;
+            viewedRuleRemoved = true;
         }
 
-        rulesPanel.removeLabel(page->first);
+        std::erase_if(tabBar.tabStrip.tabs, [ruleId](const ArsNovaUI::TabBar::Tab& tab) { return tab.id == ruleId; });
 
         page = filePages.erase(page);
     }
 
-    rulesPanel.labelPanel.applyOrder(ruleOrder);
+    treePanel.treeView.liveRuleId   = state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1);
+    treePanel.treeView.viewedRuleId = viewedRuleId;
 
-    if (activePage == nullptr) {
-        setActivePage(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
+    treePanel.treeView.rebuild();
+
+    if (viewedRuleRemoved && ! tabBar.tabStrip.tabs.empty()) {
+        viewRule(tabBar.tabStrip.tabs.front().id);
 
         return;
     }
 
-    resized();
+    if (viewedRuleRemoved) {
+        openRule(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
+
+        return;
+    }
+
+    if (treePanel.treeView.liveRuleId != viewedRuleId) {
+        snapshots.publishActiveTraversalRule();
+    }
+
+    refreshTabs();
 
     compileViewedPage();
 }
 
+void TraversalRulesWindow::refreshTabs()
+{
+    const int liveRuleId = traversalRuleState.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1);
+
+    for (ArsNovaUI::TabBar::Tab& tab : tabBar.tabStrip.tabs) {
+        tab.name   = traversalRuleState.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, tab.id).getProperty(ValueTreeIdentifiers::RuleName).toString();
+        tab.marked = tab.id == liveRuleId;
+    }
+
+    tabBar.tabStrip.activeTabId = viewedRuleId;
+
+    tabBar.tabStrip.resized();
+}
+
+void TraversalRulesWindow::viewRule(int ruleId)
+{
+    const auto match = filePages.find(ruleId);
+
+    if (match == filePages.end()) {
+        return;
+    }
+
+    ArsNovaUI::FilePage* page = match->second.get();
+
+    if (page != activePage) {
+        if (activePage != nullptr) {
+            removeChildComponent(activePage);
+        }
+
+        activePage    = page;
+        viewedRuleId  = ruleId;
+        viewedOutline = {};
+
+        addAndMakeVisible(page);
+
+        resized();
+    }
+
+    treePanel.treeView.viewedRuleId = ruleId;
+
+    treePanel.treeView.revealRule(ruleId);
+
+    refreshTabs();
+
+    compileViewedPage();
+}
+
+void TraversalRulesWindow::closeTab(int ruleId)
+{
+    const auto tab = std::ranges::find(tabBar.tabStrip.tabs, ruleId, &ArsNovaUI::TabBar::Tab::id);
+
+    const int index = static_cast<int>(std::distance(tabBar.tabStrip.tabs.begin(), tab));
+
+    if (tab == tabBar.tabStrip.tabs.end()) {
+        return;
+    }
+
+    tabBar.tabStrip.tabs.erase(tab);
+
+    if (ruleId != viewedRuleId) {
+        refreshTabs();
+
+        return;
+    }
+
+    if (! tabBar.tabStrip.tabs.empty()) {
+        const int lastTab = static_cast<int>(tabBar.tabStrip.tabs.size()) - 1;
+
+        const size_t nextTab = static_cast<size_t>(juce::jmin(index, lastTab));
+
+        viewRule(tabBar.tabStrip.tabs[nextTab].id);
+
+        return;
+    }
+
+    removeChildComponent(activePage);
+
+    activePage                      = nullptr;
+    viewedRuleId                    = -1;
+    viewedOutline                   = {};
+    treePanel.treeView.viewedRuleId = -1;
+
+    treePanel.treeView.rebuild();
+
+    refreshTabs();
+
+    compileViewedPage();
+
+    repaint();
+}
+
 void TraversalRulesWindow::createPage(int ruleId, const juce::String& source)
 {
-    auto                 page        = std::make_unique<ArsNovaUI::FilePage>(ArsNovaUI::CustomLookAndFeel::get(*this));
+    auto page = std::make_unique<ArsNovaUI::FilePage>(ArsNovaUI::CustomLookAndFeel::get(*this));
+
     ArsNovaUI::FilePage* createdPage = page.get();
 
     page->loadContent(source);
@@ -245,6 +397,12 @@ void TraversalRulesWindow::createPage(int ruleId, const juce::String& source)
         startTimer(compileDelayMs);
     };
 
+    page->onCaretMoved = [this, createdPage] {
+        if (createdPage == activePage) {
+            showCaretPosition();
+        }
+    };
+
     filePages.emplace(ruleId, std::move(page));
 }
 
@@ -253,26 +411,42 @@ void TraversalRulesWindow::compileViewedPage()
     if (activePage == nullptr || viewedRuleId < 0) {
         setStatus({}, false);
 
+        showCaretPosition();
+
         return;
     }
 
-    TraversalRuleState& state            = traversalRuleState;
-    const juce::String  source           = activePage->getDocument().getAllContent();
-    ScriptCompileResult result           = compileTraversalScript(source.toStdString());
-    const bool          isLiveRule       = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == viewedRuleId;
-    const juce::String  instructionCount = juce::String(static_cast<int>(result.script.instructions.size()));
+    TraversalRuleState& state = traversalRuleState;
+
+    const juce::String source = activePage->getDocument().getAllContent();
+
+    ScriptCompileResult result = compileTraversalScript(source.toStdString());
+
+    const bool isLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == viewedRuleId;
+
+    const int instructionTotal = static_cast<int>(result.script.instructions.size());
+
+    const juce::String instructionCount = juce::String(instructionTotal);
 
     state.setRuleSource(viewedRuleId, source, nullptr);
 
     activePage->errorLines.clear();
 
     for (const ScriptDiagnostic& diagnostic : result.diagnostics) {
-        activePage->errorLines.push_back(diagnostic.line - 1);
+        const int errorLineIndex = diagnostic.line - 1;
+
+        activePage->errorLines.push_back(errorLineIndex);
     }
 
     activePage->repaint();
 
-    if (!result.succeeded()) {
+    if (! result.outline.className.empty() || ! result.outline.entries.empty()) {
+        viewedOutline = result.outline;
+    }
+
+    showCaretPosition();
+
+    if (! result.succeeded()) {
         const ScriptDiagnostic& first = result.diagnostics.front();
 
         setStatus(juce::String(first.line) + ":" + juce::String(first.column) + "  " + juce::String(first.message), true);
@@ -280,7 +454,7 @@ void TraversalRulesWindow::compileViewedPage()
         return;
     }
 
-    if (!isLiveRule) {
+    if (! isLiveRule) {
         setStatus(instructionCount + " instructions - press play to make this the live rule", false);
 
         return;
@@ -289,6 +463,39 @@ void TraversalRulesWindow::compileViewedPage()
     snapshots.publishScript(std::make_shared<RTScript>(std::move(result.script)));
 
     setStatus(instructionCount + " instructions - live", false);
+}
+
+void TraversalRulesWindow::showCaretPosition()
+{
+    juce::StringArray segments = traversalRuleState.pathOf(viewedRuleId);
+
+    int entry = -1;
+
+    caretText = {};
+
+    if (activePage != nullptr) {
+        const juce::CodeDocument::Position caret = activePage->getCaretPos();
+
+        const int lineNumber   = caret.getLineNumber() + 1;
+        const int columnNumber = caret.getIndexInLine() + 1;
+
+        entry     = outlineEntryAt(lineNumber);
+        caretText = "Ln " + juce::String(lineNumber) + ", Col " + juce::String(columnNumber);
+    }
+
+    if (activePage != nullptr && ! viewedOutline.className.empty()) {
+        segments.add(juce::String(viewedOutline.className));
+    }
+
+    if (entry >= 0) {
+        segments.add(juce::String(viewedOutline.entries[static_cast<size_t>(entry)].name));
+    }
+
+    pathBar.segments = segments;
+
+    pathBar.repaint();
+
+    repaint(getLocalBounds().removeFromBottom(statusBarHeight));
 }
 
 void TraversalRulesWindow::setStatus(const juce::String& text, bool isError)
@@ -338,9 +545,14 @@ void TraversalRulesWindow::valueTreeChildRemoved(juce::ValueTree& parent, juce::
     triggerAsyncUpdate();
 }
 
+void TraversalRulesWindow::valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex)
+{
+    triggerAsyncUpdate();
+}
+
 void TraversalRulesWindow::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
 {
-    if (property == ValueTreeIdentifiers::ActiveRuleId) {
+    if (property != ValueTreeIdentifiers::RuleSource) {
         triggerAsyncUpdate();
     }
 }
@@ -348,108 +560,20 @@ void TraversalRulesWindow::valueTreePropertyChanged(juce::ValueTree& tree, const
 int TraversalRulesWindow::clampPanelWidth(int newWidth) const
 {
     const int available = getWidth() - minContentWidth;
-    const int maxWidth  = juce::jmax(RulesPanel::minPanelWidth, available);
+    const int maxWidth  = juce::jmax(minPanelWidth, available);
 
-    return juce::jlimit(RulesPanel::minPanelWidth, maxWidth, newWidth);
+    return juce::jlimit(minPanelWidth, maxWidth, newWidth);
 }
 
-TraversalRulesWindow::RulesTitlebar::RulesTitlebar()
-    : ArsNovaUI::Bar(Orientation::Horizontal, titlebarInsetRatio)
+int TraversalRulesWindow::outlineEntryAt(int line) const
 {
-    playButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
-        ArsNovaUI::ButtonState triangleState = state;
+    int found = -1;
 
-        triangleState.isSelected = false;
-
-        ArsNovaUI::CustomLookAndFeel::get(*this).drawPlayIcon(graphics, bounds, triangleState);
-    };
-
-    playButton.setTooltip("Make this the live traversal rule");
-
-    addAndMakeVisible(playButton);
-    addAndMakeVisible(undoRedoPane);
-}
-
-void TraversalRulesWindow::RulesTitlebar::resized()
-{
-    auto      bounds     = getContentBounds();
-    const int buttonSize = bounds.getHeight();
-
-    playButton.setBounds(bounds.removeFromLeft(buttonSize));
-
-    bounds.removeFromLeft(contentSpacing);
-
-    undoRedoPane.setBounds(bounds.removeFromLeft(buttonSize * 3));
-}
-
-TraversalRulesWindow::RulesPanel::RulesPanel(juce::UndoManager& undoManager)
-    : resizer   (ArsNovaUI::PanelResizer::Edge::Right),
-      labelPanel(undoManager)
-{
-    addAndMakeVisible(panelTitlebar);
-    addAndMakeVisible(labelPanel);
-    addAndMakeVisible(resizer);
-}
-
-void TraversalRulesWindow::RulesPanel::paint(juce::Graphics& graphics)
-{
-    const ArsNovaUI::Theme& theme = ArsNovaUI::CustomLookAndFeel::get(*this);
-
-    graphics.setColour(theme.windowColour);
-    graphics.fillRect(getLocalBounds());
-}
-
-void TraversalRulesWindow::RulesPanel::resized()
-{
-    auto bounds = getLocalBounds();
-
-    resizer.setBounds(bounds.removeFromRight(resizerWidth));
-    panelTitlebar.setBounds(bounds.removeFromTop(RulesTitlebar::preferredHeight));
-    labelPanel.setBounds(bounds);
-}
-
-void TraversalRulesWindow::RulesPanel::addLabel(int fileId, const juce::String& name)
-{
-    labelPanel.addFileLabel(name);
-
-    labelPanel.labels.back()->fileId = fileId;
-}
-
-void TraversalRulesWindow::RulesPanel::removeLabel(int fileId)
-{
-    for (auto& label : labelPanel.labels) {
-        if (label->fileId == fileId) {
-            labelPanel.removeFileLabel(label.get());
-
-            return;
+    for (int index = 0; index < static_cast<int>(viewedOutline.entries.size()); ++index) {
+        if (viewedOutline.entries[static_cast<size_t>(index)].line <= line) {
+            found = index;
         }
     }
-}
 
-void TraversalRulesWindow::RulesPanel::selectLabel(int fileId)
-{
-    for (auto& label : labelPanel.labels) {
-        if (label->fileId == fileId) {
-            labelPanel.setSelectedLabel(label.get());
-
-            return;
-        }
-    }
-}
-
-TraversalRulesWindow::RulesPanel::PanelTitlebar::PanelTitlebar()
-    : ArsNovaUI::Bar(Orientation::Horizontal, RulesTitlebar::titlebarInsetRatio)
-{
-    addButton.icon = &ArsNovaUI::CustomLookAndFeel::drawAddIcon;
-
-    addButton.setTooltip("Add Rule");
-
-    addAndMakeVisible(addButton);
-}
-
-void TraversalRulesWindow::RulesPanel::PanelTitlebar::resized()
-{
-    auto bounds = getContentBounds();
-
-    addButton.setBounds(bounds.removeFromLeft(bounds.getHeight()));
+    return found;
 }

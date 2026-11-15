@@ -11,8 +11,9 @@
     and the TraversalMenu and NodeMenu in the space beside the MenuBar. It draws frosted glass
     over the NodeCanvas behind them.
 
-    Clicking the traversal icon or the node icon calls togglePanel, which shows that menu and
-    hides the other, or hides it when it was already shown, and marks the icon as selected.
+    Clicking the settings icon calls onSettingsClicked. Clicking the traversal icon or the node
+    icon calls togglePanel, which shows that menu and hides the other, or hides it when it was
+    already shown, and marks the icon as selected.
     narrowestHeight is the least height that fits the icons and both menus, and the resizer's
     onWidthDragged is how PluginEditor changes the panel's width.
 
@@ -37,8 +38,12 @@ public:
 
     int narrowestHeight() const;
 
-    static constexpr float resizerWidthRatio = 0.256f;
-    static constexpr float menuBarWidthRatio = 0.896f;
+    static constexpr int menuIconCount = 3;
+
+    static constexpr float resizerWidthRatio = 0.167f;
+    static constexpr float menuBarWidthRatio = 1.0f;
+
+    std::function<void()> onSettingsClicked;
 
     ArsNovaUI::PanelResizer resizer;
 

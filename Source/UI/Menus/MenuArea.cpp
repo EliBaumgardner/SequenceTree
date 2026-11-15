@@ -12,8 +12,8 @@ MenuArea::MenuArea(NodeCanvas& nodeCanvas, TraversalMenu& traversalMenu, NodeMen
       traversalMenu(traversalMenu),
       nodeMenu     (nodeMenu)
 {
-    menuBar = std::make_unique<MenuBar>(nodeCanvas);
-
+    menuBar                        = std::make_unique<MenuBar>(nodeCanvas);
+    menuBar->settingsIcon.onClick  = [this] { onSettingsClicked(); };
     menuBar->traversalIcon.onClick = [this] { togglePanel(ActivePanel::Traversal); };
     menuBar->nodeIcon.onClick      = [this] { togglePanel(ActivePanel::Node); };
 
@@ -32,19 +32,23 @@ void MenuArea::paint(juce::Graphics& graphics)
 {
     ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
 
+    const juce::Rectangle<int> menuGlass = getLocalBounds().withRight(menuBar->getX()).withTrimmedTop(topBar.getBottom());
+
     lookAndFeel.drawFrostedGlass(graphics, *this, nodeCanvas, resizer.getBounds());
-    lookAndFeel.drawFrostedGlass(graphics, *this, nodeCanvas, getLocalBounds().withRight(menuBar->getX()).withTrimmedTop(topBar.getBottom()));
+    lookAndFeel.drawFrostedGlass(graphics, *this, nodeCanvas, menuGlass);
 }
 
 void MenuArea::resized()
 {
-    const int barHeight = ArsNovaUI::Theme::barHeight;
+    const int barHeight    = ArsNovaUI::Theme::barHeight;
+    const int resizerWidth = juce::roundToInt(barHeight * resizerWidthRatio);
+    const int menuBarWidth = juce::roundToInt(barHeight * menuBarWidthRatio);
 
     auto bounds = getLocalBounds();
 
-    resizer.setBounds(bounds.removeFromRight(juce::roundToInt(barHeight * resizerWidthRatio)));
+    resizer.setBounds(bounds.removeFromRight(resizerWidth));
 
-    auto menuColumn = bounds.removeFromRight(juce::roundToInt(barHeight * menuBarWidthRatio));
+    auto menuColumn = bounds.removeFromRight(menuBarWidth);
 
     menuBar->setBounds(menuColumn);
     topBar.setBounds(bounds.withHeight(barHeight));
@@ -57,9 +61,11 @@ int MenuArea::narrowestHeight() const
     const int barHeight    = ArsNovaUI::Theme::barHeight;
     const int menuBarWidth = juce::roundToInt(barHeight * menuBarWidthRatio);
     const int iconInset    = juce::roundToInt(menuBarWidth * MenuBar::iconInsetRatio);
-    const int iconSize     = menuBarWidth - iconInset * 2;
-    const int iconGap      = juce::roundToInt(iconSize * ArsNovaUI::Theme::iconGapRatio);
-    const int columnHeight = iconInset * 2 + iconSize * 3 + iconGap * 2;
+    const int iconWidth    = menuBarWidth - iconInset * 2;
+    const int iconHeight   = juce::roundToInt(iconWidth * ArsNovaUI::Theme::buttonAspectRatio);
+    const int iconGap      = juce::roundToInt(iconWidth * ArsNovaUI::Theme::iconGapRatio);
+    const int groupGap     = juce::roundToInt(iconWidth * MenuBar::groupGapRatio);
+    const int columnHeight = iconInset * 2 + iconHeight * menuIconCount + iconGap + groupGap;
 
     return juce::jmax(columnHeight, traversalMenu.narrowestHeight(), nodeMenu.narrowestHeight());
 }

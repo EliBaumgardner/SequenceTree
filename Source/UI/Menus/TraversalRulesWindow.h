@@ -2,29 +2,38 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include <ArsNovaUI/Bars/Bar.h>
-#include <ArsNovaUI/Buttons/ButtonPane.h>
-#include <ArsNovaUI/Buttons/IconButton.h>
 #include <ArsNovaUI/PanelResizer.h>
-#include <ArsNovaUI/LabelPanel.h>
+#include <ArsNovaUI/Bars/Bar.h>
 #include <ArsNovaUI/Editors/FilePage.h>
+#include <ArsNovaUI/Editors/LabeledEditor.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
+#include "../Rules/RulePathBar.h"
+#include "../Rules/RuleTabBar.h"
+#include "../Rules/RuleTreePanel.h"
+#include "../../Script/ScriptCompiler.h"
+
 /*
-    The window for writing traversal rule scripts. A side panel lists the rules by name and has an
-    add button, and the rest of the window is a code editor (a FilePage) for the rule that is
-    selected, with a status bar along the bottom. A rule is a script in TraversalRuleState's rules
-    tree, and one of them is the live rule that the audio thread runs.
+    The window for writing traversal rule scripts, laid out like a code editor. The side panel on
+    the left is a RuleTreePanel, the rules in their folders, where rules and folders are added,
+    renamed, moved by dragging and deleted; a PanelResizer along its inner edge sets its width.
+    Open rules are tabs in a RuleTabBar, which also holds the play, undo and redo buttons. A
+    RulePathBar under it shows the open rule's folders, its name and the function the caret is
+    in, and the rest is a code editor (a FilePage) for the open rule, with a status bar along the
+    bottom.
+    Adding, renaming, moving and deleting rules and folders go through the UndoManager it is
+    given. Typing in a page does not: the page keeps its own undo history, which the undo and
+    redo buttons act on.
 
     Typing in a page stores its text in TraversalRuleState at once and starts a 250 ms timer.
     When the timer fires, compileViewedPage compiles the text with compileTraversalScript, marks
-    the error lines, and reports either the first error or the instruction count. If the viewed
-    rule is the live one, a successful compile is published through
+    the error lines, keeps the outline, and reports either the first error or the instruction
+    count. If the viewed rule is the live one, a successful compile is published through
     AudioSnapshotPublisher::publishScript; a failed one leaves the last good script playing. The
-    play button in the title bar makes the viewed rule the live one. Removing a rule drops its
-    page, and republishes the live rule if the removed one was live. The window listens to the
-    rules tree and refreshes its pages and list when it changes from elsewhere, for example by a
-    restored patch.
+    play button, or Make live in the tree's menu, makes a rule the live one. Removing a rule drops
+    its page and tab, and republishes the live rule if the removed one was live; removing a folder
+    never removes the live rule. The window listens to the rules and folders trees and refreshes
+    its pages, tree and tabs when they change from elsewhere, for example by a restored patch.
 
     PluginEditor opens it in a pop-up window from TraversalMenu's and NodeMenu's buttons, so it
     takes the CustomLookAndFeel in its constructor and sets it on itself.
@@ -45,106 +54,79 @@ public:
 
     ~TraversalRulesWindow() override;
 
-    void paint(juce::Graphics& graphics) override;
-    void resized() override;
+    void paint            (juce::Graphics& graphics) override;
+    void paintOverChildren(juce::Graphics& graphics) override;
+    void resized () override;
 
-    void setActivePage(int id);
+    void openRule(int ruleId);
 
-    class RulesTitlebar : public ArsNovaUI::Bar
-    {
-    public:
+    static constexpr int defaultWidth      = 600;
+    static constexpr int defaultHeight     = 360;
+    static constexpr int minContentWidth   = 200;
+    static constexpr int statusBarHeight   = 18;
+    static constexpr int minPanelWidth     = 120;
+    static constexpr int defaultPanelWidth = 190;
+    static constexpr int compileDelayMs    = 250;
 
-        RulesTitlebar();
-
-        static constexpr int   preferredHeight    = 28;
-        static constexpr float titlebarInsetRatio = 0.143f;
-
-        ArsNovaUI::IconButton playButton;
-        ArsNovaUI::ButtonPane undoRedoPane;
-
-    private:
-
-        void resized() override;
-    };
-
-    static constexpr int defaultWidth  = 360;
-    static constexpr int defaultHeight = 260 + RulesTitlebar::preferredHeight;
-
-    static constexpr int minContentWidth = 80;
-    static constexpr int statusBarHeight = 18;
-
-    static constexpr int compileDelayMs = 250;
+    static constexpr float resizerWidthRatio = 0.167f;
 
 private:
 
-    void addRule             ();
-    void removeRule          (int ruleId);
-    void makeViewedRuleActive();
-    void syncWithRuleState   ();
+    void addRule     (int folderId);
+    void removeRule  (int ruleId);
+    void removeFolder(int folderId);
+    void makeRuleLive(int ruleId);
+    void syncWithRuleState ();
+    void refreshTabs ();
 
-    void createPage       (int ruleId, const juce::String& source);
-    void compileViewedPage();
-    void setStatus        (const juce::String& text, bool isError);
+    void viewRule(int ruleId);
+    void closeTab(int ruleId);
 
+    void createPage   (int ruleId, const juce::String& source);
+    void compileViewedPage ();
+    void showCaretPosition ();
+    void setStatus    (const juce::String& text, bool isError);
     void setPanelWidth(int newWidth);
 
     void timerCallback    () override;
     void handleAsyncUpdate() override;
 
-    void valueTreeChildAdded     (juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved   (juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
-    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
+    void valueTreeChildAdded       (juce::ValueTree& parent, juce::ValueTree& child) override;
+    void valueTreeChildRemoved     (juce::ValueTree& parent, juce::ValueTree& child, int childIndex) override;
+    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override;
+    void valueTreePropertyChanged  (juce::ValueTree& tree, const juce::Identifier& property) override;
 
     int clampPanelWidth(int newWidth) const;
+    int outlineEntryAt (int line) const;
 
-    class RulesPanel : public juce::Component
-    {
-    public:
+    ArsNovaUI::PanelResizer resizer;
+    juce::Component         sidePanel;
 
-        explicit RulesPanel(juce::UndoManager& undoManager);
+    ArsNovaUI::Bar          panelBar;
+    ArsNovaUI::CaptionLabel panelTitle;
 
-        void paint(juce::Graphics& graphics) override;
-        void resized() override;
+    RuleTreePanel treePanel;
 
-        void addLabel   (int fileId, const juce::String& name);
-        void removeLabel(int fileId);
-        void selectLabel(int fileId);
-
-        class PanelTitlebar : public ArsNovaUI::Bar
-        {
-        public:
-
-            PanelTitlebar();
-
-            ArsNovaUI::IconButton addButton;
-
-        private:
-
-            void resized() override;
-        };
-
-        static constexpr int resizerWidth      = 10;
-        static constexpr int minPanelWidth     = 60;
-        static constexpr int defaultPanelWidth = 120;
-
-        ArsNovaUI::PanelResizer resizer;
-        ArsNovaUI::LabelPanel   labelPanel;
-        PanelTitlebar           panelTitlebar;
-    };
-
-    RulesTitlebar titlebar;
-    RulesPanel    rulesPanel;
+    RuleTabBar  tabBar;
+    RulePathBar pathBar;
 
     TraversalRuleState&     traversalRuleState;
     AudioSnapshotPublisher& snapshots;
+    juce::UndoManager&      undoManager;
 
     std::unordered_map<int, std::unique_ptr<ArsNovaUI::FilePage>> filePages;
 
-    ArsNovaUI::FilePage* activePage   = nullptr;
-    int                  viewedRuleId = -1;
+    ArsNovaUI::FilePage* activePage = nullptr;
+
+    ScriptOutline viewedOutline;
+
+    juce::Rectangle<int> editorArea;
 
     juce::String statusText;
-    bool         statusIsError = false;
+    juce::String caretText;
 
-    int panelWidth = RulesPanel::defaultPanelWidth;
+    int viewedRuleId = -1;
+    int panelWidth   = defaultPanelWidth;
+
+    bool statusIsError = false;
 };

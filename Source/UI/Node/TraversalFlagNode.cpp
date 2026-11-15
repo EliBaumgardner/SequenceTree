@@ -24,32 +24,37 @@ TraversalFlagNode::TraversalFlagNode(juce::UndoManager& undoManager, GraphState&
     traversalNumEditor.boundValue.setValue(0);
 
     traversalNumEditor.onValueChange = [this]() {
-        const int typeId = std::abs(static_cast<int>(traversalNumEditor.boundValue.getValue()));
+        const int typedId = traversalNumEditor.boundValue.getValue();
+        const int typeId  = std::abs(typedId);
 
         if (typeId > 0) {
             this->graphState.traversals.addTraversalData(typeId, nullptr);
         }
     };
 
-    countEditor.setVisible(true);
-    switchCountEditor.setVisible(true);
+    countEditor       .setVisible(true);
+    switchCountEditor .setVisible(true);
     subLoopLimitEditor.setVisible(false);
-    nodeValueEditor.setVisible(false);
+    nodeValueEditor   .setVisible(false);
 
     addAndMakeVisible(traversalNumEditor);
 }
 
 void TraversalFlagNode::paint(juce::Graphics& graphics)
 {
-    const ArsNovaUI::Theme& theme      = ArsNovaUI::CustomLookAndFeel::get(*this);
-    const auto              bounds     = getLocalBounds().toFloat();
-    juce::Path              triangle   = buildTrianglePath();
-    float                   pulseScale = 1.0f;
-    juce::Colour            fillColour = nodeColour;
-    juce::Colour            outline    = theme.borderStrongColour;
+    const ArsNovaUI::Theme& theme = ArsNovaUI::CustomLookAndFeel::get(*this);
+
+    const auto bounds = getLocalBounds().toFloat();
+
+    juce::Path triangle = buildTrianglePath();
+
+    float pulseScale = 1.0f;
+
+    juce::Colour fillColour = nodeColour;
+    juce::Colour outline    = theme.borderStrongColour;
 
     if (isHighlighted) {
-        pulseScale = 1.0f + 0.1f * std::sin(pulsePhase * juce::MathConstants<float>::pi);
+        pulseScale = 1.0f + pulseDepth * std::sin(pulsePhase * juce::MathConstants<float>::pi);
         fillColour = nodeColour.brighter(ArsNovaUI::Theme::hoverFillBrightness);
     }
 
@@ -65,33 +70,42 @@ void TraversalFlagNode::paint(juce::Graphics& graphics)
 
     graphics.setColour(fillColour);
     graphics.fillPath(triangle);
-
     graphics.setColour(outline);
     graphics.strokePath(triangle, juce::PathStrokeType(ArsNovaUI::Theme::selectionRingWidth, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
 void TraversalFlagNode::resized()
 {
-    const auto  bounds         = getLocalBounds().toFloat();
-    const float centreX        = bounds.getCentreX();
-    const float centreY        = bounds.getCentreY();
-    const float bladeLength    = (juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f - 4.0f) * 0.7f;
-    const int   numEditorSize  = juce::roundToInt(bladeLength * 0.7f);
-    const auto  triangleBounds = buildTrianglePath().getBounds();
-    const int   editorWidth    = juce::roundToInt(bladeLength * 0.45f);
-    const int   editorHeight   = juce::roundToInt(bladeLength * 0.30f);
-    juce::Point<float> numEditorCentre(centreX + bladeLength / 3.0f, centreY);
+    const auto bounds         = getLocalBounds().toFloat();
+    const auto triangleBounds = buildTrianglePath().getBounds();
+
+    const float centreX         = bounds.getCentreX();
+    const float centreY         = bounds.getCentreY();
+    const float shortSide       = juce::jmin(bounds.getWidth(), bounds.getHeight());
+    const float bladeLength     = (shortSide * 0.5f - bladeInset) * bladeLengthRatio;
+    const float numEditorOffset = bladeLength / 3.0f;
+    const float bladeAngle      = incomingAngle + juce::MathConstants<float>::halfPi;
+
+    const int numEditorSize  = juce::roundToInt(bladeLength * 0.7f);
+    const int editorWidth    = juce::roundToInt(bladeLength * 0.45f);
+    const int editorHeight   = juce::roundToInt(bladeLength * 0.30f);
+    const int triangleRight  = juce::roundToInt(triangleBounds.getRight());
+    const int triangleTop    = juce::roundToInt(triangleBounds.getY());
+    const int triangleBottom = juce::roundToInt(triangleBounds.getBottom());
+    const int editorX        = triangleRight - editorWidth;
+    const int lowerEditorY   = triangleBottom - editorHeight;
+
+    juce::Point<float> numEditorCentre(centreX + numEditorOffset, centreY);
 
     arrowTipReach = bladeLength * 0.5f;
 
-    numEditorCentre.applyTransform(juce::AffineTransform::rotation(incomingAngle + juce::MathConstants<float>::halfPi, centreX, centreY));
+    numEditorCentre.applyTransform(juce::AffineTransform::rotation(bladeAngle, centreX, centreY));
 
-    traversalNumEditor.setBounds(juce::Rectangle<int>(0, 0, numEditorSize, numEditorSize).withCentre(numEditorCentre.roundToInt()));
+    const juce::Rectangle<int> numEditorBounds = juce::Rectangle<int>(numEditorSize, numEditorSize).withCentre(numEditorCentre.roundToInt());
 
-    countEditor.setBounds(juce::roundToInt(triangleBounds.getRight()) - editorWidth, juce::roundToInt(triangleBounds.getY()), editorWidth, editorHeight);
-
-    switchCountEditor.setBounds(juce::roundToInt(triangleBounds.getRight()) - editorWidth, juce::roundToInt(triangleBounds.getBottom()) - editorHeight,
-                                editorWidth, editorHeight);
+    traversalNumEditor.setBounds(numEditorBounds);
+    countEditor.setBounds(editorX, triangleTop, editorWidth, editorHeight);
+    switchCountEditor.setBounds(editorX, lowerEditorY, editorWidth, editorHeight);
 }
 
 void TraversalFlagNode::bindToTree()
@@ -107,6 +121,7 @@ void TraversalFlagNode::respondToClick(juce::Point<int> localPoint)
 {
     if (traversalNumEditor.getBounds().contains(localPoint)) {
         traversalNumEditor.beginEditing();
+
         return;
     }
 
@@ -116,12 +131,14 @@ void TraversalFlagNode::respondToClick(juce::Point<int> localPoint)
 void TraversalFlagNode::incomingAngleChanged()
 {
     resized();
+
     repaint();
 }
 
 bool TraversalFlagNode::hitTest(int x, int y)
 {
-    const juce::Point<int> point(x, y);
+    const juce::Point<int>   point(x, y);
+    const juce::Point<float> testPoint = point.toFloat();
 
     for (const ArsNovaUI::ValueEditor* editor : { &countEditor, &switchCountEditor, &nodeValueEditor }) {
         if (editor->isVisible() && editor->getBounds().contains(point)) {
@@ -129,30 +146,39 @@ bool TraversalFlagNode::hitTest(int x, int y)
         }
     }
 
-    return buildTrianglePath().contains(static_cast<float>(x), static_cast<float>(y));
+    return buildTrianglePath().contains(testPoint);
 }
 
 juce::Rectangle<int> TraversalFlagNode::getBoundsAt(juce::Point<int> position) const
 {
-    const int radius = ArsNovaUI::Theme::nodeRadius;
+    const int radius   = ArsNovaUI::Theme::nodeRadius;
+    const int flagSide = radius * 4;
 
-    return juce::Rectangle<int>(radius * 4, radius * 4).withCentre(position);
+    return juce::Rectangle<int>(flagSide, flagSide).withCentre(position);
 }
 
 juce::Path TraversalFlagNode::buildTrianglePath() const
 {
-    const auto  bounds         = getLocalBounds().toFloat();
+    const auto bounds = getLocalBounds().toFloat();
+
     const float centreX        = bounds.getCentreX();
     const float centreY        = bounds.getCentreY();
-    const float bladeLength    = (juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f - 4.0f) * 0.7f;
+    const float shortSide      = juce::jmin(bounds.getWidth(), bounds.getHeight());
+    const float bladeLength    = (shortSide * 0.5f - bladeInset) * bladeLengthRatio;
     const float baseHalfHeight = bladeLength * 0.5f;
-    juce::Path  triangle;
+    const float bladeAngle     = incomingAngle + juce::MathConstants<float>::halfPi;
 
-    triangle.startNewSubPath(centreX + bladeLength, centreY);
-    triangle.lineTo(centreX, centreY + baseHalfHeight);
-    triangle.lineTo(centreX, centreY - baseHalfHeight);
+    const juce::Point<float> bladeTip   { centreX + bladeLength, centreY };
+    const juce::Point<float> baseLower  { centreX, centreY + baseHalfHeight };
+    const juce::Point<float> baseUpper  { centreX, centreY - baseHalfHeight };
+
+    juce::Path triangle;
+
+    triangle.startNewSubPath(bladeTip);
+    triangle.lineTo(baseLower);
+    triangle.lineTo(baseUpper);
     triangle.closeSubPath();
-    triangle.applyTransform(juce::AffineTransform::rotation(incomingAngle + juce::MathConstants<float>::halfPi, centreX, centreY));
+    triangle.applyTransform(juce::AffineTransform::rotation(bladeAngle, centreX, centreY));
 
     return triangle;
 }

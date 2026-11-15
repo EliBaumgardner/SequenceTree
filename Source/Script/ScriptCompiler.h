@@ -13,7 +13,9 @@
     call, so nothing carries over from one compile to the next.
 
     The result is the RTScript, or a list of ScriptDiagnostics, each with a message and the line,
-    column and length of the text to mark; a failed compile leaves the script empty.
+    column and length of the text to mark; a failed compile leaves the script empty. It also
+    carries the ScriptOutline, the class name and the line of each global, member and function the
+    Parser read, which is filled whenever lexing succeeds, even when a later phase reports errors.
     defaultTraversalScriptSource is the script a new rule starts with, which plays the way the
     built-in rule does.
 
@@ -30,10 +32,31 @@ struct ScriptDiagnostic
     int         length = 1;
 };
 
+struct ScriptOutlineEntry
+{
+    enum class Kind { Global, Member, Function };
+
+    Kind kind = Kind::Member;
+
+    std::string name;
+    std::string detail;
+
+    int line = 1;
+};
+
+struct ScriptOutline
+{
+    std::string className;
+
+    std::vector<ScriptOutlineEntry> entries;
+};
+
 struct ScriptCompileResult
 {
     RTScript                      script;
     std::vector<ScriptDiagnostic> diagnostics;
+
+    ScriptOutline outline;
 
     bool succeeded() const { return diagnostics.empty(); }
 };

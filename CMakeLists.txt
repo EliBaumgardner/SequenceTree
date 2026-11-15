@@ -57,6 +57,8 @@ target_sources(SequenceTree PRIVATE
         Source/Audio/EventManager.cpp
         Source/Audio/NoteScheduler.cpp
         Source/Audio/Traversal/TraversalLogic.cpp
+        Source/Audio/Traversal/ChildSelector.cpp
+        Source/Audio/Traversal/ModulatorWalk.cpp
         Source/Audio/TraversalDispatcher.cpp
         Source/Audio/FlagScheduler.cpp
         Source/Audio/TraversalSession.cpp
@@ -91,6 +93,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Canvas/OrnamentMarks.cpp
         Source/UI/Canvas/OrnamentMarkView.cpp
         Source/UI/Canvas/EncapsulationView.cpp
+        Source/UI/Canvas/GridMultiplier.cpp
         Source/Input/OrnamentApplier.cpp
         Source/Input/Gestures/SelectionGestures.cpp
         Source/Input/Gestures/EncapsulationGestures.cpp
@@ -110,6 +113,12 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Menus/NodeMenu.cpp
         Source/UI/Menus/AllowedTraversalsMenu.cpp
         Source/UI/Menus/TraversalRulesWindow.cpp
+        Source/UI/Menus/SettingsMenu.cpp
+        Source/UI/Rules/RulePathBar.cpp
+        Source/UI/Rules/RuleReorderGestures.cpp
+        Source/UI/Rules/RuleTabBar.cpp
+        Source/UI/Rules/RuleTreePanel.cpp
+        Source/UI/Rules/RuleTreeView.cpp
         Source/UI/Menus/PatchControls.cpp
         Source/UI/Bars/Titlebar.cpp
         Source/UI/Bars/BottomBar.cpp
@@ -150,6 +159,8 @@ add_executable(SequenceTree_Tests
         Tests/Unit/TraversalTests.cpp
         Tests/Unit/ScriptCompilerTests.cpp
         Source/Audio/Traversal/TraversalLogic.cpp
+        Source/Audio/Traversal/ChildSelector.cpp
+        Source/Audio/Traversal/ModulatorWalk.cpp
         Source/Audio/Traversal/TraversalRule.cpp
         Source/Audio/Traversal/ScriptRun.cpp
         Source/Audio/Traversal/NodeStateTable.cpp

@@ -14,7 +14,8 @@ CanvasFrame::CanvasFrame(NodeCanvas& nodeCanvas, juce::Component& menuArea, juce
 void CanvasFrame::paint(juce::Graphics& graphics)
 {
     ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
-    const auto                    frame       = canvasArea.toFloat().reduced(ArsNovaUI::Theme::borderThickness * 0.5f);
+    const float                   halfBorder  = ArsNovaUI::Theme::borderThickness * 0.5f;
+    const auto                    frame       = canvasArea.toFloat().reduced(halfBorder);
     juce::Path                    surround;
 
     surround.addRectangle(getLocalBounds().toFloat());
@@ -23,9 +24,13 @@ void CanvasFrame::paint(juce::Graphics& graphics)
 
     graphics.saveState();
 
-    graphics.excludeClipRegion(menuArea.getBounds() - getPosition());
-    graphics.excludeClipRegion(titleBar.getBounds() - getPosition());
-    graphics.excludeClipRegion(bottomBar.getBounds() - getPosition());
+    const juce::Rectangle<int> menuAreaBounds  = menuArea.getBounds() - getPosition();
+    const juce::Rectangle<int> titleBarBounds  = titleBar.getBounds() - getPosition();
+    const juce::Rectangle<int> bottomBarBounds = bottomBar.getBounds() - getPosition();
+
+    graphics.excludeClipRegion(menuAreaBounds);
+    graphics.excludeClipRegion(titleBarBounds);
+    graphics.excludeClipRegion(bottomBarBounds);
     graphics.reduceClipRegion(surround);
 
     if (! graphics.isClipEmpty()) {

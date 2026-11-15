@@ -4,6 +4,7 @@
 #include <ArsNovaUI/Buttons/IconButton.h>
 #include <ArsNovaUI/Buttons/ButtonPane.h>
 #include <ArsNovaUI/Editors/LabeledEditor.h>
+#include <ArsNovaUI/Editors/ValueEditor.h>
 #include "../Buttons/PaintToolSettings.h"
 #include <ArsNovaUI/Buttons/ValueSlider.h>
 #include <ArsNovaUI/Menus/ContextMenu.h>
@@ -12,6 +13,7 @@
 
 #include "../../Util/ArrowInfo.h"
 #include "../../Util/NodeInfo.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
 
 #include <array>
 
@@ -27,8 +29,9 @@
     Right-clicking the ornament button calls onOrnamentWindowRequested, which PluginEditor answers
     by rescanning the OrnamentLibraries and opening the OrnamentWindow;
     the button shows the active ornament's symbol and name, updated when the libraries tree
-    changes. Each bind button turns its axis of GraphDocument::currentArrowInfo on or off, and its
-    right-click menu picks pitch or duration and a multiplier from 0.25x to 4x. applyDisplayMode
+    changes. Each bind button turns one axis of the arrow settings in canvasSettings, which
+    GraphDocument reads for every new arrow, on or off, and its right-click menu picks pitch or
+    duration and a multiplier from 0.25x to 4x. applyDisplayMode
     sets the paint layer when Titlebar changes the display mode.
 
     PluginEditor owns it and asks narrowestWidth for the smallest window the controls fit in.
@@ -45,7 +48,7 @@ class BottomBar : public ArsNovaUI::Bar, private juce::ValueTree::Listener
 {
 public:
 
-    BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, juce::ValueTree colourPresets, OrnamentLibraries& ornamentLibraries);
+    BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, juce::ValueTree colourPresets, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings);
 
     ~BottomBar() override;
 
@@ -74,11 +77,13 @@ private:
 
     struct BindAxis
     {
-        ArsNovaUI::IconButton*                    button;
-        ArrowInfo::Binding                        target;
-        ArrowInfo::Binding ArrowInfo::Settings::* binding;
-        double ArrowInfo::Settings::*             multiplier;
-        ArsNovaUI::ValueSlider                    multiplierSlider;
+        ArsNovaUI::IconButton* button;
+
+        ArsNovaUI::ValueSlider multiplierSlider;
+
+        juce::Identifier bindingProperty;
+        juce::Identifier multiplierProperty;
+        juce::Identifier targetProperty;
     };
 
     struct BindTarget
@@ -92,8 +97,10 @@ private:
         { "duration", ArrowInfo::Binding::DurationBind }
     }};
 
-    static constexpr float quaverButtonWidthRatio = 0.28f;
-    static constexpr float countsLabelWidthRatio  = 0.42f;
+    static constexpr float captionHeightRatio         = 0.73f;
+    static constexpr float captionKerningFactor       = 0.1f;
+    static constexpr float quaverButtonWidthRatio     = 0.34f;
+    static constexpr float ornamentGridCellsPerHeight = 5.0f;
 
     static constexpr double minimumBindMultiplier  = 0.25;
     static constexpr double maximumBindMultiplier  = 4.0;
@@ -101,24 +108,26 @@ private:
 
     static constexpr int multiplierSliderWidth = 150;
     static constexpr int paintPanelWidth       = 165;
-    static constexpr int quaverPaneWidth       = 67;
+    static constexpr int quaverPaneWidth       = 56;
 
     NodeCanvas&          nodeCanvas;
-    GraphDocument&       graphDocument;
     NotePreviewGestures& notePreviewGestures;
     OrnamentLibraries&   ornamentLibraries;
 
-    PaintToolSettings        paintPanel;
-    ArsNovaUI::ButtonPane    toolPane;
-    ArsNovaUI::ButtonPane    quaverPane;
-    ArsNovaUI::ButtonPane    bindPane;
-    ArsNovaUI::ButtonPane    ornamentPane;
-    ArsNovaUI::LabeledEditor countsField;
+    juce::ValueTree canvasSettings;
+
+    PaintToolSettings      paintPanel;
+    ArsNovaUI::ValueEditor countsField;
+
+    ArsNovaUI::ButtonPane toolPane;
+    ArsNovaUI::ButtonPane quaverPane;
+    ArsNovaUI::ButtonPane bindPane;
+    ArsNovaUI::ButtonPane ornamentPane;
 
     ArsNovaUI::IconButton* quaverTool     = nullptr;
     ArsNovaUI::IconButton* spanTool       = nullptr;
     ArsNovaUI::IconButton* ornamentButton = nullptr;
 
-    BindAxis xAxis { nullptr, ArrowInfo::Binding::DurationBind, &ArrowInfo::Settings::xBinding, &ArrowInfo::Settings::xMultiplier };
-    BindAxis yAxis { nullptr, ArrowInfo::Binding::PitchBind,    &ArrowInfo::Settings::yBinding, &ArrowInfo::Settings::yMultiplier };
+    BindAxis xAxis { nullptr, {}, ValueTreeIdentifiers::ArrowXBinding, ValueTreeIdentifiers::ArrowXMultiplier, ValueTreeIdentifiers::ArrowXTarget };
+    BindAxis yAxis { nullptr, {}, ValueTreeIdentifiers::ArrowYBinding, ValueTreeIdentifiers::ArrowYMultiplier, ValueTreeIdentifiers::ArrowYTarget };
 };

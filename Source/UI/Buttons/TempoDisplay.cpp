@@ -23,7 +23,8 @@ TempoDisplay::TempoDisplay(juce::UndoManager& undoManager)
 void TempoDisplay::paint(juce::Graphics& graphics)
 {
     ArsNovaUI::CustomLookAndFeel& lookAndFeel   = ArsNovaUI::CustomLookAndFeel::get(*this);
-    const auto                    contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio));
+    const int                     contentInset  = juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio);
+    const auto                    contentBounds = getLocalBounds().reduced(contentInset);
 
     lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
     lookAndFeel.drawMetronomeIcon(graphics, contentBounds.withWidth(contentBounds.getHeight()).toFloat(), ArsNovaUI::ButtonState {});
@@ -31,7 +32,9 @@ void TempoDisplay::paint(juce::Graphics& graphics)
 
 void TempoDisplay::resized()
 {
-    auto contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio));
+    const int contentInset = juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio);
+
+    auto contentBounds = getLocalBounds().reduced(contentInset);
 
     contentBounds.removeFromLeft(contentBounds.getHeight());
 

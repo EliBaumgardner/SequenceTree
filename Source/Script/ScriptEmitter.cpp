@@ -308,11 +308,11 @@ void Emitter::emitAssign(const Statement& statement)
     }
 
     if (statement.op == TokenKind::PlusAssign) {
-        emit(ScriptOpcode::Add, static_cast<int>(numberKind(valueType)));
+        emit(ScriptOpcode::Add, numberKind(valueType));
     }
 
     if (statement.op == TokenKind::MinusAssign) {
-        emit(ScriptOpcode::Subtract, static_cast<int>(numberKind(valueType)));
+        emit(ScriptOpcode::Subtract, numberKind(valueType));
     }
 
     if (!emitConversion(valueType, type)) {
@@ -342,7 +342,7 @@ void Emitter::emitAssignField(const Statement& statement)
 
     if (statement.op != TokenKind::Assign) {
         emit(ScriptOpcode::PushLocal, nodeSlot);
-        emit(ScriptOpcode::PushNodeField, static_cast<int>(field.field));
+        emit(ScriptOpcode::PushNodeField, field.field);
     }
 
     ValueType valueType = emitExpression(*statement.value);
@@ -352,18 +352,18 @@ void Emitter::emitAssignField(const Statement& statement)
     }
 
     if (statement.op == TokenKind::PlusAssign) {
-        emit(ScriptOpcode::Add, static_cast<int>(numberKind(valueType)));
+        emit(ScriptOpcode::Add, numberKind(valueType));
     }
 
     if (statement.op == TokenKind::MinusAssign) {
-        emit(ScriptOpcode::Subtract, static_cast<int>(numberKind(valueType)));
+        emit(ScriptOpcode::Subtract, numberKind(valueType));
     }
 
     if (!emitConversion(valueType, field.type)) {
         fail("'" + target.name + "' holds " + typeName(field.type), *statement.value);
     }
 
-    emit(ScriptOpcode::StoreNodeField, static_cast<int>(field.field));
+    emit(ScriptOpcode::StoreNodeField, field.field);
 
     --nextSlot;
 }
@@ -402,7 +402,7 @@ void Emitter::emitFor(const Statement& statement)
     const int indexSlot  = allocateSlot();
 
     if (statement.target == nullptr) {
-        emit(ScriptOpcode::PushContext, static_cast<int>(ScriptContextValue::Current));
+        emit(ScriptOpcode::PushContext, ScriptContextValue::Current);
     }
     else if (emitExpression(*statement.target) != ValueType::Node) {
         fail("only a Node has children", *statement.target);
@@ -416,7 +416,7 @@ void Emitter::emitFor(const Statement& statement)
 
     emit(ScriptOpcode::PushLocal, indexSlot);
     emit(ScriptOpcode::PushLocal, parentSlot);
-    emit(ScriptOpcode::PushNodeField, static_cast<int>(ScriptField::ChildCount));
+    emit(ScriptOpcode::PushNodeField, ScriptField::ChildCount);
     emit(ScriptOpcode::Less);
 
     const int exitJump = emit(ScriptOpcode::JumpIfFalse);
@@ -676,11 +676,13 @@ int Emitter::emitInitializer(std::span<const MemberDeclaration> declarations, st
     return functionIndex;
 }
 
-int Emitter::emit(ScriptOpcode opcode, int operand)
+template <typename Operand>
+int Emitter::emit(ScriptOpcode opcode, Operand operand)
 {
-    const int index = static_cast<int>(script.instructions.size());
+    const int index          = static_cast<int>(script.instructions.size());
+    const int encodedOperand = static_cast<int>(operand);
 
-    script.instructions.push_back({ opcode, operand });
+    script.instructions.push_back({ opcode, encodedOperand });
 
     stackDepth += stackDelta(opcode);
 
@@ -720,7 +722,7 @@ ValueType Emitter::emitExpression(const Expression& expression)
         }
 
         case ExpressionKind::Decimal: {
-            emit(ScriptOpcode::PushReal, static_cast<int>(script.constants.size()));
+            emit(ScriptOpcode::PushReal, script.constants.size());
             script.constants.push_back(expression.decimalValue);
             return ValueType::Double;
         }
@@ -767,7 +769,7 @@ ValueType Emitter::emitName(const Expression& expression)
     }
 
     if (expression.name == "current") {
-        emit(ScriptOpcode::PushContext, static_cast<int>(ScriptContextValue::Current));
+        emit(ScriptOpcode::PushContext, ScriptContextValue::Current);
         return ValueType::Node;
     }
 
@@ -799,7 +801,7 @@ ValueType Emitter::emitField(const Expression& expression)
     if (namesTraversal) {
         for (const ContextEntry& entry : traversalContextTable) {
             if (expression.name == entry.name) {
-                emit(ScriptOpcode::PushContext, static_cast<int>(entry.value));
+                emit(ScriptOpcode::PushContext, entry.value);
                 return ValueType::Int;
             }
         }
@@ -813,7 +815,7 @@ ValueType Emitter::emitField(const Expression& expression)
         fail("only a Node has properties", object);
     }
 
-    emit(ScriptOpcode::PushNodeField, static_cast<int>(field.field));
+    emit(ScriptOpcode::PushNodeField, field.field);
 
     return field.type;
 }
@@ -903,11 +905,11 @@ ValueType Emitter::emitUnary(const Expression& expression)
     }
 
     if (expression.op == TokenKind::Minus) {
-        emit(ScriptOpcode::Negate, static_cast<int>(numberKind(numberType)));
+        emit(ScriptOpcode::Negate, numberKind(numberType));
         return numberType;
     }
 
-    emit(ScriptOpcode::LogicalNot, static_cast<int>(numberKind(numberType)));
+    emit(ScriptOpcode::LogicalNot, numberKind(numberType));
 
     return ValueType::Bool;
 }
@@ -938,7 +940,7 @@ ValueType Emitter::emitBinary(const Expression& expression)
         fail("'%' works on ints; store the value in an int first", expression);
     }
 
-    emit(binaryOpcode(expression), static_cast<int>(numberKind(numberType)));
+    emit(binaryOpcode(expression), numberKind(numberType));
 
     if (producesNumber) {
         return numberType;
@@ -1018,7 +1020,7 @@ bool Emitter::emitConversion(ValueType from, ValueType to)
     }
 
     if (to != ValueType::Double) {
-        emit(ScriptOpcode::Convert, static_cast<int>(numberKind(to)));
+        emit(ScriptOpcode::Convert, numberKind(to));
     }
 
     return true;

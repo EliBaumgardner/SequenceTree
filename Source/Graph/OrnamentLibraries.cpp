@@ -19,14 +19,22 @@ OrnamentLibraries::~OrnamentLibraries()
 
 void OrnamentLibraries::setFigureNodePosition(juce::ValueTree ornament, int nodeId, juce::Point<int> position, juce::UndoManager* undoManager)
 {
-    const juce::ValueTree  figure  = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    juce::ValueTree        node    = figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId);
-    const juce::Point<int> delta   = position - juce::Point<int> { node.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition), node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition) };
-    const int              oldRow  = juce::roundToInt(static_cast<double>(node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition)) / ArrowInfo::pixelsPerGridSpace);
-    const int              newRow  = juce::roundToInt(position.y / ArrowInfo::pixelsPerGridSpace);
-    const int              shifted = static_cast<int>(node.getProperty(ValueTreeIdentifiers::OrnamentOffset))
-                                     + juce::roundToInt((oldRow - newRow) * ArrowInfo::semitonesPerGridSpace);
-    juce::ValueTree        moved   = node;
+    const juce::ValueTree figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
+
+    juce::ValueTree node  = figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId);
+    juce::ValueTree moved = node;
+
+    const int oldX          = node.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition);
+    const int oldY          = node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition);
+    const int oldOffset     = node.getProperty(ValueTreeIdentifiers::OrnamentOffset);
+    const int oldRow        = juce::roundToInt(oldY / ArrowInfo::pixelsPerGridSpace);
+    const int newRow        = juce::roundToInt(position.y / ArrowInfo::pixelsPerGridSpace);
+    const int rowShift      = juce::roundToInt((oldRow - newRow) * ArrowInfo::semitonesPerGridSpace);
+    const int shiftedOffset = oldOffset + rowShift;
+    const int clampedOffset = std::clamp(shiftedOffset, -maximumOffset, maximumOffset);
+
+    const juce::Point<int> oldPosition { oldX, oldY };
+    const juce::Point<int> delta = position - oldPosition;
 
     auto clearDurationOverride = [undoManager](juce::ValueTree arrowTree) {
         if (static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride)) != ArrowInfo::noDurationOverride) {
@@ -38,7 +46,7 @@ void OrnamentLibraries::setFigureNodePosition(juce::ValueTree ornament, int node
         return;
     }
 
-    node.setProperty(ValueTreeIdentifiers::OrnamentOffset, std::clamp(shifted, -maximumOffset, maximumOffset), undoManager);
+    node.setProperty(ValueTreeIdentifiers::OrnamentOffset, clampedOffset, undoManager);
 
     for (const juce::ValueTree& candidate : figure) {
         clearDurationOverride(candidate.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId));
@@ -47,8 +55,11 @@ void OrnamentLibraries::setFigureNodePosition(juce::ValueTree ornament, int node
     while (moved.isValid()) {
         const juce::ValueTree outgoing = moved.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getChild(0);
 
-        moved.setProperty(ArsNovaUI::CanvasIdentifiers::XPosition, static_cast<int>(moved.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition)) + delta.x, undoManager);
-        moved.setProperty(ArsNovaUI::CanvasIdentifiers::YPosition, static_cast<int>(moved.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition)) + delta.y, undoManager);
+        const juce::Point<int> movedFrom { moved.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition), moved.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition) };
+        const juce::Point<int> movedTo = movedFrom + delta;
+
+        moved.setProperty(ArsNovaUI::CanvasIdentifiers::XPosition, movedTo.x, undoManager);
+        moved.setProperty(ArsNovaUI::CanvasIdentifiers::YPosition, movedTo.y, undoManager);
 
         clearDurationOverride(outgoing);
 
@@ -231,8 +242,10 @@ void OrnamentLibraries::eraseSymbol(juce::ValueTree ornament, juce::Point<float>
             float                    leave        = 1.0f;
 
             if (length > 0.0f && gap < radius) {
-                enter = (alongCentre - std::sqrt(radius * radius - gap * gap)) / length;
-                leave = (alongCentre + std::sqrt(radius * radius - gap * gap)) / length;
+                const float halfChord = std::sqrt(radius * radius - gap * gap);
+
+                enter = (alongCentre - halfChord) / length;
+                leave = (alongCentre + halfChord) / length;
             }
 
             if (leave <= 0.0f || enter >= 1.0f) {
@@ -245,11 +258,15 @@ void OrnamentLibraries::eraseSymbol(juce::ValueTree ornament, juce::Point<float>
             }
 
             if (enter > 0.0f) {
-                erased.lineTo(current + along * enter);
+                const juce::Point<float> entryPoint = current + along * enter;
+
+                erased.lineTo(entryPoint);
             }
 
             if (leave < 1.0f) {
-                erased.startNewSubPath(current + along * juce::jmax(leave, 0.0f));
+                const juce::Point<float> exitPoint = current + along * juce::jmax(leave, 0.0f);
+
+                erased.startNewSubPath(exitPoint);
                 erased.lineTo(end);
             }
 
@@ -311,7 +328,9 @@ void OrnamentLibraries::load(const juce::File& libraryFolder)
         libraries.appendChild(library, nullptr);
     }
 
-    libraries.setProperty(ValueTreeIdentifiers::ActiveOrnamentUid, settings->getValue(ValueTreeIdentifiers::ActiveOrnamentUid.toString()), nullptr);
+    const juce::String savedActiveUid = settings->getValue(ValueTreeIdentifiers::ActiveOrnamentUid.toString());
+
+    libraries.setProperty(ValueTreeIdentifiers::ActiveOrnamentUid, savedActiveUid, nullptr);
 
     ensureActiveOrnament();
 
@@ -491,10 +510,12 @@ juce::ValueTree OrnamentLibraries::addOrnament(juce::ValueTree library, juce::Un
         library = addLibrary("My Ornaments", undoManager);
     }
 
-    ornament.setProperty(ValueTreeIdentifiers::OrnamentUid,      juce::Uuid().toString(),                                  nullptr);
-    ornament.setProperty(ValueTreeIdentifiers::OrnamentName,     "Ornament " + juce::String(library.getNumChildren() + 1), nullptr);
-    ornament.setProperty(ValueTreeIdentifiers::OrnamentSymbol,   juce::String(),                                           nullptr);
-    ornament.setProperty(ValueTreeIdentifiers::NextFigureNodeId, 1,                                                        nullptr);
+    const int ornamentNumber = library.getNumChildren() + 1;
+
+    ornament.setProperty(ValueTreeIdentifiers::OrnamentUid,      juce::Uuid().toString(),                     nullptr);
+    ornament.setProperty(ValueTreeIdentifiers::OrnamentName,     "Ornament " + juce::String(ornamentNumber), nullptr);
+    ornament.setProperty(ValueTreeIdentifiers::OrnamentSymbol,   juce::String(),                              nullptr);
+    ornament.setProperty(ValueTreeIdentifiers::NextFigureNodeId, 1,                                           nullptr);
 
     figure.setProperty(ValueTreeIdentifiers::OrnamentHostId, noHostId, nullptr);
 
@@ -519,7 +540,9 @@ juce::ValueTree OrnamentLibraries::duplicateOrnament(const juce::String& uid, ju
     duplicate.setProperty(ValueTreeIdentifiers::OrnamentUid,  juce::Uuid().toString(), nullptr);
     duplicate.setProperty(ValueTreeIdentifiers::OrnamentName, copyName,                nullptr);
 
-    library.addChild(duplicate, library.indexOf(source) + 1, undoManager);
+    const int duplicateIndex = library.indexOf(source) + 1;
+
+    library.addChild(duplicate, duplicateIndex, undoManager);
 
     return duplicate;
 }
@@ -575,7 +598,9 @@ juce::ValueTree OrnamentLibraries::addFigureNode(juce::ValueTree ornament, int p
         parent.removeChild(parent.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows), undoManager);
     }
 
-    ornament.setProperty(ValueTreeIdentifiers::NextFigureNodeId, nodeId + 1, undoManager);
+    const int nextFigureNodeId = nodeId + 1;
+
+    ornament.setProperty(ValueTreeIdentifiers::NextFigureNodeId, nextFigureNodeId, undoManager);
 
     figure.appendChild(node, undoManager);
 
@@ -605,12 +630,16 @@ std::vector<OrnamentStep> OrnamentLibraries::figureSteps(const juce::ValueTree& 
 
     for (const juce::ValueTree& candidate : figure) {
         for (const juce::ValueTree& connection : candidate.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds)) {
-            pointedAt.insert(static_cast<int>(connection.getProperty(ArsNovaUI::CanvasIdentifiers::Id)));
+            const int targetId = connection.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+            pointedAt.insert(targetId);
         }
     }
 
     for (const juce::ValueTree& candidate : figure) {
-        if (pointedAt.count(static_cast<int>(candidate.getProperty(ArsNovaUI::CanvasIdentifiers::Id))) == 0) {
+        const int candidateId = candidate.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+        if (pointedAt.count(candidateId) == 0) {
             node = candidate;
 
             break;
@@ -635,9 +664,14 @@ std::vector<OrnamentStep> OrnamentLibraries::figureSteps(const juce::ValueTree& 
         }
 
         if (next.isValid()) {
-            step.durationWeight = ArrowInfo::Settings::durationFromDelta(ArrowBindingOps::getArrowInfo(connection),
-                                                               static_cast<int>(next.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition)) - nodeX,
-                                                               static_cast<int>(next.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition)) - nodeY);
+            const int nextX  = next.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition);
+            const int nextY  = next.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition);
+            const int deltaX = nextX - nodeX;
+            const int deltaY = nextY - nodeY;
+
+            const ArrowInfo::Settings connectionInfo = ArrowBindingOps::getArrowInfo(connection);
+
+            step.durationWeight = ArrowInfo::Settings::durationFromDelta(connectionInfo, deltaX, deltaY);
 
             previousDurationWeight = step.durationWeight;
         }

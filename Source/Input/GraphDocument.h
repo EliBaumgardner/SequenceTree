@@ -5,14 +5,13 @@
 #include <ArsNovaUI/Canvas/CanvasDocument.h>
 #include <ArsNovaUI/Canvas/CanvasNode.h>
 #include "../Graph/NodeFactory.h"
-#include "../Util/ArrowInfo.h"
 
 /*
     The ArsNovaUI::CanvasDocument for the graph: each edit the canvas makes, carried out on GraphState's
-    nodeMap through GraphState and NodeFactory. It also holds the two settings that shape what
-    the user's edits create: creationMode, the kind of node a drag grows out of a node (set by
-    Titlebar), and currentArrowInfo, the ArrowInfo::Settings every new arrow and dangling arrow
-    starts with (set by BottomBar).
+    nodeMap through GraphState and NodeFactory. Two settings shape what the user's edits create:
+    creationMode, the kind of node a drag grows out of a node (set by Titlebar), and the
+    ArrowInfo::Settings every new arrow and dangling arrow starts with, read through
+    ArrowBindingOps::getArrowInfo from canvasSettings each time an arrow is made (set by BottomBar).
 
     moveNode moves a node, every node below it that is not also above it, and a group whose
     first member moves, by the same offset. growFrom grows a collapsed group's new children from
@@ -33,7 +32,7 @@ public:
 
     struct ArrowOwnership;
 
-    GraphDocument(GraphState& graphState, juce::UndoManager& undoManager);
+    GraphDocument(GraphState& graphState, juce::UndoManager& undoManager, juce::ValueTree canvasSettings);
 
     juce::ValueTree findNode    (int nodeId) const override;
     juce::ValueTree addChildNode(int parentNodeId, juce::Point<int> position, const juce::ModifierKeys& mods) override;
@@ -61,10 +60,10 @@ public:
         int childNodeId;
     };
 
-    NodeCreationMode    creationMode = NodeCreationMode::Node;
-    ArrowInfo::Settings currentArrowInfo;
+    NodeCreationMode creationMode = NodeCreationMode::Node;
 
-    GraphState& graphState;
+    GraphState&     graphState;
+    juce::ValueTree canvasSettings;
 
 private:
 

@@ -32,8 +32,11 @@ PatchControls::PatchControls(juce::AudioProcessor& processor, juce::ValueTree pa
 void PatchControls::paint(juce::Graphics& graphics)
 {
     ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
-    const float                   separatorX  = resetButton.getX() - separatorGap * 0.5f - ArsNovaUI::Theme::borderThickness * 0.5f;
-    const auto                    separator   = resetButton.getBounds().toFloat().reduced(0.0f, resetButton.getHeight() * separatorInsetRatio).withX(separatorX).withWidth(ArsNovaUI::Theme::borderThickness);
+
+    const float separatorX     = resetButton.getX() - separatorGap * 0.5f - ArsNovaUI::Theme::borderThickness * 0.5f;
+    const float separatorInset = resetButton.getHeight() * separatorInsetRatio;
+
+    const auto separator = resetButton.getBounds().toFloat().reduced(0.0f, separatorInset).withX(separatorX).withWidth(ArsNovaUI::Theme::borderThickness);
 
     lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
 
@@ -43,15 +46,19 @@ void PatchControls::paint(juce::Graphics& graphics)
 
 void PatchControls::resized()
 {
-    auto      contentBounds = getLocalBounds().reduced(juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio));
-    const int buttonWidth   = juce::roundToInt(contentBounds.getHeight() * ArsNovaUI::Theme::buttonAspectRatio);
+    const int contentInset = juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio);
+    const int nameInset    = juce::roundToInt(ArsNovaUI::Theme::fieldTextInset);
+
+    auto contentBounds = getLocalBounds().reduced(contentInset);
+
+    const int buttonWidth = juce::roundToInt(contentBounds.getHeight() * ArsNovaUI::Theme::buttonAspectRatio);
 
     resetButton.setBounds(contentBounds.removeFromRight(buttonWidth));
     contentBounds.removeFromRight(separatorGap);
 
     openButton.setBounds(contentBounds.removeFromRight(buttonWidth));
 
-    contentBounds.removeFromLeft(juce::roundToInt(ArsNovaUI::Theme::fieldTextInset));
+    contentBounds.removeFromLeft(nameInset);
 
     nameEditor.setBounds(contentBounds);
 }
@@ -71,7 +78,8 @@ void PatchControls::chooseFileToOpen()
     fileChooser = std::make_unique<juce::FileChooser>("Open patch", patchFolder, juce::String("*") + SequenceTreeAudioProcessor::patchExtension);
 
     fileChooser->launchAsync(chooserFlags, [this](const juce::FileChooser& chooser) {
-        const juce::File  chosen = chooser.getResult();
+        const juce::File chosen = chooser.getResult();
+
         juce::MemoryBlock outgoingState;
         juce::MemoryBlock incomingState;
 
@@ -85,7 +93,9 @@ void PatchControls::chooseFileToOpen()
             return;
         }
 
-        processor.setStateInformation(incomingState.getData(), static_cast<int>(incomingState.getSize()));
+        const int stateSize = static_cast<int>(incomingState.getSize());
+
+        processor.setStateInformation(incomingState.getData(), stateSize);
 
         patch.setProperty(ValueTreeIdentifiers::PatchName, chosen.getFileNameWithoutExtension(), nullptr);
         patch.setProperty(ValueTreeIdentifiers::PatchFile, chosen.getFullPathName(), nullptr);
@@ -94,9 +104,11 @@ void PatchControls::chooseFileToOpen()
 
 void PatchControls::renamePatch()
 {
-    const juce::File   current   = juce::File(patch[ValueTreeIdentifiers::PatchFile].toString());
+    const juce::File current = juce::File(patch[ValueTreeIdentifiers::PatchFile].toString());
+
     const juce::String requested = patch[ValueTreeIdentifiers::PatchName].toString();
-    juce::File         renamed   = current.getSiblingFile(requested + SequenceTreeAudioProcessor::patchExtension);
+
+    juce::File renamed = current.getSiblingFile(requested + SequenceTreeAudioProcessor::patchExtension);
 
     if (requested.isEmpty()) {
         renamed = current;

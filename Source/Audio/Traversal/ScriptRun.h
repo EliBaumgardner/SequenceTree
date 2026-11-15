@@ -36,11 +36,12 @@ struct ScriptNote
 {
     enum class Kind { Default, Played, Silent };
 
-    Kind kind     = Kind::Default;
-    int  nodeId   = -1;
-    int  pitch    = 0;
-    int  duration = 0;
-    int  velocity = 0;
+    Kind kind = Kind::Default;
+
+    int nodeId   = -1;
+    int pitch    = 0;
+    int duration = 0;
+    int velocity = 0;
 };
 
 class ScriptHost
@@ -58,7 +59,8 @@ using ScriptMembers = std::array<double, RTScript::maxMembers>;
 
 struct ScriptGlobals
 {
-    ScriptMembers   values {};
+    ScriptMembers values {};
+
     const RTScript* script = nullptr;
 };
 
@@ -71,15 +73,16 @@ struct ScriptRunContext
     ScriptMembers&  members;
 
     TraversalKey traversalKey;
-    int          randomValue = 0;
 
-    int            currentNodeId = -1;
-    NodeStateSlot  countSlot     = NodeStateSlot::Count;
-    ChildPredicate isEligible    = nullptr;
+    int randomValue   = 0;
+    int currentNodeId = -1;
+
+    NodeStateSlot  countSlot  = NodeStateSlot::Count;
+    ChildPredicate isEligible = nullptr;
 
     ScriptWrites writes = ScriptWrites::Commit;
-    ScriptHost*  host   = nullptr;
 
+    ScriptHost*    host    = nullptr;
     ScriptGlobals* globals = nullptr;
 };
 
@@ -101,7 +104,7 @@ private:
     Progress popValue         (const ScriptInstruction& instruction, int& programCounter, int& result);
     Progress pushValue        (const ScriptInstruction& instruction);
     Progress executeNodeOpcode(const ScriptInstruction& instruction);
-    Progress drawRandom       ();
+    Progress drawRandom ();
 
     int readField  (ScriptField field, int nodeId);
     int noteValue  (ScriptField field, const RTNode& node) const;
@@ -128,19 +131,29 @@ private:
 
     struct TrialWrite
     {
-        NodeStateSlot slot   = NodeStateSlot::Count;
-        int           nodeId = -1;
-        int           value  = 0;
+        NodeStateSlot slot = NodeStateSlot::Count;
+
+        int nodeId = -1;
+        int value  = 0;
     };
 
-    static constexpr int stackCapacity      = RTScript::maxStack * RTScript::maxCallDepth;
-    static constexpr int localCapacity      = RTScript::maxLocals * RTScript::maxCallDepth;
-    static constexpr int trialWriteCapacity = 64;
+    static constexpr int stackCapacity         = RTScript::maxStack * RTScript::maxCallDepth;
+    static constexpr int localCapacity         = RTScript::maxLocals * RTScript::maxCallDepth;
+    static constexpr int trialWriteCapacity    = 64;
+    static constexpr int playNoteArgumentCount = 4;
+    static constexpr int randomDiscardedBits   = 8;
+    static constexpr int xorshiftFirstShift    = 13;
+    static constexpr int xorshiftSecondShift   = 17;
+    static constexpr int xorshiftThirdShift    = 5;
+
+    static constexpr unsigned int randomSeedMultiplier = 2654435761u;
+    static constexpr unsigned int randomSeedOffset     = 2463534242u;
 
     ScriptRunContext context;
 
-    ScriptMembers  trialMembers {};
-    ScriptMembers  trialGlobals {};
+    ScriptMembers trialMembers {};
+    ScriptMembers trialGlobals {};
+
     ScriptMembers* memberValues = nullptr;
     ScriptMembers* globalValues = nullptr;
 

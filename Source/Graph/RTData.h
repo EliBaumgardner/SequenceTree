@@ -14,7 +14,7 @@
     RTNode is one node as playback sees it: its limits, notes, equipped traversals, ornament steps,
     and one RTConnection per arrow to a child, holding that arrow's duration and whether it jumps to
     another tree. NodeMap is every node of the published graph sorted by id; find looks a node up
-    by id, and firstUnlinkedRootId is the root playback starts from. RTtraversal is one traversal's
+    by id, and startRootId is the root playback starts from. RTtraversal is one traversal's
     playback settings, TraversalKey names a traversal by id and instance, OrnamentStep is one note
     of an ornament figure, and RTPreviewRequest asks the audio thread to start, stop or repeat a
     note preview.
@@ -145,7 +145,7 @@ struct NodeMap {
 
     std::vector<RTNode> sortedById;
 
-    int firstUnlinkedRootId = -1;
+    int startRootId = -1;
 
     const RTNode* find(int nodeId) const
     {

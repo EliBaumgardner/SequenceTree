@@ -15,6 +15,7 @@ RootNode::RootNode(juce::UndoManager& undoManager, GraphState& graphState)
 {
     nodeType          = NodeInfo::Type::Root;
     interiorLeftInset = loopLimitRectangleWidth;
+
     isRoot            = true;
     takesArrows       = true;
 
@@ -30,18 +31,22 @@ RootNode::RootNode(juce::UndoManager& undoManager, GraphState& graphState)
 
 void RootNode::paint(juce::Graphics& graphics)
 {
-    const auto circleBounds = getLocalBounds().toFloat()
-                            .withTrimmedLeft(static_cast<float>(loopLimitRectangleWidth));
+    const float rectangleWidth = static_cast<float>(loopLimitRectangleWidth);
 
-    ArsNovaUI::CustomLookAndFeel::get(*this).drawCircleNode(graphics, getNodeVisual(circleBounds));
+    const auto circleBounds = getLocalBounds().toFloat().withTrimmedLeft(rectangleWidth);
+
+    const ArsNovaUI::NodeVisual visual = getNodeVisual(circleBounds);
+
+    ArsNovaUI::CustomLookAndFeel::get(*this).drawCircleNode(graphics, visual);
 }
 
 void RootNode::resized()
 {
     const int rectangleHeight = getHeight() / 2;
     const int rectangleY      = (getHeight() - rectangleHeight) / 2;
+    const int rectangleWidth  = loopLimitRectangleWidth + rectangleOverlap;
 
-    rootRectangle.setBounds(0, rectangleY, loopLimitRectangleWidth + rectangleOverlap, rectangleHeight);
+    rootRectangle.setBounds(0, rectangleY, rectangleWidth, rectangleHeight);
 
     Node::resized();
 }
@@ -53,6 +58,7 @@ void RootNode::equipTraversals()
     }
 
     const std::vector<TraversalKey> keys = TraversalFlagFormat::parseKeys(rootRectangle.traversalEditor.boundValue.getValue().toString());
+
     juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
 
     for (int referenceIndex = traversalChildrenIds.getNumChildren() - 1; referenceIndex >= 0; --referenceIndex) {
@@ -90,7 +96,8 @@ void RootNode::bindToTree()
     }
 
     const juce::ValueTree traversalChildrenIds = nodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
-    juce::StringArray     equippedReferences;
+
+    juce::StringArray equippedReferences;
 
     for (int referenceIndex = 0; referenceIndex < traversalChildrenIds.getNumChildren(); ++referenceIndex) {
         const juce::ValueTree reference = traversalChildrenIds.getChild(referenceIndex);
@@ -119,19 +126,25 @@ float RootNode::getBodyExtent(juce::Point<float> approachDirection) const
 {
     static constexpr float rayAxisEpsilon = 1.0e-4f;
 
-    const juce::Rectangle<float> circle = ArsNovaUI::CustomLookAndFeel::getNodeCircleBounds(
-        getLocalBounds().toFloat().withTrimmedLeft(static_cast<float>(loopLimitRectangleWidth)));
+    const float rectangleWidth = static_cast<float>(loopLimitRectangleWidth);
 
-    const juce::Point<float>     centre    = (getNodeCentre() - getPosition()).toFloat();
-    const juce::Point<float>     toCircle  = circle.getCentre() - centre;
-    const float                  radius    = std::max(0.0f, circle.getWidth() * 0.5f);
-    const float                  along     = approachDirection.getDotProduct(toCircle);
-    const float                  clearance = along * along - toCircle.getDistanceSquaredFromOrigin() + radius * radius;
+    const juce::Rectangle<float> circleArea = getLocalBounds().toFloat().withTrimmedLeft(rectangleWidth);
+    const juce::Rectangle<float> circle     = ArsNovaUI::CustomLookAndFeel::getNodeCircleBounds(circleArea);
+
+    const juce::Point<float> centre   = (getNodeCentre() - getPosition()).toFloat();
+    const juce::Point<float> toCircle = circle.getCentre() - centre;
+
+    const float radius    = std::max(0.0f, circle.getWidth() * 0.5f);
+    const float along     = approachDirection.getDotProduct(toCircle);
+    const float clearance = along * along - toCircle.getDistanceSquaredFromOrigin() + radius * radius;
+
     const juce::Rectangle<float> rectangle = rootRectangle.getBounds().toFloat();
-    const juce::Point<float>     ray       = -approachDirection;
-    float                        circleExtent = radius;
-    float                        entry        = 0.0f;
-    float                        exit         = std::numeric_limits<float>::max();
+
+    const juce::Point<float> ray = -approachDirection;
+
+    float circleExtent = radius;
+    float entry        = 0.0f;
+    float exit         = std::numeric_limits<float>::max();
 
     if (clearance > 0.0f) {
         circleExtent = std::max(0.0f, std::sqrt(clearance) - along);
@@ -146,8 +159,11 @@ float RootNode::getBodyExtent(juce::Point<float> approachDirection) const
         const float toLeft  = (rectangle.getX()     - centre.x) / ray.x;
         const float toRight = (rectangle.getRight() - centre.x) / ray.x;
 
-        entry = std::max(entry, std::min(toLeft, toRight));
-        exit  = std::min(exit,  std::max(toLeft, toRight));
+        const float nearerSide  = std::min(toLeft, toRight);
+        const float fartherSide = std::max(toLeft, toRight);
+
+        entry = std::max(entry, nearerSide);
+        exit  = std::min(exit,  fartherSide);
     }
 
     if (std::abs(ray.y) < rayAxisEpsilon) {
@@ -159,8 +175,11 @@ float RootNode::getBodyExtent(juce::Point<float> approachDirection) const
         const float toTop    = (rectangle.getY()      - centre.y) / ray.y;
         const float toBottom = (rectangle.getBottom() - centre.y) / ray.y;
 
-        entry = std::max(entry, std::min(toTop, toBottom));
-        exit  = std::min(exit,  std::max(toTop, toBottom));
+        const float nearerSide  = std::min(toTop, toBottom);
+        const float fartherSide = std::max(toTop, toBottom);
+
+        entry = std::max(entry, nearerSide);
+        exit  = std::min(exit,  fartherSide);
     }
 
     if (exit < entry) {

@@ -36,7 +36,9 @@ void Arrow::resized()
         return;
     }
 
-    valueEditor->setBounds(juce::Rectangle<int>(0, 0, valueEditorWidth, valueEditorHeight).withCentre(getTip() - getPosition()));
+    const juce::Point<int> localTip = getTip() - getPosition();
+
+    valueEditor->setBounds(juce::Rectangle<int>(valueEditorWidth, valueEditorHeight).withCentre(localTip));
 }
 
 void Arrow::beginDurationEdit()
@@ -50,8 +52,9 @@ void Arrow::beginDurationEdit()
     auto durationFormat = std::make_unique<ArsNovaUI::NumberFormat>(0.0, ArrowInfo::maximumDurationMs);
 
     if (percentDuration) {
-        durationFormat = std::make_unique<ArsNovaUI::NumberFormat>(
-            0.0, static_cast<double>(ArrowInfo::maximumDurationPercent * ArrowInfo::millisecondsPerDurationPercent));
+        const double maximumPercentDuration = ArrowInfo::maximumDurationPercent * ArrowInfo::millisecondsPerDurationPercent;
+
+        durationFormat = std::make_unique<ArsNovaUI::NumberFormat>(0.0, maximumPercentDuration);
 
         durationFormat->displayDivisor = ArrowInfo::millisecondsPerDurationPercent;
         durationFormat->suffix         = "%";
@@ -87,7 +90,9 @@ void Arrow::startProgress(int trailId, int durationMs, int elapsedMs, juce::Colo
 
     trail.durationMs = juce::jmax(1, durationMs);
     trail.startMs    = originMs - elapsedMs;
-    trail.progress   = static_cast<float>(juce::jlimit(0.0, 1.0, elapsedMs / static_cast<double>(trail.durationMs)));
+    const double elapsedShare = elapsedMs / static_cast<double>(trail.durationMs);
+
+    trail.progress   = static_cast<float>(juce::jlimit(0.0, 1.0, elapsedShare));
     trail.colour     = colour;
     trail.active     = durationMs > 0;
     trail.oneShot    = oneShot;
@@ -138,8 +143,9 @@ void Arrow::resumeProgress()
 
 bool Arrow::advanceExtraAnimation()
 {
-    const double nowMs     = juce::Time::getMillisecondCounterHiRes();
-    bool         anyActive = false;
+    const double nowMs = juce::Time::getMillisecondCounterHiRes();
+
+    bool anyActive = false;
 
     for (auto entry = trails.begin(); entry != trails.end(); ) {
         Trail& trail = entry->second;
@@ -221,14 +227,18 @@ juce::String Arrow::getDurationLabel() const
         }
 
         if (pitchedNode != nullptr) {
-            return juce::String(static_cast<int>(pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch, NodeInfo::defaultMidiPitch)));
+            const int pitch = pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch, NodeInfo::defaultMidiPitch);
+
+            return juce::String(pitch);
         }
     }
 
     const int duration = getDuration();
 
     if (static_cast<const Node*>(startNode)->nodeType == NodeInfo::Type::Modulator) {
-        return juce::String(duration / ArrowInfo::millisecondsPerDurationPercent) + "%";
+        const int durationPercent = duration / ArrowInfo::millisecondsPerDurationPercent;
+
+        return juce::String(durationPercent) + "%";
     }
 
     return juce::String(duration);
@@ -273,7 +283,8 @@ ArsNovaUI::ArrowVisual Arrow::getArrowVisual() const
     }
 
     for (const auto& entry : trails) {
-        const Trail&          trail = entry.second;
+        const Trail& trail = entry.second;
+
         ArsNovaUI::ArrowTrail drawnTrail { trail.colour, trail.progress };
 
         if (trail.source == BridgeCommands::TrailSource::Preview) {

@@ -47,18 +47,23 @@ void OrnamentFigureController::mouseDown(const juce::MouseEvent& event)
 
 void OrnamentFigureController::switchClickMode(ClickMode mode)
 {
-    juce::Image    cursorImage(juce::Image::ARGB, hostCursorSize, hostCursorSize, true);
+    juce::Image cursorImage(juce::Image::ARGB, hostCursorSize, hostCursorSize, true);
+
     juce::Graphics cursorGraphics(cursorImage);
 
     clickMode = mode;
 
     if (mode == ClickMode::PickHost) {
+        const float ringThickness = 1.5f;
+
+        const int hotspot = hostCursorSize / 2;
+
         arrowGestures.setArrowMode(false);
 
         cursorGraphics.setColour(juce::Colours::black);
-        cursorGraphics.drawEllipse(cursorImage.getBounds().toFloat().reduced(1.0f), 1.5f);
+        cursorGraphics.drawEllipse(cursorImage.getBounds().toFloat().reduced(1.0f), ringThickness);
 
-        ornamentCanvas.setMouseCursor(juce::MouseCursor(cursorImage, hostCursorSize / 2, hostCursorSize / 2));
+        ornamentCanvas.setMouseCursor(juce::MouseCursor(cursorImage, hotspot, hotspot));
     }
     else {
         ornamentCanvas.setMouseCursor(juce::MouseCursor::NormalCursor);

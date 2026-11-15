@@ -1,10 +1,12 @@
 #include "VirtualMidiOutput.h"
 #include "../../Util/NodeInfo.h"
+#include "../../Util/ArrowInfo.h"
 #include <algorithm>
 
 VirtualMidiOutput::VirtualMidiOutput()
 {
     const juce::Array<juce::MidiDeviceInfo> existingPorts = juce::MidiInput::getAvailableDevices();
+
     juce::String portName = JucePlugin_Name;
 
     int portNumber = 2;
@@ -57,7 +59,7 @@ void VirtualMidiOutput::mirrorBlock(const juce::MidiBuffer& midiMessages, const 
         std::copy_n(metadata.data, metadata.numBytes, message.bytes.begin());
 
         message.size   = metadata.numBytes;
-        message.timeMs = blockStartMs + metadata.samplePosition * millisecondsPerSecond / sampleRate;
+        message.timeMs = blockStartMs + metadata.samplePosition * ArrowInfo::millisecondsPerSecond / sampleRate;
 
         messages.push(message);
     }
@@ -67,9 +69,8 @@ void VirtualMidiOutput::hiResTimerCallback()
 {
     messages.drain([this](const TimedMessage& message) {
         outgoing.clear();
-
         outgoing.addEvent(message.bytes.data(), message.size, 0);
 
-        port->sendBlockOfMessages(outgoing, message.timeMs, millisecondsPerSecond);
+        port->sendBlockOfMessages(outgoing, message.timeMs, ArrowInfo::millisecondsPerSecond);
     });
 }

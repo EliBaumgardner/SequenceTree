@@ -20,8 +20,9 @@
     duration again.
 
     GraphState::setNodePosition calls both after a move, and NodeFactory calls syncPitchBindings
-    when a dangling arrow is created or its tip moves. Every write goes through the caller's
-    UndoManager.
+    when a dangling arrow is created or its tip moves. GraphDocument calls getArrowInfo on the
+    processor's canvasSettings, which holds the settings every new arrow starts from under the
+    same properties. Every write goes through the caller's UndoManager.
 */
 
 class GraphState;

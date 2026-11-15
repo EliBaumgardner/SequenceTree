@@ -1,7 +1,9 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "../UI/Node/Node.h"
+#include "../UI/Canvas/GridMultiplier.h"
 #include "../Graph/ValueTreeIdentifiers.h"
+#include "../Util/ArrowInfo.h"
 #include "../Util/NodeInfo.h"
 #include <algorithm>
 #include <cmath>
@@ -21,7 +23,7 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 , valueTreeState(*this,nullptr,"STATE",createParameterLayout())
 {
     const juce::File applicationSupport = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application Support");
-    const juce::File untitledPatch      = patchFolder.getNonexistentChildFile("Untitled", patchExtension, true);
+    const juce::File untitledPatch      = claimUntitledPatch(patchFolder);
 
     traversalRuleState.ensureDefaultRule();
     snapshots.publishActiveTraversalRule();
@@ -30,6 +32,14 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 
     patch.setProperty(ValueTreeIdentifiers::PatchName, untitledPatch.getFileNameWithoutExtension(), nullptr);
     patch.setProperty(ValueTreeIdentifiers::PatchFile, untitledPatch.getFullPathName(), nullptr);
+    canvasSettings.setProperty(ValueTreeIdentifiers::GraphGridMultiplier, GridMultiplier::defaultGraphMultiplier, nullptr);
+    canvasSettings.setProperty(ValueTreeIdentifiers::OrnamentGridMultiplier, GridMultiplier::defaultOrnamentMultiplier, nullptr);
+    canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXBinding,        static_cast<int>(ArrowInfo::Binding::DurationBind), nullptr);
+    canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYBinding,        static_cast<int>(ArrowInfo::Binding::PitchBind),    nullptr);
+    canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXMultiplier,     1.0,                                                nullptr);
+    canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYMultiplier,     1.0,                                                nullptr);
+    canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXTarget,         static_cast<int>(ArrowInfo::Binding::DurationBind), nullptr);
+    canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYTarget,         static_cast<int>(ArrowInfo::Binding::PitchBind),    nullptr);
 
     ornamentLibraries.load(userFolder.getChildFile("Ornament Libraries"));
     ornamentLibraries.importLegacyLibraries(applicationSupport.getChildFile(JucePlugin_Name).getChildFile("Ornament Libraries"));
@@ -163,14 +173,17 @@ void SequenceTreeAudioProcessor::followHostTransport(const int numSamples) noexc
                     const bool syncedToHost      = hostSyncParameter.load() >= 0.5f;
 
                     if (jumped && syncedToHost) {
-                        tempoInfo.pendingRelocationSamples = std::round(juce::jmax(0.0, *hostPpq) * 60.0 / tempoInfo.hostBpm * tempoInfo.currentSampleRate);
+                        const double hostBeats   = juce::jmax(0.0, *hostPpq);
+                        const double hostSeconds = hostBeats * TempoInfo::secondsPerMinute / tempoInfo.hostBpm;
+
+                        tempoInfo.pendingRelocationSamples = std::round(hostSeconds * tempoInfo.currentSampleRate);
                     }
 
                     tempoInfo.expectedPpq       = *hostPpq;
                     tempoInfo.hostPositionKnown = true;
 
                     if (hostPlaying) {
-                        tempoInfo.expectedPpq = *hostPpq + numSamples / tempoInfo.currentSampleRate * tempoInfo.hostBpm / 60.0;
+                        tempoInfo.expectedPpq = *hostPpq + numSamples / tempoInfo.currentSampleRate * tempoInfo.hostBpm / TempoInfo::secondsPerMinute;
                     }
                 }
                 else {
@@ -343,12 +356,14 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
     }
     else {
         state = juce::ValueTree(ValueTreeIdentifiers::PluginState);
-        state.addChild(graphState.nodeMap.createCopy(),       -1, nullptr);
-        state.addChild(graphState.traversals.map.createCopy(),-1, nullptr);
-        state.addChild(traversalRuleState.rules.createCopy(), -1, nullptr);
-        state.addChild(colourPresets.createCopy(),            -1, nullptr);
-        state.addChild(valueTreeState.copyState(),            -1, nullptr);
-        state.addChild(patch.createCopy(),                    -1, nullptr);
+        state.addChild(graphState.nodeMap.createCopy(),         -1, nullptr);
+        state.addChild(graphState.traversals.map.createCopy(),  -1, nullptr);
+        state.addChild(traversalRuleState.rules.createCopy(),   -1, nullptr);
+        state.addChild(traversalRuleState.folders.createCopy(), -1, nullptr);
+        state.addChild(colourPresets.createCopy(),              -1, nullptr);
+        state.addChild(canvasSettings.createCopy(),             -1, nullptr);
+        state.addChild(valueTreeState.copyState(),              -1, nullptr);
+        state.addChild(patch.createCopy(),                      -1, nullptr);
     }
 
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
@@ -408,23 +423,50 @@ void SequenceTreeAudioProcessor::applyRestoredState()
     juce::ValueTree restoredNodeMap = restoredTree;
     juce::ValueTree restoredTraversalMap;
     juce::ValueTree restoredRules;
+    juce::ValueTree restoredFolders;
     juce::ValueTree restoredPresets;
+    juce::ValueTree restoredCanvasSettings;
     juce::ValueTree restoredPatch;
 
     if (restoredTree.getType() == ValueTreeIdentifiers::PluginState) {
-        restoredNodeMap      = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
-        restoredTraversalMap = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalMap);
-        restoredRules        = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalRules);
-        restoredPresets      = restoredTree.getChildWithName(ArsNovaUI::InterfaceIdentifiers::ColourPresets);
-        restoredPatch        = restoredTree.getChildWithName(ValueTreeIdentifiers::Patch);
+        restoredNodeMap        = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
+        restoredTraversalMap   = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalMap);
+        restoredRules          = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalRules);
+        restoredFolders        = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalRuleFolders);
+        restoredPresets        = restoredTree.getChildWithName(ArsNovaUI::InterfaceIdentifiers::ColourPresets);
+        restoredCanvasSettings = restoredTree.getChildWithName(ValueTreeIdentifiers::CanvasSettings);
+        restoredPatch          = restoredTree.getChildWithName(ValueTreeIdentifiers::Patch);
     }
 
     graphState.replaceState(restoredNodeMap, restoredTraversalMap);
 
-    traversalRuleState.replaceState(restoredRules);
+    traversalRuleState.replaceState(restoredRules, restoredFolders);
     traversalRuleState.ensureDefaultRule();
 
     colourPresets.copyPropertiesAndChildrenFrom(restoredPresets, nullptr);
+
+    if (restoredCanvasSettings.isValid()) {
+        canvasSettings.copyPropertiesFrom(restoredCanvasSettings, nullptr);
+
+        if (! canvasSettings.hasProperty(ValueTreeIdentifiers::ArrowXBinding)) {
+            canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXBinding, static_cast<int>(ArrowInfo::Binding::DurationBind), nullptr);
+        }
+        if (! canvasSettings.hasProperty(ValueTreeIdentifiers::ArrowYBinding)) {
+            canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYBinding, static_cast<int>(ArrowInfo::Binding::PitchBind), nullptr);
+        }
+        if (! canvasSettings.hasProperty(ValueTreeIdentifiers::ArrowXMultiplier)) {
+            canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, 1.0, nullptr);
+        }
+        if (! canvasSettings.hasProperty(ValueTreeIdentifiers::ArrowYMultiplier)) {
+            canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYMultiplier, 1.0, nullptr);
+        }
+        if (! canvasSettings.hasProperty(ValueTreeIdentifiers::ArrowXTarget)) {
+            canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXTarget, static_cast<int>(ArrowInfo::Binding::DurationBind), nullptr);
+        }
+        if (! canvasSettings.hasProperty(ValueTreeIdentifiers::ArrowYTarget)) {
+            canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYTarget, static_cast<int>(ArrowInfo::Binding::PitchBind), nullptr);
+        }
+    }
 
     if (restoredPatch.isValid()) {
         patch.copyPropertiesFrom(restoredPatch, nullptr);
@@ -458,7 +500,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::
                                                            })));
 
     layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { velocityParameterId, parameterVersion },
-                                                         "Velocity", 0, NodeInfo::maximumMidiVelocity, NodeInfo::maximumMidiVelocity));
+                                                         "Velocity", NodeInfo::silentMidiVelocity, NodeInfo::maximumMidiVelocity, NodeInfo::maximumMidiVelocity));
 
     layout.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID { transposeParameterId, parameterVersion },
                                                          "Transpose", NodeInfo::minimumGlobalTranspose, NodeInfo::maximumGlobalTranspose, 0));
@@ -466,6 +508,33 @@ juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::
     layout.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID { hostSyncParameterId, parameterVersion }, "Sync To Host", true));
 
     return layout;
+}
+
+juce::File SequenceTreeAudioProcessor::claimUntitledPatch(const juce::File& folder)
+{
+    static juce::StringArray claimedPatches;
+
+    static juce::CriticalSection claimedPatchesLock;
+
+    const juce::ScopedLock claimLock(claimedPatchesLock);
+
+    const juce::String untitledName = "Untitled";
+
+    juce::File untitledPatch = folder.getChildFile(untitledName).withFileExtension(patchExtension);
+
+    int untitledNumber = 1;
+
+    while (untitledPatch.exists() || claimedPatches.contains(untitledPatch.getFullPathName())) {
+        ++untitledNumber;
+
+        const juce::String numberedName = untitledName + " (" + juce::String(untitledNumber) + ")";
+
+        untitledPatch = folder.getChildFile(numberedName).withFileExtension(patchExtension);
+    }
+
+    claimedPatches.add(untitledPatch.getFullPathName());
+
+    return untitledPatch;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

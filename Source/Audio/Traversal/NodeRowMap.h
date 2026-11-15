@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 /*
@@ -42,6 +43,8 @@ public:
 private:
 
     [[nodiscard]] std::size_t findSlot(int nodeId) const noexcept;
+
+    static constexpr std::uint32_t hashMultiplier = 2654435761u;
 
     std::vector<int> keys;
     std::vector<int> rowOfKey;

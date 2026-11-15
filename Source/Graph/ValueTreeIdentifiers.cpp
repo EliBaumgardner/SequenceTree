@@ -1,10 +1,13 @@
 #include "ValueTreeIdentifiers.h"
 
-const juce::Identifier ValueTreeIdentifiers::PluginState          {"PluginState"};
-const juce::Identifier ValueTreeIdentifiers::NodeMap              {"NodeMap"};
-const juce::Identifier ValueTreeIdentifiers::Patch                {"Patch"};
-const juce::Identifier ValueTreeIdentifiers::PatchName            {"PatchName"};
-const juce::Identifier ValueTreeIdentifiers::PatchFile            {"PatchFile"};
+const juce::Identifier ValueTreeIdentifiers::PluginState            {"PluginState"};
+const juce::Identifier ValueTreeIdentifiers::NodeMap                {"NodeMap"};
+const juce::Identifier ValueTreeIdentifiers::Patch                  {"Patch"};
+const juce::Identifier ValueTreeIdentifiers::PatchName              {"PatchName"};
+const juce::Identifier ValueTreeIdentifiers::PatchFile              {"PatchFile"};
+const juce::Identifier ValueTreeIdentifiers::CanvasSettings         {"CanvasSettings"};
+const juce::Identifier ValueTreeIdentifiers::GraphGridMultiplier    {"GraphGridMultiplier"};
+const juce::Identifier ValueTreeIdentifiers::OrnamentGridMultiplier {"OrnamentGridMultiplier"};
 
 const juce::Identifier ValueTreeIdentifiers::RootNodeData         {"RootNodeData"};
 const juce::Identifier ValueTreeIdentifiers::ModulatorRootData    {"ModulatorRootData"};
@@ -30,6 +33,8 @@ const juce::Identifier ValueTreeIdentifiers::ArrowYBinding        {"ArrowYBindin
 const juce::Identifier ValueTreeIdentifiers::ArrowXMultiplier     {"ArrowXMultiplier"};
 const juce::Identifier ValueTreeIdentifiers::ArrowYMultiplier     {"ArrowYMultiplier"};
 const juce::Identifier ValueTreeIdentifiers::ArrowPitchOffset     {"ArrowPitchOffset"};
+const juce::Identifier ValueTreeIdentifiers::ArrowXTarget         {"ArrowXTarget"};
+const juce::Identifier ValueTreeIdentifiers::ArrowYTarget         {"ArrowYTarget"};
 const juce::Identifier ValueTreeIdentifiers::ArrowDuration         {"ArrowDuration"};
 const juce::Identifier ValueTreeIdentifiers::ArrowSync             {"ArrowSync"};
 
@@ -71,10 +76,17 @@ const juce::Identifier ValueTreeIdentifiers::TraversalMap         {"TraversalMap
 
 const juce::Identifier ValueTreeIdentifiers::TraversalRules       {"TraversalRules"};
 const juce::Identifier ValueTreeIdentifiers::TraversalRuleData    {"TraversalRuleData"};
+const juce::Identifier ValueTreeIdentifiers::TraversalRuleFolders {"TraversalRuleFolders"};
+const juce::Identifier ValueTreeIdentifiers::TraversalRuleFolder  {"TraversalRuleFolder"};
 
 const juce::Identifier ValueTreeIdentifiers::RuleName             {"RuleName"};
 const juce::Identifier ValueTreeIdentifiers::RuleSource           {"RuleSource"};
+const juce::Identifier ValueTreeIdentifiers::RuleFolderId         {"RuleFolderId"};
 const juce::Identifier ValueTreeIdentifiers::ActiveRuleId         {"ActiveRuleId"};
+
+const juce::Identifier ValueTreeIdentifiers::FolderId             {"FolderId"};
+const juce::Identifier ValueTreeIdentifiers::FolderName           {"FolderName"};
+const juce::Identifier ValueTreeIdentifiers::FolderParentId       {"FolderParentId"};
 
 const juce::Identifier ValueTreeIdentifiers::OrnamentLibraries    {"OrnamentLibraries"};
 const juce::Identifier ValueTreeIdentifiers::OrnamentLibrary      {"OrnamentLibrary"};

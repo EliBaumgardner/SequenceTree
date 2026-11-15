@@ -10,6 +10,7 @@
 #include "AudioCommandDrainer.h"
 #include "EncapsulationView.h"
 #include "OrnamentMarks.h"
+#include "GridMultiplier.h"
 #include "../../Util/ArrowInfo.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
@@ -18,7 +19,8 @@
     graph has. That is the active tool (none, paint, span, note preview or ornament), which only
     setActiveTool changes: it sets the cursor, tells onToolLeft which tool was left and tells
     the bar through onActiveToolChanged; the selection rectangle; and the parts AudioCommandDrainer
-    for the audio thread's commands, EncapsulationView, OrnamentMarks and ValueField.
+    for the audio thread's commands, EncapsulationView, OrnamentMarks, ValueField and the
+    GridMultiplier that spaces the grid and its snap points by the project's GraphGridMultiplier.
 
     Its hooks build the Node class each node type needs (RootNode, Modulator, TraversalFlagNode or
     Encapsulator), bind each node to its MIDI note, colour and the display mode, collapse and
@@ -47,7 +49,8 @@ public:
 
     enum class CanvasTool;
 
-    NodeCanvas(GraphDocument& graphDocument, AudioUIBridge& bridge, OrnamentLibraries& ornamentLibraries, ArsNovaUI::CustomLookAndFeel& lookAndFeel);
+    NodeCanvas(GraphDocument& graphDocument, AudioUIBridge& bridge, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings,
+               ArsNovaUI::CustomLookAndFeel& lookAndFeel);
 
     ~NodeCanvas() override;
 
@@ -98,6 +101,7 @@ public:
     static constexpr int notePreviewCursorSize = 24;
 
     static constexpr float flagProximityRadius = 28.0f;
+    static constexpr float selectionFillAlpha  = 0.15f;
 
     juce::Rectangle<int> selectionBounds;
 
@@ -106,6 +110,7 @@ public:
     AudioCommandDrainer drainer;
     EncapsulationView   encapsulationView;
     OrnamentMarks       ornamentMarks;
+    GridMultiplier      gridMultiplier;
 
 private:
 

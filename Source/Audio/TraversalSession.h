@@ -34,8 +34,8 @@ public:
 
     TraversalSession(EventManager& eventManager, EventManager& previewEventManager);
 
-    void prepare           ();
-    void clearTraversals   ();
+    void prepare ();
+    void clearTraversals ();
     void setTraversalScript(const RTScript* script);
 
     void silenceAllNotes     (juce::MidiBuffer& midiMessages);
@@ -61,8 +61,9 @@ public:
 
     CommandFifo<RTPreviewRequest, previewRequestCapacity> previewRequests;
 
-    Playback playback               = Playback::Live;
-    double   replayRemainingSamples = 0.0;
+    Playback playback = Playback::Live;
+
+    double replayRemainingSamples = 0.0;
 
 private:
 
@@ -89,9 +90,10 @@ private:
     std::vector<int> restartRootScratch;
     std::vector<int> removedRunIdScratch;
 
-    static constexpr int    replayChunkSamples      = 1024;
-    static constexpr int    replayMidiCapacityBytes = 65536;
-    static constexpr double replayShareOfBlock      = 0.25;
+    static constexpr int replayMidiCapacityBytes = 65536;
+
+    static constexpr double replayChunkSamples = 1024.0;
+    static constexpr double replayShareOfBlock = 0.25;
 
     juce::MidiBuffer replayMidi;
 

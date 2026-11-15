@@ -23,6 +23,9 @@ public:
     static const juce::Identifier Patch;
     static const juce::Identifier PatchName;
     static const juce::Identifier PatchFile;
+    static const juce::Identifier CanvasSettings;
+    static const juce::Identifier GraphGridMultiplier;
+    static const juce::Identifier OrnamentGridMultiplier;
 
     static const juce::Identifier RootNodeData;
     static const juce::Identifier NodeData;
@@ -51,6 +54,8 @@ public:
     static const juce::Identifier ArrowXMultiplier;
     static const juce::Identifier ArrowYMultiplier;
     static const juce::Identifier ArrowPitchOffset;
+    static const juce::Identifier ArrowXTarget;
+    static const juce::Identifier ArrowYTarget;
 
     static const juce::Identifier RootNodeId;
     static const juce::Identifier NodeId;
@@ -85,10 +90,17 @@ public:
 
     static const juce::Identifier TraversalRules;
     static const juce::Identifier TraversalRuleData;
+    static const juce::Identifier TraversalRuleFolders;
+    static const juce::Identifier TraversalRuleFolder;
 
     static const juce::Identifier RuleName;
     static const juce::Identifier RuleSource;
+    static const juce::Identifier RuleFolderId;
     static const juce::Identifier ActiveRuleId;
+
+    static const juce::Identifier FolderId;
+    static const juce::Identifier FolderName;
+    static const juce::Identifier FolderParentId;
 
     static const juce::Identifier TempoMultiplier;
     static const juce::Identifier TraversalColour;

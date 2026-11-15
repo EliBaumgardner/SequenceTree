@@ -31,7 +31,6 @@ enum class CommandDelivery { Deliver, Record };
     drain commands.
 */
 
-
 class AudioUIBridge
 {
 public:
@@ -60,9 +59,9 @@ private:
     void send(const BridgeCommands::ArrowCommand&     command);
     void send(const BridgeCommands::CountCommand&     command);
 
-    void highlightNode     (int nodeId,         BridgeCommands::HighlightKind kind, int runId = -1, int traversalId = -1);
-    void highlightNode     (const RTNode& node, BridgeCommands::HighlightKind kind, int runId = -1, int traversalId = -1);
-    void clearAllHighlights();
+    void highlightNode(int nodeId,         BridgeCommands::HighlightKind kind, int runId = -1, int traversalId = -1);
+    void highlightNode(const RTNode& node, BridgeCommands::HighlightKind kind, int runId = -1, int traversalId = -1);
+    void clearAllHighlights ();
 
     void pushProgress  (int parentNodeId, int childNodeId, int durationMs, int trailId, int traversalId,
                         BridgeCommands::TrailSource source, BridgeCommands::ArrowKind kind = BridgeCommands::ArrowKind::Progress);
@@ -72,11 +71,11 @@ private:
     struct RecordedArrow
     {
         BridgeCommands::ArrowCommand command;
-        double       recordedAtMs = 0.0;
+
+        double recordedAtMs = 0.0;
     };
 
     static constexpr int arrowCommandCapacity      = 1024;
-
     static constexpr int recordedHighlightCapacity = 256;
     static constexpr int recordedArrowCapacity     = 512;
     static constexpr int recordedCountCapacity     = 256;
@@ -86,7 +85,6 @@ private:
     int numRecordedCounts     = 0;
 
     double recordClockMs      = 0.0;
-
 
     CommandFifo<BridgeCommands::HighlightCommand> highlights;
     CommandFifo<BridgeCommands::ArrowCommand, arrowCommandCapacity> arrows;

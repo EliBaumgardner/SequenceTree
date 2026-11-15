@@ -19,7 +19,7 @@
 #include "../Input/Gestures/NotePreviewGestures.h"
 #include "../UI/Menus/TraversalRulesWindow.h"
 #include "../UI/Ornaments/OrnamentWindow.h"
-#include <ArsNovaUI/Menus/SettingsMenu.h>
+#include "../UI/Menus/SettingsMenu.h"
 #include <ArsNovaUI/PopupWindow.h>
 #include <ArsNovaUI/ScaledView.h>
 
@@ -37,8 +37,7 @@
     change to the Titlebar and has the canvas drain the AudioUIBridge, which is how playback is
     shown. resized lays the parts out, and configureWindowSize sets the zoom and size limits.
     keyPressed handles the window-wide keys: space toggles playback, delete, undo and redo, copy,
-    paste and select all (through nodeController's selectionGestures), and full screen in the
-    standalone app.
+    paste and select all (through nodeController's selectionGestures).
 
     It holds only views and input. The processor owns everything the sound needs, so destroying
     the editor does not affect playback.
@@ -67,19 +66,24 @@ private:
 
     void configureWindowSize();
     void updateResizeLimits ();
-    void toggleFullScreen   ();
+
     void wireCallbacks      ();
 
     juce::Component* keyListenerTarget = nullptr;
 
-    SequenceTreeAudioProcessor&            audioProcessor;
-    ArsNovaUI::CustomLookAndFeel           lookAndFeel;
-    std::unique_ptr<juce::PropertiesFile>  interfaceSettings;
-    juce::Component                        workspace;
+    SequenceTreeAudioProcessor& audioProcessor;
+
+    ArsNovaUI::CustomLookAndFeel lookAndFeel;
+
+    std::unique_ptr<juce::PropertiesFile> interfaceSettings;
+
+    juce::Component workspace;
+
     std::unique_ptr<ArsNovaUI::ScaledView> scaledView;
-    juce::TooltipWindow                    tooltipWindow { &workspace, 400 };
-    GraphDocument                          graphDocument;
-    NotePreviewGestures                    notePreviewGestures;
+
+    juce::TooltipWindow tooltipWindow { &workspace, tooltipDelayMs };
+    GraphDocument       graphDocument;
+    NotePreviewGestures notePreviewGestures;
 
     ArsNovaUI::PopupWindowLauncher traversalRulesLauncher {
         "Traversal Rules",
@@ -95,7 +99,7 @@ private:
     ArsNovaUI::PopupWindowLauncher settingsLauncher {
         "Settings",
         [this]() {
-            auto content = std::make_unique<ArsNovaUI::SettingsMenu>(lookAndFeel, *scaledView, audioProcessor.colourPresets, audioProcessor.undoManager);
+            auto content = std::make_unique<SettingsMenu>(lookAndFeel, *scaledView, audioProcessor.colourPresets, audioProcessor.canvasSettings, audioProcessor.undoManager);
 
             const juce::Point<int> size = content->narrowestSize();
 
@@ -108,7 +112,7 @@ private:
     ArsNovaUI::PopupWindowLauncher ornamentLauncher {
         "Ornaments",
         [this]() {
-            auto content = std::make_unique<OrnamentWindow>(lookAndFeel, audioProcessor.ornamentLibraries, audioProcessor.ornamentUndoManager);
+            auto content = std::make_unique<OrnamentWindow>(lookAndFeel, audioProcessor.ornamentLibraries, audioProcessor.canvasSettings, audioProcessor.ornamentUndoManager);
 
             const juce::Point<int> size = content->narrowestSize();
 
@@ -131,13 +135,21 @@ private:
     std::unique_ptr<MenuArea>               menuArea       = nullptr;
     std::unique_ptr<CanvasFrame>            canvasFrame    = nullptr;
 
-    int   menuWidth       = 0;
+    int menuWidth = 0;
+
     float menuHeightRatio = 0.25f;
 
-    static constexpr int   seedWidth         = 682;
-    static constexpr int   seedHeight        = 500;
-    static constexpr int   maximumWindowSide = 8192;
-    static constexpr float openingScale      = 2.0f;
+    const int minimumMenuWidth = juce::roundToInt(ArsNovaUI::Theme::barHeight * (MenuArea::menuBarWidthRatio + MenuArea::resizerWidthRatio));
+
+    static constexpr int seedWidth             = 682;
+    static constexpr int seedHeight            = 500;
+    static constexpr int maximumWindowSide     = 8192;
+    static constexpr int barCanvasGap          = 3;
+    static constexpr int tooltipDelayMs        = 400;
+    static constexpr int horizontalGutterCount = 3;
+    static constexpr int verticalGutterCount   = 2;
+
+    static constexpr float openingScale = 2.0f;
 
     juce::VBlankAttachment audioCommandFrames;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessorEditor)

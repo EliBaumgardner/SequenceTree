@@ -158,7 +158,9 @@ juce::ValueTree NodeFactory::createEncapsulator(GraphState& state, std::span<con
 
     encapsulatorValueTree.setProperty(ValueTreeIdentifiers::EncapsulatorLabel, encapsulatorLabel, undoManager);
 
-    state.setNodePosition(encapsulatorValueTree, state.getNodePosition(memberNodeIds.front()), undoManager);
+    const NodeInfo::Position memberPosition = state.getNodePosition(memberNodeIds.front());
+
+    state.setNodePosition(encapsulatorValueTree, memberPosition, undoManager);
 
     return encapsulatorValueTree;
 }
@@ -197,9 +199,9 @@ void NodeFactory::setDefaultNodeNote(GraphState& state, int nodeId, juce::UndoMa
 {
     NodeInfo::Note note;
 
-    note.pitch       = 60;
-    note.velocity    = 60;
-    note.duration    = 1000;
+    note.pitch       = NodeInfo::defaultMidiPitch;
+    note.velocity    = NodeInfo::defaultMidiVelocity;
+    note.duration    = NodeInfo::defaultNoteDurationMs;
     note.midiChannel = GraphState::defaultMidiChannel;
 
     state.addMidiNote(nodeId, note, undoManager);

@@ -91,7 +91,9 @@ void EncapsulationOps::insertNodeAfter(int nodeId, int siblingNodeId, juce::Undo
     juce::ValueTree memberId {ValueTreeIdentifiers::NodeId};
     memberId.setProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId, undoManager);
 
-    encapsulatedIds.addChild(memberId, encapsulatedIds.indexOf(siblingId) + 1, undoManager);
+    const int memberIndex = encapsulatedIds.indexOf(siblingId) + 1;
+
+    encapsulatedIds.addChild(memberId, memberIndex, undoManager);
 
     node.setProperty(ValueTreeIdentifiers::EncapsulatorId, encapsulatorId, undoManager);
 }
@@ -133,7 +135,9 @@ int EncapsulationOps::unusedLabel() const
         const juce::ValueTree existing = graphState.nodeMap.getChild(i);
 
         if (existing.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-            usedLabels.insert(static_cast<int>(existing.getProperty(ValueTreeIdentifiers::EncapsulatorLabel)));
+            const int usedLabel = existing.getProperty(ValueTreeIdentifiers::EncapsulatorLabel);
+
+            usedLabels.insert(usedLabel);
         }
     }
 

@@ -16,15 +16,12 @@ Titlebar::Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas
       tempoDisplay   (undoManager),
       patchControls  (processor, processor.patch, processor.patchFolder)
 {
-    settingsPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawSettingsIcon, "Settings", [this]() { onSettingsClicked(); });
-
     addAndMakeVisible(transportPane);
     addAndMakeVisible(tempoDisplay);
     addAndMakeVisible(buttonPane);
     addAndMakeVisible(displaySelector);
     addAndMakeVisible(undoRedoPane);
     addAndMakeVisible(patchControls);
-    addAndMakeVisible(settingsPane);
 
     configureTransportPane();
     configureModePane();
@@ -46,7 +43,7 @@ void Titlebar::resized()
     int transportPaneWidth = transportPane.idealWidth(bounds.getHeight());
     int undoRedoPaneWidth  = undoRedoPane.idealWidth(bounds.getHeight());
     int patchPaneWidth     = patchControls.idealWidth(bounds.getHeight());
-    int settingsPaneWidth  = settingsPane.idealWidth(bounds.getHeight());
+    int modePaneWidth      = buttonPane.idealWidth(bounds.getHeight());
     int spacing            = contentSpacing;
 
     float textHeight = ArsNovaUI::Theme::textHeight;
@@ -66,8 +63,6 @@ void Titlebar::resized()
     patchControls.setBounds(bounds.removeFromLeft(patchPaneWidth));
     bounds.removeFromLeft(spacing);
 
-    settingsPane.setBounds(bounds.removeFromRight(settingsPaneWidth));
-    bounds.removeFromRight(spacing);
 
     displaySelector.setBounds(bounds.removeFromRight(displaySelectorWidth));
     bounds.removeFromRight(spacing);
@@ -90,10 +85,11 @@ int Titlebar::narrowestWidth() const
 {
     const auto bounds = getContentBounds();
 
-    const int height = bounds.getHeight();
+    const int paneGapCount = 5;
+    const int height       = bounds.getHeight();
 
     return getWidth() - bounds.getWidth() + transportPane.idealWidth(height) + tempoDisplayWidth + undoRedoPane.idealWidth(height) + patchControls.idealWidth(height)
-           + displaySelectorWidth + modePaneWidth + settingsPane.idealWidth(height) + contentSpacing * 6;
+           + displaySelectorWidth + buttonPane.idealWidth(height) + contentSpacing * paneGapCount;
 }
 
 void Titlebar::configureTransportPane()
@@ -101,7 +97,7 @@ void Titlebar::configureTransportPane()
     playButton = &transportPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawPlayIcon, "Play / Pause",
                                           [this]() { applyPlaybackState(!processor.isPlaying.load()); });
 
-    playButton->state.look = ArsNovaUI::ButtonState::Look::Accent;
+    playButton->state.look = ArsNovaUI::ButtonState::Look::Raised;
 
     if (processor.wrapperType != juce::AudioProcessor::wrapperType_Standalone) {
         playButton->onClick = nullptr;
@@ -119,7 +115,11 @@ void Titlebar::configureTransportPane()
     }
 
     syncButton = &transportPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawLinkIcon, "Sync to host playhead",
-        [this]() { syncAttachment->setValueAsCompleteGesture(static_cast<float>(! syncButton->state.isSelected)); });
+        [this]() {
+            const float syncValue = static_cast<float>(! syncButton->state.isSelected);
+
+            syncAttachment->setValueAsCompleteGesture(syncValue);
+        });
 
     syncAttachment = std::make_unique<juce::ParameterAttachment>(
         *processor.valueTreeState.getParameter(SequenceTreeAudioProcessor::hostSyncParameterId),
@@ -136,22 +136,19 @@ void Titlebar::configureModePane()
         nodeController.arrowGestures.setArrowMode(selected == nullptr);
     };
 
-    ArsNovaUI::IconButton& nodeButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawCircleIcon, "",
+    ArsNovaUI::IconButton& nodeButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawCircleIcon, "Node",
         [this]() { graphDocument.creationMode = NodeCreationMode::Node; });
 
-    ArsNovaUI::IconButton& modulatorButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRoundedSquareIcon, "",
+    ArsNovaUI::IconButton& modulatorButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRoundedSquareIcon, "Modulator",
         [this]() { graphDocument.creationMode = NodeCreationMode::Modulator; });
 
-    ArsNovaUI::IconButton& flagButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawTriangleIcon, "",
+    ArsNovaUI::IconButton& flagButton = buttonPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawTriangleIcon, "Flag",
         [this]() { graphDocument.creationMode = NodeCreationMode::TraversalFlag; });
 
     nodeButton.state.look      = ArsNovaUI::ButtonState::Look::Raised;
     modulatorButton.state.look = ArsNovaUI::ButtonState::Look::Raised;
     flagButton.state.look      = ArsNovaUI::ButtonState::Look::Raised;
 
-    nodeButton.setText("Node");
-    modulatorButton.setText("Modulator");
-    flagButton.setText("Flag");
 
     buttonPane.setSelectedButton(&nodeButton);
 }
@@ -201,7 +198,11 @@ void Titlebar::configureTempoDisplay()
         [this](float tempoMultiplier) { tempoDisplay.editor.boundValue.setValue(tempoMultiplier); });
 
     tempoDisplay.editor.onValueChange = [this]() {
-        tempoAttachment->setValueAsCompleteGesture(static_cast<float>(static_cast<double>(tempoDisplay.editor.boundValue.getValue())));
+        const double typedTempo = tempoDisplay.editor.boundValue.getValue();
+
+        const float tempoValue = static_cast<float>(typedTempo);
+
+        tempoAttachment->setValueAsCompleteGesture(tempoValue);
     };
 
     tempoAttachment->sendInitialUpdate();

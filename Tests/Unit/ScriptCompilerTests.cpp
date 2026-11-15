@@ -462,8 +462,8 @@ TEST_CASE("variables outside the class are shared by every traversal and start a
     TraversalLogic first;
     TraversalLogic second;
 
-    first.nodeState.prepare();
-    second.nodeState.prepare();
+    first.childSelector.nodeState.prepare();
+    second.childSelector.nodeState.prepare();
 
     first.script  = &compiled.script;
     second.script = &compiled.script;
@@ -471,16 +471,16 @@ TEST_CASE("variables outside the class are shared by every traversal and start a
     first.sharedGlobals  = &globals;
     second.sharedGlobals = &globals;
 
-    CHECK(ScriptRun(first.makeScriptContext(nodes, TraversalLogic::Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1111);
-    CHECK(ScriptRun(second.makeScriptContext(nodes, TraversalLogic::Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1212);
-    CHECK(ScriptRun(first.makeScriptContext(nodes, TraversalLogic::Walk::Primary, ScriptWrites::Trial, nullptr)).call(0, {}) == 1312);
-    CHECK(ScriptRun(first.makeScriptContext(nodes, TraversalLogic::Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1312);
+    CHECK(ScriptRun(first.makeScriptContext(nodes, Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1111);
+    CHECK(ScriptRun(second.makeScriptContext(nodes, Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1212);
+    CHECK(ScriptRun(first.makeScriptContext(nodes, Walk::Primary, ScriptWrites::Trial, nullptr)).call(0, {}) == 1312);
+    CHECK(ScriptRun(first.makeScriptContext(nodes, Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1312);
 
     globals.script = nullptr;
 
     first.reset(1, {});
 
-    CHECK(ScriptRun(first.makeScriptContext(nodes, TraversalLogic::Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1111);
+    CHECK(ScriptRun(first.makeScriptContext(nodes, Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1111);
 }
 
 TEST_CASE("only variables may sit outside the class", "[script]")
@@ -673,4 +673,33 @@ TEST_CASE("core functions need their import and must exist", "[script]")
         "int value() { return core::random(50); }")).succeeded());
     CHECK_FALSE(compileTraversalScript("import core;\n" + classWith(
         "int value() { return core::random; }")).succeeded());
+}
+
+TEST_CASE("The outline lists the class, its members and its functions with their lines", "[script]")
+{
+    const ScriptCompileResult result = compileTraversalScript(defaultTraversalScriptSource());
+
+    REQUIRE(result.succeeded());
+    CHECK(result.outline.className == "Traversal");
+    REQUIRE(result.outline.entries.size() == 2);
+
+    CHECK(result.outline.entries[0].kind == ScriptOutlineEntry::Kind::Member);
+    CHECK(result.outline.entries[0].name == "selectedNode");
+    CHECK(result.outline.entries[0].detail == "Node");
+    CHECK(result.outline.entries[0].line == 11);
+
+    CHECK(result.outline.entries[1].kind == ScriptOutlineEntry::Kind::Function);
+    CHECK(result.outline.entries[1].name == "main()");
+    CHECK(result.outline.entries[1].detail == "void");
+    CHECK(result.outline.entries[1].line == 13);
+}
+
+TEST_CASE("The outline is kept when a later phase reports an error", "[script]")
+{
+    const ScriptCompileResult result = compileTraversalScript(classWith("    void main() {\n        undefinedName = 1;\n    }"));
+
+    CHECK_FALSE(result.succeeded());
+    CHECK(result.outline.className == "Traversal");
+    REQUIRE(result.outline.entries.size() == 1);
+    CHECK(result.outline.entries[0].name == "main()");
 }

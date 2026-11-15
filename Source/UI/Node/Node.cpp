@@ -60,7 +60,9 @@ Node::Node(juce::UndoManager& undoManager)
 
 void Node::paint(juce::Graphics& graphics)
 {
-    ArsNovaUI::CustomLookAndFeel::get(*this).drawCircleNode(graphics, getNodeVisual(getLocalBounds().toFloat()));
+    const ArsNovaUI::NodeVisual visual = getNodeVisual(getLocalBounds().toFloat());
+
+    ArsNovaUI::CustomLookAndFeel::get(*this).drawCircleNode(graphics, visual);
 }
 
 void Node::resized()
@@ -70,27 +72,31 @@ void Node::resized()
     auto editorArea = ArsNovaUI::CustomLookAndFeel::getNodeCircleBounds(nodeSquare.toFloat()).toNearestInt()
                           .reduced(editorAreaBoundsReduction);
 
-    const int buttonHeight = juce::jmax(2, juce::roundToInt(editorArea.getHeight() * incrementButtonHeightFactor));
-    const int editorWidth  = static_cast<int>(nodeSquare.getWidth()  * nodeEditorWidthFactor);
-    const int editorHeight = static_cast<int>(nodeSquare.getHeight() * nodeEditorHeightFactor);
+    const int minimumButtonHeight = 2;
+    const int scaledButtonHeight  = juce::roundToInt(editorArea.getHeight() * incrementButtonHeightFactor);
+    const int buttonHeight        = juce::jmax(minimumButtonHeight, scaledButtonHeight);
+    const int editorWidth         = static_cast<int>(nodeSquare.getWidth()  * nodeEditorWidthFactor);
+    const int editorHeight        = static_cast<int>(nodeSquare.getHeight() * nodeEditorHeightFactor);
+    const int rightEditorX        = nodeSquare.getRight() - editorWidth;
+    const int lowerEditorY        = nodeSquare.getBottom() - editorHeight;
 
     upButton.setBounds(editorArea.removeFromTop(buttonHeight));
     downButton.setBounds(editorArea.removeFromBottom(buttonHeight));
 
     nodeValueEditor.setBounds(editorArea);
-
-    countEditor.setBounds(nodeSquare.getRight() - editorWidth, nodeSquare.getY(), editorWidth, editorHeight);
-    switchCountEditor.setBounds(nodeSquare.getRight() - editorWidth, nodeSquare.getBottom() - editorHeight, editorWidth, editorHeight);
-    subLoopLimitEditor.setBounds(nodeSquare.getX(), nodeSquare.getBottom() - editorHeight, editorWidth, editorHeight);
+    countEditor.setBounds(rightEditorX, nodeSquare.getY(), editorWidth, editorHeight);
+    switchCountEditor.setBounds(rightEditorX, lowerEditorY, editorWidth, editorHeight);
+    subLoopLimitEditor.setBounds(nodeSquare.getX(), lowerEditorY, editorWidth, editorHeight);
 }
 
 void Node::incrementNodeValue(int incrementValue)
 {
-    const double currentValue = static_cast<double>(nodeValueEditor.boundValue.getValue());
+    const double currentValue     = nodeValueEditor.boundValue.getValue();
+    const double incrementedValue = currentValue + incrementValue;
 
     undoManager.beginNewTransaction();
 
-    nodeValueEditor.setNumericValue(currentValue + incrementValue);
+    nodeValueEditor.setNumericValue(incrementedValue);
 
     refreshValueDisplay();
 }

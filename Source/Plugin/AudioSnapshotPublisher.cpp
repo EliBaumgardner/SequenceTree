@@ -54,7 +54,9 @@ void AudioSnapshotPublisher::publishGraph(int graphId, NodeMap graphNodes)
     else {
         auto isOutsideGraph = [graphId](const RTNode& node) { return node.graphID != graphId; };
 
-        merged->sortedById.reserve(edit->globalNodes->sortedById.size() + graphNodes.sortedById.size());
+        const std::size_t mergedCapacity = edit->globalNodes->sortedById.size() + graphNodes.sortedById.size();
+
+        merged->sortedById.reserve(mergedCapacity);
 
         std::ranges::set_union(graphNodes.sortedById,
                                edit->globalNodes->sortedById | std::views::filter(isOutsideGraph),
@@ -62,7 +64,7 @@ void AudioSnapshotPublisher::publishGraph(int graphId, NodeMap graphNodes)
                                {}, &RTNode::nodeID, &RTNode::nodeID);
     }
 
-    merged->firstUnlinkedRootId = findFirstUnlinkedRootId(*merged);
+    merged->startRootId = findStartRootId(*merged);
 
     edit->globalNodes = std::move(merged);
 
@@ -109,7 +111,7 @@ void AudioSnapshotPublisher::collectRetiredSnapshots()
     std::erase_if(retiredSnapshots, isUnreachableByAudioThread);
 }
 
-int AudioSnapshotPublisher::findFirstUnlinkedRootId(const NodeMap& nodes)
+int AudioSnapshotPublisher::findStartRootId(const NodeMap& nodes)
 {
     std::vector<int> linkedRootIds;
 
@@ -129,6 +131,12 @@ int AudioSnapshotPublisher::findFirstUnlinkedRootId(const NodeMap& nodes)
 
     for (const RTNode& node : nodes.sortedById) {
         if (node.nodeID == node.graphID && !std::ranges::binary_search(linkedRootIds, node.nodeID)) {
+            return node.nodeID;
+        }
+    }
+
+    for (const RTNode& node : nodes.sortedById) {
+        if (node.nodeID == node.graphID) {
             return node.nodeID;
         }
     }

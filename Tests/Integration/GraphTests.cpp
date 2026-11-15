@@ -8,9 +8,12 @@
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
 #include "Audio/Traversal/TraversalLogic.h"
+#include "Audio/Traversal/TraversalPool.h"
+#include "Audio/Traversal/TraversalRule.h"
 #include "Script/ScriptCompiler.h"
 #include "Graph/NodeFactory.h"
 #include "Graph/OrnamentLibraries.h"
+#include "Input/GraphDocument.h"
 
 #include <memory>
 #include <cstdlib>
@@ -119,7 +122,7 @@ TEST_CASE("a child directly below its parent is a chord link and is never steppe
 
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(rootId, RTtraversal {});
     logic.begin(nodes, rootId, 0);
 
@@ -204,6 +207,79 @@ TEST_CASE("node colours and colour presets survive saving and restoring the plug
     CHECK(restored.colourPresets.getChild(0).getProperty(ArsNovaUI::InterfaceIdentifiers::PresetColour).toString() == "ff00ff00");
 }
 
+TEST_CASE("the grid multipliers survive saving and restoring the plugin state", "[graph][canvas]")
+{
+    SequenceTreeAudioProcessor original;
+    SequenceTreeAudioProcessor restored;
+    juce::MemoryBlock          savedState;
+    juce::TemporaryFile        patchFile { SequenceTreeAudioProcessor::patchExtension };
+
+    original.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
+
+    original.canvasSettings.setProperty(ValueTreeIdentifiers::GraphGridMultiplier, 3.5, nullptr);
+    original.canvasSettings.setProperty(ValueTreeIdentifiers::OrnamentGridMultiplier, 1.5, nullptr);
+
+    original.getStateInformation(savedState);
+
+    restored.setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
+
+    CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::GraphGridMultiplier)) == 3.5);
+    CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::OrnamentGridMultiplier)) == 1.5);
+}
+
+TEST_CASE("the arrow binding multipliers survive saving and restoring the plugin state", "[graph][canvas]")
+{
+    SequenceTreeAudioProcessor original;
+    SequenceTreeAudioProcessor restored;
+    juce::MemoryBlock          savedState;
+    juce::TemporaryFile        patchFile { SequenceTreeAudioProcessor::patchExtension };
+
+    original.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
+
+    original.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, 2.5, nullptr);
+    original.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYMultiplier, 0.75, nullptr);
+    original.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXBinding,    static_cast<int>(ArrowInfo::Binding::DurationBind), nullptr);
+    original.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYBinding,    static_cast<int>(ArrowInfo::Binding::PitchBind), nullptr);
+    original.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXTarget,     static_cast<int>(ArrowInfo::Binding::DurationBind), nullptr);
+    original.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYTarget,     static_cast<int>(ArrowInfo::Binding::PitchBind), nullptr);
+
+    original.getStateInformation(savedState);
+
+    restored.setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
+
+    CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowXMultiplier)) == 2.5);
+    CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowYMultiplier)) == 0.75);
+    CHECK(static_cast<int>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowXBinding)) == static_cast<int>(ArrowInfo::Binding::DurationBind));
+    CHECK(static_cast<int>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowYBinding)) == static_cast<int>(ArrowInfo::Binding::PitchBind));
+    CHECK(static_cast<int>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowXTarget)) == static_cast<int>(ArrowInfo::Binding::DurationBind));
+    CHECK(static_cast<int>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowYTarget)) == static_cast<int>(ArrowInfo::Binding::PitchBind));
+}
+
+TEST_CASE("a new arrow takes the arrow multiplier the canvas settings hold when it is made", "[graph][canvas]")
+{
+    SequenceTreeAudioProcessor processor;
+    GraphDocument              document(processor.graphState, processor.undoManager, processor.canvasSettings);
+
+    const juce::Point<int>   childPosition { 100, 0 };
+    const juce::ModifierKeys noModifiers;
+
+    processor.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, 2.5, nullptr);
+
+    const int rootId = createRoot(processor.graphState, 0, 0);
+
+    const juce::ValueTree child = document.addChildNode(rootId, childPosition, noModifiers);
+
+    REQUIRE(child.isValid());
+
+    const int             childId  = child.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    const juce::ValueTree children = processor.graphState.getNode(rootId).getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
+    const juce::ValueTree arrow    = children.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, childId);
+
+    REQUIRE(arrow.isValid());
+
+    CHECK(static_cast<double>(arrow.getProperty(ValueTreeIdentifiers::ArrowXMultiplier)) == 2.5);
+}
+
 TEST_CASE("a chain built through the graph walks in order and loops", "[graph][traversal]")
 {
     SequenceTreeAudioProcessor processor;
@@ -217,7 +293,7 @@ TEST_CASE("a chain built through the graph walks in order and loops", "[graph][t
 
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(rootId, RTtraversal {});
     logic.begin(nodes, rootId, 0);
 
@@ -254,17 +330,17 @@ TEST_CASE("a modulator chain built through the graph walks like a node chain", "
 
     TraversalLogic logic;
 
-    logic.nodeState.prepare();
+    logic.childSelector.nodeState.prepare();
     logic.reset(rootId, RTtraversal {});
     logic.mod.activate(modulatorRootId, rootId);
-    logic.advanceAlternative(nodes, modulatorRootId);
+    logic.childSelector.advanceAlternative(nodes, logic.mod.walker, Walk::Modulator, modulatorRootId);
 
     std::vector<int> visited { logic.mod.walker.target };
 
     for (int step = 0; step < 6; ++step) {
         logic.decideNextModulator(nodes);
         logic.mod.step();
-        logic.advanceAlternative(nodes, logic.mod.walker.target);
+        logic.childSelector.advanceAlternative(nodes, logic.mod.walker, Walk::Modulator, logic.mod.walker.target);
 
         visited.push_back(logic.mod.walker.target);
     }
@@ -302,7 +378,7 @@ TEST_CASE("only a note node's arrow into another tree's root is a root connectio
     CHECK_FALSE(graph.connectsToOtherTreeRoot(alternativeModulatorId, foreignRootId));
 }
 
-TEST_CASE("the published graph names its first unlinked root", "[graph]")
+TEST_CASE("the published graph starts from its first unlinked root, or its first root when every root is linked", "[graph]")
 {
     SequenceTreeAudioProcessor processor;
     GraphState& graph = processor.graphState;
@@ -314,16 +390,16 @@ TEST_CASE("the published graph names its first unlinked root", "[graph]")
 
     REQUIRE(firstRootId < secondRootId);
 
-    CHECK(rebuildAndPublish(processor).firstUnlinkedRootId == firstRootId);
+    CHECK(rebuildAndPublish(processor).startRootId == firstRootId);
 
     graph.connectNodes(firstChildId, secondRootId, nullptr);
-    CHECK(rebuildAndPublish(processor).firstUnlinkedRootId == firstRootId);
+    CHECK(rebuildAndPublish(processor).startRootId == firstRootId);
 
     graph.connectNodes(secondChildId, firstRootId, nullptr);
-    CHECK(rebuildAndPublish(processor).firstUnlinkedRootId == -1);
+    CHECK(rebuildAndPublish(processor).startRootId == firstRootId);
 
     graph.disconnectNodes(firstChildId, secondRootId, nullptr);
-    CHECK(rebuildAndPublish(processor).firstUnlinkedRootId == secondRootId);
+    CHECK(rebuildAndPublish(processor).startRootId == secondRootId);
 }
 
 TEST_CASE("moving a pitch-bound node transposes around the pitch last typed", "[graph][pitch]")
@@ -562,7 +638,7 @@ TEST_CASE("a restored graph indexes, numbers and walks like the one it was saved
 
         TraversalLogic logic;
 
-        logic.nodeState.prepare();
+        logic.childSelector.nodeState.prepare();
         logic.reset(rootId, RTtraversal {});
         logic.begin(nodes, rootId, 0);
 
@@ -804,4 +880,170 @@ TEST_CASE("an ornamented node plays its figure across its own duration, and the 
         CHECK(ornamented[index].velocity == expected[index].velocity);
         CHECK(std::abs(ornamented[index].sample - expected[index].sample) <= 1);
     }
+}
+
+TEST_CASE("Removing a rule folder removes the folders and rules inside it but keeps the live rule", "[rules]")
+{
+    TraversalRuleState state;
+
+    const int outerId = state.addFolder(0, nullptr).getProperty(ValueTreeIdentifiers::FolderId);
+    const int innerId = state.addFolder(outerId, nullptr).getProperty(ValueTreeIdentifiers::FolderId);
+    const int keptId  = state.addRule(0, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    const int liveId  = state.addRule(innerId, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    const int goneId  = state.addRule(outerId, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+    state.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, liveId, nullptr);
+
+    state.removeFolder(outerId, nullptr);
+
+    CHECK(state.folders.getNumChildren() == 0);
+    CHECK(state.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, keptId).isValid());
+    CHECK_FALSE(state.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, goneId).isValid());
+    REQUIRE(state.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, liveId).isValid());
+    CHECK(static_cast<int>(state.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, liveId).getProperty(ValueTreeIdentifiers::RuleFolderId)) == 0);
+}
+
+TEST_CASE("Moving rules and folders keeps their order and never puts a folder inside itself", "[rules]")
+{
+    TraversalRuleState state;
+
+    const int folderId = state.addFolder(0, nullptr).getProperty(ValueTreeIdentifiers::FolderId);
+    const int childId  = state.addFolder(folderId, nullptr).getProperty(ValueTreeIdentifiers::FolderId);
+    const int firstId  = state.addRule(0, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    const int movedId  = state.addRule(0, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+    state.addRule(0, nullptr);
+
+    state.moveRule(movedId, folderId, firstId, nullptr);
+
+    CHECK(static_cast<int>(state.rules.getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id)) == movedId);
+    CHECK(static_cast<int>(state.rules.getChild(0).getProperty(ValueTreeIdentifiers::RuleFolderId)) == folderId);
+
+    state.moveRule(movedId, 0, -1, nullptr);
+
+    CHECK(static_cast<int>(state.rules.getChild(2).getProperty(ArsNovaUI::CanvasIdentifiers::Id)) == movedId);
+    CHECK(static_cast<int>(state.rules.getChild(2).getProperty(ValueTreeIdentifiers::RuleFolderId)) == 0);
+
+    state.moveFolder(folderId, childId, -1, nullptr);
+
+    CHECK(static_cast<int>(state.folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, folderId).getProperty(ValueTreeIdentifiers::FolderParentId)) == 0);
+    CHECK(state.isInsideFolder(childId, folderId));
+    CHECK_FALSE(state.isInsideFolder(folderId, childId));
+    CHECK_FALSE(state.isInsideFolder(0, folderId));
+}
+
+TEST_CASE("A rule's folder, its path and a folder's rule count follow the folders, and a missing folder counts as the top level", "[rules]")
+{
+    TraversalRuleState state;
+
+    const int outerId  = state.addFolder(0, nullptr).getProperty(ValueTreeIdentifiers::FolderId);
+    const int innerId  = state.addFolder(outerId, nullptr).getProperty(ValueTreeIdentifiers::FolderId);
+    const int nestedId = state.addRule(innerId, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    const int strayId  = state.addRule(99, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+    state.addRule(outerId, nullptr);
+
+    state.setFolderName(outerId, "outer", nullptr);
+    state.setFolderName(innerId, "inner", nullptr);
+
+    state.setRuleName(nestedId, "nested", nullptr);
+
+    CHECK(state.folderOfRule(nestedId) == innerId);
+    CHECK(state.folderOfRule(strayId) == 0);
+    CHECK(state.parentOfFolder(innerId) == outerId);
+    CHECK(state.parentOfFolder(outerId) == 0);
+    CHECK(state.countRulesInside(outerId) == 2);
+    CHECK(state.countRulesInside(innerId) == 1);
+    CHECK(state.pathOf(nestedId) == juce::StringArray { "outer", "inner", "nested" });
+    CHECK(state.pathOf(strayId).size() == 1);
+}
+
+TEST_CASE("Rule folders are saved with the plugin state and restored", "[rules]")
+{
+    SequenceTreeAudioProcessor original;
+    SequenceTreeAudioProcessor restored;
+    juce::MemoryBlock          savedState;
+
+    const int folderId = original.traversalRuleState.addFolder(0, nullptr).getProperty(ValueTreeIdentifiers::FolderId);
+    const int ruleId   = original.traversalRuleState.addRule(folderId, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+    original.traversalRuleState.setFolderName(folderId, "Walks", nullptr);
+
+    original.getStateInformation(savedState);
+
+    restored.setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
+
+    REQUIRE(restored.traversalRuleState.folders.getNumChildren() == 1);
+    CHECK(restored.traversalRuleState.folders.getChild(0).getProperty(ValueTreeIdentifiers::FolderName).toString() == "Walks");
+    CHECK(static_cast<int>(restored.traversalRuleState.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId).getProperty(ValueTreeIdentifiers::RuleFolderId)) == folderId);
+    CHECK(static_cast<int>(restored.traversalRuleState.addFolder(0, nullptr).getProperty(ValueTreeIdentifiers::FolderId)) == folderId + 1);
+}
+
+TEST_CASE("an orphaned note restarts its own walk, not the walk of the note swapped into its place", "[audio]")
+{
+    constexpr int childOffset   = 100;
+    constexpr int deletedNodeId = 999;
+    constexpr int orphanedRunId = 1;
+    constexpr int keptRunId     = 2;
+    constexpr int poolCapacity  = 4;
+    constexpr int blockSize     = 512;
+
+    constexpr double sampleRate        = 48000.0;
+    constexpr double noteLengthSamples = 1.0e9;
+
+    SequenceTreeAudioProcessor processor;
+
+    GraphState&   graph        = processor.graphState;
+    EventManager& eventManager = processor.eventManager;
+
+    TraversalPool pool;
+
+    juce::MidiBuffer midi;
+
+    NoteScheduler::ActiveNote orphanedNote;
+    NoteScheduler::ActiveNote keptNote;
+
+    const int rootId  = createRoot(graph, 0, 0);
+    const int childId = createChild(graph, rootId, childOffset, 0);
+
+    const NodeMap& nodes = rebuildAndPublish(processor);
+
+    const RTNode* const rootNode = nodes.find(rootId);
+
+    const DispatchContext context { nodes, pool, midi, sampleRate };
+
+    REQUIRE(rootNode != nullptr);
+    REQUIRE(!rootNode->traversals.empty());
+
+    processor.prepareToPlay(sampleRate, blockSize);
+
+    pool.prepare(poolCapacity, NativeTraversalRule::instance());
+
+    TraversalPool::Instance* const orphanedWalk = pool.acquire(orphanedRunId, rootId, rootNode->traversals.front());
+    TraversalPool::Instance* const keptWalk     = pool.acquire(keptRunId, rootId, rootNode->traversals.front());
+
+    REQUIRE(orphanedWalk != nullptr);
+    REQUIRE(keptWalk != nullptr);
+
+    orphanedWalk->logic.primary.target = deletedNodeId;
+    orphanedWalk->logic.state          = TraversalLogic::TraversalState::Active;
+
+    keptWalk->logic.primary.target = childId;
+    keptWalk->logic.state          = TraversalLogic::TraversalState::Active;
+
+    orphanedNote.runId            = orphanedRunId;
+    orphanedNote.nodeId           = deletedNodeId;
+    orphanedNote.remainingSamples = noteLengthSamples;
+
+    keptNote.runId            = keptRunId;
+    keptNote.nodeId           = childId;
+    keptNote.remainingSamples = noteLengthSamples;
+
+    eventManager.scheduler.activeNotes.push_back(orphanedNote);
+    eventManager.scheduler.activeNotes.push_back(keptNote);
+
+    eventManager.processEvents(blockSize, context);
+
+    CHECK(orphanedWalk->logic.primary.target != deletedNodeId);
+    CHECK(keptWalk->logic.primary.target == childId);
 }

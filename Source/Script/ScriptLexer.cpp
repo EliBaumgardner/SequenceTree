@@ -1,4 +1,5 @@
 #include "ScriptLexer.h"
+#include <limits>
 
 #include <cctype>
 #include <cstdlib>
@@ -9,6 +10,8 @@ std::vector<Token> Lexer::run()
 
     while (position < source.size()) {
         const char current = source[position];
+
+        const unsigned char currentByte = static_cast<unsigned char>(current);
 
         if (current == ' ' || current == '\t' || current == '\r' || current == '\n') {
             advance();
@@ -30,12 +33,12 @@ std::vector<Token> Lexer::run()
             continue;
         }
 
-        if (std::isdigit(static_cast<unsigned char>(current)) != 0) {
+        if (std::isdigit(currentByte) != 0) {
             tokens.push_back(readNumber());
             continue;
         }
 
-        if (std::isalpha(static_cast<unsigned char>(current)) != 0 || current == '_') {
+        if (std::isalpha(currentByte) != 0 || current == '_') {
             tokens.push_back(readIdentifier());
             continue;
         }
@@ -82,17 +85,21 @@ char Lexer::peek(std::size_t offset) const
 
 Token Lexer::readNumber()
 {
+    constexpr int decimalBase = 10;
+
+    constexpr long long largestInt = std::numeric_limits<int>::max();
+
     Token token = makeToken(TokenKind::Number, 0);
 
     long long accumulated = 0;
     bool      overflowed  = false;
 
     while (position < source.size() && std::isdigit(static_cast<unsigned char>(source[position])) != 0) {
-        accumulated = accumulated * 10 + (source[position] - '0');
+        accumulated = accumulated * decimalBase + (source[position] - '0');
 
-        if (accumulated > 2147483647LL) {
+        if (accumulated > largestInt) {
             overflowed  = true;
-            accumulated = 2147483647LL;
+            accumulated = largestInt;
         }
 
         token.text.push_back(source[position]);

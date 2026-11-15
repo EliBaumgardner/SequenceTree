@@ -29,13 +29,17 @@ using ChildPredicate = bool (*)(NodeInfo::Kind);
 
 struct RuleContext
 {
-    const NodeMap&        nodes;
-    const RTNode&         parent;
-    int                   parentCount;
-    TraversalKey          traversalKey;
-    ChildPredicate        isEligible;
+    const NodeMap& nodes;
+    const RTNode&  parent;
+
+    int parentCount;
+
+    TraversalKey   traversalKey;
+    ChildPredicate isEligible;
+
     const NodeStateTable& nodeState;
-    int                   randomValue;
+
+    int randomValue;
 
     bool allowTreeJumpChildren = false;
 
@@ -57,5 +61,5 @@ class NativeTraversalRule : public TraversalRule
 public:
 
     int selectChild(const RuleContext& context) const override;
-    static const NativeTraversalRule& instance();
+    static const NativeTraversalRule& instance ();
 };

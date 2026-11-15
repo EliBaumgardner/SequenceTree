@@ -27,7 +27,8 @@ OrnamentLibrarySection::OrnamentLibrarySection(OrnamentLibraries& ornamentLibrar
 
     addCard.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
         ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
-        const auto                    card        = bounds.reduced(ArsNovaUI::Theme::borderThickness);
+
+        const auto card = bounds.reduced(ArsNovaUI::Theme::borderThickness);
 
         lookAndFeel.drawButtonTile(graphics, card, state);
 
@@ -54,15 +55,19 @@ void OrnamentLibrarySection::paint(juce::Graphics& graphics)
     const ArsNovaUI::Theme& theme = ArsNovaUI::CustomLookAndFeel::get(*this);
 
     if (getY() > 0) {
+        const float lineLeft  = static_cast<float>(tileGap);
+        const float lineRight = static_cast<float>(getWidth() - tileGap);
+
         graphics.setColour(theme.borderColour);
-        graphics.drawHorizontalLine(0, static_cast<float>(tileGap), static_cast<float>(getWidth() - tileGap));
+        graphics.drawHorizontalLine(0, lineLeft, lineRight);
     }
 }
 
 void OrnamentLibrarySection::resized()
 {
-    auto      bounds  = getLocalBounds();
-    auto      header  = bounds.removeFromTop(headerHeight).reduced(tileGap, headerInset);
+    auto bounds = getLocalBounds();
+    auto header = bounds.removeFromTop(headerHeight).reduced(tileGap, headerInset);
+
     const int columns = juce::jmax(1, (getWidth() - tileGap) / (OrnamentTile::tileWidth + tileGap));
     const int count   = static_cast<int>(tiles.size());
 
@@ -73,12 +78,14 @@ void OrnamentLibrarySection::resized()
     for (int index = 0; index <= count; ++index) {
         juce::Component* entry = &addCard;
 
+        const int tileX = tileGap + (index % columns) * (OrnamentTile::tileWidth + tileGap);
+        const int tileY = tileGap + (index / columns) * (OrnamentTile::tileHeight + tileGap);
+
         if (index < count) {
             entry = tiles[static_cast<size_t>(index)].get();
         }
 
-        entry->setTopLeftPosition(tileGap + (index % columns) * (OrnamentTile::tileWidth + tileGap),
-                                  tileGap + (index / columns) * (OrnamentTile::tileHeight + tileGap));
+        entry->setTopLeftPosition(tileX, tileY);
     }
 }
 
@@ -159,8 +166,10 @@ void OrnamentLibrarySection::addOrnament()
 
 void OrnamentLibrarySection::showMenu()
 {
-    const auto             libraryFolder = ornamentLibraries.libraryFolders.find(library.getProperty(ValueTreeIdentifiers::LibraryUid).toString());
-    juce::File             revealed      = ornamentLibraries.folder;
+    const auto libraryFolder = ornamentLibraries.libraryFolders.find(library.getProperty(ValueTreeIdentifiers::LibraryUid).toString());
+
+    juce::File revealed = ornamentLibraries.folder;
+
     ArsNovaUI::ContextMenu menu;
 
     if (libraryFolder != ornamentLibraries.libraryFolders.end()) {

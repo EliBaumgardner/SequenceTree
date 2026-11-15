@@ -20,7 +20,8 @@
 /*
     The plugin itself, as the host sees it, and the root that owns everything the sound depends on:
     the document (graphState, traversalRuleState, ornamentLibraries, undoManager, the host
-    parameters in valueTreeState, patch), the audio model (rtGraphBuilder, snapshots), playback
+    parameters in valueTreeState, patch, and in canvasSettings the grid multipliers and the
+    settings new arrows start from), the audio model (rtGraphBuilder, snapshots), playback
     (traversalSession and the two EventManagers) and the output channels (bridge,
     virtualMidiOutput). The editor window is separate and optional, so closing it loses nothing.
 
@@ -32,7 +33,7 @@
     ends by copying the block's MIDI to virtualMidiOutput.
 
     getStateInformation and setStateInformation save and restore the graph, traversal map, rules,
-    colour presets, parameters and patch as one ValueTree. setStateInformation restores the
+    colour presets, canvas settings, parameters and patch as one ValueTree. setStateInformation restores the
     parameters at once, on whichever thread the host calls it from, so the host reads them back
     straight away; the rest of a load is applied on the message thread by applyRestoredState, which
     rebuilds the audio model and refreshes an open editor's canvas.
@@ -85,6 +86,7 @@ public:
     {
         static constexpr double referenceBpm             = 120.0;
         static constexpr double relocationToleranceBeats = 1.0 / 64.0;
+        static constexpr double secondsPerMinute         = 60.0;
 
         double currentSampleRate = 44100.0;
         double hostBpm           = 0.0;
@@ -132,7 +134,8 @@ public:
 
     TraversalRuleState traversalRuleState;
 
-    juce::ValueTree colourPresets { ArsNovaUI::InterfaceIdentifiers::ColourPresets };
+    juce::ValueTree colourPresets  { ArsNovaUI::InterfaceIdentifiers::ColourPresets };
+    juce::ValueTree canvasSettings { ValueTreeIdentifiers::CanvasSettings };
 
     juce::File userFolder  { juce::File::getSpecialLocation(juce::File::userMusicDirectory).getChildFile(JucePlugin_Name) };
     juce::File patchFolder { userFolder.getChildFile("Patches") };
@@ -166,4 +169,6 @@ public:
 private:
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
+    static juce::File claimUntitledPatch(const juce::File& folder);
 };

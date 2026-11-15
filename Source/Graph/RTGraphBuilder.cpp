@@ -110,7 +110,10 @@ void RTGraphBuilder::rebuildAllGraphs()
 void RTGraphBuilder::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
 {
     if (parent.getType() == ValueTreeIdentifiers::NodeMap) {
-        pending.addedNodeIds.insert(static_cast<int>(child.getProperty(ArsNovaUI::CanvasIdentifiers::Id)));
+        const int addedId = child.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+        pending.addedNodeIds.insert(addedId);
+
         triggerAsyncUpdate();
         return;
     }
@@ -175,7 +178,9 @@ void RTGraphBuilder::valueTreePropertyChanged(juce::ValueTree& tree, const juce:
          || propertyIdentifier == ValueTreeIdentifiers::TraversalChannel
          || propertyIdentifier == ValueTreeIdentifiers::TraversalTranspose
          || propertyIdentifier == ValueTreeIdentifiers::TraversalVelocity)) {
-        pending.traversalIds.insert(static_cast<int>(tree.getProperty(ValueTreeIdentifiers::TraversalId)));
+        const int changedTraversalId = tree.getProperty(ValueTreeIdentifiers::TraversalId);
+
+        pending.traversalIds.insert(changedTraversalId);
     }
     else if (propertyIdentifier == ArsNovaUI::CanvasIdentifiers::ArrowTipX
         || propertyIdentifier == ArsNovaUI::CanvasIdentifiers::ArrowTipY) {
@@ -346,14 +351,18 @@ void RTGraphBuilder::rebuildGraphsForTraversal(int traversalId)
             juce::ValueTree traversalChildrenIds = node.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
 
             if (traversalChildrenIds.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId).isValid()) {
-                rootsToRebuild.insert(static_cast<int>(node.getProperty(ValueTreeIdentifiers::RootNodeId)));
+                const int rootId = node.getProperty(ValueTreeIdentifiers::RootNodeId);
+
+                rootsToRebuild.insert(rootId);
             }
         }
         else if (node.getType() == ValueTreeIdentifiers::TraversalFlagData) {
             const int flagValue = node.getProperty(ValueTreeIdentifiers::TraversalFlagValue, 0);
 
             if (std::abs(flagValue) == traversalId) {
-                rootsToRebuild.insert(static_cast<int>(node.getProperty(ValueTreeIdentifiers::RootNodeId)));
+                const int rootId = node.getProperty(ValueTreeIdentifiers::RootNodeId);
+
+                rootsToRebuild.insert(rootId);
             }
         }
     }
@@ -467,12 +476,16 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
 
         for (int i = 0; i < nodeMidiNotes.getNumChildren(); i++) {
             juce::ValueTree note = nodeMidiNotes.getChild(i);
+
+            const int storedChannel = note.getProperty(ValueTreeIdentifiers::MidiChannel, GraphState::defaultMidiChannel);
+
             RTNote rtNote;
 
             rtNote.pitch       = note.getProperty(ValueTreeIdentifiers::MidiPitch);
             rtNote.velocity    = note.getProperty(ValueTreeIdentifiers::MidiVelocity);
             rtNote.duration    = note.getProperty(ValueTreeIdentifiers::MidiDuration);
-            rtNote.midiChannel = juce::jlimit(1, 16, static_cast<int>(note.getProperty(ValueTreeIdentifiers::MidiChannel, GraphState::defaultMidiChannel)));
+            rtNote.midiChannel = juce::jlimit(NodeInfo::minimumMidiChannel, NodeInfo::maximumMidiChannel, storedChannel);
+
             rtNode.notes.push_back(std::move(rtNote));
         }
 
@@ -667,7 +680,9 @@ void RTGraphBuilder::rememberOwners(juce::ValueTree graphOwner, const juce::Valu
     }
 
     if (graphOwner.isValid()) {
-        pending.rebuildNodeIds.insert(static_cast<int>(graphOwner.getProperty(ArsNovaUI::CanvasIdentifiers::Id)));
+        const int ownerId = graphOwner.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+        pending.rebuildNodeIds.insert(ownerId);
     }
 
     if (reshapedNode.isValid()) {
@@ -711,7 +726,8 @@ void RTGraphBuilder::classifyRootConnection(const juce::ValueTree& parentValueTr
         return;
     }
 
-    const int arrowType = childIdTree.getProperty(ValueTreeIdentifiers::ArrowType, static_cast<int>(ArrowInfo::Type::Node));
+    const int nodeArrowType = static_cast<int>(ArrowInfo::Type::Node);
+    const int arrowType     = childIdTree.getProperty(ValueTreeIdentifiers::ArrowType, nodeArrowType);
 
     connection.isTreeJump  = arrowType == static_cast<int>(ArrowInfo::Type::Traversal);
     connection.isCrossRoot = arrowType == static_cast<int>(ArrowInfo::Type::CrossRootTree)

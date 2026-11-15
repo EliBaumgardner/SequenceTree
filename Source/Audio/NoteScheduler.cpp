@@ -1,4 +1,5 @@
 #include "NoteScheduler.h"
+#include "../Util/ArrowInfo.h"
 #include <algorithm>
 #include <functional>
 
@@ -17,14 +18,15 @@ void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, d
         return;
     }
 
-    const double lengthInSamples = juce::jmax(1.0, (duration / 1000.0) * sampleRate / tempoMultiplier);
+    const double durationSamples = duration / ArrowInfo::millisecondsPerSecond * sampleRate / tempoMultiplier;
+    const double lengthInSamples = juce::jmax(1.0, durationSamples);
 
     ActiveNote newNote;
 
     newNote.role                = role;
     newNote.runId               = runId;
-    newNote.event.pitch         = 63;
-    newNote.event.velocity      = 63;
+    newNote.event.pitch         = RTNote::fallbackValue;
+    newNote.event.velocity      = RTNote::fallbackValue;
     newNote.event.duration      = duration;
     newNote.remainingSamples    = sample + lengthInSamples;
     newNote.nodeId              = node.nodeID;
@@ -33,33 +35,39 @@ void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, d
     newNote.sound               = voicing.sound;
 
     if (!isConnectionTrigger && !node.notes.empty()) {
-        const RTNote& noteData       = node.notes[0];
+        const RTNote& noteData = node.notes[0];
+
         newNote.event.pitch          = noteData.pitch;
         newNote.event.velocity       = noteData.velocity;
-        newNote.event.midiChannel    = juce::jlimit(1, 16, noteData.midiChannel);
+        newNote.event.midiChannel    = juce::jlimit(NodeInfo::minimumMidiChannel, NodeInfo::maximumMidiChannel, noteData.midiChannel);
 
         if (voicing.pitchOverride >= 0) {
             newNote.event.pitch = voicing.pitchOverride;
         }
+
         if (voicing.velocityOverride >= 0) {
             newNote.event.velocity = voicing.velocityOverride;
         }
 
         if (newNote.event.velocity <= 0) {
-            newNote.event.velocity = 63;
+            newNote.event.velocity = RTNote::fallbackValue;
         }
     }
 
     if (voicing.channel >= 1) {
-        newNote.event.midiChannel = juce::jlimit(1, 16, voicing.channel);
+        newNote.event.midiChannel = juce::jlimit(NodeInfo::minimumMidiChannel, NodeInfo::maximumMidiChannel, voicing.channel);
     }
 
     if (voicing.transpose != 0) {
-        newNote.event.pitch = juce::jlimit(0, 127, newNote.event.pitch + voicing.transpose);
+        const int transposedPitch = newNote.event.pitch + voicing.transpose;
+
+        newNote.event.pitch = juce::jlimit(NodeInfo::minimumMidiPitch, NodeInfo::maximumMidiPitch, transposedPitch);
     }
 
     if (voicing.velocityMultiplier != 1.0) {
-        newNote.event.velocity = juce::jlimit(0, 127, juce::roundToInt(newNote.event.velocity * voicing.velocityMultiplier));
+        const int scaledVelocity = juce::roundToInt(newNote.event.velocity * voicing.velocityMultiplier);
+
+        newNote.event.velocity = juce::jlimit(NodeInfo::silentMidiVelocity, NodeInfo::maximumMidiVelocity, scaledVelocity);
     }
 
     if (!isConnectionTrigger && !node.ornament.empty()) {
@@ -71,8 +79,13 @@ void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, d
     activeNotes.push_back(newNote);
 
     if (isNoteSounding(newNote)) {
-        midiMessages.addEvent(juce::MidiMessage::noteOn(newNote.event.midiChannel, newNote.event.pitch,
-                              static_cast<juce::uint8>(newNote.event.velocity)), static_cast<int>(sample));
+        const juce::uint8 noteOnVelocity = static_cast<juce::uint8>(newNote.event.velocity);
+
+        const int noteOnSample = static_cast<int>(sample);
+
+        const juce::MidiMessage noteOn = juce::MidiMessage::noteOn(newNote.event.midiChannel, newNote.event.pitch, noteOnVelocity);
+
+        midiMessages.addEvent(noteOn, noteOnSample);
     }
 }
 
@@ -91,8 +104,13 @@ void NoteScheduler::continueOrnament(ActiveNote note, const RTNode* node, juce::
     activeNotes.push_back(note);
 
     if (isNoteSounding(note)) {
-        midiMessages.addEvent(juce::MidiMessage::noteOn(note.event.midiChannel, note.event.pitch,
-                              static_cast<juce::uint8>(note.event.velocity)), static_cast<int>(sample));
+        const juce::uint8 noteOnVelocity = static_cast<juce::uint8>(note.event.velocity);
+
+        const int noteOnSample = static_cast<int>(sample);
+
+        const juce::MidiMessage noteOn = juce::MidiMessage::noteOn(note.event.midiChannel, note.event.pitch, noteOnVelocity);
+
+        midiMessages.addEvent(noteOn, noteOnSample);
     }
 }
 
@@ -106,6 +124,7 @@ void NoteScheduler::sendNoteOff(const ActiveNote& note, juce::MidiBuffer& midiMe
 void NoteScheduler::removeNote(int index)
 {
     activeNotes[index] = std::move(activeNotes.back());
+
     activeNotes.pop_back();
 
     orderedNotes = 0;
@@ -123,8 +142,9 @@ const NoteScheduler::ActiveNote* NoteScheduler::nextToExpire()
     while (orderedNotes < activeNotes.size()) {
         ++orderedNotes;
 
-        std::ranges::push_heap(activeNotes.begin(), activeNotes.begin() + static_cast<std::ptrdiff_t>(orderedNotes),
-                               std::ranges::greater {}, &ActiveNote::remainingSamples);
+        const auto orderedEnd = activeNotes.begin() + static_cast<std::ptrdiff_t>(orderedNotes);
+
+        std::ranges::push_heap(activeNotes.begin(), orderedEnd, std::ranges::greater {}, &ActiveNote::remainingSamples);
     }
 
     if (activeNotes.empty()) {
@@ -162,20 +182,27 @@ bool NoteScheduler::isNodeAudible(NodeInfo::Kind nodeType)
 
 void NoteScheduler::startOrnamentStep(ActiveNote& note, std::span<const OrnamentStep> figure, double sample)
 {
-    OrnamentProgress& progress        = note.ornament;
-    double            stepSamples     = progress.remainingSamples;
-    int               remainingWeight = 0;
+    OrnamentProgress& progress = note.ornament;
+
+    double stepSamples = progress.remainingSamples;
+
+    int remainingWeight = 0;
 
     note.event.pitch    = progress.basePitch;
     note.event.velocity = progress.baseVelocity;
 
     if (progress.step < static_cast<int>(figure.size())) {
-        const OrnamentStep& step = figure[static_cast<std::size_t>(progress.step)];
+        const std::size_t stepIndex = static_cast<std::size_t>(progress.step);
 
-        note.event.pitch    = juce::jlimit(0, 127, progress.basePitch + step.offset);
-        note.event.velocity = juce::jlimit(0, 127, juce::roundToInt(progress.baseVelocity * step.velocityPercent / 100.0));
+        const OrnamentStep& step = figure[stepIndex];
 
-        for (const OrnamentStep& remainingStep : figure.subspan(static_cast<std::size_t>(progress.step))) {
+        const int steppedPitch    = progress.basePitch + step.offset;
+        const int steppedVelocity = juce::roundToInt(progress.baseVelocity * step.velocityPercent / velocityPercentScale);
+
+        note.event.pitch    = juce::jlimit(NodeInfo::minimumMidiPitch, NodeInfo::maximumMidiPitch, steppedPitch);
+        note.event.velocity = juce::jlimit(NodeInfo::silentMidiVelocity, NodeInfo::maximumMidiVelocity, steppedVelocity);
+
+        for (const OrnamentStep& remainingStep : figure.subspan(stepIndex)) {
             remainingWeight += remainingStep.durationWeight;
         }
 

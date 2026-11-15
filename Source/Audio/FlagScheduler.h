@@ -29,7 +29,8 @@ public:
 
     struct PendingStart
     {
-        int flagNodeId          = -1;
+        int flagNodeId = -1;
+
         double remainingSamples = 0.0;
 
         TraversalKey hostKey;
@@ -37,14 +38,13 @@ public:
         bool active = false;
     };
 
-
     FlagScheduler(TraversalDispatcher& owner, AudioUIBridge& bridgeRef);
 
     void dispatchFlags(const RTNode& node, int hostRunId, const TraversalKey& hostKey, int parentCount,
                        double sample, double tempoMultiplier, const DispatchContext& context);
 
     void advance(int numSamples);
-    void clear  ();
+    void clear ();
 
     bool startNextDue(double before, const DispatchContext& context);
 

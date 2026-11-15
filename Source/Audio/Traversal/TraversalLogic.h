@@ -1,8 +1,9 @@
 #pragma once
 
 #include "../../Graph/RTData.h"
+#include "ChildSelector.h"
+#include "ModulatorWalk.h"
 #include "ScriptRun.h"
-#include "TraversalRule.h"
 #include <unordered_map>
 #include <vector>
 
@@ -16,22 +17,21 @@
     reset and begin start the walk at a root. Each handleNodeEvent moves it forward and returns a
     StepResult: the node it left, the node it entered, and whether it went back to the root, jumped
     to another tree or ended. The note walk (primary) and the modulator walk under it (mod) follow
-    the same rules and keep separate counts in nodeState.
+    the same rules and keep separate counts in childSelector's nodeState.
 
-    The next node comes from the script when one is set, and from rule otherwise. peekNextTarget and
-    peekCrossTreeNode ask where the walk would go next without moving it. Mode::Preview is the note
-    preview, started by beginPreview.
+    The next node comes from the script when one is set, and from childSelector otherwise. peekNextTarget
+    asks where the walk would go next without moving it. advanceCrossTreeCounts picks the other
+    trees' roots this step jumps to and advances each one's CrossTree and CrossTreeSwitch counts, the
+    only place they advance. Mode::Preview is the note preview, started by beginPreview.
 
     TraversalPool holds one in each slot, and TraversalSession starts and stops them. It runs on the
-    audio thread and never allocates. peekCrossTreeNode fills a vector TraversalDispatcher reserved.
+    audio thread and never allocates. advanceCrossTreeCounts fills a vector TraversalDispatcher reserved.
 */
 
 class TraversalLogic {
-
 public:
 
     struct StepResult;
-    enum class Walk;
 
     constexpr TraversalLogic() = default;
 
@@ -39,10 +39,9 @@ public:
     void begin       (const NodeMap& nodes, int startNodeId, int graphLoopLimit);
     void beginPreview(const NodeMap& nodes, int startNodeId, int alternativeId);
 
-    void advance           (const NodeMap& nodes, int steps = 1);
-    void advanceAlternative(const NodeMap& nodes, int parentId);
+    void advance(const NodeMap& nodes, int steps = 1);
 
-    void peekCrossTreeNode(const NodeMap& nodes, std::vector<int>& traverserIds);
+    void advanceCrossTreeCounts(const NodeMap& nodes, std::vector<int>& traverserIds);
 
     StepResult handleNodeEvent(const NodeMap& nodes, int steps = 1);
 
@@ -51,88 +50,18 @@ public:
     const RTNode* peekNextTarget     (const NodeMap& nodes);
     const RTNode* decideNextModulator(const NodeMap& nodes);
 
-    int findActiveModulatorRoot(const NodeMap& nodes, int regularNodeId) const;
-
     bool shouldTraverse() const;
-
-    static bool isDescendantOf(const NodeMap& nodes, int nodeId, int ancestorId);
-
-    struct Walker
-    {
-        int target = -1;
-        int last   = -1;
-
-        int subRootNode = -1;
-
-        int alternativeTarget = -1;
-        int alternativeLast   = -1;
-    };
 
     struct LoopState
     {
-        bool active   = false;
-        int  count    = 0;
-        int  limit    = 0;
-        int  returnId = -1;
-    };
+        bool active = false;
 
-    struct ModulatorGate
-    {
-        int activeRootId = -1;
-        int hostId       = -1;
-        int repeatCount  = 0;
-    };
-
-    struct ModulatorWalk
-    {
-        Walker        walker;
-        ModulatorGate gate;
-
-        int  decidedTarget  = -1;
-        bool decidedRestart = false;
-
-        constexpr bool isActive() const
-        {
-            return gate.activeRootId != -1;
-        }
-
-        void activate(int rootId, int hostId)
-        {
-            gate.activeRootId = rootId;
-            gate.hostId       = hostId;
-            gate.repeatCount  = 0;
-            walker            = { .target = rootId };
-            decidedTarget     = -1;
-            decidedRestart    = false;
-        }
-
-        void deactivate()
-        {
-            gate           = {};
-            walker         = {};
-            decidedTarget  = -1;
-            decidedRestart = false;
-        }
-
-        bool tickRepeat(int repeatLimit)
-        {
-            gate.repeatCount++;
-            if (gate.repeatCount >= repeatLimit) {
-                gate.repeatCount = 0;
-                return true;
-            }
-            return false;
-        }
-
-        void decide(const NodeMap& nodes, TraversalLogic& owner);
-        bool step  ();
+        int count    = 0;
+        int limit    = 0;
+        int returnId = -1;
     };
 
     enum class TraversalState { Active, End, Reset, Jump };
-
-    enum class Mode { Live, Preview };
-
-    enum class Walk { Primary, Modulator };
 
     struct StepResult
     {
@@ -140,49 +69,57 @@ public:
 
         Kind kind = Kind::None;
 
-        int  leftId         = -1;
-        int  enteredId      = -1;
-        int  referenceOffId = -1;
-        bool clearTrail     = false;
+        int leftId         = -1;
+        int enteredId      = -1;
+        int referenceOffId = -1;
 
-        int  jumpedFromRootId = -1;
+        bool clearTrail = false;
 
+        int jumpedFromRootId          = -1;
         int leftAlternativeId         = -1;
         int enteredAlternativeId      = -1;
         int referenceOffAlternativeId = -1;
 
-        bool pushCounts        = false;
-        int  countSourceNodeId = -1;
-        int  countSourceCount  = 0;
+        bool pushCounts = false;
+
+        int countSourceNodeId = -1;
+        int countSourceCount  = 0;
     };
 
-    using ChildPredicate = ::ChildPredicate;
+    RTtraversal   traversal;
+    ChildSelector childSelector;
 
-    RTtraversal    traversal;
-    NodeStateTable nodeState;
+    Walker primary;
 
-    Walker        primary;
-    LoopState     loop;
+    LoopState loop;
+
     ModulatorWalk mod;
 
     int rootId = 0;
 
     TraversalState state = TraversalState::End;
 
-    Mode mode              = Mode::Live;
-    int  previewVisitCount = 1;
+    TraversalMode mode = TraversalMode::Live;
 
-    unsigned int selectionRandom = 1;
-
-    const TraversalRule* rule = &NativeTraversalRule::instance();
+    int previewVisitCount = 1;
 
     static constexpr int maxAdvanceSteps     = 64;
     static constexpr int maxCrossTreeTargets = NodeStateTable::maxNodeIds;
+    static constexpr int xorshiftFirstShift  = 13;
+    static constexpr int xorshiftSecondShift = 17;
+    static constexpr int xorshiftThirdShift  = 5;
+
+    static constexpr unsigned int seedRootMultiplier     = 2654435761u;
+    static constexpr unsigned int seedTypeMultiplier     = 40503u;
+    static constexpr unsigned int seedInstanceMultiplier = 2246822519u;
+    static constexpr unsigned int seedOffset             = 2463534242u;
 
     const RTScript* script        = nullptr;
     const RTScript* membersScript = nullptr;
-    ScriptMembers   scriptMembers {};
-    ScriptGlobals*  sharedGlobals = nullptr;
+
+    ScriptMembers scriptMembers {};
+
+    ScriptGlobals* sharedGlobals = nullptr;
 
 private:
 
@@ -194,19 +131,6 @@ private:
 
     void advanceByScript(const NodeMap& nodes, const RTNode& leavingNode, int steps, TraversalState deadEndState);
     void skipAhead      (const NodeMap& nodes, int steps);
-
-    void selectSwitchNode(const NodeMap& nodes, int targetId, int& chosenNodeId);
-    void registerTrigger (const NodeMap& nodes, int nodeId);
-    void armSubLoop      (Walker& walker, const RTNode& enteredNode);
-
-    int selectNextChild    (const NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible) const;
-    int selectTreeJumpChild(const NodeMap& nodes, const RTNode& host) const;
-    int chooseChild        (const NodeMap& nodes, Walker& walker, NodeStateSlot countSlot, ChildPredicate isEligible);
-
-    int encapsulationLoopTarget(const NodeMap& nodes, Walker& walker, int leavingNodeId, int chosenNodeId);
-    int advanceSubRoot         (const NodeMap& nodes, Walker& walker);
-
-    const RTNode* eligibleModulatorRoot(const NodeMap& nodes, const RTConnection& connection, int hostCount) const;
 
     int referenceTargetId   = -1;
     int pendingJumpTargetId = -1;

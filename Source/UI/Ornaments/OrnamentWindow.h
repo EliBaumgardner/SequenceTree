@@ -27,8 +27,7 @@ class OrnamentWindow : public juce::Component
 {
 public:
 
-    OrnamentWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager);
-    ~OrnamentWindow() override;
+    OrnamentWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings, juce::UndoManager& undoManager);
 
     void paint  (juce::Graphics& graphics) override;
     void resized() override;

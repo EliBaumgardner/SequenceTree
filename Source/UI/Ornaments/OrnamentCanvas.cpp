@@ -4,10 +4,10 @@
 #include "../../Input/FigureDocument.h"
 #include "../../Graph/OrnamentLibraries.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../../Util/ArrowInfo.h"
 
-OrnamentCanvas::OrnamentCanvas(FigureDocument& document)
-    : NodeArrowCanvas(document)
+OrnamentCanvas::OrnamentCanvas(FigureDocument& document, juce::ValueTree canvasSettings)
+    : NodeArrowCanvas(document),
+      gridMultiplier (*this, canvasSettings, ValueTreeIdentifiers::OrnamentGridMultiplier)
 {
     gridDisplay = GridDisplay::Always;
 
@@ -26,10 +26,11 @@ OrnamentCanvas::OrnamentCanvas(FigureDocument& document)
 
 void OrnamentCanvas::paint(juce::Graphics& graphics)
 {
-    const ArsNovaUI::Theme& theme     = ArsNovaUI::CustomLookAndFeel::get(*this);
-    const float             grid      = ArrowInfo::pixelsPerGridSpace;
-    const auto              visible   = getLocalBounds().toFloat().transformedBy(modelTransform);
-    const float             lineWidth = 1.0f / viewTransform.getScaleFactor();
+    const ArsNovaUI::Theme& theme = ArsNovaUI::CustomLookAndFeel::get(*this);
+
+    const juce::Rectangle<float> visible = getLocalBounds().toFloat().transformedBy(modelTransform);
+
+    const float lineWidth = 1.0f / viewTransform.getScaleFactor();
 
     graphics.setColour(theme.canvasColour);
     graphics.fillRect(getLocalBounds());
@@ -38,11 +39,11 @@ void OrnamentCanvas::paint(juce::Graphics& graphics)
 
     graphics.setColour(theme.gridColour);
 
-    for (float x = std::floor(visible.getX() / grid) * grid; x < visible.getRight(); x += grid) {
+    for (float x = std::floor(visible.getX() / gridSpacing) * gridSpacing; x < visible.getRight(); x += gridSpacing) {
         graphics.drawLine(x, visible.getY(), x, visible.getBottom(), lineWidth);
     }
 
-    for (float y = std::floor(visible.getY() / grid) * grid; y < visible.getBottom(); y += grid) {
+    for (float y = std::floor(visible.getY() / gridSpacing) * gridSpacing; y < visible.getBottom(); y += gridSpacing) {
         graphics.drawLine(visible.getX(), y, visible.getRight(), y, lineWidth);
     }
 
@@ -55,7 +56,6 @@ void OrnamentCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
     ArsNovaUI::EditCanvas::rebuildFromNodeMap(stateTree);
 
     gridOrigin    = { 0.0f, 0.0f };
-    gridSpacing   = ArrowInfo::pixelsPerGridSpace;
     gridOriginSet = true;
     gridVisible   = true;
 }

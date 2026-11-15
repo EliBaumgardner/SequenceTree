@@ -16,8 +16,9 @@
 
     To change what playback sees, a caller takes a copy with beginEdit, replaces one member and
     calls publish. publishGraph merges a rebuilt graph into the published nodes, drops that
-    graph's stale nodes and sets firstUnlinkedRootId, the root the audio thread starts walking
-    from. publishScript publishes a compiled script, and publishActiveTraversalRule compiles the
+    graph's stale nodes and sets startRootId, the root the audio thread starts walking from: the
+    lowest-id root no arrow points into, or the lowest-id root when every root has one. publishScript
+    publishes a compiled script, and publishActiveTraversalRule compiles the
     active rule's source first and returns the compile result so its errors can be shown.
 
     The audio thread must never free a snapshot. blockEpoch is odd while a block runs, so publish
@@ -74,12 +75,13 @@ public:
 private:
 
     void collectRetiredSnapshots();
-    static int findFirstUnlinkedRootId(const NodeMap& nodes);
+    static int findStartRootId(const NodeMap& nodes);
 
     struct RetiredSnapshot
     {
         std::shared_ptr<Snapshot> snapshot;
-        std::uint64_t             retiredAtEpoch = 0;
+
+        std::uint64_t retiredAtEpoch = 0;
     };
 
     TraversalRuleState& traversalRuleState;
@@ -87,7 +89,8 @@ private:
     std::atomic<Snapshot*>     currentSnapshot { nullptr };
     std::atomic<std::uint64_t> blockEpoch { 0 };
 
-    std::shared_ptr<Snapshot>    publishedSnapshot;
+    std::shared_ptr<Snapshot> publishedSnapshot;
+
     std::vector<RetiredSnapshot> retiredSnapshots;
 
     std::uint64_t snapshotGeneration = 0;

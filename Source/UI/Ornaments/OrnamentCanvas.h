@@ -4,12 +4,14 @@
 
 #include "OrnamentNode.h"
 #include "../Canvas/NodeArrowCanvas.h"
+#include "../Canvas/GridMultiplier.h"
 
 /*
     The NodeArrowCanvas for an ornament's figure (see FigureDocument): an OrnamentNode for each figure
     node and an Arrow for each connection and for the dangling arrow, over lines at the grid
     spacing and a line at zero. Its grid is always shown with its origin at zero, so positions
-    snap to the lines the figure's rows are counted from. The node that is the host, standing
+    snap to the lines the figure's rows are counted from, and gridMultiplier spaces those lines
+    by the project's OrnamentGridMultiplier. The node that is the host, standing
     for the note itself, is drawn with an inner rim, and refreshHost sets the rim again on every
     node when the host changes.
 
@@ -26,7 +28,7 @@ class OrnamentCanvas : public NodeArrowCanvas
 {
 public:
 
-    explicit OrnamentCanvas(FigureDocument& document);
+    OrnamentCanvas(FigureDocument& document, juce::ValueTree canvasSettings);
 
     void paint(juce::Graphics& graphics) override;
 
@@ -43,4 +45,6 @@ public:
     bool rebuildRequested = false;
 
     juce::VBlankAttachment updateFrames;
+
+    GridMultiplier gridMultiplier;
 };

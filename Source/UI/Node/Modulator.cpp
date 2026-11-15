@@ -14,7 +14,9 @@ Modulator::Modulator(juce::UndoManager& undoManager) : Node(undoManager)
 
 void Modulator::paint(juce::Graphics& graphics)
 {
-    ArsNovaUI::CustomLookAndFeel::get(*this).drawSquareNode(graphics, getNodeVisual(getSquareBounds()));
+    const ArsNovaUI::NodeVisual visual = getNodeVisual(getSquareBounds());
+
+    ArsNovaUI::CustomLookAndFeel::get(*this).drawSquareNode(graphics, visual);
 }
 
 void Modulator::bindValueEditorForMode()
@@ -62,11 +64,19 @@ float Modulator::getBodyExtent(juce::Point<float> approachDirection) const
     float                        exit   = std::numeric_limits<float>::max();
 
     if (std::abs(ray.x) > rayAxisEpsilon) {
-        exit = std::min(exit, std::max((square.getX() - centre.x) / ray.x, (square.getRight() - centre.x) / ray.x));
+        const float toLeft      = (square.getX()     - centre.x) / ray.x;
+        const float toRight     = (square.getRight() - centre.x) / ray.x;
+        const float fartherSide = std::max(toLeft, toRight);
+
+        exit = std::min(exit, fartherSide);
     }
 
     if (std::abs(ray.y) > rayAxisEpsilon) {
-        exit = std::min(exit, std::max((square.getY() - centre.y) / ray.y, (square.getBottom() - centre.y) / ray.y));
+        const float toTop       = (square.getY()      - centre.y) / ray.y;
+        const float toBottom    = (square.getBottom() - centre.y) / ray.y;
+        const float fartherSide = std::max(toTop, toBottom);
+
+        exit = std::min(exit, fartherSide);
     }
 
     return std::max(0.0f, exit);

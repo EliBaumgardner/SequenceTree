@@ -8,15 +8,17 @@
 #include "../../Input/Gestures/NotePreviewGestures.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
-BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, juce::ValueTree colourPresets, OrnamentLibraries& ornamentLibraries)
+BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, juce::ValueTree colourPresets, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings)
     : ArsNovaUI::Bar     (nodeCanvas, Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
       nodeCanvas         (nodeCanvas),
-      graphDocument      (graphDocument),
       notePreviewGestures(notePreviewGestures),
       ornamentLibraries  (ornamentLibraries),
+      canvasSettings     (canvasSettings),
       paintPanel         (nodeCanvas, colourPresets, graphDocument.undoManager),
       countsField        (graphDocument.undoManager)
 {
+    auto countsFormat = std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit);
+
     quaverTool = &quaverPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawQuaverIcon, "Note",
         [this]() {
             if (this->nodeCanvas.activeTool == NodeCanvas::CanvasTool::NotePreview) {
@@ -49,17 +51,22 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NoteP
     configureAxis(xAxis, "X");
     configureAxis(yAxis, "Y");
 
+    paintPanel.paintTool.state.look = ArsNovaUI::ButtonState::Look::Raised;
+    quaverTool->state.look          = ArsNovaUI::ButtonState::Look::Raised;
+    spanTool->state.look            = ArsNovaUI::ButtonState::Look::Raised;
+    ornamentButton->state.look      = ArsNovaUI::ButtonState::Look::Raised;
+
     quaverTool->onRightClick = [this]() {
         showQuaverMenu();
     };
 
-    countsField.label.setText("counts", juce::dontSendNotification);
+    countsFormat->suffix      = "x";
+    countsField.backdrop      = ArsNovaUI::ValueEditor::Backdrop::Field;
+    countsField.wheelResponse = ArsNovaUI::ValueEditor::WheelResponse::StepValue;
+    countsField.setFormat(std::move(countsFormat));
+    countsField.setTooltip("Preview count");
 
-    countsField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit));
-
-    countsField.editor.wheelResponse = ArsNovaUI::ValueEditor::WheelResponse::StepValue;
-
-    countsField.editor.boundValue.referTo(notePreviewGestures.count);
+    countsField.boundValue.referTo(notePreviewGestures.count);
 
     addAndMakeVisible(paintPanel);
     addAndMakeVisible(toolPane);
@@ -69,6 +76,7 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NoteP
     addAndMakeVisible(countsField);
 
     ornamentLibraries.libraries.addListener(this);
+    this->canvasSettings.addListener(this);
 
     showActiveOrnamentName();
 }
@@ -76,36 +84,43 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NoteP
 BottomBar::~BottomBar()
 {
     ornamentLibraries.libraries.removeListener(this);
+    canvasSettings.removeListener(this);
 }
 
 void BottomBar::resized()
 {
-    auto                 bounds          = getContentBounds();
+    auto bounds = getContentBounds();
 
-    const int            height          = bounds.getHeight();
-    const int            spacing         = contentSpacing;
-    const int            toolPaneWidth   = toolPane.idealWidth(height);
-    const int            bindPaneWidth   = bindPane.idealWidth(height);
-    const int            ornamentWidth   = ornamentPane.idealWidth(height);
-    const int            paneWidth       = quaverPaneWidth;
-    const int            paneInset       = juce::roundToInt(height * ArsNovaUI::Theme::contentInsetRatio);
-    const int            innerHeight     = juce::jmax(0, height - paneInset * 2);
-    const int            buttonSlotWidth = juce::roundToInt(paneWidth * quaverButtonWidthRatio);
-    const int            buttonWidth     = juce::jlimit(0, innerHeight, buttonSlotWidth - paneInset * 2);
-    const int            labelWidth      = juce::roundToInt(paneWidth * countsLabelWidthRatio);
+    const int height          = bounds.getHeight();
+    const int spacing         = contentSpacing;
+    const int toolPaneWidth   = toolPane.idealWidth(height);
+    const int bindPaneWidth   = bindPane.idealWidth(height);
+    const int ornamentWidth   = ornamentPane.idealWidth(height);
+    const int paneWidth       = quaverPaneWidth;
+    const int paneInset       = juce::roundToInt(height * ArsNovaUI::Theme::contentInsetRatio);
+    const int paneInsets      = paneInset * 2;
+    const int innerHeight     = juce::jmax(0, height - paneInsets);
+    const int buttonSlotWidth = juce::roundToInt(paneWidth * quaverButtonWidthRatio);
+    const int buttonWidth     = juce::jlimit(0, innerHeight, buttonSlotWidth - paneInsets);
 
-    const float          textHeight      = ArsNovaUI::Theme::textHeight;
-    const juce::Font     textFont        = ArsNovaUI::CustomLookAndFeel::get(*this).font(ArsNovaUI::Theme::FontStyle::Regular, textHeight);
+    const float textHeight    = ArsNovaUI::Theme::textHeight;
+    const float captionHeight = textHeight * captionHeightRatio;
+
+    ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
+
+    const juce::Font captionFont = lookAndFeel.font(ArsNovaUI::Theme::FontStyle::SemiBold, captionHeight).withExtraKerningFactor(captionKerningFactor);
 
     juce::Rectangle<int> quaverPaneBounds;
 
-    paintPanel.sizeField.label.setFont(textFont);
-    paintPanel.flowField.label.setFont(textFont);
-    countsField.label.setFont(textFont);
+    paintPanel.sizeField.label.setFont(captionFont);
+    paintPanel.flowField.label.setFont(captionFont);
+
+    paintPanel.sizeField.label.setColour(juce::Label::textColourId, lookAndFeel.dimTextColour);
+    paintPanel.flowField.label.setColour(juce::Label::textColourId, lookAndFeel.dimTextColour);
 
     paintPanel.sizeField.editor.setFontHeight(textHeight);
     paintPanel.flowField.editor.setFontHeight(textHeight);
-    countsField.editor         .setFontHeight(textHeight);
+    countsField                .setFontHeight(textHeight);
 
     paintPanel.setBounds(bounds.removeFromLeft(paintPanelWidth));
 
@@ -128,9 +143,6 @@ void BottomBar::resized()
 
     quaverPaneBounds.removeFromLeft(buttonSlotWidth);
 
-    countsField.labelWidth = labelWidth;
-    countsField.gap        = paneInset;
-
     countsField.setBounds(quaverPaneBounds);
 }
 
@@ -146,10 +158,12 @@ void BottomBar::applyDisplayMode(NodeInfo::DisplayMode mode)
 int BottomBar::narrowestWidth() const
 {
     const auto bounds = getContentBounds();
-    const int  height = bounds.getHeight();
+
+    const int paneGapCount = 4;
+    const int height       = bounds.getHeight();
 
     return getWidth() - bounds.getWidth() + paintPanelWidth + bindPane.idealWidth(height) + toolPane.idealWidth(height) + ornamentPane.idealWidth(height)
-           + quaverPaneWidth + contentSpacing * 4;
+           + quaverPaneWidth + contentSpacing * paneGapCount;
 }
 
 void BottomBar::configureOrnamentButton()
@@ -167,20 +181,63 @@ void BottomBar::configureOrnamentButton()
 
     ornamentButton->painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState& state) {
         ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
-        const juce::Rectangle<float>  glyphArea   = lookAndFeel.drawButtonTile(graphics, bounds, state);
-        const float                   glyphSide   = glyphArea.getHeight() * ArsNovaUI::Theme::glyphSizeRatio;
-        const juce::String            activeUid   = ornamentLibraries.libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString();
-        const juce::String            symbol      = ornamentLibraries.findOrnament(activeUid).getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString();
 
-        if (symbol.isEmpty()) {
+        const juce::Rectangle<float> glyphArea = lookAndFeel.drawButtonTile(graphics, bounds, state);
+
+        const float cellSide      = glyphArea.getHeight() / ornamentGridCellsPerHeight;
+        const float columnsToEdge = std::floor(glyphArea.getWidth() * 0.5f / cellSide);
+        const float rowsToEdge    = std::floor(glyphArea.getHeight() * 0.5f / cellSide);
+        const float firstColumn   = glyphArea.getCentreX() - columnsToEdge * cellSide;
+        const float firstRow      = glyphArea.getCentreY() - rowsToEdge * cellSide;
+
+        const juce::String activeUid = ornamentLibraries.libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString();
+        const juce::String symbol    = ornamentLibraries.findOrnament(activeUid).getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString();
+
+        const std::vector<ArsNovaUI::SymbolStroke> strokes = OrnamentLibraries::readSymbol(symbol);
+
+        juce::Rectangle<float> extent;
+
+        juce::Path tileOutline;
+
+        tileOutline.addRoundedRectangle(glyphArea, ArsNovaUI::Theme::paneCornerRadius);
+
+        graphics.saveState();
+        graphics.reduceClipRegion(tileOutline);
+        graphics.setColour(lookAndFeel.gridColour);
+
+        for (float x = firstColumn; x < glyphArea.getRight(); x += cellSide) {
+            graphics.drawLine(x, glyphArea.getY(), x, glyphArea.getBottom(), ArsNovaUI::Theme::borderThickness);
+        }
+
+        for (float y = firstRow; y < glyphArea.getBottom(); y += cellSide) {
+            graphics.drawLine(glyphArea.getX(), y, glyphArea.getRight(), y, ArsNovaUI::Theme::borderThickness);
+        }
+
+        graphics.restoreState();
+
+        for (const ArsNovaUI::SymbolStroke& stroke : strokes) {
+            const float halfWidth = stroke.width * 0.5f;
+
+            extent = extent.getUnion(stroke.path.getBounds().expanded(halfWidth));
+        }
+
+        if (extent.isEmpty()) {
             lookAndFeel.drawWaveButton(graphics, glyphArea, state);
 
             return;
         }
 
+        const float fillSide   = juce::jmin(glyphArea.getWidth(), glyphArea.getHeight());
+        const float extentSide = juce::jmax(extent.getWidth(), extent.getHeight());
+        const float unitSide   = fillSide / extentSide;
+
+        const juce::Point<float> unitOrigin = glyphArea.getCentre() - extent.getCentre() * unitSide;
+
+        const juce::Rectangle<float> unitSquare = juce::Rectangle<float>(unitSide, unitSide).withPosition(unitOrigin);
+
         graphics.setColour(lookAndFeel.pressableButtonColour(state));
 
-        lookAndFeel.drawStrokeSymbol(graphics, glyphArea.withSizeKeepingCentre(glyphSide, glyphSide), OrnamentLibraries::readSymbol(symbol));
+        lookAndFeel.drawStrokeSymbol(graphics, unitSquare, strokes);
     };
 }
 
@@ -199,56 +256,50 @@ void BottomBar::showActiveOrnamentName()
 
 void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
 {
-    const ArrowInfo::Settings& arrowInfo = graphDocument.currentArrowInfo;
-
     axis.button               = &bindPane.addButton(nullptr, text + " Binding", [this, &axis]() { toggleAxis(axis); });
     axis.button->onRightClick = [this, &axis]() { showAxisMenu(axis); };
 
     axis.button->setText(text);
 
-    if (arrowInfo.*axis.binding != ArrowInfo::Binding::NoBind) {
-        axis.target = arrowInfo.*axis.binding;
-    }
-
     axis.multiplierSlider.range  = { minimumBindMultiplier, maximumBindMultiplier, bindMultiplierInterval };
     axis.multiplierSlider.label  = "multiplier";
     axis.multiplierSlider.suffix = "x";
 
-    axis.multiplierSlider.boundValue.setValue(arrowInfo.*axis.multiplier);
+    axis.multiplierSlider.boundValue.referTo(canvasSettings.getPropertyAsValue(axis.multiplierProperty, nullptr));
 
-    axis.multiplierSlider.onValueChange = [this, &axis]() {
-        graphDocument.currentArrowInfo.*axis.multiplier = static_cast<double>(axis.multiplierSlider.boundValue.getValue());
-    };
-
-    axis.button->setSelected(arrowInfo.*axis.binding != ArrowInfo::Binding::NoBind);
+    valueTreePropertyChanged(canvasSettings, axis.bindingProperty);
 }
 
 void BottomBar::toggleAxis(BindAxis& axis)
 {
-    ArrowInfo::Settings& arrowInfo = graphDocument.currentArrowInfo;
+    const int storedBinding = canvasSettings.getProperty(axis.bindingProperty);
+    const int storedTarget  = canvasSettings.getProperty(axis.targetProperty);
+    const int noBinding     = static_cast<int>(ArrowInfo::Binding::NoBind);
 
-    if (arrowInfo.*axis.binding == ArrowInfo::Binding::NoBind) {
-        arrowInfo.*axis.binding = axis.target;
-    }
-    else {
-        arrowInfo.*axis.binding = ArrowInfo::Binding::NoBind;
+    int toggledBinding = noBinding;
+
+    if (storedBinding == noBinding) {
+        toggledBinding = storedTarget;
     }
 
-    axis.button->setSelected(arrowInfo.*axis.binding != ArrowInfo::Binding::NoBind);
+    canvasSettings.setProperty(axis.bindingProperty, toggledBinding, nullptr);
 }
 
 void BottomBar::showAxisMenu(BindAxis& axis)
 {
-    const ArrowInfo::Binding binding = graphDocument.currentArrowInfo.*axis.binding;
-    ArsNovaUI::ContextMenu   menu;
+    const int storedBinding = canvasSettings.getProperty(axis.bindingProperty);
+
+    ArsNovaUI::ContextMenu menu;
 
     for (const BindTarget& target : bindTargets) {
-        menu.addItem(target.label, ArsNovaUI::ContextMenu::ItemKind::Toggle, [this, &axis, bound = target.binding]() {
-            axis.target                            = bound;
-            graphDocument.currentArrowInfo.*axis.binding = bound;
+        const int targetBinding = static_cast<int>(target.binding);
 
-            axis.button->setSelected(true);
-        }, true, binding == target.binding);
+        const bool isChecked = storedBinding == targetBinding;
+
+        menu.addItem(target.label, ArsNovaUI::ContextMenu::ItemKind::Toggle, [this, &axis, targetBinding]() {
+            canvasSettings.setProperty(axis.targetProperty,  targetBinding, nullptr);
+            canvasSettings.setProperty(axis.bindingProperty, targetBinding, nullptr);
+        }, true, isChecked);
     }
 
     menu.addComponent(axis.multiplierSlider, multiplierSliderWidth, ArsNovaUI::Theme::popupMenuItemHeight);
@@ -267,6 +318,20 @@ void BottomBar::showQuaverMenu()
 
 void BottomBar::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
 {
+    if (tree == canvasSettings) {
+        for (BindAxis* axis : { &xAxis, &yAxis }) {
+            if (property == axis->bindingProperty) {
+                const int storedBinding = canvasSettings.getProperty(property);
+
+                const bool isBound = static_cast<ArrowInfo::Binding>(storedBinding) != ArrowInfo::Binding::NoBind;
+
+                axis->button->setSelected(isBound);
+            }
+        }
+
+        return;
+    }
+
     if (property == ValueTreeIdentifiers::ActiveOrnamentUid || property == ValueTreeIdentifiers::OrnamentName
         || property == ValueTreeIdentifiers::OrnamentSymbol) {
         showActiveOrnamentName();

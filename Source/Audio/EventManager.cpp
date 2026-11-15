@@ -29,6 +29,7 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
     for (int eventsProcessed = 0; eventsProcessed < maxEventsPerBlock; ++eventsProcessed)
     {
         const NoteScheduler::ActiveNote* const nextNote = scheduler.nextToExpire();
+
         double expiringTime = static_cast<double>(numSamples);
 
         if (nextNote != nullptr) {
@@ -43,13 +44,15 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
             break;
         }
 
-        const double expiryTime   = juce::jmax(0.0, expiringTime);
-        const int    expirySample = static_cast<int>(expiryTime);
+        const double expiryTime = juce::jmax(0.0, expiringTime);
+
+        const int expirySample = static_cast<int>(expiryTime);
 
         const NoteScheduler::ActiveNote expiredNote = scheduler.expireNext(context.midiMessages, expirySample);
 
         if (expiredNote.ornament.remainingSamples > 0.0) {
             scheduler.continueOrnament(expiredNote, context.nodes.find(expiredNote.nodeId), context.midiMessages, expiryTime);
+
             continue;
         }
 
@@ -57,6 +60,7 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
             if (NoteScheduler::isNodeAudible(expiredNote.nodeType)) {
                 bridge.highlightNode(expiredNote.nodeId, BridgeCommands::HighlightKind::Hide, expiredNote.runId);
             }
+
             continue;
         }
 
@@ -78,14 +82,15 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
     {
         auto& activeNote = activeNotes[i];
 
+        const int orphanedRunId = activeNote.runId;
+
+        const NoteScheduler::NoteRole orphanedRole = activeNote.role;
+
         if (context.nodes.find(activeNote.nodeId) != nullptr) {
             continue;
         }
 
         scheduler.sendNoteOff(activeNote, context.midiMessages, 0);
-
-        const int                     orphanedRunId = activeNote.runId;
-        const NoteScheduler::NoteRole orphanedRole  = activeNote.role;
 
         scheduler.removeNote(i);
 
@@ -100,7 +105,8 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
         }
 
         TraversalLogic& traversal = orphanedInstance->logic;
-        const RTNode*   rootNode  = context.nodes.find(traversal.rootId);
+
+        const RTNode* rootNode = context.nodes.find(traversal.rootId);
 
         if (rootNode == nullptr) {
             continue;
@@ -108,9 +114,11 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
 
         traversal.primary.target = traversal.rootId;
         traversal.state          = TraversalLogic::TraversalState::Active;
-        traversal.advanceAlternative(context.nodes, traversal.rootId);
+
+        traversal.childSelector.advanceAlternative(context.nodes, traversal.primary, Walk::Primary, traversal.rootId);
 
         bridge    .highlightNode(*rootNode, BridgeCommands::HighlightKind::Show, orphanedRunId, traversal.traversal.key.typeId);
+
         dispatcher.pushNote(*rootNode, orphanedRunId, context, 0);
     }
 }

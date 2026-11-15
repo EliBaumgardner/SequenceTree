@@ -75,7 +75,9 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
     if (dynamic_cast<NodeCanvas*>(e.eventComponent) != nullptr) {
         if (!e.mods.isShiftDown() && e.mods.isRightButtonDown()) {
             if (ArsNovaUI::CanvasArrow* clickedArrow = nodeCanvas.hitTester.arrowNear(clickPoint, ArsNovaUI::ArrowGestures::arrowHoverRadius)) {
-                arrowMenu.showArrowContextMenu(static_cast<Arrow*>(clickedArrow));
+                Arrow* const graphArrow = static_cast<Arrow*>(clickedArrow);
+
+                arrowMenu.showArrowContextMenu(graphArrow);
                 return;
             }
 

@@ -1,0 +1,8 @@
+{
+  "name": "sequencetree-figma-verify",
+  "private": true,
+  "description": "Runs the Figma mockup plugin against a mock Figma API and renders the result for comparison with the app.",
+  "dependencies": {
+    "opentype.js": "^1.3.4"
+  }
+}

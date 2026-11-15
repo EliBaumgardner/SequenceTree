@@ -17,7 +17,6 @@
 
 namespace BridgeCommands
 {
-
 constexpr int primaryTrail(int runId)
 {
     return runId * 2;
@@ -63,5 +62,4 @@ struct CountCommand
     int currentCount = 0;
     int countLimit   = 1;
 };
-
 }

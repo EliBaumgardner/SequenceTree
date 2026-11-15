@@ -25,18 +25,21 @@ juce::String TraversalFlagFormat::text(const ArsNovaUI::ValueBinding& binding, A
 {
     const int value = static_cast<int>(binding.primary.getValue());
 
+    int instance = 0;
+
     if (value == 0) {
         return {};
     }
-
-    int instance = 0;
 
     if (! binding.secondaries.empty()) {
         instance = static_cast<int>(binding.secondaries.front().getValue());
     }
 
-    const int          letter       = juce::jlimit(0, TraversalKey::maxInstances - 1, instance);
-    const juce::String instanceText = instanceLetters.substring(letter, letter + 1);
+    const int lastInstance = TraversalKey::maxInstances - 1;
+    const int letter       = juce::jlimit(0, lastInstance, instance);
+    const int letterEnd    = letter + 1;
+
+    const juce::String instanceText = instanceLetters.substring(letter, letterEnd);
 
     if (value > 0) {
         return "+" + juce::String(value) + instanceText;
@@ -47,9 +50,11 @@ juce::String TraversalFlagFormat::text(const ArsNovaUI::ValueBinding& binding, A
 
 ArsNovaUI::ParsedValue TraversalFlagFormat::parse(const ArsNovaUI::ValueBinding& binding, const juce::String& enteredText) const
 {
-    const juce::String           trimmed = enteredText.trim();
-    const bool                   spawns  = trimmed.startsWithChar('+');
-    const bool                   removes = trimmed.startsWithChar('-');
+    const juce::String trimmed = enteredText.trim();
+
+    const bool spawns  = trimmed.startsWithChar('+');
+    const bool removes = trimmed.startsWithChar('-');
+
     const ArsNovaUI::ParsedValue cleared { 0, { 0 } };
 
     if (! spawns && ! removes) {
@@ -62,7 +67,9 @@ ArsNovaUI::ParsedValue TraversalFlagFormat::parse(const ArsNovaUI::ValueBinding&
         return cleared;
     }
 
-    const int typeId = static_cast<int>(juce::jlimit(1.0, maximum, static_cast<double>(keys.front().typeId)));
+    const double firstTypeId = keys.front().typeId;
+
+    const int typeId = static_cast<int>(juce::jlimit(1.0, maximum, firstTypeId));
 
     if (removes) {
         return { -typeId, { keys.front().instance } };
@@ -74,7 +81,8 @@ ArsNovaUI::ParsedValue TraversalFlagFormat::parse(const ArsNovaUI::ValueBinding&
 std::vector<TraversalKey> TraversalFlagFormat::parseKeys(const juce::String& text)
 {
     std::vector<TraversalKey> parsed;
-    juce::String              digits;
+
+    juce::String digits;
 
     for (int characterIndex = 0; characterIndex <= text.length(); ++characterIndex) {
         const bool isDigit = characterIndex < text.length() && juce::CharacterFunctions::isDigit(text[characterIndex]);
@@ -110,8 +118,11 @@ std::vector<TraversalKey> TraversalFlagFormat::parseKeys(const juce::String& tex
 
 juce::String TraversalFlagFormat::describe(const TraversalKey& key)
 {
-    const int          letter       = juce::jlimit(0, TraversalKey::maxInstances - 1, key.instance);
-    const juce::String instanceText = instanceLetters.substring(letter, letter + 1);
+    const int lastInstance = TraversalKey::maxInstances - 1;
+    const int letter       = juce::jlimit(0, lastInstance, key.instance);
+    const int letterEnd    = letter + 1;
+
+    const juce::String instanceText = instanceLetters.substring(letter, letterEnd);
 
     return juce::String(key.typeId) + instanceText;
 }

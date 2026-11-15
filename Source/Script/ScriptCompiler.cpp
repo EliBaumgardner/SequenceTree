@@ -4,6 +4,56 @@
 #include "ScriptLexer.h"
 #include "ScriptParser.h"
 
+#include <algorithm>
+
+static std::string typeName(ValueType type)
+{
+    switch (type) {
+        case ValueType::Int:      return "int";
+        case ValueType::Float:    return "float";
+        case ValueType::Double:   return "double";
+        case ValueType::Bool:     return "bool";
+        case ValueType::Node:     return "Node";
+        case ValueType::Void:     return "void";
+        case ValueType::Inferred: return "let";
+    }
+
+    return {};
+}
+
+static ScriptOutline makeOutline(const ClassDeclaration& declaration)
+{
+    ScriptOutline outline;
+
+    outline.className = declaration.name;
+
+    for (const MemberDeclaration& global : declaration.globals) {
+        outline.entries.push_back({ ScriptOutlineEntry::Kind::Global, global.name, typeName(global.type), global.line });
+    }
+
+    for (const MemberDeclaration& member : declaration.members) {
+        outline.entries.push_back({ ScriptOutlineEntry::Kind::Member, member.name, typeName(member.type), member.line });
+    }
+
+    for (const FunctionDeclaration& function : declaration.functions) {
+        std::string parameters;
+
+        for (const Parameter& parameter : function.parameters) {
+            if (! parameters.empty()) {
+                parameters += ", ";
+            }
+
+            parameters += typeName(parameter.type);
+        }
+
+        outline.entries.push_back({ ScriptOutlineEntry::Kind::Function, function.name + "(" + parameters + ")", typeName(function.returnType), function.line });
+    }
+
+    std::ranges::stable_sort(outline.entries, {}, &ScriptOutlineEntry::line);
+
+    return outline;
+}
+
 ScriptCompileResult compileTraversalScript(const std::string& source)
 {
     ScriptCompileResult result;
@@ -19,6 +69,8 @@ ScriptCompileResult compileTraversalScript(const std::string& source)
     Parser parser(tokens, result.diagnostics);
 
     const ClassDeclaration declaration = parser.run();
+
+    result.outline = makeOutline(declaration);
 
     if (!result.diagnostics.empty()) {
         return result;
