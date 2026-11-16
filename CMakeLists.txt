@@ -184,6 +184,7 @@ add_executable(SequenceTree_GraphTests
         Tests/Integration/OrnamentTests.cpp
         Tests/Integration/CanvasTests.cpp
         Tests/Integration/GestureTests.cpp
+        Tests/Integration/EditorTests.cpp
 )
 
 target_compile_features(SequenceTree_GraphTests PRIVATE cxx_std_23)
