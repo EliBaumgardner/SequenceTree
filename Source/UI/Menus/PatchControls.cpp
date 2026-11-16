@@ -11,22 +11,20 @@ PatchControls::PatchControls(juce::AudioProcessor& processor, juce::ValueTree pa
       patchFolder(patchFolder),
       nameEditor (nameUndoManager)
 {
-    nameEditor.fontStyle = ArsNovaUI::Theme::FontStyle::Regular;
-
-    openButton.icon = &ArsNovaUI::IconLibrary::get().chevronDown;
-    openButton.setTooltip("Open a saved patch");
-
-    resetButton.icon = &ArsNovaUI::IconLibrary::get().reload;
-    resetButton.setTooltip("Reset the patch");
-
+    nameEditor.fontStyle      = ArsNovaUI::Theme::FontStyle::Regular;
+    nameEditor.onEditFinished = [this]() { renamePatch(); };
     nameEditor.setFormat(std::make_unique<ArsNovaUI::TextFormat>(ArsNovaUI::TextFormat::labelTextLength, ArsNovaUI::TextFormat::labelCharacters));
     nameEditor.setJustification(juce::Justification::centredLeft);
     nameEditor.bindEditor(patch, ValueTreeIdentifiers::PatchName);
-
     nameEditor.setTooltip("Rename the patch");
-    nameEditor.onEditFinished = [this]() { renamePatch(); };
-    openButton.onClick        = [this]() { chooseFileToOpen(); };
-    resetButton.onClick       = [this]() { confirmReset(); };
+
+    openButton.icon    = &ArsNovaUI::IconLibrary::get().chevronDown;
+    openButton.onClick = [this]() { chooseFileToOpen(); };
+    openButton.setTooltip("Open a saved patch");
+
+    resetButton.icon    = &ArsNovaUI::IconLibrary::get().reload;
+    resetButton.onClick = [this]() { confirmReset(); };
+    resetButton.setTooltip("Reset the patch");
 
     addAndMakeVisible(nameEditor);
     addAndMakeVisible(openButton);
