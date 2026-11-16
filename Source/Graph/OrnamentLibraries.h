@@ -108,6 +108,8 @@ public:
     juce::ValueTree libraries { ValueTreeIdentifiers::OrnamentLibraries };
     juce::File      folder;
 
+    juce::CachedValue<juce::String> activeOrnamentUid;
+
     std::map<juce::String, LibraryFolder> libraryFolders;
 
 private:
@@ -125,8 +127,7 @@ private:
     static juce::ValueTree readLibraryFolder(const juce::File& directory, LibraryFolder& libraryFolder);
     static juce::ValueTree readLibraryFile  (const juce::File& file);
 
-    static constexpr int saveDelayMs           = 500;
-    static constexpr int unlistedOrnamentIndex = std::numeric_limits<int>::max();
+    static constexpr int saveDelayMs = 500;
 
     std::set<juce::String> changedLibraryUids;
 

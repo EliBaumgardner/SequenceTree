@@ -14,11 +14,13 @@
     every edit so playback follows the graph. A graph here is one tree: a root and every node
     reachable from it. For each graph it builds one RTNode per node, with its limits, notes,
     traversals, ornament steps and each arrow's duration computed from the arrow's length, and
-    publishes the result with AudioSnapshotPublisher::publishGraph, which merges it into the
-    published NodeMap.
+    queues the result. The graphs one edit rebuilds are published together by
+    AudioSnapshotPublisher::publishGraphs, which merges them into the published NodeMap in one
+    pass, so a rebuild of every graph copies the published nodes once.
 
-    makeRTGraph rebuilds the graph a node belongs to, discardGraph publishes an empty one in its
-    place, and rebuildAllGraphs rebuilds every graph and discards those whose root was deleted.
+    makeRTGraph rebuilds the graph a node belongs to, discardGraph queues an empty one in its
+    place, and rebuildAllGraphs rebuilds every graph, discards those whose root was deleted and
+    publishes the queue.
     updateDurationMaps recomputes only the arrow durations of the given nodes and their parents.
     It listens to nodeMap, the traversal map and the ornament libraries, records which graphs each
     change affects, and rebuilds them together in handleAsyncUpdate on the message thread.
@@ -42,8 +44,6 @@ public:
     RTGraphBuilder(GraphState& graphState, OrnamentLibraries& ornamentLibraries, AudioSnapshotPublisher& snapshots);
     ~RTGraphBuilder() override;
 
-    void makeRTGraph     (const juce::ValueTree& nodeValueTree);
-    void discardGraph    (int graphId);
     void rebuildAllGraphs();
 
     void valueTreeChildAdded     (juce::ValueTree& parent, juce::ValueTree& child) override;
@@ -57,7 +57,12 @@ public:
 
 private:
 
+    void makeRTGraph (const juce::ValueTree& nodeValueTree);
+    void discardGraph(int graphId);
+    void queueGraph  (int graphId, NodeMap graphNodes);
+
     void rebuildGraphsForTraversal(int traversalId);
+    void publishQueuedGraphs ();
 
     void createRTNodes          (juce::ValueTree rootNodeValueTree, NodeBuildMap& builtNodes, std::unordered_map<int, juce::ValueTree>& tempNodeMap);
     void createRTNodeConnections(NodeBuildMap& builtNodes, std::unordered_map<int, juce::ValueTree>& tempNodeMap);
@@ -91,7 +96,8 @@ private:
 
     std::unordered_set<int> builtGraphIds;
 
-    std::vector<int> durationRefreshScratch;
+    std::vector<GraphUpdate> queuedGraphs;
+    std::vector<int>         durationRefreshScratch;
 
     PendingChanges pending;
 };

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "ScriptCompiler.h"
@@ -83,13 +84,15 @@ enum class TokenKind
 
 struct Token
 {
-    TokenKind   kind         = TokenKind::Null;
-    std::string text;
-    int         value        = 0;
-    double      decimalValue = 0.0;
-    int         line         = 1;
-    int         column       = 1;
-    int         length       = 1;
+    TokenKind        kind         = TokenKind::Null;
+    std::string_view text;
+
+    int              value        = 0;
+    double           decimalValue = 0.0;
+
+    int              line         = 1;
+    int              column       = 1;
+    int              length       = 1;
 };
 
 struct KeywordEntry

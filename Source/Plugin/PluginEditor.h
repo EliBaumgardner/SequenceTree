@@ -5,6 +5,7 @@
 #include "PluginProcessor.h"
 #include "../UI/Canvas/NodeCanvas.h"
 #include "../UI/Canvas/CanvasFrame.h"
+#include "../UI/Canvas/NodeLimitWarning.h"
 #include "../UI/Node/Node.h"
 #include "../Graph/RTGraphBuilder.h"
 #include <ArsNovaUI/Canvas/DynamicPort.h>
@@ -84,6 +85,7 @@ private:
     juce::TooltipWindow tooltipWindow { &workspace, tooltipDelayMs };
     GraphDocument       graphDocument;
     NotePreviewGestures notePreviewGestures;
+    NodeLimitWarning    nodeLimitWarning;
 
     ArsNovaUI::PopupWindowLauncher traversalRulesLauncher {
         "Traversal Rules",
@@ -99,7 +101,7 @@ private:
     ArsNovaUI::PopupWindowLauncher settingsLauncher {
         "Settings",
         [this]() {
-            auto content = std::make_unique<SettingsMenu>(lookAndFeel, *scaledView, audioProcessor.colourPresets, audioProcessor.canvasSettings, audioProcessor.undoManager);
+            auto content = std::make_unique<SettingsMenu>(lookAndFeel, *scaledView, audioProcessor.colourPresets, graphDocument);
 
             const juce::Point<int> size = content->narrowestSize();
 

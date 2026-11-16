@@ -1,5 +1,6 @@
 #include "TraversalRulesWindow.h"
 #include "../../Graph/TraversalRuleState.h"
+#include "../../Graph/TypedProperties.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "../../Plugin/AudioSnapshotPublisher.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
@@ -56,7 +57,7 @@ TraversalRulesWindow::TraversalRulesWindow(ArsNovaUI::CustomLookAndFeel& lookAnd
 
     syncWithRuleState();
 
-    openRule(traversalRuleState.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
+    openRule(traversalRuleState.activeRuleId);
 }
 
 TraversalRulesWindow::~TraversalRulesWindow()
@@ -150,12 +151,14 @@ void TraversalRulesWindow::openRule(int ruleId)
 
     const bool isOpen = std::ranges::find(tabBar.tabStrip.tabs, ruleId, &ArsNovaUI::TabBar::Tab::id) != tabBar.tabStrip.tabs.end();
 
+    const RuleProperties properties(rule);
+
     if (! rule.isValid()) {
         return;
     }
 
     if (! isOpen) {
-        tabBar.tabStrip.tabs.push_back({ ruleId, rule.getProperty(ValueTreeIdentifiers::RuleName).toString(), false });
+        tabBar.tabStrip.tabs.push_back({ ruleId, properties.ruleName, false });
     }
 
     viewRule(ruleId);
@@ -180,7 +183,7 @@ void TraversalRulesWindow::addRule(int folderId)
 
 void TraversalRulesWindow::removeRule(int ruleId)
 {
-    const bool wasLiveRule = static_cast<int>(traversalRuleState.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == ruleId;
+    const bool wasLiveRule = traversalRuleState.activeRuleId == ruleId;
 
     undoManager.beginNewTransaction();
 
@@ -208,7 +211,7 @@ void TraversalRulesWindow::makeRuleLive(int ruleId)
         return;
     }
 
-    traversalRuleState.rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, ruleId, nullptr);
+    traversalRuleState.activeRuleId.setValue(ruleId, nullptr);
 
     if (ruleId != viewedRuleId) {
         snapshots.publishActiveTraversalRule();
@@ -228,9 +231,11 @@ void TraversalRulesWindow::syncWithRuleState()
     for (int i = 0; i < state.rules.getNumChildren(); ++i) {
         const juce::ValueTree rule = state.rules.getChild(i);
 
+        const RuleProperties properties(rule);
+
         const int ruleId = rule.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-        const juce::String source = rule.getProperty(ValueTreeIdentifiers::RuleSource).toString();
+        const juce::String source = properties.ruleSource;
 
         const auto match = filePages.find(ruleId);
 
@@ -266,7 +271,7 @@ void TraversalRulesWindow::syncWithRuleState()
         page = filePages.erase(page);
     }
 
-    treePanel.treeView.liveRuleId   = state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1);
+    treePanel.treeView.liveRuleId   = state.activeRuleId;
     treePanel.treeView.viewedRuleId = viewedRuleId;
 
     treePanel.treeView.rebuild();
@@ -278,7 +283,7 @@ void TraversalRulesWindow::syncWithRuleState()
     }
 
     if (viewedRuleRemoved) {
-        openRule(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
+        openRule(state.activeRuleId);
 
         return;
     }
@@ -294,10 +299,12 @@ void TraversalRulesWindow::syncWithRuleState()
 
 void TraversalRulesWindow::refreshTabs()
 {
-    const int liveRuleId = traversalRuleState.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1);
+    const int liveRuleId = traversalRuleState.activeRuleId;
 
     for (ArsNovaUI::TabBar::Tab& tab : tabBar.tabStrip.tabs) {
-        tab.name   = traversalRuleState.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, tab.id).getProperty(ValueTreeIdentifiers::RuleName).toString();
+        const RuleProperties rule(traversalRuleState.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, tab.id));
+
+        tab.name   = rule.ruleName;
         tab.marked = tab.id == liveRuleId;
     }
 
@@ -422,7 +429,7 @@ void TraversalRulesWindow::compileViewedPage()
 
     ScriptCompileResult result = compileTraversalScript(source.toStdString());
 
-    const bool isLiveRule = static_cast<int>(state.rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) == viewedRuleId;
+    const bool isLiveRule = state.activeRuleId == viewedRuleId;
 
     const int instructionTotal = static_cast<int>(result.script.instructions.size());
 

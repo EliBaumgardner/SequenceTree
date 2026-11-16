@@ -15,8 +15,8 @@
     ends the block, and the audio thread never writes to a snapshot.
 
     To change what playback sees, a caller takes a copy with beginEdit, replaces one member and
-    calls publish. publishGraph merges a rebuilt graph into the published nodes, drops that
-    graph's stale nodes and sets startRootId, the root the audio thread starts walking from: the
+    calls publish. publishGraphs merges rebuilt graphs into the published nodes in one snapshot,
+    drops those graphs' stale nodes and sets startRootId, the root the audio thread starts walking from: the
     lowest-id root no arrow points into, or the lowest-id root when every root has one. publishScript
     publishes a compiled script, and publishActiveTraversalRule compiles the
     active rule's source first and returns the compile result so its errors can be shown.
@@ -54,7 +54,7 @@ public:
 
     void publish      (std::shared_ptr<Snapshot> snapshot);
     void publishScript(std::shared_ptr<RTScript> script);
-    void publishGraph (int graphId, NodeMap graphNodes);
+    void publishGraphs(std::vector<GraphUpdate> updates);
 
     void releaseRetiredSnapshots();
 

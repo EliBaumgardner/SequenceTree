@@ -2,6 +2,8 @@
 #include "PluginEditor.h"
 #include "../UI/Node/Node.h"
 #include "../UI/Canvas/GridMultiplier.h"
+#include "../Graph/TypedProperties.h"
+#include "../Graph/StateJson.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include "../Util/ArrowInfo.h"
 #include "../Util/NodeInfo.h"
@@ -25,21 +27,28 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
     const juce::File applicationSupport = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application Support");
     const juce::File untitledPatch      = claimUntitledPatch(patchFolder);
 
+    const juce::String untitledName = untitledPatch.getFileNameWithoutExtension();
+    const juce::String untitledPath = untitledPatch.getFullPathName();
+
+    PatchProperties patchProperties(patch);
+
+    CanvasSettingsProperties settings(canvasSettings);
+
     traversalRuleState.ensureDefaultRule();
     snapshots.publishActiveTraversalRule();
 
     patchFolder.createDirectory();
 
-    patch.setProperty(ValueTreeIdentifiers::PatchName, untitledPatch.getFileNameWithoutExtension(), nullptr);
-    patch.setProperty(ValueTreeIdentifiers::PatchFile, untitledPatch.getFullPathName(), nullptr);
-    canvasSettings.setProperty(ValueTreeIdentifiers::GraphGridMultiplier, GridMultiplier::defaultGraphMultiplier, nullptr);
-    canvasSettings.setProperty(ValueTreeIdentifiers::OrnamentGridMultiplier, GridMultiplier::defaultOrnamentMultiplier, nullptr);
-    canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXBinding,        static_cast<int>(ArrowInfo::Binding::DurationBind), nullptr);
-    canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYBinding,        static_cast<int>(ArrowInfo::Binding::PitchBind),    nullptr);
-    canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXMultiplier,     1.0,                                                nullptr);
-    canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYMultiplier,     1.0,                                                nullptr);
-    canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXTarget,         static_cast<int>(ArrowInfo::Binding::DurationBind), nullptr);
-    canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYTarget,         static_cast<int>(ArrowInfo::Binding::PitchBind),    nullptr);
+    patchProperties.patchName.setValue(untitledName, nullptr);
+    patchProperties.patchFile.setValue(untitledPath, nullptr);
+    settings.graphGridMultiplier   .setValue(GridMultiplier::defaultGraphMultiplier,    nullptr);
+    settings.ornamentGridMultiplier.setValue(GridMultiplier::defaultOrnamentMultiplier, nullptr);
+    settings.arrowXBinding         .setValue(settings.arrowXBinding.getDefault(),       nullptr);
+    settings.arrowYBinding         .setValue(settings.arrowYBinding.getDefault(),       nullptr);
+    settings.arrowXMultiplier      .setValue(settings.arrowXMultiplier.getDefault(),    nullptr);
+    settings.arrowYMultiplier      .setValue(settings.arrowYMultiplier.getDefault(),    nullptr);
+    settings.arrowXTarget          .setValue(settings.arrowXTarget.getDefault(),        nullptr);
+    settings.arrowYTarget          .setValue(settings.arrowYTarget.getDefault(),        nullptr);
 
     ornamentLibraries.load(userFolder.getChildFile("Ornament Libraries"));
     ornamentLibraries.importLegacyLibraries(applicationSupport.getChildFile(JucePlugin_Name).getChildFile("Ornament Libraries"));
@@ -347,9 +356,15 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
         applyRestoredState();
     }
 
-    const bool       stateIsLive = ! pendingRestoreState.isValid();
-    const juce::File patchFile(patch[ValueTreeIdentifiers::PatchFile].toString());
-    juce::ValueTree  state;
+    const PatchProperties patchProperties(patch);
+
+    const juce::String storedPatchFile = patchProperties.patchFile;
+
+    const bool stateIsLive = ! pendingRestoreState.isValid();
+
+    const juce::File patchFile(storedPatchFile);
+
+    juce::ValueTree state;
 
     if (! stateIsLive) {
         state = pendingRestoreState;
@@ -368,7 +383,9 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
 
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
 
-    copyXmlToBinary(*xml, destData);
+    const juce::String stateText = juce::JSON::toString(StateJson::toVar(*xml));
+
+    destData.replaceAll(stateText.toRawUTF8(), stateText.getNumBytesAsUTF8());
 
     if (stateIsLive && (graphState.nodeMap.getNumChildren() > 0 || patchFile.existsAsFile())) {
         patchFile.replaceWithData(destData.getData(), destData.getSize());
@@ -381,7 +398,11 @@ void SequenceTreeAudioProcessor::setStateInformation (const void* data, int size
         pendingRestoreState = juce::ValueTree(ValueTreeIdentifiers::NodeMap);
     }
     else {
-        std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+        std::unique_ptr<juce::XmlElement> xmlState = StateJson::read(data, sizeInBytes);
+
+        if (xmlState == nullptr) {
+            xmlState = getXmlFromBinary(data, sizeInBytes);
+        }
 
         if (xmlState == nullptr)     { DBG("INVALID STATE DATA"); return; }
 
@@ -446,25 +467,32 @@ void SequenceTreeAudioProcessor::applyRestoredState()
     colourPresets.copyPropertiesAndChildrenFrom(restoredPresets, nullptr);
 
     if (restoredCanvasSettings.isValid()) {
+        CanvasSettingsProperties settings(canvasSettings);
+
         canvasSettings.copyPropertiesFrom(restoredCanvasSettings, nullptr);
 
-        if (! canvasSettings.hasProperty(ValueTreeIdentifiers::ArrowXBinding)) {
-            canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXBinding, static_cast<int>(ArrowInfo::Binding::DurationBind), nullptr);
+        if (settings.arrowXBinding.isUsingDefault()) {
+            settings.arrowXBinding.setValue(settings.arrowXBinding.getDefault(), nullptr);
         }
-        if (! canvasSettings.hasProperty(ValueTreeIdentifiers::ArrowYBinding)) {
-            canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYBinding, static_cast<int>(ArrowInfo::Binding::PitchBind), nullptr);
+
+        if (settings.arrowYBinding.isUsingDefault()) {
+            settings.arrowYBinding.setValue(settings.arrowYBinding.getDefault(), nullptr);
         }
-        if (! canvasSettings.hasProperty(ValueTreeIdentifiers::ArrowXMultiplier)) {
-            canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, 1.0, nullptr);
+
+        if (settings.arrowXMultiplier.isUsingDefault()) {
+            settings.arrowXMultiplier.setValue(settings.arrowXMultiplier.getDefault(), nullptr);
         }
-        if (! canvasSettings.hasProperty(ValueTreeIdentifiers::ArrowYMultiplier)) {
-            canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYMultiplier, 1.0, nullptr);
+
+        if (settings.arrowYMultiplier.isUsingDefault()) {
+            settings.arrowYMultiplier.setValue(settings.arrowYMultiplier.getDefault(), nullptr);
         }
-        if (! canvasSettings.hasProperty(ValueTreeIdentifiers::ArrowXTarget)) {
-            canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXTarget, static_cast<int>(ArrowInfo::Binding::DurationBind), nullptr);
+
+        if (settings.arrowXTarget.isUsingDefault()) {
+            settings.arrowXTarget.setValue(settings.arrowXTarget.getDefault(), nullptr);
         }
-        if (! canvasSettings.hasProperty(ValueTreeIdentifiers::ArrowYTarget)) {
-            canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYTarget, static_cast<int>(ArrowInfo::Binding::PitchBind), nullptr);
+
+        if (settings.arrowYTarget.isUsingDefault()) {
+            settings.arrowYTarget.setValue(settings.arrowYTarget.getDefault(), nullptr);
         }
     }
 

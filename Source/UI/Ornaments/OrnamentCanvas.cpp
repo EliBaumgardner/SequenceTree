@@ -64,7 +64,11 @@ void OrnamentCanvas::nodeCreated(ArsNovaUI::CanvasNode& canvasNode)
 {
     Node& node = static_cast<Node&>(canvasNode);
 
-    const int hostId = document.nodes.getProperty(ValueTreeIdentifiers::OrnamentHostId, OrnamentLibraries::noHostId);
+    juce::ValueTree figure = document.nodes;
+
+    const juce::CachedValue<int> storedHostId(figure, ValueTreeIdentifiers::OrnamentHostId, nullptr, OrnamentLibraries::noHostId);
+
+    const int hostId = storedHostId;
 
     node.nodeColour  = ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour;
     node.hasInnerRim = node.nodeId == hostId;
@@ -80,7 +84,11 @@ void OrnamentCanvas::prepareArrow(ArsNovaUI::CanvasArrow& arrow)
 
 void OrnamentCanvas::refreshHost()
 {
-    const int hostId = document.nodes.getProperty(ValueTreeIdentifiers::OrnamentHostId, OrnamentLibraries::noHostId);
+    juce::ValueTree figure = document.nodes;
+
+    const juce::CachedValue<int> storedHostId(figure, ValueTreeIdentifiers::OrnamentHostId, nullptr, OrnamentLibraries::noHostId);
+
+    const int hostId = storedHostId;
 
     for (const auto& [nodeId, node] : nodeManager.all()) {
         Node* const figureNode = static_cast<Node*>(node.get());

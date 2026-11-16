@@ -1,4 +1,5 @@
 #include "RootNode.h"
+#include "../../Graph/TypedProperties.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/GraphState.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
@@ -63,8 +64,10 @@ void RootNode::equipTraversals()
 
     for (int referenceIndex = traversalChildrenIds.getNumChildren() - 1; referenceIndex >= 0; --referenceIndex) {
         const juce::ValueTree reference = traversalChildrenIds.getChild(referenceIndex);
-        const TraversalKey    existingKey { static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
-                                         static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) };
+
+        const TraversalReferenceProperties referenceProperties(reference);
+
+        const TraversalKey existingKey { referenceProperties.traversalId, referenceProperties.traversalInstance };
 
         if (std::ranges::find(keys, existingKey) == keys.end()) {
             traversalChildrenIds.removeChild(referenceIndex, nullptr);
@@ -80,8 +83,10 @@ void RootNode::equipTraversals()
 
         juce::ValueTree traversalIdTree { ValueTreeIdentifiers::TraversalId };
 
-        traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalId,       key.typeId,   nullptr);
-        traversalIdTree.setProperty(ValueTreeIdentifiers::TraversalInstance, key.instance, nullptr);
+        TraversalReferenceProperties reference(traversalIdTree);
+
+        reference.traversalId      .setValue(key.typeId,   nullptr);
+        reference.traversalInstance.setValue(key.instance, nullptr);
 
         traversalChildrenIds.addChild(traversalIdTree, -1, nullptr);
     }
@@ -100,9 +105,9 @@ void RootNode::bindToTree()
     juce::StringArray equippedReferences;
 
     for (int referenceIndex = 0; referenceIndex < traversalChildrenIds.getNumChildren(); ++referenceIndex) {
-        const juce::ValueTree reference = traversalChildrenIds.getChild(referenceIndex);
-        const TraversalKey    key { static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
-                                 static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) };
+        const TraversalReferenceProperties reference(traversalChildrenIds.getChild(referenceIndex));
+
+        const TraversalKey key { reference.traversalId, reference.traversalInstance };
 
         equippedReferences.add(TraversalFlagFormat::describe(key));
     }

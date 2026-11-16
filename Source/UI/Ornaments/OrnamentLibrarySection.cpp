@@ -1,5 +1,7 @@
 #include "OrnamentLibrarySection.h"
+#include "../../Graph/TypedProperties.h"
 #include <ArsNovaUI/Menus/ContextMenu.h>
+#include <ArsNovaUI/Menus/Dialog.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
 
@@ -161,12 +163,18 @@ void OrnamentLibrarySection::addOrnament()
 
     ornament = ornamentLibraries.addOrnament(library, &undoManager);
 
-    ornamentLibraries.libraries.setProperty(ValueTreeIdentifiers::ActiveOrnamentUid, ornament.getProperty(ValueTreeIdentifiers::OrnamentUid), nullptr);
+    const OrnamentProperties added(ornament);
+
+    ornamentLibraries.activeOrnamentUid.setValue(added.ornamentUid, nullptr);
 }
 
 void OrnamentLibrarySection::showMenu()
 {
-    const auto libraryFolder = ornamentLibraries.libraryFolders.find(library.getProperty(ValueTreeIdentifiers::LibraryUid).toString());
+    const LibraryProperties properties(library);
+
+    const juce::String libraryUid = properties.libraryUid;
+
+    const auto libraryFolder = ornamentLibraries.libraryFolders.find(libraryUid);
 
     juce::File revealed = ornamentLibraries.folder;
 
@@ -184,15 +192,20 @@ void OrnamentLibrarySection::showMenu()
 
 void OrnamentLibrarySection::confirmRemove()
 {
-    const juce::String uid     = library.getProperty(ValueTreeIdentifiers::LibraryUid).toString();
-    const juce::String name    = library.getProperty(ValueTreeIdentifiers::LibraryName).toString();
-    const auto         options = juce::MessageBoxOptions().withIconType(juce::MessageBoxIconType::QuestionIcon).withTitle("Remove library")
-                                     .withMessage("Remove \"" + name + "\"? Its folder moves to the Trash.").withButton("Remove").withButton("Cancel")
-                                     .withAssociatedComponent(this);
+    const LibraryProperties properties(library);
 
-    juce::AlertWindow::showAsync(options, [&libraries = ornamentLibraries, &undoManager = undoManager, uid](int result) {
-        if (result == 1) {
-            libraries.removeLibrary(uid, undoManager);
-        }
+    const juce::String uid  = properties.libraryUid;
+    const juce::String name = properties.libraryName;
+
+    ArsNovaUI::Dialog dialog;
+
+    dialog.title   = "Remove library";
+    dialog.message = "Remove \"" + name + "\"? Its folder moves to the Trash.";
+
+    dialog.addButton("Remove", [&libraries = ornamentLibraries, &undoManager = undoManager, uid]() {
+        libraries.removeLibrary(uid, undoManager);
     });
+
+    dialog.addButton("Cancel", nullptr);
+    dialog.show(*this);
 }

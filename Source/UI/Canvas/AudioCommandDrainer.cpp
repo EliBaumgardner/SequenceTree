@@ -1,4 +1,5 @@
 #include "AudioCommandDrainer.h"
+#include "../../Graph/TypedProperties.h"
 
 #include "NodeCanvas.h"
 #include "../Node/Node.h"
@@ -144,7 +145,9 @@ juce::Colour AudioCommandDrainer::getTraversalColour(int traversalId) const
         return juce::Colours::white;
     }
 
-    const juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
+    const TraversalProperties traversal(traversalData);
+
+    const juce::String colourString = traversal.colour;
 
     if (colourString.isEmpty()) {
         return juce::Colours::white;

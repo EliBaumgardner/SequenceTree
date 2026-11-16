@@ -155,10 +155,11 @@ void OrnamentBuildPanel::applyView()
 
 void OrnamentBuildPanel::showActiveOrnament()
 {
-    ornament = ornamentLibraries.findOrnament(ornamentLibraries.libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString());
+    const juce::String activeUid = ornamentLibraries.activeOrnamentUid;
 
     document.nodes.removeListener(&canvas.treeListener);
 
+    ornament              = ornamentLibraries.findOrnament(activeUid);
     document.ornament     = ornament;
     document.nodes        = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
     symbolEditor.ornament = ornament;

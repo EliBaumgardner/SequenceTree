@@ -12,6 +12,7 @@
 #include "Audio/Traversal/TraversalRule.h"
 #include "Script/ScriptCompiler.h"
 #include "Graph/NodeFactory.h"
+#include "Graph/StateJson.h"
 #include "Graph/OrnamentLibraries.h"
 #include "Input/GraphDocument.h"
 
@@ -222,6 +223,62 @@ TEST_CASE("the grid multipliers survive saving and restoring the plugin state", 
     original.getStateInformation(savedState);
 
     restored.setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
+
+    CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::GraphGridMultiplier)) == 3.5);
+    CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::OrnamentGridMultiplier)) == 1.5);
+}
+
+struct LegacyStateWriter : SequenceTreeAudioProcessor
+{
+    static void write(const juce::XmlElement& element, juce::MemoryBlock& destination)
+    {
+        copyXmlToBinary(element, destination);
+    }
+};
+
+TEST_CASE("the plugin state is saved as JSON text", "[graph]")
+{
+    SequenceTreeAudioProcessor original;
+    juce::MemoryBlock          savedState;
+    juce::TemporaryFile        patchFile { SequenceTreeAudioProcessor::patchExtension };
+
+    original.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
+
+    original.canvasSettings.setProperty(ValueTreeIdentifiers::GraphGridMultiplier, 3.5, nullptr);
+
+    original.getStateInformation(savedState);
+
+    const juce::String savedText = savedState.toString();
+
+    juce::var parsed;
+
+    REQUIRE(juce::JSON::parse(savedText, parsed).wasOk());
+    CHECK(parsed.getProperty("type", juce::var()).toString() == ValueTreeIdentifiers::PluginState.toString());
+    CHECK(parsed.getProperty("children", juce::var()).size() > 0);
+}
+
+TEST_CASE("a state saved in the old binary format still restores", "[graph]")
+{
+    SequenceTreeAudioProcessor original;
+    SequenceTreeAudioProcessor restored;
+    juce::MemoryBlock          jsonState;
+    juce::MemoryBlock          binaryState;
+    juce::TemporaryFile        patchFile { SequenceTreeAudioProcessor::patchExtension };
+
+    original.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
+
+    original.canvasSettings.setProperty(ValueTreeIdentifiers::GraphGridMultiplier, 3.5, nullptr);
+    original.canvasSettings.setProperty(ValueTreeIdentifiers::OrnamentGridMultiplier, 1.5, nullptr);
+
+    original.getStateInformation(jsonState);
+
+    const std::unique_ptr<juce::XmlElement> element = StateJson::read(jsonState.getData(), static_cast<int>(jsonState.getSize()));
+
+    REQUIRE(element != nullptr);
+
+    LegacyStateWriter::write(*element, binaryState);
+
+    restored.setStateInformation(binaryState.getData(), static_cast<int>(binaryState.getSize()));
 
     CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::GraphGridMultiplier)) == 3.5);
     CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::OrnamentGridMultiplier)) == 1.5);

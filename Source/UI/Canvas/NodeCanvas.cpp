@@ -1,4 +1,5 @@
 #include "NodeCanvas.h"
+#include "../../Graph/TypedProperties.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Node/Node.h"
 #include "../Node/Arrow.h"
@@ -18,14 +19,13 @@
 #include <algorithm>
 #include <cmath>
 
-NodeCanvas::NodeCanvas(GraphDocument& graphDocument, AudioUIBridge& bridge, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings,
-                       ArsNovaUI::CustomLookAndFeel& lookAndFeel)
+NodeCanvas::NodeCanvas(GraphDocument& graphDocument, AudioUIBridge& bridge, OrnamentLibraries& ornamentLibraries, ArsNovaUI::CustomLookAndFeel& lookAndFeel)
     : NodeArrowCanvas  (graphDocument),
       graphState       (graphDocument.graphState),
       drainer          (*this, bridge, graphState),
       encapsulationView(*this, graphState),
       ornamentMarks    (*this, ornamentLibraries),
-      gridMultiplier   (*this, canvasSettings, ValueTreeIdentifiers::GraphGridMultiplier)
+      gridMultiplier   (*this, graphDocument.canvasSettings, ValueTreeIdentifiers::GraphGridMultiplier)
 {
     setWantsKeyboardFocus(true);
 
@@ -121,10 +121,16 @@ void NodeCanvas::nodeCreated(ArsNovaUI::CanvasNode& canvasNode)
 
     const juce::ValueTree midiNotes = node.nodeValueTree.getChildWithName(ValueTreeIdentifiers::MidiNotesData);
 
-    const juce::var colourText = node.nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour.toString());
+    const NodeProperties properties(node.nodeValueTree);
+
+    juce::String colourText = properties.nodeColour;
+
+    if (properties.nodeColour.isUsingDefault()) {
+        colourText = ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour.toString();
+    }
 
     node.midiNoteData = midiNotes.getChildWithName(ValueTreeIdentifiers::MidiNoteData);
-    node.nodeColour   = juce::Colour::fromString(colourText.toString());
+    node.nodeColour   = juce::Colour::fromString(colourText);
 
     node.bindToTree();
     node.setDisplayMode(displayMode);
@@ -137,7 +143,9 @@ void NodeCanvas::nodeAdded(ArsNovaUI::CanvasNode& node)
 {
     const juce::ValueTree nodeTree = node.nodeValueTree;
 
-    const int owningEncapsulatorId = nodeTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+    const NodeProperties properties(nodeTree);
+
+    const int owningEncapsulatorId = properties.encapsulatorId;
 
     if (nodeTree.getType() == ValueTreeIdentifiers::EncapsulatorData) {
         encapsulationView.collapse(node.nodeId);
@@ -162,7 +170,9 @@ void NodeCanvas::nodeAdded(ArsNovaUI::CanvasNode& node)
 
 void NodeCanvas::nodeRemoving(ArsNovaUI::CanvasNode& node)
 {
-    const int encapsulatorId = node.nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+    const NodeProperties properties(node.nodeValueTree);
+
+    const int encapsulatorId = properties.encapsulatorId;
 
     if (auto* const encapsulator = dynamic_cast<Encapsulator*>(&node)) {
         encapsulationView.showMembers(encapsulator->memberNodeIds);
@@ -201,9 +211,15 @@ void NodeCanvas::updateApplied(const AsyncUpdate& update)
     }
 
     if (update.type == AsyncUpdateType::NodeColourChanged) {
-        const juce::var colourText = node->nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour.toString());
+        const NodeProperties properties(node->nodeValueTree);
 
-        node->nodeColour = juce::Colour::fromString(colourText.toString());
+        juce::String colourText = properties.nodeColour;
+
+        if (properties.nodeColour.isUsingDefault()) {
+            colourText = ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour.toString();
+        }
+
+        node->nodeColour = juce::Colour::fromString(colourText);
 
         node->repaint();
 
@@ -404,8 +420,10 @@ void NodeCanvas::resumeAllProgress()
 
 juce::Point<int> NodeCanvas::drawnPosition(const juce::ValueTree& nodeTree) const
 {
+    const NodeProperties properties(nodeTree);
+
     const int nodeId         = nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
-    const int encapsulatorId = nodeTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+    const int encapsulatorId = properties.encapsulatorId;
 
     const juce::ValueTree encapsulator = graphState.getNode(encapsulatorId);
 

@@ -1,5 +1,7 @@
 #include "OrnamentTile.h"
+#include "../../Graph/TypedProperties.h"
 #include <ArsNovaUI/Menus/ContextMenu.h>
+#include <ArsNovaUI/Menus/Dialog.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
 
@@ -27,15 +29,24 @@ OrnamentTile::OrnamentTile(OrnamentLibraries& ornamentLibraries, juce::ValueTree
 void OrnamentTile::paint(juce::Graphics& graphics)
 {
     ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
-    const auto                    bounds      = getLocalBounds().toFloat().reduced(ArsNovaUI::Theme::borderThickness);
-    const auto                    symbol      = getLocalBounds().withTrimmedTop(markerHeight).withTrimmedBottom(nameTagHeight).reduced(nameTagInset).toFloat();
-    const juce::String            activeUid   = ornamentLibraries.libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString();
-    const auto                    marker      = getLocalBounds().removeFromTop(markerHeight).reduced(nameTagInset, 0);
-    juce::Colour                  fill        = lookAndFeel.raisedColour;
-    juce::Colour                  border      = lookAndFeel.borderColour;
-    juce::String                  status;
 
-    if (activeUid == ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString()) {
+    const auto bounds = getLocalBounds().toFloat().reduced(ArsNovaUI::Theme::borderThickness);
+    const auto symbol = getLocalBounds().withTrimmedTop(markerHeight).withTrimmedBottom(nameTagHeight).reduced(nameTagInset).toFloat();
+    const auto marker = getLocalBounds().removeFromTop(markerHeight).reduced(nameTagInset, 0);
+
+    const juce::String activeUid = ornamentLibraries.activeOrnamentUid;
+
+    juce::Colour fill   = lookAndFeel.raisedColour;
+    juce::Colour border = lookAndFeel.borderColour;
+
+    juce::String status;
+
+    const OrnamentProperties properties(ornament);
+
+    const juce::String ornamentUid  = properties.ornamentUid;
+    const juce::String storedSymbol = properties.symbol;
+
+    if (activeUid == ornamentUid) {
         fill   = lookAndFeel.selectedColour;
         border = lookAndFeel.accentColour;
     }
@@ -58,7 +69,7 @@ void OrnamentTile::paint(juce::Graphics& graphics)
 
     graphics.setColour(lookAndFeel.textColour);
 
-    const std::vector<ArsNovaUI::SymbolStroke> symbolStrokes = OrnamentLibraries::readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString());
+    const std::vector<ArsNovaUI::SymbolStroke> symbolStrokes = OrnamentLibraries::readSymbol(storedSymbol);
 
     lookAndFeel.drawStrokeSymbol(graphics, symbol, symbolStrokes);
 }
@@ -71,12 +82,17 @@ void OrnamentTile::mouseDown(const juce::MouseEvent& event)
         return;
     }
 
-    ornamentLibraries.libraries.setProperty(ValueTreeIdentifiers::ActiveOrnamentUid, ornament.getProperty(ValueTreeIdentifiers::OrnamentUid), nullptr);
+    const OrnamentProperties properties(ornament);
+
+    ornamentLibraries.activeOrnamentUid.setValue(properties.ornamentUid, nullptr);
 }
 
 void OrnamentTile::showMenu()
 {
-    const juce::String     uid = ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
+    const OrnamentProperties properties(ornament);
+
+    const juce::String uid = properties.ornamentUid;
+
     ArsNovaUI::ContextMenu menu;
 
     menu.addItem("duplicate", ArsNovaUI::ContextMenu::ItemKind::Action, [this, uid]() {
@@ -92,18 +108,22 @@ void OrnamentTile::showMenu()
 
 void OrnamentTile::confirmDelete()
 {
-    const juce::String uid     = ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
-    const juce::String name    = ornament.getProperty(ValueTreeIdentifiers::OrnamentName).toString();
-    const auto         options = juce::MessageBoxOptions().withIconType(juce::MessageBoxIconType::QuestionIcon).withTitle("Delete ornament")
-                                     .withMessage("Delete \"" + name + "\"?").withButton("Delete").withButton("Cancel").withAssociatedComponent(this);
+    const OrnamentProperties properties(ornament);
 
-    juce::AlertWindow::showAsync(options, [&libraries = ornamentLibraries, &undoManager = undoManager, uid](int result) {
-        if (result != 1) {
-            return;
-        }
+    const juce::String uid  = properties.ornamentUid;
+    const juce::String name = properties.ornamentName;
 
+    ArsNovaUI::Dialog dialog;
+
+    dialog.title   = "Delete ornament";
+    dialog.message = "Delete \"" + name + "\"?";
+
+    dialog.addButton("Delete", [&libraries = ornamentLibraries, &undoManager = undoManager, uid]() {
         undoManager.beginNewTransaction();
 
         libraries.removeOrnament(uid, &undoManager);
     });
+
+    dialog.addButton("Cancel", nullptr);
+    dialog.show(*this);
 }

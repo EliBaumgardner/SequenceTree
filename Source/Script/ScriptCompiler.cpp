@@ -45,7 +45,7 @@ static ScriptOutline makeOutline(const ClassDeclaration& declaration)
 
             parameters += typeName(parameter.type);
         }
-
+        
         outline.entries.push_back({ ScriptOutlineEntry::Kind::Function, function.name + "(" + parameters + ")", typeName(function.returnType), function.line });
     }
 

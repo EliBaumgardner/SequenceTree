@@ -1,5 +1,6 @@
 #include "TraversalMenu.h"
 #include "../../Graph/GraphState.h"
+#include "../../Graph/TypedProperties.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Util/NodeInfo.h"
@@ -45,9 +46,9 @@ TraversalMenu::TraversalMenu(NotePreviewGestures& notePreviewGestures, GraphStat
     editTraversalRulesButton.setText("edit traversal rules");
 
     colourSelector.onColourPicked = [this](juce::Colour pickedColour) {
-        if (currentTraversalData.isValid()) {
-            currentTraversalData.setProperty(ValueTreeIdentifiers::TraversalColour, pickedColour.toString(), nullptr);
-        }
+        TraversalProperties traversal(currentTraversalData);
+
+        traversal.colour.setValue(pickedColour.toString(), nullptr);
     };
 
     displayMenu.onItemSelected = [this](int traversalId) { selectTraversal(traversalId); };
@@ -70,7 +71,9 @@ TraversalMenu::TraversalMenu(NotePreviewGestures& notePreviewGestures, GraphStat
             continue;
         }
 
-        const int traversalId = traversalData.getProperty(ValueTreeIdentifiers::TraversalId);
+        const TraversalProperties traversal(traversalData);
+
+        const int traversalId = traversal.traversalId;
 
         displayMenu.addItem(traversalId, "Traversal " + juce::String(traversalId));
 
@@ -179,7 +182,9 @@ void TraversalMenu::selectTraversal(int traversalId)
 {
     juce::ValueTree traversalData = graphState.traversals.map.getChildWithProperty(ValueTreeIdentifiers::TraversalId, traversalId);
 
-    const juce::String colourString = traversalData.getProperty(ValueTreeIdentifiers::TraversalColour).toString();
+    const TraversalProperties traversal(traversalData);
+
+    const juce::String colourString = traversal.colour;
 
     const auto bindWithDefault = [&traversalData](ArsNovaUI::ValueEditor& editor, const juce::Identifier& propertyId,
                                                   const juce::var& defaultValue) {
@@ -238,7 +243,9 @@ void TraversalMenu::valueTreeChildAdded(juce::ValueTree&, juce::ValueTree& child
         return;
     }
 
-    const int traversalId = child.getProperty(ValueTreeIdentifiers::TraversalId);
+    const TraversalProperties traversal(child);
+
+    const int traversalId = traversal.traversalId;
 
     displayMenu.addItem(traversalId, "Traversal " + juce::String(traversalId));
 
@@ -251,18 +258,21 @@ void TraversalMenu::valueTreeChildRemoved(juce::ValueTree&, juce::ValueTree& chi
 {
     const juce::ValueTree remainingTraversal = graphState.traversals.map.getChildWithName(ValueTreeIdentifiers::TraversalData);
 
+    const TraversalProperties removed(child);
+    const TraversalProperties remaining(remainingTraversal);
+
     if (child.getType() != ValueTreeIdentifiers::TraversalData) {
         return;
     }
 
-    displayMenu.removeItem(child.getProperty(ValueTreeIdentifiers::TraversalId));
+    displayMenu.removeItem(removed.traversalId);
 
     if (child != currentTraversalData) {
         return;
     }
 
     if (remainingTraversal.isValid()) {
-        selectTraversal(remainingTraversal.getProperty(ValueTreeIdentifiers::TraversalId));
+        selectTraversal(remaining.traversalId);
 
         return;
     }

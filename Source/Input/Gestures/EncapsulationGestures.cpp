@@ -1,4 +1,5 @@
 #include "EncapsulationGestures.h"
+#include "../../Graph/TypedProperties.h"
 #include "../../UI/Canvas/NodeCanvas.h"
 #include "../../UI/Node/Node.h"
 #include "../../UI/Node/Encapsulator.h"
@@ -33,8 +34,11 @@ void EncapsulationGestures::selectSpanNode(Node& node)
         return;
     }
 
-    const int nodeRootId   = node.nodeValueTree.getProperty(ValueTreeIdentifiers::RootNodeId);
-    const int anchorRootId = graphState.getNode(spanAnchorNodeId).getProperty(ValueTreeIdentifiers::RootNodeId);
+    const NodeProperties clicked(node.nodeValueTree);
+    const NodeProperties anchor(graphState.getNode(spanAnchorNodeId));
+
+    const int nodeRootId   = clicked.rootNodeId;
+    const int anchorRootId = anchor.rootNodeId;
 
     if (spanAnchorNodeId < 0 || anchorRootId != nodeRootId) {
         nodeCanvas.clearOutlines();
@@ -64,7 +68,9 @@ void EncapsulationGestures::selectSpanNode(Node& node)
 
 void EncapsulationGestures::adoptCreatedChild(int parentNodeId, const juce::ValueTree& child)
 {
-    const int owningEncapsulatorId = graphState.getNode(parentNodeId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+    const NodeProperties parent(graphState.getNode(parentNodeId));
+
+    const int owningEncapsulatorId = parent.encapsulatorId;
 
     auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(nodeCanvas.nodeManager.find(owningEncapsulatorId));
 
@@ -88,7 +94,9 @@ bool EncapsulationGestures::toggleEncapsulationExpansion(Node& node)
         return true;
     }
 
-    const int owningEncapsulatorId = node.nodeValueTree.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+    const NodeProperties properties(node.nodeValueTree);
+
+    const int owningEncapsulatorId = properties.encapsulatorId;
 
     auto* const owningEncapsulator = dynamic_cast<Encapsulator*>(nodeCanvas.nodeManager.find(owningEncapsulatorId));
 

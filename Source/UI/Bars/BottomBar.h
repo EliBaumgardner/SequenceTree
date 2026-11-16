@@ -48,7 +48,7 @@ class BottomBar : public ArsNovaUI::Bar, private juce::ValueTree::Listener
 {
 public:
 
-    BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, juce::ValueTree colourPresets, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings);
+    BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, juce::ValueTree colourPresets, OrnamentLibraries& ornamentLibraries);
 
     ~BottomBar() override;
 

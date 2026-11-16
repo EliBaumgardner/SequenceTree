@@ -31,7 +31,7 @@ juce_add_plugin(SequenceTree
         PLUGIN_CODE ST01
 )
 
-target_compile_features(SequenceTree PRIVATE cxx_std_20)
+target_compile_features(SequenceTree PRIVATE cxx_std_23)
 
 if(MSVC)
     target_compile_options(SequenceTree PRIVATE /W4)
@@ -73,12 +73,14 @@ target_sources(SequenceTree PRIVATE
         Source/Audio/Traversal/NodeRowMap.cpp
         Source/Graph/RTGraphBuilder.cpp
         Source/Graph/GraphState.cpp
+        Source/Graph/TypedProperties.cpp
         Source/Graph/ArrowBindingOps.cpp
         Source/Graph/EncapsulationOps.cpp
         Source/Graph/TraversalState.cpp
         Source/Graph/TraversalRuleState.cpp
         Source/Graph/OrnamentLibraries.cpp
         Source/Graph/ValueTreeIdentifiers.cpp
+        Source/Graph/StateJson.cpp
         Source/Graph/NodeFactory.cpp
         Source/Graph/Clipboard.cpp
         Source/Input/NodeController.cpp
@@ -90,6 +92,7 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Canvas/NodeCanvas.cpp
         Source/UI/Canvas/ValueField.cpp
         Source/UI/Canvas/AudioCommandDrainer.cpp
+        Source/UI/Canvas/NodeLimitWarning.cpp
         Source/UI/Canvas/OrnamentMarks.cpp
         Source/UI/Canvas/OrnamentMarkView.cpp
         Source/UI/Canvas/EncapsulationView.cpp
@@ -171,7 +174,7 @@ add_executable(SequenceTree_Tests
         Source/Script/ScriptCompiler.cpp
 )
 
-target_compile_features(SequenceTree_Tests PRIVATE cxx_std_20)
+target_compile_features(SequenceTree_Tests PRIVATE cxx_std_23)
 target_compile_options(SequenceTree_Tests PRIVATE -Wall -Wextra -Wno-unused-parameter)
 target_include_directories(SequenceTree_Tests PRIVATE Source)
 target_link_libraries(SequenceTree_Tests PRIVATE Catch2::Catch2WithMain)
@@ -182,9 +185,10 @@ add_executable(SequenceTree_GraphTests
         Tests/Integration/GraphTests.cpp
         Tests/Integration/OrnamentTests.cpp
         Tests/Integration/CanvasTests.cpp
+        Tests/Integration/GestureTests.cpp
 )
 
-target_compile_features(SequenceTree_GraphTests PRIVATE cxx_std_20)
+target_compile_features(SequenceTree_GraphTests PRIVATE cxx_std_23)
 target_compile_options(SequenceTree_GraphTests PRIVATE -Wall -Wextra -Wno-unused-parameter)
 
 target_include_directories(SequenceTree_GraphTests PRIVATE Source JUCE/modules ${ARSNOVAUI_PATH})
@@ -198,7 +202,7 @@ if(SEQUENCETREE_REALTIME_SANITIZER)
             Tests/Integration/RealtimeTests.cpp
     )
 
-    target_compile_features(SequenceTree_RealtimeTests PRIVATE cxx_std_20)
+    target_compile_features(SequenceTree_RealtimeTests PRIVATE cxx_std_23)
     target_compile_options(SequenceTree_RealtimeTests PRIVATE -Wall -Wextra -Wno-unused-parameter)
 
     target_include_directories(SequenceTree_RealtimeTests PRIVATE Source JUCE/modules ${ARSNOVAUI_PATH})

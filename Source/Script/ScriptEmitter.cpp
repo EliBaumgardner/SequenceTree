@@ -169,11 +169,10 @@ void Emitter::emitSequence(std::span<const StatementPtr> statements)
     for (const StatementPtr& statement : statements) {
         const std::size_t scopeDepth = scopeMarks.size();
         const std::size_t localCount = locals.size();
-        const int         slotMark   = nextSlot;
 
-        try {
-            emitStatement(*statement);
-        } catch (const EmitFailure&) {
+        const int slotMark = nextSlot;
+
+        if (! emitStatement(*statement)) {
             scopeMarks.resize(scopeDepth);
             slotMarks.resize(scopeDepth);
             locals.resize(localCount);
@@ -193,30 +192,39 @@ void Emitter::emitBlock(std::span<const StatementPtr> body)
     closeScope();
 }
 
-void Emitter::emitStatement(const Statement& statement)
+EmitStatus Emitter::emitStatement(const Statement& statement)
 {
     switch (statement.kind) {
-        case StatementKind::Declare:  emitDeclare(statement);  break;
-        case StatementKind::Assign:   emitAssign(statement);   break;
-        case StatementKind::If:       emitIf(statement);       break;
-        case StatementKind::For:      emitFor(statement);      break;
-        case StatementKind::While:    emitWhile(statement);    break;
-        case StatementKind::Break:    emitBreak(statement);    break;
-        case StatementKind::Continue: emitContinue(statement); break;
-        case StatementKind::Return:   emitReturn(statement);   break;
+        case StatementKind::Declare:  return emitDeclare(statement);
+        case StatementKind::Assign:   return emitAssign(statement);
+        case StatementKind::If:       return emitIf(statement);
+        case StatementKind::For:      return emitFor(statement);
+        case StatementKind::While:    return emitWhile(statement);
+        case StatementKind::Break:    return emitBreak(statement);
+        case StatementKind::Continue: return emitContinue(statement);
+        case StatementKind::Return:   return emitReturn(statement);
 
         case StatementKind::Call: {
-            emitExpression(*statement.value);
+            const Emitted<ValueType> calledType = emitExpression(*statement.value);
+
+            if (! calledType) {
+                return std::unexpected(calledType.error());
+            }
+
             emit(ScriptOpcode::Pop);
-            break;
+
+            return {};
         }
     }
+
+    return {};
 }
 
-void Emitter::emitDeclare(const Statement& statement)
+EmitStatus Emitter::emitDeclare(const Statement& statement)
 {
-    ValueType type         = statement.declaredType;
-    int       defaultValue = 0;
+    ValueType type = statement.declaredType;
+
+    int defaultValue = 0;
 
     if (statement.value == nullptr) {
         if (type == ValueType::Node) {
@@ -226,45 +234,48 @@ void Emitter::emitDeclare(const Statement& statement)
         emit(ScriptOpcode::PushInt, defaultValue);
     }
     else {
-        const ValueType valueType = emitExpression(*statement.value);
+        const Emitted<ValueType> valueType = emitExpression(*statement.value);
 
-        if (valueType == ValueType::Void) {
-            fail("this gives no value to store in '" + statement.name + "'", *statement.value);
+        if (! valueType) {
+            return std::unexpected(valueType.error());
+        }
+
+        if (*valueType == ValueType::Void) {
+            return fail("this gives no value to store in '" + statement.name + "'", *statement.value);
         }
 
         if (type == ValueType::Inferred) {
-            type = valueType;
+            type = *valueType;
         }
 
-        if (!emitConversion(valueType, type)) {
-            fail("'" + statement.name + "' holds " + typeName(type) + ", but this is " + typeName(valueType), *statement.value);
+        if (!emitConversion(*valueType, type)) {
+            return fail("'" + statement.name + "' holds " + typeName(type) + ", but this is " + typeName(*valueType), *statement.value);
         }
     }
 
     emit(ScriptOpcode::StoreLocal, declareLocal(statement.name, type));
+
+    return {};
 }
 
-void Emitter::emitAssign(const Statement& statement)
+EmitStatus Emitter::emitAssign(const Statement& statement)
 {
     const Expression& target = *statement.target;
 
-    const LocalBinding* local  = nullptr;
-    const LocalBinding* member = nullptr;
-    const LocalBinding* global = nullptr;
+    if (target.kind == ExpressionKind::Field) {
+        return emitAssignField(statement);
+    }
+
+    const LocalBinding* const local  = findLocal(target.name);
+    const LocalBinding* const member = findMember(target.name);
+    const LocalBinding* const global = findGlobal(target.name);
 
     ScriptOpcode loadOpcode  = ScriptOpcode::PushLocal;
     ScriptOpcode storeOpcode = ScriptOpcode::StoreLocal;
-    int          slot        = 0;
-    ValueType    type        = ValueType::Int;
 
-    if (target.kind == ExpressionKind::Field) {
-        emitAssignField(statement);
-        return;
-    }
+    int slot = 0;
 
-    local  = findLocal(target.name);
-    member = findMember(target.name);
-    global = findGlobal(target.name);
+    ValueType type = ValueType::Int;
 
     if (local != nullptr) {
         slot = local->slot;
@@ -283,27 +294,33 @@ void Emitter::emitAssign(const Statement& statement)
         type        = global->type;
     }
     else if (target.name == "current") {
-        fail("'current' is where the walk is; move it by returning a node from advance", target);
+        return fail("'current' is where the walk is; move it by returning a node from advance", target);
     }
     else {
-        fail("'" + target.name + "' is not declared; declare it with 'int " + target.name + " = ...;'", target);
+        return fail("'" + target.name + "' is not declared; declare it with 'int " + target.name + " = ...;'", target);
     }
 
     if (statement.op != TokenKind::Assign) {
         if (commonType(type, type) == ValueType::Void) {
-            fail("only a number can be added to or taken from", target);
+            return fail("only a number can be added to or taken from", target);
         }
 
         emit(loadOpcode, slot);
     }
 
-    ValueType valueType = emitExpression(*statement.value);
+    const Emitted<ValueType> emittedType = emitExpression(*statement.value);
+
+    if (! emittedType) {
+        return std::unexpected(emittedType.error());
+    }
+
+    ValueType valueType = *emittedType;
 
     if (statement.op != TokenKind::Assign) {
         valueType = commonType(type, valueType);
 
         if (valueType == ValueType::Void) {
-            fail("only a number can be added to or taken from", *statement.value);
+            return fail("only a number can be added to or taken from", *statement.value);
         }
     }
 
@@ -316,25 +333,40 @@ void Emitter::emitAssign(const Statement& statement)
     }
 
     if (!emitConversion(valueType, type)) {
-        fail("'" + target.name + "' holds " + typeName(type) + ", but this is " + typeName(valueType), *statement.value);
+        return fail("'" + target.name + "' holds " + typeName(type) + ", but this is " + typeName(valueType), *statement.value);
     }
 
     emit(storeOpcode, slot);
+
+    return {};
 }
 
-void Emitter::emitAssignField(const Statement& statement)
+EmitStatus Emitter::emitAssignField(const Statement& statement)
 {
     const Expression& target = *statement.target;
-    const FieldEntry& field  = nodeField(target);
+
+    const Emitted<const FieldEntry*> fieldEntry = nodeField(target);
+
+    if (! fieldEntry) {
+        return std::unexpected(fieldEntry.error());
+    }
+
+    const FieldEntry& field = **fieldEntry;
 
     const int nodeSlot = allocateSlot();
 
     if (field.access == FieldAccess::ReadOnly) {
-        fail("'" + target.name + "' can only be read; a played note's values are passed to playNote", target);
+        return fail("'" + target.name + "' can only be read; a played note's values are passed to playNote", target);
     }
 
-    if (emitExpression(*target.left) != ValueType::Node) {
-        fail("only a Node has properties", *target.left);
+    const Emitted<ValueType> objectType = emitExpression(*target.left);
+
+    if (! objectType) {
+        return std::unexpected(objectType.error());
+    }
+
+    if (*objectType != ValueType::Node) {
+        return fail("only a Node has properties", *target.left);
     }
 
     emit(ScriptOpcode::StoreLocal, nodeSlot);
@@ -345,7 +377,13 @@ void Emitter::emitAssignField(const Statement& statement)
         emit(ScriptOpcode::PushNodeField, field.field);
     }
 
-    ValueType valueType = emitExpression(*statement.value);
+    const Emitted<ValueType> emittedType = emitExpression(*statement.value);
+
+    if (! emittedType) {
+        return std::unexpected(emittedType.error());
+    }
+
+    ValueType valueType = *emittedType;
 
     if (statement.op != TokenKind::Assign) {
         valueType = commonType(field.type, valueType);
@@ -360,20 +398,26 @@ void Emitter::emitAssignField(const Statement& statement)
     }
 
     if (!emitConversion(valueType, field.type)) {
-        fail("'" + target.name + "' holds " + typeName(field.type), *statement.value);
+        return fail("'" + target.name + "' holds " + typeName(field.type), *statement.value);
     }
 
     emit(ScriptOpcode::StoreNodeField, field.field);
 
     --nextSlot;
+
+    return {};
 }
 
-void Emitter::emitIf(const Statement& statement)
+EmitStatus Emitter::emitIf(const Statement& statement)
 {
-    const ValueType conditionType = emitExpression(*statement.value);
+    const Emitted<ValueType> conditionType = emitExpression(*statement.value);
 
-    if (commonType(conditionType, conditionType) == ValueType::Void) {
-        fail("a condition must be a bool or a number; compare a Node with '==' or '!='", *statement.value);
+    if (! conditionType) {
+        return std::unexpected(conditionType.error());
+    }
+
+    if (commonType(*conditionType, *conditionType) == ValueType::Void) {
+        return fail("a condition must be a bool or a number; compare a Node with '==' or '!='", *statement.value);
     }
 
     const int falseJump = emit(ScriptOpcode::JumpIfFalse);
@@ -382,7 +426,8 @@ void Emitter::emitIf(const Statement& statement)
 
     if (!statement.hasElse) {
         patch(falseJump, here());
-        return;
+
+        return {};
     }
 
     const int endJump = emit(ScriptOpcode::Jump);
@@ -392,9 +437,11 @@ void Emitter::emitIf(const Statement& statement)
     emitBlock(statement.elseBody);
 
     patch(endJump, here());
+
+    return {};
 }
 
-void Emitter::emitFor(const Statement& statement)
+EmitStatus Emitter::emitFor(const Statement& statement)
 {
     openScope();
 
@@ -404,8 +451,16 @@ void Emitter::emitFor(const Statement& statement)
     if (statement.target == nullptr) {
         emit(ScriptOpcode::PushContext, ScriptContextValue::Current);
     }
-    else if (emitExpression(*statement.target) != ValueType::Node) {
-        fail("only a Node has children", *statement.target);
+    else {
+        const Emitted<ValueType> targetType = emitExpression(*statement.target);
+
+        if (! targetType) {
+            return std::unexpected(targetType.error());
+        }
+
+        if (*targetType != ValueType::Node) {
+            return fail("only a Node has children", *statement.target);
+        }
     }
 
     emit(ScriptOpcode::StoreLocal, parentSlot);
@@ -448,16 +503,22 @@ void Emitter::emitFor(const Statement& statement)
     closeScope();
 
     patchLoopFrame(frame, continueTarget, exitTarget);
+
+    return {};
 }
 
-void Emitter::emitWhile(const Statement& statement)
+EmitStatus Emitter::emitWhile(const Statement& statement)
 {
     const int loopTop = here();
 
-    const ValueType conditionType = emitExpression(*statement.value);
+    const Emitted<ValueType> conditionType = emitExpression(*statement.value);
 
-    if (commonType(conditionType, conditionType) == ValueType::Void) {
-        fail("a condition must be a bool or a number; compare a Node with '==' or '!='", *statement.value);
+    if (! conditionType) {
+        return std::unexpected(conditionType.error());
+    }
+
+    if (commonType(*conditionType, *conditionType) == ValueType::Void) {
+        return fail("a condition must be a bool or a number; compare a Node with '==' or '!='", *statement.value);
     }
 
     const int exitJump = emit(ScriptOpcode::JumpIfFalse);
@@ -476,49 +537,64 @@ void Emitter::emitWhile(const Statement& statement)
     patch(exitJump, exitTarget);
 
     patchLoopFrame(frame, loopTop, exitTarget);
+
+    return {};
 }
 
-void Emitter::emitBreak(const Statement& statement)
+EmitStatus Emitter::emitBreak(const Statement& statement)
 {
     if (loopStack.empty()) {
-        fail("'break' is only valid inside a loop", statement);
+        return fail("'break' is only valid inside a loop", statement);
     }
 
     loopStack.back().breakJumps.push_back(emit(ScriptOpcode::Jump));
+
+    return {};
 }
 
-void Emitter::emitContinue(const Statement& statement)
+EmitStatus Emitter::emitContinue(const Statement& statement)
 {
     if (loopStack.empty()) {
-        fail("'continue' is only valid inside a loop", statement);
+        return fail("'continue' is only valid inside a loop", statement);
     }
 
     loopStack.back().continueJumps.push_back(emit(ScriptOpcode::Jump));
+
+    return {};
 }
 
-void Emitter::emitReturn(const Statement& statement)
+EmitStatus Emitter::emitReturn(const Statement& statement)
 {
     const ValueType returnType = currentFunction->returnType;
 
     if (statement.value == nullptr) {
         if (returnType != ValueType::Void) {
-            fail("'" + currentFunction->name + "' must return " + typeName(returnType), statement);
+            return fail("'" + currentFunction->name + "' must return " + typeName(returnType), statement);
         }
 
         emit(ScriptOpcode::PushInt, 0);
         emit(ScriptOpcode::Return);
-        return;
+
+        return {};
     }
 
     if (returnType == ValueType::Void) {
-        fail("'" + currentFunction->name + "' gives no value; use 'return;'", *statement.value);
+        return fail("'" + currentFunction->name + "' gives no value; use 'return;'", *statement.value);
     }
 
-    if (!emitConversion(emitExpression(*statement.value), returnType)) {
-        fail("'" + currentFunction->name + "' must return " + typeName(returnType), *statement.value);
+    const Emitted<ValueType> returnedType = emitExpression(*statement.value);
+
+    if (! returnedType) {
+        return std::unexpected(returnedType.error());
+    }
+
+    if (!emitConversion(*returnedType, returnType)) {
+        return fail("'" + currentFunction->name + "' must return " + typeName(returnType), *statement.value);
     }
 
     emit(ScriptOpcode::Return);
+
+    return {};
 }
 
 void Emitter::openScope()
@@ -552,16 +628,18 @@ void Emitter::patchLoopFrame(const LoopFrame& frame, int continueTarget, int exi
     }
 }
 
-void Emitter::fail(const std::string& message, const Expression& expression)
+std::unexpected<EmitFailure> Emitter::fail(const std::string& message, const Expression& expression)
 {
     diagnostics.push_back({ message, expression.line, expression.column, expression.length });
-    throw EmitFailure{};
+
+    return std::unexpected(EmitFailure{});
 }
 
-void Emitter::fail(const std::string& message, const Statement& statement)
+std::unexpected<EmitFailure> Emitter::fail(const std::string& message, const Statement& statement)
 {
     diagnostics.push_back({ message, statement.line, statement.column, statement.length });
-    throw EmitFailure{};
+
+    return std::unexpected(EmitFailure{});
 }
 
 const LocalBinding* Emitter::findMember(const std::string& name) const
@@ -643,23 +721,7 @@ int Emitter::emitInitializer(std::span<const MemberDeclaration> declarations, st
             continue;
         }
 
-        try {
-            const ValueType valueType = emitExpression(*variable.value);
-
-            if (valueType == ValueType::Void) {
-                fail("this gives no value to store in '" + variable.name + "'", *variable.value);
-            }
-
-            if (!emitConversion(valueType, variable.type)) {
-                fail("'" + variable.name + "' holds " + typeName(variable.type) + ", but this is " + typeName(valueType), *variable.value);
-            }
-
-            emit(storeOpcode, binding->slot);
-
-            if (highWaterStack > RTScript::maxStack || highWaterSlot > RTScript::maxLocals) {
-                fail("this value is nested too deeply for the traversal stack", *variable.value);
-            }
-        } catch (const EmitFailure&) {
+        if (! emitInitialValue(variable, binding->slot, storeOpcode)) {
             stackDepth     = 0;
             highWaterStack = 0;
         }
@@ -674,6 +736,31 @@ int Emitter::emitInitializer(std::span<const MemberDeclaration> declarations, st
     script.functions.push_back(function);
 
     return functionIndex;
+}
+
+EmitStatus Emitter::emitInitialValue(const MemberDeclaration& variable, int slot, ScriptOpcode storeOpcode)
+{
+    const Emitted<ValueType> valueType = emitExpression(*variable.value);
+
+    if (! valueType) {
+        return std::unexpected(valueType.error());
+    }
+
+    if (*valueType == ValueType::Void) {
+        return fail("this gives no value to store in '" + variable.name + "'", *variable.value);
+    }
+
+    if (!emitConversion(*valueType, variable.type)) {
+        return fail("'" + variable.name + "' holds " + typeName(variable.type) + ", but this is " + typeName(*valueType), *variable.value);
+    }
+
+    emit(storeOpcode, slot);
+
+    if (highWaterStack > RTScript::maxStack || highWaterSlot > RTScript::maxLocals) {
+        return fail("this value is nested too deeply for the traversal stack", *variable.value);
+    }
+
+    return {};
 }
 
 template <typename Operand>
@@ -713,7 +800,7 @@ int Emitter::allocateSlot()
     return slot;
 }
 
-ValueType Emitter::emitExpression(const Expression& expression)
+Emitted<ValueType> Emitter::emitExpression(const Expression& expression)
 {
     switch (expression.kind) {
         case ExpressionKind::Literal: {
@@ -744,10 +831,10 @@ ValueType Emitter::emitExpression(const Expression& expression)
         case ExpressionKind::Binary: return emitBinary(expression);
     }
 
-    fail("expected a value", expression);
+    return fail("expected a value", expression);
 }
 
-ValueType Emitter::emitName(const Expression& expression)
+Emitted<ValueType> Emitter::emitName(const Expression& expression)
 {
     const LocalBinding* const local  = findLocal(expression.name);
     const LocalBinding* const member = findMember(expression.name);
@@ -774,14 +861,14 @@ ValueType Emitter::emitName(const Expression& expression)
     }
 
     if (expression.name == "children") {
-        fail("'children' can only be walked, as in 'for child in children { }'", expression);
+        return fail("'children' can only be walked, as in 'for child in children { }'", expression);
     }
 
     if (expression.name == "traversal") {
-        fail("'traversal' needs a property, such as 'traversal.random'", expression);
+        return fail("'traversal' needs a property, such as 'traversal.random'", expression);
     }
 
-    fail("'" + expression.name + "' is not declared", expression);
+    return fail("'" + expression.name + "' is not declared", expression);
 }
 
 const ContextEntry traversalContextTable[] = {
@@ -790,7 +877,7 @@ const ContextEntry traversalContextTable[] = {
     { "instance", ScriptContextValue::TraversalInstance }
 };
 
-ValueType Emitter::emitField(const Expression& expression)
+Emitted<ValueType> Emitter::emitField(const Expression& expression)
 {
     const Expression& object = *expression.left;
 
@@ -806,21 +893,31 @@ ValueType Emitter::emitField(const Expression& expression)
             }
         }
 
-        fail("the traversal has no property '" + expression.name + "'", expression);
+        return fail("the traversal has no property '" + expression.name + "'", expression);
     }
 
-    const FieldEntry& field = nodeField(expression);
+    const Emitted<const FieldEntry*> field = nodeField(expression);
 
-    if (emitExpression(object) != ValueType::Node) {
-        fail("only a Node has properties", object);
+    if (! field) {
+        return std::unexpected(field.error());
     }
 
-    emit(ScriptOpcode::PushNodeField, field.field);
+    const Emitted<ValueType> objectType = emitExpression(object);
 
-    return field.type;
+    if (! objectType) {
+        return std::unexpected(objectType.error());
+    }
+
+    if (*objectType != ValueType::Node) {
+        return fail("only a Node has properties", object);
+    }
+
+    emit(ScriptOpcode::PushNodeField, (*field)->field);
+
+    return (*field)->type;
 }
 
-ValueType Emitter::emitCall(const Expression& expression)
+Emitted<ValueType> Emitter::emitCall(const Expression& expression)
 {
     const FunctionSignature* const signature = findFunction(expression.name);
 
@@ -834,10 +931,11 @@ ValueType Emitter::emitCall(const Expression& expression)
     const bool insideAdvance = currentFunction != nullptr && currentFunction->name == "advance";
 
     std::vector<ValueType> parameterTypes;
-    ValueType              returnType = ValueType::Void;
+
+    ValueType returnType = ValueType::Void;
 
     if (isScoped && !isImported) {
-        fail("add 'import " + expression.scope + ";' at the top of the script to use '" + expression.scope + "::" + expression.name + "'", expression);
+        return fail("add 'import " + expression.scope + ";' at the top of the script to use '" + expression.scope + "::" + expression.name + "'", expression);
     }
 
     if (isAdvance) {
@@ -852,29 +950,35 @@ ValueType Emitter::emitCall(const Expression& expression)
         returnType     = ValueType::Double;
     }
     else if (isScoped) {
-        fail("'" + expression.scope + "' has no function '" + expression.name + "'", expression);
+        return fail("'" + expression.scope + "' has no function '" + expression.name + "'", expression);
     }
     else if (signature != nullptr) {
         parameterTypes = signature->parameterTypes;
         returnType     = signature->returnType;
     }
     else {
-        fail("'" + expression.name + "' is not a function", expression);
+        return fail("'" + expression.name + "' is not a function", expression);
     }
 
     if ((isAdvance || isPlayNote) && insideAdvance) {
-        fail("advance only chooses where the walk goes; call '" + expression.name + "' from main", expression);
+        return fail("advance only chooses where the walk goes; call '" + expression.name + "' from main", expression);
     }
 
     if (expression.arguments.size() != parameterTypes.size()) {
-        fail("'" + expression.name + "' takes " + std::to_string(parameterTypes.size()) + " values", expression);
+        return fail("'" + expression.name + "' takes " + std::to_string(parameterTypes.size()) + " values", expression);
     }
 
     for (std::size_t index = 0; index < parameterTypes.size(); ++index) {
         const Expression& argument = *expression.arguments[index];
 
-        if (!emitConversion(emitExpression(argument), parameterTypes[index])) {
-            fail("this should be " + std::string(typeName(parameterTypes[index])), argument);
+        const Emitted<ValueType> argumentType = emitExpression(argument);
+
+        if (! argumentType) {
+            return std::unexpected(argumentType.error());
+        }
+
+        if (!emitConversion(*argumentType, parameterTypes[index])) {
+            return fail("this should be " + std::string(typeName(parameterTypes[index])), argument);
         }
     }
 
@@ -895,13 +999,18 @@ ValueType Emitter::emitCall(const Expression& expression)
     return returnType;
 }
 
-ValueType Emitter::emitUnary(const Expression& expression)
+Emitted<ValueType> Emitter::emitUnary(const Expression& expression)
 {
-    const ValueType operandType = emitExpression(*expression.left);
-    const ValueType numberType  = commonType(operandType, operandType);
+    const Emitted<ValueType> operandType = emitExpression(*expression.left);
+
+    if (! operandType) {
+        return operandType;
+    }
+
+    const ValueType numberType = commonType(*operandType, *operandType);
 
     if (numberType == ValueType::Void) {
-        fail("this needs a number", *expression.left);
+        return fail("this needs a number", *expression.left);
     }
 
     if (expression.op == TokenKind::Minus) {
@@ -914,7 +1023,7 @@ ValueType Emitter::emitUnary(const Expression& expression)
     return ValueType::Bool;
 }
 
-ValueType Emitter::emitBinary(const Expression& expression)
+Emitted<ValueType> Emitter::emitBinary(const Expression& expression)
 {
     const bool comparesIdentity = expression.op == TokenKind::EqualEqual || expression.op == TokenKind::NotEqual;
 
@@ -922,25 +1031,41 @@ ValueType Emitter::emitBinary(const Expression& expression)
                                 || expression.op == TokenKind::Star || expression.op == TokenKind::Slash
                                 || expression.op == TokenKind::Percent;
 
-    const ValueType leftType   = emitExpression(*expression.left);
-    const ValueType rightType  = emitExpression(*expression.right);
-    const ValueType numberType = commonType(leftType, rightType);
+    const Emitted<ValueType> leftType = emitExpression(*expression.left);
 
-    const bool comparesNodes = comparesIdentity && leftType == ValueType::Node && rightType == ValueType::Node;
+    if (! leftType) {
+        return leftType;
+    }
+
+    const Emitted<ValueType> rightType = emitExpression(*expression.right);
+
+    if (! rightType) {
+        return rightType;
+    }
+
+    const ValueType numberType = commonType(*leftType, *rightType);
+
+    const bool comparesNodes = comparesIdentity && *leftType == ValueType::Node && *rightType == ValueType::Node;
 
     if (comparesIdentity && !comparesNodes && numberType == ValueType::Void) {
-        fail("'==' and '!=' compare two numbers or two Nodes", expression);
+        return fail("'==' and '!=' compare two numbers or two Nodes", expression);
     }
 
     if (!comparesIdentity && numberType == ValueType::Void) {
-        fail("this operator works on numbers; read a number from a Node, such as 'node.count'", expression);
+        return fail("this operator works on numbers; read a number from a Node, such as 'node.count'", expression);
     }
 
     if (expression.op == TokenKind::Percent && numberType != ValueType::Int) {
-        fail("'%' works on ints; store the value in an int first", expression);
+        return fail("'%' works on ints; store the value in an int first", expression);
     }
 
-    emit(binaryOpcode(expression), numberKind(numberType));
+    const Emitted<ScriptOpcode> opcode = binaryOpcode(expression);
+
+    if (! opcode) {
+        return std::unexpected(opcode.error());
+    }
+
+    emit(*opcode, numberKind(numberType));
 
     if (producesNumber) {
         return numberType;
@@ -972,22 +1097,22 @@ const FieldEntry nodeFieldTable[] = {
     { "traversalId",  ScriptField::TraversalId,  ValueType::Int,  FieldAccess::ReadOnly }
 };
 
-const FieldEntry& Emitter::nodeField(const Expression& expression)
+Emitted<const FieldEntry*> Emitter::nodeField(const Expression& expression)
 {
     for (const FieldEntry& entry : nodeFieldTable) {
         if (expression.name == entry.name) {
-            return entry;
+            return &entry;
         }
     }
 
     if (expression.name == "children") {
-        fail("'children' can only be walked, as in 'for child in node.children { }'", expression);
+        return fail("'children' can only be walked, as in 'for child in node.children { }'", expression);
     }
 
-    fail("a Node has no property '" + expression.name + "'", expression);
+    return fail("a Node has no property '" + expression.name + "'", expression);
 }
 
-ScriptOpcode Emitter::binaryOpcode(const Expression& expression)
+Emitted<ScriptOpcode> Emitter::binaryOpcode(const Expression& expression)
 {
     switch (expression.op) {
         case TokenKind::Plus:           return ScriptOpcode::Add;
@@ -1006,7 +1131,7 @@ ScriptOpcode Emitter::binaryOpcode(const Expression& expression)
         default:                        break;
     }
 
-    fail("this operator cannot be used between two values", expression);
+    return fail("this operator cannot be used between two values", expression);
 }
 
 bool Emitter::emitConversion(ValueType from, ValueType to)

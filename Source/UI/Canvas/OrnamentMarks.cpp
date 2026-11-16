@@ -1,4 +1,5 @@
 #include "OrnamentMarks.h"
+#include "../../Graph/TypedProperties.h"
 #include "NodeCanvas.h"
 #include "../Node/Node.h"
 #include "../../Graph/OrnamentLibraries.h"
@@ -23,9 +24,15 @@ OrnamentMarks::~OrnamentMarks()
 
 void OrnamentMarks::refresh(Node& node)
 {
-    const juce::String    uid      = node.nodeValueTree.getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
+    const NodeProperties properties(node.nodeValueTree);
+
+    const juce::String uid = properties.ornamentUid;
+
     const juce::ValueTree ornament = ornamentLibraries.findOrnament(uid);
-    ArsNovaUI::SymbolMark mark     = ArsNovaUI::SymbolMark::None;
+
+    const OrnamentProperties ornamentInfo(ornament);
+
+    ArsNovaUI::SymbolMark mark = ArsNovaUI::SymbolMark::None;
 
     if (uid.isNotEmpty()) {
         mark = ArsNovaUI::SymbolMark::Missing;
@@ -57,7 +64,7 @@ void OrnamentMarks::refresh(Node& node)
     }
 
     view->mark          = mark;
-    view->symbol        = ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString();
+    view->symbol        = ornamentInfo.symbol;
     view->nodeValueTree = node.nodeValueTree;
 
     if (mark == ArsNovaUI::SymbolMark::Symbol) {

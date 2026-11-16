@@ -40,8 +40,6 @@ private:
     void resetPatch      ();
     void confirmReset    ();
 
-    enum class ResetAnswer { Cancel = 0, Reset = 1 };
-
     static constexpr int   separatorGap        = 7;
     static constexpr float separatorInsetRatio = 0.2f;
 

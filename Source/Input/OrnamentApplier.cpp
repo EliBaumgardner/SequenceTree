@@ -1,4 +1,5 @@
 #include "OrnamentApplier.h"
+#include "../Graph/TypedProperties.h"
 #include "../UI/Canvas/NodeCanvas.h"
 #include <ArsNovaUI/Menus/ContextMenu.h>
 #include "../UI/Node/Node.h"
@@ -14,9 +15,11 @@ OrnamentApplier::OrnamentApplier(NodeCanvas& nodeCanvas, OrnamentLibraries& orna
 
 void OrnamentApplier::respondToClick(juce::Component* clickedComponent)
 {
-    Node* const          clickedNode = dynamic_cast<Node*>(clickedComponent);
-    const juce::String   activeUid   = ornamentLibraries.libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString();
-    const OrnamentStatus status      = ornamentLibraries.statusOf(ornamentLibraries.findOrnament(activeUid));
+    Node* const clickedNode = dynamic_cast<Node*>(clickedComponent);
+
+    const juce::String activeUid = ornamentLibraries.activeOrnamentUid;
+
+    const OrnamentStatus status = ornamentLibraries.statusOf(ornamentLibraries.findOrnament(activeUid));
 
     if (clickedNode == nullptr) {
         nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::None);
@@ -28,9 +31,11 @@ void OrnamentApplier::respondToClick(juce::Component* clickedComponent)
         return;
     }
 
+    NodeProperties properties(clickedNode->nodeValueTree);
+
     undoManager.beginNewTransaction();
 
-    clickedNode->nodeValueTree.setProperty(ValueTreeIdentifiers::OrnamentUid, activeUid, &undoManager);
+    properties.ornamentUid.setValue(activeUid, &undoManager);
 }
 
 void OrnamentApplier::respondToMarkClick(const juce::MouseEvent& event, OrnamentMarkView& markView)
@@ -43,17 +48,21 @@ void OrnamentApplier::respondToMarkClick(const juce::MouseEvent& event, Ornament
     }
 
     if (event.mods.isShiftDown()) {
+        NodeProperties properties(ornamentedNode);
+
         undoManager.beginNewTransaction();
 
-        ornamentedNode.removeProperty(ValueTreeIdentifiers::OrnamentUid, &undoManager);
+        properties.ornamentUid.resetToDefault(&undoManager);
 
         return;
     }
 
     menu.addItem("delete ornament", ArsNovaUI::ContextMenu::ItemKind::Action, [this, ornamentedNode]() mutable {
+        NodeProperties properties(ornamentedNode);
+
         undoManager.beginNewTransaction();
 
-        ornamentedNode.removeProperty(ValueTreeIdentifiers::OrnamentUid, &undoManager);
+        properties.ornamentUid.resetToDefault(&undoManager);
     });
 
     menu.show(markView);

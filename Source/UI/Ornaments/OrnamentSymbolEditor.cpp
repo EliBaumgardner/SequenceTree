@@ -1,4 +1,5 @@
 #include "OrnamentSymbolEditor.h"
+#include "../../Graph/TypedProperties.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
 
@@ -18,9 +19,11 @@ OrnamentSymbolEditor::OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries,
     clearButton.icon = &ArsNovaUI::CustomLookAndFeel::drawRemoveIcon;
 
     clearButton.onClick = [this]() {
+        OrnamentProperties properties(ornament);
+
         this->undoManager.beginNewTransaction();
 
-        ornament.setProperty(ValueTreeIdentifiers::OrnamentSymbol, juce::String(), &this->undoManager);
+        properties.symbol.setValue({}, &this->undoManager);
     };
 
     clearButton.setTooltip("Clear symbol");
@@ -67,7 +70,11 @@ void OrnamentSymbolEditor::paint(juce::Graphics& graphics)
 
     graphics.setColour(lookAndFeel.textColour);
 
-    const std::vector<ArsNovaUI::SymbolStroke> symbolStrokes = OrnamentLibraries::readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString());
+    const OrnamentProperties properties(ornament);
+
+    const juce::String storedSymbol = properties.symbol;
+
+    const std::vector<ArsNovaUI::SymbolStroke> symbolStrokes = OrnamentLibraries::readSymbol(storedSymbol);
 
     lookAndFeel.drawStrokeSymbol(graphics, drawingArea, symbolStrokes);
 

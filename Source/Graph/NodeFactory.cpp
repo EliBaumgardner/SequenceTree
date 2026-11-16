@@ -1,4 +1,5 @@
 #include "NodeFactory.h"
+#include "TypedProperties.h"
 #include "ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
@@ -25,6 +26,8 @@ void NodeFactory::createDanglingArrow(GraphState& state, juce::ValueTree nodeTre
     juce::ValueTree arrowList = nodeTree.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows);
     juce::ValueTree arrowTree(ArsNovaUI::CanvasIdentifiers::DanglingArrow);
 
+    ArrowProperties arrowProperties(arrowTree);
+
     inheritArrowBindings(state, arrowInfo, nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id), {});
 
     if (!arrowList.isValid()) {
@@ -35,7 +38,8 @@ void NodeFactory::createDanglingArrow(GraphState& state, juce::ValueTree nodeTre
 
     arrowTree.setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipX, tipOffset.x, undoManager);
     arrowTree.setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipY, tipOffset.y, undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::CountLimit, GraphState::defaultNodeCountLimit, undoManager);
+
+    arrowProperties.countLimit.setValue(GraphState::defaultNodeCountLimit, undoManager);
 
     ArrowBindingOps::setArrowInfo(arrowTree, arrowInfo, undoManager);
 
@@ -51,9 +55,12 @@ void NodeFactory::setDanglingArrowTip(GraphState& state, juce::ValueTree arrowTr
         return;
     }
 
+    ArrowProperties arrowProperties(arrowTree);
+
     arrowTree.setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipX, tipOffset.x, undoManager);
     arrowTree.setProperty(ArsNovaUI::CanvasIdentifiers::ArrowTipY, tipOffset.y, undoManager);
-    arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride, undoManager);
+
+    arrowProperties.durationOverride.setValue(ArrowInfo::noDurationOverride, undoManager);
 
     state.arrows.syncPitchBindings(arrowTree.getParent().getParent().getProperty(ArsNovaUI::CanvasIdentifiers::Id), undoManager);
 }
@@ -156,7 +163,9 @@ juce::ValueTree NodeFactory::createEncapsulator(GraphState& state, std::span<con
     const int       encapsulatorLabel     = state.encapsulation.unusedLabel();
     juce::ValueTree encapsulatorValueTree = state.encapsulation.create(memberNodeIds, undoManager);
 
-    encapsulatorValueTree.setProperty(ValueTreeIdentifiers::EncapsulatorLabel, encapsulatorLabel, undoManager);
+    NodeProperties encapsulatorProperties(encapsulatorValueTree);
+
+    encapsulatorProperties.encapsulatorLabel.setValue(encapsulatorLabel, undoManager);
 
     const NodeInfo::Position memberPosition = state.getNodePosition(memberNodeIds.front());
 
@@ -214,10 +223,12 @@ void NodeFactory::setDefaultTraversal(GraphState& state, int nodeId, juce::UndoM
     juce::ValueTree       traversalChildrenIds = rootNodeValueTree.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
     juce::ValueTree       traversalId          { ValueTreeIdentifiers::TraversalId };
 
+    TraversalReferenceProperties reference(traversalId);
+
     state.traversals.addTraversalData(TraversalState::defaultTraversalId, undoManager);
 
-    traversalId.setProperty(ValueTreeIdentifiers::TraversalId,       TraversalState::defaultTraversalId, undoManager);
-    traversalId.setProperty(ValueTreeIdentifiers::TraversalInstance, traversalInstance,                  undoManager);
+    reference.traversalId      .setValue(TraversalState::defaultTraversalId, undoManager);
+    reference.traversalInstance.setValue(traversalInstance,                  undoManager);
 
     traversalChildrenIds.addChild(traversalId, -1, undoManager);
 }

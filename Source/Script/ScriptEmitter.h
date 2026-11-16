@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <expected>
 #include <span>
 #include <string>
 #include <vector>
@@ -17,9 +18,12 @@
     writable (nodeFieldTable), and calls are valid: advance, playNote, user functions with the
     right arguments, and core::random after 'import core'.
 
-    Each error becomes a ScriptDiagnostic that marks the text it concerns. The Emitter also
-    counts the deepest stack and most locals a function uses, and rejects a script that would
-    exceed RTScript's limits. An Emitter lives for one compile, made by compileTraversalScript.
+    Each error becomes a ScriptDiagnostic that marks the text it concerns. A function that can find
+    an error returns an Emitted value: what it emitted, or an EmitFailure once the diagnostic is
+    filed, and each caller passes the failure up to emitSequence, which drops the broken
+    statement and goes on with the next. The Emitter also counts the deepest stack and most
+    locals a function uses, and rejects a script that would exceed RTScript's limits. An Emitter
+    lives for one compile, made by compileTraversalScript.
 */
 
 struct LoopFrame
@@ -62,6 +66,11 @@ struct ContextEntry
 
 struct EmitFailure {};
 
+template <typename Value>
+using Emitted = std::expected<Value, EmitFailure>;
+
+using EmitStatus = Emitted<void>;
+
 class Emitter
 {
 public:
@@ -82,18 +91,18 @@ private:
     void emitSequence   (std::span<const StatementPtr> statements);
     void emitBlock      (std::span<const StatementPtr> body);
 
-    void emitStatement  (const Statement& statement);
-    void emitDeclare    (const Statement& statement);
-    void emitAssign     (const Statement& statement);
-    void emitAssignField(const Statement& statement);
+    [[nodiscard]] EmitStatus emitStatement  (const Statement& statement);
+    [[nodiscard]] EmitStatus emitDeclare    (const Statement& statement);
+    [[nodiscard]] EmitStatus emitAssign     (const Statement& statement);
+    [[nodiscard]] EmitStatus emitAssignField(const Statement& statement);
 
-    void emitIf         (const Statement& statement);
-    void emitFor        (const Statement& statement);
-    void emitWhile      (const Statement& statement);
+    [[nodiscard]] EmitStatus emitIf         (const Statement& statement);
+    [[nodiscard]] EmitStatus emitFor        (const Statement& statement);
+    [[nodiscard]] EmitStatus emitWhile      (const Statement& statement);
 
-    void emitBreak      (const Statement& statement);
-    void emitContinue   (const Statement& statement);
-    void emitReturn     (const Statement& statement);
+    [[nodiscard]] EmitStatus emitBreak      (const Statement& statement);
+    [[nodiscard]] EmitStatus emitContinue   (const Statement& statement);
+    [[nodiscard]] EmitStatus emitReturn     (const Statement& statement);
 
     void openScope ();
     void closeScope();
@@ -101,8 +110,8 @@ private:
     void patch          (int jumpIndex, int target);
     void patchLoopFrame (const LoopFrame& frame, int continueTarget, int exitTarget);
 
-    [[noreturn]] void fail(const std::string& message, const Expression& expression);
-    [[noreturn]] void fail(const std::string& message, const Statement& statement);
+    [[nodiscard]] std::unexpected<EmitFailure> fail(const std::string& message, const Expression& expression);
+    [[nodiscard]] std::unexpected<EmitFailure> fail(const std::string& message, const Statement& statement);
 
     const LocalBinding*      findMember  (const std::string& name) const;
     const LocalBinding*      findGlobal  (const std::string& name) const;
@@ -111,6 +120,8 @@ private:
 
     int emitInitializer(std::span<const MemberDeclaration> declarations, std::span<const LocalBinding> bindings, ScriptOpcode storeOpcode);
 
+    [[nodiscard]] EmitStatus emitInitialValue(const MemberDeclaration& variable, int slot, ScriptOpcode storeOpcode);
+
     template <typename Operand = int>
     int emit(ScriptOpcode opcode, Operand operand = 0);
     int here() const;
@@ -118,17 +129,17 @@ private:
     int declareLocal(const std::string& name, ValueType type);
     int allocateSlot();
 
-    ValueType emitExpression(const Expression& expression);
-    ValueType emitName      (const Expression& expression);
-    ValueType emitField     (const Expression& expression);
-    ValueType emitCall      (const Expression& expression);
+    [[nodiscard]] Emitted<ValueType> emitExpression(const Expression& expression);
+    [[nodiscard]] Emitted<ValueType> emitName      (const Expression& expression);
+    [[nodiscard]] Emitted<ValueType> emitField     (const Expression& expression);
+    [[nodiscard]] Emitted<ValueType> emitCall      (const Expression& expression);
 
-    ValueType emitUnary (const Expression& expression);
-    ValueType emitBinary(const Expression& expression);
+    [[nodiscard]] Emitted<ValueType> emitUnary (const Expression& expression);
+    [[nodiscard]] Emitted<ValueType> emitBinary(const Expression& expression);
 
-    const FieldEntry& nodeField(const Expression& expression);
+    [[nodiscard]] Emitted<const FieldEntry*> nodeField(const Expression& expression);
 
-    ScriptOpcode binaryOpcode(const Expression& expression);
+    [[nodiscard]] Emitted<ScriptOpcode> binaryOpcode(const Expression& expression);
 
     bool emitConversion(ValueType from, ValueType to);
 

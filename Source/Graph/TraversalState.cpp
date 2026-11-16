@@ -1,5 +1,6 @@
 #include "TraversalState.h"
 #include "GraphState.h"
+#include "TypedProperties.h"
 #include "ValueTreeIdentifiers.h"
 
 #include <juce_graphics/juce_graphics.h>
@@ -22,12 +23,16 @@ juce::ValueTree TraversalState::addTraversalData(int traversalId, juce::UndoMana
 
     juce::ValueTree traversalData {ValueTreeIdentifiers::TraversalData};
 
-    traversalData.setProperty(ValueTreeIdentifiers::TraversalId,        traversalId,      undoManager);
-    traversalData.setProperty(ValueTreeIdentifiers::TempoMultiplier,    defaultTempoMult, undoManager);
-    traversalData.setProperty(ValueTreeIdentifiers::TraversalColour,    juce::Colours::white.toString(), undoManager);
-    traversalData.setProperty(ValueTreeIdentifiers::TraversalChannel,   defaultChannel,   undoManager);
-    traversalData.setProperty(ValueTreeIdentifiers::TraversalTranspose, defaultTranspose, undoManager);
-    traversalData.setProperty(ValueTreeIdentifiers::TraversalVelocity,  defaultVelocity,  undoManager);
+    TraversalProperties properties(traversalData);
+
+    const juce::String defaultColour = juce::Colours::white.toString();
+
+    properties.traversalId    .setValue(traversalId,      undoManager);
+    properties.tempoMultiplier.setValue(defaultTempoMult, undoManager);
+    properties.colour         .setValue(defaultColour,    undoManager);
+    properties.channel        .setValue(defaultChannel,   undoManager);
+    properties.transpose      .setValue(defaultTranspose, undoManager);
+    properties.velocity       .setValue(defaultVelocity,  undoManager);
 
     map.addChild(traversalData, -1, undoManager);
 
@@ -50,23 +55,25 @@ void TraversalState::collectKeys(std::vector<TraversalKey>& keys) const
         const juce::ValueTree node = graphState.nodeMap.getChild(i);
 
         if (node.getType() == ValueTreeIdentifiers::TraversalFlagData) {
-            int flagValue = node.getProperty(ValueTreeIdentifiers::TraversalFlagValue, 0);
+            const NodeProperties flag(node);
+
+            int flagValue = flag.traversalFlagValue;
 
             if (flagValue < 0) {
                 flagValue = -flagValue;
             }
 
-            appendKey({ flagValue, static_cast<int>(node.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) });
+            appendKey({ flagValue, flag.traversalInstance });
+
             continue;
         }
 
         const juce::ValueTree equipped = node.getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
 
         for (int child = 0; child < equipped.getNumChildren(); ++child) {
-            const juce::ValueTree reference = equipped.getChild(child);
+            const TraversalReferenceProperties reference(equipped.getChild(child));
 
-            appendKey({ static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
-                        static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) });
+            appendKey({ reference.traversalId, reference.traversalInstance });
         }
     }
 }
@@ -98,8 +105,9 @@ juce::ValueTree TraversalState::findReference(const juce::ValueTree& references,
     for (int i = 0; i < references.getNumChildren(); ++i) {
         const juce::ValueTree reference = references.getChild(i);
 
-        const TraversalKey referencedKey { static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalId)),
-                                           static_cast<int>(reference.getProperty(ValueTreeIdentifiers::TraversalInstance, 0)) };
+        const TraversalReferenceProperties referenceProperties(reference);
+
+        const TraversalKey referencedKey { referenceProperties.traversalId, referenceProperties.traversalInstance };
 
         if (referencedKey == key) {
             return reference;

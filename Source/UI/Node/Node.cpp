@@ -1,4 +1,5 @@
 #include "Node.h"
+#include "../../Graph/TypedProperties.h"
 #include "Arrow.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Canvas/NodeCanvas.h"
@@ -10,14 +11,6 @@ Node::Node(juce::UndoManager& undoManager)
       switchCountEditor    (undoManager),
       subLoopLimitEditor   (undoManager)
 {
-    upButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState&) {
-        ArsNovaUI::CustomLookAndFeel::get(*this).drawIncrementIcon(graphics, bounds, true);
-    };
-
-    downButton.painter = [this](juce::Graphics& graphics, juce::Rectangle<float> bounds, const ArsNovaUI::ButtonState&) {
-        ArsNovaUI::CustomLookAndFeel::get(*this).drawIncrementIcon(graphics, bounds, false);
-    };
-
     nodeValueEditor.autoFitText       = true;
     nodeValueEditor.autoFitInsetRatio = nodeValueTextInsetRatio;
     nodeValueEditor.fontStyle         = ArsNovaUI::Theme::FontStyle::SemiBold;
@@ -40,15 +33,10 @@ Node::Node(juce::UndoManager& undoManager)
     subLoopLimitEditor.setTooltip("Sub Loop Count Limit");
     switchCountEditor .setTooltip("Switch Count Limit");
 
-    upButton          .setInterceptsMouseClicks(false, false);
-    downButton        .setInterceptsMouseClicks(false, false);
     nodeValueEditor   .setInterceptsMouseClicks(false, true);
     countEditor       .setInterceptsMouseClicks(false, true);
     switchCountEditor. setInterceptsMouseClicks(false, true);
     subLoopLimitEditor.setInterceptsMouseClicks(false, true);
-
-    addChildComponent(upButton);
-    addChildComponent(downButton);
 
     addAndMakeVisible(nodeValueEditor);
     addAndMakeVisible(switchCountEditor);
@@ -62,7 +50,14 @@ void Node::paint(juce::Graphics& graphics)
 {
     const ArsNovaUI::NodeVisual visual = getNodeVisual(getLocalBounds().toFloat());
 
-    ArsNovaUI::CustomLookAndFeel::get(*this).drawCircleNode(graphics, visual);
+    ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
+
+    lookAndFeel.drawCircleNode(graphics, visual);
+
+    if (showIncrementButtons) {
+        lookAndFeel.drawIncrementIcon(graphics, incrementUpBounds.toFloat(), true);
+        lookAndFeel.drawIncrementIcon(graphics, incrementDownBounds.toFloat(), false);
+    }
 }
 
 void Node::resized()
@@ -80,8 +75,8 @@ void Node::resized()
     const int rightEditorX        = nodeSquare.getRight() - editorWidth;
     const int lowerEditorY        = nodeSquare.getBottom() - editorHeight;
 
-    upButton.setBounds(editorArea.removeFromTop(buttonHeight));
-    downButton.setBounds(editorArea.removeFromBottom(buttonHeight));
+    incrementUpBounds   = editorArea.removeFromTop(buttonHeight);
+    incrementDownBounds = editorArea.removeFromBottom(buttonHeight);
 
     nodeValueEditor.setBounds(editorArea);
     countEditor.setBounds(rightEditorX, nodeSquare.getY(), editorWidth, editorHeight);
@@ -140,12 +135,10 @@ void Node::setHighlightVisual(int runId, bool shouldHighlight, juce::Colour colo
         activeHighlights[runId] = colour;
         pulsePhase = 0.0f;
 
-        if (pulseFrames.isEmpty()) {
-            pulseFrames = juce::VBlankAttachment(this, [this](double frameSec) { advancePulse(frameSec); });
-        }
+        pulseFrames.start(frameClock, [this](double frameSec) { advancePulse(frameSec); });
     }
     else if (runId == -1) {
-        if (! pulseFrames.isEmpty()) {
+        if (pulseFrames.isActive()) {
             for (const auto& entry : activeHighlights) {
                 pendingHighlightOffIds.insert(entry.first);
             }
@@ -154,7 +147,7 @@ void Node::setHighlightVisual(int runId, bool shouldHighlight, juce::Colour colo
             activeHighlights.clear();
         }
     }
-    else if (! pulseFrames.isEmpty()) {
+    else if (pulseFrames.isActive()) {
         pendingHighlightOffIds.insert(runId);
     }
     else {
@@ -191,31 +184,45 @@ void Node::advancePulse(double frameSec)
 
         isHighlighted = ! activeHighlights.empty();
 
-        pulseFrames = {};
+        pulseFrames.stop();
     }
 }
 
 void Node::mouseMove(const juce::MouseEvent& event)
 {
-    const bool showIncrementButtons = nodeValueEditor.isVisible() && contains(event.getEventRelativeTo(this).getPosition()) && ! event.mods.isShiftDown();
+    const bool shouldShow = nodeValueEditor.isVisible() && contains(event.getEventRelativeTo(this).getPosition()) && ! event.mods.isShiftDown();
 
-    upButton.setVisible(showIncrementButtons);
-    downButton.setVisible(showIncrementButtons);
+    if (shouldShow != showIncrementButtons) {
+        showIncrementButtons = shouldShow;
+
+        repaint();
+    }
 }
 
 void Node::mouseExit(const juce::MouseEvent& event)
 {
-    const bool showIncrementButtons = nodeValueEditor.isVisible() && contains(event.getEventRelativeTo(this).getPosition()) && ! event.mods.isShiftDown();
+    const bool shouldShow = nodeValueEditor.isVisible() && contains(event.getEventRelativeTo(this).getPosition()) && ! event.mods.isShiftDown();
 
-    upButton.setVisible(showIncrementButtons);
-    downButton.setVisible(showIncrementButtons);
+    if (shouldShow != showIncrementButtons) {
+        showIncrementButtons = shouldShow;
+
+        repaint();
+    }
 }
 
 void Node::lookAndFeelChanged()
 {
     const juce::String defaultColourText = ArsNovaUI::CustomLookAndFeel::get(*this).defaultNodeColour.toString();
 
-    nodeColour = juce::Colour::fromString(nodeValueTree.getProperty(ValueTreeIdentifiers::NodeColour, defaultColourText).toString());
+    const NodeProperties properties(nodeValueTree);
+
+    juce::String colourText = properties.nodeColour;
+
+    if (properties.nodeColour.isUsingDefault()) {
+        colourText = defaultColourText;
+    }
+
+    nodeColour = juce::Colour::fromString(colourText);
 }
 
 void Node::bindToTree()
@@ -309,12 +316,12 @@ void Node::respondToClick(juce::Point<int> localPoint)
         }
     }
 
-    if (upButton.isVisible() && upButton.getBounds().contains(localPoint)) {
+    if (showIncrementButtons && incrementUpBounds.contains(localPoint)) {
         incrementNodeValue(1);
         return;
     }
 
-    if (downButton.isVisible() && downButton.getBounds().contains(localPoint)) {
+    if (showIncrementButtons && incrementDownBounds.contains(localPoint)) {
         incrementNodeValue(-1);
         return;
     }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <memory>
 #include <string>
 #include <vector>
@@ -15,6 +16,10 @@
     type: int, float, double, bool or Node, void for a function with no result, and Inferred for a
     variable declared with 'let'. Each element keeps the line, column and length of its text, so
     the Emitter can mark errors the Parser could not see.
+
+    Expressions and statements are not owned one by one. Every one the Parser makes is stored in
+    the SyntaxArena of the ClassDeclaration, and the tree refers to them by pointer, so the whole
+    tree is made as the Parser reads and freed in one step with the declaration.
 
     It is a header of its own so the Emitter does not need to include the Parser.
 */
@@ -44,7 +49,7 @@ enum class ExpressionKind
 };
 
 struct Expression;
-using ExpressionPtr = std::unique_ptr<Expression>;
+using ExpressionPtr = Expression*;
 
 struct Expression
 {
@@ -58,8 +63,8 @@ struct Expression
 
     TokenKind op = TokenKind::Null;
 
-    ExpressionPtr left;
-    ExpressionPtr right;
+    ExpressionPtr left  = nullptr;
+    ExpressionPtr right = nullptr;
 
     std::vector<ExpressionPtr> arguments;
 
@@ -82,7 +87,7 @@ enum class StatementKind
 };
 
 struct Statement;
-using StatementPtr = std::unique_ptr<Statement>;
+using StatementPtr = Statement*;
 
 struct Statement
 {
@@ -92,8 +97,8 @@ struct Statement
     std::string name;
     TokenKind   op = TokenKind::Assign;
 
-    ExpressionPtr target;
-    ExpressionPtr value;
+    ExpressionPtr target = nullptr;
+    ExpressionPtr value  = nullptr;
 
     std::vector<StatementPtr> body;
     std::vector<StatementPtr> elseBody;
@@ -133,15 +138,23 @@ struct MemberDeclaration
     ValueType   type = ValueType::Int;
     std::string name;
 
-    ExpressionPtr value;
+    ExpressionPtr value = nullptr;
 
     int line   = 1;
     int column = 1;
     int length = 1;
 };
 
+struct SyntaxArena
+{
+    std::deque<Expression> expressions;
+    std::deque<Statement>  statements;
+};
+
 struct ClassDeclaration
 {
+    SyntaxArena arena;
+
     std::string name;
 
     std::vector<std::string> imports;

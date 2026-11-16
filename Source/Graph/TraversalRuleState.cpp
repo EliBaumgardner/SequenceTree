@@ -1,4 +1,5 @@
 #include "TraversalRuleState.h"
+#include "TypedProperties.h"
 #include "ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "../Script/ScriptCompiler.h"
@@ -7,18 +8,25 @@ TraversalRuleState::TraversalRuleState()
 {
     rules   = juce::ValueTree(ValueTreeIdentifiers::TraversalRules);
     folders = juce::ValueTree(ValueTreeIdentifiers::TraversalRuleFolders);
+
+    activeRuleId.referTo(rules, ValueTreeIdentifiers::ActiveRuleId, nullptr, noActiveRuleId);
 }
 
 juce::ValueTree TraversalRuleState::addRule(int folderId, juce::UndoManager* undoManager)
 {
     juce::ValueTree rule {ValueTreeIdentifiers::TraversalRuleData};
 
+    RuleProperties properties(rule);
+
     ++ruleIdIncrement;
 
-    rule.setProperty(ArsNovaUI::CanvasIdentifiers::Id,   ruleIdIncrement, undoManager);
-    rule.setProperty(ValueTreeIdentifiers::RuleName,     "rule " + juce::String(ruleIdIncrement), undoManager);
-    rule.setProperty(ValueTreeIdentifiers::RuleSource,   defaultTraversalScriptSource(), undoManager);
-    rule.setProperty(ValueTreeIdentifiers::RuleFolderId, folderId, undoManager);
+    const juce::String ruleName = "rule " + juce::String(ruleIdIncrement);
+
+    rule.setProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleIdIncrement, undoManager);
+
+    properties.ruleName  .setValue(ruleName,                       undoManager);
+    properties.ruleSource.setValue(defaultTraversalScriptSource(), undoManager);
+    properties.folderId  .setValue(folderId,                       undoManager);
 
     rules.addChild(rule, -1, undoManager);
 
@@ -29,11 +37,15 @@ juce::ValueTree TraversalRuleState::addFolder(int parentFolderId, juce::UndoMana
 {
     juce::ValueTree folder {ValueTreeIdentifiers::TraversalRuleFolder};
 
+    FolderProperties properties(folder);
+
     ++folderIdIncrement;
 
-    folder.setProperty(ValueTreeIdentifiers::FolderId,       folderIdIncrement, undoManager);
-    folder.setProperty(ValueTreeIdentifiers::FolderName,     "folder " + juce::String(folderIdIncrement), undoManager);
-    folder.setProperty(ValueTreeIdentifiers::FolderParentId, parentFolderId, undoManager);
+    const juce::String folderName = "folder " + juce::String(folderIdIncrement);
+
+    properties.folderId      .setValue(folderIdIncrement, undoManager);
+    properties.folderName    .setValue(folderName,        undoManager);
+    properties.parentFolderId.setValue(parentFolderId,    undoManager);
 
     folders.addChild(folder, -1, undoManager);
 
@@ -44,17 +56,17 @@ void TraversalRuleState::removeRule(int ruleId, juce::UndoManager* undoManager)
 {
     juce::ValueTree rule = rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId);
 
+    int replacementId = noActiveRuleId;
+
     if (! rule.isValid()) {
         return;
     }
 
     rules.removeChild(rule, undoManager);
 
-    if (static_cast<int>(rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1)) != ruleId) {
+    if (activeRuleId != ruleId) {
         return;
     }
-
-    int replacementId = -1;
 
     const juce::ValueTree replacement = rules.getChild(0);
 
@@ -62,15 +74,17 @@ void TraversalRuleState::removeRule(int ruleId, juce::UndoManager* undoManager)
         replacementId = replacement.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
     }
 
-    rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, replacementId, undoManager);
+    activeRuleId.setValue(replacementId, undoManager);
 }
 
 void TraversalRuleState::removeFolder(int folderId, juce::UndoManager* undoManager)
 {
     const juce::ValueTree folder = folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, folderId);
 
-    const int liveRuleId = rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1);
-    const int parentId   = folder.getProperty(ValueTreeIdentifiers::FolderParentId, 0);
+    const FolderProperties properties(folder);
+
+    const int liveRuleId = activeRuleId;
+    const int parentId   = properties.parentFolderId;
 
     std::vector<int> removedFolderIds;
     std::vector<int> removedRuleIds;
@@ -80,7 +94,9 @@ void TraversalRuleState::removeFolder(int folderId, juce::UndoManager* undoManag
     }
 
     for (int i = 0; i < folders.getNumChildren(); ++i) {
-        const int id = folders.getChild(i).getProperty(ValueTreeIdentifiers::FolderId);
+        const FolderProperties child(folders.getChild(i));
+
+        const int id = child.folderId;
 
         if (isInsideFolder(id, folderId)) {
             removedFolderIds.push_back(id);
@@ -90,15 +106,17 @@ void TraversalRuleState::removeFolder(int folderId, juce::UndoManager* undoManag
     for (int i = 0; i < rules.getNumChildren(); ++i) {
         juce::ValueTree rule = rules.getChild(i);
 
+        RuleProperties ruleProperties(rule);
+
         const int ruleId       = rule.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
-        const int ruleFolderId = rule.getProperty(ValueTreeIdentifiers::RuleFolderId, 0);
+        const int ruleFolderId = ruleProperties.folderId;
 
         if (! isInsideFolder(ruleFolderId, folderId)) {
             continue;
         }
 
         if (ruleId == liveRuleId) {
-            rule.setProperty(ValueTreeIdentifiers::RuleFolderId, parentId, undoManager);
+            ruleProperties.folderId.setValue(parentId, undoManager);
 
             continue;
         }
@@ -120,8 +138,10 @@ void TraversalRuleState::setRuleSource(int ruleId, const juce::String& source,
 {
     juce::ValueTree rule = rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId);
 
+    RuleProperties properties(rule);
+
     if (rule.isValid()) {
-        rule.setProperty(ValueTreeIdentifiers::RuleSource, source, undoManager);
+        properties.ruleSource.setValue(source, undoManager);
     }
 }
 
@@ -129,8 +149,10 @@ void TraversalRuleState::setRuleName(int ruleId, const juce::String& name, juce:
 {
     juce::ValueTree rule = rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId);
 
+    RuleProperties properties(rule);
+
     if (rule.isValid()) {
-        rule.setProperty(ValueTreeIdentifiers::RuleName, name, undoManager);
+        properties.ruleName.setValue(name, undoManager);
     }
 }
 
@@ -138,8 +160,10 @@ void TraversalRuleState::setFolderName(int folderId, const juce::String& name, j
 {
     juce::ValueTree folder = folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, folderId);
 
+    FolderProperties properties(folder);
+
     if (folder.isValid()) {
-        folder.setProperty(ValueTreeIdentifiers::FolderName, name, undoManager);
+        properties.folderName.setValue(name, undoManager);
     }
 }
 
@@ -147,6 +171,8 @@ void TraversalRuleState::moveRule(int ruleId, int folderId, int beforeRuleId, ju
 {
     juce::ValueTree       rule   = rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId);
     const juce::ValueTree anchor = rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, beforeRuleId);
+
+    RuleProperties properties(rule);
 
     int targetIndex = rules.getNumChildren() - 1;
 
@@ -162,7 +188,7 @@ void TraversalRuleState::moveRule(int ruleId, int folderId, int beforeRuleId, ju
         }
     }
 
-    rule.setProperty(ValueTreeIdentifiers::RuleFolderId, folderId, undoManager);
+    properties.folderId.setValue(folderId, undoManager);
 
     rules.moveChild(rules.indexOf(rule), targetIndex, undoManager);
 }
@@ -171,6 +197,8 @@ void TraversalRuleState::moveFolder(int folderId, int parentFolderId, int before
 {
     juce::ValueTree       folder = folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, folderId);
     const juce::ValueTree anchor = folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, beforeFolderId);
+
+    FolderProperties properties(folder);
 
     int targetIndex = folders.getNumChildren() - 1;
 
@@ -186,7 +214,7 @@ void TraversalRuleState::moveFolder(int folderId, int parentFolderId, int before
         }
     }
 
-    folder.setProperty(ValueTreeIdentifiers::FolderParentId, parentFolderId, undoManager);
+    properties.parentFolderId.setValue(parentFolderId, undoManager);
 
     folders.moveChild(folders.indexOf(folder), targetIndex, undoManager);
 }
@@ -197,16 +225,20 @@ void TraversalRuleState::ensureDefaultRule()
         addRule(0, nullptr);
     }
 
-    const juce::ValueTree activeRule =
-        rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
+    const int liveRuleId  = activeRuleId;
+    const int firstRuleId = rules.getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+    const juce::ValueTree activeRule = rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, liveRuleId);
 
     if (! activeRule.isValid()) {
-        rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, rules.getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id), nullptr);
+        activeRuleId.setValue(firstRuleId, nullptr);
     }
 }
 
 void TraversalRuleState::replaceState(const juce::ValueTree& restoredRules, const juce::ValueTree& restoredFolders)
 {
+    juce::ValueTree restoredRulesTree = restoredRules;
+
     rules.removeAllChildren(nullptr);
     rules.removeAllProperties(nullptr);
 
@@ -220,8 +252,10 @@ void TraversalRuleState::replaceState(const juce::ValueTree& restoredRules, cons
         rules.addChild(restoredRules.getChild(i).createCopy(), -1, nullptr);
     }
 
-    if (restoredRules.hasProperty(ValueTreeIdentifiers::ActiveRuleId)) {
-        rules.setProperty(ValueTreeIdentifiers::ActiveRuleId, restoredRules.getProperty(ValueTreeIdentifiers::ActiveRuleId), nullptr);
+    const juce::CachedValue<int> restoredActiveRuleId(restoredRulesTree, ValueTreeIdentifiers::ActiveRuleId, nullptr, noActiveRuleId);
+
+    if (! restoredActiveRuleId.isUsingDefault()) {
+        activeRuleId.setValue(restoredActiveRuleId, nullptr);
     }
 
     ruleIdIncrement = 0;
@@ -237,7 +271,9 @@ void TraversalRuleState::replaceState(const juce::ValueTree& restoredRules, cons
     folderIdIncrement = 0;
 
     for (int i = 0; i < folders.getNumChildren(); ++i) {
-        const int id = folders.getChild(i).getProperty(ValueTreeIdentifiers::FolderId);
+        const FolderProperties folder(folders.getChild(i));
+
+        const int id = folder.folderId;
 
         if (id > folderIdIncrement) {
             folderIdIncrement = id;
@@ -250,11 +286,13 @@ bool TraversalRuleState::isInsideFolder(int folderId, int ancestorId) const
     int current = folderId;
 
     for (int step = 0; step <= folders.getNumChildren() && current > 0; ++step) {
+        const FolderProperties folder(folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, current));
+
         if (current == ancestorId) {
             return true;
         }
 
-        current = folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, current).getProperty(ValueTreeIdentifiers::FolderParentId, 0);
+        current = folder.parentFolderId;
     }
 
     return false;
@@ -262,7 +300,9 @@ bool TraversalRuleState::isInsideFolder(int folderId, int ancestorId) const
 
 int TraversalRuleState::folderOfRule(int ruleId) const
 {
-    const int folderId = rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId).getProperty(ValueTreeIdentifiers::RuleFolderId, 0);
+    const RuleProperties rule(rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId));
+
+    const int folderId = rule.folderId;
 
     if (folderId > 0 && folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, folderId).isValid()) {
         return folderId;
@@ -273,7 +313,9 @@ int TraversalRuleState::folderOfRule(int ruleId) const
 
 int TraversalRuleState::parentOfFolder(int folderId) const
 {
-    const int parentId = folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, folderId).getProperty(ValueTreeIdentifiers::FolderParentId, 0);
+    const FolderProperties folder(folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, folderId));
+
+    const int parentId = folder.parentFolderId;
 
     if (parentId > 0 && folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, parentId).isValid()) {
         return parentId;
@@ -299,19 +341,24 @@ int TraversalRuleState::countRulesInside(int folderId) const
 
 juce::String TraversalRuleState::activeRuleSource() const
 {
-    const juce::ValueTree rule =
-        rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, rules.getProperty(ValueTreeIdentifiers::ActiveRuleId, -1));
+    const int liveRuleId = activeRuleId;
+
+    const juce::ValueTree rule = rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, liveRuleId);
+
+    const RuleProperties properties(rule);
 
     if (! rule.isValid()) {
         return {};
     }
 
-    return rule.getProperty(ValueTreeIdentifiers::RuleSource).toString();
+    return properties.ruleSource;
 }
 
 juce::StringArray TraversalRuleState::pathOf(int ruleId) const
 {
     const juce::ValueTree rule = rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId);
+
+    const RuleProperties properties(rule);
 
     juce::StringArray segments;
 
@@ -321,10 +368,12 @@ juce::StringArray TraversalRuleState::pathOf(int ruleId) const
         return segments;
     }
 
-    segments.add(rule.getProperty(ValueTreeIdentifiers::RuleName).toString());
+    segments.add(properties.ruleName);
 
     for (int step = 0; step <= folders.getNumChildren() && folderId > 0; ++step) {
-        segments.insert(0, folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, folderId).getProperty(ValueTreeIdentifiers::FolderName).toString());
+        const FolderProperties folder(folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, folderId));
+
+        segments.insert(0, folder.folderName);
 
         folderId = parentOfFolder(folderId);
     }

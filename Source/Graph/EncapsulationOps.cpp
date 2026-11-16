@@ -1,5 +1,6 @@
 #include "EncapsulationOps.h"
 #include "GraphState.h"
+#include "TypedProperties.h"
 #include "ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
@@ -20,18 +21,26 @@ juce::ValueTree EncapsulationOps::create(std::span<const int> memberNodeIds, juc
     juce::ValueTree encapsulator    {ValueTreeIdentifiers::EncapsulatorData};
     juce::ValueTree encapsulatedIds {ValueTreeIdentifiers::EncapsulatedIds};
 
+    NodeProperties encapsulatorProperties(encapsulator);
+
+    const NodeProperties firstMemberProperties(firstMember);
+
     for (const int memberNodeId : memberNodeIds) {
         juce::ValueTree memberId {ValueTreeIdentifiers::NodeId};
+
+        NodeProperties memberProperties(graphState.getNode(memberNodeId));
+
         memberId.setProperty(ArsNovaUI::CanvasIdentifiers::Id, memberNodeId, undoManager);
 
         encapsulatedIds.addChild(memberId, -1, undoManager);
 
-        graphState.getNode(memberNodeId).setProperty(ValueTreeIdentifiers::EncapsulatorId, encapsulatorId, undoManager);
+        memberProperties.encapsulatorId.setValue(encapsulatorId, undoManager);
     }
 
     encapsulator.addChild(encapsulatedIds, -1, undoManager);
 
-    encapsulator.setProperty(ValueTreeIdentifiers::RootNodeId, firstMember.getProperty(ValueTreeIdentifiers::RootNodeId), undoManager);
+    encapsulatorProperties.rootNodeId.setValue(firstMemberProperties.rootNodeId, undoManager);
+
     encapsulator.setProperty(ArsNovaUI::CanvasIdentifiers::Id, encapsulatorId, undoManager);
 
     graphState.nodeMap.addChild(encapsulator, -1, undoManager);
@@ -50,8 +59,10 @@ void EncapsulationOps::dissolve(int encapsulatorId, juce::UndoManager* undoManag
     for (const int memberNodeId : memberIds(encapsulatorId)) {
         juce::ValueTree member = graphState.getNode(memberNodeId);
 
+        NodeProperties memberProperties(member);
+
         if (member.isValid()) {
-            member.removeProperty(ValueTreeIdentifiers::EncapsulatorId, undoManager);
+            memberProperties.encapsulatorId.resetToDefault(undoManager);
         }
     }
 
@@ -73,7 +84,11 @@ void EncapsulationOps::insertNodeAfter(int nodeId, int siblingNodeId, juce::Undo
 {
     juce::ValueTree node = graphState.getNode(nodeId);
 
-    const int encapsulatorId = graphState.getNode(siblingNodeId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+    NodeProperties properties(node);
+
+    const NodeProperties siblingProperties(graphState.getNode(siblingNodeId));
+
+    const int encapsulatorId = siblingProperties.encapsulatorId;
 
     juce::ValueTree encapsulatedIds =
         graphState.getNode(encapsulatorId).getChildWithName(ValueTreeIdentifiers::EncapsulatedIds);
@@ -95,7 +110,7 @@ void EncapsulationOps::insertNodeAfter(int nodeId, int siblingNodeId, juce::Undo
 
     encapsulatedIds.addChild(memberId, memberIndex, undoManager);
 
-    node.setProperty(ValueTreeIdentifiers::EncapsulatorId, encapsulatorId, undoManager);
+    properties.encapsulatorId.setValue(encapsulatorId, undoManager);
 }
 
 void EncapsulationOps::removeMember(int nodeId, int encapsulatorId, juce::UndoManager* undoManager)
@@ -135,7 +150,9 @@ int EncapsulationOps::unusedLabel() const
         const juce::ValueTree existing = graphState.nodeMap.getChild(i);
 
         if (existing.getType() == ValueTreeIdentifiers::EncapsulatorData) {
-            const int usedLabel = existing.getProperty(ValueTreeIdentifiers::EncapsulatorLabel);
+            const NodeProperties properties(existing);
+
+            const int usedLabel = properties.encapsulatorLabel;
 
             usedLabels.insert(usedLabel);
         }

@@ -1,16 +1,16 @@
 #include "SettingsMenu.h"
 #include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
 #include "../Canvas/GridMultiplier.h"
+#include "../../Input/GraphDocument.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
-SettingsMenu::SettingsMenu(ArsNovaUI::CustomLookAndFeel& lookAndFeel, ArsNovaUI::ScaledView& scaledView, juce::ValueTree colourPresets, juce::ValueTree canvasSettings,
-                           juce::UndoManager& undoManager)
+SettingsMenu::SettingsMenu(ArsNovaUI::CustomLookAndFeel& lookAndFeel, ArsNovaUI::ScaledView& scaledView, juce::ValueTree colourPresets, GraphDocument& graphDocument)
     : lookAndFeel        (lookAndFeel),
       scaledView         (scaledView),
-      themeColourSelector(colourPresets, undoManager),
-      zoomEditor         (undoManager),
-      graphGridEditor    (undoManager),
-      ornamentGridEditor (undoManager)
+      themeColourSelector(colourPresets, graphDocument.undoManager),
+      zoomEditor         (graphDocument.undoManager),
+      graphGridEditor    (graphDocument.undoManager),
+      ornamentGridEditor (graphDocument.undoManager)
 {
     auto zoomFormat         = std::make_unique<ArsNovaUI::NumberFormat>(ArsNovaUI::ScaledView::minimumZoom, ArsNovaUI::ScaledView::maximumZoom, ArsNovaUI::ValueFormat::editableDecimalPlaces);
     auto graphGridFormat    = std::make_unique<ArsNovaUI::NumberFormat>(GridMultiplier::minimumMultiplier, GridMultiplier::maximumMultiplier, ArsNovaUI::ValueFormat::editableDecimalPlaces);
@@ -37,8 +37,8 @@ SettingsMenu::SettingsMenu(ArsNovaUI::CustomLookAndFeel& lookAndFeel, ArsNovaUI:
     graphGridEditor.setFormat(std::move(graphGridFormat));
     ornamentGridEditor.setFormat(std::move(ornamentGridFormat));
 
-    graphGridEditor.bindEditor(canvasSettings, ValueTreeIdentifiers::GraphGridMultiplier);
-    ornamentGridEditor.bindEditor(canvasSettings, ValueTreeIdentifiers::OrnamentGridMultiplier);
+    graphGridEditor.bindEditor(graphDocument.canvasSettings, ValueTreeIdentifiers::GraphGridMultiplier);
+    ornamentGridEditor.bindEditor(graphDocument.canvasSettings, ValueTreeIdentifiers::OrnamentGridMultiplier);
 
     zoomEditor.onEditFinished = [this]() {
         const double enteredZoom = zoomEditor.boundValue.getValue();

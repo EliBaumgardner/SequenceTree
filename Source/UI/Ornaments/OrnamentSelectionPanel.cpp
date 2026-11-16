@@ -1,4 +1,5 @@
 #include "OrnamentSelectionPanel.h"
+#include <ArsNovaUI/Menus/Dialog.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
 
@@ -81,13 +82,16 @@ void OrnamentSelectionPanel::chooseLibraryFile()
     fileChooser->launchAsync(chooserFlags, [this](const juce::FileChooser& chooser) {
         const juce::File file = chooser.getResult();
 
+        ArsNovaUI::Dialog dialog;
+
         if (file == juce::File() || ornamentLibraries.importLibrary(file).isValid()) {
             return;
         }
 
-        juce::AlertWindow::showAsync(juce::MessageBoxOptions().withIconType(juce::MessageBoxIconType::WarningIcon).withTitle("Library not added")
-                                         .withMessage(file.getFileName() + " is already added, or is not an ornament library.").withButton("OK")
-                                         .withAssociatedComponent(this), nullptr);
+        dialog.title   = "Library not added";
+        dialog.message = file.getFileName() + " is already added, or is not an ornament library.";
+        dialog.addButton("OK", nullptr);
+        dialog.show(*this);
     });
 }
 

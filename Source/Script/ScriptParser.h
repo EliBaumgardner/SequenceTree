@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <expected>
 #include <span>
 #include <string>
 #include <vector>
@@ -15,13 +16,20 @@
     parseStatement reads declarations, assignments, calls, if / else, for, while, break, continue
     and return, and parseExpression reads operators in order of precedence (precedenceOf).
 
-    It reports a break in the grammar as a ScriptDiagnostic, then recover skips to the end of the
-    broken member or statement and carries on, so one compile can list several errors. It does not
-    check that names exist or that types agree; the Emitter does. A Parser lives for one compile,
-    made by compileTraversalScript.
+    It reports a break in the grammar as a ScriptDiagnostic. Every function that reads the tokens
+    returns a Parsed value: the thing it read, or a ParseFailure once the diagnostic is filed, and
+    each caller passes a failure up. The loops over class members, global variables and statements
+    stop the failure, call recover to skip to the end of the broken member or statement and carry
+    on, so one compile can list several errors. It does not check that names exist or that types
+    agree; the Emitter does. A Parser lives for one compile, made by compileTraversalScript.
 */
 
 struct ParseFailure {};
+
+template <typename Value>
+using Parsed = std::expected<Value, ParseFailure>;
+
+using ParseStatus = Parsed<void>;
 
 class Parser
 {
@@ -35,48 +43,50 @@ public:
 
 private:
 
-    void parseImports    (ClassDeclaration& declaration);
-    void parseGlobals    (ClassDeclaration& declaration);
-    void parseClassHeader(ClassDeclaration& declaration);
-    void parseClassBody  (ClassDeclaration& declaration);
+    [[nodiscard]] ParseStatus parseImports    (ClassDeclaration& declaration);
+    [[nodiscard]] ParseStatus parseGlobal     (ClassDeclaration& declaration);
+    [[nodiscard]] ParseStatus parseClassHeader(ClassDeclaration& declaration);
+    [[nodiscard]] ParseStatus parseClassMember(ClassDeclaration& declaration);
+    [[nodiscard]] ParseStatus parseFunction   (ClassDeclaration& declaration, ValueType returnType, const Token& nameToken);
+    [[nodiscard]] ParseStatus endStatement    ();
 
-    void parseClassMember(ClassDeclaration& declaration);
-    void parseFunction   (ClassDeclaration& declaration, ValueType returnType, const Token& nameToken);
+    void parseGlobals  (ClassDeclaration& declaration);
+    void parseClassBody(ClassDeclaration& declaration);
 
     void skipTerminators();
-    void endStatement   ();
     void recover        ();
 
-    [[noreturn]] void fail(const std::string& message);
+    [[nodiscard]] std::unexpected<ParseFailure> fail(const std::string& message);
 
     const Token& current() const;
-    const Token& expect (TokenKind kind, const char* description);
+
+    [[nodiscard]] Parsed<const Token*> expect(TokenKind kind, const char* description);
 
     bool match(TokenKind kind);
 
-    ValueType parseType();
+    [[nodiscard]] Parsed<ValueType> parseType();
 
-    MemberDeclaration parseVariable(ValueType type, const Token& nameToken);
+    [[nodiscard]] Parsed<MemberDeclaration> parseVariable(ValueType type, const Token& nameToken);
 
-    std::vector<StatementPtr> parseBlock();
+    [[nodiscard]] Parsed<std::vector<StatementPtr>> parseBlock();
 
-    StatementPtr parseStatement   ();
-    StatementPtr parseDeclaration ();
-    StatementPtr parseAssignOrCall();
-    StatementPtr parseSimple      (StatementKind kind);
-    StatementPtr parseReturn      ();
+    [[nodiscard]] Parsed<StatementPtr> parseStatement   ();
+    [[nodiscard]] Parsed<StatementPtr> parseDeclaration ();
+    [[nodiscard]] Parsed<StatementPtr> parseAssignOrCall();
+    [[nodiscard]] Parsed<StatementPtr> parseSimple      (StatementKind kind);
+    [[nodiscard]] Parsed<StatementPtr> parseReturn      ();
 
-    StatementPtr parseIf   ();
-    StatementPtr parseFor  ();
-    StatementPtr parseWhile();
+    [[nodiscard]] Parsed<StatementPtr> parseIf   ();
+    [[nodiscard]] Parsed<StatementPtr> parseFor  ();
+    [[nodiscard]] Parsed<StatementPtr> parseWhile();
 
     StatementPtr makeStatement(StatementKind kind, const Token& token);
 
-    ExpressionPtr parseExpression();
-    ExpressionPtr parseBinary    (int minimumPrecedence);
-    ExpressionPtr parseUnary     ();
-    ExpressionPtr parsePostfix   ();
-    ExpressionPtr parsePrimary   ();
+    [[nodiscard]] Parsed<ExpressionPtr> parseExpression();
+    [[nodiscard]] Parsed<ExpressionPtr> parseBinary    (int minimumPrecedence);
+    [[nodiscard]] Parsed<ExpressionPtr> parseUnary     ();
+    [[nodiscard]] Parsed<ExpressionPtr> parsePostfix   ();
+    [[nodiscard]] Parsed<ExpressionPtr> parsePrimary   ();
 
     ExpressionPtr makeExpression(ExpressionKind kind, const Token& token);
 
@@ -84,6 +94,8 @@ private:
 
     std::span<const Token>         tokens;
     std::vector<ScriptDiagnostic>& diagnostics;
+
+    SyntaxArena* arena = nullptr;
 
     std::size_t position = 0;
 };

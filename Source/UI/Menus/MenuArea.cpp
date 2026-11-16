@@ -80,12 +80,11 @@ void MenuArea::togglePanel(ActivePanel panel)
     }
 
     traversalMenu.setVisible(activePanel == ActivePanel::Traversal);
-    nodeMenu.setVisible(activePanel == ActivePanel::Node);
+    nodeMenu     .setVisible(activePanel == ActivePanel::Node);
 
     menuBar->traversalIcon.setSelected(activePanel == ActivePanel::Traversal);
-    menuBar->nodeIcon.setSelected(activePanel == ActivePanel::Node);
+    menuBar->nodeIcon     .setSelected(activePanel == ActivePanel::Node);
 
     resized();
-
     menuBar->repaint();
 }

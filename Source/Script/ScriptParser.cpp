@@ -4,13 +4,17 @@ ClassDeclaration Parser::run()
 {
     ClassDeclaration declaration;
 
+    arena = &declaration.arena;
+
     skipTerminators();
 
-    try {
-        parseImports(declaration);
-        parseGlobals(declaration);
-        parseClassHeader(declaration);
-    } catch (const ParseFailure&) {
+    if (! parseImports(declaration)) {
+        return declaration;
+    }
+
+    parseGlobals(declaration);
+
+    if (! parseClassHeader(declaration)) {
         return declaration;
     }
 
@@ -27,22 +31,65 @@ ClassDeclaration Parser::run()
     return declaration;
 }
 
-void Parser::parseImports(ClassDeclaration& declaration)
+ParseStatus Parser::parseImports(ClassDeclaration& declaration)
 {
     while (match(TokenKind::KeywordImport)) {
-        const Token& library = expect(TokenKind::Identifier, "a library name after 'import', such as 'core'");
+        const Parsed<const Token*> library = expect(TokenKind::Identifier, "a library name after 'import', such as 'core'");
 
-        if (library.text != "core") {
-            diagnostics.push_back({ "there is no library '" + library.text + "'; the only library is 'core'",
-                                    library.line, library.column, library.length });
-            throw ParseFailure{};
+        if (! library) {
+            return std::unexpected(library.error());
         }
 
-        endStatement();
+        const Token& libraryToken = **library;
+
+        if (libraryToken.text != "core") {
+            diagnostics.push_back({ "there is no library '" + std::string(libraryToken.text) + "'; the only library is 'core'",
+                                    libraryToken.line, libraryToken.column, libraryToken.length });
+
+            return std::unexpected(ParseFailure{});
+        }
+
+        const ParseStatus ended = endStatement();
+
+        if (! ended) {
+            return ended;
+        }
+
         skipTerminators();
 
-        declaration.imports.push_back(library.text);
+        declaration.imports.push_back(std::string(libraryToken.text));
     }
+
+    return {};
+}
+
+ParseStatus Parser::parseGlobal(ClassDeclaration& declaration)
+{
+    const Parsed<ValueType> type = parseType();
+
+    if (! type) {
+        return std::unexpected(type.error());
+    }
+
+    const Parsed<const Token*> nameToken = expect(TokenKind::Identifier, "a variable name");
+
+    if (! nameToken) {
+        return std::unexpected(nameToken.error());
+    }
+
+    if (current().kind == TokenKind::LeftParen) {
+        return fail("a function belongs inside the class");
+    }
+
+    Parsed<MemberDeclaration> variable = parseVariable(*type, **nameToken);
+
+    if (! variable) {
+        return std::unexpected(variable.error());
+    }
+
+    declaration.globals.push_back(std::move(*variable));
+
+    return {};
 }
 
 void Parser::parseGlobals(ClassDeclaration& declaration)
@@ -57,16 +104,7 @@ void Parser::parseGlobals(ClassDeclaration& declaration)
             default:                     return;
         }
 
-        try {
-            const ValueType type      = parseType();
-            const Token&    nameToken = expect(TokenKind::Identifier, "a variable name");
-
-            if (current().kind == TokenKind::LeftParen) {
-                fail("a function belongs inside the class");
-            }
-
-            declaration.globals.push_back(parseVariable(type, nameToken));
-        } catch (const ParseFailure&) {
+        if (! parseGlobal(declaration)) {
             recover();
         }
 
@@ -74,27 +112,44 @@ void Parser::parseGlobals(ClassDeclaration& declaration)
     }
 }
 
-void Parser::parseClassHeader(ClassDeclaration& declaration)
+ParseStatus Parser::parseClassHeader(ClassDeclaration& declaration)
 {
     if (current().kind != TokenKind::KeywordClass) {
-        fail("a traversal script is a class, such as 'class Traversal : defaultTraversal { ... };'");
+        return fail("a traversal script is a class, such as 'class Traversal : defaultTraversal { ... };'");
     }
 
     ++position;
 
-    declaration.name = expect(TokenKind::Identifier, "a class name").text;
+    const Parsed<const Token*> className = expect(TokenKind::Identifier, "a class name");
+
+    if (! className) {
+        return std::unexpected(className.error());
+    }
+
+    declaration.name = std::string((*className)->text);
 
     if (match(TokenKind::Colon)) {
-        const Token& base = expect(TokenKind::Identifier, "'defaultTraversal' after ':'");
+        const Parsed<const Token*> base = expect(TokenKind::Identifier, "'defaultTraversal' after ':'");
 
-        if (base.text != "defaultTraversal") {
+        if (! base) {
+            return std::unexpected(base.error());
+        }
+
+        if ((*base)->text != "defaultTraversal") {
             diagnostics.push_back({ "a traversal can only build on 'defaultTraversal'",
-                                    base.line, base.column, base.length });
-            throw ParseFailure{};
+                                    (*base)->line, (*base)->column, (*base)->length });
+
+            return std::unexpected(ParseFailure{});
         }
     }
 
-    expect(TokenKind::LeftBrace, "'{' to open the class");
+    const Parsed<const Token*> brace = expect(TokenKind::LeftBrace, "'{' to open the class");
+
+    if (! brace) {
+        return std::unexpected(brace.error());
+    }
+
+    return {};
 }
 
 void Parser::parseClassBody(ClassDeclaration& declaration)
@@ -108,9 +163,7 @@ void Parser::parseClassBody(ClassDeclaration& declaration)
             return;
         }
 
-        try {
-            parseClassMember(declaration);
-        } catch (const ParseFailure&) {
+        if (! parseClassMember(declaration)) {
             recover();
         }
 
@@ -120,48 +173,76 @@ void Parser::parseClassBody(ClassDeclaration& declaration)
     ++position;
 }
 
-void Parser::parseClassMember(ClassDeclaration& declaration)
+ParseStatus Parser::parseClassMember(ClassDeclaration& declaration)
 {
     ValueType type = ValueType::Void;
 
     if (match(TokenKind::KeywordPublic)) {
-        expect(TokenKind::Colon, "':' after 'public'");
-        return;
+        const Parsed<const Token*> colon = expect(TokenKind::Colon, "':' after 'public'");
+
+        if (! colon) {
+            return std::unexpected(colon.error());
+        }
+
+        return {};
     }
 
     if (current().kind == TokenKind::Identifier) {
-        fail("give '" + current().text + "' a type, such as 'Node " + current().text + ";' or 'int " + current().text + ";'");
+        const std::string word(current().text);
+
+        return fail("give '" + word + "' a type, such as 'Node " + word + ";' or 'int " + word + ";'");
     }
 
     if (!match(TokenKind::KeywordVoid)) {
-        type = parseType();
+        const Parsed<ValueType> parsedType = parseType();
+
+        if (! parsedType) {
+            return std::unexpected(parsedType.error());
+        }
+
+        type = *parsedType;
     }
 
-    const Token& nameToken = expect(TokenKind::Identifier, "a name");
+    const Parsed<const Token*> nameToken = expect(TokenKind::Identifier, "a name");
+
+    if (! nameToken) {
+        return std::unexpected(nameToken.error());
+    }
 
     if (current().kind == TokenKind::LeftParen) {
-        parseFunction(declaration, type, nameToken);
-        return;
+        return parseFunction(declaration, type, **nameToken);
     }
 
     if (type == ValueType::Void) {
-        fail("only a function can be 'void'");
+        return fail("only a function can be 'void'");
     }
 
-    declaration.members.push_back(parseVariable(type, nameToken));
+    Parsed<MemberDeclaration> member = parseVariable(type, **nameToken);
+
+    if (! member) {
+        return std::unexpected(member.error());
+    }
+
+    declaration.members.push_back(std::move(*member));
+
+    return {};
 }
 
-void Parser::parseFunction(ClassDeclaration& declaration, ValueType returnType, const Token& nameToken)
+ParseStatus Parser::parseFunction(ClassDeclaration& declaration, ValueType returnType, const Token& nameToken)
 {
     FunctionDeclaration function;
 
     function.returnType = returnType;
-    function.name       = nameToken.text;
+    function.name       = std::string(nameToken.text);
     function.line       = nameToken.line;
     function.column     = nameToken.column;
     function.length     = nameToken.length;
 
-    expect(TokenKind::LeftParen, "'('");
+    const Parsed<const Token*> openParen = expect(TokenKind::LeftParen, "'('");
+
+    if (! openParen) {
+        return std::unexpected(openParen.error());
+    }
 
     if (current().kind != TokenKind::RightParen) {
         do {
@@ -169,19 +250,44 @@ void Parser::parseFunction(ClassDeclaration& declaration, ValueType returnType, 
 
             parameter.line   = current().line;
             parameter.column = current().column;
-            parameter.type   = parseType();
-            parameter.name   = expect(TokenKind::Identifier, "a parameter name").text;
+
+            const Parsed<ValueType> parameterType = parseType();
+
+            if (! parameterType) {
+                return std::unexpected(parameterType.error());
+            }
+
+            const Parsed<const Token*> parameterName = expect(TokenKind::Identifier, "a parameter name");
+
+            if (! parameterName) {
+                return std::unexpected(parameterName.error());
+            }
+
+            parameter.type   = *parameterType;
+            parameter.name   = std::string((*parameterName)->text);
             parameter.length = tokens[position - 1].column + tokens[position - 1].length - parameter.column;
 
             function.parameters.push_back(parameter);
         } while (match(TokenKind::Comma));
     }
 
-    expect(TokenKind::RightParen, "')' after the parameters");
+    const Parsed<const Token*> closeParen = expect(TokenKind::RightParen, "')' after the parameters");
 
-    function.body = parseBlock();
+    if (! closeParen) {
+        return std::unexpected(closeParen.error());
+    }
+
+    Parsed<std::vector<StatementPtr>> body = parseBlock();
+
+    if (! body) {
+        return std::unexpected(body.error());
+    }
+
+    function.body = std::move(*body);
 
     declaration.functions.push_back(std::move(function));
+
+    return {};
 }
 
 void Parser::skipTerminators()
@@ -191,9 +297,15 @@ void Parser::skipTerminators()
     }
 }
 
-void Parser::endStatement()
+ParseStatus Parser::endStatement()
 {
-    expect(TokenKind::Terminator, "';' after a statement");
+    const Parsed<const Token*> terminator = expect(TokenKind::Terminator, "';' after a statement");
+
+    if (! terminator) {
+        return std::unexpected(terminator.error());
+    }
+
+    return {};
 }
 
 void Parser::recover()
@@ -227,21 +339,22 @@ void Parser::recover()
     }
 }
 
-void Parser::fail(const std::string& message)
+std::unexpected<ParseFailure> Parser::fail(const std::string& message)
 {
     diagnostics.push_back({ message, current().line, current().column, current().length });
-    throw ParseFailure{};
+
+    return std::unexpected(ParseFailure{});
 }
 
 const Token& Parser::current() const { return tokens[position]; }
 
-const Token& Parser::expect(TokenKind kind, const char* description)
+Parsed<const Token*> Parser::expect(TokenKind kind, const char* description)
 {
     if (current().kind != kind) {
-        fail(std::string("expected ") + description);
+        return fail(std::string("expected ") + description);
     }
 
-    return tokens[position++];
+    return &tokens[position++];
 }
 
 bool Parser::match(TokenKind kind)
@@ -254,7 +367,7 @@ bool Parser::match(TokenKind kind)
     return true;
 }
 
-ValueType Parser::parseType()
+Parsed<ValueType> Parser::parseType()
 {
     if (match(TokenKind::KeywordInt)) {
         return ValueType::Int;
@@ -276,25 +389,39 @@ ValueType Parser::parseType()
         return ValueType::Node;
     }
 
-    fail("expected a type, 'int', 'float', 'double', 'bool' or 'Node'");
+    return fail("expected a type, 'int', 'float', 'double', 'bool' or 'Node'");
 }
 
-MemberDeclaration Parser::parseVariable(ValueType type, const Token& nameToken)
+Parsed<MemberDeclaration> Parser::parseVariable(ValueType type, const Token& nameToken)
 {
-    MemberDeclaration variable { type, nameToken.text, nullptr, nameToken.line, nameToken.column, nameToken.length };
+    MemberDeclaration variable { type, std::string(nameToken.text), nullptr, nameToken.line, nameToken.column, nameToken.length };
 
     if (match(TokenKind::Assign)) {
-        variable.value = parseExpression();
+        Parsed<ExpressionPtr> value = parseExpression();
+
+        if (! value) {
+            return std::unexpected(value.error());
+        }
+
+        variable.value = std::move(*value);
     }
 
-    expect(TokenKind::Terminator, "';' after a variable");
+    const Parsed<const Token*> terminator = expect(TokenKind::Terminator, "';' after a variable");
+
+    if (! terminator) {
+        return std::unexpected(terminator.error());
+    }
 
     return variable;
 }
 
-std::vector<StatementPtr> Parser::parseBlock()
+Parsed<std::vector<StatementPtr>> Parser::parseBlock()
 {
-    expect(TokenKind::LeftBrace, "'{'");
+    const Parsed<const Token*> openBrace = expect(TokenKind::LeftBrace, "'{'");
+
+    if (! openBrace) {
+        return std::unexpected(openBrace.error());
+    }
 
     std::vector<StatementPtr> body;
 
@@ -302,12 +429,15 @@ std::vector<StatementPtr> Parser::parseBlock()
 
     while (current().kind != TokenKind::RightBrace) {
         if (current().kind == TokenKind::End) {
-            fail("expected '}'");
+            return fail("expected '}'");
         }
 
-        try {
-            body.push_back(parseStatement());
-        } catch (const ParseFailure&) {
+        Parsed<StatementPtr> statement = parseStatement();
+
+        if (statement) {
+            body.push_back(std::move(*statement));
+        }
+        else {
             recover();
         }
 
@@ -319,7 +449,7 @@ std::vector<StatementPtr> Parser::parseBlock()
     return body;
 }
 
-StatementPtr Parser::parseStatement()
+Parsed<StatementPtr> Parser::parseStatement()
 {
     switch (current().kind) {
         case TokenKind::KeywordLet:
@@ -338,10 +468,10 @@ StatementPtr Parser::parseStatement()
         default:                         break;
     }
 
-    fail("expected a statement");
+    return fail("expected a statement");
 }
 
-StatementPtr Parser::parseDeclaration()
+Parsed<StatementPtr> Parser::parseDeclaration()
 {
     StatementPtr statement = makeStatement(StatementKind::Declare, current());
 
@@ -349,117 +479,219 @@ StatementPtr Parser::parseDeclaration()
         statement->declaredType = ValueType::Inferred;
     }
     else {
-        statement->declaredType = parseType();
+        const Parsed<ValueType> declaredType = parseType();
+
+        if (! declaredType) {
+            return std::unexpected(declaredType.error());
+        }
+
+        statement->declaredType = *declaredType;
     }
 
-    statement->name = expect(TokenKind::Identifier, "a variable name").text;
+    const Parsed<const Token*> name = expect(TokenKind::Identifier, "a variable name");
+
+    if (! name) {
+        return std::unexpected(name.error());
+    }
+
+    statement->name = std::string((*name)->text);
 
     if (statement->declaredType == ValueType::Inferred) {
-        expect(TokenKind::Assign, "'=' after a variable name");
-        statement->value = parseExpression();
-    }
-    else if (match(TokenKind::Assign)) {
-        statement->value = parseExpression();
+        const Parsed<const Token*> assign = expect(TokenKind::Assign, "'=' after a variable name");
+
+        if (! assign) {
+            return std::unexpected(assign.error());
+        }
     }
 
-    endStatement();
+    if (statement->declaredType == ValueType::Inferred || match(TokenKind::Assign)) {
+        Parsed<ExpressionPtr> value = parseExpression();
+
+        if (! value) {
+            return std::unexpected(value.error());
+        }
+
+        statement->value = std::move(*value);
+    }
+
+    const ParseStatus ended = endStatement();
+
+    if (! ended) {
+        return std::unexpected(ended.error());
+    }
 
     return statement;
 }
 
-StatementPtr Parser::parseAssignOrCall()
+Parsed<StatementPtr> Parser::parseAssignOrCall()
 {
     StatementPtr statement = makeStatement(StatementKind::Assign, current());
 
-    ExpressionPtr   target     = parsePostfix();
+    Parsed<ExpressionPtr> parsedTarget = parsePostfix();
+
+    if (! parsedTarget) {
+        return std::unexpected(parsedTarget.error());
+    }
+
+    ExpressionPtr   target     = std::move(*parsedTarget);
     const TokenKind assignKind = current().kind;
 
     if (assignKind != TokenKind::Assign
         && assignKind != TokenKind::PlusAssign
         && assignKind != TokenKind::MinusAssign) {
         if (target->kind != ExpressionKind::Call) {
-            fail("expected '=', '+=' or '-='");
+            return fail("expected '=', '+=' or '-='");
         }
 
         statement->kind  = StatementKind::Call;
         statement->value = std::move(target);
 
-        endStatement();
+        const ParseStatus ended = endStatement();
+
+        if (! ended) {
+            return std::unexpected(ended.error());
+        }
 
         return statement;
     }
 
     if (target->kind != ExpressionKind::Name && target->kind != ExpressionKind::Field) {
-        fail("only a variable or a node property can be assigned");
+        return fail("only a variable or a node property can be assigned");
     }
 
     statement->op     = assignKind;
     statement->target = std::move(target);
     ++position;
 
-    statement->value = parseExpression();
+    Parsed<ExpressionPtr> value = parseExpression();
 
-    endStatement();
+    if (! value) {
+        return std::unexpected(value.error());
+    }
+
+    statement->value = std::move(*value);
+
+    const ParseStatus ended = endStatement();
+
+    if (! ended) {
+        return std::unexpected(ended.error());
+    }
 
     return statement;
 }
 
-StatementPtr Parser::parseSimple(StatementKind kind)
+Parsed<StatementPtr> Parser::parseSimple(StatementKind kind)
 {
     StatementPtr statement = makeStatement(kind, current());
     ++position;
 
-    endStatement();
+    const ParseStatus ended = endStatement();
+
+    if (! ended) {
+        return std::unexpected(ended.error());
+    }
 
     return statement;
 }
 
-StatementPtr Parser::parseReturn()
+Parsed<StatementPtr> Parser::parseReturn()
 {
     StatementPtr statement = makeStatement(StatementKind::Return, current());
     ++position;
 
     if (current().kind != TokenKind::Terminator) {
-        statement->value = parseExpression();
+        Parsed<ExpressionPtr> value = parseExpression();
+
+        if (! value) {
+            return std::unexpected(value.error());
+        }
+
+        statement->value = std::move(*value);
     }
 
-    endStatement();
+    const ParseStatus ended = endStatement();
+
+    if (! ended) {
+        return std::unexpected(ended.error());
+    }
 
     return statement;
 }
 
-StatementPtr Parser::parseIf()
+Parsed<StatementPtr> Parser::parseIf()
 {
     StatementPtr statement = makeStatement(StatementKind::If, current());
     ++position;
 
-    statement->value = parseExpression();
-    statement->body  = parseBlock();
+    Parsed<ExpressionPtr> condition = parseExpression();
+
+    if (! condition) {
+        return std::unexpected(condition.error());
+    }
+
+    statement->value = std::move(*condition);
+
+    Parsed<std::vector<StatementPtr>> body = parseBlock();
+
+    if (! body) {
+        return std::unexpected(body.error());
+    }
+
+    statement->body = std::move(*body);
 
     if (match(TokenKind::KeywordElse)) {
         statement->hasElse = true;
 
         if (current().kind == TokenKind::KeywordIf) {
-            statement->elseBody.push_back(parseIf());
+            Parsed<StatementPtr> chained = parseIf();
+
+            if (! chained) {
+                return std::unexpected(chained.error());
+            }
+
+            statement->elseBody.push_back(std::move(*chained));
+
             return statement;
         }
 
-        statement->elseBody = parseBlock();
+        Parsed<std::vector<StatementPtr>> elseBody = parseBlock();
+
+        if (! elseBody) {
+            return std::unexpected(elseBody.error());
+        }
+
+        statement->elseBody = std::move(*elseBody);
     }
 
     return statement;
 }
 
-StatementPtr Parser::parseFor()
+Parsed<StatementPtr> Parser::parseFor()
 {
     StatementPtr statement = makeStatement(StatementKind::For, current());
     ++position;
 
-    statement->name = expect(TokenKind::Identifier, "a loop variable name").text;
+    const Parsed<const Token*> variable = expect(TokenKind::Identifier, "a loop variable name");
 
-    expect(TokenKind::KeywordIn, "'in' after a loop variable name");
+    if (! variable) {
+        return std::unexpected(variable.error());
+    }
 
-    ExpressionPtr iterable = parsePostfix();
+    statement->name = std::string((*variable)->text);
+
+    const Parsed<const Token*> inKeyword = expect(TokenKind::KeywordIn, "'in' after a loop variable name");
+
+    if (! inKeyword) {
+        return std::unexpected(inKeyword.error());
+    }
+
+    Parsed<ExpressionPtr> parsedIterable = parsePostfix();
+
+    if (! parsedIterable) {
+        return std::unexpected(parsedIterable.error());
+    }
+
+    ExpressionPtr iterable = std::move(*parsedIterable);
 
     if (iterable->kind == ExpressionKind::Field && iterable->name == "children") {
         statement->target = std::move(iterable->left);
@@ -467,28 +699,48 @@ StatementPtr Parser::parseFor()
     else if (iterable->kind != ExpressionKind::Name || iterable->name != "children") {
         diagnostics.push_back({ "only children can be iterated, such as 'children' or 'node.children'",
                                 iterable->line, iterable->column, iterable->length });
-        throw ParseFailure{};
+
+        return std::unexpected(ParseFailure{});
     }
 
-    statement->body = parseBlock();
+    Parsed<std::vector<StatementPtr>> body = parseBlock();
+
+    if (! body) {
+        return std::unexpected(body.error());
+    }
+
+    statement->body = std::move(*body);
 
     return statement;
 }
 
-StatementPtr Parser::parseWhile()
+Parsed<StatementPtr> Parser::parseWhile()
 {
     StatementPtr statement = makeStatement(StatementKind::While, current());
     ++position;
 
-    statement->value = parseExpression();
-    statement->body  = parseBlock();
+    Parsed<ExpressionPtr> condition = parseExpression();
+
+    if (! condition) {
+        return std::unexpected(condition.error());
+    }
+
+    statement->value = std::move(*condition);
+
+    Parsed<std::vector<StatementPtr>> body = parseBlock();
+
+    if (! body) {
+        return std::unexpected(body.error());
+    }
+
+    statement->body = std::move(*body);
 
     return statement;
 }
 
 StatementPtr Parser::makeStatement(StatementKind kind, const Token& token)
 {
-    StatementPtr statement = std::make_unique<Statement>();
+    StatementPtr statement = &arena->statements.emplace_back();
 
     statement->kind   = kind;
     statement->line   = token.line;
@@ -498,11 +750,17 @@ StatementPtr Parser::makeStatement(StatementKind kind, const Token& token)
     return statement;
 }
 
-ExpressionPtr Parser::parseExpression() { return parseBinary(0); }
+Parsed<ExpressionPtr> Parser::parseExpression() { return parseBinary(0); }
 
-ExpressionPtr Parser::parseBinary(int minimumPrecedence)
+Parsed<ExpressionPtr> Parser::parseBinary(int minimumPrecedence)
 {
-    ExpressionPtr left = parseUnary();
+    Parsed<ExpressionPtr> parsedLeft = parseUnary();
+
+    if (! parsedLeft) {
+        return parsedLeft;
+    }
+
+    ExpressionPtr left = std::move(*parsedLeft);
 
     while (true) {
         const int precedence = precedenceOf(current().kind);
@@ -514,13 +772,17 @@ ExpressionPtr Parser::parseBinary(int minimumPrecedence)
         const Token& operatorToken = current();
         ++position;
 
-        ExpressionPtr right = parseBinary(precedence);
+        Parsed<ExpressionPtr> right = parseBinary(precedence);
+
+        if (! right) {
+            return right;
+        }
 
         ExpressionPtr combined = makeExpression(ExpressionKind::Binary, operatorToken);
 
         combined->op    = operatorToken.kind;
         combined->left  = std::move(left);
-        combined->right = std::move(right);
+        combined->right = std::move(*right);
 
         left = std::move(combined);
     }
@@ -528,13 +790,19 @@ ExpressionPtr Parser::parseBinary(int minimumPrecedence)
     return left;
 }
 
-ExpressionPtr Parser::parseUnary()
+Parsed<ExpressionPtr> Parser::parseUnary()
 {
     if (current().kind == TokenKind::Not || current().kind == TokenKind::Minus) {
         const Token& operatorToken = current();
         ++position;
 
-        ExpressionPtr operand = parseUnary();
+        Parsed<ExpressionPtr> parsedOperand = parseUnary();
+
+        if (! parsedOperand) {
+            return parsedOperand;
+        }
+
+        ExpressionPtr operand = std::move(*parsedOperand);
 
         if (operatorToken.kind == TokenKind::Minus
             && (operand->kind == ExpressionKind::Literal || operand->kind == ExpressionKind::Decimal)) {
@@ -554,16 +822,28 @@ ExpressionPtr Parser::parseUnary()
     return parsePostfix();
 }
 
-ExpressionPtr Parser::parsePostfix()
+Parsed<ExpressionPtr> Parser::parsePostfix()
 {
-    ExpressionPtr expression = parsePrimary();
+    Parsed<ExpressionPtr> parsedExpression = parsePrimary();
+
+    if (! parsedExpression) {
+        return parsedExpression;
+    }
+
+    ExpressionPtr expression = std::move(*parsedExpression);
 
     while (match(TokenKind::Dot)) {
-        const Token& memberToken = expect(TokenKind::Identifier, "a property name");
+        const Parsed<const Token*> member = expect(TokenKind::Identifier, "a property name");
+
+        if (! member) {
+            return std::unexpected(member.error());
+        }
+
+        const Token& memberToken = **member;
 
         ExpressionPtr field = makeExpression(ExpressionKind::Field, memberToken);
 
-        field->name   = memberToken.text;
+        field->name   = std::string(memberToken.text);
         field->line   = expression->line;
         field->column = expression->column;
         field->length = expression->length;
@@ -579,7 +859,7 @@ ExpressionPtr Parser::parsePostfix()
     return expression;
 }
 
-ExpressionPtr Parser::parsePrimary()
+Parsed<ExpressionPtr> Parser::parsePrimary()
 {
     const Token& token = current();
 
@@ -610,9 +890,17 @@ ExpressionPtr Parser::parsePrimary()
     if (token.kind == TokenKind::LeftParen) {
         ++position;
 
-        ExpressionPtr expression = parseExpression();
+        Parsed<ExpressionPtr> expression = parseExpression();
 
-        expect(TokenKind::RightParen, "')'");
+        if (! expression) {
+            return expression;
+        }
+
+        const Parsed<const Token*> closeParen = expect(TokenKind::RightParen, "')'");
+
+        if (! closeParen) {
+            return std::unexpected(closeParen.error());
+        }
 
         return expression;
     }
@@ -629,46 +917,63 @@ ExpressionPtr Parser::parsePrimary()
         ++position;
 
         if (match(TokenKind::Scope)) {
-            scope     = token.text;
-            nameToken = &expect(TokenKind::Identifier, "a function name after '::'");
+            scope = std::string(token.text);
+
+            const Parsed<const Token*> scopedName = expect(TokenKind::Identifier, "a function name after '::'");
+
+            if (! scopedName) {
+                return std::unexpected(scopedName.error());
+            }
+
+            nameToken = *scopedName;
 
             if (current().kind != TokenKind::LeftParen) {
-                fail("'" + scope + "::" + nameToken->text + "' is a function; call it with '( )'");
+                return fail("'" + scope + "::" + std::string(nameToken->text) + "' is a function; call it with '( )'");
             }
         }
 
         if (match(TokenKind::LeftParen)) {
             ExpressionPtr expression = makeExpression(ExpressionKind::Call, token);
-            expression->name  = nameToken->text;
+            expression->name  = std::string(nameToken->text);
             expression->scope = scope;
 
             if (current().kind != TokenKind::RightParen) {
                 do {
-                    expression->arguments.push_back(parseExpression());
+                    Parsed<ExpressionPtr> argument = parseExpression();
+
+                    if (! argument) {
+                        return argument;
+                    }
+
+                    expression->arguments.push_back(std::move(*argument));
                 } while (match(TokenKind::Comma));
             }
 
-            const Token& closing = expect(TokenKind::RightParen, "')' after the arguments");
+            const Parsed<const Token*> closing = expect(TokenKind::RightParen, "')' after the arguments");
 
-            if (closing.line == token.line) {
-                expression->length = closing.column + closing.length - token.column;
+            if (! closing) {
+                return std::unexpected(closing.error());
+            }
+
+            if ((*closing)->line == token.line) {
+                expression->length = (*closing)->column + (*closing)->length - token.column;
             }
 
             return expression;
         }
 
         ExpressionPtr expression = makeExpression(ExpressionKind::Name, token);
-        expression->name = token.text;
+        expression->name = std::string(token.text);
 
         return expression;
     }
 
-    fail("expected a value");
+    return fail("expected a value");
 }
 
 ExpressionPtr Parser::makeExpression(ExpressionKind kind, const Token& token)
 {
-    ExpressionPtr expression = std::make_unique<Expression>();
+    ExpressionPtr expression = &arena->expressions.emplace_back();
 
     expression->kind   = kind;
     expression->line   = token.line;

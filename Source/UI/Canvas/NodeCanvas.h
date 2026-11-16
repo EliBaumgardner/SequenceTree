@@ -49,8 +49,7 @@ public:
 
     enum class CanvasTool;
 
-    NodeCanvas(GraphDocument& graphDocument, AudioUIBridge& bridge, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings,
-               ArsNovaUI::CustomLookAndFeel& lookAndFeel);
+    NodeCanvas(GraphDocument& graphDocument, AudioUIBridge& bridge, OrnamentLibraries& ornamentLibraries, ArsNovaUI::CustomLookAndFeel& lookAndFeel);
 
     ~NodeCanvas() override;
 

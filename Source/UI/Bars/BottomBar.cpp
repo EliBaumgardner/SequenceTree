@@ -1,4 +1,5 @@
 #include "BottomBar.h"
+#include "../../Graph/TypedProperties.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Canvas/NodeCanvas.h"
 
@@ -8,12 +9,12 @@
 #include "../../Input/Gestures/NotePreviewGestures.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
-BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, juce::ValueTree colourPresets, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings)
+BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, juce::ValueTree colourPresets, OrnamentLibraries& ornamentLibraries)
     : ArsNovaUI::Bar     (nodeCanvas, Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
       nodeCanvas         (nodeCanvas),
       notePreviewGestures(notePreviewGestures),
       ornamentLibraries  (ornamentLibraries),
-      canvasSettings     (canvasSettings),
+      canvasSettings     (graphDocument.canvasSettings),
       paintPanel         (nodeCanvas, colourPresets, graphDocument.undoManager),
       countsField        (graphDocument.undoManager)
 {
@@ -190,8 +191,11 @@ void BottomBar::configureOrnamentButton()
         const float firstColumn   = glyphArea.getCentreX() - columnsToEdge * cellSide;
         const float firstRow      = glyphArea.getCentreY() - rowsToEdge * cellSide;
 
-        const juce::String activeUid = ornamentLibraries.libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString();
-        const juce::String symbol    = ornamentLibraries.findOrnament(activeUid).getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString();
+        const juce::String activeUid = ornamentLibraries.activeOrnamentUid;
+
+        const OrnamentProperties active(ornamentLibraries.findOrnament(activeUid));
+
+        const juce::String symbol = active.symbol;
 
         const std::vector<ArsNovaUI::SymbolStroke> strokes = OrnamentLibraries::readSymbol(symbol);
 
@@ -243,12 +247,16 @@ void BottomBar::configureOrnamentButton()
 
 void BottomBar::showActiveOrnamentName()
 {
-    const juce::String    activeUid = ornamentLibraries.libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString();
-    const juce::ValueTree active    = ornamentLibraries.findOrnament(activeUid);
-    juce::String          tooltip   = "Ornaments";
+    const juce::String activeUid = ornamentLibraries.activeOrnamentUid;
+
+    const juce::ValueTree active = ornamentLibraries.findOrnament(activeUid);
+
+    juce::String tooltip = "Ornaments";
+
+    const OrnamentProperties activeInfo(active);
 
     if (active.isValid()) {
-        tooltip = "Ornaments - " + active.getProperty(ValueTreeIdentifiers::OrnamentName).toString();
+        tooltip = "Ornaments - " + activeInfo.ornamentName.get();
     }
 
     ornamentButton->setTooltip(tooltip);

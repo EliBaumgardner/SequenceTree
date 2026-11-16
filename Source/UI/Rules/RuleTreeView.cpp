@@ -1,8 +1,10 @@
 #include "RuleTreeView.h"
 #include "../../Graph/TraversalRuleState.h"
+#include "../../Graph/TypedProperties.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include <ArsNovaUI/Menus/ContextMenu.h>
+#include <ArsNovaUI/Menus/Dialog.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 RuleTreeView::RuleTreeView(TraversalRuleState& traversalRuleState, juce::UndoManager& undoManager)
@@ -311,10 +313,12 @@ void RuleTreeView::addFolder(int parentFolderId)
 
     const juce::ValueTree folder = traversalRuleState.addFolder(parentFolderId, &undoManager);
 
+    const FolderProperties properties(folder);
+
     collapsedFolders.erase(parentFolderId);
 
     selectedKind = RuleItemKind::Folder;
-    selectedId   = folder.getProperty(ValueTreeIdentifiers::FolderId);
+    selectedId   = properties.folderId;
 
     beginRename(RuleItemKind::Folder, selectedId);
 }
@@ -326,7 +330,9 @@ void RuleTreeView::showFolders(FolderDisplay display)
     collapsedFolders.clear();
 
     for (int i = 0; display == FolderDisplay::Collapsed && i < folders.getNumChildren(); ++i) {
-        const int folderId = folders.getChild(i).getProperty(ValueTreeIdentifiers::FolderId);
+        const FolderProperties folder(folders.getChild(i));
+
+        const int folderId = folder.folderId;
 
         collapsedFolders.insert(folderId);
     }
@@ -361,9 +367,9 @@ void RuleTreeView::addItems(int parentId, int depth)
     }
 
     for (int i = 0; i < folders.getNumChildren(); ++i) {
-        const juce::ValueTree folder = folders.getChild(i);
+        const FolderProperties folder(folders.getChild(i));
 
-        const int id = folder.getProperty(ValueTreeIdentifiers::FolderId);
+        const int id = folder.folderId;
 
         RuleTreeItem item;
 
@@ -386,7 +392,7 @@ void RuleTreeView::addItems(int parentId, int depth)
         }
 
         if (renamingKind != RuleItemKind::Folder || renamingId != id) {
-            row.text = folder.getProperty(ValueTreeIdentifiers::FolderName).toString();
+            row.text = folder.folderName;
         }
 
         items.push_back(item);
@@ -402,7 +408,7 @@ void RuleTreeView::addItems(int parentId, int depth)
     for (int i = 0; i < rules.getNumChildren(); ++i) {
         const juce::ValueTree rule = rules.getChild(i);
 
-        const juce::String name = rule.getProperty(ValueTreeIdentifiers::RuleName).toString();
+        const RuleProperties properties(rule);
 
         const int id = rule.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
@@ -410,7 +416,7 @@ void RuleTreeView::addItems(int parentId, int depth)
 
         Row row;
 
-        if (traversalRuleState.folderOfRule(id) != parentId || (filtering && ! name.containsIgnoreCase(filterText))) {
+        if (traversalRuleState.folderOfRule(id) != parentId || (filtering && ! properties.ruleName.get().containsIgnoreCase(filterText))) {
             continue;
         }
 
@@ -421,7 +427,7 @@ void RuleTreeView::addItems(int parentId, int depth)
         row.marked    = id == liveRuleId;
 
         if (renamingKind != RuleItemKind::Rule || renamingId != id) {
-            row.text = name;
+            row.text = properties.ruleName;
         }
 
         items.push_back(item);
@@ -505,14 +511,18 @@ void RuleTreeView::confirmRemoval(const RuleTreeItem& item)
 
     const bool holdsLiveRule = kind == RuleItemKind::Folder && traversalRuleState.isInsideFolder(traversalRuleState.folderOfRule(liveRuleId), id);
 
-    juce::String name = traversalRuleState.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, id).getProperty(ValueTreeIdentifiers::RuleName).toString();
+    const RuleProperties rule(traversalRuleState.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, id));
+
+    const FolderProperties folder(traversalRuleState.folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, id));
+
+    juce::String name = rule.ruleName;
     juce::String noun = "rules";
     juce::String message;
 
-    juce::MessageBoxOptions options;
+    ArsNovaUI::Dialog dialog;
 
     if (kind == RuleItemKind::Folder) {
-        name      = traversalRuleState.folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, id).getProperty(ValueTreeIdentifiers::FolderName).toString();
+        name      = folder.folderName;
         ruleCount = traversalRuleState.countRulesInside(id);
     }
 
@@ -540,11 +550,11 @@ void RuleTreeView::confirmRemoval(const RuleTreeItem& item)
         message += " The live rule moves out of the folder instead of being deleted.";
     }
 
-    options = juce::MessageBoxOptions().withIconType(juce::MessageBoxIconType::QuestionIcon).withTitle("Delete")
-                  .withMessage(message).withButton("Delete").withButton("Cancel").withAssociatedComponent(this);
+    dialog.title   = "Delete";
+    dialog.message = message;
 
-    juce::AlertWindow::showAsync(options, [safeThis, kind, id](int result) {
-        if (safeThis == nullptr || result != 1) {
+    dialog.addButton("Delete", [safeThis, kind, id]() {
+        if (safeThis == nullptr) {
             return;
         }
 
@@ -555,6 +565,9 @@ void RuleTreeView::confirmRemoval(const RuleTreeItem& item)
             safeThis->onFolderRemoved(id);
         }
     });
+
+    dialog.addButton("Cancel", nullptr);
+    dialog.show(*this);
 }
 
 bool RuleTreeView::folderHasMatch(int folderId) const
@@ -566,7 +579,11 @@ bool RuleTreeView::folderHasMatch(int folderId) const
 
         const int ruleId = rule.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-        if (rule.getProperty(ValueTreeIdentifiers::RuleName).toString().containsIgnoreCase(filterText)
+        const RuleProperties properties(rule);
+
+        const juce::String name = properties.ruleName;
+
+        if (name.containsIgnoreCase(filterText)
             && traversalRuleState.isInsideFolder(traversalRuleState.folderOfRule(ruleId), folderId)) {
             return true;
         }

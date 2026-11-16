@@ -1,4 +1,5 @@
 #include "GraphDocument.h"
+#include "../Graph/TypedProperties.h"
 #include "../UI/Node/Node.h"
 #include "../Graph/GraphState.h"
 #include "../Graph/ArrowBindingOps.h"
@@ -211,9 +212,13 @@ void GraphDocument::moveDescendants(juce::ValueTree nodeTree, int deltaX, int de
 
 void GraphDocument::moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY)
 {
-    const int              encapsulatorId = graphState.getNode(nodeId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-    const juce::ValueTree  encapsulator   = graphState.getNode(encapsulatorId);
-    const std::vector<int> memberNodeIds  = graphState.encapsulation.memberIds(encapsulatorId);
+    const NodeProperties properties(graphState.getNode(nodeId));
+
+    const int encapsulatorId = properties.encapsulatorId;
+
+    const juce::ValueTree encapsulator = graphState.getNode(encapsulatorId);
+
+    const std::vector<int> memberNodeIds = graphState.encapsulation.memberIds(encapsulatorId);
 
     if (memberNodeIds.empty() || encapsulatorId == draggedNodeId || memberNodeIds.front() != nodeId) {
         return;

@@ -1,5 +1,6 @@
 #include "AllowedTraversalsMenu.h"
 #include "../../Graph/GraphState.h"
+#include "../../Graph/TypedProperties.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Editors/Formats/TraversalFlagFormat.h"
@@ -18,11 +19,13 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(ArsNovaUI::CustomLookAndFeel& lookA
     for (int traversalIndex = 0; traversalIndex < traversalMap.getNumChildren(); ++traversalIndex) {
         const juce::ValueTree traversalData = traversalMap.getChild(traversalIndex);
 
+        const TraversalProperties traversal(traversalData);
+
         if (traversalData.getType() != ValueTreeIdentifiers::TraversalData) {
             continue;
         }
 
-        keys.push_back({ static_cast<int>(traversalData.getProperty(ValueTreeIdentifiers::TraversalId)), 0 });
+        keys.push_back({ traversal.traversalId, 0 });
     }
 
     graphState.traversals.collectKeys(keys);
@@ -126,8 +129,10 @@ void AllowedTraversalsMenu::setTraversalEnabled(const TraversalKey& key, bool en
         if (!TraversalState::findReference(disabled, key).isValid()) {
             juce::ValueTree entry {ValueTreeIdentifiers::TraversalId};
 
-            entry.setProperty(ValueTreeIdentifiers::TraversalId,       key.typeId,   &undoManager);
-            entry.setProperty(ValueTreeIdentifiers::TraversalInstance, key.instance, &undoManager);
+            TraversalReferenceProperties reference(entry);
+
+            reference.traversalId      .setValue(key.typeId,   &undoManager);
+            reference.traversalInstance.setValue(key.instance, &undoManager);
 
             disabled.addChild(entry, -1, &undoManager);
         }

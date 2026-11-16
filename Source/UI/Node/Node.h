@@ -71,17 +71,19 @@ public:
 
     NodeInfo::DisplayMode mode = NodeInfo::DisplayMode::Pitch;
 
-    ArsNovaUI::IconButton  upButton;
-    ArsNovaUI::IconButton  downButton;
     ArsNovaUI::ValueEditor countEditor;
     ArsNovaUI::ValueEditor switchCountEditor;
     ArsNovaUI::ValueEditor subLoopLimitEditor;
+
+    juce::Rectangle<int> incrementUpBounds;
+    juce::Rectangle<int> incrementDownBounds;
 
     juce::Colour nodeColour;
     juce::Colour encapsulationRingColour;
 
     NodeInfo::Type nodeType = NodeInfo::Type::Node;
 
+    bool showIncrementButtons  = false;
     bool isHighlighted         = false;
     bool isOutlined            = false;
     bool hasInnerRim           = false;
@@ -92,7 +94,7 @@ public:
 
     float                  pulsePhase        = 1.0f;
     double                 lastPulseFrameSec = 0.0;
-    juce::VBlankAttachment pulseFrames;
+    ArsNovaUI::FrameClock::Subscription pulseFrames;
 
     int displayCurrentCount = 0;
     int displayCountLimit   = 1;

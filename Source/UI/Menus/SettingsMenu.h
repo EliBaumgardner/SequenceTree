@@ -6,12 +6,13 @@
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include <ArsNovaUI/ScaledView.h>
 
+class GraphDocument;
+
 class SettingsMenu : public juce::Component
 {
 public:
 
-    SettingsMenu(ArsNovaUI::CustomLookAndFeel& lookAndFeel, ArsNovaUI::ScaledView& scaledView, juce::ValueTree colourPresets, juce::ValueTree canvasSettings,
-                 juce::UndoManager& undoManager);
+    SettingsMenu(ArsNovaUI::CustomLookAndFeel& lookAndFeel, ArsNovaUI::ScaledView& scaledView, juce::ValueTree colourPresets, GraphDocument& graphDocument);
 
     void paint(juce::Graphics& graphics) override;
     void resized () override;

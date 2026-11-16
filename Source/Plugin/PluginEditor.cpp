@@ -6,7 +6,8 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     : AudioProcessorEditor(p),
       audioProcessor      (p),
       graphDocument       (p.graphState, p.undoManager, p.canvasSettings),
-      notePreviewGestures (p.traversalSession, p.rtGraphBuilder)
+      notePreviewGestures (p.traversalSession, p.rtGraphBuilder),
+      nodeLimitWarning    (p.graphState, workspace)
 {
     juce::PropertiesFile::Options interfaceSettingsOptions;
 
@@ -28,14 +29,14 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     tooltipWindow.setOpaque(false);
 
     scaledView     = std::make_unique<ArsNovaUI::ScaledView>(workspace, *interfaceSettings);
-    nodeCanvas     = std::make_unique<NodeCanvas>(graphDocument, p.bridge, p.ornamentLibraries, p.canvasSettings, lookAndFeel);
+    nodeCanvas     = std::make_unique<NodeCanvas>(graphDocument, p.bridge, p.ornamentLibraries, lookAndFeel);
     nodeController = std::make_unique<NodeController>(*nodeCanvas, graphDocument, notePreviewGestures, p.ornamentLibraries);
     port           = std::make_unique<ArsNovaUI::DynamicPort>(*nodeCanvas);
     traversalMenu  = std::make_unique<TraversalMenu>(notePreviewGestures, p.graphState, p.colourPresets, p.undoManager);
     nodeMenu       = std::make_unique<NodeMenu>(*nodeCanvas, p.graphState, p.colourPresets, p.undoManager);
     menuArea       = std::make_unique<MenuArea>(*nodeCanvas, *traversalMenu, *nodeMenu);
     titleBar       = std::make_unique<Titlebar>(p, *nodeCanvas, *nodeController, graphDocument);
-    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, graphDocument, notePreviewGestures, p.colourPresets, p.ornamentLibraries, p.canvasSettings);
+    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, graphDocument, notePreviewGestures, p.colourPresets, p.ornamentLibraries);
     canvasFrame    = std::make_unique<CanvasFrame>(*nodeCanvas, *menuArea, *titleBar, *bottomBar);
 
     wireCallbacks();

@@ -1,5 +1,6 @@
 #include "OrnamentLibraries.h"
 #include "ArrowBindingOps.h"
+#include "TypedProperties.h"
 #include "../Util/ArrowInfo.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
@@ -7,6 +8,8 @@
 
 OrnamentLibraries::OrnamentLibraries()
 {
+    activeOrnamentUid.referTo(libraries, ValueTreeIdentifiers::ActiveOrnamentUid, nullptr);
+
     libraries.addListener(this);
 }
 
@@ -24,9 +27,11 @@ void OrnamentLibraries::setFigureNodePosition(juce::ValueTree ornament, int node
     juce::ValueTree node  = figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId);
     juce::ValueTree moved = node;
 
+    FigureNoteProperties properties(node);
+
     const int oldX          = node.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition);
     const int oldY          = node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition);
-    const int oldOffset     = node.getProperty(ValueTreeIdentifiers::OrnamentOffset);
+    const int oldOffset     = properties.offset;
     const int oldRow        = juce::roundToInt(oldY / ArrowInfo::pixelsPerGridSpace);
     const int newRow        = juce::roundToInt(position.y / ArrowInfo::pixelsPerGridSpace);
     const int rowShift      = juce::roundToInt((oldRow - newRow) * ArrowInfo::semitonesPerGridSpace);
@@ -37,8 +42,10 @@ void OrnamentLibraries::setFigureNodePosition(juce::ValueTree ornament, int node
     const juce::Point<int> delta = position - oldPosition;
 
     auto clearDurationOverride = [undoManager](juce::ValueTree arrowTree) {
-        if (static_cast<int>(arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride)) != ArrowInfo::noDurationOverride) {
-            arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride, undoManager);
+        ArrowProperties arrow(arrowTree);
+
+        if (arrow.durationOverride != ArrowInfo::noDurationOverride) {
+            arrow.durationOverride.setValue(ArrowInfo::noDurationOverride, undoManager);
         }
     };
 
@@ -46,7 +53,7 @@ void OrnamentLibraries::setFigureNodePosition(juce::ValueTree ornament, int node
         return;
     }
 
-    node.setProperty(ValueTreeIdentifiers::OrnamentOffset, clampedOffset, undoManager);
+    properties.offset.setValue(clampedOffset, undoManager);
 
     for (const juce::ValueTree& candidate : figure) {
         clearDurationOverride(candidate.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId));
@@ -75,12 +82,14 @@ void OrnamentLibraries::removeFigureNode(juce::ValueTree ornament, int nodeId, j
     juce::ValueTree       parent;
     juce::ValueTree       incoming;
 
+    juce::CachedValue<int> hostId(figure, ValueTreeIdentifiers::OrnamentHostId, nullptr, noHostId);
+
     if (! node.isValid()) {
         return;
     }
 
-    if (static_cast<int>(figure.getProperty(ValueTreeIdentifiers::OrnamentHostId, noHostId)) == nodeId) {
-        figure.setProperty(ValueTreeIdentifiers::OrnamentHostId, noHostId, undoManager);
+    if (hostId == nodeId) {
+        hostId.setValue(noHostId, undoManager);
     }
 
     for (const juce::ValueTree& candidate : figure) {
@@ -112,17 +121,20 @@ void OrnamentLibraries::removeFigureNode(juce::ValueTree ornament, int nodeId, j
 void OrnamentLibraries::toggleHost(juce::ValueTree ornament, int nodeId, juce::UndoManager* undoManager)
 {
     juce::ValueTree figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    int             hostId = nodeId;
+
+    juce::CachedValue<int> storedHostId(figure, ValueTreeIdentifiers::OrnamentHostId, nullptr, noHostId);
+
+    int hostId = nodeId;
 
     if (! figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeId).isValid()) {
         return;
     }
 
-    if (static_cast<int>(figure.getProperty(ValueTreeIdentifiers::OrnamentHostId, noHostId)) == nodeId) {
+    if (storedHostId == nodeId) {
         hostId = noHostId;
     }
 
-    figure.setProperty(ValueTreeIdentifiers::OrnamentHostId, hostId, undoManager);
+    storedHostId.setValue(hostId, undoManager);
 }
 
 void OrnamentLibraries::addDanglingArrow(juce::ValueTree ornament, int nodeId, juce::Point<int> tipOffset, juce::UndoManager* undoManager)
@@ -200,7 +212,9 @@ void OrnamentLibraries::setLastNodeLength(juce::ValueTree ornament, juce::Point<
 
 void OrnamentLibraries::addSymbolStroke(juce::ValueTree ornament, const juce::Path& stroke, float width, juce::UndoManager* undoManager)
 {
-    juce::String symbol = ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString();
+    OrnamentProperties properties(ornament);
+
+    juce::String symbol = properties.symbol;
 
     if (symbol.isNotEmpty()) {
         symbol << "|";
@@ -208,14 +222,18 @@ void OrnamentLibraries::addSymbolStroke(juce::ValueTree ornament, const juce::Pa
 
     symbol << juce::String(width) << " " << stroke.toString();
 
-    ornament.setProperty(ValueTreeIdentifiers::OrnamentSymbol, symbol, undoManager);
+    properties.symbol.setValue(symbol, undoManager);
 }
 
 void OrnamentLibraries::eraseSymbol(juce::ValueTree ornament, juce::Point<float> centre, float radius, juce::UndoManager* undoManager)
 {
     juce::StringArray erasedStrokes;
 
-    for (const ArsNovaUI::SymbolStroke& stroke : readSymbol(ornament.getProperty(ValueTreeIdentifiers::OrnamentSymbol).toString())) {
+    OrnamentProperties properties(ornament);
+
+    const juce::String symbol = properties.symbol;
+
+    for (const ArsNovaUI::SymbolStroke& stroke : readSymbol(symbol)) {
         juce::Path           erased;
         juce::Point<float>   current;
         bool                 penDown = false;
@@ -279,7 +297,9 @@ void OrnamentLibraries::eraseSymbol(juce::ValueTree ornament, juce::Point<float>
         }
     }
 
-    ornament.setProperty(ValueTreeIdentifiers::OrnamentSymbol, erasedStrokes.joinIntoString("|"), undoManager);
+    const juce::String erasedSymbol = erasedStrokes.joinIntoString("|");
+
+    properties.symbol.setValue(erasedSymbol, undoManager);
 }
 
 void OrnamentLibraries::publish(juce::ValueTree ornament, juce::UndoManager* undoManager)
@@ -315,9 +335,13 @@ void OrnamentLibraries::load(const juce::File& libraryFolder)
     libraries.removeListener(this);
 
     for (const juce::File& directory : directories) {
-        LibraryFolder         loadedFolder;
-        const juce::ValueTree library    = readLibraryFolder(directory, loadedFolder);
-        const juce::String    libraryUid = library.getProperty(ValueTreeIdentifiers::LibraryUid).toString();
+        LibraryFolder loadedFolder;
+
+        const juce::ValueTree library = readLibraryFolder(directory, loadedFolder);
+
+        const LibraryProperties properties(library);
+
+        const juce::String libraryUid = properties.libraryUid;
 
         if (! library.isValid() || libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryUid).isValid()) {
             continue;
@@ -330,7 +354,7 @@ void OrnamentLibraries::load(const juce::File& libraryFolder)
 
     const juce::String savedActiveUid = settings->getValue(ValueTreeIdentifiers::ActiveOrnamentUid.toString());
 
-    libraries.setProperty(ValueTreeIdentifiers::ActiveOrnamentUid, savedActiveUid, nullptr);
+    activeOrnamentUid.setValue(savedActiveUid, nullptr);
 
     ensureActiveOrnament();
 
@@ -384,9 +408,13 @@ void OrnamentLibraries::rescan(juce::UndoManager& undoManager)
             continue;
         }
 
-        const juce::ValueTree library    = readLibraryFolder(directory, loadedFolder);
-        const juce::String    libraryUid = library.getProperty(ValueTreeIdentifiers::LibraryUid).toString();
-        const juce::ValueTree loaded     = libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryUid);
+        const juce::ValueTree library = readLibraryFolder(directory, loadedFolder);
+
+        const LibraryProperties properties(library);
+
+        const juce::String libraryUid = properties.libraryUid;
+
+        const juce::ValueTree loaded = libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryUid);
 
         if (! library.isValid() || (known == libraryFolders.end() && loaded.isValid()) || (known != libraryFolders.end() && known->first != libraryUid)) {
             continue;
@@ -452,8 +480,12 @@ juce::ValueTree OrnamentLibraries::addLibrary(const juce::String& name, juce::Un
 {
     juce::ValueTree library {ValueTreeIdentifiers::OrnamentLibrary};
 
-    library.setProperty(ValueTreeIdentifiers::LibraryUid,  juce::Uuid().toString(), nullptr);
-    library.setProperty(ValueTreeIdentifiers::LibraryName, name,                    nullptr);
+    LibraryProperties properties(library);
+
+    const juce::String libraryUid = juce::Uuid().toString();
+
+    properties.libraryUid .setValue(libraryUid, nullptr);
+    properties.libraryName.setValue(name,       nullptr);
 
     libraries.appendChild(library, undoManager);
 
@@ -473,7 +505,9 @@ juce::ValueTree OrnamentLibraries::importLibrary(const juce::File& source)
         library = readLibraryFile(source);
     }
 
-    libraryUid = library.getProperty(ValueTreeIdentifiers::LibraryUid).toString();
+    const LibraryProperties properties(library);
+
+    libraryUid = properties.libraryUid;
 
     if (! library.isValid() || libraries.getChildWithProperty(ValueTreeIdentifiers::LibraryUid, libraryUid).isValid()) {
         return {};
@@ -512,12 +546,18 @@ juce::ValueTree OrnamentLibraries::addOrnament(juce::ValueTree library, juce::Un
 
     const int ornamentNumber = library.getNumChildren() + 1;
 
-    ornament.setProperty(ValueTreeIdentifiers::OrnamentUid,      juce::Uuid().toString(),                     nullptr);
-    ornament.setProperty(ValueTreeIdentifiers::OrnamentName,     "Ornament " + juce::String(ornamentNumber), nullptr);
-    ornament.setProperty(ValueTreeIdentifiers::OrnamentSymbol,   juce::String(),                              nullptr);
-    ornament.setProperty(ValueTreeIdentifiers::NextFigureNodeId, 1,                                           nullptr);
+    const juce::String ornamentUid  = juce::Uuid().toString();
+    const juce::String ornamentName = "Ornament " + juce::String(ornamentNumber);
 
-    figure.setProperty(ValueTreeIdentifiers::OrnamentHostId, noHostId, nullptr);
+    OrnamentProperties properties(ornament);
+
+    juce::CachedValue<int> hostId(figure, ValueTreeIdentifiers::OrnamentHostId, nullptr, noHostId);
+
+    properties.ornamentUid     .setValue(ornamentUid,                           nullptr);
+    properties.ornamentName    .setValue(ornamentName,                          nullptr);
+    properties.symbol          .setValue({},                                    nullptr);
+    properties.nextFigureNodeId.setValue(OrnamentProperties::firstFigureNodeId, nullptr);
+    hostId                     .setValue(noHostId,                              nullptr);
 
     ornament.appendChild(figure, nullptr);
 
@@ -529,16 +569,23 @@ juce::ValueTree OrnamentLibraries::addOrnament(juce::ValueTree library, juce::Un
 juce::ValueTree OrnamentLibraries::duplicateOrnament(const juce::String& uid, juce::UndoManager* undoManager)
 {
     const juce::ValueTree source    = findOrnament(uid);
-    const juce::String    copyName  = source.getProperty(ValueTreeIdentifiers::OrnamentName).toString() + " copy";
     juce::ValueTree       library   = source.getParent();
     juce::ValueTree       duplicate = source.createCopy();
+
+    const OrnamentProperties sourceProperties(source);
+
+    OrnamentProperties duplicateProperties(duplicate);
+
+    const juce::String sourceName   = sourceProperties.ornamentName;
+    const juce::String copyName     = sourceName + " copy";
+    const juce::String duplicateUid = juce::Uuid().toString();
 
     if (! source.isValid()) {
         return {};
     }
 
-    duplicate.setProperty(ValueTreeIdentifiers::OrnamentUid,  juce::Uuid().toString(), nullptr);
-    duplicate.setProperty(ValueTreeIdentifiers::OrnamentName, copyName,                nullptr);
+    duplicateProperties.ornamentUid .setValue(duplicateUid, nullptr);
+    duplicateProperties.ornamentName.setValue(copyName,     nullptr);
 
     const int duplicateIndex = library.indexOf(source) + 1;
 
@@ -562,11 +609,18 @@ juce::ValueTree OrnamentLibraries::findOrnament(const juce::String& uid) const
 
 juce::ValueTree OrnamentLibraries::addFigureNode(juce::ValueTree ornament, int parentNodeId, juce::Point<int> position, juce::UndoManager* undoManager)
 {
-    juce::ValueTree     figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    juce::ValueTree     parent = figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, parentNodeId);
-    const int           nodeId = ornament.getProperty(ValueTreeIdentifiers::NextFigureNodeId, 1);
-    juce::ValueTree     node   {ValueTreeIdentifiers::OrnamentNoteData};
+    OrnamentProperties properties(ornament);
+
+    juce::ValueTree figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
+    juce::ValueTree parent = figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, parentNodeId);
+    juce::ValueTree node   {ValueTreeIdentifiers::OrnamentNoteData};
+
+    const int nodeId           = properties.nextFigureNodeId;
+    const int nextFigureNodeId = nodeId + 1;
+
     ArrowInfo::Settings arrowInfo;
+
+    FigureNoteProperties noteProperties(node);
 
     if (! figure.isValid() || (parentNodeId == -1 && figure.getNumChildren() > 0)) {
         return {};
@@ -582,8 +636,10 @@ juce::ValueTree OrnamentLibraries::addFigureNode(juce::ValueTree ornament, int p
     node.setProperty(ArsNovaUI::CanvasIdentifiers::Id,               nodeId,                 nullptr);
     node.setProperty(ArsNovaUI::CanvasIdentifiers::XPosition,        position.x,             nullptr);
     node.setProperty(ArsNovaUI::CanvasIdentifiers::YPosition,        position.y,             nullptr);
-    node.setProperty(ValueTreeIdentifiers::OrnamentOffset,   0,                      nullptr);
-    node.setProperty(ValueTreeIdentifiers::OrnamentVelocity, defaultVelocityPercent, nullptr);
+
+    noteProperties.offset      .setValue(0,                      nullptr);
+    noteProperties.velocity    .setValue(defaultVelocityPercent, nullptr);
+    properties.nextFigureNodeId.setValue(nextFigureNodeId,       undoManager);
 
     node.appendChild(juce::ValueTree(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds), nullptr);
 
@@ -598,10 +654,6 @@ juce::ValueTree OrnamentLibraries::addFigureNode(juce::ValueTree ornament, int p
         parent.removeChild(parent.getChildWithName(ArsNovaUI::CanvasIdentifiers::DanglingArrows), undoManager);
     }
 
-    const int nextFigureNodeId = nodeId + 1;
-
-    ornament.setProperty(ValueTreeIdentifiers::NextFigureNodeId, nextFigureNodeId, undoManager);
-
     figure.appendChild(node, undoManager);
 
     return node;
@@ -609,24 +661,36 @@ juce::ValueTree OrnamentLibraries::addFigureNode(juce::ValueTree ornament, int p
 
 bool OrnamentLibraries::isPublishable(const juce::ValueTree& ornament) const
 {
-    const juce::ValueTree figure      = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
-    int                   totalWeight = 0;
+    juce::ValueTree figure = ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure);
+
+    const juce::CachedValue<int> hostId(figure, ValueTreeIdentifiers::OrnamentHostId, nullptr, noHostId);
+
+    const int storedHostId = hostId;
+
+    int totalWeight = 0;
 
     for (const OrnamentStep& step : figureSteps(figure)) {
         totalWeight += step.durationWeight;
     }
 
-    return figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, figure.getProperty(ValueTreeIdentifiers::OrnamentHostId, noHostId)).isValid()
+    return figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, storedHostId).isValid()
            && figure.getNumChildren() > 1 && totalWeight > 0;
 }
 
 std::vector<OrnamentStep> OrnamentLibraries::figureSteps(const juce::ValueTree& figure) const
 {
-    const int                 hostId = figure.getProperty(ValueTreeIdentifiers::OrnamentHostId, noHostId);
+    juce::ValueTree figureTree = figure;
+    juce::ValueTree node;
+
+    const juce::CachedValue<int> storedHostId(figureTree, ValueTreeIdentifiers::OrnamentHostId, nullptr, noHostId);
+
+    const int hostId = storedHostId;
+
     std::vector<OrnamentStep> steps;
-    std::set<int>             pointedAt;
-    juce::ValueTree           node;
-    int                       previousDurationWeight = 0;
+
+    std::set<int> pointedAt;
+
+    int previousDurationWeight = 0;
 
     for (const juce::ValueTree& candidate : figure) {
         for (const juce::ValueTree& connection : candidate.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds)) {
@@ -652,8 +716,10 @@ std::vector<OrnamentStep> OrnamentLibraries::figureSteps(const juce::ValueTree& 
         const int             nodeX         = node.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition);
         const int             nodeY         = node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition);
         juce::ValueTree       next;
-        OrnamentStep          step { OrnamentNodeKind::Note, node.getProperty(ValueTreeIdentifiers::OrnamentOffset),
-                                     node.getProperty(ValueTreeIdentifiers::OrnamentVelocity), 0 };
+
+        const FigureNoteProperties note(node);
+
+        OrnamentStep step { OrnamentNodeKind::Note, note.offset, note.velocity, 0 };
 
         if (connection.isValid()) {
             next = figure.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, connection.getProperty(ArsNovaUI::CanvasIdentifiers::Id));
@@ -744,7 +810,11 @@ void OrnamentLibraries::valueTreeChildAdded(juce::ValueTree& parent, juce::Value
 
 void OrnamentLibraries::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index)
 {
-    const auto libraryFolder = libraryFolders.find(child.getProperty(ValueTreeIdentifiers::LibraryUid).toString());
+    const LibraryProperties removed(child);
+
+    const juce::String removedUid = removed.libraryUid;
+
+    const auto libraryFolder = libraryFolders.find(removedUid);
 
     if (parent != libraries) {
         markLibraryChanged(parent);
@@ -782,16 +852,22 @@ void OrnamentLibraries::markLibraryChanged(juce::ValueTree tree)
         return;
     }
 
-    changedLibraryUids.insert(tree.getProperty(ValueTreeIdentifiers::LibraryUid).toString());
+    const LibraryProperties changed(tree);
+
+    changedLibraryUids.insert(changed.libraryUid);
 
     startTimer(saveDelayMs);
 }
 
 void OrnamentLibraries::saveLibrary(const juce::ValueTree& library, LibraryFolder& libraryFolder)
 {
-    const juce::String libraryName = library.getProperty(ValueTreeIdentifiers::LibraryName).toString();
-    juce::String       folderName  = juce::File::createLegalFileName(libraryName.trim());
-    juce::ValueTree    libraryInfo {ValueTreeIdentifiers::OrnamentLibrary};
+    const LibraryProperties properties(library);
+
+    const juce::String libraryName = properties.libraryName;
+
+    juce::String folderName = juce::File::createLegalFileName(libraryName.trim());
+
+    juce::ValueTree libraryInfo {ValueTreeIdentifiers::OrnamentLibrary};
 
     if (folderName.isEmpty()) {
         folderName = "Library";
@@ -825,9 +901,13 @@ void OrnamentLibraries::saveLibrary(const juce::ValueTree& library, LibraryFolde
     }
 
     for (int index = 0; index < library.getNumChildren(); ++index) {
-        const juce::ValueTree                   ornament     = library.getChild(index);
-        const juce::String                      ornamentUid  = ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
-        const juce::String                      ornamentName = ornament.getProperty(ValueTreeIdentifiers::OrnamentName).toString();
+        const juce::ValueTree ornament = library.getChild(index);
+
+        const OrnamentProperties ornamentInfo(ornament);
+
+        const juce::String ornamentUid  = ornamentInfo.ornamentUid;
+        const juce::String ornamentName = ornamentInfo.ornamentName;
+
         juce::String                            fileName     = juce::File::createLegalFileName(ornamentName.trim());
         OrnamentFile&                           ornamentFile = libraryFolder.ornamentFiles[ornamentUid];
         const juce::String                      previousName = ornamentFile.fileName;
@@ -872,19 +952,23 @@ void OrnamentLibraries::ensureActiveOrnament()
 {
     juce::String activeUid;
 
-    if (findOrnament(libraries.getProperty(ValueTreeIdentifiers::ActiveOrnamentUid).toString()).isValid()) {
+    const juce::String storedActiveUid = activeOrnamentUid;
+
+    if (findOrnament(storedActiveUid).isValid()) {
         return;
     }
 
     for (const juce::ValueTree& library : libraries) {
         if (library.getNumChildren() > 0) {
-            activeUid = library.getChild(0).getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
+            const OrnamentProperties firstOrnament(library.getChild(0));
+
+            activeUid = firstOrnament.ornamentUid;
 
             break;
         }
     }
 
-    libraries.setProperty(ValueTreeIdentifiers::ActiveOrnamentUid, activeUid, nullptr);
+    activeOrnamentUid.setValue(activeUid, nullptr);
 }
 
 juce::Time OrnamentLibraries::newestChange(const juce::File& directory)
@@ -911,7 +995,11 @@ juce::ValueTree OrnamentLibraries::readLibraryFolder(const juce::File& directory
 
     library = juce::ValueTree::fromXml(*infoXml);
 
-    if (library.getType() != ValueTreeIdentifiers::OrnamentLibrary || library.getProperty(ValueTreeIdentifiers::LibraryUid).toString().isEmpty()) {
+    const LibraryProperties properties(library);
+
+    const juce::String libraryUid = properties.libraryUid;
+
+    if (library.getType() != ValueTreeIdentifiers::OrnamentLibrary || libraryUid.isEmpty()) {
         return {};
     }
 
@@ -928,33 +1016,40 @@ juce::ValueTree OrnamentLibraries::readLibraryFolder(const juce::File& directory
             continue;
         }
 
-        ornament    = juce::ValueTree::fromXml(*xml);
-        ornamentUid = ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString();
+        ornament = juce::ValueTree::fromXml(*xml);
+
+        const OrnamentProperties ornamentInfo(ornament);
+
+        ornamentUid = ornamentInfo.ornamentUid;
 
         if (ornament.getType() != ValueTreeIdentifiers::OrnamentData || ornamentUid.isEmpty()
             || ! ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure).isValid() || libraryFolder.ornamentFiles.count(ornamentUid) > 0) {
             continue;
         }
 
-        libraryFolder.ornamentFiles[ornamentUid] = OrnamentFile { file.getFileName(), ornament.getProperty(ValueTreeIdentifiers::OrnamentName).toString() };
+        libraryFolder.ornamentFiles[ornamentUid] = OrnamentFile { file.getFileName(), ornamentInfo.ornamentName };
 
         ornaments.push_back(ornament);
     }
 
     std::stable_sort(ornaments.begin(), ornaments.end(), [](const juce::ValueTree& first, const juce::ValueTree& second) {
-        return static_cast<int>(first.getProperty(ValueTreeIdentifiers::OrnamentIndex, unlistedOrnamentIndex))
-               < static_cast<int>(second.getProperty(ValueTreeIdentifiers::OrnamentIndex, unlistedOrnamentIndex));
+        const OrnamentProperties firstInfo(first);
+        const OrnamentProperties secondInfo(second);
+
+        return firstInfo.listIndex < secondInfo.listIndex;
     });
 
     for (juce::ValueTree& ornament : ornaments) {
-        ornament.removeProperty(ValueTreeIdentifiers::OrnamentIndex, nullptr);
+        OrnamentProperties ornamentInfo(ornament);
+
+        ornamentInfo.listIndex.resetToDefault(nullptr);
 
         library.appendChild(ornament, nullptr);
     }
 
     libraryFolder.folder    = directory;
     libraryFolder.savedAt   = newestChange(directory);
-    libraryFolder.savedName = library.getProperty(ValueTreeIdentifiers::LibraryName).toString();
+    libraryFolder.savedName = properties.libraryName;
 
     return library;
 }
@@ -970,15 +1065,23 @@ juce::ValueTree OrnamentLibraries::readLibraryFile(const juce::File& file)
 
     library = juce::ValueTree::fromXml(*xml);
 
-    if (library.getType() != ValueTreeIdentifiers::OrnamentLibrary || library.getProperty(ValueTreeIdentifiers::LibraryUid).toString().isEmpty()) {
+    const LibraryProperties properties(library);
+
+    const juce::String libraryUid = properties.libraryUid;
+
+    if (library.getType() != ValueTreeIdentifiers::OrnamentLibrary || libraryUid.isEmpty()) {
         return {};
     }
 
     for (int index = library.getNumChildren() - 1; index >= 0; --index) {
         const juce::ValueTree ornament = library.getChild(index);
 
+        const OrnamentProperties ornamentInfo(ornament);
+
+        const juce::String ornamentUid = ornamentInfo.ornamentUid;
+
         if (ornament.getType() != ValueTreeIdentifiers::OrnamentData
-            || ornament.getProperty(ValueTreeIdentifiers::OrnamentUid).toString().isEmpty()
+            || ornamentUid.isEmpty()
             || ! ornament.getChildWithName(ValueTreeIdentifiers::OrnamentFigure).isValid()) {
             library.removeChild(index, nullptr);
         }

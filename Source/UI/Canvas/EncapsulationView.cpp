@@ -1,4 +1,5 @@
 #include "EncapsulationView.h"
+#include "../../Graph/TypedProperties.h"
 
 #include "NodeCanvas.h"
 #include <ArsNovaUI/Canvas/NodeManager.h>
@@ -144,8 +145,10 @@ juce::Point<int> EncapsulationView::collapsedSpanShift(int nodeId) const
 {
     const juce::ValueTree node = graphState.getNode(nodeId);
 
+    const NodeProperties properties(node);
+
     int walkStartId       = nodeId;
-    int ownEncapsulatorId = node.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+    int ownEncapsulatorId = properties.encapsulatorId;
 
     if (node.getType() == ValueTreeIdentifiers::EncapsulatorData) {
         const std::vector<int> memberNodeIds = graphState.encapsulation.memberIds(nodeId);
@@ -181,8 +184,9 @@ juce::Point<int> EncapsulationView::collapsedSpanShift(int nodeId) const
 
                 nextFrontier.push_back(parentId);
 
-                const int encapsulatorId = graphState.getNode(parentId)
-                                                     .getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+                const NodeProperties parent(graphState.getNode(parentId));
+
+                const int encapsulatorId = parent.encapsulatorId;
 
                 if (encapsulatorId < 0 || encapsulatorId == ownEncapsulatorId) {
                     continue;

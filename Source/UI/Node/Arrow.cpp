@@ -1,4 +1,5 @@
 #include "../../Graph/GraphState.h"
+#include "../../Graph/TypedProperties.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include "Arrow.h"
 
@@ -62,10 +63,14 @@ void Arrow::beginDurationEdit()
 
     durationEditor->setFormat(std::move(durationFormat));
 
-    const int durationOverride = arrowTree.getProperty(ValueTreeIdentifiers::ArrowDuration, ArrowInfo::noDurationOverride);
+    ArrowProperties arrow(arrowTree);
+
+    const int durationOverride = arrow.durationOverride;
 
     if (durationOverride == ArrowInfo::noDurationOverride) {
-        arrowTree.setProperty(ValueTreeIdentifiers::ArrowDuration, getDuration(), nullptr);
+        const int drawnDuration = getDuration();
+
+        arrow.durationOverride.setValue(drawnDuration, nullptr);
     }
 
     durationEditor->bindEditor(arrowTree, ValueTreeIdentifiers::ArrowDuration);
@@ -98,9 +103,7 @@ void Arrow::startProgress(int trailId, int durationMs, int elapsedMs, juce::Colo
     trail.oneShot    = oneShot;
     trail.source     = source;
 
-    if (animationFrames.isEmpty()) {
-        animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
-    }
+    animationFrames.start(frameClock, [this](double frameSec) { advanceAnimation(frameSec); });
 
     repaint();
 }
@@ -136,8 +139,8 @@ void Arrow::resumeProgress()
         trailsPaused = false;
     }
 
-    if (! trails.empty() && animationFrames.isEmpty()) {
-        animationFrames = juce::VBlankAttachment(this, [this](double frameSec) { advanceAnimation(frameSec); });
+    if (! trails.empty()) {
+        animationFrames.start(frameClock, [this](double frameSec) { advanceAnimation(frameSec); });
     }
 }
 
@@ -227,7 +230,13 @@ juce::String Arrow::getDurationLabel() const
         }
 
         if (pitchedNode != nullptr) {
-            const int pitch = pitchedNode->midiNoteData.getProperty(ValueTreeIdentifiers::MidiPitch, NodeInfo::defaultMidiPitch);
+            const NoteProperties note(pitchedNode->midiNoteData);
+
+            int pitch = note.midiPitch;
+
+            if (note.midiPitch.isUsingDefault()) {
+                pitch = NodeInfo::defaultMidiPitch;
+            }
 
             return juce::String(pitch);
         }

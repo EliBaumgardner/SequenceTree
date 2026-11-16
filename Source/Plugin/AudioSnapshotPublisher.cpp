@@ -42,24 +42,36 @@ void AudioSnapshotPublisher::publishScript(std::shared_ptr<RTScript> script)
     publish(std::move(edit));
 }
 
-void AudioSnapshotPublisher::publishGraph(int graphId, NodeMap graphNodes)
+void AudioSnapshotPublisher::publishGraphs(std::vector<GraphUpdate> updates)
 {
     auto edit = beginEdit();
 
     auto merged = std::make_shared<NodeMap>();
 
+    std::unordered_set<int> replacedGraphIds;
+
+    std::vector<RTNode> replacementNodes;
+
+    for (GraphUpdate& update : updates) {
+        replacedGraphIds.insert(update.graphId);
+
+        std::ranges::move(update.nodes.sortedById, std::back_inserter(replacementNodes));
+    }
+
+    std::ranges::sort(replacementNodes, {}, &RTNode::nodeID);
+
     if (edit->globalNodes == nullptr) {
-        merged->sortedById = std::move(graphNodes.sortedById);
+        merged->sortedById = std::move(replacementNodes);
     }
     else {
-        auto isOutsideGraph = [graphId](const RTNode& node) { return node.graphID != graphId; };
+        auto isOutsideGraphs = [&replacedGraphIds](const RTNode& node) { return ! replacedGraphIds.contains(node.graphID); };
 
-        const std::size_t mergedCapacity = edit->globalNodes->sortedById.size() + graphNodes.sortedById.size();
+        const std::size_t mergedCapacity = edit->globalNodes->sortedById.size() + replacementNodes.size();
 
         merged->sortedById.reserve(mergedCapacity);
 
-        std::ranges::set_union(graphNodes.sortedById,
-                               edit->globalNodes->sortedById | std::views::filter(isOutsideGraph),
+        std::ranges::set_union(replacementNodes,
+                               edit->globalNodes->sortedById | std::views::filter(isOutsideGraphs),
                                std::back_inserter(merged->sortedById),
                                {}, &RTNode::nodeID, &RTNode::nodeID);
     }

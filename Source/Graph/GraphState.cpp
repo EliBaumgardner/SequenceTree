@@ -1,4 +1,5 @@
 #include "GraphState.h"
+#include "TypedProperties.h"
 #include "ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
@@ -28,15 +29,18 @@ juce::ValueTree GraphState::addRootNode(juce::UndoManager* undoManager)
     juce::ValueTree midiNotesData        {ValueTreeIdentifiers::MidiNotesData};
     juce::ValueTree traversalChildrenIds {ValueTreeIdentifiers::TraversalChildrenIds};
 
+    NodeProperties properties(rootNode);
+
     rootNode.addChild(midiNotesData,        -1, undoManager);
     rootNode.addChild(nodeChildrenIds,      -1, undoManager);
     rootNode.addChild(traversalChildrenIds, -1, undoManager);
 
     setNodeLimitProperties(rootNode, undoManager);
 
-    rootNode.setProperty(ValueTreeIdentifiers::LoopLimit,  defaultRootLoopLimit, undoManager);
-    rootNode.setProperty(ValueTreeIdentifiers::RootNodeId, rootId,               undoManager);
-    rootNode.setProperty(ArsNovaUI::CanvasIdentifiers::Id,         rootId,               undoManager);
+    properties.loopLimit .setValue(defaultRootLoopLimit, undoManager);
+    properties.rootNodeId.setValue(rootId,               undoManager);
+
+    rootNode.setProperty(ArsNovaUI::CanvasIdentifiers::Id, rootId, undoManager);
 
     nodeMap.addChild(rootNode, -1, undoManager);
 
@@ -51,7 +55,9 @@ juce::ValueTree GraphState::addChildNode(int parentNodeId, const juce::Identifie
     jassert(parentNode.isValid());
     jassert(parentNode.getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds).isValid());
 
-    const int rootId = parentNode.getProperty(ValueTreeIdentifiers::RootNodeId);
+    const NodeProperties parentProperties(parentNode);
+
+    const int rootId = parentProperties.rootNodeId;
 
     nodeIdIncrement = nodeIdIncrement + 1;
 
@@ -59,16 +65,19 @@ juce::ValueTree GraphState::addChildNode(int parentNodeId, const juce::Identifie
     juce::ValueTree nodeChildrenIds {ArsNovaUI::CanvasIdentifiers::NodeChildrenIds};
     juce::ValueTree midiNotesData   {ValueTreeIdentifiers::MidiNotesData};
 
+    NodeProperties properties(node);
+
     node.addChild(nodeChildrenIds, -1, undoManager);
     node.addChild(midiNotesData,   -1, undoManager);
 
     setNodeLimitProperties(node, undoManager);
 
-    node.setProperty(ValueTreeIdentifiers::RootNodeId, rootId,          undoManager);
-    node.setProperty(ArsNovaUI::CanvasIdentifiers::Id,         nodeIdIncrement, undoManager);
+    properties.rootNodeId.setValue(rootId, undoManager);
 
-    if (parentNode.hasProperty(ValueTreeIdentifiers::NodeColour)) {
-        node.setProperty(ValueTreeIdentifiers::NodeColour, parentNode.getProperty(ValueTreeIdentifiers::NodeColour), undoManager);
+    node.setProperty(ArsNovaUI::CanvasIdentifiers::Id, nodeIdIncrement, undoManager);
+
+    if (! parentProperties.nodeColour.isUsingDefault()) {
+        properties.nodeColour.setValue(parentProperties.nodeColour, undoManager);
     }
 
     connectNodes(parentNodeId, nodeIdIncrement, undoManager);
@@ -88,8 +97,11 @@ juce::ValueTree GraphState::addTraversalFlagNode(int parentNodeId, juce::UndoMan
 
     juce::ValueTree traversalChildrenIds {ValueTreeIdentifiers::TraversalChildrenIds};
 
+    NodeProperties properties(node);
+
     node.addChild(traversalChildrenIds, -1, undoManager);
-    node.setProperty(ValueTreeIdentifiers::TraversalFlagValue, 0, undoManager);
+
+    properties.traversalFlagValue.setValue(0, undoManager);
 
     return node;
 }
@@ -237,11 +249,15 @@ void GraphState::connectNodes(int parentNodeId, int childNodeId, juce::UndoManag
         return;
     }
 
-    if (parentNode.hasProperty(ValueTreeIdentifiers::NodeColour)) {
-        childNode.setProperty(ValueTreeIdentifiers::NodeColour, parentNode.getProperty(ValueTreeIdentifiers::NodeColour), undoManager);
+    const NodeProperties parentProperties(parentNode);
+
+    NodeProperties childProperties(childNode);
+
+    if (! parentProperties.nodeColour.isUsingDefault()) {
+        childProperties.nodeColour.setValue(parentProperties.nodeColour, undoManager);
     }
     else {
-        childNode.removeProperty(ValueTreeIdentifiers::NodeColour, undoManager);
+        childProperties.nodeColour.resetToDefault(undoManager);
     }
 }
 
@@ -280,7 +296,9 @@ void GraphState::removeNode(int nodeId, juce::UndoManager* undoManager)
         parentIds = parents->second;
     }
 
-    const int encapsulatorId = node.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+    const NodeProperties properties(node);
+
+    const int encapsulatorId = properties.encapsulatorId;
 
     nodeMap.removeChild(node, undoManager);
 
@@ -302,30 +320,39 @@ void GraphState::addMidiNote(int nodeId, NodeInfo::Note note, juce::UndoManager*
 
     juce::ValueTree midiNote {ValueTreeIdentifiers::MidiNoteData};
 
-    midiNote.setProperty(ValueTreeIdentifiers::MidiPitch,    note.pitch,       undoManager);
-    midiNote.setProperty(ValueTreeIdentifiers::MidiVelocity, note.velocity,    undoManager);
-    midiNote.setProperty(ValueTreeIdentifiers::MidiDuration, note.duration,    undoManager);
-    midiNote.setProperty(ValueTreeIdentifiers::MidiChannel,  note.midiChannel, undoManager);
+    NoteProperties properties(midiNote);
+
+    properties.midiPitch   .setValue(note.pitch,       undoManager);
+    properties.midiVelocity.setValue(note.velocity,    undoManager);
+    properties.midiDuration.setValue(note.duration,    undoManager);
+    properties.midiChannel .setValue(note.midiChannel, undoManager);
 
     node.getChildWithName(ValueTreeIdentifiers::MidiNotesData).addChild(midiNote, -1, undoManager);
 }
 
 void GraphState::setNodeColour(int nodeId, const juce::String& colourText, juce::UndoManager* undoManager)
 {
-    juce::ValueTree         node           = getNode(nodeId);
-    const int               encapsulatorId = node.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
-    std::vector<int>        pendingIds     { nodeId };
-    std::unordered_set<int> visitedIds     { nodeId };
+    juce::ValueTree node = getNode(nodeId);
+
+    NodeProperties properties(node);
+
+    const int encapsulatorId = properties.encapsulatorId;
+
+    std::vector<int> pendingIds { nodeId };
+
+    std::unordered_set<int> visitedIds { nodeId };
 
     jassert(node.isValid());
 
-    node.setProperty(ValueTreeIdentifiers::NodeColour, colourText, undoManager);
+    properties.nodeColour.setValue(colourText, undoManager);
 
     if (node.getType() == ValueTreeIdentifiers::EncapsulatorData) {
         const std::vector<int> memberNodeIds = encapsulation.memberIds(nodeId);
 
         if (! memberNodeIds.empty()) {
-            getNode(memberNodeIds.front()).setProperty(ValueTreeIdentifiers::NodeColour, colourText, undoManager);
+            NodeProperties firstMember(getNode(memberNodeIds.front()));
+
+            firstMember.nodeColour.setValue(colourText, undoManager);
         }
 
         return;
@@ -340,15 +367,19 @@ void GraphState::setNodeColour(int nodeId, const juce::String& colourText, juce:
             const int       childId = childIds.getChild(childIndex).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
             juce::ValueTree child   = getNode(childId);
 
+            NodeProperties childProperties(child);
+
+            const int childEncapsulatorId = childProperties.encapsulatorId;
+
             if (! child.isValid() || ! visitedIds.insert(childId).second) {
                 continue;
             }
 
-            if (encapsulatorId >= 0 && static_cast<int>(child.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1)) != encapsulatorId) {
+            if (encapsulatorId >= 0 && childEncapsulatorId != encapsulatorId) {
                 continue;
             }
 
-            child.setProperty(ValueTreeIdentifiers::NodeColour, colourText, undoManager);
+            childProperties.nodeColour.setValue(colourText, undoManager);
 
             pendingIds.push_back(childId);
         }
@@ -357,11 +388,14 @@ void GraphState::setNodeColour(int nodeId, const juce::String& colourText, juce:
 
 void GraphState::setNodePosition(juce::ValueTree node, NodeInfo::Position nodePosition, juce::UndoManager* undoManager)
 {
+    NodeProperties properties(node);
+
     jassert(node.isValid());
 
     node.setProperty(ArsNovaUI::CanvasIdentifiers::XPosition, nodePosition.xPosition, undoManager);
     node.setProperty(ArsNovaUI::CanvasIdentifiers::YPosition, nodePosition.yPosition, undoManager);
-    node.setProperty(ValueTreeIdentifiers::Radius,    nodePosition.radius,    undoManager);
+
+    properties.radius.setValue(nodePosition.radius, undoManager);
 
     const int nodeId = node.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
@@ -397,13 +431,16 @@ void GraphState::replaceState(const juce::ValueTree& restoredNodeMap,
 NodeInfo::Position GraphState::getNodePosition(int nodeId) const
 {
     juce::ValueTree node = getNode(nodeId);
-    jassert(node.isValid());
+
+    const NodeProperties properties(node);
 
     NodeInfo::Position nodePosition;
 
+    jassert(node.isValid());
+
     nodePosition.xPosition = node.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition);
     nodePosition.yPosition = node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition);
-    nodePosition.radius    = node.getProperty(ValueTreeIdentifiers::Radius);
+    nodePosition.radius    = properties.radius;
 
     return nodePosition;
 }
@@ -423,7 +460,9 @@ bool GraphState::connectsToOtherTreeRoot(int parentNodeId, int childNodeId) cons
         return false;
     }
 
-    return static_cast<int>(parentTree.getProperty(ValueTreeIdentifiers::RootNodeId)) != childNodeId;
+    const NodeProperties parentProperties(parentTree);
+
+    return parentProperties.rootNodeId != childNodeId;
 }
 
 std::vector<int> GraphState::nodeIdsBetween(int startNodeId, int endNodeId) const
@@ -458,12 +497,14 @@ std::vector<int> GraphState::nodeIdsBetween(int startNodeId, int endNodeId) cons
 
                 const juce::Identifier neighbourType = neighbour.getType();
 
+                const NodeProperties neighbourProperties(neighbour);
+
                 const bool isSequenceNode = neighbourType == ValueTreeIdentifiers::NodeData
                                          || neighbourType == ValueTreeIdentifiers::AlternativeNodeData
                                          || neighbourType == ValueTreeIdentifiers::RootNodeData;
 
                 if (! isSequenceNode
-                    || neighbour.hasProperty(ValueTreeIdentifiers::EncapsulatorId)
+                    || ! neighbourProperties.encapsulatorId.isUsingDefault()
                     || previousNodeId.count(neighbourId) > 0) {
                     continue;
                 }
@@ -507,12 +548,14 @@ std::vector<int> GraphState::nodeIdsBetween(int startNodeId, int endNodeId) cons
 
             const juce::Identifier childType = child.getType();
 
+            const NodeProperties childProperties(child);
+
             const bool isSequenceNode = childType == ValueTreeIdentifiers::NodeData
                                      || childType == ValueTreeIdentifiers::AlternativeNodeData
                                      || childType == ValueTreeIdentifiers::RootNodeData;
 
             if (! isSequenceNode
-                || child.hasProperty(ValueTreeIdentifiers::EncapsulatorId)
+                || ! childProperties.encapsulatorId.isUsingDefault()
                 || ! spannedIds.insert(childId).second) {
                 continue;
             }
@@ -562,13 +605,14 @@ NodeInfo::Kind GraphState::kindOf(const juce::ValueTree& node)
 
 void GraphState::setNodeLimitProperties(juce::ValueTree node, juce::UndoManager* undoManager)
 {
-    node.setProperty(ValueTreeIdentifiers::CountLimit,        defaultNodeCountLimit,    undoManager);
-    node.setProperty(ValueTreeIdentifiers::TriggerLimit,      defaultTriggerLimit,      undoManager);
-    node.setProperty(ValueTreeIdentifiers::SwitchCountLimit,  defaultSwitchCountLimit,  undoManager);
-    node.setProperty(ValueTreeIdentifiers::SubLoopCountLimit, defaultSubLoopCountLimit, undoManager);
+    NodeProperties properties(node);
 
-    node.setProperty(ValueTreeIdentifiers::RepeatValue,       defaultRepeatValue,       undoManager);
-    node.setProperty(ValueTreeIdentifiers::Probability,       defaultProbability,       undoManager);
+    properties.countLimit       .setValue(defaultNodeCountLimit,    undoManager);
+    properties.triggerLimit     .setValue(defaultTriggerLimit,      undoManager);
+    properties.switchCountLimit .setValue(defaultSwitchCountLimit,  undoManager);
+    properties.subLoopCountLimit.setValue(defaultSubLoopCountLimit, undoManager);
+    properties.repeatValue      .setValue(defaultRepeatValue,       undoManager);
+    properties.probability      .setValue(defaultProbability,       undoManager);
 }
 
 void GraphState::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
@@ -648,25 +692,30 @@ void GraphState::unlinkParent(int parentNodeId, int childNodeId)
 juce::ValueTree GraphState::addModulatorNode(juce::ValueTree parentNode, const juce::Identifier& nodeType,
                                              int newNodeId, juce::UndoManager* undoManager)
 {
-    int rootId = static_cast<int>(parentNode.getProperty(ValueTreeIdentifiers::RootNodeId));
+    const NodeProperties parentProperties(parentNode);
+
+    int rootId = parentProperties.rootNodeId;
+
+    juce::ValueTree modulatorNode        {nodeType};
+    juce::ValueTree modulatorChildrenIds {ArsNovaUI::CanvasIdentifiers::NodeChildrenIds};
+
+    NodeProperties properties(modulatorNode);
 
     if (nodeType == ValueTreeIdentifiers::ModulatorRootData) {
         rootId = newNodeId;
     }
 
-    juce::ValueTree modulatorNode        {nodeType};
-    juce::ValueTree modulatorChildrenIds {ArsNovaUI::CanvasIdentifiers::NodeChildrenIds};
-
     modulatorNode.addChild(modulatorChildrenIds, -1, undoManager);
 
     setNodeLimitProperties(modulatorNode, undoManager);
 
-    modulatorNode.setProperty(ValueTreeIdentifiers::RootNodeId, rootId,           undoManager);
-    modulatorNode.setProperty(ValueTreeIdentifiers::ModAmount,  defaultModAmount, undoManager);
-    modulatorNode.setProperty(ArsNovaUI::CanvasIdentifiers::Id,         newNodeId,        undoManager);
+    properties.rootNodeId.setValue(rootId,           undoManager);
+    properties.modAmount .setValue(defaultModAmount, undoManager);
 
-    if (parentNode.hasProperty(ValueTreeIdentifiers::NodeColour)) {
-        modulatorNode.setProperty(ValueTreeIdentifiers::NodeColour, parentNode.getProperty(ValueTreeIdentifiers::NodeColour), undoManager);
+    modulatorNode.setProperty(ArsNovaUI::CanvasIdentifiers::Id, newNodeId, undoManager);
+
+    if (! parentProperties.nodeColour.isUsingDefault()) {
+        properties.nodeColour.setValue(parentProperties.nodeColour, undoManager);
     }
 
     connectNodes(parentNode.getProperty(ArsNovaUI::CanvasIdentifiers::Id), newNodeId, undoManager);

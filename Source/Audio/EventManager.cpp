@@ -29,7 +29,6 @@ void EventManager::processEvents(int numSamples, const DispatchContext& context)
     for (int eventsProcessed = 0; eventsProcessed < maxEventsPerBlock; ++eventsProcessed)
     {
         const NoteScheduler::ActiveNote* const nextNote = scheduler.nextToExpire();
-
         double expiringTime = static_cast<double>(numSamples);
 
         if (nextNote != nullptr) {
@@ -117,7 +116,7 @@ void EventManager::handleOrphanNotes(const DispatchContext& context)
 
         traversal.childSelector.advanceAlternative(context.nodes, traversal.primary, Walk::Primary, traversal.rootId);
 
-        bridge    .highlightNode(*rootNode, BridgeCommands::HighlightKind::Show, orphanedRunId, traversal.traversal.key.typeId);
+        bridge.highlightNode(*rootNode, BridgeCommands::HighlightKind::Show, orphanedRunId, traversal.traversal.key.typeId);
 
         dispatcher.pushNote(*rootNode, orphanedRunId, context, 0);
     }

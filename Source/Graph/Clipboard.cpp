@@ -1,5 +1,6 @@
 #include "Clipboard.h"
 #include "NodeFactory.h"
+#include "TypedProperties.h"
 #include "ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "GraphState.h"
@@ -20,7 +21,10 @@ void Clipboard::copy(std::span<const int> selectedIds)
         }
 
         juce::ValueTree copiedNode = node.createCopy();
-        copiedNode.removeProperty(ValueTreeIdentifiers::EncapsulatorId, nullptr);
+
+        NodeProperties copiedProperties(copiedNode);
+
+        copiedProperties.encapsulatorId.resetToDefault(nullptr);
 
         copied.addChild(copiedNode, -1, nullptr);
     }
@@ -36,8 +40,10 @@ void Clipboard::copy(std::span<const int> selectedIds)
     copiedRootTraversals      .clear();
 
     for (const juce::ValueTree& node : clipboardNodes()) {
+        const NodeProperties properties(node);
+
         const int nodeId     = node.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
-        const int rootNodeId = node.getProperty(ValueTreeIdentifiers::RootNodeId);
+        const int rootNodeId = properties.rootNodeId;
 
         if (wasChordMember(node)) {
             copiedChordMemberIds.insert(nodeId);
@@ -79,13 +85,17 @@ std::vector<int> Clipboard::pasteAt(juce::Point<int> canvasPoint)
 void Clipboard::insertClipboardNodes(const PasteLayout& layout, juce::Point<int> offset) const
 {
     for (const juce::ValueTree& source : pastedSources(layout)) {
-        const int originalId = source.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
-        const int newId      = layout.idMap.at(originalId);
+        const int originalId   = source.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+        const int newId        = layout.idMap.at(originalId);
+        const int pastedRootId = layout.rootIdOf.at(originalId);
 
         juce::ValueTree node = buildPastedNode(source, layout.promotedToRoot.count(originalId) > 0);
 
+        NodeProperties properties(node);
+
         node.setProperty(ArsNovaUI::CanvasIdentifiers::Id, newId, nullptr);
-        node.setProperty(ValueTreeIdentifiers::RootNodeId, layout.rootIdOf.at(originalId), nullptr);
+
+        properties.rootNodeId.setValue(pastedRootId, nullptr);
 
         const juce::Point<int> copiedPosition { node.getProperty(ArsNovaUI::CanvasIdentifiers::XPosition), node.getProperty(ArsNovaUI::CanvasIdentifiers::YPosition) };
         const juce::Point<int> pastedPosition = copiedPosition + offset;
@@ -169,7 +179,10 @@ void Clipboard::addRootTraversals(juce::ValueTree node, int originalRootId) cons
     graphState.traversals.addTraversalData(TraversalState::defaultTraversalId, &undoManager);
 
     juce::ValueTree traversalId { ValueTreeIdentifiers::TraversalId };
-    traversalId.setProperty(ValueTreeIdentifiers::TraversalId, TraversalState::defaultTraversalId, nullptr);
+
+    TraversalReferenceProperties reference(traversalId);
+
+    reference.traversalId.setValue(TraversalState::defaultTraversalId, nullptr);
 
     traversals.addChild(traversalId, -1, nullptr);
 }
@@ -303,8 +316,13 @@ juce::ValueTree Clipboard::buildPastedNode(const juce::ValueTree& source, bool p
     }
 
     if (promoteToRoot && node.getType() == ValueTreeIdentifiers::RootNodeData) {
-        node.setProperty(ValueTreeIdentifiers::LoopLimit, GraphState::defaultRootLoopLimit, nullptr);
-        addRootTraversals(node, source.getProperty(ValueTreeIdentifiers::RootNodeId));
+        NodeProperties properties(node);
+
+        const NodeProperties sourceProperties(source);
+
+        properties.loopLimit.setValue(GraphState::defaultRootLoopLimit, nullptr);
+
+        addRootTraversals(node, sourceProperties.rootNodeId);
     }
 
     return node;
@@ -402,7 +420,9 @@ std::vector<juce::ValueTree> Clipboard::encapsulatorsCovering(std::span<const in
     for (const int nodeId : nodeIds) {
         const juce::ValueTree node = graphState.getNode(nodeId);
 
-        int encapsulatorId = node.getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
+        const NodeProperties properties(node);
+
+        int encapsulatorId = properties.encapsulatorId;
 
         if (node.getType() == ValueTreeIdentifiers::EncapsulatorData) {
             encapsulatorId = nodeId;
@@ -526,7 +546,10 @@ std::map<int,int> Clipboard::resolvePastedRootIds(const PasteLayout& layout) con
             const auto parent = layout.parentOf.find(ancestorId);
 
             if (parent == layout.parentOf.end() || !visited.insert(ancestorId).second) {
-                rootIdOf[nodeId] = ancestor.getProperty(ValueTreeIdentifiers::RootNodeId);
+                const NodeProperties ancestorProperties(ancestor);
+
+                rootIdOf[nodeId] = ancestorProperties.rootNodeId;
+
                 break;
             }
 

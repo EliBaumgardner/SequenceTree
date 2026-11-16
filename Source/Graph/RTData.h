@@ -158,3 +158,9 @@ struct NodeMap {
         return &*position;
     }
 };
+
+struct GraphUpdate {
+
+    int     graphId = 0;
+    NodeMap nodes;
+};

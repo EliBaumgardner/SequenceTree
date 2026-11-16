@@ -91,6 +91,8 @@ Token Lexer::readNumber()
 
     Token token = makeToken(TokenKind::Number, 0);
 
+    const std::size_t start = position;
+
     long long accumulated = 0;
     bool      overflowed  = false;
 
@@ -102,7 +104,6 @@ Token Lexer::readNumber()
             accumulated = largestInt;
         }
 
-        token.text.push_back(source[position]);
         advance();
     }
 
@@ -110,19 +111,20 @@ Token Lexer::readNumber()
         token.kind = TokenKind::Decimal;
         overflowed = false;
 
-        token.text.push_back(source[position]);
         advance();
 
         while (position < source.size() && std::isdigit(static_cast<unsigned char>(source[position])) != 0) {
-            token.text.push_back(source[position]);
             advance();
         }
-
-        token.decimalValue = std::strtod(token.text.c_str(), nullptr);
     }
 
+    token.text   = std::string_view(source).substr(start, position - start);
     token.length = static_cast<int>(token.text.size());
     token.value  = static_cast<int>(accumulated);
+
+    if (token.kind == TokenKind::Decimal) {
+        token.decimalValue = std::strtod(std::string(token.text).c_str(), nullptr);
+    }
 
     if (overflowed) {
         report("number is too large", token);
@@ -158,7 +160,7 @@ const KeywordEntry keywordTable[] = {
     { "not",      TokenKind::Not }
 };
 
-TokenKind keywordKind(const std::string& word)
+TokenKind keywordKind(std::string_view word)
 {
     for (const KeywordEntry& entry : keywordTable) {
         if (word == entry.name) {
@@ -173,11 +175,13 @@ Token Lexer::readIdentifier()
 {
     Token token = makeToken(TokenKind::Identifier, 0);
 
+    const std::size_t start = position;
+
     while (position < source.size() && isIdentifierPart(source[position])) {
-        token.text.push_back(source[position]);
         advance();
     }
 
+    token.text   = std::string_view(source).substr(start, position - start);
     token.length = static_cast<int>(token.text.size());
     token.kind   = keywordKind(token.text);
 
@@ -221,7 +225,7 @@ Token Lexer::readPunctuation()
     }
 
     Token unexpected = makeToken(TokenKind::Invalid, 1);
-    unexpected.text.push_back(current);
+    unexpected.text = std::string_view(source).substr(position, 1);
 
     report(std::string("unexpected character '") + current + "'", unexpected);
 
@@ -232,10 +236,9 @@ Token Lexer::readFixed(TokenKind kind, int length)
 {
     Token token = makeToken(kind, length);
 
-    for (int index = 0; index < length; ++index) {
-        token.text.push_back(source[position]);
-        advance();
-    }
+    token.text = std::string_view(source).substr(position, static_cast<std::size_t>(length));
+
+    advance(length);
 
     return token;
 }

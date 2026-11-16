@@ -61,8 +61,12 @@ public:
 
     juce::StringArray pathOf(int ruleId) const;
 
+    static constexpr int noActiveRuleId = -1;
+
     juce::ValueTree rules;
     juce::ValueTree folders;
+
+    juce::CachedValue<int> activeRuleId;
 
 private:
 

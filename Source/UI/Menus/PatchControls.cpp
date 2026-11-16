@@ -1,4 +1,6 @@
 #include "PatchControls.h"
+#include "../../Graph/TypedProperties.h"
+#include <ArsNovaUI/Menus/Dialog.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Plugin/PluginProcessor.h"
 
@@ -97,16 +99,24 @@ void PatchControls::chooseFileToOpen()
 
         processor.setStateInformation(incomingState.getData(), stateSize);
 
-        patch.setProperty(ValueTreeIdentifiers::PatchName, chosen.getFileNameWithoutExtension(), nullptr);
-        patch.setProperty(ValueTreeIdentifiers::PatchFile, chosen.getFullPathName(), nullptr);
+        PatchProperties patchProperties(patch);
+
+        const juce::String chosenName = chosen.getFileNameWithoutExtension();
+        const juce::String chosenPath = chosen.getFullPathName();
+
+        patchProperties.patchName.setValue(chosenName, nullptr);
+        patchProperties.patchFile.setValue(chosenPath, nullptr);
     });
 }
 
 void PatchControls::renamePatch()
 {
-    const juce::File current = juce::File(patch[ValueTreeIdentifiers::PatchFile].toString());
+    PatchProperties patchProperties(patch);
 
-    const juce::String requested = patch[ValueTreeIdentifiers::PatchName].toString();
+    const juce::String currentPath = patchProperties.patchFile;
+    const juce::String requested   = patchProperties.patchName;
+
+    const juce::File current = juce::File(currentPath);
 
     juce::File renamed = current.getSiblingFile(requested + SequenceTreeAudioProcessor::patchExtension);
 
@@ -121,27 +131,32 @@ void PatchControls::renamePatch()
         renamed = current;
     }
 
-    patch.setProperty(ValueTreeIdentifiers::PatchName, renamed.getFileNameWithoutExtension(), nullptr);
-    patch.setProperty(ValueTreeIdentifiers::PatchFile, renamed.getFullPathName(), nullptr);
+    const juce::String renamedName = renamed.getFileNameWithoutExtension();
+    const juce::String renamedPath = renamed.getFullPathName();
+
+    patchProperties.patchName.setValue(renamedName, nullptr);
+    patchProperties.patchFile.setValue(renamedPath, nullptr);
 }
 
 void PatchControls::confirmReset()
 {
-    const juce::String patchName = patch[ValueTreeIdentifiers::PatchName].toString();
-    const auto         options   = juce::MessageBoxOptions().withIconType(juce::MessageBoxIconType::QuestionIcon).withTitle("Reset patch")
-                                       .withMessage("Clear " + patchName + " back to an empty patch?").withButton("Reset").withButton("Cancel")
-                                       .withAssociatedComponent(this);
+    const PatchProperties patchProperties(patch);
 
-    juce::AlertWindow::showAsync(options, [safeThis = juce::Component::SafePointer<PatchControls>(this)](int result) {
-        if (safeThis == nullptr) {
-            return;
-        }
+    const juce::String patchName = patchProperties.patchName;
 
-        switch (static_cast<ResetAnswer>(result)) {
-            case ResetAnswer::Reset:  safeThis->resetPatch(); break;
-            case ResetAnswer::Cancel: break;
+    ArsNovaUI::Dialog dialog;
+
+    dialog.title   = "Reset patch";
+    dialog.message = "Clear " + patchName + " back to an empty patch?";
+
+    dialog.addButton("Reset", [safeThis = juce::Component::SafePointer<PatchControls>(this)]() {
+        if (safeThis != nullptr) {
+            safeThis->resetPatch();
         }
     });
+
+    dialog.addButton("Cancel", nullptr);
+    dialog.show(*this);
 }
 
 void PatchControls::resetPatch()
