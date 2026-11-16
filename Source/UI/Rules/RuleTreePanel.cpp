@@ -1,12 +1,13 @@
 #include "RuleTreePanel.h"
+#include <ArsNovaUI/Theme/IconLibrary.h>
 #include <ArsNovaUI/Menus/ContextMenu.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 RuleTreePanel::RuleTreePanel(TraversalRuleState& traversalRuleState, juce::UndoManager& undoManager)
     : treeView(traversalRuleState, undoManager)
 {
-    addButton.icon     = &ArsNovaUI::CustomLookAndFeel::drawAddIcon;
-    moreButton.icon    = &ArsNovaUI::CustomLookAndFeel::drawMoreIcon;
+    addButton.icon     = &ArsNovaUI::IconLibrary::get().add;
+    moreButton.icon    = &ArsNovaUI::IconLibrary::get().more;
     addButton.onClick  = [this] { treeView.onRuleAdded(treeView.folderForNewItem()); };
     moreButton.onClick = [this] { showMoreMenu(); };
 

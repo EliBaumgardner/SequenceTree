@@ -1,4 +1,5 @@
 #include "PatchControls.h"
+#include <ArsNovaUI/Theme/IconLibrary.h>
 #include "../../Graph/TypedProperties.h"
 #include <ArsNovaUI/Menus/Dialog.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
@@ -11,17 +12,18 @@ PatchControls::PatchControls(juce::AudioProcessor& processor, juce::ValueTree pa
       nameEditor (nameUndoManager)
 {
     nameEditor.fontStyle = ArsNovaUI::Theme::FontStyle::Regular;
-    openButton.icon      = &ArsNovaUI::CustomLookAndFeel::drawChevronDownIcon;
-    resetButton.icon     = &ArsNovaUI::CustomLookAndFeel::drawReloadIcon;
+
+    openButton.icon = &ArsNovaUI::IconLibrary::get().chevronDown;
+    openButton.setTooltip("Open a saved patch");
+
+    resetButton.icon = &ArsNovaUI::IconLibrary::get().reload;
+    resetButton.setTooltip("Reset the patch");
 
     nameEditor.setFormat(std::make_unique<ArsNovaUI::TextFormat>(ArsNovaUI::TextFormat::labelTextLength, ArsNovaUI::TextFormat::labelCharacters));
     nameEditor.setJustification(juce::Justification::centredLeft);
     nameEditor.bindEditor(patch, ValueTreeIdentifiers::PatchName);
 
     nameEditor.setTooltip("Rename the patch");
-    openButton.setTooltip("Open a saved patch");
-    resetButton.setTooltip("Reset the patch");
-
     nameEditor.onEditFinished = [this]() { renamePatch(); };
     openButton.onClick        = [this]() { chooseFileToOpen(); };
     resetButton.onClick       = [this]() { confirmReset(); };

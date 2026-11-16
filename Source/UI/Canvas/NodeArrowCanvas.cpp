@@ -18,15 +18,15 @@ void NodeArrowCanvas::treePropertyChanged(const juce::ValueTree& tree, const juc
         asyncUpdates.push_back({ .type   = AsyncUpdateType::ValueChanged,
                                  .nodeId = tree.getParent().getParent().getProperty(ArsNovaUI::CanvasIdentifiers::Id) });
     }
-    else if (propertyIdentifier == ValueTreeIdentifiers::NodeColour) {
-        asyncUpdates.push_back({ .type = AsyncUpdateType::NodeColourChanged, .nodeId = tree.getProperty(ArsNovaUI::CanvasIdentifiers::Id) });
-    }
-    else if (propertyIdentifier == ValueTreeIdentifiers::OrnamentUid) {
-        asyncUpdates.push_back({ .type = AsyncUpdateType::NodeMarkChanged, .nodeId = tree.getProperty(ArsNovaUI::CanvasIdentifiers::Id) });
+    else if (propertyIdentifier == ValueTreeIdentifiers::NodeColour || propertyIdentifier == ValueTreeIdentifiers::OrnamentUid) {
+        asyncUpdates.push_back({ .type     = AsyncUpdateType::PropertyChanged,
+                                 .nodeId   = tree.getProperty(ArsNovaUI::CanvasIdentifiers::Id),
+                                 .property = propertyIdentifier });
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::ArrowDuration) {
-        asyncUpdates.push_back({ .type   = AsyncUpdateType::ArrowDurationChanged,
-                                 .nodeId = tree.getParent().getParent().getProperty(ArsNovaUI::CanvasIdentifiers::Id) });
+        asyncUpdates.push_back({ .type     = AsyncUpdateType::PropertyChanged,
+                                 .nodeId   = tree.getParent().getParent().getProperty(ArsNovaUI::CanvasIdentifiers::Id),
+                                 .property = propertyIdentifier });
     }
     else if (propertyIdentifier == ValueTreeIdentifiers::ArrowType
         || propertyIdentifier == ValueTreeIdentifiers::ArrowSync

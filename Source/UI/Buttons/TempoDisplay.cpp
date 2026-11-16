@@ -1,6 +1,7 @@
 #include "TempoDisplay.h"
 #include <ArsNovaUI/Buttons/IconButton.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
+#include <ArsNovaUI/Theme/IconLibrary.h>
 #include "../../Graph/RTData.h"
 
 TempoDisplay::TempoDisplay(juce::UndoManager& undoManager)
@@ -27,7 +28,7 @@ void TempoDisplay::paint(juce::Graphics& graphics)
     const auto                    contentBounds = getLocalBounds().reduced(contentInset);
 
     lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
-    lookAndFeel.drawMetronomeIcon(graphics, contentBounds.withWidth(contentBounds.getHeight()).toFloat(), ArsNovaUI::ButtonState {});
+    lookAndFeel.drawIcon(graphics, contentBounds.withWidth(contentBounds.getHeight()).toFloat(), ArsNovaUI::IconLibrary::get().metronome, ArsNovaUI::ButtonState {});
 }
 
 void TempoDisplay::resized()

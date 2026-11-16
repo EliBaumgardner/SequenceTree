@@ -116,8 +116,6 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Menus/NodeMenu.cpp
         Source/UI/Menus/AllowedTraversalsMenu.cpp
         Source/UI/Menus/TraversalRulesWindow.cpp
-        Source/UI/Menus/SettingsMenu.cpp
-        Source/UI/Rules/RulePathBar.cpp
         Source/UI/Rules/RuleReorderGestures.cpp
         Source/UI/Rules/RuleTabBar.cpp
         Source/UI/Rules/RuleTreePanel.cpp

@@ -1,4 +1,5 @@
 #include "OrnamentLibrarySection.h"
+#include <ArsNovaUI/Theme/IconLibrary.h>
 #include "../../Graph/TypedProperties.h"
 #include <ArsNovaUI/Menus/ContextMenu.h>
 #include <ArsNovaUI/Menus/Dialog.h>
@@ -21,7 +22,7 @@ OrnamentLibrarySection::OrnamentLibrarySection(OrnamentLibraries& ornamentLibrar
     nameEditor.bindEditor(library, ValueTreeIdentifiers::LibraryName);
     nameEditor.setTooltip("Library name");
 
-    foldButton.icon    = &ArsNovaUI::CustomLookAndFeel::drawChevronUpIcon;
+    foldButton.icon    = &ArsNovaUI::IconLibrary::get().chevronUp;
     foldButton.onClick = [this]() { toggleFold(); };
     foldButton.setTooltip("Fold library");
 
@@ -37,7 +38,7 @@ OrnamentLibrarySection::OrnamentLibrarySection(OrnamentLibraries& ornamentLibrar
         graphics.setColour(lookAndFeel.borderColour);
         graphics.drawRoundedRectangle(card, ArsNovaUI::Theme::paneCornerRadius, ArsNovaUI::Theme::borderThickness);
 
-        lookAndFeel.drawAddIcon(graphics, card.withSizeKeepingCentre(addGlyphSide, addGlyphSide), state);
+        lookAndFeel.drawIcon(graphics, card.withSizeKeepingCentre(addGlyphSide, addGlyphSide), ArsNovaUI::IconLibrary::get().add, state);
     };
 
     addCard.setTooltip("Add ornament");
@@ -139,11 +140,11 @@ void OrnamentLibrarySection::toggleFold()
 {
     if (fold == Fold::Open) {
         fold            = Fold::Closed;
-        foldButton.icon = &ArsNovaUI::CustomLookAndFeel::drawChevronDownIcon;
+        foldButton.icon = &ArsNovaUI::IconLibrary::get().chevronDown;
     }
     else {
         fold            = Fold::Open;
-        foldButton.icon = &ArsNovaUI::CustomLookAndFeel::drawChevronUpIcon;
+        foldButton.icon = &ArsNovaUI::IconLibrary::get().chevronUp;
     }
 
     body.setVisible(fold == Fold::Open);

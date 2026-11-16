@@ -1,4 +1,5 @@
 #include "OrnamentSymbolEditor.h"
+#include <ArsNovaUI/Theme/IconLibrary.h>
 #include "../../Graph/TypedProperties.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
@@ -8,15 +9,16 @@ OrnamentSymbolEditor::OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries,
       ornamentLibraries(ornamentLibraries),
       undoManager      (undoManager)
 {
-    ArsNovaUI::IconButton& pencilButton = toolPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawPencilIcon, "Pencil: draw the symbol", [this]() { tool = SymbolTool::Pencil; });
+    ArsNovaUI::IconButton& pencilButton = toolPane.addButton(ArsNovaUI::IconLibrary::get().pencil, "Pencil: draw the symbol", [this]() { tool = SymbolTool::Pencil; });
 
-    toolPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawEraserIcon, "Eraser: rub out what it touches", [this]() { tool = SymbolTool::Eraser; });
+    toolPane.addButton(ArsNovaUI::IconLibrary::get().eraser, "Eraser: rub out what it touches", [this]() { tool = SymbolTool::Eraser; });
 
     toolPane.selection = ArsNovaUI::ButtonPane::Selection::Exclusive;
 
     toolPane.setSelectedButton(&pencilButton);
 
-    clearButton.icon = &ArsNovaUI::CustomLookAndFeel::drawRemoveIcon;
+    clearButton.icon = &ArsNovaUI::IconLibrary::get().remove;
+    clearButton.setTooltip("Clear symbol");
 
     clearButton.onClick = [this]() {
         OrnamentProperties properties(ornament);
@@ -25,8 +27,6 @@ OrnamentSymbolEditor::OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries,
 
         properties.symbol.setValue({}, &this->undoManager);
     };
-
-    clearButton.setTooltip("Clear symbol");
 
     sizeField.labelWidth = sizeLabelWidth;
     sizeField.gap        = sizeFieldGap;

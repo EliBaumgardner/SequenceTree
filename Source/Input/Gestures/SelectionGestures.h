@@ -8,9 +8,8 @@
 /*
     The selection features of the canvas: choosing nodes and acting on the chosen ones. Whether a
     node is selected is the isSelected flag on its Node component, which NodeManager changes for
-    every node at once (selectAll, clearAll, deselectAllExcept). This class draws and applies a
-    selection rectangle: begin, update and finishBoxSelection select every visible node whose
-    centre is inside it.
+    every node at once (selectAll, clearAll, deselectAllExcept). The selection rectangle is the
+    library's BoxSelectionGestures, which NodeController routes to.
 
     copySelection, deleteSelection and pasteAt act on the selected nodes. It owns the Clipboard
     and hands it the selected ids; after a paste it selects the ids the clipboard returns. Deleting
@@ -40,10 +39,7 @@ public:
     void deleteSelection();
     void pasteAt        (juce::Point<int> canvasPoint);
 
-    void beginBoxSelection (const juce::Point<int>& clickPoint);
-    void updateBoxSelection(const juce::MouseEvent& e);
-    void finishBoxSelection();
-    void showSelectionMenu (juce::Point<int> canvasPoint);
+    void showSelectionMenu(juce::Point<int> canvasPoint);
 
 private:
 
@@ -54,6 +50,4 @@ private:
     NodeCanvas&        nodeCanvas;
 
     Clipboard clipboard;
-
-    juce::Point<int> selectionAnchor;
 };

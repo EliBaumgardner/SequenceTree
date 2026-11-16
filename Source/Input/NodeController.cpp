@@ -88,7 +88,8 @@ void NodeController::mouseDown(const juce::MouseEvent& e)
         if (e.mods.isShiftDown() && e.mods.isLeftButtonDown() && arrowGestures.arrowMode) {
             graphGesture = GraphGesture::BoxSelecting;
 
-            selectionGestures.beginBoxSelection(clickPoint.roundToInt());
+            boxSelectionGestures.begin(clickPoint.roundToInt());
+
             return;
         }
     }
@@ -109,7 +110,8 @@ void NodeController::mouseUp(const juce::MouseEvent& e)
     if (graphGesture == GraphGesture::BoxSelecting) {
         graphGesture = GraphGesture::None;
 
-        selectionGestures.finishBoxSelection();
+        boxSelectionGestures.finish();
+
         return;
     }
 
@@ -172,7 +174,8 @@ void NodeController::mouseDrag(const juce::MouseEvent& e)
     }
 
     if (graphGesture == GraphGesture::BoxSelecting) {
-        selectionGestures.updateBoxSelection(e);
+        boxSelectionGestures.update(e);
+
         return;
     }
 

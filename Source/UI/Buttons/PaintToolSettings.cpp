@@ -1,4 +1,5 @@
 #include "PaintToolSettings.h"
+#include <ArsNovaUI/Theme/IconLibrary.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Canvas/NodeCanvas.h"
 
@@ -11,8 +12,7 @@ PaintToolSettings::PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree col
     ValueField& valueField = nodeCanvas.valueField;
     const float brushFlow  = juce::jlimit(minBrushFlow, maxBrushFlow, valueField.brushFlow);
 
-    paintTool.icon = &ArsNovaUI::CustomLookAndFeel::drawBrushIcon;
-
+    paintTool.icon       = &ArsNovaUI::IconLibrary::get().brush;
     colourSelector.shape = ArsNovaUI::ColourSelector::Shape::Circle;
 
     configureValueFields(valueField, brushFlow);

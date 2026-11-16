@@ -45,18 +45,6 @@ void NodeCanvas::paint(juce::Graphics& graphics)
         graphics.setImageResamplingQuality(juce::Graphics::mediumResamplingQuality);
         graphics.drawImageTransformed(valueField.image, valueField.imageToGraph.followedBy(viewTransform));
     }
-
-    if (!selectionBounds.isEmpty()) {
-        const ArsNovaUI::Theme& theme = ArsNovaUI::CustomLookAndFeel::get(*this);
-
-        graphics.addTransform(viewTransform);
-
-        graphics.setColour(theme.selectionBoxColour.withAlpha(selectionFillAlpha));
-        graphics.fillRect(selectionBounds);
-
-        graphics.setColour(theme.selectionBoxColour);
-        graphics.drawRect(selectionBounds, 1);
-    }
 }
 
 void NodeCanvas::rebuildFromNodeMap(const juce::ValueTree& stateTree)
@@ -210,7 +198,7 @@ void NodeCanvas::updateApplied(const AsyncUpdate& update)
         return;
     }
 
-    if (update.type == AsyncUpdateType::NodeColourChanged) {
+    if (update.property == ValueTreeIdentifiers::NodeColour) {
         const NodeProperties properties(node->nodeValueTree);
 
         juce::String colourText = properties.nodeColour;
@@ -228,8 +216,12 @@ void NodeCanvas::updateApplied(const AsyncUpdate& update)
         }
     }
 
-    if (update.type == AsyncUpdateType::NodeMarkChanged) {
+    if (update.property == ValueTreeIdentifiers::OrnamentUid) {
         ornamentMarks.refresh(*node);
+    }
+
+    if (update.property == ValueTreeIdentifiers::ArrowDuration) {
+        arrowManager.refreshFor(node);
     }
 }
 
@@ -457,7 +449,7 @@ std::unique_ptr<ArsNovaUI::CanvasNode> NodeCanvas::makeNode(const juce::ValueTre
     }
     else if (treeType == ValueTreeIdentifiers::AlternativeNodeData) {
         node = std::make_unique<Node>(undoManager);
-        node->isAlternativeNode = true;
+        node->arrowPointsToParent = true;
     }
     else if (treeType == ValueTreeIdentifiers::TraversalFlagData) {
         node = std::make_unique<TraversalFlagNode>(undoManager, graphState);
@@ -468,7 +460,7 @@ std::unique_ptr<ArsNovaUI::CanvasNode> NodeCanvas::makeNode(const juce::ValueTre
     }
     else if (treeType == ValueTreeIdentifiers::AlternativeModulatorData) {
         node = std::make_unique<Modulator>(undoManager);
-        node->isAlternativeNode = true;
+        node->arrowPointsToParent = true;
     }
     else if (treeType == ValueTreeIdentifiers::EncapsulatorData) {
         node = std::make_unique<Encapsulator>(undoManager, graphState, *this);

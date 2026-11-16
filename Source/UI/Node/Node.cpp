@@ -234,7 +234,7 @@ void Node::bindToTree()
     countEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::CountLimit);
     switchCountEditor.bindEditor(nodeValueTree, ValueTreeIdentifiers::SwitchCountLimit);
 
-    if (isAlternativeNode) {
+    if (arrowPointsToParent) {
         subLoopLimitEditor.setVisible(false);
         return;
     }

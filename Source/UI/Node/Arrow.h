@@ -16,9 +16,9 @@
     the dangling arrow's tree, which holds its ArrowInfo::Settings (see ArrowBindingOps).
 
     The arrow's length is its meaning. getDuration turns the offset from the start node's centre
-    to the tip into milliseconds with ArrowInfo::Settings::durationFromDelta, and getDurationLabel
+    to the tip into milliseconds with ArrowInfo::Settings::durationFromDelta, and getLabelText
     shows it (as a percentage when the arrow starts at a modulator, or as the pitched node's pitch
-    when the arrow is bound to pitch alone). beginDurationEdit lets the user type a duration
+    when the arrow is bound to pitch alone). beginLabelEdit lets the user type a duration
     instead, which is stored as the arrow's fixed duration. A dangling arrow also has an editor for
     its count limit.
 
@@ -48,7 +48,7 @@ public:
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
-    void beginDurationEdit() override;
+    void beginLabelEdit() override;
 
     void startProgress(int trailId, int durationMs, int elapsedMs, juce::Colour colour, bool oneShot, BridgeCommands::TrailSource source);
     void resetProgress(int trailId);
@@ -56,13 +56,13 @@ public:
     void resumeProgress ();
 
     bool advanceExtraAnimation() override;
-    bool showsDurationLabel   () const override;
+    bool hasLabel             () const override;
     bool isTraversalArrow     () const;
     bool isSyncArrow          () const;
 
     int getDuration() const;
 
-    juce::String getDurationLabel() const override;
+    juce::String getLabelText() const override;
 
     ArsNovaUI::ArrowVisual getArrowVisual() const;
 

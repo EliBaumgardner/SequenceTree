@@ -120,12 +120,12 @@ TEST_CASE("a selection box selects the visible nodes whose centres lie inside it
 
     REQUIRE(fixture.canvas.nodeManager.all().size() == 3);
 
-    fixture.controller.selectionGestures.beginBoxSelection({ 150, 50 });
-    fixture.controller.selectionGestures.updateBoxSelection(fixture.mouseEventOn(fixture.canvas, { 250.0f, 150.0f }, {}));
+    fixture.controller.boxSelectionGestures.begin({ 150, 50 });
+    fixture.controller.boxSelectionGestures.update(fixture.mouseEventOn(fixture.canvas, { 250.0f, 150.0f }, {}));
 
     CHECK(fixture.canvas.selectionBounds == juce::Rectangle<int> { 150, 50, 100, 100 });
 
-    fixture.controller.selectionGestures.finishBoxSelection();
+    fixture.controller.boxSelectionGestures.finish();
 
     CHECK(fixture.selectedIds() == std::vector<int> { insideId });
     CHECK(fixture.canvas.selectionBounds.isEmpty());

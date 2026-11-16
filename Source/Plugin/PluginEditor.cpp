@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
+#include "../Graph/ValueTreeIdentifiers.h"
 
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
     : AudioProcessorEditor(p),
@@ -26,7 +27,6 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     setLookAndFeel(&lookAndFeel);
 
-    tooltipWindow.setOpaque(false);
 
     scaledView     = std::make_unique<ArsNovaUI::ScaledView>(workspace, *interfaceSettings);
     nodeCanvas     = std::make_unique<NodeCanvas>(graphDocument, p.bridge, p.ornamentLibraries, lookAndFeel);
@@ -201,8 +201,9 @@ void SequenceTreeAudioProcessorEditor::configureWindowSize()
         juce::Component* const               window      = getTopLevelComponent();
         const juce::Displays::Display* const display     = juce::Desktop::getInstance().getDisplays().getDisplayForRect(window->getScreenBounds());
 
-        const float              rescaledZoom = port->zoom * zoomRatio;
-        const juce::Point<float> zoomOrigin   = -port->getPosition().toFloat();
+        const float rescaledZoom = port->view.zoom * zoomRatio;
+
+        const juce::Point<float> zoomOrigin = -port->getPosition().toFloat();
 
         menuWidth = juce::roundToInt(menuWidth * zoomRatio);
 
@@ -242,14 +243,11 @@ void SequenceTreeAudioProcessorEditor::updateResizeLimits()
     const int barsWidth        = juce::jmax(titleBar->narrowestWidth(), bottomBar->narrowestWidth());
     const int menuColumnWidth  = juce::jmax(menuWidth, minimumMenuWidth);
 
-    const float zoom = scaledView->zoom;
-
     scaledView->minimumContentSize.x = ArsNovaUI::Theme::windowGutter * horizontalGutterCount + menuColumnWidth + barsWidth;
 
-    const int minimumWindowWidth  = juce::roundToInt(scaledView->minimumContentSize.x * zoom);
-    const int minimumWindowHeight = juce::roundToInt(scaledView->minimumContentSize.y * zoom);
+    const juce::Point<int> minimumWindowSize = scaledView->scaledMinimumSize();
 
-    setResizeLimits(minimumWindowWidth, minimumWindowHeight, maximumWindowSide, maximumWindowSide);
+    setResizeLimits(minimumWindowSize.x, minimumWindowSize.y, maximumWindowSide, maximumWindowSide);
 
     if (getWidth() < getConstrainer()->getMinimumWidth()) {
         setSize(getConstrainer()->getMinimumWidth(), getHeight());
@@ -259,7 +257,7 @@ void SequenceTreeAudioProcessorEditor::updateResizeLimits()
 
 void SequenceTreeAudioProcessorEditor::wireCallbacks()
 {
-    settingsLauncher.openingScale = SettingsMenu::openingScale;
+    settingsLauncher.openingScale = ArsNovaUI::SettingsMenu::openingScale;
     ornamentLauncher.openingScale = OrnamentWindow::openingScale;
 
     titleBar->onDisplayModeChanged                  = [this](NodeInfo::DisplayMode mode) { bottomBar->applyDisplayMode(mode); };
@@ -284,4 +282,23 @@ void SequenceTreeAudioProcessorEditor::wireCallbacks()
 
         repaint();
     };
+}
+
+std::unique_ptr<ArsNovaUI::SettingsMenu> SequenceTreeAudioProcessorEditor::makeSettingsMenu()
+{
+    std::unique_ptr<ArsNovaUI::SettingsMenu> menu = std::make_unique<ArsNovaUI::SettingsMenu>(lookAndFeel, *scaledView, audioProcessor.colourPresets, graphDocument.undoManager);
+
+    auto graphGridFormat    = std::make_unique<ArsNovaUI::NumberFormat>(GridMultiplier::minimumMultiplier, GridMultiplier::maximumMultiplier, ArsNovaUI::ValueFormat::editableDecimalPlaces);
+    auto ornamentGridFormat = std::make_unique<ArsNovaUI::NumberFormat>(GridMultiplier::minimumMultiplier, GridMultiplier::maximumMultiplier, ArsNovaUI::ValueFormat::editableDecimalPlaces);
+
+    graphGridFormat->suffix    = "x";
+    ornamentGridFormat->suffix = "x";
+
+    ArsNovaUI::ValueEditor& graphGridEditor    = menu->addEditorRow("Grid spacing", std::move(graphGridFormat));
+    ArsNovaUI::ValueEditor& ornamentGridEditor = menu->addEditorRow("Ornament grid spacing", std::move(ornamentGridFormat));
+
+    graphGridEditor.bindEditor(graphDocument.canvasSettings, ValueTreeIdentifiers::GraphGridMultiplier);
+    ornamentGridEditor.bindEditor(graphDocument.canvasSettings, ValueTreeIdentifiers::OrnamentGridMultiplier);
+
+    return menu;
 }

@@ -18,7 +18,7 @@
     The NodeArrowCanvas for the graph: it shows GraphDocument's nodeMap and adds what only the
     graph has. That is the active tool (none, paint, span, note preview or ornament), which only
     setActiveTool changes: it sets the cursor, tells onToolLeft which tool was left and tells
-    the bar through onActiveToolChanged; the selection rectangle; and the parts AudioCommandDrainer
+    the bar through onActiveToolChanged; and the parts AudioCommandDrainer
     for the audio thread's commands, EncapsulationView, OrnamentMarks, ValueField and the
     GridMultiplier that spaces the grid and its snap points by the project's GraphGridMultiplier.
 
@@ -100,9 +100,6 @@ public:
     static constexpr int notePreviewCursorSize = 24;
 
     static constexpr float flagProximityRadius = 28.0f;
-    static constexpr float selectionFillAlpha  = 0.15f;
-
-    juce::Rectangle<int> selectionBounds;
 
     ValueField valueField { *this };
 

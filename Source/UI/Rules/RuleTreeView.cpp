@@ -1,4 +1,5 @@
 #include "RuleTreeView.h"
+#include <ArsNovaUI/Theme/IconLibrary.h>
 #include "../../Graph/TraversalRuleState.h"
 #include "../../Graph/TypedProperties.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
@@ -385,10 +386,10 @@ void RuleTreeView::addItems(int parentId, int depth)
         item.depth    = depth;
         item.expanded = filtering || collapsedFolders.count(id) == 0;
         row.depth     = depth;
-        row.icon      = &ArsNovaUI::CustomLookAndFeel::drawChevronRightIcon;
+        row.icon      = &ArsNovaUI::IconLibrary::get().chevronRight;
 
         if (item.expanded) {
-            row.icon = &ArsNovaUI::CustomLookAndFeel::drawChevronDownIcon;
+            row.icon = &ArsNovaUI::IconLibrary::get().chevronDown;
         }
 
         if (renamingKind != RuleItemKind::Folder || renamingId != id) {

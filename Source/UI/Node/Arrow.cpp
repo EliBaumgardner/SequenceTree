@@ -21,7 +21,7 @@ Arrow::Arrow(ArsNovaUI::CanvasNode* startNode, juce::Point<int> tipOffset, juce:
     valueEditor->setFormat(std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit));
     addAndMakeVisible(*valueEditor);
 
-    durationEditor->toFront(false);
+    labelEditor->toFront(false);
 }
 
 void Arrow::paint(juce::Graphics& graphics)
@@ -42,9 +42,9 @@ void Arrow::resized()
     valueEditor->setBounds(juce::Rectangle<int>(valueEditorWidth, valueEditorHeight).withCentre(localTip));
 }
 
-void Arrow::beginDurationEdit()
+void Arrow::beginLabelEdit()
 {
-    if (startNode == nullptr || ! arrowTree.isValid() || ! showsDurationLabel()) {
+    if (startNode == nullptr || ! arrowTree.isValid() || ! hasLabel()) {
         return;
     }
 
@@ -61,7 +61,7 @@ void Arrow::beginDurationEdit()
         durationFormat->suffix         = "%";
     }
 
-    durationEditor->setFormat(std::move(durationFormat));
+    labelEditor->setFormat(std::move(durationFormat));
 
     ArrowProperties arrow(arrowTree);
 
@@ -73,12 +73,12 @@ void Arrow::beginDurationEdit()
         arrow.durationOverride.setValue(drawnDuration, nullptr);
     }
 
-    durationEditor->bindEditor(arrowTree, ValueTreeIdentifiers::ArrowDuration);
+    labelEditor->bindEditor(arrowTree, ValueTreeIdentifiers::ArrowDuration);
 
     editingDuration = true;
 
-    durationEditor->setVisible(true);
-    durationEditor->beginEditing();
+    labelEditor->setVisible(true);
+    labelEditor->beginEditing();
 
     repaint();
 }
@@ -180,7 +180,7 @@ bool Arrow::advanceExtraAnimation()
     return anyActive;
 }
 
-bool Arrow::showsDurationLabel() const
+bool Arrow::hasLabel() const
 {
     const ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(arrowTree);
 
@@ -216,16 +216,16 @@ int Arrow::getDuration() const
     return ArrowInfo::Settings::durationFromDelta(ArrowBindingOps::getArrowInfo(arrowTree), delta.x, delta.y);
 }
 
-juce::String Arrow::getDurationLabel() const
+juce::String Arrow::getLabelText() const
 {
     if (startNode == nullptr) {
         return "0";
     }
 
-    if (! showsDurationLabel()) {
+    if (! hasLabel()) {
         const Node* pitchedNode = static_cast<const Node*>(endNode);
 
-        if (isDangling() || startNode->isAlternativeNode) {
+        if (isDangling() || startNode->arrowPointsToParent) {
             pitchedNode = static_cast<const Node*>(startNode);
         }
 
@@ -264,7 +264,7 @@ ArsNovaUI::ArrowVisual Arrow::getArrowVisual() const
     }
 
     visual.origin       = { static_cast<float>(getX()), static_cast<float>(getY()) };
-    visual.labelText    = getDurationLabel();
+    visual.labelText    = getLabelText();
     visual.shaftStyle   = shaftStyle();
     visual.headLength   = arrowHeadLength;
     visual.rulerOpacity = animation.rulerFade;
@@ -324,7 +324,7 @@ ArsNovaUI::ArrowVisual::ShaftStyle Arrow::shaftStyle() const
         return ArsNovaUI::ArrowVisual::ShaftStyle::Dashed;
     }
 
-    if (endNode == nullptr || static_cast<const Node*>(endNode)->nodeType != NodeInfo::Type::Root || startNode->isAlternativeNode) {
+    if (endNode == nullptr || static_cast<const Node*>(endNode)->nodeType != NodeInfo::Type::Root || startNode->arrowPointsToParent) {
         return ArsNovaUI::ArrowVisual::ShaftStyle::Solid;
     }
 

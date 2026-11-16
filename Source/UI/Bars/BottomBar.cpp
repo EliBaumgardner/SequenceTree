@@ -1,4 +1,5 @@
 #include "BottomBar.h"
+#include <ArsNovaUI/Theme/IconLibrary.h>
 #include "../../Graph/TypedProperties.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Canvas/NodeCanvas.h"
@@ -20,7 +21,7 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NoteP
 {
     auto countsFormat = std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit);
 
-    quaverTool = &quaverPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawQuaverIcon, "Note",
+    quaverTool = &quaverPane.addButton(ArsNovaUI::IconLibrary::get().quaver, "Note",
         [this]() {
             if (this->nodeCanvas.activeTool == NodeCanvas::CanvasTool::NotePreview) {
                 this->nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::None);
@@ -30,7 +31,7 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NoteP
             this->nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::NotePreview);
         });
 
-    spanTool = &toolPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawDashedBoxIcon, "Node Span",
+    spanTool = &toolPane.addButton(ArsNovaUI::IconLibrary::get().dashedBox, "Node Span",
         [this]() {
             if (this->nodeCanvas.activeTool == NodeCanvas::CanvasTool::Span) {
                 this->nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::None);
@@ -169,7 +170,7 @@ int BottomBar::narrowestWidth() const
 
 void BottomBar::configureOrnamentButton()
 {
-    ornamentButton = &ornamentPane.addButton(nullptr, "Ornaments", [this]() {
+    ornamentButton = &ornamentPane.addButton("Ornaments", [this]() {
         if (nodeCanvas.activeTool == NodeCanvas::CanvasTool::Ornament) {
             nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::None);
             return;
@@ -226,7 +227,7 @@ void BottomBar::configureOrnamentButton()
         }
 
         if (extent.isEmpty()) {
-            lookAndFeel.drawWaveButton(graphics, glyphArea, state);
+            lookAndFeel.drawIcon(graphics, glyphArea, ArsNovaUI::IconLibrary::get().wave, state);
 
             return;
         }
@@ -264,9 +265,8 @@ void BottomBar::showActiveOrnamentName()
 
 void BottomBar::configureAxis(BindAxis& axis, const juce::String& text)
 {
-    axis.button               = &bindPane.addButton(nullptr, text + " Binding", [this, &axis]() { toggleAxis(axis); });
+    axis.button               = &bindPane.addButton(text + " Binding", [this, &axis]() { toggleAxis(axis); });
     axis.button->onRightClick = [this, &axis]() { showAxisMenu(axis); };
-
     axis.button->setText(text);
 
     axis.multiplierSlider.range  = { minimumBindMultiplier, maximumBindMultiplier, bindMultiplierInterval };

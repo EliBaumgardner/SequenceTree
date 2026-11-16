@@ -1,4 +1,5 @@
 #include "OrnamentBuildPanel.h"
+#include <ArsNovaUI/Theme/IconLibrary.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
 #include "../../Util/ArrowInfo.h"
@@ -37,8 +38,8 @@ OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juc
         }
     };
 
-    titlebar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawUndoIcon, "Undo", [&undoManager]() { undoManager.undo(); });
-    titlebar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRedoIcon, "Redo", [&undoManager]() { undoManager.redo(); });
+    titlebar.undoRedoPane.addButton(ArsNovaUI::IconLibrary::get().undo, "Undo", [&undoManager]() { undoManager.undo(); });
+    titlebar.undoRedoPane.addButton(ArsNovaUI::IconLibrary::get().redo, "Redo", [&undoManager]() { undoManager.redo(); });
 
     titlebar.publishButton->onClick = [this, &undoManager]() {
         undoManager.beginNewTransaction();
@@ -240,12 +241,12 @@ OrnamentBuildPanel::BuildTitlebar::BuildTitlebar()
     : ArsNovaUI::Bar(Orientation::Horizontal, titlebarInsetRatio)
 {
     nodePane.selection     = ArsNovaUI::ButtonPane::Selection::ExclusiveOrNone;
-    hostButton             = &nodePane.addButton(&ArsNovaUI::CustomLookAndFeel::drawHostNodeIcon, "Host node");
-    nodeButton             = &nodePane.addButton(&ArsNovaUI::CustomLookAndFeel::drawCircleIcon, "Node (deselect for arrows)");
+    hostButton             = &nodePane.addButton(ArsNovaUI::IconLibrary::get().hostNode, "Host node");
+    nodeButton             = &nodePane.addButton(ArsNovaUI::IconLibrary::get().circle, "Node (deselect for arrows)");
     hostButton->state.look = ArsNovaUI::ButtonState::Look::Raised;
     nodeButton->state.look = ArsNovaUI::ButtonState::Look::Raised;
-    symbolButton           = &symbolPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawPencilIcon, "Draw symbol");
-    publishButton          = &publishPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawUploadIcon, "Publish");
+    symbolButton           = &symbolPane.addButton(ArsNovaUI::IconLibrary::get().pencil, "Draw symbol");
+    publishButton          = &publishPane.addButton(ArsNovaUI::IconLibrary::get().upload, "Publish");
 
     addAndMakeVisible(undoRedoPane);
 

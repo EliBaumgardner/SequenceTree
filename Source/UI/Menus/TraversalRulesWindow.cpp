@@ -1,4 +1,5 @@
 #include "TraversalRulesWindow.h"
+#include <ArsNovaUI/Theme/IconLibrary.h>
 #include "../../Graph/TraversalRuleState.h"
 #include "../../Graph/TypedProperties.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
@@ -23,15 +24,15 @@ TraversalRulesWindow::TraversalRulesWindow(ArsNovaUI::CustomLookAndFeel& lookAnd
     tabBar.tabStrip.onTabClicked       = [this](int ruleId) { viewRule(ruleId); };
     tabBar.tabStrip.onTabClosed        = [this](int ruleId) { closeTab(ruleId); };
 
-    tabBar.transportPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawPlayIcon, "Make this the live traversal rule", [this] { makeRuleLive(viewedRuleId); });
+    tabBar.transportPane.addButton(ArsNovaUI::IconLibrary::get().play, "Make this the live traversal rule", [this] { makeRuleLive(viewedRuleId); });
 
-    tabBar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawUndoIcon, "Undo", [this] {
+    tabBar.undoRedoPane.addButton(ArsNovaUI::IconLibrary::get().undo, "Undo", [this] {
         if (activePage != nullptr) {
             activePage->juce::CodeEditorComponent::undo();
         }
     });
 
-    tabBar.undoRedoPane.addButton(&ArsNovaUI::CustomLookAndFeel::drawRedoIcon, "Redo", [this] {
+    tabBar.undoRedoPane.addButton(ArsNovaUI::IconLibrary::get().redo, "Redo", [this] {
         if (activePage != nullptr) {
             activePage->juce::CodeEditorComponent::redo();
         }
@@ -136,7 +137,7 @@ void TraversalRulesWindow::resized()
     treePanel.setBounds(side);
 
     tabBar.setBounds(bounds.removeFromTop(RuleTabBar::preferredHeight));
-    pathBar.setBounds(bounds.removeFromTop(RulePathBar::preferredHeight));
+    pathBar.setBounds(bounds.removeFromTop(ArsNovaUI::PathBar::preferredHeight));
 
     editorArea = bounds;
 

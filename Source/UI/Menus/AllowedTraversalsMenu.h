@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "../../Graph/RTData.h"
+#include <ArsNovaUI/Buttons/ToggleSwitch.h>
 #include <ArsNovaUI/Editors/LabeledEditor.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
@@ -48,23 +49,11 @@ private:
     bool isTraversalEnabled(const TraversalKey& key) const;
     void setTraversalEnabled(const TraversalKey& key, bool enabled);
 
-    class ToggleButton : public juce::Component
-    {
-    public:
-
-        void paint(juce::Graphics& graphics) override;
-
-        void mouseDown(const juce::MouseEvent& event) override;
-
-        bool                      isOn = true;
-        std::function<void(bool)> onToggle;
-    };
-
     struct TraversalRow
     {
         TraversalKey                             key;
         std::unique_ptr<ArsNovaUI::CaptionLabel> label;
-        std::unique_ptr<ToggleButton>            toggle;
+        std::unique_ptr<ArsNovaUI::ToggleSwitch> toggle;
     };
 
     juce::UndoManager& undoManager;

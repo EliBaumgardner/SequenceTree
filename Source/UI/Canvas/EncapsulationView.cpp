@@ -26,7 +26,7 @@ void EncapsulationView::collapse(int encapsulatorId) const
 
     repositionAll();
 
-    nodeCanvas.arrowManager.refreshEncapsulatedArrows();
+    nodeCanvas.arrowManager.refreshCollapsedArrows();
 }
 
 void EncapsulationView::expand(int encapsulatorId) const
@@ -90,7 +90,7 @@ void EncapsulationView::collapseAll() const
 
     repositionAll();
 
-    nodeCanvas.arrowManager.refreshEncapsulatedArrows();
+    nodeCanvas.arrowManager.refreshCollapsedArrows();
 }
 
 void EncapsulationView::showMembers(std::span<const int> memberNodeIds) const
@@ -102,8 +102,8 @@ void EncapsulationView::showMembers(std::span<const int> memberNodeIds) const
             continue;
         }
 
-        member->isEncapsulated        = false;
-        member->isEncapsulationExit   = false;
+        member->isCollapsed        = false;
+        member->isCollapsedExit   = false;
         member->isEncapsulationRinged = false;
         member->hasInnerRim           = false;
 
@@ -114,7 +114,7 @@ void EncapsulationView::showMembers(std::span<const int> memberNodeIds) const
 
     repositionAll();
 
-    nodeCanvas.arrowManager.refreshEncapsulatedArrows();
+    nodeCanvas.arrowManager.refreshCollapsedArrows();
 }
 
 void EncapsulationView::syncHighlights() const
@@ -242,8 +242,8 @@ bool EncapsulationView::applyCollapsedState(int encapsulatorId) const
             continue;
         }
 
-        member->isEncapsulated        = true;
-        member->isEncapsulationExit   = memberNodeId == encapsulator->memberNodeIds.back();
+        member->isCollapsed        = true;
+        member->isCollapsedExit   = memberNodeId == encapsulator->memberNodeIds.back();
         member->isOutlined            = false;
         member->isEncapsulationRinged = false;
         member->hasInnerRim           = false;

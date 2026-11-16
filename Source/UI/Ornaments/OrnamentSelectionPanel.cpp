@@ -1,4 +1,5 @@
 #include "OrnamentSelectionPanel.h"
+#include <ArsNovaUI/Theme/IconLibrary.h>
 #include <ArsNovaUI/Menus/Dialog.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
@@ -172,8 +173,8 @@ void OrnamentSelectionPanel::valueTreePropertyChanged(juce::ValueTree& tree, con
 OrnamentSelectionPanel::PanelTitlebar::PanelTitlebar()
     : ArsNovaUI::Bar(Orientation::Horizontal, titlebarInsetRatio)
 {
-    newLibraryButton.icon = &ArsNovaUI::CustomLookAndFeel::drawAddIcon;
-    addLibraryButton.icon = &ArsNovaUI::CustomLookAndFeel::drawImportIcon;
+    newLibraryButton.icon = &ArsNovaUI::IconLibrary::get().add;
+    addLibraryButton.icon = &ArsNovaUI::IconLibrary::get().import;
 
     newLibraryButton.setTooltip("New library");
     addLibraryButton.setTooltip("Add library...");

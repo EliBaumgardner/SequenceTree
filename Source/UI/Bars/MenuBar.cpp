@@ -1,14 +1,15 @@
 #include "MenuBar.h"
+#include <ArsNovaUI/Theme/IconLibrary.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../Canvas/NodeCanvas.h"
 
 MenuBar::MenuBar(NodeCanvas& nodeCanvas)
     : ArsNovaUI::Bar(nodeCanvas, Orientation::Vertical, iconInsetRatio)
 {
-    treeIcon.icon      = &ArsNovaUI::CustomLookAndFeel::drawForkIcon;
-    settingsIcon.icon  = &ArsNovaUI::CustomLookAndFeel::drawSettingsIcon;
-    nodeIcon.icon      = &ArsNovaUI::CustomLookAndFeel::drawRingDotIcon;
-    traversalIcon.icon = &ArsNovaUI::CustomLookAndFeel::drawRouteIcon;
+    treeIcon.icon      = &ArsNovaUI::IconLibrary::get().fork;
+    settingsIcon.icon  = &ArsNovaUI::IconLibrary::get().settings;
+    nodeIcon.icon      = &ArsNovaUI::IconLibrary::get().ringDot;
+    traversalIcon.icon = &ArsNovaUI::IconLibrary::get().route;
 
     treeIcon.setTooltip("Tree");
     settingsIcon.setTooltip("Settings");

@@ -55,38 +55,6 @@ void SelectionGestures::pasteAt(juce::Point<int> canvasPoint)
     }
 }
 
-void SelectionGestures::beginBoxSelection(const juce::Point<int>& clickPoint)
-{
-    selectionAnchor = clickPoint;
-
-    nodeCanvas.selectionBounds = {};
-
-    nodeCanvas.nodeManager.clearAll();
-}
-
-void SelectionGestures::updateBoxSelection(const juce::MouseEvent& e)
-{
-    const juce::Point<int> cursor = e.getEventRelativeTo(&nodeCanvas).position.transformedBy(nodeCanvas.modelTransform).roundToInt();
-
-    nodeCanvas.selectionBounds = juce::Rectangle<int>(selectionAnchor, cursor);
-
-    nodeCanvas.repaint();
-}
-
-void SelectionGestures::finishBoxSelection()
-{
-    const juce::Rectangle<int> selection = nodeCanvas.selectionBounds;
-
-    for (auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
-        if (node->isVisible() && selection.contains(node->getNodeCentre())) {
-            node->setSelectVisual(true);
-        }
-    }
-
-    nodeCanvas.selectionBounds = {};
-
-    nodeCanvas.repaint();
-}
 
 void SelectionGestures::showSelectionMenu(juce::Point<int> canvasPoint)
 {

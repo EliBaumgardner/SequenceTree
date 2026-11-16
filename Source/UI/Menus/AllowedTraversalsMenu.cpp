@@ -37,7 +37,7 @@ AllowedTraversalsMenu::AllowedTraversalsMenu(ArsNovaUI::CustomLookAndFeel& lookA
 
         row.key          = key;
         row.label        = std::make_unique<ArsNovaUI::CaptionLabel>();
-        row.toggle       = std::make_unique<ToggleButton>();
+        row.toggle       = std::make_unique<ArsNovaUI::ToggleSwitch>();
         row.toggle->isOn = isTraversalEnabled(key);
 
         row.toggle->onToggle = [this, key](bool enabled) {
@@ -139,44 +139,3 @@ void AllowedTraversalsMenu::setTraversalEnabled(const TraversalKey& key, bool en
     }
 }
 
-void AllowedTraversalsMenu::ToggleButton::paint(juce::Graphics& graphics)
-{
-    const ArsNovaUI::Theme& theme      = ArsNovaUI::CustomLookAndFeel::get(*this);
-    const auto              bounds     = getLocalBounds().toFloat().reduced(2.0f);
-    const juce::Colour      onColour   = theme.accentColour;
-    const juce::Colour      offColour  = theme.raisedColour;
-    juce::Colour            textColour = theme.mutedTextColour;
-    juce::String            stateText  = "off";
-
-    if (isOn) {
-        graphics.setColour(onColour);
-    }
-    else {
-        graphics.setColour(offColour);
-    }
-
-    graphics.fillRoundedRectangle(bounds, ArsNovaUI::Theme::paneCornerRadius);
-
-    graphics.setColour(theme.borderStrongColour);
-    graphics.drawRoundedRectangle(bounds, ArsNovaUI::Theme::paneCornerRadius, ArsNovaUI::Theme::borderThickness);
-
-    if (isOn) {
-        textColour = theme.onAccentColour;
-        stateText  = "on";
-    }
-
-    graphics.setColour(textColour);
-    graphics.setFont(theme.font(ArsNovaUI::Theme::FontStyle::Regular, ArsNovaUI::Theme::labelFontHeight));
-    graphics.drawText(stateText, getLocalBounds(), juce::Justification::centred);
-}
-
-void AllowedTraversalsMenu::ToggleButton::mouseDown(const juce::MouseEvent&)
-{
-    isOn = !isOn;
-
-    repaint();
-
-    if (onToggle) {
-        onToggle(isOn);
-    }
-}

@@ -162,7 +162,7 @@ void NodeMenu::bindToNode(const Node* node)
 {
     const bool hasNodeTree = node->nodeValueTree.isValid();
     const bool hasMidiNote = node->midiNoteData.isValid();
-    const bool hasSubLoop  = hasNodeTree && ! node->isAlternativeNode;
+    const bool hasSubLoop  = hasNodeTree && ! node->arrowPointsToParent;
 
     for (const LabeledRow& row : labeledRows) {
         juce::ValueTree boundTree = node->nodeValueTree;

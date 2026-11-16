@@ -20,7 +20,7 @@
 #include "../Input/Gestures/NotePreviewGestures.h"
 #include "../UI/Menus/TraversalRulesWindow.h"
 #include "../UI/Ornaments/OrnamentWindow.h"
-#include "../UI/Menus/SettingsMenu.h"
+#include <ArsNovaUI/Menus/SettingsMenu.h>
 #include <ArsNovaUI/PopupWindow.h>
 #include <ArsNovaUI/ScaledView.h>
 
@@ -70,6 +70,8 @@ private:
 
     void wireCallbacks      ();
 
+    std::unique_ptr<ArsNovaUI::SettingsMenu> makeSettingsMenu();
+
     juce::Component* keyListenerTarget = nullptr;
 
     SequenceTreeAudioProcessor& audioProcessor;
@@ -82,7 +84,6 @@ private:
 
     std::unique_ptr<ArsNovaUI::ScaledView> scaledView;
 
-    juce::TooltipWindow tooltipWindow { &workspace, tooltipDelayMs };
     GraphDocument       graphDocument;
     NotePreviewGestures notePreviewGestures;
     NodeLimitWarning    nodeLimitWarning;
@@ -101,7 +102,7 @@ private:
     ArsNovaUI::PopupWindowLauncher settingsLauncher {
         "Settings",
         [this]() {
-            auto content = std::make_unique<SettingsMenu>(lookAndFeel, *scaledView, audioProcessor.colourPresets, graphDocument);
+            auto content = makeSettingsMenu();
 
             const juce::Point<int> size = content->narrowestSize();
 
@@ -147,7 +148,6 @@ private:
     static constexpr int seedHeight            = 500;
     static constexpr int maximumWindowSide     = 8192;
     static constexpr int barCanvasGap          = 3;
-    static constexpr int tooltipDelayMs        = 400;
     static constexpr int horizontalGutterCount = 3;
     static constexpr int verticalGutterCount   = 2;
 

@@ -8,7 +8,7 @@
 #include <ArsNovaUI/Editors/LabeledEditor.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
-#include "../Rules/RulePathBar.h"
+#include <ArsNovaUI/Bars/PathBar.h>
 #include "../Rules/RuleTabBar.h"
 #include "../Rules/RuleTreePanel.h"
 #include "../../Script/ScriptCompiler.h"
@@ -18,7 +18,7 @@
     the left is a RuleTreePanel, the rules in their folders, where rules and folders are added,
     renamed, moved by dragging and deleted; a PanelResizer along its inner edge sets its width.
     Open rules are tabs in a RuleTabBar, which also holds the play, undo and redo buttons. A
-    RulePathBar under it shows the open rule's folders, its name and the function the caret is
+    PathBar under it shows the open rule's folders, its name and the function the caret is
     in, and the rest is a code editor (a FilePage) for the open rule, with a status bar along the
     bottom.
     Adding, renaming, moving and deleting rules and folders go through the UndoManager it is
@@ -108,7 +108,7 @@ private:
     RuleTreePanel treePanel;
 
     RuleTabBar  tabBar;
-    RulePathBar pathBar;
+    ArsNovaUI::PathBar pathBar;
 
     TraversalRuleState&     traversalRuleState;
     AudioSnapshotPublisher& snapshots;
