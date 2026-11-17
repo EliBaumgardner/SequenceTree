@@ -4,6 +4,7 @@
 #include "Plugin/PluginProcessor.h"
 #include "Graph/GraphState.h"
 #include "Graph/RTGraphBuilder.h"
+#include "Graph/TypedProperties.h"
 #include "Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
@@ -14,6 +15,7 @@
 #include "Graph/NodeFactory.h"
 #include "Graph/StateJson.h"
 #include "Graph/OrnamentLibraries.h"
+#include "Graph/OrnamentFigure.h"
 #include "Input/GraphDocument.h"
 
 #include <memory>
@@ -32,7 +34,7 @@ static const NodeMap& rebuildAndPublish(SequenceTreeAudioProcessor& processor)
 {
     processor.rtGraphBuilder.rebuildAllGraphs();
 
-    const AudioSnapshotPublisher::Snapshot* snapshot = processor.snapshots.getPublished();
+    const Snapshot* snapshot = processor.snapshots.getPublished();
 
     REQUIRE(snapshot != nullptr);
     REQUIRE(snapshot->globalNodes != nullptr);
@@ -42,7 +44,7 @@ static const NodeMap& rebuildAndPublish(SequenceTreeAudioProcessor& processor)
 
 static int createRoot(GraphState& graph, int x, int y)
 {
-    NodeFactory::createRootNode(graph, NodeInfo::Position { x, y, 25 }, nullptr);
+    NodeFactory(graph, nullptr).createRootNode(NodeInfo::Position { x, y, 25 });
 
     const juce::ValueTree root = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1);
 
@@ -53,8 +55,7 @@ static int createRoot(GraphState& graph, int x, int y)
 
 static int createChild(GraphState& graph, int parentId, int x, int y)
 {
-    const juce::ValueTree child = NodeFactory::createNode(graph, parentId, ValueTreeIdentifiers::NodeData,
-                                                          NodeInfo::Position { x, y, 25 }, nullptr);
+    const juce::ValueTree child = NodeFactory(graph, nullptr).createNode(parentId, ValueTreeIdentifiers::NodeData, NodeInfo::Position { x, y, 25 });
 
     return child.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 }
@@ -62,7 +63,7 @@ static int createChild(GraphState& graph, int parentId, int x, int y)
 TEST_CASE("arrow length sets the connection duration, and moving a node retimes it", "[graph]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId  = createRoot(graph, 0, 0);
     const int childId = createChild(graph, rootId, 100, 0);
@@ -84,7 +85,7 @@ TEST_CASE("arrow length sets the connection duration, and moving a node retimes 
 TEST_CASE("moving a node retimes the arrow from every one of its parents", "[graph]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId         = createRoot(graph, 0, 0);
     const int firstParentId  = createChild(graph, rootId, 100, 0);
@@ -112,7 +113,7 @@ TEST_CASE("moving a node retimes the arrow from every one of its parents", "[gra
 TEST_CASE("a child directly below its parent is a chord link and is never stepped into", "[graph]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId  = createRoot(graph, 0, 0);
     const int chordId = createChild(graph, rootId, 0, 100);
@@ -135,7 +136,7 @@ TEST_CASE("a child directly below its parent is a chord link and is never steppe
 TEST_CASE("a created child inherits its parent's limits", "[graph]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId   = createRoot(graph, 0, 0);
     const int parentId = createChild(graph, rootId, 100, 0);
@@ -155,7 +156,7 @@ TEST_CASE("a created child inherits its parent's limits", "[graph]")
 TEST_CASE("recolouring a node colours its descendants, is inherited by new children, and undoes as one step", "[graph][colour]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
     juce::UndoManager undoManager;
 
     const int rootId       = createRoot(graph, 0, 0);
@@ -187,25 +188,25 @@ TEST_CASE("node colours and colour presets survive saving and restoring the plug
     SequenceTreeAudioProcessor restored;
     juce::MemoryBlock          savedState;
     juce::ValueTree            preset { ArsNovaUI::InterfaceIdentifiers::ColourPreset };
-    juce::TemporaryFile        patchFile { SequenceTreeAudioProcessor::patchExtension };
+    juce::TemporaryFile        patchFile { StateJson::patchExtension };
 
-    const int rootId = createRoot(original.graphState, 0, 0);
+    const int rootId = createRoot(original.document.graphState, 0, 0);
 
-    original.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
+    original.document.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
 
-    original.graphState.setNodeColour(rootId, "ff993300", nullptr);
+    original.document.graphState.setNodeColour(rootId, "ff993300", nullptr);
 
     preset.setProperty(ArsNovaUI::InterfaceIdentifiers::PresetColour, "ff00ff00", nullptr);
 
-    original.colourPresets.appendChild(preset, nullptr);
+    original.document.colourPresets.appendChild(preset, nullptr);
 
     original.getStateInformation(savedState);
 
     restored.setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
 
-    CHECK(restored.graphState.getNode(rootId).getProperty(ValueTreeIdentifiers::NodeColour).toString() == "ff993300");
-    REQUIRE(restored.colourPresets.getNumChildren() == 1);
-    CHECK(restored.colourPresets.getChild(0).getProperty(ArsNovaUI::InterfaceIdentifiers::PresetColour).toString() == "ff00ff00");
+    CHECK(restored.document.graphState.getNode(rootId).getProperty(ValueTreeIdentifiers::NodeColour).toString() == "ff993300");
+    REQUIRE(restored.document.colourPresets.getNumChildren() == 1);
+    CHECK(restored.document.colourPresets.getChild(0).getProperty(ArsNovaUI::InterfaceIdentifiers::PresetColour).toString() == "ff00ff00");
 }
 
 TEST_CASE("the grid multipliers survive saving and restoring the plugin state", "[graph][canvas]")
@@ -213,19 +214,19 @@ TEST_CASE("the grid multipliers survive saving and restoring the plugin state", 
     SequenceTreeAudioProcessor original;
     SequenceTreeAudioProcessor restored;
     juce::MemoryBlock          savedState;
-    juce::TemporaryFile        patchFile { SequenceTreeAudioProcessor::patchExtension };
+    juce::TemporaryFile        patchFile { StateJson::patchExtension };
 
-    original.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
+    original.document.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
 
-    original.canvasSettings.setProperty(ValueTreeIdentifiers::GraphGridMultiplier, 3.5, nullptr);
-    original.canvasSettings.setProperty(ValueTreeIdentifiers::OrnamentGridMultiplier, 1.5, nullptr);
+    original.document.canvasSettings.setProperty(ValueTreeIdentifiers::GraphGridMultiplier, 3.5, nullptr);
+    original.document.canvasSettings.setProperty(ValueTreeIdentifiers::OrnamentGridMultiplier, 1.5, nullptr);
 
     original.getStateInformation(savedState);
 
     restored.setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
 
-    CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::GraphGridMultiplier)) == 3.5);
-    CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::OrnamentGridMultiplier)) == 1.5);
+    CHECK(static_cast<double>(restored.document.canvasSettings.getProperty(ValueTreeIdentifiers::GraphGridMultiplier)) == 3.5);
+    CHECK(static_cast<double>(restored.document.canvasSettings.getProperty(ValueTreeIdentifiers::OrnamentGridMultiplier)) == 1.5);
 }
 
 struct LegacyStateWriter : SequenceTreeAudioProcessor
@@ -240,11 +241,11 @@ TEST_CASE("the plugin state is saved as JSON text", "[graph]")
 {
     SequenceTreeAudioProcessor original;
     juce::MemoryBlock          savedState;
-    juce::TemporaryFile        patchFile { SequenceTreeAudioProcessor::patchExtension };
+    juce::TemporaryFile        patchFile { StateJson::patchExtension };
 
-    original.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
+    original.document.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
 
-    original.canvasSettings.setProperty(ValueTreeIdentifiers::GraphGridMultiplier, 3.5, nullptr);
+    original.document.canvasSettings.setProperty(ValueTreeIdentifiers::GraphGridMultiplier, 3.5, nullptr);
 
     original.getStateInformation(savedState);
 
@@ -263,12 +264,12 @@ TEST_CASE("a state saved in the old binary format still restores", "[graph]")
     SequenceTreeAudioProcessor restored;
     juce::MemoryBlock          jsonState;
     juce::MemoryBlock          binaryState;
-    juce::TemporaryFile        patchFile { SequenceTreeAudioProcessor::patchExtension };
+    juce::TemporaryFile        patchFile { StateJson::patchExtension };
 
-    original.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
+    original.document.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
 
-    original.canvasSettings.setProperty(ValueTreeIdentifiers::GraphGridMultiplier, 3.5, nullptr);
-    original.canvasSettings.setProperty(ValueTreeIdentifiers::OrnamentGridMultiplier, 1.5, nullptr);
+    original.document.canvasSettings.setProperty(ValueTreeIdentifiers::GraphGridMultiplier, 3.5, nullptr);
+    original.document.canvasSettings.setProperty(ValueTreeIdentifiers::OrnamentGridMultiplier, 1.5, nullptr);
 
     original.getStateInformation(jsonState);
 
@@ -280,8 +281,216 @@ TEST_CASE("a state saved in the old binary format still restores", "[graph]")
 
     restored.setStateInformation(binaryState.getData(), static_cast<int>(binaryState.getSize()));
 
-    CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::GraphGridMultiplier)) == 3.5);
-    CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::OrnamentGridMultiplier)) == 1.5);
+    CHECK(static_cast<double>(restored.document.canvasSettings.getProperty(ValueTreeIdentifiers::GraphGridMultiplier)) == 3.5);
+    CHECK(static_cast<double>(restored.document.canvasSettings.getProperty(ValueTreeIdentifiers::OrnamentGridMultiplier)) == 1.5);
+}
+
+TEST_CASE("every node property in the table is set on creation or inherited exactly as its row says", "[graph][properties]")
+{
+    GraphState graph;
+
+    const int rootId = createRoot(graph, 0, 0);
+
+    for (const NodePropertyTable::Row& row : NodePropertyTable::rows) {
+        if (row.isSetOnCreation) {
+            CHECK(graph.getNode(rootId).hasProperty(row.identifier));
+            CHECK(static_cast<int>(graph.getNode(rootId).getProperty(row.identifier)) == row.initialValue);
+        }
+    }
+
+    for (const NodePropertyTable::Row& row : NodePropertyTable::rows) {
+        const int changedValue = row.initialValue + 3;
+
+        if (row.isInheritedByChild) {
+            graph.getNode(rootId).setProperty(row.identifier, changedValue, nullptr);
+        }
+    }
+
+    const int childId = createChild(graph, rootId, 100, 0);
+
+    for (const NodePropertyTable::Row& row : NodePropertyTable::rows) {
+        const int childValue = graph.getNode(childId).getProperty(row.identifier, -999);
+
+        if (row.isInheritedByChild) {
+            CHECK(childValue == row.initialValue + 3);
+        }
+        else if (row.isSetOnCreation) {
+            CHECK(childValue == row.initialValue);
+        }
+    }
+}
+
+TEST_CASE("making another rule live publishes its script with no rules window open", "[graph][rules]")
+{
+    SequenceTreeAudioProcessor processor;
+
+    const std::string sourceWithGlobal = std::string(defaultTraversalScriptSource()) + "\nint marker = 3;\n";
+
+    const int ruleId = processor.document.traversalRuleState.addRule(0, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+    processor.document.traversalRuleState.setRuleSource(ruleId, sourceWithGlobal, nullptr);
+
+    REQUIRE(processor.snapshots.getPublished()->traversalScript != nullptr);
+
+    const std::uint64_t generationBefore = processor.snapshots.getPublished()->traversalScript->generation;
+
+    processor.document.traversalRuleState.activeRuleId.setValue(ruleId, nullptr);
+
+    const RTScript* const published = processor.snapshots.getPublished()->traversalScript.get();
+
+    REQUIRE(published != nullptr);
+
+    CHECK(published->generation != generationBefore);
+    CHECK(published->globalDefaults.size() == 1);
+}
+
+TEST_CASE("typing in the live rule publishes its script once the typing pauses", "[graph][rules]")
+{
+    SequenceTreeAudioProcessor processor;
+
+    TraversalRuleState& ruleState = processor.document.traversalRuleState;
+
+    const std::string sourceWithGlobal = std::string(defaultTraversalScriptSource()) + "\nint marker = 3;\n";
+
+    const int liveRuleId = ruleState.activeRuleId;
+    const int pauseWaitMs = 600;
+
+    const std::uint64_t generationBefore = processor.snapshots.getPublished()->traversalScript->generation;
+
+    ruleState.setRuleSource(liveRuleId, sourceWithGlobal, nullptr);
+
+    CHECK(processor.snapshots.getPublished()->traversalScript->generation == generationBefore);
+
+    juce::Thread::sleep(pauseWaitMs);
+
+    juce::Timer::callPendingTimersSynchronously();
+
+    const RTScript* const published = processor.snapshots.getPublished()->traversalScript.get();
+
+    REQUIRE(published != nullptr);
+
+    CHECK(published->generation != generationBefore);
+    CHECK(published->globalDefaults.size() == 1);
+}
+
+TEST_CASE("typing in a rule that is not live publishes nothing", "[graph][rules]")
+{
+    SequenceTreeAudioProcessor processor;
+
+    TraversalRuleState& ruleState = processor.document.traversalRuleState;
+
+    const std::string sourceWithGlobal = std::string(defaultTraversalScriptSource()) + "\nint marker = 3;\n";
+
+    const int otherRuleId = ruleState.addRule(0, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    const int pauseWaitMs = 600;
+
+    const std::uint64_t generationBefore = processor.snapshots.getPublished()->traversalScript->generation;
+
+    ruleState.setRuleSource(otherRuleId, sourceWithGlobal, nullptr);
+
+    juce::Thread::sleep(pauseWaitMs);
+
+    juce::Timer::callPendingTimersSynchronously();
+
+    CHECK(processor.snapshots.getPublished()->traversalScript->generation == generationBefore);
+}
+
+TEST_CASE("a rule change that leaves the live rule and its text alone publishes nothing", "[graph][rules]")
+{
+    SequenceTreeAudioProcessor processor;
+
+    TraversalRuleState& ruleState = processor.document.traversalRuleState;
+
+    const int liveRuleId = ruleState.activeRuleId;
+
+    const std::uint64_t generationBefore = processor.snapshots.getPublished()->traversalScript->generation;
+
+    ruleState.setRuleName(liveRuleId, "renamed", nullptr);
+
+    CHECK(processor.snapshots.getPublished()->traversalScript->generation == generationBefore);
+
+    const int otherRuleId = ruleState.addRule(0, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    const int folderId    = ruleState.addFolder(0, nullptr).getProperty(ValueTreeIdentifiers::FolderId);
+
+    CHECK(processor.snapshots.getPublished()->traversalScript->generation == generationBefore);
+
+    ruleState.moveRule(otherRuleId, folderId, -1, nullptr);
+    ruleState.moveRule(otherRuleId, 0, liveRuleId, nullptr);
+
+    CHECK(processor.snapshots.getPublished()->traversalScript->generation == generationBefore);
+
+    ruleState.removeRule(otherRuleId, nullptr);
+    ruleState.removeFolder(folderId, nullptr);
+
+    CHECK(processor.snapshots.getPublished()->traversalScript->generation == generationBefore);
+}
+
+TEST_CASE("processBlock leaves a restore that is still pending for the message thread", "[graph][state]")
+{
+    constexpr double sampleRate = 48000.0;
+    constexpr int    blockSize  = 512;
+
+    SequenceTreeAudioProcessor processor;
+
+    juce::AudioBuffer<float> buffer(2, blockSize);
+
+    juce::MidiBuffer midi;
+
+    createRoot(processor.document.graphState, 0, 0);
+
+    processor.pendingRestoreState = juce::ValueTree(ValueTreeIdentifiers::NodeMap);
+
+    processor.prepareToPlay(sampleRate, blockSize);
+    processor.processBlock(buffer, midi);
+    processor.releaseResources();
+
+    CHECK(processor.pendingRestoreState.isValid());
+    CHECK(processor.document.graphState.nodeMap.getNumChildren() == 1);
+}
+
+TEST_CASE("a session saved before the schema version existed still restores and is saved with the current version", "[graph][state]")
+{
+    SequenceTreeAudioProcessor processor;
+    juce::MemoryBlock          resavedState;
+
+    const juce::File fixture = juce::File(__FILE__).getParentDirectory().getParentDirectory().getChildFile("Fixtures/savedBeforeSchemaVersion.sqtree");
+
+    REQUIRE(fixture.existsAsFile());
+
+    juce::MemoryBlock fixtureBytes;
+
+    REQUIRE(fixture.loadFileAsData(fixtureBytes));
+
+    const int fixtureSize = static_cast<int>(fixtureBytes.getSize());
+
+    processor.setStateInformation(fixtureBytes.getData(), fixtureSize);
+
+    REQUIRE(processor.document.graphState.nodeMap.getNumChildren() == 1);
+
+    CHECK(processor.document.graphState.getNode(1).getProperty(ValueTreeIdentifiers::NodeColour).toString() == "ff993300");
+    CHECK(static_cast<double>(processor.document.canvasSettings.getProperty(ValueTreeIdentifiers::GraphGridMultiplier)) == 3.5);
+
+    processor.getStateInformation(resavedState);
+
+    const std::unique_ptr<juce::XmlElement> resaved = StateJson::read(resavedState.getData(), static_cast<int>(resavedState.getSize()));
+
+    REQUIRE(resaved != nullptr);
+
+    CHECK(resaved->getIntAttribute(ValueTreeIdentifiers::SchemaVersion.toString()) == PluginDocument::schemaVersion);
+}
+
+TEST_CASE("a session saved by a newer schema version is not loaded", "[graph][state]")
+{
+    SequenceTreeAudioProcessor processor;
+
+    const juce::String newerState = "{\"type\":\"PluginState\",\"properties\":{\"SchemaVersion\":\"" + juce::String(PluginDocument::schemaVersion + 1)
+                                    + "\"},\"children\":[{\"type\":\"NodeMap\",\"properties\":{},\"children\":[{\"type\":\"RootNodeData\",\"properties\":{\"Id\":\"1\"},\"children\":[]}]}]}";
+
+    const int newerStateSize = static_cast<int>(newerState.getNumBytesAsUTF8());
+
+    processor.setStateInformation(newerState.toRawUTF8(), newerStateSize);
+
+    CHECK(processor.document.graphState.nodeMap.getNumChildren() == 0);
 }
 
 TEST_CASE("the arrow binding multipliers survive saving and restoring the plugin state", "[graph][canvas]")
@@ -289,47 +498,50 @@ TEST_CASE("the arrow binding multipliers survive saving and restoring the plugin
     SequenceTreeAudioProcessor original;
     SequenceTreeAudioProcessor restored;
     juce::MemoryBlock          savedState;
-    juce::TemporaryFile        patchFile { SequenceTreeAudioProcessor::patchExtension };
+    juce::TemporaryFile        patchFile { StateJson::patchExtension };
 
-    original.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
+    const int durationBinding = static_cast<int>(ArrowInfo::Binding::DurationBind);
+    const int pitchBinding    = static_cast<int>(ArrowInfo::Binding::PitchBind);
 
-    original.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, 2.5, nullptr);
-    original.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYMultiplier, 0.75, nullptr);
-    original.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXBinding,    static_cast<int>(ArrowInfo::Binding::DurationBind), nullptr);
-    original.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYBinding,    static_cast<int>(ArrowInfo::Binding::PitchBind), nullptr);
-    original.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXTarget,     static_cast<int>(ArrowInfo::Binding::DurationBind), nullptr);
-    original.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYTarget,     static_cast<int>(ArrowInfo::Binding::PitchBind), nullptr);
+    original.document.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
+
+    original.document.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, 2.5, nullptr);
+    original.document.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYMultiplier, 0.75, nullptr);
+    original.document.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXBinding,    durationBinding, nullptr);
+    original.document.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYBinding,    pitchBinding, nullptr);
+    original.document.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXTarget,     durationBinding, nullptr);
+    original.document.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowYTarget,     pitchBinding, nullptr);
 
     original.getStateInformation(savedState);
 
     restored.setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
 
-    CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowXMultiplier)) == 2.5);
-    CHECK(static_cast<double>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowYMultiplier)) == 0.75);
-    CHECK(static_cast<int>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowXBinding)) == static_cast<int>(ArrowInfo::Binding::DurationBind));
-    CHECK(static_cast<int>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowYBinding)) == static_cast<int>(ArrowInfo::Binding::PitchBind));
-    CHECK(static_cast<int>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowXTarget)) == static_cast<int>(ArrowInfo::Binding::DurationBind));
-    CHECK(static_cast<int>(restored.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowYTarget)) == static_cast<int>(ArrowInfo::Binding::PitchBind));
+    CHECK(static_cast<double>(restored.document.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowXMultiplier)) == 2.5);
+    CHECK(static_cast<double>(restored.document.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowYMultiplier)) == 0.75);
+    CHECK(static_cast<int>(restored.document.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowXBinding)) == durationBinding);
+    CHECK(static_cast<int>(restored.document.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowYBinding)) == pitchBinding);
+    CHECK(static_cast<int>(restored.document.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowXTarget)) == durationBinding);
+    CHECK(static_cast<int>(restored.document.canvasSettings.getProperty(ValueTreeIdentifiers::ArrowYTarget)) == pitchBinding);
 }
 
 TEST_CASE("a new arrow takes the arrow multiplier the canvas settings hold when it is made", "[graph][canvas]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphDocument              document(processor.graphState, processor.undoManager, processor.canvasSettings);
+    GraphDocument              document(processor.document.graphState, processor.document.undoManager, processor.document.canvasSettings);
 
     const juce::Point<int>   childPosition { 100, 0 };
     const juce::ModifierKeys noModifiers;
 
-    processor.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, 2.5, nullptr);
+    processor.document.canvasSettings.setProperty(ValueTreeIdentifiers::ArrowXMultiplier, 2.5, nullptr);
 
-    const int rootId = createRoot(processor.graphState, 0, 0);
+    const int rootId = createRoot(processor.document.graphState, 0, 0);
 
     const juce::ValueTree child = document.addChildNode(rootId, childPosition, noModifiers);
 
     REQUIRE(child.isValid());
 
     const int             childId  = child.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
-    const juce::ValueTree children = processor.graphState.getNode(rootId).getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
+    const juce::ValueTree children = processor.document.graphState.getNode(rootId).getChildWithName(ArsNovaUI::CanvasIdentifiers::NodeChildrenIds);
     const juce::ValueTree arrow    = children.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, childId);
 
     REQUIRE(arrow.isValid());
@@ -340,7 +552,7 @@ TEST_CASE("a new arrow takes the arrow multiplier the canvas settings hold when 
 TEST_CASE("a chain built through the graph walks in order and loops", "[graph][traversal]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId   = createRoot(graph, 0, 0);
     const int middleId = createChild(graph, rootId, 100, 0);
@@ -368,19 +580,19 @@ TEST_CASE("a chain built through the graph walks in order and loops", "[graph][t
 TEST_CASE("a modulator chain built through the graph walks like a node chain", "[graph][traversal][parity]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId   = createRoot(graph, 0, 0);
     const int middleId = createChild(graph, rootId, 100, 0);
     const int leafId   = createChild(graph, middleId, 200, 0);
 
-    const juce::ValueTree modulatorRoot = NodeFactory::createModulatorRoot(graph, rootId, NodeInfo::Position { 0, 200, 25 }, nullptr);
+    const juce::ValueTree modulatorRoot = NodeFactory(graph, nullptr).createModulatorNode(NodeInfo::Kind::ModulatorRoot, rootId, NodeInfo::Position { 0, 200, 25 });
     const int modulatorRootId = modulatorRoot.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    const juce::ValueTree modulatorMiddle = NodeFactory::createModulator(graph, modulatorRootId, NodeInfo::Position { 100, 200, 25 }, nullptr);
+    const juce::ValueTree modulatorMiddle = NodeFactory(graph, nullptr).createModulatorNode(NodeInfo::Kind::Modulator, modulatorRootId, NodeInfo::Position { 100, 200, 25 });
     const int modulatorMiddleId = modulatorMiddle.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    const juce::ValueTree modulatorLeaf = NodeFactory::createModulator(graph, modulatorMiddleId, NodeInfo::Position { 200, 200, 25 }, nullptr);
+    const juce::ValueTree modulatorLeaf = NodeFactory(graph, nullptr).createModulatorNode(NodeInfo::Kind::Modulator, modulatorMiddleId, NodeInfo::Position { 200, 200, 25 });
     const int modulatorLeafId = modulatorLeaf.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const NodeMap& nodes = rebuildAndPublish(processor);
@@ -413,19 +625,19 @@ TEST_CASE("a modulator chain built through the graph walks like a node chain", "
 TEST_CASE("only a note node's arrow into another tree's root is a root connection", "[graph][connection]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId        = createRoot(graph, 0, 0);
     const int nodeId        = createChild(graph, rootId, 100, 0);
     const int foreignRootId = createRoot(graph, 0, 400);
 
-    const juce::ValueTree modulatorRoot = NodeFactory::createModulatorRoot(graph, nodeId, NodeInfo::Position { 100, 200, 25 }, nullptr);
+    const juce::ValueTree modulatorRoot = NodeFactory(graph, nullptr).createModulatorNode(NodeInfo::Kind::ModulatorRoot, nodeId, NodeInfo::Position { 100, 200, 25 });
     const int modulatorRootId = modulatorRoot.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    const juce::ValueTree modulator = NodeFactory::createModulator(graph, modulatorRootId, NodeInfo::Position { 200, 200, 25 }, nullptr);
+    const juce::ValueTree modulator = NodeFactory(graph, nullptr).createModulatorNode(NodeInfo::Kind::Modulator, modulatorRootId, NodeInfo::Position { 200, 200, 25 });
     const int modulatorId = modulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    const juce::ValueTree alternativeModulator = NodeFactory::createAlternativeModulator(graph, modulatorId, NodeInfo::Position { 200, 300, 25 }, nullptr);
+    const juce::ValueTree alternativeModulator = NodeFactory(graph, nullptr).createModulatorNode(NodeInfo::Kind::AlternativeModulator, modulatorId, NodeInfo::Position { 200, 300, 25 });
     const int alternativeModulatorId = alternativeModulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     CHECK(graph.connectsToOtherTreeRoot(nodeId, foreignRootId));
@@ -438,7 +650,7 @@ TEST_CASE("only a note node's arrow into another tree's root is a root connectio
 TEST_CASE("the published graph starts from its first unlinked root, or its first root when every root is linked", "[graph]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int firstRootId   = createRoot(graph, 0, 0);
     const int secondRootId  = createRoot(graph, 0, 400);
@@ -462,7 +674,7 @@ TEST_CASE("the published graph starts from its first unlinked root, or its first
 TEST_CASE("moving a pitch-bound node transposes around the pitch last typed", "[graph][pitch]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId  = createRoot(graph, 0, 0);
     const int childId = createChild(graph, rootId, 100, 0);
@@ -492,15 +704,14 @@ TEST_CASE("moving a pitch-bound node transposes around the pitch last typed", "[
 TEST_CASE("undo and redo keep the node index, parent links and published graph in step", "[graph][undo]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
     juce::UndoManager undoManager;
 
     const int rootId = createRoot(graph, 0, 0);
 
     undoManager.beginNewTransaction();
 
-    const juce::ValueTree child = NodeFactory::createNode(graph, rootId, ValueTreeIdentifiers::NodeData,
-                                                          NodeInfo::Position { 100, 0, 25 }, &undoManager);
+    const juce::ValueTree child = NodeFactory(graph, &undoManager).createNode(rootId, ValueTreeIdentifiers::NodeData, NodeInfo::Position { 100, 0, 25 });
     const int childId = child.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const std::vector<int> rootOnly { rootId };
@@ -539,8 +750,8 @@ TEST_CASE("undo and redo keep the node index, parent links and published graph i
 TEST_CASE("undoing a move restores the arrow's duration and keeps the move redoable", "[graph][undo]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
-    juce::UndoManager& undoManager = processor.undoManager;
+    GraphState& graph = processor.document.graphState;
+    juce::UndoManager& undoManager = processor.document.undoManager;
 
     const int rootId  = createRoot(graph, 0, 0);
     const int childId = createChild(graph, rootId, 100, 0);
@@ -575,7 +786,7 @@ TEST_CASE("undoing a move restores the arrow's duration and keeps the move redoa
 TEST_CASE("removing an encapsulator removes its members and every link to them", "[graph][encapsulation]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId  = createRoot(graph, 0, 0);
     const int firstId = createChild(graph, rootId, 100, 0);
@@ -583,7 +794,7 @@ TEST_CASE("removing an encapsulator removes its members and every link to them",
     const int afterId = createChild(graph, lastId, 300, 0);
 
     const std::vector<int> memberIds { firstId, lastId };
-    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, nullptr);
+    const juce::ValueTree encapsulator = NodeFactory(graph, nullptr).createEncapsulator(memberIds);
     const int encapsulatorId = encapsulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     graph.removeNode(encapsulatorId, nullptr);
@@ -607,14 +818,14 @@ TEST_CASE("removing an encapsulator removes its members and every link to them",
 TEST_CASE("dissolving an encapsulator keeps its members and their arrows", "[graph][encapsulation]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId  = createRoot(graph, 0, 0);
     const int firstId = createChild(graph, rootId, 100, 0);
     const int lastId  = createChild(graph, firstId, 200, 0);
 
     const std::vector<int> memberIds { firstId, lastId };
-    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, nullptr);
+    const juce::ValueTree encapsulator = NodeFactory(graph, nullptr).createEncapsulator(memberIds);
     const int encapsulatorId = encapsulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     CHECK(graph.encapsulation.memberIds(encapsulatorId) == std::vector<int> { firstId, lastId });
@@ -637,13 +848,13 @@ TEST_CASE("dissolving an encapsulator keeps its members and their arrows", "[gra
 TEST_CASE("removing an encapsulator's last member dissolves it", "[graph][encapsulation]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId   = createRoot(graph, 0, 0);
     const int memberId = createChild(graph, rootId, 100, 0);
 
     const std::vector<int> memberIds { memberId };
-    const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graph, memberIds, nullptr);
+    const juce::ValueTree encapsulator = NodeFactory(graph, nullptr).createEncapsulator(memberIds);
     const int encapsulatorId = encapsulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     graph.removeNode(memberId, nullptr);
@@ -654,15 +865,15 @@ TEST_CASE("removing an encapsulator's last member dissolves it", "[graph][encaps
 TEST_CASE("a node's parent is found through a chain of traversal flags", "[graph]")
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId = createRoot(graph, 0, 0);
     const int noteId = createChild(graph, rootId, 100, 0);
 
-    const juce::ValueTree firstFlag = NodeFactory::createTraversalFlagNode(graph, noteId, NodeInfo::Position { 200, 0, 25 }, nullptr);
+    const juce::ValueTree firstFlag = NodeFactory(graph, nullptr).createTraversalFlagNode(noteId, NodeInfo::Position { 200, 0, 25 });
     const int firstFlagId = firstFlag.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    const juce::ValueTree secondFlag = NodeFactory::createTraversalFlagNode(graph, firstFlagId, NodeInfo::Position { 300, 0, 25 }, nullptr);
+    const juce::ValueTree secondFlag = NodeFactory(graph, nullptr).createTraversalFlagNode(firstFlagId, NodeInfo::Position { 300, 0, 25 });
     const int secondFlagId = secondFlag.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     CHECK(static_cast<int>(graph.getNodeParent(secondFlagId).getProperty(ArsNovaUI::CanvasIdentifiers::Id)) == noteId);
@@ -676,17 +887,17 @@ TEST_CASE("a restored graph indexes, numbers and walks like the one it was saved
     SequenceTreeAudioProcessor original;
     SequenceTreeAudioProcessor restored;
 
-    const int rootId   = createRoot(original.graphState, 0, 0);
-    const int everyId  = createChild(original.graphState, rootId, 100, 0);
-    const int secondId = createChild(original.graphState, rootId, 100, 100);
+    const int rootId   = createRoot(original.document.graphState, 0, 0);
+    const int everyId  = createChild(original.document.graphState, rootId, 100, 0);
+    const int secondId = createChild(original.document.graphState, rootId, 100, 100);
 
-    original.graphState.getNode(secondId).setProperty(ValueTreeIdentifiers::CountLimit, 2, nullptr);
+    original.document.graphState.getNode(secondId).setProperty(ValueTreeIdentifiers::CountLimit, 2, nullptr);
 
-    restored.graphState.replaceState(original.graphState.nodeMap, original.graphState.traversals.map);
+    restored.document.graphState.replaceState(original.document.graphState.nodeMap, original.document.graphState.traversals.map);
 
-    CHECK(restored.graphState.nodeIdIncrement == original.graphState.nodeIdIncrement);
-    CHECK(restored.graphState.parentIdsOf     == original.graphState.parentIdsOf);
-    CHECK(restored.graphState.getNode(everyId).isValid());
+    CHECK(restored.document.graphState.nodeIdIncrement == original.document.graphState.nodeIdIncrement);
+    CHECK(restored.document.graphState.parentIdsOf     == original.document.graphState.parentIdsOf);
+    CHECK(restored.document.graphState.getNode(everyId).isValid());
 
     std::vector<std::vector<int>> walks;
 
@@ -776,7 +987,7 @@ static std::vector<PlayedNote> playProcessor(SequenceTreeAudioProcessor& process
 static std::vector<PlayedNote> playChainWithScript(const char* scriptSource)
 {
     SequenceTreeAudioProcessor processor;
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
     const int rootId  = createRoot(graph, 0, 0);
     const int firstId = createChild(graph, rootId, 100, 0);
@@ -872,22 +1083,22 @@ static std::vector<PlayedNote> playLowerGraceChain(bool ornamentsFirstNode)
 {
     TemporaryLibraryFolder     temporary;
     SequenceTreeAudioProcessor processor;
-    GraphState&                graph     = processor.graphState;
-    OrnamentLibraries&         ornaments = processor.ornamentLibraries;
+    GraphState&                graph     = processor.document.graphState;
+    OrnamentLibraries&         ornaments = processor.document.ornamentLibraries;
 
     ornaments.load(temporary.folder);
 
     const juce::ValueTree library  = ornaments.addLibrary("Graph tests", nullptr);
     juce::ValueTree       ornament = ornaments.addOrnament(library, nullptr);
-    juce::ValueTree       grace    = ornaments.addFigureNode(ornament, -1, { 0, 0 }, nullptr);
-    const juce::ValueTree host     = ornaments.addFigureNode(ornament, grace.getProperty(ArsNovaUI::CanvasIdentifiers::Id), { 100, 0 }, nullptr);
+    juce::ValueTree       grace    = OrnamentFigure::addNode(ornament, -1, { 0, 0 }, nullptr);
+    const juce::ValueTree host     = OrnamentFigure::addNode(ornament, grace.getProperty(ArsNovaUI::CanvasIdentifiers::Id), { 100, 0 }, nullptr);
 
     grace.setProperty(ValueTreeIdentifiers::OrnamentOffset,   -1, nullptr);
     grace.setProperty(ValueTreeIdentifiers::OrnamentVelocity, 70, nullptr);
 
-    ornaments.toggleHost(ornament, host.getProperty(ArsNovaUI::CanvasIdentifiers::Id), nullptr);
-    ornaments.setLastNodeLength(ornament, { 200, 0 }, nullptr);
-    ornaments.publish(ornament, nullptr);
+    OrnamentFigure::toggleHost(ornament, host.getProperty(ArsNovaUI::CanvasIdentifiers::Id), nullptr);
+    OrnamentFigure::setLastNodeLength(ornament, { 200, 0 }, nullptr);
+    OrnamentFigure::publish(ornament, nullptr);
 
     const int       rootId  = createRoot(graph, 0, 0);
     const int       firstId = createChild(graph, rootId, 100, 0);
@@ -1021,19 +1232,19 @@ TEST_CASE("Rule folders are saved with the plugin state and restored", "[rules]"
     SequenceTreeAudioProcessor restored;
     juce::MemoryBlock          savedState;
 
-    const int folderId = original.traversalRuleState.addFolder(0, nullptr).getProperty(ValueTreeIdentifiers::FolderId);
-    const int ruleId   = original.traversalRuleState.addRule(folderId, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    const int folderId = original.document.traversalRuleState.addFolder(0, nullptr).getProperty(ValueTreeIdentifiers::FolderId);
+    const int ruleId   = original.document.traversalRuleState.addRule(folderId, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    original.traversalRuleState.setFolderName(folderId, "Walks", nullptr);
+    original.document.traversalRuleState.setFolderName(folderId, "Walks", nullptr);
 
     original.getStateInformation(savedState);
 
     restored.setStateInformation(savedState.getData(), static_cast<int>(savedState.getSize()));
 
-    REQUIRE(restored.traversalRuleState.folders.getNumChildren() == 1);
-    CHECK(restored.traversalRuleState.folders.getChild(0).getProperty(ValueTreeIdentifiers::FolderName).toString() == "Walks");
-    CHECK(static_cast<int>(restored.traversalRuleState.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId).getProperty(ValueTreeIdentifiers::RuleFolderId)) == folderId);
-    CHECK(static_cast<int>(restored.traversalRuleState.addFolder(0, nullptr).getProperty(ValueTreeIdentifiers::FolderId)) == folderId + 1);
+    REQUIRE(restored.document.traversalRuleState.folders.getNumChildren() == 1);
+    CHECK(restored.document.traversalRuleState.folders.getChild(0).getProperty(ValueTreeIdentifiers::FolderName).toString() == "Walks");
+    CHECK(static_cast<int>(restored.document.traversalRuleState.rules.getChildWithProperty(ArsNovaUI::CanvasIdentifiers::Id, ruleId).getProperty(ValueTreeIdentifiers::RuleFolderId)) == folderId);
+    CHECK(static_cast<int>(restored.document.traversalRuleState.addFolder(0, nullptr).getProperty(ValueTreeIdentifiers::FolderId)) == folderId + 1);
 }
 
 TEST_CASE("an orphaned note restarts its own walk, not the walk of the note swapped into its place", "[audio]")
@@ -1050,8 +1261,8 @@ TEST_CASE("an orphaned note restarts its own walk, not the walk of the note swap
 
     SequenceTreeAudioProcessor processor;
 
-    GraphState&   graph        = processor.graphState;
-    EventManager& eventManager = processor.eventManager;
+    GraphState&   graph        = processor.document.graphState;
+    EventManager& eventManager = processor.playback.eventManager;
 
     TraversalPool pool;
 

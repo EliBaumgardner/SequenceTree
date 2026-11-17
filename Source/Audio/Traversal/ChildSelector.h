@@ -29,6 +29,8 @@ public:
     int selectNextChild    (const NodeMap& nodes, int parentId, int parentCount, ChildPredicate isEligible) const;
     int selectTreeJumpChild(const NodeMap& nodes, const Walker& walker, const RTNode& host) const;
 
+    static const RTNode* subLoopEntryFor(const NodeMap& nodes, const Walker& walker, int leavingNodeId, int chosenNodeId);
+
     static bool isModulatorChild  (NodeInfo::Kind kind);
     static bool isAdvanceableChild(NodeInfo::Kind kind);
     static bool isAudibleChild    (NodeInfo::Kind kind);

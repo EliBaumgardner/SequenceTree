@@ -24,7 +24,7 @@
 namespace ArrowInfo
 {
 
-enum class Type    { Node   = 0, Polyphonic = 1, Traversal    = 2, CrossRootTree = 3, StepIntoTree = 4 };
+enum class Type    { Node   = 0, Traversal    = 2, CrossRootTree = 3, StepIntoTree = 4 };
 enum class Binding { NoBind = 0, PitchBind  = 1, DurationBind = 2 };
 
 inline constexpr int    noDurationOverride             = -1;

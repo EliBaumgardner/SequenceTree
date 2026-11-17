@@ -260,7 +260,7 @@ TraversalSession::Playback TraversalSession::continueReplay(const DispatchContex
     const double startedMs = juce::Time::getMillisecondCounterHiRes();
 
     while (replayRemainingSamples >= 1.0
-           && juce::Time::getMillisecondCounterHiRes() - startedMs < budgetMs) {
+           && (renderingOffline || juce::Time::getMillisecondCounterHiRes() - startedMs < budgetMs)) {
         const int chunkSamples = static_cast<int>(juce::jmin(replayRemainingSamples, replayChunkSamples));
 
         eventManager.processEvents(chunkSamples, replayContext);

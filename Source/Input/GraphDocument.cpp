@@ -10,7 +10,8 @@
 GraphDocument::GraphDocument(GraphState& graphState, juce::UndoManager& undoManager, juce::ValueTree canvasSettings)
     : ArsNovaUI::CanvasDocument(graphState.nodeMap, undoManager),
       graphState    (graphState),
-      canvasSettings(canvasSettings)
+      canvasSettings(canvasSettings),
+      nodeFactory   (graphState, &undoManager)
 {
 }
 
@@ -21,14 +22,16 @@ juce::ValueTree GraphDocument::findNode(int nodeId) const
 
 juce::ValueTree GraphDocument::addChildNode(int parentNodeId, juce::Point<int> position, const juce::ModifierKeys& mods)
 {
-    const juce::Identifier   parentType   = graphState.getNode(parentNodeId).getType();
+    const bool makeAlternative = mods.isCtrlDown() && mods.isShiftDown();
+
     const NodeInfo::Position nodePosition { position.x, position.y, ArsNovaUI::Theme::nodeRadius };
-    const juce::ValueTree    child        = NodeFactory::create(creationMode, graphState, parentNodeId, parentType, mods.isCtrlDown() && mods.isShiftDown(), nodePosition, &undoManager);
+
+    const juce::ValueTree child = nodeFactory.create(creationMode, parentNodeId, makeAlternative, nodePosition);
 
     if (child.isValid()) {
         const ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(canvasSettings);
 
-        NodeFactory::applyArrowInfo(graphState, parentNodeId, child.getProperty(ArsNovaUI::CanvasIdentifiers::Id), arrowInfo, ArrowInfo::Type::StepIntoTree, &undoManager);
+        nodeFactory.applyArrowInfo(parentNodeId, child.getProperty(ArsNovaUI::CanvasIdentifiers::Id), arrowInfo, ArrowInfo::Type::StepIntoTree);
     }
 
     return child;
@@ -50,7 +53,7 @@ void GraphDocument::addRootNode(juce::Point<int> position)
 {
     const NodeInfo::Position nodePosition { position.x, position.y, ArsNovaUI::Theme::nodeRadius };
 
-    NodeFactory::createRootNode(graphState, nodePosition, &undoManager);
+    nodeFactory.createRootNode(nodePosition);
 }
 
 static std::unordered_set<int> collectAncestorIds(const GraphState& graphState, int nodeId)
@@ -113,17 +116,17 @@ void GraphDocument::addDanglingArrow(juce::ValueTree nodeTree, juce::Point<int> 
 {
     const ArrowInfo::Settings arrowInfo = ArrowBindingOps::getArrowInfo(canvasSettings);
 
-    NodeFactory::createDanglingArrow(graphState, nodeTree, tipOffset, arrowInfo, &undoManager);
+    nodeFactory.createDanglingArrow(nodeTree, tipOffset, arrowInfo);
 }
 
 void GraphDocument::setDanglingArrowTip(juce::ValueTree arrowTree, juce::Point<int> tipOffset)
 {
-    NodeFactory::setDanglingArrowTip(graphState, arrowTree, tipOffset, &undoManager);
+    nodeFactory.setDanglingArrowTip(arrowTree, tipOffset);
 }
 
 void GraphDocument::removeDanglingArrow(juce::ValueTree arrowTree)
 {
-    NodeFactory::destroyDanglingArrow(arrowTree, &undoManager);
+    nodeFactory.destroyDanglingArrow(arrowTree);
 }
 
 void GraphDocument::connect(int parentNodeId, int childNodeId, ConnectionGesture gesture)
@@ -138,7 +141,7 @@ void GraphDocument::connect(int parentNodeId, int childNodeId, ConnectionGesture
 
     graphState.connectNodes(parentNodeId, childNodeId, &undoManager);
 
-    NodeFactory::applyArrowInfo(graphState, parentNodeId, childNodeId, arrowInfo, rootConnectionType, &undoManager);
+    nodeFactory.applyArrowInfo(parentNodeId, childNodeId, arrowInfo, rootConnectionType);
 }
 
 void GraphDocument::disconnect(int startNodeId, int endNodeId)
@@ -155,11 +158,7 @@ void GraphDocument::disconnect(int startNodeId, int endNodeId)
 
 bool GraphDocument::canConnect(const ArsNovaUI::CanvasNode& startNode, const ArsNovaUI::CanvasNode& endNode) const
 {
-    const juce::Identifier startType = startNode.nodeValueTree.getType();
-
-    const bool startsOnModulator = startType == ValueTreeIdentifiers::ModulatorData
-                                || startType == ValueTreeIdentifiers::ModulatorRootData
-                                || startType == ValueTreeIdentifiers::AlternativeModulatorData;
+    const bool startsOnModulator = NodeInfo::kindTraits[static_cast<int>(GraphState::kindOf(startNode.nodeValueTree))].isModulator;
 
     if (startNode.nodeArrows.count(endNode.nodeId) > 0) {
         return false;

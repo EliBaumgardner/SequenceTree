@@ -1,4 +1,5 @@
- #include "TraversalRule.h"
+#include "TraversalRule.h"
+#include "WeightedPick.h"
 
 #include <algorithm>
 
@@ -82,8 +83,7 @@ int TraversalRule::selectDanglingArrow(const RTNode& node, int count, const Trav
 
 int NativeTraversalRule::selectChild(const RuleContext& context) const
 {
-    int maxLimit    = 0;
-    int totalWeight = 0;
+    WeightedPick weightedPick;
 
     for (const RTConnection& connection : context.parent.connections) {
         const RTNode* child = context.eligibleChild(connection.childId);
@@ -96,28 +96,12 @@ int NativeTraversalRule::selectChild(const RuleContext& context) const
             continue;
         }
 
-        if (child->countLimit > maxLimit) {
-            maxLimit    = child->countLimit;
-            totalWeight = child->probability;
-        }
-        else if (child->countLimit == maxLimit) {
-            totalWeight += child->probability;
-        }
+        weightedPick.tally(child->countLimit, child->probability);
     }
 
-    if (totalWeight <= 0) {
+    if (! weightedPick.draw(context.randomValue)) {
         return -1;
     }
-
-    int selectionSpan = totalWeight;
-
-    if (selectionSpan < RTNode::probabilityScale) {
-        selectionSpan = RTNode::probabilityScale;
-    }
-
-    const int pick = context.randomValue % selectionSpan;
-
-    int runningWeight = 0;
 
     for (const RTConnection& connection : context.parent.connections) {
         const RTNode* child = context.eligibleChild(connection.childId);
@@ -126,13 +110,11 @@ int NativeTraversalRule::selectChild(const RuleContext& context) const
             continue;
         }
 
-        if (context.parentCount % child->countLimit != 0 || child->countLimit != maxLimit) {
+        if (context.parentCount % child->countLimit != 0) {
             continue;
         }
 
-        runningWeight += child->probability;
-
-        if (pick < runningWeight) {
+        if (weightedPick.accepts(child->countLimit, child->probability)) {
             return connection.childId;
         }
     }

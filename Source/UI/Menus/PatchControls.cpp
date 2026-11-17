@@ -3,7 +3,8 @@
 #include "../../Graph/TypedProperties.h"
 #include <ArsNovaUI/Menus/Dialog.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
-#include "../../Plugin/PluginProcessor.h"
+#include "../../Graph/StateJson.h"
+#include "../../Graph/ValueTreeIdentifiers.h"
 
 PatchControls::PatchControls(juce::AudioProcessor& processor, juce::ValueTree patch, const juce::File& patchFolder)
     : processor  (processor),
@@ -77,7 +78,7 @@ void PatchControls::chooseFileToOpen()
 {
     const int chooserFlags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
 
-    fileChooser = std::make_unique<juce::FileChooser>("Open patch", patchFolder, juce::String("*") + SequenceTreeAudioProcessor::patchExtension);
+    fileChooser = std::make_unique<juce::FileChooser>("Open patch", patchFolder, juce::String("*") + StateJson::patchExtension);
 
     fileChooser->launchAsync(chooserFlags, [this](const juce::FileChooser& chooser) {
         const juce::File chosen = chooser.getResult();
@@ -118,13 +119,13 @@ void PatchControls::renamePatch()
 
     const juce::File current = juce::File(currentPath);
 
-    juce::File renamed = current.getSiblingFile(requested + SequenceTreeAudioProcessor::patchExtension);
+    juce::File renamed = current.getSiblingFile(requested + StateJson::patchExtension);
 
     if (requested.isEmpty()) {
         renamed = current;
     }
     else if (renamed.exists() && renamed != current) {
-        renamed = current.getParentDirectory().getNonexistentChildFile(requested, SequenceTreeAudioProcessor::patchExtension, true);
+        renamed = current.getParentDirectory().getNonexistentChildFile(requested, StateJson::patchExtension, true);
     }
 
     if (current.existsAsFile() && ! current.moveFileTo(renamed)) {

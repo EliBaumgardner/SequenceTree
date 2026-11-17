@@ -19,6 +19,7 @@ class ValueTreeIdentifiers {
 public:
 
     static const juce::Identifier PluginState;
+    static const juce::Identifier SchemaVersion;
     static const juce::Identifier NodeMap;
     static const juce::Identifier Patch;
     static const juce::Identifier PatchName;

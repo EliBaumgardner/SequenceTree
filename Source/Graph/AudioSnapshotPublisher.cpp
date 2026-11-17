@@ -1,5 +1,7 @@
 #include "AudioSnapshotPublisher.h"
-#include "../Graph/TraversalRuleState.h"
+#include "ValueTreeIdentifiers.h"
+
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 #include <algorithm>
 #include <iterator>
@@ -8,6 +10,16 @@
 AudioSnapshotPublisher::AudioSnapshotPublisher(TraversalRuleState& traversalRuleState)
     : traversalRuleState(traversalRuleState)
 {
+    traversalRuleState.rules.addListener(this);
+    traversalRuleState.folders.addListener(this);
+}
+
+AudioSnapshotPublisher::~AudioSnapshotPublisher()
+{
+    stopTimer();
+
+    traversalRuleState.rules.removeListener(this);
+    traversalRuleState.folders.removeListener(this);
 }
 
 void AudioSnapshotPublisher::publish(std::shared_ptr<Snapshot> snapshot)
@@ -23,8 +35,9 @@ void AudioSnapshotPublisher::publish(std::shared_ptr<Snapshot> snapshot)
 
     currentSnapshot.store(raw, std::memory_order_seq_cst);
 
-    const std::uint64_t retiredAtEpoch         = blockEpoch.load(std::memory_order_seq_cst);
-    const bool          audioThreadInsideBlock = retiredAtEpoch % 2 != 0;
+    const std::uint64_t retiredAtEpoch = blockEpoch.load(std::memory_order_seq_cst);
+
+    const bool audioThreadInsideBlock = retiredAtEpoch % 2 != 0;
 
     if (retired != nullptr && audioThreadInsideBlock) {
         retiredSnapshots.push_back({ std::move(retired), retiredAtEpoch });
@@ -90,8 +103,10 @@ void AudioSnapshotPublisher::releaseRetiredSnapshots()
 
 ScriptCompileResult AudioSnapshotPublisher::publishActiveTraversalRule()
 {
-    ScriptCompileResult result =
-        compileTraversalScript(traversalRuleState.activeRuleSource().toStdString());
+    compiledRuleId     = traversalRuleState.activeRuleId;
+    compiledRuleSource = traversalRuleState.activeRuleSource();
+
+    ScriptCompileResult result = compileTraversalScript(compiledRuleSource.toStdString());
 
     if (result.succeeded()) {
         publishScript(std::make_shared<RTScript>(std::move(result.script)));
@@ -100,7 +115,7 @@ ScriptCompileResult AudioSnapshotPublisher::publishActiveTraversalRule()
     return result;
 }
 
-std::shared_ptr<AudioSnapshotPublisher::Snapshot> AudioSnapshotPublisher::beginEdit() const
+std::shared_ptr<Snapshot> AudioSnapshotPublisher::beginEdit() const
 {
     auto edit = std::make_shared<Snapshot>();
 
@@ -110,6 +125,55 @@ std::shared_ptr<AudioSnapshotPublisher::Snapshot> AudioSnapshotPublisher::beginE
     }
 
     return edit;
+}
+
+void AudioSnapshotPublisher::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
+{
+    publishChangedTraversalRule();
+}
+
+void AudioSnapshotPublisher::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int childIndex)
+{
+    publishChangedTraversalRule();
+}
+
+void AudioSnapshotPublisher::valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex)
+{
+    publishChangedTraversalRule();
+}
+
+void AudioSnapshotPublisher::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
+{
+    const int changedRuleId = tree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    const int liveRuleId    = traversalRuleState.activeRuleId;
+
+    if (property != ValueTreeIdentifiers::RuleSource) {
+        publishChangedTraversalRule();
+
+        return;
+    }
+
+    if (changedRuleId == liveRuleId) {
+        startTimer(sourceDebounceMs);
+    }
+}
+
+void AudioSnapshotPublisher::timerCallback()
+{
+    stopTimer();
+
+    publishChangedTraversalRule();
+}
+
+void AudioSnapshotPublisher::publishChangedTraversalRule()
+{
+    const int liveRuleId = traversalRuleState.activeRuleId;
+
+    const juce::String liveRuleSource = traversalRuleState.activeRuleSource();
+
+    if (liveRuleId != compiledRuleId || liveRuleSource != compiledRuleSource) {
+        publishActiveTraversalRule();
+    }
 }
 
 void AudioSnapshotPublisher::collectRetiredSnapshots()

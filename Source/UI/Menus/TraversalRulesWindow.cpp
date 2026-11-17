@@ -3,16 +3,14 @@
 #include "../../Graph/TraversalRuleState.h"
 #include "../../Graph/TypedProperties.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
-#include "../../Plugin/AudioSnapshotPublisher.h"
+
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
-TraversalRulesWindow::TraversalRulesWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-                                           juce::UndoManager& undoManager)
+TraversalRulesWindow::TraversalRulesWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, juce::UndoManager& undoManager)
     : resizer           (ArsNovaUI::PanelResizer::Edge::Right),
       panelBar          (ArsNovaUI::Bar::Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
       treePanel         (traversalRuleState, undoManager),
       traversalRuleState(traversalRuleState),
-      snapshots         (snapshots),
       undoManager       (undoManager)
 {
     resizer.onWidthDragged             = [this](int newWidth) { setPanelWidth(newWidth); };
@@ -184,17 +182,11 @@ void TraversalRulesWindow::addRule(int folderId)
 
 void TraversalRulesWindow::removeRule(int ruleId)
 {
-    const bool wasLiveRule = traversalRuleState.activeRuleId == ruleId;
-
     undoManager.beginNewTransaction();
 
     traversalRuleState.removeRule(ruleId, &undoManager);
 
     syncWithRuleState();
-
-    if (wasLiveRule) {
-        snapshots.publishActiveTraversalRule();
-    }
 }
 
 void TraversalRulesWindow::removeFolder(int folderId)
@@ -213,10 +205,6 @@ void TraversalRulesWindow::makeRuleLive(int ruleId)
     }
 
     traversalRuleState.activeRuleId.setValue(ruleId, nullptr);
-
-    if (ruleId != viewedRuleId) {
-        snapshots.publishActiveTraversalRule();
-    }
 
     compileViewedPage();
 }
@@ -287,10 +275,6 @@ void TraversalRulesWindow::syncWithRuleState()
         openRule(state.activeRuleId);
 
         return;
-    }
-
-    if (treePanel.treeView.liveRuleId != viewedRuleId) {
-        snapshots.publishActiveTraversalRule();
     }
 
     refreshTabs();
@@ -467,8 +451,6 @@ void TraversalRulesWindow::compileViewedPage()
 
         return;
     }
-
-    snapshots.publishScript(std::make_shared<RTScript>(std::move(result.script)));
 
     setStatus(instructionCount + " instructions - live", false);
 }

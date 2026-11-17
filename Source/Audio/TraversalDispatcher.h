@@ -53,6 +53,7 @@ private:
 
     void hideModulatorHighlight(const Walker& walker, int runId, int typeId);
     void scaleByModulator      (NotePlan& plan, TraversalLogic& traversalLogic, const NodeMap& nodes);
+
     void overrideVoicing       (NotePlan& plan, const RTNode& node, const TraversalLogic& traversalLogic, const DispatchContext& context,
                                 const ScriptNote& scriptNote, ScriptNote::Kind scriptKind);
 
@@ -61,6 +62,7 @@ private:
 
     void pushChordNotes(const NoteDispatch& dispatch, const DispatchContext& context, int parentCount, int transpose);
 
+    void dispatchVisualProgress(const NoteDispatch& dispatch, const NotePlan& plan, const NodeMap& nodes);
     void dispatchPrimaryArrow  (const NoteDispatch& dispatch, const RTNode& arrowNode, const RTNode* voicedAlternative, const RTNode* nextTarget, int danglingIndex);
     void dispatchModulatorArrow(const NoteDispatch& dispatch, const RTNode* modulatorNode, const RTNode* nextModulatorTarget, int danglingIndex);
     void dispatchCrossTree     (const NoteDispatch& dispatch, const DispatchContext& context);
@@ -71,6 +73,8 @@ private:
     int resolveDuration(const RTNode& node, const RTNode* nextTarget, int lastTargetId, const NodeMap& nodes, int danglingIndex);
 
     bool markChordVisited(int nodeId);
+
+    static void applyBaseVoicing(NoteScheduler::NoteVoicing& voicing, const RTtraversal& traversal, const DispatchContext& context, int transpose);
 
     static double traversalTempoMultiplier(const TraversalLogic& traversalLogic, const DispatchContext& context);
 

@@ -6,9 +6,9 @@
 SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTreeAudioProcessor& p)
     : AudioProcessorEditor(p),
       audioProcessor      (p),
-      graphDocument       (p.graphState, p.undoManager, p.canvasSettings),
-      notePreviewGestures (p.traversalSession, p.rtGraphBuilder),
-      nodeLimitWarning    (p.graphState, workspace)
+      graphDocument       (p.document.graphState, p.document.undoManager, p.document.canvasSettings),
+      notePreviewGestures (p.playback.traversalSession, p.rtGraphBuilder),
+      nodeLimitWarning    (p.document.graphState, workspace)
 {
     juce::PropertiesFile::Options interfaceSettingsOptions;
 
@@ -29,14 +29,14 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
 
     scaledView     = std::make_unique<ArsNovaUI::ScaledView>(workspace, *interfaceSettings);
-    nodeCanvas     = std::make_unique<NodeCanvas>(graphDocument, p.bridge, p.ornamentLibraries, lookAndFeel);
-    nodeController = std::make_unique<NodeController>(*nodeCanvas, graphDocument, notePreviewGestures, p.ornamentLibraries);
+    nodeCanvas     = std::make_unique<NodeCanvas>(graphDocument, p.bridge, p.document.ornamentLibraries, lookAndFeel);
+    nodeController = std::make_unique<NodeController>(*nodeCanvas, graphDocument, notePreviewGestures, p.document.ornamentLibraries);
     port           = std::make_unique<ArsNovaUI::DynamicPort>(*nodeCanvas);
-    traversalMenu  = std::make_unique<TraversalMenu>(notePreviewGestures, p.graphState, p.colourPresets, p.undoManager);
-    nodeMenu       = std::make_unique<NodeMenu>(*nodeCanvas, p.graphState, p.colourPresets, p.undoManager);
+    traversalMenu  = std::make_unique<TraversalMenu>(notePreviewGestures, p.document.graphState, p.document.colourPresets, p.document.undoManager);
+    nodeMenu       = std::make_unique<NodeMenu>(*nodeCanvas, p.document.graphState, p.document.colourPresets, p.document.undoManager);
     menuArea       = std::make_unique<MenuArea>(*nodeCanvas, *traversalMenu, *nodeMenu);
     titleBar       = std::make_unique<Titlebar>(p, *nodeCanvas, *nodeController, graphDocument);
-    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, graphDocument, notePreviewGestures, p.colourPresets, p.ornamentLibraries);
+    bottomBar      = std::make_unique<BottomBar>(*nodeCanvas, graphDocument, notePreviewGestures, p.document.colourPresets, p.document.ornamentLibraries);
     canvasFrame    = std::make_unique<CanvasFrame>(*nodeCanvas, *menuArea, *titleBar, *bottomBar);
 
     wireCallbacks();
@@ -45,13 +45,13 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
         audioProcessor.applyRestoredState();
     }
 
-    nodeCanvas->rebuildFromNodeMap(audioProcessor.graphState.nodeMap);
+    nodeCanvas->rebuildFromNodeMap(audioProcessor.document.graphState.nodeMap);
 
-    titleBar->applyPlaybackState(audioProcessor.isPlaying.load());
+    titleBar->applyPlaybackState(audioProcessor.playback.isPlaying.load());
 
     nodeCanvas->addMouseListener(nodeController.get(), true);
 
-    audioProcessor.graphState.nodeMap.addListener(&nodeCanvas->treeListener);
+    audioProcessor.document.graphState.nodeMap.addListener(&nodeCanvas->treeListener);
 
     workspace.addAndMakeVisible(port.get());
     workspace.addAndMakeVisible(canvasFrame.get());
@@ -64,11 +64,11 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
     audioCommandFrames = juce::VBlankAttachment(this, [this](double) {
         lookAndFeel.frostedBackdropStale = true;
 
-        if (audioProcessor.playbackStateChanged.exchange(false)) {
-            titleBar->applyPlaybackState(audioProcessor.isPlaying.load());
+        if (audioProcessor.playback.playbackStateChanged.exchange(false)) {
+            titleBar->applyPlaybackState(audioProcessor.playback.isPlaying.load());
         }
 
-        if (audioProcessor.eventManager.bridge.hasPendingCommands() || !nodeCanvas->asyncUpdates.empty()) {
+        if (audioProcessor.bridge.hasPendingCommands() || !nodeCanvas->asyncUpdates.empty()) {
             nodeCanvas->handleAsyncUpdate();
         }
     });
@@ -80,7 +80,7 @@ SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
         keyListenerTarget->removeKeyListener(this);
     }
 
-    audioProcessor.graphState.nodeMap.removeListener(&nodeCanvas->treeListener);
+    audioProcessor.document.graphState.nodeMap.removeListener(&nodeCanvas->treeListener);
 
     setLookAndFeel(nullptr);
 }
@@ -146,10 +146,10 @@ bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, ju
     const juce::ModifierKeys commandShift = juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier;
 
     SelectionGestures& selectionGestures = nodeController->selectionGestures;
-    juce::UndoManager& undoManager       = audioProcessor.undoManager;
+    juce::UndoManager& undoManager       = audioProcessor.document.undoManager;
 
     if (key == juce::KeyPress::spaceKey) {
-        titleBar->applyPlaybackState(!audioProcessor.isPlaying.load());
+        titleBar->applyPlaybackState(!audioProcessor.playback.isPlaying.load());
 
         return true;
     }
@@ -265,8 +265,8 @@ void SequenceTreeAudioProcessorEditor::wireCallbacks()
     traversalMenu->editTraversalRulesButton.onClick = [this]() { traversalRulesLauncher.show(*traversalMenu); };
     nodeMenu->editTraversalRulesButton.onClick      = [this]() { traversalRulesLauncher.show(*nodeMenu); };
 
-    bottomBar->onOrnamentWindowRequested = [this]() {
-        audioProcessor.ornamentLibraries.rescan(audioProcessor.ornamentUndoManager);
+    bottomBar->ornamentPane.onWindowRequested = [this]() {
+        audioProcessor.document.ornamentLibraries.rescan(audioProcessor.document.ornamentUndoManager);
 
         ornamentLauncher.show(*bottomBar);
     };
@@ -286,7 +286,7 @@ void SequenceTreeAudioProcessorEditor::wireCallbacks()
 
 std::unique_ptr<ArsNovaUI::SettingsMenu> SequenceTreeAudioProcessorEditor::makeSettingsMenu()
 {
-    std::unique_ptr<ArsNovaUI::SettingsMenu> menu = std::make_unique<ArsNovaUI::SettingsMenu>(lookAndFeel, *scaledView, audioProcessor.colourPresets, graphDocument.undoManager);
+    std::unique_ptr<ArsNovaUI::SettingsMenu> menu = std::make_unique<ArsNovaUI::SettingsMenu>(lookAndFeel, *scaledView, audioProcessor.document.colourPresets, graphDocument.undoManager);
 
     auto graphGridFormat    = std::make_unique<ArsNovaUI::NumberFormat>(GridMultiplier::minimumMultiplier, GridMultiplier::maximumMultiplier, ArsNovaUI::ValueFormat::editableDecimalPlaces);
     auto ornamentGridFormat = std::make_unique<ArsNovaUI::NumberFormat>(GridMultiplier::minimumMultiplier, GridMultiplier::maximumMultiplier, ArsNovaUI::ValueFormat::editableDecimalPlaces);

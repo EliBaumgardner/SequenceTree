@@ -25,9 +25,9 @@ References run from the editor into the processor and almost never back. The edi
 
 | Layer | Members | Folder | Thread |
 |---|---|---|---|
-| 1. Document | `graphState`, `traversalRuleState`, `ornamentLibraries`, `undoManager`, `ornamentUndoManager`, `valueTreeState`, `patch`, `colourPresets` | `Source/Graph/` | message |
-| 2. Audio model | `rtGraphBuilder`, `snapshots` (`AudioSnapshotPublisher`) | `Source/Graph/`, `Source/Plugin/` | built on message, read on audio |
-| 3. Playback | `traversalSession`, `eventManager`, `previewEventManager` | `Source/Audio/` | audio |
+| 1. Document | `valueTreeState`, and `document` (a `PluginDocument`) holding `graphState`, `traversalRuleState`, `ornamentLibraries`, `undoManager`, `ornamentUndoManager`, `patch`, `colourPresets`, `canvasSettings` | `Source/Graph/`, `Source/Plugin/` | message |
+| 2. Audio model | `rtGraphBuilder`, `snapshots` (`AudioSnapshotPublisher`) | `Source/Graph/` | built on message, read on audio |
+| 3. Playback | `playback` (`PlaybackEngine`), holding `traversalSession`, `eventManager`, `previewEventManager` and the transport atomics | `Source/Audio/` | audio |
 | 4. Output channels | `bridge` (`AudioUIBridge`), `virtualMidiOutput` | `Source/Audio/ThreadMessaging/` | written on audio, read elsewhere |
 
 ### 2.1 Document
@@ -69,7 +69,7 @@ Playback runs entirely inside `processBlock` on the audio thread. Three levels o
 One block, in order:
 
 1. `BlockScope` calls `snapshots.beginBlock()`, which makes `blockEpoch` odd and loads the current `Snapshot*`. Its destructor calls `endBlock()`.
-2. `followHostTransport` reads the host's play state, tempo and position.
+2. `PlaybackEngine::processBlock` runs the rest, taking the parameters and the host's play head in a `BlockInfo`; `followHostTransport` reads the host's play state, tempo and position.
 3. Notes are silenced or suspended on stop or reset, and `traversalSession.setTraversalScript` installs the snapshot's script.
 4. `driveWalk` builds a `DispatchContext` (nodes, pool, `MidiBuffer`, tempo, transpose, velocity) for playback and one for preview. It then runs `playPreview`, replays to a new position if the host jumped, calls `syncWithGraph`, starts a walk from the first root if none is running, and calls `eventManager.processEvents`.
 5. `virtualMidiOutput.mirrorBlock` copies the block's MIDI out.
@@ -149,9 +149,9 @@ The two threads never call into each other. Each crossing goes through a lock-fr
 
 1. **Edit → screen** (message thread only). A gesture class edits the graph through `GraphDocument`, which calls `GraphState` and `NodeFactory`, inside an undo transaction. `CanvasTreeListener` queues an `AsyncUpdate`, and `EditCanvas::handleAsyncUpdate` has `NodeManager` and `ArrowManager` add, move or remove components. Undo and redo take the same path, because the listener reacts to the tree, not to the gesture.
 2. **Edit → sound.** The same tree change reaches `RTGraphBuilder`'s listener. Its `handleAsyncUpdate` rebuilds the touched trees, and `AudioSnapshotPublisher::publishGraph` stores a new `Snapshot*`. The next block's `beginBlock` loads it.
-3. **Script → sound.** `TraversalRulesWindow` writes the source into `TraversalRuleState` and, after a 250 ms debounce, calls `publishActiveTraversalRule`. That compiles the source and publishes the `RTScript` the same way. A failed compile returns diagnostics to the editor, and the last good script keeps playing.
+3. **Script → sound.** `TraversalRulesWindow` writes the source into `TraversalRuleState` and, after a 250 ms debounce, compiles it to show diagnostics; it never publishes. `AudioSnapshotPublisher` listens to the rule state's rules and folders. After a change it calls `publishActiveTraversalRule`, which compiles the active rule and publishes the `RTScript` the same way, only when the active rule's id or source differs from the last one it compiled: at once for every change except typing, and when a 250 ms timer fires after the last change to the active rule's source. Renaming, moving or adding rules and folders, and typing in another rule, publish nothing, so they never reset the playing script's variables. A failed compile publishes nothing, so the last good script keeps playing.
 4. **Sound → screen.** `TraversalDispatcher` pushes highlight, arrow and count commands into `AudioUIBridge`. The editor's `audioCommandFrames` (a `VBlankAttachment`) fires once per display frame, applies transport changes to the `Titlebar` and calls `NodeCanvas::handleAsyncUpdate`, which drains the FIFOs. With no editor open the FIFOs overflow, and the drainer resyncs the canvas on its first drain.
-5. **Controls → sound.** The `Titlebar`'s transport buttons store the atomics `isPlaying` (`Titlebar::applyPlaybackState`, which also has `NodeCanvas::setPlaybackActive` equip the roots and then flushes `RTGraphBuilder`) and `resetRequested`. Its tempo and sync controls set host parameters. `processBlock` loads all of them each block. Note preview requests all come from `NotePreviewGestures` and go through `previewRequests`, which `TraversalSession::playPreview` pops.
+5. **Controls → sound.** The `Titlebar`'s transport buttons store the atomics `playback.isPlaying` (`Titlebar::applyPlaybackState`, which also has `NodeCanvas::setPlaybackActive` equip the roots and then flushes `RTGraphBuilder`) and `playback.resetRequested`. Its tempo and sync controls set host parameters. `processBlock` loads all of them each block. Note preview requests all come from `NotePreviewGestures` and go through `previewRequests`, which `TraversalSession::playPreview` pops.
 
 Memory is reclaimed without the audio thread freeing anything. `blockEpoch` is odd while a block runs. When `publish` replaces a snapshot it reads the epoch: if it is even, the old snapshot is freed on the spot; if it is odd, the snapshot is parked in `retiredSnapshots` until the epoch moves on. The audio thread therefore never drops the last reference. A RealtimeSanitizer build enforces this (section 6).
 
@@ -164,11 +164,11 @@ Memory is reclaimed without the audio thread freeing anything. `blockEpoch` is o
 | `Source/Audio/Traversal/` | one walk and its state | `Graph/RTData.h`, `Script/RTScript.h` (no JUCE) |
 | `Source/Audio/` | playback and channels | `Graph`, `Script`, `Util` |
 | `Source/Graph/` | document and audio-model builder | `Util`, `Script` |
-| `Source/Input/` | gesture routing and features | `Graph`, `UI`, `Util` |
+| `Source/Input/` | gesture routing and features | `Graph`, `Audio`, `UI`, `Util` |
 | `Source/UI/` | components | `Graph`, `Audio`, `Input`, `Util`, `Script` |
-| `Source/Plugin/` | the two roots and the publisher | everything |
+| `Source/Plugin/` | the two roots and the saved document | everything |
 
-The lower rows depend on the upper ones. The exceptions are `.cpp` files that include `Source/Plugin/` headers to reach processor members: `Titlebar.cpp` and `PatchControls.cpp` include `PluginProcessor.h`, and `TraversalRulesWindow.cpp` includes `AudioSnapshotPublisher.h`.
+The lower rows depend on the upper ones. `ArsNovaUI`, the shared library, may be included from any folder except `Source/Script/` and `Source/Audio/Traversal/`; `Source/Graph/` takes its canvas identifiers. The one exception is `Titlebar.cpp`, which includes `PluginProcessor.h` to reach the processor's transport, parameters and audio model.
 
 ## 6. Tests
 

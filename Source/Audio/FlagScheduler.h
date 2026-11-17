@@ -2,6 +2,7 @@
 
 #include "Traversal/TraversalPool.h"
 #include "DispatchContext.h"
+#include "NoteScheduler.h"
 
 #include <array>
 
@@ -40,8 +41,8 @@ public:
 
     FlagScheduler(TraversalDispatcher& owner, AudioUIBridge& bridgeRef);
 
-    void dispatchFlags(const RTNode& node, int hostRunId, const TraversalKey& hostKey, int parentCount,
-                       double sample, double tempoMultiplier, const DispatchContext& context);
+    void dispatchFlags(const RTNode& node, const TraversalKey& hostKey, int parentCount, const NoteScheduler::NoteTiming& timing,
+                       const DispatchContext& context);
 
     void advance(int numSamples);
     void clear ();

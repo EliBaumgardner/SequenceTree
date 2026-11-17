@@ -15,9 +15,9 @@
 
     syncWithGraph starts traversals newly assigned to a root and removes those whose root or
     assignment is gone. When the host jumps to a new position, beginReplay and continueReplay run
-    the walk forward silently to that point, a share of each block at a time, before playback
-    carries on live; playback says which of these it is doing. Note preview runs alongside in
-    previewTraversals.
+    the walk forward silently to that point, a share of each block at a time (the whole replay in
+    one block while renderingOffline is set), before playback carries on live; playback says
+    which of these it is doing. Note preview runs alongside in previewTraversals.
 
     processBlock drives it on the audio thread, and BottomBar and NodeCanvas send it preview
     requests through previewRequests. It holds both TraversalPools and plays them through the two
@@ -62,6 +62,8 @@ public:
     CommandFifo<RTPreviewRequest, previewRequestCapacity> previewRequests;
 
     Playback playback = Playback::Live;
+
+    bool renderingOffline = false;
 
     double replayRemainingSamples = 0.0;
 

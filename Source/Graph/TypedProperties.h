@@ -28,6 +28,27 @@ struct NodeProperties
     juce::CachedValue<juce::String> ornamentUid;
 };
 
+class NodePropertyTable
+{
+public:
+
+    struct Row
+    {
+        const juce::Identifier& identifier;
+
+        int initialValue = 0;
+
+        bool isSetOnCreation    = false;
+        bool isInheritedByChild = false;
+    };
+
+    static bool isAudioProperty(const juce::Identifier& identifier);
+
+    static constexpr int rowCount = 12;
+
+    static const Row rows[rowCount];
+};
+
 struct NoteProperties
 {
     explicit NoteProperties(juce::ValueTree note);

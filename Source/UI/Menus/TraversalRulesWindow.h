@@ -28,19 +28,18 @@
     Typing in a page stores its text in TraversalRuleState at once and starts a 250 ms timer.
     When the timer fires, compileViewedPage compiles the text with compileTraversalScript, marks
     the error lines, keeps the outline, and reports either the first error or the instruction
-    count. If the viewed rule is the live one, a successful compile is published through
-    AudioSnapshotPublisher::publishScript; a failed one leaves the last good script playing. The
-    play button, or Make live in the tree's menu, makes a rule the live one. Removing a rule drops
-    its page and tab, and republishes the live rule if the removed one was live; removing a folder
-    never removes the live rule. The window listens to the rules and folders trees and refreshes
-    its pages, tree and tabs when they change from elsewhere, for example by a restored patch.
+    count. The window never publishes: AudioSnapshotPublisher listens to the same trees and
+    publishes the live rule, 250 ms after typing in it pauses and at once when another rule
+    becomes the live one. The play button, or Make live in the tree's menu, makes a rule the live
+    one. Removing a rule drops its page and tab; removing a folder never removes the live rule.
+    The window listens to the rules and folders trees and refreshes its pages, tree and tabs when
+    they change from elsewhere, for example by a restored patch.
 
     PluginEditor opens it in a pop-up window from TraversalMenu's and NodeMenu's buttons, so it
     takes the CustomLookAndFeel in its constructor and sets it on itself.
 */
 
 class TraversalRuleState;
-class AudioSnapshotPublisher;
 
 class TraversalRulesWindow : public juce::Component,
                              private juce::Timer,
@@ -49,8 +48,7 @@ class TraversalRulesWindow : public juce::Component,
 {
 public:
 
-    TraversalRulesWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, AudioSnapshotPublisher& snapshots,
-                         juce::UndoManager& undoManager);
+    TraversalRulesWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, TraversalRuleState& traversalRuleState, juce::UndoManager& undoManager);
 
     ~TraversalRulesWindow() override;
 
@@ -110,9 +108,8 @@ private:
     RuleTabBar  tabBar;
     ArsNovaUI::PathBar pathBar;
 
-    TraversalRuleState&     traversalRuleState;
-    AudioSnapshotPublisher& snapshots;
-    juce::UndoManager&      undoManager;
+    TraversalRuleState& traversalRuleState;
+    juce::UndoManager&  undoManager;
 
     std::unordered_map<int, std::unique_ptr<ArsNovaUI::FilePage>> filePages;
 

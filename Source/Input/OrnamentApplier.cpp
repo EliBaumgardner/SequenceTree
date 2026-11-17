@@ -4,6 +4,7 @@
 #include <ArsNovaUI/Menus/ContextMenu.h>
 #include "../UI/Node/Node.h"
 #include "../Graph/OrnamentLibraries.h"
+#include "../Graph/OrnamentFigure.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 
 OrnamentApplier::OrnamentApplier(NodeCanvas& nodeCanvas, OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
@@ -19,7 +20,7 @@ void OrnamentApplier::respondToClick(juce::Component* clickedComponent)
 
     const juce::String activeUid = ornamentLibraries.activeOrnamentUid;
 
-    const OrnamentStatus status = ornamentLibraries.statusOf(ornamentLibraries.findOrnament(activeUid));
+    const OrnamentStatus status = OrnamentFigure::statusOf(ornamentLibraries.findOrnament(activeUid));
 
     if (clickedNode == nullptr) {
         nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::None);

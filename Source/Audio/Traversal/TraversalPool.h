@@ -150,8 +150,8 @@ public:
             slot.active = false;
         }
 
-        activeCount    = 0;
-        globals.script = nullptr;
+        activeCount        = 0;
+        globals.generation = 0;
         ++epoch;
     }
 

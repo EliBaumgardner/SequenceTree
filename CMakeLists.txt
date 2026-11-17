@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(SequenceTree VERSION 0.0.1)
+project(SequenceTree VERSION 1.0.0)
 
 option(SEQUENCETREE_REALTIME_SANITIZER "Build everything with -fsanitize=realtime and add SequenceTree_RealtimeTests; needs upstream clang 20 or later" OFF)
 
@@ -27,7 +27,7 @@ juce_add_plugin(SequenceTree
         NEEDS_MIDI_INPUT TRUE
         NEEDS_MIDI_OUTPUT TRUE
         FORMATS AU VST3 Standalone
-        PLUGIN_MANUFACTURER_CODE ANON
+        PLUGIN_MANUFACTURER_CODE ARNV
         PLUGIN_CODE ST01
 )
 
@@ -51,8 +51,9 @@ target_compile_definitions(SequenceTree PUBLIC
 
 target_sources(SequenceTree PRIVATE
         Source/Plugin/PluginProcessor.cpp
+        Source/Plugin/PluginDocument.cpp
         Source/Plugin/PluginEditor.cpp
-        Source/Plugin/AudioSnapshotPublisher.cpp
+        Source/Graph/AudioSnapshotPublisher.cpp
         Source/Audio/ThreadMessaging/AudioUIBridge.cpp
         Source/Audio/EventManager.cpp
         Source/Audio/NoteScheduler.cpp
@@ -62,8 +63,10 @@ target_sources(SequenceTree PRIVATE
         Source/Audio/TraversalDispatcher.cpp
         Source/Audio/FlagScheduler.cpp
         Source/Audio/TraversalSession.cpp
+        Source/Audio/PlaybackEngine.cpp
         Source/Audio/ThreadMessaging/VirtualMidiOutput.cpp
         Source/Audio/Traversal/TraversalRule.cpp
+        Source/Audio/Traversal/WeightedPick.cpp
         Source/Audio/Traversal/ScriptRun.cpp
         Source/Script/ScriptLexer.cpp
         Source/Script/ScriptParser.cpp
@@ -79,6 +82,8 @@ target_sources(SequenceTree PRIVATE
         Source/Graph/TraversalState.cpp
         Source/Graph/TraversalRuleState.cpp
         Source/Graph/OrnamentLibraries.cpp
+        Source/Graph/OrnamentFigure.cpp
+        Source/Graph/OrnamentSymbol.cpp
         Source/Graph/ValueTreeIdentifiers.cpp
         Source/Graph/StateJson.cpp
         Source/Graph/NodeFactory.cpp
@@ -123,6 +128,8 @@ target_sources(SequenceTree PRIVATE
         Source/UI/Menus/PatchControls.cpp
         Source/UI/Bars/Titlebar.cpp
         Source/UI/Bars/BottomBar.cpp
+        Source/UI/Bars/BindPane.cpp
+        Source/UI/Bars/OrnamentPane.cpp
         Source/UI/Ornaments/OrnamentWindow.cpp
         Source/UI/Ornaments/OrnamentBuildPanel.cpp
         Source/UI/Ornaments/OrnamentSelectionPanel.cpp
@@ -163,6 +170,7 @@ add_executable(SequenceTree_Tests
         Source/Audio/Traversal/ChildSelector.cpp
         Source/Audio/Traversal/ModulatorWalk.cpp
         Source/Audio/Traversal/TraversalRule.cpp
+        Source/Audio/Traversal/WeightedPick.cpp
         Source/Audio/Traversal/ScriptRun.cpp
         Source/Audio/Traversal/NodeStateTable.cpp
         Source/Audio/Traversal/NodeRowMap.cpp

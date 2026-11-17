@@ -2,6 +2,7 @@
 #include "OrnamentCanvas.h"
 #include "../../Input/FigureDocument.h"
 #include "../../Graph/OrnamentLibraries.h"
+#include "../../Graph/OrnamentFigure.h"
 
 OrnamentFigureController::OrnamentFigureController(OrnamentCanvas& ornamentCanvas, FigureDocument& figureDocument, OrnamentLibraries& ornamentLibraries)
     : ArsNovaUI::CanvasController(ornamentCanvas, figureDocument),
@@ -26,7 +27,7 @@ void OrnamentFigureController::mouseDown(const juce::MouseEvent& event)
         if (node != nullptr && ! event.mods.isRightButtonDown()) {
             undoManager.beginNewTransaction();
 
-            ornamentLibraries.toggleHost(figureDocument.ornament, node->nodeId, &undoManager);
+            OrnamentFigure::toggleHost(figureDocument.ornament, node->nodeId, &undoManager);
         }
 
         switchClickMode(ClickMode::Build);

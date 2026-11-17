@@ -22,7 +22,7 @@
     and redo, to publish the ornament, and to switch views. With the host tool selected the next
     click on a node makes it the host; with the node tool selected the figure is built as usual;
     with neither selected the canvas is in arrow mode and Shift-drag adds a dangling arrow.
-    Publish calls OrnamentLibraries::publish and is enabled only when isPublishable accepts the
+    Publish calls OrnamentFigure::publish and is enabled only when isPublishable accepts the
     figure and it is not already published.
 
     It listens to the libraries tree: when the active ornament changes it hands the new ornament

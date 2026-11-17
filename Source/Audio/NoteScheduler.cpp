@@ -8,72 +8,37 @@ NoteScheduler::NoteScheduler()
     activeNotes.reserve(maxExpectedActiveNotes);
 }
 
-void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, double sample,
-                                 juce::MidiBuffer& midiMessages,
-                                 double sampleRate, double tempoMultiplier,
-                                 int duration, bool isConnectionTrigger,
+void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, NoteTrigger trigger, const NoteTiming& timing, const DispatchContext& context,
                                  const NoteVoicing& voicing)
 {
-    if (static_cast<int>(activeNotes.size()) >= maxExpectedActiveNotes) {
-        return;
-    }
+    const bool isConnectionTrigger = trigger == NoteTrigger::Connection;
 
-    const double durationSamples = duration / ArrowInfo::millisecondsPerSecond * sampleRate / tempoMultiplier;
+    const double durationSamples = timing.duration / ArrowInfo::millisecondsPerSecond * context.sampleRate / timing.tempoMultiplier;
     const double lengthInSamples = juce::jmax(1.0, durationSamples);
 
     ActiveNote newNote;
 
+    if (static_cast<int>(activeNotes.size()) >= maxExpectedActiveNotes) {
+        return;
+    }
+
+    newNote.runId               = timing.runId;
+    newNote.nodeId              = node.nodeID;
     newNote.role                = role;
-    newNote.runId               = runId;
+    newNote.nodeType            = node.nodeType;
+    newNote.sound               = voicing.sound;
+    newNote.isConnectionTrigger = isConnectionTrigger;
+    newNote.remainingSamples    = timing.sample + lengthInSamples;
     newNote.event.pitch         = RTNote::fallbackValue;
     newNote.event.velocity      = RTNote::fallbackValue;
-    newNote.event.duration      = duration;
-    newNote.remainingSamples    = sample + lengthInSamples;
-    newNote.nodeId              = node.nodeID;
-    newNote.nodeType            = node.nodeType;
-    newNote.isConnectionTrigger = isConnectionTrigger;
-    newNote.sound               = voicing.sound;
+    newNote.event.duration      = timing.duration;
 
-    if (!isConnectionTrigger && !node.notes.empty()) {
-        const RTNote& noteData = node.notes[0];
-
-        newNote.event.pitch          = noteData.pitch;
-        newNote.event.velocity       = noteData.velocity;
-        newNote.event.midiChannel    = juce::jlimit(NodeInfo::minimumMidiChannel, NodeInfo::maximumMidiChannel, noteData.midiChannel);
-
-        if (voicing.pitchOverride >= 0) {
-            newNote.event.pitch = voicing.pitchOverride;
-        }
-
-        if (voicing.velocityOverride >= 0) {
-            newNote.event.velocity = voicing.velocityOverride;
-        }
-
-        if (newNote.event.velocity <= 0) {
-            newNote.event.velocity = RTNote::fallbackValue;
-        }
-    }
-
-    if (voicing.channel >= 1) {
-        newNote.event.midiChannel = juce::jlimit(NodeInfo::minimumMidiChannel, NodeInfo::maximumMidiChannel, voicing.channel);
-    }
-
-    if (voicing.transpose != 0) {
-        const int transposedPitch = newNote.event.pitch + voicing.transpose;
-
-        newNote.event.pitch = juce::jlimit(NodeInfo::minimumMidiPitch, NodeInfo::maximumMidiPitch, transposedPitch);
-    }
-
-    if (voicing.velocityMultiplier != 1.0) {
-        const int scaledVelocity = juce::roundToInt(newNote.event.velocity * voicing.velocityMultiplier);
-
-        newNote.event.velocity = juce::jlimit(NodeInfo::silentMidiVelocity, NodeInfo::maximumMidiVelocity, scaledVelocity);
-    }
+    applyVoicing(newNote, node, voicing);
 
     if (!isConnectionTrigger && !node.ornament.empty()) {
         newNote.ornament = { 0, newNote.event.pitch, newNote.event.velocity, lengthInSamples };
 
-        startOrnamentStep(newNote, node.ornament, sample);
+        startOrnamentStep(newNote, node.ornament, timing.sample);
     }
 
     activeNotes.push_back(newNote);
@@ -81,11 +46,11 @@ void NoteScheduler::scheduleNote(const RTNode& node, NoteRole role, int runId, d
     if (isNoteSounding(newNote)) {
         const juce::uint8 noteOnVelocity = static_cast<juce::uint8>(newNote.event.velocity);
 
-        const int noteOnSample = static_cast<int>(sample);
+        const int noteOnSample = static_cast<int>(timing.sample);
 
         const juce::MidiMessage noteOn = juce::MidiMessage::noteOn(newNote.event.midiChannel, newNote.event.pitch, noteOnVelocity);
 
-        midiMessages.addEvent(noteOn, noteOnSample);
+        context.midiMessages.addEvent(noteOn, noteOnSample);
     }
 }
 
@@ -176,8 +141,46 @@ bool NoteScheduler::isNoteSounding(const ActiveNote& note)
 
 bool NoteScheduler::isNodeAudible(NodeInfo::Kind nodeType)
 {
-    return nodeType != NodeInfo::Kind::ModulatorRoot
-        && nodeType != NodeInfo::Kind::TraversalFlag;
+    return NodeInfo::kindTraits[static_cast<int>(nodeType)].isAudible;
+}
+
+void NoteScheduler::applyVoicing(ActiveNote& note, const RTNode& node, const NoteVoicing& voicing)
+{
+    if (!note.isConnectionTrigger && !node.notes.empty()) {
+        const RTNote& noteData = node.notes[0];
+
+        note.event.pitch       = noteData.pitch;
+        note.event.velocity    = noteData.velocity;
+        note.event.midiChannel = juce::jlimit(NodeInfo::minimumMidiChannel, NodeInfo::maximumMidiChannel, noteData.midiChannel);
+
+        if (voicing.pitchOverride >= 0) {
+            note.event.pitch = voicing.pitchOverride;
+        }
+
+        if (voicing.velocityOverride >= 0) {
+            note.event.velocity = voicing.velocityOverride;
+        }
+
+        if (note.event.velocity <= 0) {
+            note.event.velocity = RTNote::fallbackValue;
+        }
+    }
+
+    if (voicing.channel >= 1) {
+        note.event.midiChannel = juce::jlimit(NodeInfo::minimumMidiChannel, NodeInfo::maximumMidiChannel, voicing.channel);
+    }
+
+    if (voicing.transpose != 0) {
+        const int transposedPitch = note.event.pitch + voicing.transpose;
+
+        note.event.pitch = juce::jlimit(NodeInfo::minimumMidiPitch, NodeInfo::maximumMidiPitch, transposedPitch);
+    }
+
+    if (voicing.velocityMultiplier != 1.0) {
+        const int scaledVelocity = juce::roundToInt(note.event.velocity * voicing.velocityMultiplier);
+
+        note.event.velocity = juce::jlimit(NodeInfo::silentMidiVelocity, NodeInfo::maximumMidiVelocity, scaledVelocity);
+    }
 }
 
 void NoteScheduler::startOrnamentStep(ActiveNote& note, std::span<const OrnamentStep> figure, double sample)

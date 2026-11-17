@@ -7,6 +7,7 @@
 #include <ArsNovaUI/Buttons/ButtonPane.h>
 #include <ArsNovaUI/Editors/LabeledEditor.h>
 #include "../../Graph/OrnamentLibraries.h"
+#include "../../Graph/OrnamentSymbol.h"
 
 /*
     The drawing surface for an ornament's symbol, the small picture shown on the canvas where the
@@ -16,8 +17,8 @@
     that clears the symbol.
 
     With the pencil, a drag draws a stroke that is only shown on screen while the mouse is down;
-    mouseUp scales it into the square's units and stores it with OrnamentLibraries::addSymbolStroke.
-    With the eraser, each step of a drag calls OrnamentLibraries::eraseSymbol on the symbol under
+    mouseUp scales it into the square's units and stores it with OrnamentSymbol::addStroke.
+    With the eraser, each step of a drag calls OrnamentSymbol::erase on the symbol under
     the eraser's circle. The size is the brush width as a percentage of the square, from 1 to 20.
     Each edit is an undo transaction.
 
@@ -45,24 +46,28 @@ public:
 
     static constexpr float pointSpacing      = 2.0f;
     static constexpr float drawingInsetRatio = 0.1f;
-    static constexpr int   clearButtonSize   = 22;
-    static constexpr int   clearButtonInset  = 6;
-    static constexpr int   toolPaneHeight    = 26;
-    static constexpr int   toolPaneInset     = 6;
-    static constexpr float eraserStepRatio   = 0.5f;
-    static constexpr float dashLength        = 2.0f;
-    static constexpr float percent           = 100.0f;
 
-    static constexpr double minBrushPercent    = 1.0;
-    static constexpr double maxBrushPercent    = 20.0;
-    static constexpr int    brushDecimalPlaces = 1;
-    static constexpr int    sizeLabelWidth     = 30;
-    static constexpr int    sizeEditorWidth    = 44;
-    static constexpr int    sizeFieldGap       = 4;
+    static constexpr int clearButtonSize  = 22;
+    static constexpr int clearButtonInset = 6;
+    static constexpr int toolPaneHeight   = 26;
+    static constexpr int toolPaneInset    = 6;
+
+    static constexpr float eraserStepRatio = 0.5f;
+    static constexpr float dashLength      = 2.0f;
+    static constexpr float percent         = 100.0f;
+
+    static constexpr double minBrushPercent = 1.0;
+    static constexpr double maxBrushPercent = 20.0;
+
+    static constexpr int brushDecimalPlaces = 1;
+    static constexpr int sizeLabelWidth     = 30;
+    static constexpr int sizeEditorWidth    = 44;
+    static constexpr int sizeFieldGap       = 4;
 
     juce::ValueTree ornament;
-    SymbolTool      tool       = SymbolTool::Pencil;
-    float           brushWidth = OrnamentLibraries::defaultStrokeWidth;
+    SymbolTool      tool = SymbolTool::Pencil;
+
+    float brushWidth = OrnamentSymbol::defaultStrokeWidth;
 
     ArsNovaUI::ButtonPane    toolPane;
     ArsNovaUI::IconButton    clearButton;
@@ -76,8 +81,10 @@ private:
     juce::UndoManager& undoManager;
 
     juce::Rectangle<float> drawingArea;
-    juce::Path             stroke;
-    juce::Point<float>     lastPoint;
+
+    juce::Path stroke;
+
+    juce::Point<float> lastPoint;
 
     std::optional<juce::Point<float>> cursorPosition;
 };

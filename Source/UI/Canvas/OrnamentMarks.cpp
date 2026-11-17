@@ -3,6 +3,7 @@
 #include "NodeCanvas.h"
 #include "../Node/Node.h"
 #include "../../Graph/OrnamentLibraries.h"
+#include "../../Graph/OrnamentFigure.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
@@ -38,7 +39,7 @@ void OrnamentMarks::refresh(Node& node)
         mark = ArsNovaUI::SymbolMark::Missing;
     }
 
-    if (uid.isNotEmpty() && ornamentLibraries.statusOf(ornament) != OrnamentStatus::Draft) {
+    if (uid.isNotEmpty() && OrnamentFigure::statusOf(ornament) != OrnamentStatus::Draft) {
         mark = ArsNovaUI::SymbolMark::Symbol;
     }
 

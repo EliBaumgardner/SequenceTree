@@ -28,6 +28,8 @@ public:
 
     static std::unique_ptr<juce::XmlElement> read(const void* data, int sizeInBytes);
 
+    static constexpr const char* patchExtension = ".sqtree";
+
 private:
 
     static std::unique_ptr<juce::XmlElement> toElement(const juce::var& value);

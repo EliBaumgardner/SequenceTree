@@ -13,7 +13,7 @@
     note's length; a Ctrl drag scrubs a node's value; and a Shift right-click removes a node or
     the dangling arrow. What it handles itself is a Shift-click on the empty canvas, which adds
     the first node snapped to the grid, and the click mode: in ClickMode::PickHost the next
-    click on a node makes it the host, or unmarks it, through OrnamentLibraries::toggleHost, and
+    click on a node makes it the host, or unmarks it, through OrnamentFigure::toggleHost, and
     the mode returns to Build.
 
     OrnamentBuildPanel owns it and shows its click mode and arrow mode on the title bar through

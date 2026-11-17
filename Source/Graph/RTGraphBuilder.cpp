@@ -1,13 +1,3 @@
-/*
-  ==============================================================================
-
-    RTGraphBuilder.cpp
-    Created: 30 Apr 2026
-    Author:  Eli Baumgardner
-
-  ==============================================================================
-*/
-
 #include "RTGraphBuilder.h"
 
 #include <algorithm>
@@ -15,9 +5,10 @@
 #include <unordered_set>
 #include <utility>
 
-#include "../Plugin/AudioSnapshotPublisher.h"
+#include "AudioSnapshotPublisher.h"
 #include "GraphState.h"
 #include "OrnamentLibraries.h"
+#include "OrnamentFigure.h"
 #include "TypedProperties.h"
 #include "ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
@@ -118,18 +109,7 @@ void RTGraphBuilder::valueTreePropertyChanged(juce::ValueTree& tree, const juce:
         || propertyIdentifier == ValueTreeIdentifiers::MidiVelocity) {
         graphOwner = tree.getParent().getParent();
     }
-    else if (propertyIdentifier == ValueTreeIdentifiers::MidiChannel
-        || propertyIdentifier == ValueTreeIdentifiers::CountLimit
-        || propertyIdentifier == ValueTreeIdentifiers::TriggerLimit
-        || propertyIdentifier == ValueTreeIdentifiers::LoopLimit
-        || propertyIdentifier == ValueTreeIdentifiers::SwitchCountLimit
-        || propertyIdentifier == ValueTreeIdentifiers::SubLoopCountLimit
-        || propertyIdentifier == ValueTreeIdentifiers::RepeatValue
-        || propertyIdentifier == ValueTreeIdentifiers::Probability
-        || propertyIdentifier == ValueTreeIdentifiers::ModAmount
-        || propertyIdentifier == ValueTreeIdentifiers::TraversalFlagValue
-        || propertyIdentifier == ValueTreeIdentifiers::EncapsulatorId
-        || propertyIdentifier == ValueTreeIdentifiers::OrnamentUid) {
+    else if (NodePropertyTable::isAudioProperty(propertyIdentifier)) {
         graphOwner = tree;
     }
     else if (tree.getType() == ValueTreeIdentifiers::TraversalData
@@ -456,7 +436,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
         rtNode.repeatValue       = properties.repeatValue;
         rtNode.probability       = properties.probability;
 
-        const bool isAlternative = NodeInfo::alternativeKind[static_cast<int>(rtNode.nodeType)];
+        const bool isAlternative = NodeInfo::kindTraits[static_cast<int>(rtNode.nodeType)].isAlternative;
 
         if (rtNode.nodeType == NodeInfo::Kind::Root) {
             rtNode.subLoopCountLimit = loopLimit;
@@ -467,8 +447,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
             rtNode.subLoopCountLimit = GraphState::defaultSubLoopCountLimit;
         }
 
-        if (rtNode.nodeType == NodeInfo::Kind::ModulatorRoot || rtNode.nodeType == NodeInfo::Kind::Modulator
-            || rtNode.nodeType == NodeInfo::Kind::AlternativeModulator) {
+        if (NodeInfo::kindTraits[static_cast<int>(rtNode.nodeType)].isModulator) {
             rtNode.pitchOffset = properties.modAmount;
         }
 
@@ -492,7 +471,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
 
                 rtNode.parentId = parentId;
 
-                if (isAlternative && !NodeInfo::alternativeKind[static_cast<int>(parentNode.nodeType)]) {
+                if (isAlternative && !NodeInfo::kindTraits[static_cast<int>(parentNode.nodeType)].isAlternative) {
                     parentNode.alternativeRootId = rtNode.nodeID;
                     rtNode.alternativeRootId     = rtNode.nodeID;
                 }
@@ -534,7 +513,7 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
             rtNode.notes.push_back(std::move(rtNote));
         }
 
-        rtNode.ornament = ornamentLibraries.figureSteps(publishedFigure);
+        rtNode.ornament = OrnamentFigure::steps(publishedFigure);
 
         builtNodes[nodeId] = std::move(rtNode);
     }

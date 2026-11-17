@@ -91,7 +91,7 @@ private:
     ArsNovaUI::PopupWindowLauncher traversalRulesLauncher {
         "Traversal Rules",
         [this]() {
-            auto content = std::make_unique<TraversalRulesWindow>(lookAndFeel, audioProcessor.traversalRuleState, audioProcessor.snapshots, audioProcessor.undoManager);
+            auto content = std::make_unique<TraversalRulesWindow>(lookAndFeel, audioProcessor.document.traversalRuleState, audioProcessor.document.undoManager);
 
             content->setSize(TraversalRulesWindow::defaultWidth, TraversalRulesWindow::defaultHeight);
 
@@ -115,7 +115,7 @@ private:
     ArsNovaUI::PopupWindowLauncher ornamentLauncher {
         "Ornaments",
         [this]() {
-            auto content = std::make_unique<OrnamentWindow>(lookAndFeel, audioProcessor.ornamentLibraries, audioProcessor.canvasSettings, audioProcessor.ornamentUndoManager);
+            auto content = std::make_unique<OrnamentWindow>(lookAndFeel, audioProcessor.document.ornamentLibraries, audioProcessor.document.canvasSettings, audioProcessor.document.ornamentUndoManager);
 
             const juce::Point<int> size = content->narrowestSize();
 

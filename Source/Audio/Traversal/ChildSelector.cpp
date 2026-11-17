@@ -208,19 +208,42 @@ int ChildSelector::selectTreeJumpChild(const NodeMap& nodes, const Walker& walke
     return chosen;
 }
 
+const RTNode* ChildSelector::subLoopEntryFor(const NodeMap& nodes, const Walker& walker, int leavingNodeId, int chosenNodeId)
+{
+    const RTNode* const leavingNode = nodes.find(leavingNodeId);
+
+    if (leavingNode == nullptr) {
+        return nullptr;
+    }
+
+    const int entryId = leavingNode->encapsulationEntryId;
+
+    if (entryId == -1 || walker.subRootNode != entryId) {
+        return nullptr;
+    }
+
+    const RTNode* const chosenNode = nodes.find(chosenNodeId);
+
+    if (chosenNode != nullptr && chosenNode->encapsulationEntryId == entryId) {
+        return nullptr;
+    }
+
+    return nodes.find(entryId);
+}
+
 bool ChildSelector::isModulatorChild(NodeInfo::Kind kind)
 {
-    return kind == NodeInfo::Kind::Modulator || kind == NodeInfo::Kind::ModulatorRoot;
+    return NodeInfo::kindTraits[static_cast<int>(kind)].isModulatorChild;
 }
 
 bool ChildSelector::isAdvanceableChild(NodeInfo::Kind kind)
 {
-    return kind == NodeInfo::Kind::Node || kind == NodeInfo::Kind::Modulator || kind == NodeInfo::Kind::Root;
+    return NodeInfo::kindTraits[static_cast<int>(kind)].isAdvanceable;
 }
 
 bool ChildSelector::isAudibleChild(NodeInfo::Kind kind)
 {
-    return kind == NodeInfo::Kind::Node || kind == NodeInfo::Kind::Root;
+    return NodeInfo::kindTraits[static_cast<int>(kind)].isAudibleChild;
 }
 
 void ChildSelector::selectSwitchNode(const NodeMap& nodes, int targetId, int& chosenNodeId)
@@ -262,30 +285,13 @@ void ChildSelector::registerTrigger(const NodeMap& nodes, int nodeId)
 
 int ChildSelector::encapsulationLoopTarget(const NodeMap& nodes, Walker& walker, int leavingNodeId, int chosenNodeId)
 {
-    const RTNode* const leavingNode = nodes.find(leavingNodeId);
-
-    if (leavingNode == nullptr) {
-        return -1;
-    }
-
-    const int entryId = leavingNode->encapsulationEntryId;
-
-    if (entryId == -1 || walker.subRootNode != entryId) {
-        return -1;
-    }
-
-    const RTNode* const chosenNode = nodes.find(chosenNodeId);
-
-    if (chosenNode != nullptr && chosenNode->encapsulationEntryId == entryId) {
-        return -1;
-    }
-
-    const RTNode* const entryNode = nodes.find(entryId);
+    const RTNode* const entryNode = subLoopEntryFor(nodes, walker, leavingNodeId, chosenNodeId);
 
     if (entryNode == nullptr) {
         return -1;
     }
 
+    const int entryId      = entryNode->nodeID;
     const int subLoopLimit = entryNode->subLoopCountLimit;
     const int subLoopCount = nodeState.increment(NodeStateSlot::SubRootCount, entryId);
 

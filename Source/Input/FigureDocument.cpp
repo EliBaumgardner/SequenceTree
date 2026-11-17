@@ -1,5 +1,6 @@
 #include "FigureDocument.h"
 #include "../Graph/OrnamentLibraries.h"
+#include "../Graph/OrnamentFigure.h"
 #include "../Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
@@ -16,7 +17,7 @@ juce::ValueTree FigureDocument::findNode(int nodeId) const
 
 juce::ValueTree FigureDocument::addChildNode(int parentNodeId, juce::Point<int> position, const juce::ModifierKeys&)
 {
-    return ornamentLibraries.addFigureNode(ornament, parentNodeId, position, &undoManager);
+    return OrnamentFigure::addNode(ornament, parentNodeId, position, &undoManager);
 }
 
 int FigureDocument::growFrom(int nodeId) const
@@ -32,32 +33,32 @@ int FigureDocument::growFrom(int nodeId) const
 
 void FigureDocument::addRootNode(juce::Point<int> position)
 {
-    ornamentLibraries.addFigureNode(ornament, -1, position, &undoManager);
+    OrnamentFigure::addNode(ornament, -1, position, &undoManager);
 }
 
 void FigureDocument::moveNode(juce::ValueTree nodeTree, juce::Point<int> position)
 {
-    ornamentLibraries.setFigureNodePosition(ornament, nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id), position, &undoManager);
+    OrnamentFigure::setNodePosition(ornament, nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id), position, &undoManager);
 }
 
 void FigureDocument::removeNode(int nodeId)
 {
-    ornamentLibraries.removeFigureNode(ornament, nodeId, &undoManager);
+    OrnamentFigure::removeNode(ornament, nodeId, &undoManager);
 }
 
 void FigureDocument::addDanglingArrow(juce::ValueTree nodeTree, juce::Point<int> tipOffset)
 {
-    ornamentLibraries.addDanglingArrow(ornament, nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id), tipOffset, &undoManager);
+    OrnamentFigure::addDanglingArrow(ornament, nodeTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id), tipOffset, &undoManager);
 }
 
 void FigureDocument::setDanglingArrowTip(juce::ValueTree, juce::Point<int> tipOffset)
 {
-    ornamentLibraries.setLastNodeLength(ornament, tipOffset, &undoManager);
+    OrnamentFigure::setLastNodeLength(ornament, tipOffset, &undoManager);
 }
 
 void FigureDocument::removeDanglingArrow(juce::ValueTree)
 {
-    ornamentLibraries.removeDanglingArrow(ornament, &undoManager);
+    OrnamentFigure::removeDanglingArrow(ornament, &undoManager);
 }
 
 void FigureDocument::connect(int, int, ConnectionGesture)

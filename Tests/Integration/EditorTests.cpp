@@ -58,25 +58,25 @@ static void addVariedGraph(GraphState& graph, const juce::Point<int>& origin)
     const int firstY  = origin.y + firstRow;
     const int secondY = origin.y + secondRow;
 
-    NodeFactory::createRootNode(graph, { origin.x, origin.y, nodeRadius }, nullptr);
+    NodeFactory(graph, nullptr).createRootNode({ origin.x, origin.y, nodeRadius });
 
     const juce::ValueTree root   = graph.nodeMap.getChild(graph.nodeMap.getNumChildren() - 1);
     const int             rootId = root.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    const juce::ValueTree first   = NodeFactory::createNode(graph, rootId, ValueTreeIdentifiers::NodeData, { firstX, origin.y, nodeRadius }, nullptr);
+    const juce::ValueTree first   = NodeFactory(graph, nullptr).createNode(rootId, ValueTreeIdentifiers::NodeData, { firstX, origin.y, nodeRadius });
     const int             firstId = first.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    const juce::ValueTree second   = NodeFactory::createNode(graph, firstId, ValueTreeIdentifiers::NodeData, { secondX, origin.y, nodeRadius }, nullptr);
+    const juce::ValueTree second   = NodeFactory(graph, nullptr).createNode(firstId, ValueTreeIdentifiers::NodeData, { secondX, origin.y, nodeRadius });
     const int             secondId = second.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    const juce::ValueTree modulatorRoot   = NodeFactory::createModulatorRoot(graph, rootId, { origin.x, secondY, nodeRadius }, nullptr);
+    const juce::ValueTree modulatorRoot   = NodeFactory(graph, nullptr).createModulatorNode(NodeInfo::Kind::ModulatorRoot, rootId, { origin.x, secondY, nodeRadius });
     const int             modulatorRootId = modulatorRoot.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
     const std::vector<int> members { firstId, secondId };
 
-    NodeFactory::createTraversalFlagNode(graph, rootId, { firstX, firstY, nodeRadius }, nullptr);
-    NodeFactory::createModulator(graph, modulatorRootId, { firstX, secondY, nodeRadius }, nullptr);
-    NodeFactory::createEncapsulator(graph, members, nullptr);
+    NodeFactory(graph, nullptr).createTraversalFlagNode(rootId, { firstX, firstY, nodeRadius });
+    NodeFactory(graph, nullptr).createModulatorNode(NodeInfo::Kind::Modulator, modulatorRootId, { firstX, secondY, nodeRadius });
+    NodeFactory(graph, nullptr).createEncapsulator(members);
 }
 
 static juce::Image drawEditor(juce::AudioProcessorEditor& editor)
@@ -172,7 +172,7 @@ TEST_CASE("nodes, flags, modulators and groups added to the graph show up in the
 
         const juce::Image emptyImage = drawEditor(*editor);
 
-        addVariedGraph(processor->graphState, origin);
+        addVariedGraph(processor->document.graphState, origin);
 
         sequenceTreeEditor.nodeCanvas->handleAsyncUpdate();
 

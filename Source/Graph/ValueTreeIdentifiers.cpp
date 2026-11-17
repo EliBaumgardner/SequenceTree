@@ -1,6 +1,7 @@
 #include "ValueTreeIdentifiers.h"
 
 const juce::Identifier ValueTreeIdentifiers::PluginState            {"PluginState"};
+const juce::Identifier ValueTreeIdentifiers::SchemaVersion          {"SchemaVersion"};
 const juce::Identifier ValueTreeIdentifiers::NodeMap                {"NodeMap"};
 const juce::Identifier ValueTreeIdentifiers::Patch                  {"Patch"};
 const juce::Identifier ValueTreeIdentifiers::PatchName              {"PatchName"};

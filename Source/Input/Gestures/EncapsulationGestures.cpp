@@ -63,7 +63,7 @@ void EncapsulationGestures::selectSpanNode(Node& node)
 
     undoManager.beginNewTransaction();
 
-    NodeFactory::createEncapsulator(graphState, spanNodeIds, &undoManager);
+    NodeFactory(graphState, &undoManager).createEncapsulator(spanNodeIds);
 }
 
 void EncapsulationGestures::adoptCreatedChild(int parentNodeId, const juce::ValueTree& child)

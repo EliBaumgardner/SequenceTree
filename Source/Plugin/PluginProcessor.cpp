@@ -1,7 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "../UI/Node/Node.h"
-#include "../UI/Canvas/GridMultiplier.h"
+
 #include "../Graph/TypedProperties.h"
 #include "../Graph/StateJson.h"
 #include "../Graph/ValueTreeIdentifiers.h"
@@ -24,55 +23,17 @@ SequenceTreeAudioProcessor::SequenceTreeAudioProcessor()
 #endif
 , valueTreeState(*this,nullptr,"STATE",createParameterLayout())
 {
-    const juce::File applicationSupport = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Application Support");
-    const juce::File untitledPatch      = claimUntitledPatch(patchFolder);
-
-    const juce::String untitledName = untitledPatch.getFileNameWithoutExtension();
-    const juce::String untitledPath = untitledPatch.getFullPathName();
-
-    PatchProperties patchProperties(patch);
-
-    CanvasSettingsProperties settings(canvasSettings);
-
-    traversalRuleState.ensureDefaultRule();
     snapshots.publishActiveTraversalRule();
-
-    patchFolder.createDirectory();
-
-    patchProperties.patchName.setValue(untitledName, nullptr);
-    patchProperties.patchFile.setValue(untitledPath, nullptr);
-    settings.graphGridMultiplier   .setValue(GridMultiplier::defaultGraphMultiplier,    nullptr);
-    settings.ornamentGridMultiplier.setValue(GridMultiplier::defaultOrnamentMultiplier, nullptr);
-    settings.arrowXBinding         .setValue(settings.arrowXBinding.getDefault(),       nullptr);
-    settings.arrowYBinding         .setValue(settings.arrowYBinding.getDefault(),       nullptr);
-    settings.arrowXMultiplier      .setValue(settings.arrowXMultiplier.getDefault(),    nullptr);
-    settings.arrowYMultiplier      .setValue(settings.arrowYMultiplier.getDefault(),    nullptr);
-    settings.arrowXTarget          .setValue(settings.arrowXTarget.getDefault(),        nullptr);
-    settings.arrowYTarget          .setValue(settings.arrowYTarget.getDefault(),        nullptr);
-
-    ornamentLibraries.load(userFolder.getChildFile("Ornament Libraries"));
-    ornamentLibraries.importLegacyLibraries(applicationSupport.getChildFile(JucePlugin_Name).getChildFile("Ornament Libraries"));
 }
 
 void SequenceTreeAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    tempoInfo.currentSampleRate = sampleRate;
-    traversalSession.prepare();
+    playback.prepare(sampleRate);
 }
 
 void SequenceTreeAudioProcessor::releaseResources()
 {
-    pendingNoteOffs.clear();
-
-    for (EventManager* manager : { &eventManager, &previewEventManager }) {
-        for (const auto& note : manager->scheduler.activeNotes) {
-            if (NoteScheduler::isNoteSounding(note)) {
-                pendingNoteOffs.push_back(juce::MidiMessage::noteOff(note.event.midiChannel, note.event.pitch));
-            }
-        }
-
-        manager->scheduler.clear();
-    }
+    playback.releaseNotes();
 
     snapshots.releaseRetiredSnapshots();
 }
@@ -104,179 +65,30 @@ void SequenceTreeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, 
 {
     juce::ScopedNoDenormals noDenormals;
 
-    const BlockScope                        blockScope { snapshots };
-    const AudioSnapshotPublisher::Snapshot* snap       = blockScope.snapshot;
-    const int                               numSamples = buffer.getNumSamples();
-    bool                                    resetHit   = resetRequested.exchange(false);
+    const BlockScope blockScope { snapshots };
 
-    if (resetHit && traversalSession.playback == TraversalSession::Playback::Replaying) {
-        tempoInfo.expectedPpq.reset();
-        resetHit = false;
-    }
+    const Snapshot*            snap     = blockScope.snapshot;
+    juce::AudioPlayHead* const playHead = getPlayHead();
 
-    followHostTransport(numSamples);
+    const int numSamples = buffer.getNumSamples();
+    const int transpose  = juce::roundToInt(transposeParameter.load());
 
-    const bool      playing         = isPlaying.load();
-    const bool      suspended       = wasPlaying && !playing;
-    const bool      hasGraph        = snap != nullptr && snap->globalNodes != nullptr;
-    const bool      replayWanted    = tempoInfo.pendingRelocationSamples.has_value()
-                                   || traversalSession.playback == TraversalSession::Playback::Replaying;
-    const bool      replayThisBlock = replayWanted && !resetHit;
-    const RTScript* activeScript    = nullptr;
+    const float tempo    = tempoParameter.load();
+    const float velocity = velocityParameter.load();
 
-    if (snap != nullptr) {
-        activeScript = snap->traversalScript.get();
-    }
+    const bool followsHost  = wrapperType != wrapperType_Standalone;
+    const bool syncedToHost = hostSyncParameter.load() >= 0.5f;
+    const bool offline      = isNonRealtime();
+
+    const PlaybackEngine::BlockInfo block { .playHead = playHead, .tempoParameter = tempo, .velocityParameter = velocity, .numSamples = numSamples,
+                                            .transpose = transpose, .followsHost = followsHost, .syncedToHost = syncedToHost, .offline = offline };
 
     buffer.clear();
     midiMessages.clear();
 
-    for (const auto& noteOff : pendingNoteOffs) {
-        midiMessages.addEvent(noteOff, 0);
-    }
+    playback.processBlock(snap, midiMessages, block);
 
-    pendingNoteOffs.clear();
-
-    if (resetHit) {
-        traversalSession.silenceAllNotes(midiMessages);
-    }
-
-    if (suspended) {
-        traversalSession.suspendActiveNotes(midiMessages);
-    }
-
-    wasPlaying = playing;
-
-    traversalSession.setTraversalScript(activeScript);
-
-    if (hasGraph) {
-        driveWalk(*snap, midiMessages, numSamples, playing, resetHit, replayThisBlock);
-    }
-    else if (resetHit) {
-        traversalSession.clearTraversals();
-    }
-
-    virtualMidiOutput.mirrorBlock(midiMessages, tempoInfo.currentSampleRate);
-}
-
-void SequenceTreeAudioProcessor::followHostTransport(const int numSamples) noexcept
-{
-    if (wrapperType != wrapperType_Standalone) {
-        bool hostPlaying = false;
-
-        if (juce::AudioPlayHead* playHead = getPlayHead()) {
-            if (const juce::Optional<juce::AudioPlayHead::PositionInfo> position = playHead->getPosition()) {
-                hostPlaying = position->getIsPlaying();
-
-                if (const juce::Optional<double> hostBpm = position->getBpm()) {
-                    tempoInfo.hostBpm = *hostBpm;
-                }
-
-                const juce::Optional<double> hostPpq = position->getPpqPosition();
-
-                if (hostPpq && tempoInfo.hostBpm > 0.0) {
-                    const bool resumed           = hostPlaying && !tempoInfo.hostWasPlaying;
-                    const bool resumeNeedsReplay = resumed && traversalSession.playback == TraversalSession::Playback::Live;
-                    const bool moved             = tempoInfo.hostPositionKnown && (!tempoInfo.expectedPpq || std::abs(*hostPpq - *tempoInfo.expectedPpq) > TempoInfo::relocationToleranceBeats);
-                    const bool jumped            = resumeNeedsReplay || moved;
-                    const bool syncedToHost      = hostSyncParameter.load() >= 0.5f;
-
-                    if (jumped && syncedToHost) {
-                        const double hostBeats   = juce::jmax(0.0, *hostPpq);
-                        const double hostSeconds = hostBeats * TempoInfo::secondsPerMinute / tempoInfo.hostBpm;
-
-                        tempoInfo.pendingRelocationSamples = std::round(hostSeconds * tempoInfo.currentSampleRate);
-                    }
-
-                    tempoInfo.expectedPpq       = *hostPpq;
-                    tempoInfo.hostPositionKnown = true;
-
-                    if (hostPlaying) {
-                        tempoInfo.expectedPpq = *hostPpq + numSamples / tempoInfo.currentSampleRate * tempoInfo.hostBpm / TempoInfo::secondsPerMinute;
-                    }
-                }
-                else {
-                    tempoInfo.expectedPpq.reset();
-                }
-            }
-        }
-
-        tempoInfo.hostWasPlaying = hostPlaying;
-
-        if (hostPlaying != isPlaying.exchange(hostPlaying)) {
-            playbackStateChanged.store(true);
-        }
-    }
-}
-
-void SequenceTreeAudioProcessor::driveWalk(const AudioSnapshotPublisher::Snapshot& snap, juce::MidiBuffer& midiMessages,
-                                           const int numSamples, const bool playing, const bool resetHit,
-                                           const bool replayThisBlock) noexcept
-{
-    double hostTempoScale = 1.0;
-
-    if (tempoInfo.hostBpm > 0.0) {
-        hostTempoScale = tempoInfo.hostBpm / TempoInfo::referenceBpm;
-    }
-
-    const DispatchContext context {
-        *snap.globalNodes,
-        traversalSession.traversals,
-        midiMessages,
-        tempoInfo.currentSampleRate,
-        tempoParameter.load() * hostTempoScale,
-        velocityParameter.load() / static_cast<double>(NodeInfo::maximumMidiVelocity),
-        juce::roundToInt(transposeParameter.load())
-    };
-
-    const DispatchContext previewContext { context.nodes, traversalSession.previewTraversals, context.midiMessages,
-                                           context.sampleRate, context.tempoMultiplier,
-                                           context.velocityScale, context.transpose };
-
-    traversalSession.playPreview(previewContext, numSamples);
-
-    if (!playing && !replayThisBlock) {
-        if (resetHit) {
-            traversalSession.clearTraversals();
-        }
-
-        return;
-    }
-
-    eventManager.followTempo(context.tempoMultiplier);
-
-    if (tempoInfo.pendingRelocationSamples) {
-        traversalSession.beginReplay(context, *tempoInfo.pendingRelocationSamples);
-        tempoInfo.pendingRelocationSamples.reset();
-    }
-
-    if (traversalSession.continueReplay(context, snap.generation, numSamples, playing) == TraversalSession::Playback::Replaying) {
-        return;
-    }
-
-    if (!playing) {
-        return;
-    }
-
-    if (traversalSession.playback == TraversalSession::Playback::Suspended) {
-        traversalSession.resumeSuspendedNotes(midiMessages);
-    }
-
-    if (resetHit) {
-        traversalSession.restartActiveTraversals(context);
-    }
-
-    traversalSession.syncWithGraph(context, snap.generation);
-
-    if (traversalSession.traversals.empty() && !traversalSession.startTraversalsFromFirstRoot(context)) {
-        if (!eventManager.scheduler.activeNotes.empty()) {
-            traversalSession.silenceAllNotes(midiMessages);
-        }
-
-        return;
-    }
-
-    eventManager.processEvents(numSamples, context);
+    virtualMidiOutput.mirrorBlock(midiMessages, playback.tempoInfo.currentSampleRate);
 }
 
 juce::AudioProcessorEditor* SequenceTreeAudioProcessor::createEditor()
@@ -356,7 +168,7 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
         applyRestoredState();
     }
 
-    const PatchProperties patchProperties(patch);
+    const PatchProperties patchProperties(document.patch);
 
     const juce::String storedPatchFile = patchProperties.patchFile;
 
@@ -370,15 +182,9 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
         state = pendingRestoreState;
     }
     else {
-        state = juce::ValueTree(ValueTreeIdentifiers::PluginState);
-        state.addChild(graphState.nodeMap.createCopy(),         -1, nullptr);
-        state.addChild(graphState.traversals.map.createCopy(),  -1, nullptr);
-        state.addChild(traversalRuleState.rules.createCopy(),   -1, nullptr);
-        state.addChild(traversalRuleState.folders.createCopy(), -1, nullptr);
-        state.addChild(colourPresets.createCopy(),              -1, nullptr);
-        state.addChild(canvasSettings.createCopy(),             -1, nullptr);
-        state.addChild(valueTreeState.copyState(),              -1, nullptr);
-        state.addChild(patch.createCopy(),                      -1, nullptr);
+        const juce::ValueTree parameters = valueTreeState.copyState();
+
+        state = document.createState(parameters);
     }
 
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
@@ -387,7 +193,7 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
 
     destData.replaceAll(stateText.toRawUTF8(), stateText.getNumBytesAsUTF8());
 
-    if (stateIsLive && (graphState.nodeMap.getNumChildren() > 0 || patchFile.existsAsFile())) {
+    if (stateIsLive && (document.graphState.nodeMap.getNumChildren() > 0 || patchFile.existsAsFile())) {
         patchFile.replaceWithData(destData.getData(), destData.getSize());
     }
 }
@@ -409,6 +215,14 @@ void SequenceTreeAudioProcessor::setStateInformation (const void* data, int size
         juce::ValueTree restoredTree = juce::ValueTree::fromXml (*xmlState);
 
         if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
+
+        const int savedSchemaVersion = restoredTree.getProperty(ValueTreeIdentifiers::SchemaVersion, 0);
+
+        if (savedSchemaVersion > PluginDocument::schemaVersion) {
+            DBG("STATE FROM A NEWER SCHEMA VERSION");
+
+            return;
+        }
 
         const juce::ValueTree restoredParameters = restoredTree.getChildWithName(valueTreeState.state.getType());
 
@@ -441,75 +255,18 @@ void SequenceTreeAudioProcessor::applyRestoredState()
 
     const juce::ValueTree restoredTree = pendingRestoreState;
 
-    juce::ValueTree restoredNodeMap = restoredTree;
-    juce::ValueTree restoredTraversalMap;
-    juce::ValueTree restoredRules;
-    juce::ValueTree restoredFolders;
-    juce::ValueTree restoredPresets;
-    juce::ValueTree restoredCanvasSettings;
-    juce::ValueTree restoredPatch;
-
-    if (restoredTree.getType() == ValueTreeIdentifiers::PluginState) {
-        restoredNodeMap        = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
-        restoredTraversalMap   = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalMap);
-        restoredRules          = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalRules);
-        restoredFolders        = restoredTree.getChildWithName(ValueTreeIdentifiers::TraversalRuleFolders);
-        restoredPresets        = restoredTree.getChildWithName(ArsNovaUI::InterfaceIdentifiers::ColourPresets);
-        restoredCanvasSettings = restoredTree.getChildWithName(ValueTreeIdentifiers::CanvasSettings);
-        restoredPatch          = restoredTree.getChildWithName(ValueTreeIdentifiers::Patch);
-    }
-
-    graphState.replaceState(restoredNodeMap, restoredTraversalMap);
-
-    traversalRuleState.replaceState(restoredRules, restoredFolders);
-    traversalRuleState.ensureDefaultRule();
-
-    colourPresets.copyPropertiesAndChildrenFrom(restoredPresets, nullptr);
-
-    if (restoredCanvasSettings.isValid()) {
-        CanvasSettingsProperties settings(canvasSettings);
-
-        canvasSettings.copyPropertiesFrom(restoredCanvasSettings, nullptr);
-
-        if (settings.arrowXBinding.isUsingDefault()) {
-            settings.arrowXBinding.setValue(settings.arrowXBinding.getDefault(), nullptr);
-        }
-
-        if (settings.arrowYBinding.isUsingDefault()) {
-            settings.arrowYBinding.setValue(settings.arrowYBinding.getDefault(), nullptr);
-        }
-
-        if (settings.arrowXMultiplier.isUsingDefault()) {
-            settings.arrowXMultiplier.setValue(settings.arrowXMultiplier.getDefault(), nullptr);
-        }
-
-        if (settings.arrowYMultiplier.isUsingDefault()) {
-            settings.arrowYMultiplier.setValue(settings.arrowYMultiplier.getDefault(), nullptr);
-        }
-
-        if (settings.arrowXTarget.isUsingDefault()) {
-            settings.arrowXTarget.setValue(settings.arrowXTarget.getDefault(), nullptr);
-        }
-
-        if (settings.arrowYTarget.isUsingDefault()) {
-            settings.arrowYTarget.setValue(settings.arrowYTarget.getDefault(), nullptr);
-        }
-    }
-
-    if (restoredPatch.isValid()) {
-        patch.copyPropertiesFrom(restoredPatch, nullptr);
-    }
+    document.restore(restoredTree);
 
     rtGraphBuilder.rebuildAllGraphs();
 
-    undoManager.clearUndoHistory();
+    document.undoManager.clearUndoHistory();
 
     snapshots.publishActiveTraversalRule();
 
     pendingRestoreState = juce::ValueTree();
 
     if (auto* editor = dynamic_cast<SequenceTreeAudioProcessorEditor*>(getActiveEditor())) {
-        editor->nodeCanvas->rebuildFromNodeMap(graphState.nodeMap);
+        editor->nodeCanvas->rebuildFromNodeMap(document.graphState.nodeMap);
     }
 }
 
@@ -536,33 +293,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout SequenceTreeAudioProcessor::
     layout.add(std::make_unique<juce::AudioParameterBool>(juce::ParameterID { hostSyncParameterId, parameterVersion }, "Sync To Host", true));
 
     return layout;
-}
-
-juce::File SequenceTreeAudioProcessor::claimUntitledPatch(const juce::File& folder)
-{
-    static juce::StringArray claimedPatches;
-
-    static juce::CriticalSection claimedPatchesLock;
-
-    const juce::ScopedLock claimLock(claimedPatchesLock);
-
-    const juce::String untitledName = "Untitled";
-
-    juce::File untitledPatch = folder.getChildFile(untitledName).withFileExtension(patchExtension);
-
-    int untitledNumber = 1;
-
-    while (untitledPatch.exists() || claimedPatches.contains(untitledPatch.getFullPathName())) {
-        ++untitledNumber;
-
-        const juce::String numberedName = untitledName + " (" + juce::String(untitledNumber) + ")";
-
-        untitledPatch = folder.getChildFile(numberedName).withFileExtension(patchExtension);
-    }
-
-    claimedPatches.add(untitledPatch.getFullPathName());
-
-    return untitledPatch;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

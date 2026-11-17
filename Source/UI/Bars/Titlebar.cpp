@@ -12,10 +12,10 @@ Titlebar::Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas
       nodeCanvas     (nodeCanvas),
       nodeController (nodeController),
       graphDocument  (graphDocument),
-      undoManager    (processor.undoManager),
+      undoManager    (processor.document.undoManager),
       displaySelector(undoManager),
       tempoDisplay   (undoManager),
-      patchControls  (processor, processor.patch, processor.patchFolder)
+      patchControls  (processor, processor.document.patch, processor.document.patchFolder)
 {
     addAndMakeVisible(transportPane);
     addAndMakeVisible(tempoDisplay);
@@ -75,7 +75,7 @@ void Titlebar::applyPlaybackState(bool shouldPlay)
 {
     playButton->setSelected(shouldPlay);
 
-    processor.isPlaying.store(shouldPlay);
+    processor.playback.isPlaying.store(shouldPlay);
 
     nodeCanvas.setPlaybackActive(shouldPlay);
 
@@ -96,7 +96,7 @@ int Titlebar::narrowestWidth() const
 void Titlebar::configureTransportPane()
 {
     playButton = &transportPane.addButton(ArsNovaUI::IconLibrary::get().play, "Play / Pause",
-                                          [this]() { applyPlaybackState(!processor.isPlaying.load()); });
+                                          [this]() { applyPlaybackState(!processor.playback.isPlaying.load()); });
 
     playButton->state.look = ArsNovaUI::ButtonState::Look::Raised;
 
@@ -106,7 +106,7 @@ void Titlebar::configureTransportPane()
         playButton->setTooltip("Follows host transport");
     }
 
-    playButton->setSelected(processor.isPlaying.load());
+    playButton->setSelected(processor.playback.isPlaying.load());
 
     transportPane.addButton(ArsNovaUI::IconLibrary::get().skipBack, "Reset",
         [this]() { resetTraversals(); });
@@ -211,7 +211,7 @@ void Titlebar::configureTempoDisplay()
 
 void Titlebar::resetTraversals()
 {
-    processor.resetRequested.store(true);
+    processor.playback.resetRequested.store(true);
 
     nodeCanvas.resetAllProgress();
 }

@@ -2,6 +2,7 @@
 #include <ArsNovaUI/Theme/IconLibrary.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
+#include "../../Graph/OrnamentFigure.h"
 #include "../../Util/ArrowInfo.h"
 
 OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings, juce::UndoManager& undoManager)
@@ -44,7 +45,7 @@ OrnamentBuildPanel::OrnamentBuildPanel(OrnamentLibraries& ornamentLibraries, juc
     titlebar.publishButton->onClick = [this, &undoManager]() {
         undoManager.beginNewTransaction();
 
-        this->ornamentLibraries.publish(ornament, &undoManager);
+        OrnamentFigure::publish(ornament, &undoManager);
     };
 
     titlebar.symbolButton->onClick = [this]() {
@@ -185,7 +186,7 @@ void OrnamentBuildPanel::showActiveOrnament()
 
 void OrnamentBuildPanel::refreshFigure()
 {
-    const bool canPublish = ornamentLibraries.isPublishable(ornament) && ornamentLibraries.statusOf(ornament) != OrnamentStatus::Published;
+    const bool canPublish = OrnamentFigure::isPublishable(ornament) && OrnamentFigure::statusOf(ornament) != OrnamentStatus::Published;
 
     titlebar.publishButton->setEnabled(ornament.isValid() && canPublish);
 

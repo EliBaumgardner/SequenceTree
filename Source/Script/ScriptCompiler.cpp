@@ -5,6 +5,7 @@
 #include "ScriptParser.h"
 
 #include <algorithm>
+#include <atomic>
 
 static std::string typeName(ValueType type)
 {
@@ -45,7 +46,7 @@ static ScriptOutline makeOutline(const ClassDeclaration& declaration)
 
             parameters += typeName(parameter.type);
         }
-        
+
         outline.entries.push_back({ ScriptOutlineEntry::Kind::Function, function.name + "(" + parameters + ")", typeName(function.returnType), function.line });
     }
 
@@ -53,6 +54,8 @@ static ScriptOutline makeOutline(const ClassDeclaration& declaration)
 
     return outline;
 }
+
+static std::atomic<std::uint64_t> compileCount { 0 };
 
 ScriptCompileResult compileTraversalScript(const std::string& source)
 {
@@ -82,7 +85,11 @@ ScriptCompileResult compileTraversalScript(const std::string& source)
 
     if (!result.diagnostics.empty()) {
         result.script = RTScript {};
+
+        return result;
     }
+
+    result.script.generation = ++compileCount;
 
     return result;
 }

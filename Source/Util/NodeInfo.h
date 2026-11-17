@@ -12,6 +12,8 @@
     sets the DisplayMode through NodeCanvas::setDisplayMode.
 */
 
+#include <iterator>
+
 namespace NodeInfo
 {
 
@@ -66,6 +68,30 @@ enum class Type        { Node, Root, Modulator, TraversalFlag, Encapsulator};
 enum class Kind        { Root, Node, Alternative, TraversalFlag, Modulator, ModulatorRoot, AlternativeModulator, Encapsulator };
 enum class DisplayMode {Pitch, Velocity, Duration, CountLimit, Channel, RepeatValue, Probability};
 
-inline constexpr bool alternativeKind[] = { false, false, true, false, false, false, true, false };
+struct KindTraits
+{
+    bool playsNotes       = false;
+    bool isModulator      = false;
+    bool isAlternative    = false;
+    bool isAdvanceable    = false;
+    bool isModulatorChild = false;
+    bool isAudibleChild   = false;
+    bool isAudible        = false;
+};
+
+inline constexpr int kindCount = static_cast<int>(Kind::Encapsulator) + 1;
+
+inline constexpr KindTraits kindTraits[] = {
+    { .playsNotes = true, .isAdvanceable = true, .isAudibleChild = true, .isAudible = true },
+    { .playsNotes = true, .isAdvanceable = true, .isAudibleChild = true, .isAudible = true },
+    { .playsNotes = true, .isAlternative = true, .isAudible = true },
+    { },
+    { .isModulator = true, .isAdvanceable = true, .isModulatorChild = true, .isAudible = true },
+    { .isModulator = true, .isModulatorChild = true },
+    { .isModulator = true, .isAlternative = true, .isAudible = true },
+    { .isAudible = true }
+};
+
+static_assert(std::size(kindTraits) == kindCount, "kindTraits holds one row for every NodeInfo::Kind");
 
 }

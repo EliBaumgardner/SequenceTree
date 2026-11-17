@@ -14,7 +14,7 @@ enum class CommandDelivery { Deliver, Record };
     canvas empties them on the message thread. Each command is either delivered as it is sent or
     recorded to deliver later.
 
-    While delivery is CommandDelivery::Deliver, highlightNode, clearAllHighlights, pushProgress,
+    While delivery is CommandDelivery::Deliver, highlightNode, clearAllHighlights, send,
     pushArrowReset and pushCount each put their command straight into its queue. beginRecording
     switches to CommandDelivery::Record: a command then replaces the earlier ones for the same node,
     arrow or trail, so only what the canvas should end up showing is kept, and each arrow notes when
@@ -63,8 +63,6 @@ private:
     void highlightNode(const RTNode& node, BridgeCommands::HighlightKind kind, int runId = -1, int traversalId = -1);
     void clearAllHighlights ();
 
-    void pushProgress  (int parentNodeId, int childNodeId, int durationMs, int trailId, int traversalId,
-                        BridgeCommands::TrailSource source, BridgeCommands::ArrowKind kind = BridgeCommands::ArrowKind::Progress);
     void pushArrowReset(int trailId);
     void pushCount     (int nodeId, int currentCount, int countLimit);
 

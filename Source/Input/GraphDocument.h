@@ -7,8 +7,9 @@
 #include "../Graph/NodeFactory.h"
 
 /*
-    The ArsNovaUI::CanvasDocument for the graph: each edit the canvas makes, carried out on GraphState's
-    nodeMap through GraphState and NodeFactory. Two settings shape what the user's edits create:
+    The ArsNovaUI::CanvasDocument for the graph: each edit the canvas makes, carried out on
+    GraphState's nodeMap through GraphState and the NodeFactory it holds. Two settings shape what
+    the user's edits create:
     creationMode, the kind of node a drag grows out of a node (set by Titlebar), and the
     ArrowInfo::Settings every new arrow and dangling arrow starts with, read through
     ArrowBindingOps::getArrowInfo from canvasSettings each time an arrow is made (set by BottomBar).
@@ -62,11 +63,14 @@ public:
 
     NodeCreationMode creationMode = NodeCreationMode::Node;
 
-    GraphState&     graphState;
+    GraphState& graphState;
+
     juce::ValueTree canvasSettings;
 
 private:
 
     void moveDescendants                (juce::ValueTree nodeTree, int deltaX, int deltaY, std::unordered_set<int>& visited, int draggedNodeId);
     void moveEncapsulatorWithEntryMember(int nodeId, int draggedNodeId, int deltaX, int deltaY);
+
+    NodeFactory nodeFactory;
 };

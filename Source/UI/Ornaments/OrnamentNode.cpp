@@ -1,11 +1,12 @@
 #include "OrnamentNode.h"
 #include "../../Graph/OrnamentLibraries.h"
+#include "../../Graph/OrnamentFigure.h"
 
 OrnamentNode::OrnamentNode(juce::UndoManager& undoManager)
     : Node          (undoManager),
       velocityEditor(undoManager)
 {
-    auto velocityFormat = std::make_unique<ArsNovaUI::NumberFormat>(1, OrnamentLibraries::maximumVelocityPercent);
+    auto velocityFormat = std::make_unique<ArsNovaUI::NumberFormat>(1, OrnamentFigure::maximumVelocityPercent);
 
     velocityFormat->suffix = "%";
 
@@ -38,7 +39,7 @@ void OrnamentNode::bindToTree()
 
 void OrnamentNode::bindValueEditorForMode()
 {
-    auto offsetFormat = std::make_unique<ArsNovaUI::NumberFormat>(-OrnamentLibraries::maximumOffset, OrnamentLibraries::maximumOffset);
+    auto offsetFormat = std::make_unique<ArsNovaUI::NumberFormat>(-OrnamentFigure::maximumOffset, OrnamentFigure::maximumOffset);
 
     offsetFormat->showsPositiveSign = true;
 

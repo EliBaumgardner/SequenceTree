@@ -51,9 +51,19 @@ enum class NodeStateSlot
         case NodeStateSlot::SwitchCandidate:
             return -1;
 
-        default:
+        case NodeStateSlot::Count:
+        case NodeStateSlot::SwitchCount:
+        case NodeStateSlot::SubRootCount:
+        case NodeStateSlot::ModulatorCount:
+        case NodeStateSlot::Trigger:
+        case NodeStateSlot::Chord:
+        case NodeStateSlot::CrossTree:
+        case NodeStateSlot::CrossTreeSwitch:
+        case NodeStateSlot::Total:
             return 0;
     }
+
+    return 0;
 }
 
 class NodeStateTable

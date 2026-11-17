@@ -3,6 +3,7 @@
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Input/FigureDocument.h"
 #include "../../Graph/OrnamentLibraries.h"
+#include "../../Graph/OrnamentFigure.h"
 #include "../../Graph/ValueTreeIdentifiers.h"
 
 OrnamentCanvas::OrnamentCanvas(FigureDocument& document, juce::ValueTree canvasSettings)
@@ -66,7 +67,7 @@ void OrnamentCanvas::nodeCreated(ArsNovaUI::CanvasNode& canvasNode)
 
     juce::ValueTree figure = document.nodes;
 
-    const juce::CachedValue<int> storedHostId(figure, ValueTreeIdentifiers::OrnamentHostId, nullptr, OrnamentLibraries::noHostId);
+    const juce::CachedValue<int> storedHostId(figure, ValueTreeIdentifiers::OrnamentHostId, nullptr, OrnamentFigure::noHostId);
 
     const int hostId = storedHostId;
 
@@ -86,7 +87,7 @@ void OrnamentCanvas::refreshHost()
 {
     juce::ValueTree figure = document.nodes;
 
-    const juce::CachedValue<int> storedHostId(figure, ValueTreeIdentifiers::OrnamentHostId, nullptr, OrnamentLibraries::noHostId);
+    const juce::CachedValue<int> storedHostId(figure, ValueTreeIdentifiers::OrnamentHostId, nullptr, OrnamentFigure::noHostId);
 
     const int hostId = storedHostId;
 

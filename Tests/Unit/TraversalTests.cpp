@@ -328,6 +328,38 @@ static NodeMap alternativeShapeWithTreeJump(int jumpOwnerId, int foreignRootLimi
     return makeMap(withForeignTree);
 }
 
+static const NodeInfo::KindTraits& traitsOf(NodeInfo::Kind kind)
+{
+    return NodeInfo::kindTraits[static_cast<int>(kind)];
+}
+
+TEST_CASE("the kind table answers each group question for every kind", "[traversal][kind]")
+{
+    using Kind = NodeInfo::Kind;
+
+    const Kind playsNotes[]       = { Kind::Root, Kind::Node, Kind::Alternative };
+    const Kind modulators[]       = { Kind::Modulator, Kind::ModulatorRoot, Kind::AlternativeModulator };
+    const Kind alternatives[]     = { Kind::Alternative, Kind::AlternativeModulator };
+    const Kind advanceable[]      = { Kind::Root, Kind::Node, Kind::Modulator };
+    const Kind modulatorChildren[] = { Kind::Modulator, Kind::ModulatorRoot };
+    const Kind audibleChildren[]  = { Kind::Root, Kind::Node };
+    const Kind silent[]           = { Kind::ModulatorRoot, Kind::TraversalFlag };
+
+    for (int index = 0; index < NodeInfo::kindCount; ++index) {
+        const Kind kind = static_cast<Kind>(index);
+
+        const NodeInfo::KindTraits& traits = traitsOf(kind);
+
+        CHECK(traits.playsNotes       == std::ranges::contains(playsNotes, kind));
+        CHECK(traits.isModulator      == std::ranges::contains(modulators, kind));
+        CHECK(traits.isAlternative    == std::ranges::contains(alternatives, kind));
+        CHECK(traits.isAdvanceable    == std::ranges::contains(advanceable, kind));
+        CHECK(traits.isModulatorChild == std::ranges::contains(modulatorChildren, kind));
+        CHECK(traits.isAudibleChild   == std::ranges::contains(audibleChildren, kind));
+        CHECK(traits.isAudible        != std::ranges::contains(silent, kind));
+    }
+}
+
 TEST_CASE("a chain plays in order and loops back to the root", "[traversal]")
 {
     const std::vector<int> expected { 1, 2, 3, 1, 2, 3, 1 };

@@ -1,4 +1,5 @@
 #include "ModulatorWalk.h"
+#include "WeightedPick.h"
 
 #include <algorithm>
 
@@ -150,13 +151,12 @@ int ModulatorWalk::findActiveModulatorRoot(const NodeMap& nodes, const ChildSele
 
     const RTNode& host = *hostNode;
 
-    const int hostCount = selector.nodeState.get(NodeStateSlot::Count, regularNodeId) + 1;
-
-    int maxLimit      = 0;
-    int totalWeight   = 0;
-    int runningWeight = 0;
+    const int hostCount   = selector.nodeState.get(NodeStateSlot::Count, regularNodeId) + 1;
+    const int randomValue = static_cast<int>(selector.selectionRandom >> 1);
 
     const RTNode* chosenRoot = nullptr;
+
+    WeightedPick weightedPick;
 
     for (const RTConnection& connection : host.connections) {
         const RTNode* const modRoot = eligibleModulatorRoot(nodes, selector.traversalKey, connection, hostCount);
@@ -165,37 +165,21 @@ int ModulatorWalk::findActiveModulatorRoot(const NodeMap& nodes, const ChildSele
             continue;
         }
 
-        if (modRoot->countLimit > maxLimit) {
-            maxLimit    = modRoot->countLimit;
-            totalWeight = modRoot->probability;
-        }
-        else if (modRoot->countLimit == maxLimit) {
-            totalWeight += modRoot->probability;
-        }
+        weightedPick.tally(modRoot->countLimit, modRoot->probability);
     }
 
-    if (totalWeight <= 0) {
+    if (! weightedPick.draw(randomValue)) {
         return -1;
     }
-
-    int selectionSpan = totalWeight;
-
-    if (selectionSpan < RTNode::probabilityScale) {
-        selectionSpan = RTNode::probabilityScale;
-    }
-
-    const int pick = static_cast<int>(selector.selectionRandom >> 1) % selectionSpan;
 
     for (const RTConnection& connection : host.connections) {
         const RTNode* const modRoot = eligibleModulatorRoot(nodes, selector.traversalKey, connection, hostCount);
 
-        if (modRoot == nullptr || modRoot->countLimit != maxLimit) {
+        if (modRoot == nullptr) {
             continue;
         }
 
-        runningWeight += modRoot->probability;
-
-        if (pick < runningWeight) {
+        if (weightedPick.accepts(modRoot->countLimit, modRoot->probability)) {
             chosenRoot = modRoot;
 
             break;

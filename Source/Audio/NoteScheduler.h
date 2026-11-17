@@ -2,6 +2,7 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "../Graph/RTData.h"
+#include "DispatchContext.h"
 #include <cstddef>
 #include <span>
 #include <vector>
@@ -26,16 +27,18 @@ class NoteScheduler
 public:
 
     enum class NoteRole;
+    enum class NoteTrigger;
     struct ActiveNote;
+    struct NoteTiming;
     struct NoteVoicing;
 
-    NoteScheduler();
+    NoteScheduler ();
 
-    void scheduleNote(const RTNode& node, NoteRole role, int runId, double sample, juce::MidiBuffer& midiMessages, double sampleRate,
-                      double tempoMultiplier, int duration, bool isConnectionTrigger, const NoteVoicing& voicing);
+    void scheduleNote (const RTNode& node, NoteRole role, NoteTrigger trigger, const NoteTiming& timing, const DispatchContext& context,
+                       const NoteVoicing& voicing);
 
-    void continueOrnament(ActiveNote note, const RTNode* node, juce::MidiBuffer& midiMessages, double sample);
-    void sendNoteOff     (const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
+    void continueOrnament (ActiveNote note, const RTNode* node, juce::MidiBuffer& midiMessages, double sample);
+    void sendNoteOff      (const ActiveNote& note, juce::MidiBuffer& midiMessages, int sample);
 
     void removeNote(int index);
     void clear ();
@@ -55,8 +58,18 @@ public:
         int midiChannel = 1;
     };
 
-    enum class NoteRole { Stepping, ChordVoice };
-    enum class Sound { Audible, Silent };
+    enum class NoteRole    { Stepping, ChordVoice };
+    enum class NoteTrigger { Step, Connection };
+    enum class Sound       { Audible, Silent };
+
+    struct NoteTiming
+    {
+        int runId    = -1;
+        int duration = 0;
+
+        double sample          = 0.0;
+        double tempoMultiplier = 1.0;
+    };
 
     struct OrnamentProgress
     {
@@ -70,7 +83,8 @@ public:
     struct ActiveNote
     {
         MidiEvent event;
-        NoteRole  role  = NoteRole::Stepping;
+
+        NoteRole  role          = NoteRole::Stepping;
         NodeInfo::Kind nodeType = NodeInfo::Kind::Node;
 
         int runId  = 0;
@@ -88,7 +102,7 @@ public:
     struct NoteVoicing
     {
         int channel          = -1;
-        int transpose        = 0;
+        int transpose        =  0;
         int pitchOverride    = -1;
         int velocityOverride = -1;
 
@@ -103,6 +117,7 @@ public:
 
 private:
 
+    static void applyVoicing     (ActiveNote& note, const RTNode& node, const NoteVoicing& voicing);
     static void startOrnamentStep(ActiveNote& note, std::span<const OrnamentStep> figure, double sample);
 
     static constexpr double velocityPercentScale = 100.0;

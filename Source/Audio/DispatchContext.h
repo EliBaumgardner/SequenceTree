@@ -12,7 +12,7 @@
     velocity scale that decide how they sound.
 
     It describes a single block and holds references, so a new one is made every block.
-    SequenceTreeAudioProcessor::driveWalk makes one for playback and one for note preview, and
+    PlaybackEngine::driveWalk makes one for playback and one for note preview, and
     TraversalSession makes one writing into replayMidi while it replays to a new host position.
 */
 

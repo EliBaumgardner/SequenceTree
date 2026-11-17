@@ -11,8 +11,7 @@ FlagScheduler::FlagScheduler(TraversalDispatcher& owner, AudioUIBridge& bridgeRe
 {
 }
 
-void FlagScheduler::dispatchFlags(const RTNode& node, int hostRunId, const TraversalKey& hostKey,
-                                  int parentCount, double sample, double tempoMultiplier,
+void FlagScheduler::dispatchFlags(const RTNode& node, const TraversalKey& hostKey, int parentCount, const NoteScheduler::NoteTiming& timing,
                                   const DispatchContext& context)
 {
     for (const RTConnection& connection : node.connections) {
@@ -41,7 +40,7 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostRunId, const Trave
         }
 
         if (flagNode.flagRemovesTraversal) {
-            queueRemoval(flagNode, hostRunId, hostKey, context.traversalMap);
+            queueRemoval(flagNode, timing.runId, hostKey, context.traversalMap);
 
             continue;
         }
@@ -49,12 +48,12 @@ void FlagScheduler::dispatchFlags(const RTNode& node, int hostRunId, const Trave
         const int delayMs = connection.duration;
 
         if (delayMs <= 0) {
-            startFlagTraversal(flagNode, hostKey, sample, context);
+            startFlagTraversal(flagNode, hostKey, timing.sample, context);
 
             continue;
         }
 
-        queueStart(flagNode, hostKey, delayMs, sample, tempoMultiplier, context);
+        queueStart(flagNode, hostKey, delayMs, timing.sample, timing.tempoMultiplier, context);
     }
 }
 

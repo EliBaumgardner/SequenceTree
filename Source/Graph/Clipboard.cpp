@@ -402,7 +402,7 @@ std::vector<int> Clipboard::createPastedEncapsulators(const PasteLayout& layout)
             continue;
         }
 
-        const juce::ValueTree encapsulator = NodeFactory::createEncapsulator(graphState, pastedMemberIds, &undoManager);
+        const juce::ValueTree encapsulator = NodeFactory(graphState, &undoManager).createEncapsulator(pastedMemberIds);
 
         encapsulatorIds.push_back(encapsulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id));
     }

@@ -146,12 +146,6 @@ void AudioUIBridge::clearAllHighlights()
     send(BridgeCommands::HighlightCommand { BridgeCommands::HighlightKind::ClearEveryNode });
 }
 
-void AudioUIBridge::pushProgress(int parentNodeId, int childNodeId, int durationMs, int trailId, int traversalId,
-                                 BridgeCommands::TrailSource source, BridgeCommands::ArrowKind kind)
-{
-    send(BridgeCommands::ArrowCommand { kind, parentNodeId, childNodeId, durationMs, trailId, traversalId, 0, source });
-}
-
 void AudioUIBridge::pushArrowReset(int trailId)
 {
     send(BridgeCommands::ArrowCommand { BridgeCommands::ArrowKind::TrailReset, 0, 0, 0, trailId, -1 });

@@ -4,6 +4,8 @@
 #include <ArsNovaUI/Menus/Dialog.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
+#include "../../Graph/OrnamentFigure.h"
+#include "../../Graph/OrnamentSymbol.h"
 
 OrnamentTile::OrnamentTile(OrnamentLibraries& ornamentLibraries, juce::ValueTree ornament, juce::UndoManager& undoManager)
     : ornament         (ornament),
@@ -57,7 +59,7 @@ void OrnamentTile::paint(juce::Graphics& graphics)
     graphics.setColour(border);
     graphics.drawRoundedRectangle(bounds, ArsNovaUI::Theme::paneCornerRadius, ArsNovaUI::Theme::borderThickness);
 
-    switch (ornamentLibraries.statusOf(ornament)) {
+    switch (OrnamentFigure::statusOf(ornament)) {
         case OrnamentStatus::Draft:          status = "draft";       break;
         case OrnamentStatus::ChangesPending: status = "unpublished"; break;
         case OrnamentStatus::Published:                              break;
@@ -69,7 +71,7 @@ void OrnamentTile::paint(juce::Graphics& graphics)
 
     graphics.setColour(lookAndFeel.textColour);
 
-    const std::vector<ArsNovaUI::SymbolStroke> symbolStrokes = OrnamentLibraries::readSymbol(storedSymbol);
+    const std::vector<ArsNovaUI::SymbolStroke> symbolStrokes = OrnamentSymbol::read(storedSymbol);
 
     lookAndFeel.drawStrokeSymbol(graphics, symbol, symbolStrokes);
 }

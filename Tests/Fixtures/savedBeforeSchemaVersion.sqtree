@@ -1,0 +1,22 @@
+{
+  "type": "PluginState",
+  "properties": {},
+  "children": [
+    {
+      "type": "NodeMap",
+      "properties": {},
+      "children": [
+        {
+          "type": "RootNodeData",
+          "properties": { "Id": "1", "NodeColour": "ff993300" },
+          "children": []
+        }
+      ]
+    },
+    {
+      "type": "CanvasSettings",
+      "properties": { "GraphGridMultiplier": "3.5" },
+      "children": []
+    }
+  ]
+}

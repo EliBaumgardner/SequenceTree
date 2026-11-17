@@ -449,6 +449,32 @@ TEST_CASE("members and variables outside the class start at any value", "[script
     CHECK(fixture.members[3] == 0);
 }
 
+TEST_CASE("a script compiled at the address of a freed one still starts its members again", "[script]")
+{
+    const ScriptCompileResult first  = compileTraversalScript(classWith("int mine = 1;\nint value() { return mine; }"));
+    const ScriptCompileResult second = compileTraversalScript(classWith("int mine = 5;\nint value() { return mine; }"));
+
+    REQUIRE(first.succeeded());
+    REQUIRE(second.succeeded());
+
+    CHECK(first.script.generation != second.script.generation);
+
+    const NodeMap nodes = twoNodeGraph();
+
+    RTScript       held = first.script;
+    TraversalLogic logic;
+
+    logic.childSelector.nodeState.prepare();
+
+    logic.script = &held;
+
+    CHECK(ScriptRun(logic.makeScriptContext(nodes, Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1);
+
+    held = second.script;
+
+    CHECK(ScriptRun(logic.makeScriptContext(nodes, Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 5);
+}
+
 TEST_CASE("variables outside the class are shared by every traversal and start again on a restart", "[script]")
 {
     const ScriptCompileResult compiled = compileTraversalScript(
@@ -476,7 +502,7 @@ TEST_CASE("variables outside the class are shared by every traversal and start a
     CHECK(ScriptRun(first.makeScriptContext(nodes, Walk::Primary, ScriptWrites::Trial, nullptr)).call(0, {}) == 1312);
     CHECK(ScriptRun(first.makeScriptContext(nodes, Walk::Primary, ScriptWrites::Commit, nullptr)).call(0, {}) == 1312);
 
-    globals.script = nullptr;
+    globals.generation = 0;
 
     first.reset(1, {});
 

@@ -43,9 +43,7 @@ public:
     juce::ValueTree addChildNode        (int parentNodeId, const juce::Identifier& nodeType, juce::UndoManager* undoManager);
     juce::ValueTree addTraversalFlagNode(int parentNodeId, juce::UndoManager* undoManager);
 
-    juce::ValueTree addModulatorRoot       (int parentNodeId, juce::UndoManager* undoManager);
-    juce::ValueTree addModulator           (int parentNodeId, juce::UndoManager* undoManager);
-    juce::ValueTree addAlternativeModulator(int parentNodeId, juce::UndoManager* undoManager);
+    juce::ValueTree addModulator(int parentNodeId, NodeInfo::Kind kind, juce::UndoManager* undoManager);
 
     juce::ValueTree getNode      (int nodeId) const;
     juce::ValueTree getNodeParent(int nodeId) const;
@@ -103,7 +101,7 @@ private:
     void linkParent  (int parentNodeId, int childNodeId);
     void unlinkParent(int parentNodeId, int childNodeId);
 
-    juce::ValueTree addModulatorNode(juce::ValueTree parentNode, const juce::Identifier& nodeType, int newNodeId, juce::UndoManager* undoManager);
+    juce::ValueTree addModulatorNode(juce::ValueTree parentNode, NodeInfo::Kind kind, int newNodeId, juce::UndoManager* undoManager);
 
     std::unordered_map<int, juce::ValueTree> nodeIndex;
 };

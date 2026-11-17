@@ -88,10 +88,9 @@ juce::ValueTree GraphState::addChildNode(int parentNodeId, const juce::Identifie
 
 juce::ValueTree GraphState::addTraversalFlagNode(int parentNodeId, juce::UndoManager* undoManager)
 {
-    jassert(getNode(parentNodeId).getType() == ValueTreeIdentifiers::NodeData
-         || getNode(parentNodeId).getType() == ValueTreeIdentifiers::AlternativeNodeData
-         || getNode(parentNodeId).getType() == ValueTreeIdentifiers::RootNodeData
-         || getNode(parentNodeId).getType() == ValueTreeIdentifiers::TraversalFlagData);
+    [[maybe_unused]] const NodeInfo::Kind parentKind = kindOf(getNode(parentNodeId));
+
+    jassert(NodeInfo::kindTraits[static_cast<int>(parentKind)].playsNotes || parentKind == NodeInfo::Kind::TraversalFlag);
 
     juce::ValueTree node = addChildNode(parentNodeId, ValueTreeIdentifiers::TraversalFlagData, undoManager);
 
@@ -106,58 +105,27 @@ juce::ValueTree GraphState::addTraversalFlagNode(int parentNodeId, juce::UndoMan
     return node;
 }
 
-juce::ValueTree GraphState::addModulatorRoot(int parentNodeId, juce::UndoManager* undoManager)
+juce::ValueTree GraphState::addModulator(int parentNodeId, NodeInfo::Kind kind, juce::UndoManager* undoManager)
 {
     juce::ValueTree parentNode = getNode(parentNodeId);
 
+    [[maybe_unused]] const NodeInfo::KindTraits& parentTraits  = NodeInfo::kindTraits[static_cast<int>(kindOf(parentNode))];
+    [[maybe_unused]] const NodeInfo::KindTraits& newNodeTraits = NodeInfo::kindTraits[static_cast<int>(kind)];
+
+    [[maybe_unused]] const bool parentFitsKind = (kind == NodeInfo::Kind::ModulatorRoot && parentTraits.playsNotes)
+                                              || (kind != NodeInfo::Kind::ModulatorRoot && parentTraits.isModulator);
+
     jassert(parentNode.isValid());
-    jassert(parentNode.getType() == ValueTreeIdentifiers::NodeData
-         || parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData
-         || parentNode.getType() == ValueTreeIdentifiers::RootNodeData);
+    jassert(newNodeTraits.isModulator);
+    jassert(parentFitsKind);
 
     nodeIdIncrement = nodeIdIncrement + 1;
 
-    juce::ValueTree modulatorNode = addModulatorNode(parentNode, ValueTreeIdentifiers::ModulatorRootData, nodeIdIncrement, undoManager);
+    juce::ValueTree modulatorNode = addModulatorNode(parentNode, kind, nodeIdIncrement, undoManager);
 
     nodeMap.addChild(modulatorNode, -1, undoManager);
 
     return modulatorNode;
-}
-
-juce::ValueTree GraphState::addModulator(int parentNodeId, juce::UndoManager* undoManager)
-{
-    juce::ValueTree parentNode = getNode(parentNodeId);
-
-    jassert(parentNode.isValid());
-    jassert(parentNode.getType() == ValueTreeIdentifiers::ModulatorData
-         || parentNode.getType() == ValueTreeIdentifiers::ModulatorRootData
-         || parentNode.getType() == ValueTreeIdentifiers::AlternativeModulatorData);
-
-    nodeIdIncrement = nodeIdIncrement + 1;
-
-    juce::ValueTree modulatorNode = addModulatorNode(parentNode, ValueTreeIdentifiers::ModulatorData, nodeIdIncrement, undoManager);
-
-    nodeMap.addChild(modulatorNode, -1, undoManager);
-
-    return modulatorNode;
-}
-
-juce::ValueTree GraphState::addAlternativeModulator(int parentNodeId, juce::UndoManager* undoManager)
-{
-    juce::ValueTree parentNode = getNode(parentNodeId);
-
-    jassert(parentNode.isValid());
-    jassert(parentNode.getType() == ValueTreeIdentifiers::ModulatorData
-         || parentNode.getType() == ValueTreeIdentifiers::ModulatorRootData
-         || parentNode.getType() == ValueTreeIdentifiers::AlternativeModulatorData);
-
-    nodeIdIncrement = nodeIdIncrement + 1;
-
-    juce::ValueTree alternativeModulatorNode = addModulatorNode(parentNode, ValueTreeIdentifiers::AlternativeModulatorData, nodeIdIncrement, undoManager);
-
-    nodeMap.addChild(alternativeModulatorNode, -1, undoManager);
-
-    return alternativeModulatorNode;
 }
 
 juce::ValueTree GraphState::getNode(int nodeId) const
@@ -230,13 +198,14 @@ void GraphState::connectNodes(int parentNodeId, int childNodeId, juce::UndoManag
     juce::ValueTree parentNode = getNode(parentNodeId);
     juce::ValueTree childNode  = getNode(childNodeId);
 
+    const NodeInfo::Kind parentKind = kindOf(parentNode);
+
     juce::ValueTree childId {ValueTreeIdentifiers::NodeId};
     childId.setProperty(ArsNovaUI::CanvasIdentifiers::Id, childNodeId, undoManager);
 
     ArrowInfo::Settings arrowInfo;
 
-    if (parentNode.getType() == ValueTreeIdentifiers::AlternativeNodeData
-        || parentNode.getType() == ValueTreeIdentifiers::AlternativeModulatorData) {
+    if (NodeInfo::kindTraits[static_cast<int>(parentKind)].isAlternative) {
         arrowInfo.xBinding = ArrowInfo::Binding::NoBind;
         arrowInfo.yBinding = ArrowInfo::Binding::DurationBind;
     }
@@ -314,9 +283,7 @@ void GraphState::addMidiNote(int nodeId, NodeInfo::Note note, juce::UndoManager*
     juce::ValueTree node = getNode(nodeId);
 
     jassert(node.isValid());
-    jassert(node.getType() == ValueTreeIdentifiers::NodeData
-         || node.getType() == ValueTreeIdentifiers::AlternativeNodeData
-         || node.getType() == ValueTreeIdentifiers::RootNodeData);
+    jassert(NodeInfo::kindTraits[static_cast<int>(kindOf(node))].playsNotes);
 
     juce::ValueTree midiNote {ValueTreeIdentifiers::MidiNoteData};
 
@@ -454,9 +421,7 @@ bool GraphState::connectsToOtherTreeRoot(int parentNodeId, int childNodeId) cons
         return false;
     }
 
-    if (parentTree.getType() == ValueTreeIdentifiers::ModulatorData
-        || parentTree.getType() == ValueTreeIdentifiers::ModulatorRootData
-        || parentTree.getType() == ValueTreeIdentifiers::AlternativeModulatorData) {
+    if (NodeInfo::kindTraits[static_cast<int>(kindOf(parentTree))].isModulator) {
         return false;
     }
 
@@ -495,13 +460,11 @@ std::vector<int> GraphState::nodeIdsBetween(int startNodeId, int endNodeId) cons
             for (const int neighbourId : neighbourIds) {
                 const juce::ValueTree neighbour = getNode(neighbourId);
 
-                const juce::Identifier neighbourType = neighbour.getType();
+                const NodeInfo::Kind neighbourKind = kindOf(neighbour);
 
                 const NodeProperties neighbourProperties(neighbour);
 
-                const bool isSequenceNode = neighbourType == ValueTreeIdentifiers::NodeData
-                                         || neighbourType == ValueTreeIdentifiers::AlternativeNodeData
-                                         || neighbourType == ValueTreeIdentifiers::RootNodeData;
+                const bool isSequenceNode = NodeInfo::kindTraits[static_cast<int>(neighbourKind)].playsNotes;
 
                 if (! isSequenceNode
                     || ! neighbourProperties.encapsulatorId.isUsingDefault()
@@ -546,13 +509,11 @@ std::vector<int> GraphState::nodeIdsBetween(int startNodeId, int endNodeId) cons
 
             const juce::ValueTree child = getNode(childId);
 
-            const juce::Identifier childType = child.getType();
+            const NodeInfo::Kind childKind = kindOf(child);
 
             const NodeProperties childProperties(child);
 
-            const bool isSequenceNode = childType == ValueTreeIdentifiers::NodeData
-                                     || childType == ValueTreeIdentifiers::AlternativeNodeData
-                                     || childType == ValueTreeIdentifiers::RootNodeData;
+            const bool isSequenceNode = NodeInfo::kindTraits[static_cast<int>(childKind)].playsNotes;
 
             if (! isSequenceNode
                 || ! childProperties.encapsulatorId.isUsingDefault()
@@ -605,14 +566,11 @@ NodeInfo::Kind GraphState::kindOf(const juce::ValueTree& node)
 
 void GraphState::setNodeLimitProperties(juce::ValueTree node, juce::UndoManager* undoManager)
 {
-    NodeProperties properties(node);
-
-    properties.countLimit       .setValue(defaultNodeCountLimit,    undoManager);
-    properties.triggerLimit     .setValue(defaultTriggerLimit,      undoManager);
-    properties.switchCountLimit .setValue(defaultSwitchCountLimit,  undoManager);
-    properties.subLoopCountLimit.setValue(defaultSubLoopCountLimit, undoManager);
-    properties.repeatValue      .setValue(defaultRepeatValue,       undoManager);
-    properties.probability      .setValue(defaultProbability,       undoManager);
+    for (const NodePropertyTable::Row& row : NodePropertyTable::rows) {
+        if (row.isSetOnCreation) {
+            node.setProperty(row.identifier, row.initialValue, undoManager);
+        }
+    }
 }
 
 void GraphState::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
@@ -689,19 +647,40 @@ void GraphState::unlinkParent(int parentNodeId, int childNodeId)
     }
 }
 
-juce::ValueTree GraphState::addModulatorNode(juce::ValueTree parentNode, const juce::Identifier& nodeType,
+static const juce::Identifier& modulatorIdentifier(NodeInfo::Kind kind)
+{
+    switch (kind) {
+        case NodeInfo::Kind::ModulatorRoot:
+            return ValueTreeIdentifiers::ModulatorRootData;
+
+        case NodeInfo::Kind::AlternativeModulator:
+            return ValueTreeIdentifiers::AlternativeModulatorData;
+
+        case NodeInfo::Kind::Root:
+        case NodeInfo::Kind::Node:
+        case NodeInfo::Kind::Alternative:
+        case NodeInfo::Kind::TraversalFlag:
+        case NodeInfo::Kind::Modulator:
+        case NodeInfo::Kind::Encapsulator:
+            return ValueTreeIdentifiers::ModulatorData;
+    }
+
+    return ValueTreeIdentifiers::ModulatorData;
+}
+
+juce::ValueTree GraphState::addModulatorNode(juce::ValueTree parentNode, NodeInfo::Kind kind,
                                              int newNodeId, juce::UndoManager* undoManager)
 {
     const NodeProperties parentProperties(parentNode);
 
     int rootId = parentProperties.rootNodeId;
 
-    juce::ValueTree modulatorNode        {nodeType};
+    juce::ValueTree modulatorNode        {modulatorIdentifier(kind)};
     juce::ValueTree modulatorChildrenIds {ArsNovaUI::CanvasIdentifiers::NodeChildrenIds};
 
     NodeProperties properties(modulatorNode);
 
-    if (nodeType == ValueTreeIdentifiers::ModulatorRootData) {
+    if (kind == NodeInfo::Kind::ModulatorRoot) {
         rootId = newNodeId;
     }
 

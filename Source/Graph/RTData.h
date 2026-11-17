@@ -2,8 +2,11 @@
 
 #include <algorithm>
 #include <compare>
+#include <cstdint>
+#include <memory>
 #include <vector>
 
+#include "../Script/RTScript.h"
 #include "../Util/NodeInfo.h"
 
 /*
@@ -17,10 +20,11 @@
     by id, and startRootId is the root playback starts from. RTtraversal is one traversal's
     playback settings, TraversalKey names a traversal by id and instance, OrnamentStep is one note
     of an ornament figure, and RTPreviewRequest asks the audio thread to start, stop or repeat a
-    note preview.
+    note preview. Snapshot is everything one audio block reads: the published NodeMap, the compiled
+    RTScript and a generation number that goes up by one with every publish.
 
-    RTGraphBuilder creates them and AudioSnapshotPublisher publishes them. With RTScript they are
-    the only types that cross to the audio thread.
+    RTGraphBuilder creates the graph types and AudioSnapshotPublisher publishes them in a Snapshot.
+    With RTScript they are the only types that cross to the audio thread.
 */
 
 struct RTNote {
@@ -163,4 +167,12 @@ struct GraphUpdate {
 
     int     graphId = 0;
     NodeMap nodes;
+};
+
+struct Snapshot {
+
+    std::shared_ptr<NodeMap>  globalNodes;
+    std::shared_ptr<RTScript> traversalScript;
+
+    std::uint64_t generation = 0;
 };

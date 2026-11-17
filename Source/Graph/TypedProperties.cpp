@@ -3,6 +3,21 @@
 #include "ValueTreeIdentifiers.h"
 #include "../Util/ArrowInfo.h"
 
+const NodePropertyTable::Row NodePropertyTable::rows[rowCount] = {
+    { .identifier = ValueTreeIdentifiers::CountLimit,        .initialValue = GraphState::defaultNodeCountLimit,    .isSetOnCreation = true, .isInheritedByChild = true },
+    { .identifier = ValueTreeIdentifiers::TriggerLimit,      .initialValue = GraphState::defaultTriggerLimit,      .isSetOnCreation = true },
+    { .identifier = ValueTreeIdentifiers::LoopLimit },
+    { .identifier = ValueTreeIdentifiers::SwitchCountLimit,  .initialValue = GraphState::defaultSwitchCountLimit,  .isSetOnCreation = true, .isInheritedByChild = true },
+    { .identifier = ValueTreeIdentifiers::SubLoopCountLimit, .initialValue = GraphState::defaultSubLoopCountLimit, .isSetOnCreation = true, .isInheritedByChild = true },
+    { .identifier = ValueTreeIdentifiers::RepeatValue,       .initialValue = GraphState::defaultRepeatValue,       .isSetOnCreation = true, .isInheritedByChild = true },
+    { .identifier = ValueTreeIdentifiers::Probability,       .initialValue = GraphState::defaultProbability,       .isSetOnCreation = true, .isInheritedByChild = true },
+    { .identifier = ValueTreeIdentifiers::ModAmount },
+    { .identifier = ValueTreeIdentifiers::TraversalFlagValue },
+    { .identifier = ValueTreeIdentifiers::EncapsulatorId },
+    { .identifier = ValueTreeIdentifiers::OrnamentUid },
+    { .identifier = ValueTreeIdentifiers::MidiChannel }
+};
+
 NodeProperties::NodeProperties(juce::ValueTree node)
 {
     rootNodeId        .referTo(node, ValueTreeIdentifiers::RootNodeId,        nullptr);
@@ -21,6 +36,17 @@ NodeProperties::NodeProperties(juce::ValueTree node)
     traversalInstance .referTo(node, ValueTreeIdentifiers::TraversalInstance, nullptr);
     nodeColour        .referTo(node, ValueTreeIdentifiers::NodeColour,        nullptr);
     ornamentUid       .referTo(node, ValueTreeIdentifiers::OrnamentUid,       nullptr);
+}
+
+bool NodePropertyTable::isAudioProperty(const juce::Identifier& identifier)
+{
+    for (const Row& row : rows) {
+        if (row.identifier == identifier) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 NoteProperties::NoteProperties(juce::ValueTree note)

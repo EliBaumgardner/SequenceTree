@@ -3,6 +3,7 @@
 #include "Plugin/PluginProcessor.h"
 #include "Graph/GraphState.h"
 #include "Graph/NodeFactory.h"
+#include "Graph/TypedProperties.h"
 #include "Graph/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "Input/GraphDocument.h"
@@ -10,6 +11,7 @@
 #include "Input/Gestures/NotePreviewGestures.h"
 #include "UI/Canvas/NodeCanvas.h"
 #include "UI/Node/Node.h"
+#include "UI/Node/RootNode.h"
 #include "UI/Node/Encapsulator.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
@@ -32,7 +34,7 @@ struct GestureCanvas
 
     int addRoot(int x)
     {
-        NodeFactory::createRootNode(graph, { x, nodeRowY, nodeRadius }, nullptr);
+        NodeFactory(graph, nullptr).createRootNode({ x, nodeRowY, nodeRadius });
 
         const int lastIndex = graph.nodeMap.getNumChildren() - 1;
 
@@ -41,7 +43,7 @@ struct GestureCanvas
 
     int addChild(int parentId, int x)
     {
-        const juce::ValueTree child = NodeFactory::createNode(graph, parentId, ValueTreeIdentifiers::NodeData, { x, nodeRowY, nodeRadius }, nullptr);
+        const juce::ValueTree child = NodeFactory(graph, nullptr).createNode(parentId, ValueTreeIdentifiers::NodeData, { x, nodeRowY, nodeRadius });
 
         REQUIRE(child.isValid());
 
@@ -98,13 +100,13 @@ struct GestureCanvas
 
     SequenceTreeAudioProcessor processor;
 
-    GraphState& graph = processor.graphState;
+    GraphState& graph = processor.document.graphState;
 
-    GraphDocument                document    { graph, processor.undoManager, processor.canvasSettings };
+    GraphDocument                document    { graph, processor.document.undoManager, processor.document.canvasSettings };
     ArsNovaUI::CustomLookAndFeel lookAndFeel;
-    NodeCanvas                   canvas      { document, processor.bridge, processor.ornamentLibraries, lookAndFeel };
-    NotePreviewGestures          notePreview { processor.traversalSession, processor.rtGraphBuilder };
-    NodeController               controller  { canvas, document, notePreview, processor.ornamentLibraries };
+    NodeCanvas                   canvas      { document, processor.bridge, processor.document.ornamentLibraries, lookAndFeel };
+    NotePreviewGestures          notePreview { processor.playback.traversalSession, processor.rtGraphBuilder };
+    NodeController               controller  { canvas, document, notePreview, processor.document.ornamentLibraries };
 };
 
 TEST_CASE("a selection box selects the visible nodes whose centres lie inside it", "[gestures][selection]")
@@ -150,7 +152,7 @@ TEST_CASE("deleting the selection removes every selected node in one undo transa
     CHECK_FALSE(fixture.graph.getNode(firstId).isValid());
     CHECK_FALSE(fixture.graph.getNode(secondId).isValid());
 
-    fixture.processor.undoManager.undo();
+    fixture.processor.document.undoManager.undo();
 
     CHECK(fixture.graph.getNode(firstId).isValid());
     CHECK(fixture.graph.getNode(secondId).isValid());
@@ -245,7 +247,7 @@ TEST_CASE("right-clicking expands a collapsed group, and collapses it from its f
 
     const std::vector<int> memberIds { firstId, middleId, lastId };
 
-    const juce::ValueTree group = NodeFactory::createEncapsulator(fixture.graph, memberIds, nullptr);
+    const juce::ValueTree group = NodeFactory(fixture.graph, nullptr).createEncapsulator(memberIds);
 
     const int groupId = group.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
@@ -276,7 +278,7 @@ TEST_CASE("a child dragged out of an expanded group's member joins the group aft
 
     const std::vector<int> memberIds { firstId, lastId };
 
-    const juce::ValueTree group = NodeFactory::createEncapsulator(fixture.graph, memberIds, nullptr);
+    const juce::ValueTree group = NodeFactory(fixture.graph, nullptr).createEncapsulator(memberIds);
 
     const int groupId = group.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
@@ -286,8 +288,8 @@ TEST_CASE("a child dragged out of an expanded group's member joins the group aft
 
     fixture.canvas.encapsulationView.expand(groupId);
 
-    const juce::ValueTree firstChild = NodeFactory::createNode(fixture.graph, firstId, ValueTreeIdentifiers::NodeData, { 200, 200, GestureCanvas::nodeRadius }, nullptr);
-    const juce::ValueTree lastChild  = NodeFactory::createNode(fixture.graph, lastId, ValueTreeIdentifiers::NodeData, { 300, 200, GestureCanvas::nodeRadius }, nullptr);
+    const juce::ValueTree firstChild = NodeFactory(fixture.graph, nullptr).createNode(firstId, ValueTreeIdentifiers::NodeData, { 200, 200, GestureCanvas::nodeRadius });
+    const juce::ValueTree lastChild  = NodeFactory(fixture.graph, nullptr).createNode(lastId, ValueTreeIdentifiers::NodeData, { 300, 200, GestureCanvas::nodeRadius });
 
     const int firstChildId = firstChild.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
@@ -356,7 +358,7 @@ TEST_CASE("a right-click on a collapsed group reaches the expansion gesture", "[
 
     const std::vector<int> memberIds { firstId, lastId };
 
-    const juce::ValueTree group = NodeFactory::createEncapsulator(fixture.graph, memberIds, nullptr);
+    const juce::ValueTree group = NodeFactory(fixture.graph, nullptr).createEncapsulator(memberIds);
 
     const int groupId = group.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
@@ -369,4 +371,33 @@ TEST_CASE("a right-click on a collapsed group reaches the expansion gesture", "[
     fixture.controller.mouseDown(fixture.mouseEventOn(groupNode, {}, rightButton));
 
     CHECK(groupNode.isExpanded);
+}
+
+TEST_CASE("traversals typed on a root reach the saved document without playing", "[gestures][roots]")
+{
+    GestureCanvas fixture;
+
+    const int rootId = fixture.addRoot(100);
+
+    fixture.canvas.handleAsyncUpdate();
+
+    RootNode* const rootNode = dynamic_cast<RootNode*>(fixture.canvas.nodeManager.find(rootId));
+
+    REQUIRE(rootNode != nullptr);
+
+    rootNode->rootRectangle.traversalEditor.commitText("4 5b");
+
+    rootNode->rootRectangle.traversalEditor.boundValue.getValueSource().sendChangeMessage(true);
+
+    const juce::ValueTree traversalChildrenIds = fixture.graph.getNode(rootId).getChildWithName(ValueTreeIdentifiers::TraversalChildrenIds);
+
+    REQUIRE(traversalChildrenIds.getNumChildren() == 2);
+
+    const TraversalReferenceProperties first (traversalChildrenIds.getChild(0));
+    const TraversalReferenceProperties second(traversalChildrenIds.getChild(1));
+
+    CHECK(first.traversalId        == 4);
+    CHECK(first.traversalInstance  == 0);
+    CHECK(second.traversalId       == 5);
+    CHECK(second.traversalInstance == 1);
 }

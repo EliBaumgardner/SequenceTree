@@ -16,7 +16,7 @@ void TraversalLogic::reset(int root, const RTtraversal& newTraversal)
     rootId                     = root;
     referenceTargetId          = -1;
     pendingJumpTargetId        = -1;
-    membersScript              = nullptr;
+    membersGeneration          = 0;
     state                      = TraversalState::End;
 
     childSelector.selectionRandom = (static_cast<unsigned int>(root) * seedRootMultiplier
@@ -267,9 +267,12 @@ TraversalLogic::StepResult TraversalLogic::handleNodeEvent(const NodeMap& nodes,
             return result;
         }
 
-        default:
+        case TraversalState::Reset:
+        case TraversalState::Jump:
             return {};
     }
+
+    return {};
 }
 
 ScriptRunContext TraversalLogic::makeScriptContext(const NodeMap& nodes, Walk walk, ScriptWrites writes,
@@ -293,22 +296,22 @@ ScriptRunContext TraversalLogic::makeScriptContext(const NodeMap& nodes, Walk wa
     initialContext.writes = ScriptWrites::Commit;
     initialContext.host   = nullptr;
 
-    if (sharedGlobals != nullptr && sharedGlobals->script != script) {
+    if (sharedGlobals != nullptr && sharedGlobals->generation != script->generation) {
         sharedGlobals->values.fill(0);
 
         std::copy_n(script->globalDefaults.begin(), globalCount, sharedGlobals->values.begin());
 
-        sharedGlobals->script = script;
+        sharedGlobals->generation = script->generation;
 
         ScriptRun(initialContext).call(script->globalInitFunction, {});
     }
 
-    if (membersScript != script) {
+    if (membersGeneration != script->generation) {
         scriptMembers.fill(0);
 
         std::copy_n(script->memberDefaults.begin(), memberCount, scriptMembers.begin());
 
-        membersScript = script;
+        membersGeneration = script->generation;
 
         ScriptRun(initialContext).call(script->memberInitFunction, {});
     }
@@ -371,18 +374,13 @@ const RTNode* TraversalLogic::peekNextTarget(const NodeMap& nodes)
         return nullptr;
     }
 
-    if (targetNode == nullptr || targetNode->encapsulationEntryId == -1) {
+    const RTNode* const entryNode = ChildSelector::subLoopEntryFor(nodes, primary, primary.target, peekTargetId);
+
+    if (entryNode == nullptr) {
         return peekNode;
     }
 
-    const int entryId      = targetNode->encapsulationEntryId;
-    const int subLoopCount = childSelector.nodeState.get(NodeStateSlot::SubRootCount, entryId) + 1;
-
-    const RTNode* const entryNode = nodes.find(entryId);
-
-    if (entryId != primary.subRootNode || peekNode->encapsulationEntryId == entryId || entryNode == nullptr) {
-        return peekNode;
-    }
+    const int subLoopCount = childSelector.nodeState.get(NodeStateSlot::SubRootCount, entryNode->nodeID) + 1;
 
     if (entryNode->subLoopCountLimit > 0 && subLoopCount >= entryNode->subLoopCountLimit) {
         return peekNode;
@@ -460,9 +458,6 @@ TraversalLogic::StepResult TraversalLogic::stepActive(const NodeMap& nodes, int 
 
         case TraversalState::End:
             fillEndedResult(result);
-            break;
-
-        default:
             break;
     }
 

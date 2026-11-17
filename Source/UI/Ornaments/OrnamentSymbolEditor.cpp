@@ -3,6 +3,7 @@
 #include "../../Graph/TypedProperties.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "../../Graph/OrnamentLibraries.h"
+#include "../../Graph/OrnamentSymbol.h"
 
 OrnamentSymbolEditor::OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
     : sizeField        (undoManager),
@@ -74,7 +75,7 @@ void OrnamentSymbolEditor::paint(juce::Graphics& graphics)
 
     const juce::String storedSymbol = properties.symbol;
 
-    const std::vector<ArsNovaUI::SymbolStroke> symbolStrokes = OrnamentLibraries::readSymbol(storedSymbol);
+    const std::vector<ArsNovaUI::SymbolStroke> symbolStrokes = OrnamentSymbol::read(storedSymbol);
 
     lookAndFeel.drawStrokeSymbol(graphics, drawingArea, symbolStrokes);
 
@@ -170,7 +171,7 @@ void OrnamentSymbolEditor::mouseUp(const juce::MouseEvent& event)
 
     undoManager.beginNewTransaction();
 
-    ornamentLibraries.addSymbolStroke(ornament, normalised, brushWidth, &undoManager);
+    OrnamentSymbol::addStroke(ornament, normalised, brushWidth, &undoManager);
 }
 
 void OrnamentSymbolEditor::mouseMove(const juce::MouseEvent& event)
@@ -218,7 +219,7 @@ void OrnamentSymbolEditor::eraseAlong(juce::Point<float> target)
     for (int step = 1; step <= steps; ++step) {
         const auto centre = (lastPoint + (target - lastPoint) * (static_cast<float>(step) / steps) - drawingArea.getPosition()) * scale;
 
-        ornamentLibraries.eraseSymbol(ornament, centre, eraseRadius, &undoManager);
+        OrnamentSymbol::erase(ornament, centre, eraseRadius, &undoManager);
     }
 
     lastPoint = target;

@@ -75,10 +75,9 @@ public:
 
         bool clearTrail = false;
 
-        int jumpedFromRootId          = -1;
-        int leftAlternativeId         = -1;
-        int enteredAlternativeId      = -1;
-        int referenceOffAlternativeId = -1;
+        int jumpedFromRootId     = -1;
+        int leftAlternativeId    = -1;
+        int enteredAlternativeId = -1;
 
         bool pushCounts = false;
 
@@ -114,8 +113,9 @@ public:
     static constexpr unsigned int seedInstanceMultiplier = 2246822519u;
     static constexpr unsigned int seedOffset             = 2463534242u;
 
-    const RTScript* script        = nullptr;
-    const RTScript* membersScript = nullptr;
+    const RTScript* script = nullptr;
+
+    std::uint64_t membersGeneration = 0;
 
     ScriptMembers scriptMembers {};
 

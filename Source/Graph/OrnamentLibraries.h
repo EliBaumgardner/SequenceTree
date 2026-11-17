@@ -2,7 +2,6 @@
 
 #include "RTData.h"
 #include "ValueTreeIdentifiers.h"
-#include <ArsNovaUI/Theme/Visuals.h>
 
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_events/juce_events.h>
@@ -22,10 +21,10 @@
     canvas where it is applied. Each ornament keeps an editable draft figure and, once published, a
     separate published copy, and playback only ever uses the published copy.
 
-    The figure functions (addFigureNode, setFigureNodePosition, toggleHost and the rest) and the
-    symbol functions (addSymbolStroke, eraseSymbol) edit the draft. publish copies the draft into
-    the published figure if isPublishable accepts it, and statusOf reports Draft, Published or
-    ChangesPending. figureSteps turns a figure into the OrnamentSteps NoteScheduler plays.
+    It holds the libraries and ornaments and the files they are saved in. Editing an ornament's
+    figure, publishing it and turning it into the OrnamentSteps NoteScheduler plays is OrnamentFigure
+    (addNode, setNodePosition, toggleHost, publish, isPublishable, statusOf, steps), and editing its
+    symbol is OrnamentSymbol (addStroke, erase, read). Both are stateless functions of an ornament's tree.
 
     Each library is saved as a folder with one .ornament file per ornament, half a second after its
     last change. load reads the folder at start-up, rescan picks up libraries changed on disk, and
@@ -34,27 +33,12 @@
     RTGraphBuilder reads the published figures and rebuilds when they change.
 */
 
-enum class OrnamentStatus { Draft, Published, ChangesPending };
-
 class OrnamentLibraries : public juce::ValueTree::Listener, private juce::Timer
 {
 public:
 
     OrnamentLibraries();
     ~OrnamentLibraries() override;
-
-    void setFigureNodePosition(juce::ValueTree ornament, int nodeId, juce::Point<int> position, juce::UndoManager* undoManager);
-    void removeFigureNode     (juce::ValueTree ornament, int nodeId, juce::UndoManager* undoManager);
-    void toggleHost           (juce::ValueTree ornament, int nodeId, juce::UndoManager* undoManager);
-
-    void addDanglingArrow   (juce::ValueTree ornament, int nodeId, juce::Point<int> tipOffset, juce::UndoManager* undoManager);
-    void removeDanglingArrow(juce::ValueTree ornament, juce::UndoManager* undoManager);
-    void setLastNodeLength  (juce::ValueTree ornament, juce::Point<int> tipOffset, juce::UndoManager* undoManager);
-
-    void addSymbolStroke(juce::ValueTree ornament, const juce::Path& stroke, float width, juce::UndoManager* undoManager);
-    void eraseSymbol    (juce::ValueTree ornament, juce::Point<float> centre, float radius, juce::UndoManager* undoManager);
-
-    void publish(juce::ValueTree ornament, juce::UndoManager* undoManager);
 
     void load                 (const juce::File& libraryFolder);
     void importLegacyLibraries(const juce::File& legacyFolder);
@@ -72,14 +56,6 @@ public:
     juce::ValueTree duplicateOrnament(const juce::String& uid, juce::UndoManager* undoManager);
     juce::ValueTree findOrnament     (const juce::String& uid) const;
 
-    juce::ValueTree addFigureNode(juce::ValueTree ornament, int parentNodeId, juce::Point<int> position, juce::UndoManager* undoManager);
-
-    bool                      isPublishable(const juce::ValueTree& ornament) const;
-    std::vector<OrnamentStep> figureSteps  (const juce::ValueTree& figure) const;
-    OrnamentStatus            statusOf     (const juce::ValueTree& ornament) const;
-
-    static std::vector<ArsNovaUI::SymbolStroke> readSymbol(const juce::String& symbol);
-
     struct OrnamentFile
     {
         juce::String fileName;
@@ -94,16 +70,8 @@ public:
         std::map<juce::String, OrnamentFile> ornamentFiles;
     };
 
-    static constexpr float defaultStrokeWidth = 0.06f;
-
     static constexpr const char* libraryInfoFileName = "Library.ornamentlibrary";
     static constexpr const char* ornamentExtension   = ".ornament";
-
-    static constexpr int maximumOffset          = 48;
-    static constexpr int defaultVelocityPercent = 100;
-    static constexpr int maximumVelocityPercent = 200;
-    static constexpr int firstNodeLengthInGrid  = 2;
-    static constexpr int noHostId               = -1;
 
     juce::ValueTree libraries { ValueTreeIdentifiers::OrnamentLibraries };
     juce::File      folder;

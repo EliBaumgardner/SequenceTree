@@ -61,7 +61,7 @@ struct ScriptGlobals
 {
     ScriptMembers values {};
 
-    const RTScript* script = nullptr;
+    std::uint64_t generation = 0;
 };
 
 struct ScriptRunContext

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 /*
@@ -156,6 +157,8 @@ struct RTScript
     int globalInitFunction = -1;
 
     int stepBudget = defaultStepBudget;
+
+    std::uint64_t generation = 0;
 
     bool isEmpty() const { return instructions.empty(); }
 };
