@@ -1,0 +1,564 @@
+#include "TraversalSession.h"
+#include "Core/Model/ArrowInfo.h"
+#include "EventManager.h"
+
+#include <algorithm>
+
+TraversalSession::TraversalSession(EventManager& eventManager, EventManager& previewEventManager)
+    : eventManager       (eventManager),
+      previewEventManager(previewEventManager)
+{
+    activeRootIdScratch.reserve(scratchCapacity);
+    restartRootScratch .reserve(scratchCapacity);
+    removedRunIdScratch.reserve(maxConcurrentTraversals);
+
+    replayMidi.ensureSize(replayMidiCapacityBytes);
+}
+
+void TraversalSession::prepare()
+{
+    const TraversalRule& rule = NativeTraversalRule::instance();
+
+    syncedGraphGeneration = 0;
+    syncedPoolEpoch       = 0;
+
+    traversals.prepare(maxConcurrentTraversals, rule);
+    previewTraversals.prepare(maxPreviewTraversals, rule);
+    previewTraversals.mode         = TraversalMode::Preview;
+    previewTraversals.runIdCounter = juce::jmax(previewTraversals.runIdCounter, previewRunIdBase);
+}
+
+void TraversalSession::clearTraversals()
+{
+    eventManager.dispatcher.flagScheduler.clear();
+
+    eventManager.bridge.pushArrowReset(BridgeCommands::allTrails);
+
+    traversals.clear();
+}
+
+void TraversalSession::setTraversalScript(const RTScript* script)
+{
+    const RTScript* activeScript = nullptr;
+
+    if (script != nullptr && !script->isEmpty()) {
+        activeScript = script;
+    }
+
+    traversals.script        = activeScript;
+    previewTraversals.script = activeScript;
+
+    for (auto& [runId, instance] : traversals.entries()) {
+        instance.logic.script = activeScript;
+    }
+
+    for (auto& [runId, instance] : previewTraversals.entries()) {
+        instance.logic.script = activeScript;
+    }
+}
+
+void TraversalSession::silenceAllNotes(juce::MidiBuffer& midiMessages)
+{
+    for (const auto& note : eventManager.scheduler.activeNotes) {
+        eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
+    }
+
+    eventManager.bridge.clearAllHighlights();
+    eventManager.bridge.pushArrowReset(BridgeCommands::allTrails);
+
+    eventManager.scheduler.clear();
+
+    if (playback == Playback::Suspended) {
+        playback = Playback::Live;
+    }
+}
+
+void TraversalSession::suspendActiveNotes(juce::MidiBuffer& midiMessages)
+{
+    if (playback != Playback::Live) {
+        return;
+    }
+
+    for (const auto& note : eventManager.scheduler.activeNotes) {
+        eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
+    }
+
+    playback = Playback::Suspended;
+}
+
+void TraversalSession::resumeSuspendedNotes(juce::MidiBuffer& midiMessages)
+{
+    for (const auto& note : eventManager.scheduler.activeNotes) {
+        if (NoteScheduler::isNoteSounding(note)) {
+            const juce::uint8 noteOnVelocity = static_cast<juce::uint8>(note.event.velocity);
+
+            const juce::MidiMessage noteOn = juce::MidiMessage::noteOn(note.event.midiChannel, note.event.pitch, noteOnVelocity);
+
+            midiMessages.addEvent(noteOn, 0);
+        }
+    }
+
+    playback = Playback::Live;
+}
+
+namespace {
+int homeRootId(const TraversalPool::Instance& instance)
+{
+    if (instance.runtime.originRootId != -1) {
+        return instance.runtime.originRootId;
+    }
+
+    return instance.logic.rootId;
+}
+}
+
+void TraversalSession::restartActiveTraversals(const DispatchContext& context)
+{
+    restartRootScratch.clear();
+    eventManager.dispatcher.flagScheduler.clear();
+
+    for (const auto& [runId, instance] : traversals.entries()) {
+        if (instance.runtime.isSpawned()) {
+            continue;
+        }
+
+        const int rootId = homeRootId(instance);
+
+        if (std::ranges::find(restartRootScratch, rootId) == restartRootScratch.end()) {
+            restartRootScratch.push_back(rootId);
+        }
+    }
+
+    eventManager.bridge.pushArrowReset(BridgeCommands::allTrails);
+
+    traversals.clear();
+
+    for (int rootId : restartRootScratch) {
+        const RTNode* rootNode = context.nodes.find(rootId);
+
+        if (rootNode == nullptr) {
+            continue;
+        }
+
+        for (const RTtraversal& assigned : rootNode->traversals) {
+            startTraversal(*rootNode, assigned, context);
+        }
+    }
+}
+
+void TraversalSession::syncWithGraph(const DispatchContext& context, std::uint64_t graphGeneration)
+{
+    if (graphGeneration == syncedGraphGeneration
+        && traversals.epoch == syncedPoolEpoch) {
+        return;
+    }
+
+    syncActiveTraversals(context.nodes);
+
+    removeDeletedTraversals(context.nodes, context.midiMessages);
+
+    startMissingTraversals(context);
+
+    syncTraversalLoopLimits(context);
+
+    syncedGraphGeneration = graphGeneration;
+    syncedPoolEpoch       = traversals.epoch;
+}
+
+void TraversalSession::playPreview(const DispatchContext& context, int numSamples)
+{
+    previewRequests.drain([this, &context](const RTPreviewRequest& request) {
+        int loopLimit = 1;
+
+        switch (request.kind) {
+            case RTPreviewRequest::Kind::Start: {
+                stopPreview(context.midiMessages);
+                startPreview(request, context);
+                break;
+            }
+            case RTPreviewRequest::Kind::Stop: {
+                stopPreview(context.midiMessages);
+                break;
+            }
+            case RTPreviewRequest::Kind::SetRepeat: {
+                break;
+            }
+        }
+
+        if (request.repeat) {
+            loopLimit = 0;
+        }
+
+        for (auto& [runId, instance] : previewTraversals.entries()) {
+            if (instance.logic.loop.returnId != -1) {
+                instance.logic.loop.limit = loopLimit;
+            }
+        }
+    });
+
+    previewEventManager.followTempo(context.tempoMultiplier);
+
+    if (previewTraversals.empty()) {
+        return;
+    }
+
+    previewEventManager.processEvents(numSamples, context);
+}
+
+void TraversalSession::beginReplay(const DispatchContext& context, double targetSamples)
+{
+    silenceAllNotes(context.midiMessages);
+
+    clearTraversals();
+
+    eventManager.bridge.beginRecording();
+
+    playback              = Playback::Replaying;
+    replayRemainingSamples = targetSamples;
+
+    const DispatchContext replayContext { context.nodes, context.traversalMap, replayMidi,
+                                          context.sampleRate, context.tempoMultiplier,
+                                          context.velocityScale, context.transpose };
+
+    replayMidi.clear();
+
+    startTraversalsFromFirstRoot(replayContext);
+}
+
+bool TraversalSession::startTraversalsFromFirstRoot(const DispatchContext& context)
+{
+    const int rootId = context.nodes.startRootId;
+
+    const RTNode* const rootNode = context.nodes.find(rootId);
+
+    if (rootNode == nullptr) {
+        return false;
+    }
+
+    for (const RTtraversal& traversal : rootNode->traversals) {
+        startTraversal(*rootNode, traversal, context);
+    }
+
+    return true;
+}
+
+TraversalSession::Playback TraversalSession::continueReplay(const DispatchContext& context,
+                                                            std::uint64_t graphGeneration, int numSamples,
+                                                            bool playing)
+{
+    if (playback != Playback::Replaying) {
+        return playback;
+    }
+
+    const DispatchContext replayContext { context.nodes, context.traversalMap, replayMidi,
+                                          context.sampleRate, context.tempoMultiplier,
+                                          context.velocityScale, context.transpose };
+
+    syncWithGraph(replayContext, graphGeneration);
+
+    const double budgetMs  = ArrowInfo::millisecondsPerSecond * replayShareOfBlock * numSamples / context.sampleRate;
+    const double startedMs = juce::Time::getMillisecondCounterHiRes();
+
+    while (replayRemainingSamples >= 1.0
+           && (renderingOffline || juce::Time::getMillisecondCounterHiRes() - startedMs < budgetMs)) {
+        const int chunkSamples = static_cast<int>(juce::jmin(replayRemainingSamples, replayChunkSamples));
+
+        eventManager.processEvents(chunkSamples, replayContext);
+
+        replayMidi.clear();
+
+        replayRemainingSamples -= chunkSamples;
+        eventManager.bridge.recordClockMs += ArrowInfo::millisecondsPerSecond * chunkSamples / context.sampleRate;
+    }
+
+    if (replayRemainingSamples >= 1.0) {
+        if (playing) {
+            replayRemainingSamples += numSamples;
+        }
+
+        return Playback::Replaying;
+    }
+
+    eventManager.bridge.deliverRecording();
+
+    if (playing) {
+        context.midiMessages.addEvents(replayMidi, 0, -1, 0);
+    }
+
+    replayMidi.clear();
+
+    playback = Playback::Live;
+
+    return Playback::Live;
+}
+
+void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
+{
+    for (auto& [runId, instance] : traversals.entries()) {
+        TraversalLogic& logic = instance.logic;
+
+        if (instance.runtime.asFlag) {
+            const RTNode* flagNode = nodes.find(instance.runtime.sourceNodeId);
+
+            if (flagNode != nullptr && flagNode->flagTraversal.key == logic.traversal.key) {
+                logic.traversal = flagNode->flagTraversal;
+            }
+
+            continue;
+        }
+
+        const RTNode* rootNode = nodes.find(homeRootId(instance));
+
+        if (rootNode == nullptr) {
+            continue;
+        }
+
+        for (const RTtraversal& assigned : rootNode->traversals) {
+            if (assigned.key == logic.traversal.key) {
+                logic.traversal = assigned;
+
+                break;
+            }
+        }
+    }
+}
+
+void TraversalSession::removeDeletedTraversals(const NodeMap& nodes, juce::MidiBuffer& midiMessages)
+{
+    removedRunIdScratch.clear();
+
+    for (const auto& [runId, instance] : traversals.entries()) {
+        const TraversalLogic& traverser = instance.logic;
+
+        bool stillAssigned = false;
+
+        const RTNode* rootNode = nodes.find(homeRootId(instance));
+
+        if (rootNode != nullptr) {
+            if (instance.runtime.asFlag) {
+                stillAssigned = true;
+            }
+            else {
+                for (const RTtraversal& assigned : rootNode->traversals) {
+                    if (assigned.key == traverser.traversal.key) {
+                        stillAssigned = true;
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!stillAssigned) {
+            removedRunIdScratch.push_back(runId);
+        }
+    }
+
+    for (int runId : removedRunIdScratch) {
+        stopTraversalNotes(runId, midiMessages);
+
+        traversals.erase(runId);
+    }
+}
+
+void TraversalSession::startMissingTraversals(const DispatchContext& context)
+{
+    activeRootIdScratch.clear();
+
+    for (const auto& [runId, instance] : traversals.entries()) {
+        if (instance.runtime.isSpawned()) {
+            continue;
+        }
+
+        if (std::ranges::find(activeRootIdScratch, homeRootId(instance)) == activeRootIdScratch.end()) {
+            activeRootIdScratch.push_back(homeRootId(instance));
+        }
+    }
+
+    auto isActive = [this](int rootId, const TraversalKey& key) {
+        for (const auto& [runId, instance] : traversals.entries()) {
+            if (homeRootId(instance) == rootId && instance.logic.traversal.key == key) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    for (int rootId : activeRootIdScratch) {
+        const RTNode* rootNode = context.nodes.find(rootId);
+
+        if (rootNode == nullptr) {
+            continue;
+        }
+
+        for (const RTtraversal& assigned : rootNode->traversals) {
+            if (isActive(rootId, assigned.key)) {
+                continue;
+            }
+
+            startTraversal(*rootNode, assigned, context);
+        }
+    }
+}
+
+void TraversalSession::syncTraversalLoopLimits(const DispatchContext& context)
+{
+    for (auto& [runId, instance] : traversals.entries())
+    {
+        TraversalLogic& traversal = instance.logic;
+
+        const RTNode* rootEntry = context.nodes.find(traversal.rootId);
+
+        if (rootEntry == nullptr) {
+            continue;
+        }
+
+        const RTNode& rootNode = *rootEntry;
+
+        int newLoopLimit = rootNode.graphLoopLimit;
+
+        if (newLoopLimit == traversal.loop.limit) {
+            continue;
+        }
+
+        traversal.loop.limit = newLoopLimit;
+
+        if (traversal.state == TraversalLogic::TraversalState::End) {
+            if (newLoopLimit == 0 || traversal.loop.count < newLoopLimit) {
+                traversal.primary.target = traversal.rootId;
+                traversal.state          = TraversalLogic::TraversalState::Active;
+
+                traversal.childSelector.advanceAlternative(context.nodes, traversal.primary, Walk::Primary, traversal.rootId);
+
+                eventManager.bridge.highlightNode(rootNode, BridgeCommands::HighlightKind::Show, runId, traversal.traversal.key.typeId);
+
+                eventManager.dispatcher.pushNote(rootNode, runId, context, 0);
+            }
+        }
+    }
+}
+
+void TraversalSession::startTraversal(const RTNode& rootNode, const RTtraversal& traversal,
+                                      const DispatchContext& context)
+{
+    const int rootId = rootNode.nodeID;
+    const int runId  = traversals.nextRunId();
+
+    TraversalPool::Instance* acquired = traversals.acquire(runId, rootId, traversal);
+
+    if (acquired == nullptr) {
+        return;
+    }
+
+    acquired->logic.begin(context.nodes, rootId, rootNode.graphLoopLimit);
+
+    eventManager.bridge.highlightNode(rootNode, BridgeCommands::HighlightKind::Show, runId, traversal.key.typeId);
+
+    eventManager.dispatcher.pushNote(rootNode, runId, context, 0);
+}
+
+void TraversalSession::stopTraversalNotes(int runId, juce::MidiBuffer& midiMessages)
+{
+    auto& activeNotes = eventManager.scheduler.activeNotes;
+
+    for (int i = static_cast<int>(activeNotes.size()) - 1; i >= 0; --i) {
+        auto& note = activeNotes[i];
+
+        const int stoppedNodeId = note.nodeId;
+
+        if (note.runId != runId || note.role != NoteScheduler::NoteRole::Stepping) {
+            continue;
+        }
+
+        eventManager.scheduler.sendNoteOff(note, midiMessages, 0);
+
+        eventManager.scheduler.removeNote(i);
+
+        eventManager.bridge.highlightNode(stoppedNodeId, BridgeCommands::HighlightKind::Hide, runId);
+    }
+
+    eventManager.bridge.pushArrowReset(BridgeCommands::primaryTrail(runId));
+    eventManager.bridge.pushArrowReset(BridgeCommands::modulatorTrail(runId));
+}
+
+void TraversalSession::startPreview(const RTPreviewRequest& request, const DispatchContext& context)
+{
+    const RTNode* const clickedNode   = context.nodes.find(request.nodeId);
+    const RTNode*       hostNode      = clickedNode;
+    const RTNode*       rootNode      = nullptr;
+
+    RTtraversal         traversal     = request.traversal;
+
+    int                 alternativeId = -1;
+
+    if (clickedNode == nullptr) {
+        return;
+    }
+
+    if (clickedNode->nodeType == NodeInfo::Kind::Alternative) {
+        alternativeId = clickedNode->nodeID;
+        hostNode      = context.nodes.find(clickedNode->parentId);
+    }
+    else if (clickedNode->nodeType != NodeInfo::Kind::Node && clickedNode->nodeType != NodeInfo::Kind::Root) {
+        return;
+    }
+
+    if (hostNode == nullptr) {
+        return;
+    }
+
+    rootNode = context.nodes.find(hostNode->graphID);
+
+    if (rootNode != nullptr) {
+        for (const RTtraversal& equipped : rootNode->traversals) {
+            if (equipped.key.typeId == traversal.key.typeId) {
+                traversal = equipped;
+
+                break;
+            }
+        }
+    }
+
+    previewTraversals.previewVisitCount = juce::jmax(1, request.visitCount);
+
+    const int runId = previewTraversals.nextRunId();
+
+    TraversalPool::Instance* const instance = previewTraversals.acquire(runId, hostNode->graphID, traversal);
+
+    if (instance == nullptr) {
+        return;
+    }
+
+    instance->logic.childSelector.selectionRandom = (instance->logic.childSelector.selectionRandom ^ static_cast<unsigned int>(runId) * TraversalLogic::seedInstanceMultiplier) | 1u;
+
+    instance->logic.beginPreview(context.nodes, hostNode->nodeID, alternativeId);
+
+    previewEventManager.bridge.highlightNode(*clickedNode, BridgeCommands::HighlightKind::Show, runId, traversal.key.typeId);
+
+    previewEventManager.dispatcher.pushNote(*hostNode, runId, context, 0);
+}
+
+void TraversalSession::stopPreview(juce::MidiBuffer& midiMessages)
+{
+    AudioUIBridge& bridge = previewEventManager.bridge;
+
+    for (const auto& note : previewEventManager.scheduler.activeNotes) {
+        previewEventManager.scheduler.sendNoteOff(note, midiMessages, 0);
+
+        bridge.highlightNode(note.nodeId, BridgeCommands::HighlightKind::Hide, note.runId);
+    }
+
+    for (const auto& [runId, instance] : previewTraversals.entries()) {
+        bridge.highlightNode(instance.logic.primary.target,               BridgeCommands::HighlightKind::Hide, runId);
+        bridge.highlightNode(instance.logic.primary.alternativeTarget,    BridgeCommands::HighlightKind::Hide, runId);
+        bridge.highlightNode(instance.logic.mod.walker.target,            BridgeCommands::HighlightKind::Hide, runId);
+        bridge.highlightNode(instance.logic.mod.walker.alternativeTarget, BridgeCommands::HighlightKind::Hide, runId);
+        bridge.pushArrowReset(BridgeCommands::primaryTrail(runId));
+        bridge.pushArrowReset(BridgeCommands::modulatorTrail(runId));
+    }
+
+    previewEventManager.scheduler.clear();
+    previewEventManager.dispatcher.flagScheduler.clear();
+    previewTraversals.clear();
+}

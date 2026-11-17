@@ -1,8 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "Audio/Traversal/ScriptRun.h"
-#include "Audio/Traversal/TraversalLogic.h"
-#include "Script/ScriptCompiler.h"
+#include "Core/Traversal/ScriptRun.h"
+#include "Core/Traversal/TraversalLogic.h"
+#include "Core/Script/ScriptCompiler.h"
 
 #include <string>
 #include <vector>

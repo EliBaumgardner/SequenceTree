@@ -1,0 +1,115 @@
+#pragma once
+
+
+#include <unordered_set>
+
+#include "Core/Model/RTData.h"
+#include "Core/Model/NodeInfo.h"
+#include "NodeArrowCanvas.h"
+#include "ValueField.h"
+#include "AudioCommandDrainer.h"
+#include "EncapsulationView.h"
+#include "Editor/Ornaments/OrnamentMarks.h"
+#include "GridMultiplier.h"
+#include "Core/Model/ArrowInfo.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
+
+/*
+    The NodeArrowCanvas for the graph: it shows GraphDocument's nodeMap and adds what only the
+    graph has. That is the active tool (none, paint, span, note preview or ornament), which only
+    setActiveTool changes: it sets the cursor, tells onToolLeft which tool was left and tells
+    the bar through onActiveToolChanged; and the parts AudioCommandDrainer
+    for the audio thread's commands, EncapsulationView, OrnamentMarks, ValueField and the
+    GridMultiplier that spaces the grid and its snap points by the project's GraphGridMultiplier.
+
+    Its hooks build the Node class each node type needs (RootNode, Modulator, TraversalFlagNode or
+    Encapsulator), bind each node to its MIDI note, colour and the display mode, collapse and
+    refresh groups as nodes come and go, draw a member of a collapsed group at its group, and
+    refresh ornament marks and group colours. handleAsyncUpdate drains the audio commands before
+    it applies the queued updates; the editor's per-frame poll and SelectionGestures call it.
+    rebuildFromNodeMap also collapses every group and puts the grid origin on a root.
+    setPlaybackActive equips the roots' traversals and starts, or pauses, the arrows' progress
+    animation. setDisplayMode, clearHighlights, clearOutlines, setInterceptsClicks
+    and equipRootTraversals apply one change to every node, resetAllProgress, resetTrail,
+    pauseAllProgress and resumeAllProgress to the trails of every arrow, and fadeFlagArrows fades in
+    the arrows of the traversal flags near the cursor.
+
+    NodeController routes mouse events on it; the editor and the bars hold it by reference.
+*/
+
+class RootNode;
+class AudioUIBridge;
+class GraphState;
+class OrnamentLibraries;
+class GraphDocument;
+
+class NodeCanvas : public NodeArrowCanvas
+{
+public:
+
+    enum class CanvasTool;
+
+    NodeCanvas(GraphDocument& graphDocument, AudioUIBridge& bridge, OrnamentLibraries& ornamentLibraries, ArsNovaUI::CustomLookAndFeel& lookAndFeel);
+
+    ~NodeCanvas() override;
+
+    void paint(juce::Graphics& graphics) override;
+
+    void rebuildFromNodeMap(const juce::ValueTree& stateTree) override;
+    void handleAsyncUpdate () override;
+
+    void nodeCreated      (ArsNovaUI::CanvasNode& node) override;
+    void nodeAdded        (ArsNovaUI::CanvasNode& node) override;
+    void nodeRemoving     (ArsNovaUI::CanvasNode& node) override;
+    void prepareArrow     (ArsNovaUI::CanvasArrow& arrow) override;
+    void connectionCreated(ArsNovaUI::CanvasArrow& arrow) override;
+    void updateApplied    (const AsyncUpdate& update) override;
+
+    void setActiveTool(CanvasTool tool);
+
+    void applyViewTransform(const juce::AffineTransform& newViewTransform, float zoom);
+    void setPlaybackActive (bool shouldPlay);
+
+    void setDisplayMode     (NodeInfo::DisplayMode mode);
+    void setInterceptsClicks(bool shouldIntercept, bool shouldChildrenIntercept);
+    void resetTrail         (int trailId);
+    void fadeFlagArrows     (juce::Point<float> cursor);
+    void clearHighlights ();
+    void clearOutlines ();
+    void equipRootTraversals ();
+    void resetAllProgress ();
+    void pauseAllProgress ();
+    void resumeAllProgress ();
+
+    juce::Point<int> drawnPosition(const juce::ValueTree& nodeTree) const override;
+
+    std::unique_ptr<ArsNovaUI::CanvasNode> makeNode(const juce::ValueTree& nodeTree) override;
+
+    enum class CanvasTool { None, Paint, Span, NotePreview, Ornament };
+
+    GraphState& graphState;
+
+    CanvasTool activeTool = CanvasTool::None;
+
+    NodeInfo::DisplayMode displayMode = NodeInfo::DisplayMode::Pitch;
+
+    std::function<void(CanvasTool)> onActiveToolChanged;
+    std::function<void(CanvasTool)> onToolLeft;
+
+    static constexpr int spanCursorSize        = 16;
+    static constexpr int notePreviewCursorSize = 24;
+
+    static constexpr float flagProximityRadius = 28.0f;
+
+    ValueField valueField { *this };
+
+    AudioCommandDrainer drainer;
+    EncapsulationView   encapsulationView;
+    OrnamentMarks       ornamentMarks;
+    GridMultiplier      gridMultiplier;
+
+private:
+
+    juce::MouseCursor spanCursor       () const;
+    juce::MouseCursor notePreviewCursor() const;
+};

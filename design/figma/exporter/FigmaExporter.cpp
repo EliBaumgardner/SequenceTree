@@ -53,11 +53,11 @@
 
 #define private public
 #define protected public
-#include "Plugin/PluginProcessor.h"
-#include "Plugin/PluginEditor.h"
-#include "UI/Menus/AllowedTraversalsMenu.h"
-#include "UI/Menus/MenuArea.h"
-#include "UI/Bars/MenuBar.h"
+#include "Processor/PluginProcessor.h"
+#include "Editor/PluginEditor.h"
+#include "Editor/Menus/AllowedTraversalsMenu.h"
+#include "Editor/Menus/MenuArea.h"
+#include "Editor/Menus/MenuBar.h"
 #include <ArsNovaUI/Menus/ColourSelector.h>
 #include <ArsNovaUI/Bars/Bar.h>
 #include <ArsNovaUI/Editors/ValueEditor.h>

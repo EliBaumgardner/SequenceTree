@@ -4,7 +4,7 @@ This is the technical companion to the [README](../README.md). It goes through t
 
 ## 1. The two roots
 
-Every object in the program is owned, directly or through a chain of members, by one of two classes in `Source/Plugin/`:
+Every object in the program is owned, directly or through a chain of members, by one of two classes, the processor in `Source/Processor/` and the editor in `Source/Editor/`:
 
 | Root | Created by | Lifetime | Owns |
 |---|---|---|---|
@@ -25,10 +25,10 @@ References run from the editor into the processor and almost never back. The edi
 
 | Layer | Members | Folder | Thread |
 |---|---|---|---|
-| 1. Document | `valueTreeState`, and `document` (a `PluginDocument`) holding `graphState`, `traversalRuleState`, `ornamentLibraries`, `undoManager`, `ornamentUndoManager`, `patch`, `colourPresets`, `canvasSettings` | `Source/Graph/`, `Source/Plugin/` | message |
-| 2. Audio model | `rtGraphBuilder`, `snapshots` (`AudioSnapshotPublisher`) | `Source/Graph/` | built on message, read on audio |
-| 3. Playback | `playback` (`PlaybackEngine`), holding `traversalSession`, `eventManager`, `previewEventManager` and the transport atomics | `Source/Audio/` | audio |
-| 4. Output channels | `bridge` (`AudioUIBridge`), `virtualMidiOutput` | `Source/Audio/ThreadMessaging/` | written on audio, read elsewhere |
+| 1. Document | `valueTreeState`, and `document` (a `PluginDocument`) holding `graphState`, `traversalRuleState`, `ornamentLibraries`, `undoManager`, `ornamentUndoManager`, `patch`, `colourPresets`, `canvasSettings` | `Source/Processor/`, `Source/Processor/Document/` | message |
+| 2. Audio model | `rtGraphBuilder`, `snapshots` (`AudioSnapshotPublisher`) | `Source/Processor/AudioModel/`, with the structs in `Source/Core/Model/` | built on message, read on audio |
+| 3. Playback | `playback` (`PlaybackEngine`), holding `traversalSession`, `eventManager`, `previewEventManager` and the transport atomics | `Source/Processor/Playback/`, with the walk in `Source/Core/Traversal/` | audio |
+| 4. Output channels | `bridge` (`AudioUIBridge`), `virtualMidiOutput` | `Source/Processor/Channels/` | written on audio, read elsewhere |
 
 ### 2.1 Document
 
@@ -52,7 +52,7 @@ The audio thread cannot read a `ValueTree`. This layer turns the document into p
 
 - **`RTGraphBuilder`** is a `ValueTree::Listener` on `nodeMap`, the traversal map and the ornament libraries. It collects what each change touched into `PendingChanges`. Its `handleAsyncUpdate` rebuilds each affected tree with `makeRTGraph` (or `discardGraph` for a deleted root), freezes it into a sorted `NodeMap` (`freezeNodes`) and hands it to the publisher. Arrow durations are computed here from arrow geometry (`fillDurationMap`). It reads the document and never writes to it.
 - **`AudioSnapshotPublisher`** owns everything the audio thread reads: one immutable `Snapshot { globalNodes, traversalScript, generation }` behind an atomic pointer. Every change copies the current snapshot (`beginEdit`), replaces one member and calls `publish`. `publishGraph` merges a rebuilt tree into the nodes. `publishScript` and `publishActiveTraversalRule` publish a compiled rule. Old snapshots are freed only once `blockEpoch` shows that no block can still be reading them (see 2.3).
-- **The script compiler** (`Source/Script/`) makes the bytecode. `compileTraversalScript` runs `ScriptLexer` → `ScriptParser` → `ScriptEmitter` on the message thread. It returns an `RTScript` or a `ScriptDiagnostic` with a line and column. Each phase is a local that lives for one compile. Only the `RTScript` ever reaches the audio thread.
+- **The script compiler** (`Source/Core/Script/`) makes the bytecode. `compileTraversalScript` runs `ScriptLexer` → `ScriptParser` → `ScriptEmitter` on the message thread. It returns an `RTScript` or a `ScriptDiagnostic` with a line and column. Each phase is a local that lives for one compile. Only the `RTScript` ever reaches the audio thread.
 
 ### 2.3 Playback
 
@@ -61,7 +61,7 @@ Playback runs entirely inside `processBlock` on the audio thread. Three levels o
 1. **`TraversalSession`** decides which traversals exist. It starts them from roots, removes those whose root or assignment was deleted (`syncWithGraph`), restarts them, and replays the walk silently after a host relocation (`beginReplay` / `continueReplay`). It owns:
    - `TraversalPool traversals` (128 slots) and `TraversalPool previewTraversals` (16 slots). Each slot holds an `Instance { TraversalLogic logic; TraversalRuntime runtime; }`, allocated in `prepare` so that starting a traversal never allocates.
    - `CommandFifo previewRequests`, through which the UI asks for note preview.
-2. **`TraversalLogic`** (`Source/Audio/Traversal/`) is one walk. It holds the node it is on, and on each `handleNodeEvent` it picks the next node through the script when one is set (run by `ScriptRun`), or otherwise through its `ChildSelector`, which keeps the counts in a `NodeStateTable` and asks the active `TraversalRule`. The modulator walk under it is a `ModulatorWalk`: it starts when the main walk enters the modulator's host, steps while the main walk stays under the host, stops when it leaves, and chooses through the same `ChildSelector`. It returns a `StepResult` and produces no MIDI. This folder uses no JUCE, which is what lets `SequenceTree_Tests` compile it on its own.
+2. **`TraversalLogic`** (`Source/Core/Traversal/`) is one walk. It holds the node it is on, and on each `handleNodeEvent` it picks the next node through the script when one is set (run by `ScriptRun`), or otherwise through its `ChildSelector`, which keeps the counts in a `NodeStateTable` and asks the active `TraversalRule`. The modulator walk under it is a `ModulatorWalk`: it starts when the main walk enters the modulator's host, steps while the main walk stays under the host, stops when it leaves, and chooses through the same `ChildSelector`. It returns a `StepResult` and produces no MIDI. This folder uses no JUCE, which is what lets `SequenceTree_Tests` compile it on its own.
 3. **`EventManager`** (one for playback, one for preview) moves time forward. `processEvents` finds each note ending inside the block and handles it at its exact sample. It owns:
    - `NoteScheduler`: the sounding notes (`activeNotes`), note-ons on `scheduleNote` and note-offs on `expireNext`.
    - `TraversalDispatcher`: turns a step into output. `handleExpiredNote` steps the `TraversalLogic`, and `pushNote` plays the node it entered, with its chord, modulator, cross-tree jumps and traversal flags, and pushes canvas commands into the bridge. It owns `FlagScheduler`, which fires traversal flags and holds delayed traversal starts.
@@ -86,14 +86,14 @@ One block, in order:
 
 | Member | Folder | Job |
 |---|---|---|
-| `nodeCanvas` (`NodeCanvas`) | `Source/UI/Canvas/` | draws the graph and applies changes to it |
-| `nodeController` (`NodeController`) | `Source/Input/` | receives every mouse event on the canvas and routes it |
-| `titleBar` (`Titlebar`) | `Source/UI/Bars/` | transport, tempo, display mode, undo / redo, patches |
-| `bottomBar` (`BottomBar`) | `Source/UI/Bars/` | canvas tools, arrow bindings, note preview, ornament window |
-| `menuArea` (`MenuArea`) | `Source/UI/Menus/` | the `MenuBar` plus the `TraversalMenu` and `NodeMenu` panels |
-| `notePreviewGestures` (`NotePreviewGestures`) | `Source/Input/Gestures/` | note preview settings and requests, shared by `NodeController`, `BottomBar` and `TraversalMenu` |
+| `nodeCanvas` (`NodeCanvas`) | `Source/Editor/Canvas/` | draws the graph and applies changes to it |
+| `nodeController` (`NodeController`) | `Source/Editor/Input/` | receives every mouse event on the canvas and routes it |
+| `titleBar` (`Titlebar`) | `Source/Editor/Bars/` | transport, tempo, display mode, undo / redo, patches |
+| `bottomBar` (`BottomBar`) | `Source/Editor/Bars/` | canvas tools, arrow bindings, note preview, ornament window |
+| `menuArea` (`MenuArea`) | `Source/Editor/Menus/` | the `MenuBar` plus the `TraversalMenu` and `NodeMenu` panels |
+| `notePreviewGestures` (`NotePreviewGestures`) | `Source/Editor/Input/Gestures/` | note preview settings and requests, shared by `NodeController`, `BottomBar` and `TraversalMenu` |
 | `traversalRulesLauncher`, `settingsLauncher`, `ornamentLauncher` | ArsNovaUI | the pop-up windows |
-| `port`, `canvasFrame`, `scaledView`, `lookAndFeel`, `tooltipWindow`, `audioCommandFrames` | ArsNovaUI, JUCE, `Source/UI/Canvas/` | zoom and pan, framing, interface scale, theme, tooltips, the per-frame poll |
+| `port`, `canvasFrame`, `scaledView`, `lookAndFeel`, `tooltipWindow`, `audioCommandFrames` | ArsNovaUI, JUCE, `Source/Editor/Canvas/` | zoom and pan, framing, interface scale, theme, tooltips, the per-frame poll |
 
 ### 3.1 `NodeCanvas`
 
@@ -132,7 +132,7 @@ A new graph feature becomes one more class here and one more branch in the routi
 
 `Titlebar`, `BottomBar`, `MenuBar` and the menu panels derive from ArsNovaUI's `Bar` and are built from its generic components (`ButtonPane`, `IconButton`, `ItemSelector`, `ValueSlider`, `LabeledEditor`). Two windows open as pop-ups and exist only while shown:
 
-- `TraversalRulesWindow`, the script editor, opened by the editor from `TraversalMenu`'s or `NodeMenu`'s button. It is laid out like a code editor from the parts in `Source/UI/Rules/`: a side panel holding `RuleTreePanel` (the rules in their folders) with a `PanelResizer` on its inner edge, a `RuleTabBar` of open rules, a `PathBar`, and a `FilePage` for the open rule. Those parts are assembled from `ArsNovaUI` components rather than drawn by hand: the tab bar is a `Bar` holding `ButtonPane`s, the tabs are a `TabBar`, the side-panel list is a `RowList` (`RuleTreeView` extends it with folders, renaming and its menu, and hands dragging to `RuleReorderGestures`), menus are a `ContextMenu` and a name is edited in a `ValueEditor`. `ArsNovaUI` is where a generic, reusable component lives, whether or not this app uses it at the moment; `Source/UI/` holds only what is specific to SequenceTree.
+- `TraversalRulesWindow`, the script editor, opened by the editor from `TraversalMenu`'s or `NodeMenu`'s button. It is laid out like a code editor from the parts beside it in `Source/Editor/Rules/`: a side panel holding `RuleTreePanel` (the rules in their folders) with a `PanelResizer` on its inner edge, a `RuleTabBar` of open rules, a `PathBar`, and a `FilePage` for the open rule. Those parts are assembled from `ArsNovaUI` components rather than drawn by hand: the tab bar is a `Bar` holding `ButtonPane`s, the tabs are a `TabBar`, the side-panel list is a `RowList` (`RuleTreeView` extends it with folders, renaming and its menu, and hands dragging to `RuleReorderGestures`), menus are a `ContextMenu` and a name is edited in a `ValueEditor`. `ArsNovaUI` is where a generic, reusable component lives, whether or not this app uses it at the moment; `Source/Editor/` holds only what is specific to SequenceTree.
 - `OrnamentWindow`, opened by the editor from `BottomBar`'s ornament button. Its figure editor is built from the same parts as the graph canvas: `OrnamentCanvas` is a `NodeArrowCanvas` and `OrnamentFigureController` an `ArsNovaUI::CanvasController`, both over a `FigureDocument` that calls `OrnamentLibraries`.
 
 ### 3.4 ArsNovaUI
@@ -157,18 +157,21 @@ Memory is reclaimed without the audio thread freeing anything. `blockEpoch` is o
 
 ## 5. Folders and dependency direction
 
-| Folder | Layer | Includes from |
-|---|---|---|
-| `Source/Util/` | value types (`NodeInfo`, `ArrowInfo`) | nothing |
-| `Source/Script/` | compiler, `RTScript` | nothing (no JUCE) |
-| `Source/Audio/Traversal/` | one walk and its state | `Graph/RTData.h`, `Script/RTScript.h` (no JUCE) |
-| `Source/Audio/` | playback and channels | `Graph`, `Script`, `Util` |
-| `Source/Graph/` | document and audio-model builder | `Util`, `Script` |
-| `Source/Input/` | gesture routing and features | `Graph`, `Audio`, `UI`, `Util` |
-| `Source/UI/` | components | `Graph`, `Audio`, `Input`, `Util`, `Script` |
-| `Source/Plugin/` | the two roots and the saved document | everything |
+The top level follows the two roots, plus the code that uses no JUCE, which both roots read:
 
-The lower rows depend on the upper ones. `ArsNovaUI`, the shared library, may be included from any folder except `Source/Script/` and `Source/Audio/Traversal/`; `Source/Graph/` takes its canvas identifiers. The one exception is `Titlebar.cpp`, which includes `PluginProcessor.h` to reach the processor's transport, parameters and audio model.
+| Folder | Holds | Includes from |
+|---|---|---|
+| `Source/Core/Model/` | `RTData.h` (the structs the audio thread reads), `NodeInfo`, `ArrowInfo` | `Core` |
+| `Source/Core/Script/` | the script compiler and `RTScript` | `Core` |
+| `Source/Core/Traversal/` | one walk and its state | `Core` |
+| `Source/Processor/` | `PluginProcessor`, `PluginDocument` | `Core`, `Processor`, and `Editor/PluginEditor.h` for `createEditor` and `applyRestoredState` |
+| `Source/Processor/Document/` | the document; `Ornaments/` holds the ornament libraries, figures and symbols | `Core`, `Processor` |
+| `Source/Processor/AudioModel/` | `RTGraphBuilder`, `AudioSnapshotPublisher` | `Core`, `Processor` |
+| `Source/Processor/Playback/` | the session, the dispatcher, the schedulers, `PlaybackEngine` | `Core`, `Processor` |
+| `Source/Processor/Channels/` | `AudioUIBridge`, `CommandFifo`, `VirtualMidiOutput` | `Core`, `Processor` |
+| `Source/Editor/` | `PluginEditor` and its components by feature: `Canvas/`, `Input/` (`NodeController` and `Gestures/`), `Nodes/`, `Ornaments/`, `Rules/`, `Bars/`, `Menus/` | everything |
+
+Each folder reads only the rows above it, and the editor reads the processor, never the reverse, apart from `PluginProcessor.cpp`. `Source/Core/` uses no JUCE and no `ArsNovaUI`; CMake builds it as the `SequenceTreeCore` library, which the plugin and `SequenceTree_Tests` both link. `Source/Processor/Document/` takes `ArsNovaUI`'s canvas identifiers. Includes are written from `Source/` (`"Processor/Document/GraphState.h"`), or by file name within one folder, so an include line names the layer it reaches.
 
 ## 6. Tests
 
@@ -176,7 +179,7 @@ Unit tests, which check the traversal core and the script compiler on their own,
 
 | Target | Files | What it covers |
 |---|---|---|
-| `SequenceTree_Tests` | `TraversalTests`, `ScriptCompilerTests` | `Source/Audio/Traversal/` and `Source/Script/`, compiled without JUCE. Includes walk parity (a node tree and the same shape built as modulators unfold the same sequence), compiler diagnostics, the step budget, and the default script matching the native rule. |
+| `SequenceTree_Tests` | `TraversalTests`, `ScriptCompilerTests` | `Source/Core/`, linked as `SequenceTreeCore` and built without JUCE. Includes walk parity (a node tree and the same shape built as modulators unfold the same sequence), compiler diagnostics, the step budget, and the default script matching the native rule. |
 | `SequenceTree_GraphTests` | `GraphTests`, `OrnamentTests` | Graphs built through `NodeFactory` and `GraphState`, read back from what `RTGraphBuilder` published: arrow length → duration, chords, pitch bindings, creation defaults, ornaments. |
 | `SequenceTree_RealtimeTests` | `RealtimeTests` | Plays a graph through a fake host while editing, relocating and stopping, with `-fsanitize=realtime`, so any allocation, lock or blocking call in `processBlock` aborts. Built only with `SEQUENCETREE_REALTIME_SANITIZER`. |
 

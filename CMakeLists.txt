@@ -49,98 +49,118 @@ target_compile_definitions(SequenceTree PUBLIC
         JUCE_USE_CURL=0
 )
 
-target_sources(SequenceTree PRIVATE
-        Source/Plugin/PluginProcessor.cpp
-        Source/Plugin/PluginDocument.cpp
-        Source/Plugin/PluginEditor.cpp
-        Source/Graph/AudioSnapshotPublisher.cpp
-        Source/Audio/ThreadMessaging/AudioUIBridge.cpp
-        Source/Audio/EventManager.cpp
-        Source/Audio/NoteScheduler.cpp
-        Source/Audio/Traversal/TraversalLogic.cpp
-        Source/Audio/Traversal/ChildSelector.cpp
-        Source/Audio/Traversal/ModulatorWalk.cpp
-        Source/Audio/TraversalDispatcher.cpp
-        Source/Audio/FlagScheduler.cpp
-        Source/Audio/TraversalSession.cpp
-        Source/Audio/PlaybackEngine.cpp
-        Source/Audio/ThreadMessaging/VirtualMidiOutput.cpp
-        Source/Audio/Traversal/TraversalRule.cpp
-        Source/Audio/Traversal/WeightedPick.cpp
-        Source/Audio/Traversal/ScriptRun.cpp
-        Source/Script/ScriptLexer.cpp
-        Source/Script/ScriptParser.cpp
-        Source/Script/ScriptEmitter.cpp
-        Source/Script/ScriptCompiler.cpp
-        Source/Audio/Traversal/NodeStateTable.cpp
-        Source/Audio/Traversal/NodeRowMap.cpp
-        Source/Graph/RTGraphBuilder.cpp
-        Source/Graph/GraphState.cpp
-        Source/Graph/TypedProperties.cpp
-        Source/Graph/ArrowBindingOps.cpp
-        Source/Graph/EncapsulationOps.cpp
-        Source/Graph/TraversalState.cpp
-        Source/Graph/TraversalRuleState.cpp
-        Source/Graph/OrnamentLibraries.cpp
-        Source/Graph/OrnamentFigure.cpp
-        Source/Graph/OrnamentSymbol.cpp
-        Source/Graph/ValueTreeIdentifiers.cpp
-        Source/Graph/StateJson.cpp
-        Source/Graph/NodeFactory.cpp
-        Source/Graph/Clipboard.cpp
-        Source/Input/NodeController.cpp
-        Source/Input/GraphDocument.cpp
-        Source/Input/FigureDocument.cpp
-        Source/Input/ArrowMenu.cpp
-        Source/UI/Canvas/CanvasFrame.cpp
-        Source/UI/Canvas/NodeArrowCanvas.cpp
-        Source/UI/Canvas/NodeCanvas.cpp
-        Source/UI/Canvas/ValueField.cpp
-        Source/UI/Canvas/AudioCommandDrainer.cpp
-        Source/UI/Canvas/NodeLimitWarning.cpp
-        Source/UI/Canvas/OrnamentMarks.cpp
-        Source/UI/Canvas/OrnamentMarkView.cpp
-        Source/UI/Canvas/EncapsulationView.cpp
-        Source/UI/Canvas/GridMultiplier.cpp
-        Source/Input/OrnamentApplier.cpp
-        Source/Input/Gestures/SelectionGestures.cpp
-        Source/Input/Gestures/EncapsulationGestures.cpp
-        Source/Input/Gestures/NotePreviewGestures.cpp
-        Source/UI/Node/Node.cpp
-        Source/UI/Node/RootNode.cpp
-        Source/UI/Node/Arrow.cpp
-        Source/UI/Editors/Formats/TraversalFlagFormat.cpp
-        Source/UI/Node/Modulator.cpp
-        Source/UI/Node/Encapsulator.cpp
-        Source/UI/Node/TraversalFlagNode.cpp
-        Source/UI/Buttons/RootRectangle.cpp
-        Source/UI/Buttons/TempoDisplay.cpp
-        Source/UI/Buttons/PaintToolSettings.cpp
-        Source/UI/Menus/TraversalMenu.cpp
-        Source/UI/Menus/MenuArea.cpp
-        Source/UI/Menus/NodeMenu.cpp
-        Source/UI/Menus/AllowedTraversalsMenu.cpp
-        Source/UI/Menus/TraversalRulesWindow.cpp
-        Source/UI/Rules/RuleReorderGestures.cpp
-        Source/UI/Rules/RuleTabBar.cpp
-        Source/UI/Rules/RuleTreePanel.cpp
-        Source/UI/Rules/RuleTreeView.cpp
-        Source/UI/Menus/PatchControls.cpp
-        Source/UI/Bars/Titlebar.cpp
-        Source/UI/Bars/BottomBar.cpp
-        Source/UI/Bars/BindPane.cpp
-        Source/UI/Bars/OrnamentPane.cpp
-        Source/UI/Ornaments/OrnamentWindow.cpp
-        Source/UI/Ornaments/OrnamentBuildPanel.cpp
-        Source/UI/Ornaments/OrnamentSelectionPanel.cpp
-        Source/UI/Ornaments/OrnamentLibrarySection.cpp
-        Source/UI/Ornaments/OrnamentTile.cpp
-        Source/UI/Ornaments/OrnamentNode.cpp
-        Source/UI/Ornaments/OrnamentCanvas.cpp
-        Source/UI/Ornaments/OrnamentFigureController.cpp
-        Source/UI/Ornaments/OrnamentSymbolEditor.cpp
-        Source/UI/Bars/MenuBar.cpp
+add_library(SequenceTreeCore STATIC
+        Source/Core/Script/ScriptCompiler.cpp
+        Source/Core/Script/ScriptEmitter.cpp
+        Source/Core/Script/ScriptLexer.cpp
+        Source/Core/Script/ScriptParser.cpp
+        Source/Core/Traversal/ChildSelector.cpp
+        Source/Core/Traversal/ModulatorWalk.cpp
+        Source/Core/Traversal/NodeRowMap.cpp
+        Source/Core/Traversal/NodeStateTable.cpp
+        Source/Core/Traversal/ScriptRun.cpp
+        Source/Core/Traversal/TraversalLogic.cpp
+        Source/Core/Traversal/TraversalRule.cpp
+        Source/Core/Traversal/WeightedPick.cpp
 )
+
+target_compile_features(SequenceTreeCore PUBLIC cxx_std_23)
+target_include_directories(SequenceTreeCore PUBLIC Source)
+set_target_properties(SequenceTreeCore PROPERTIES POSITION_INDEPENDENT_CODE ON CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON)
+
+if(MSVC)
+    target_compile_options(SequenceTreeCore PRIVATE /W4)
+else()
+    target_compile_options(SequenceTreeCore PRIVATE -Wall -Wextra -Wno-unused-parameter)
+endif()
+
+target_link_libraries(SequenceTreeCore PRIVATE
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+)
+
+target_sources(SequenceTree PRIVATE
+        Source/Processor/PluginProcessor.cpp
+        Source/Processor/PluginDocument.cpp
+        Source/Processor/Document/ArrowBindingOps.cpp
+        Source/Processor/Document/Clipboard.cpp
+        Source/Processor/Document/EncapsulationOps.cpp
+        Source/Processor/Document/GraphState.cpp
+        Source/Processor/Document/NodeFactory.cpp
+        Source/Processor/Document/StateJson.cpp
+        Source/Processor/Document/TraversalRuleState.cpp
+        Source/Processor/Document/TraversalState.cpp
+        Source/Processor/Document/TypedProperties.cpp
+        Source/Processor/Document/ValueTreeIdentifiers.cpp
+        Source/Processor/Document/Ornaments/OrnamentFigure.cpp
+        Source/Processor/Document/Ornaments/OrnamentLibraries.cpp
+        Source/Processor/Document/Ornaments/OrnamentSymbol.cpp
+        Source/Processor/AudioModel/AudioSnapshotPublisher.cpp
+        Source/Processor/AudioModel/RTGraphBuilder.cpp
+        Source/Processor/Playback/EventManager.cpp
+        Source/Processor/Playback/FlagScheduler.cpp
+        Source/Processor/Playback/NoteScheduler.cpp
+        Source/Processor/Playback/PlaybackEngine.cpp
+        Source/Processor/Playback/TraversalDispatcher.cpp
+        Source/Processor/Playback/TraversalSession.cpp
+        Source/Processor/Channels/AudioUIBridge.cpp
+        Source/Processor/Channels/VirtualMidiOutput.cpp
+        Source/Editor/PluginEditor.cpp
+        Source/Editor/Bars/BindPane.cpp
+        Source/Editor/Bars/BottomBar.cpp
+        Source/Editor/Bars/PaintToolSettings.cpp
+        Source/Editor/Bars/PatchControls.cpp
+        Source/Editor/Bars/TempoDisplay.cpp
+        Source/Editor/Bars/Titlebar.cpp
+        Source/Editor/Canvas/AudioCommandDrainer.cpp
+        Source/Editor/Canvas/CanvasFrame.cpp
+        Source/Editor/Canvas/EncapsulationView.cpp
+        Source/Editor/Canvas/GraphDocument.cpp
+        Source/Editor/Canvas/GridMultiplier.cpp
+        Source/Editor/Canvas/NodeArrowCanvas.cpp
+        Source/Editor/Canvas/NodeCanvas.cpp
+        Source/Editor/Canvas/NodeLimitWarning.cpp
+        Source/Editor/Canvas/ValueField.cpp
+        Source/Editor/Input/NodeController.cpp
+        Source/Editor/Input/Gestures/EncapsulationGestures.cpp
+        Source/Editor/Input/Gestures/NotePreviewGestures.cpp
+        Source/Editor/Input/Gestures/SelectionGestures.cpp
+        Source/Editor/Menus/AllowedTraversalsMenu.cpp
+        Source/Editor/Menus/ArrowMenu.cpp
+        Source/Editor/Menus/MenuArea.cpp
+        Source/Editor/Menus/MenuBar.cpp
+        Source/Editor/Menus/NodeMenu.cpp
+        Source/Editor/Menus/TraversalMenu.cpp
+        Source/Editor/Nodes/Arrow.cpp
+        Source/Editor/Nodes/Encapsulator.cpp
+        Source/Editor/Nodes/Modulator.cpp
+        Source/Editor/Nodes/Node.cpp
+        Source/Editor/Nodes/RootNode.cpp
+        Source/Editor/Nodes/RootRectangle.cpp
+        Source/Editor/Nodes/TraversalFlagFormat.cpp
+        Source/Editor/Nodes/TraversalFlagNode.cpp
+        Source/Editor/Ornaments/FigureDocument.cpp
+        Source/Editor/Ornaments/OrnamentApplier.cpp
+        Source/Editor/Ornaments/OrnamentBuildPanel.cpp
+        Source/Editor/Ornaments/OrnamentCanvas.cpp
+        Source/Editor/Ornaments/OrnamentFigureController.cpp
+        Source/Editor/Ornaments/OrnamentLibrarySection.cpp
+        Source/Editor/Ornaments/OrnamentMarkView.cpp
+        Source/Editor/Ornaments/OrnamentMarks.cpp
+        Source/Editor/Ornaments/OrnamentNode.cpp
+        Source/Editor/Ornaments/OrnamentPane.cpp
+        Source/Editor/Ornaments/OrnamentSelectionPanel.cpp
+        Source/Editor/Ornaments/OrnamentSymbolEditor.cpp
+        Source/Editor/Ornaments/OrnamentTile.cpp
+        Source/Editor/Ornaments/OrnamentWindow.cpp
+        Source/Editor/Rules/RuleReorderGestures.cpp
+        Source/Editor/Rules/RuleTabBar.cpp
+        Source/Editor/Rules/RuleTreePanel.cpp
+        Source/Editor/Rules/RuleTreeView.cpp
+        Source/Editor/Rules/TraversalRulesWindow.cpp
+)
+
+target_include_directories(SequenceTree PRIVATE Source)
 
 target_link_libraries(SequenceTree PRIVATE
         juce::juce_core
@@ -153,6 +173,7 @@ target_link_libraries(SequenceTree PRIVATE
         juce::juce_audio_devices
         juce::juce_audio_utils
         ArsNovaUI
+        SequenceTreeCore
         PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
@@ -166,24 +187,11 @@ enable_testing()
 add_executable(SequenceTree_Tests
         Tests/Unit/TraversalTests.cpp
         Tests/Unit/ScriptCompilerTests.cpp
-        Source/Audio/Traversal/TraversalLogic.cpp
-        Source/Audio/Traversal/ChildSelector.cpp
-        Source/Audio/Traversal/ModulatorWalk.cpp
-        Source/Audio/Traversal/TraversalRule.cpp
-        Source/Audio/Traversal/WeightedPick.cpp
-        Source/Audio/Traversal/ScriptRun.cpp
-        Source/Audio/Traversal/NodeStateTable.cpp
-        Source/Audio/Traversal/NodeRowMap.cpp
-        Source/Script/ScriptLexer.cpp
-        Source/Script/ScriptParser.cpp
-        Source/Script/ScriptEmitter.cpp
-        Source/Script/ScriptCompiler.cpp
 )
 
 target_compile_features(SequenceTree_Tests PRIVATE cxx_std_23)
 target_compile_options(SequenceTree_Tests PRIVATE -Wall -Wextra -Wno-unused-parameter)
-target_include_directories(SequenceTree_Tests PRIVATE Source)
-target_link_libraries(SequenceTree_Tests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(SequenceTree_Tests PRIVATE SequenceTreeCore Catch2::Catch2WithMain)
 
 catch_discover_tests(SequenceTree_Tests)
 

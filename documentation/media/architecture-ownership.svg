@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 924" width="1280" height="924"><defs><marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4d4d4d"/></marker></defs><rect width="1280" height="924" fill="#ffffff"/>
 <rect x="20" y="20" width="760" height="860" rx="12" fill="#fafafa" stroke="#333333" stroke-width="1.6"/>
 <text x="40" y="50" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="16" font-weight="700" fill="#111" text-anchor="start">SequenceTreeAudioProcessor</text>
-<text x="40" y="68" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#555" text-anchor="start">Source/Plugin · created by the host, lives as long as the plugin instance, works with no window open</text>
+<text x="40" y="68" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#555" text-anchor="start">Source/Processor · created by the host, lives as long as the plugin instance, works with no window open</text>
 <rect x="40" y="84" width="720" height="176" rx="10" fill="#eaf1fb" stroke="#4a78c2" stroke-width="1.4"/>
-<text x="56" y="104" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#4a78c2" text-anchor="start">1  Document: the saved state, edited on the message thread · Source/Graph</text>
+<text x="56" y="104" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#4a78c2" text-anchor="start">1  Document: the saved state, edited on the message thread · Source/Processor/Document</text>
 <rect x="56" y="116" width="230" height="130" rx="8" fill="#ffffff" stroke="#4a78c2" stroke-width="1.4"/>
 <text x="68" y="136" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">GraphState</text>
 <text x="68" y="152" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">graphState · nodeMap ValueTree</text>
@@ -33,7 +33,7 @@
 <text x="644" y="206" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="700" fill="#1f1f1f" text-anchor="start">colourPresets</text>
 <text x="644" y="222" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">ValueTree</text>
 <rect x="40" y="276" width="720" height="104" rx="10" fill="#f2ecfb" stroke="#8a5cc7" stroke-width="1.4"/>
-<text x="56" y="296" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#8a5cc7" text-anchor="start">2  Audio model: derived from the document, read by the audio thread · Source/Graph, Source/Plugin</text>
+<text x="56" y="296" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#8a5cc7" text-anchor="start">2  Audio model: derived from the document, read by the audio thread · Source/Processor/AudioModel</text>
 <rect x="56" y="308" width="330" height="58" rx="8" fill="#ffffff" stroke="#8a5cc7" stroke-width="1.4"/>
 <text x="68" y="328" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">RTGraphBuilder</text>
 <text x="68" y="344" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">rtGraphBuilder · listens to the document</text>
@@ -41,7 +41,7 @@
 <text x="412" y="328" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">AudioSnapshotPublisher</text>
 <text x="412" y="344" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">snapshots · publishes Snapshot { NodeMap, RTScript }</text>
 <rect x="40" y="396" width="720" height="330" rx="10" fill="#fdf1e4" stroke="#d07a2a" stroke-width="1.4"/>
-<text x="56" y="416" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#d07a2a" text-anchor="start">3  Playback: runs on the audio thread inside processBlock · Source/Audio</text>
+<text x="56" y="416" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#d07a2a" text-anchor="start">3  Playback: runs on the audio thread inside processBlock · Source/Processor/Playback</text>
 <rect x="56" y="428" width="420" height="284" rx="8" fill="#ffffff" stroke="#d07a2a" stroke-width="1.4"/>
 <text x="68" y="448" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">TraversalSession</text>
 <text x="68" y="464" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">traversalSession · starts, stops, syncs and replays traversals</text>
@@ -85,7 +85,7 @@
 <text x="526" y="656" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" fill="#1f1f1f" text-anchor="start">FlagScheduler</text>
 <text x="526" y="672" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#555" text-anchor="start">traversal flags, delayed starts</text>
 <rect x="40" y="742" width="720" height="124" rx="10" fill="#e4f5f1" stroke="#2a9a82" stroke-width="1.4"/>
-<text x="56" y="762" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#2a9a82" text-anchor="start">4  Output channels: the audio thread writes, other threads read · Source/Audio/ThreadMessaging</text>
+<text x="56" y="762" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#2a9a82" text-anchor="start">4  Output channels: the audio thread writes, other threads read · Source/Processor/Channels</text>
 <rect x="56" y="774" width="420" height="80" rx="8" fill="#ffffff" stroke="#2a9a82" stroke-width="1.4"/>
 <text x="68" y="794" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#1f1f1f" text-anchor="start">AudioUIBridge</text>
 <text x="68" y="810" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">bridge · lock-free audio → canvas commands</text>
@@ -101,9 +101,9 @@
 <text x="502" y="824" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">to a virtual MIDI port</text>
 <rect x="800" y="20" width="460" height="860" rx="12" fill="#fafafa" stroke="#333333" stroke-width="1.6" stroke-dasharray="6 4"/>
 <text x="820" y="50" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="16" font-weight="700" fill="#111" text-anchor="start">SequenceTreeAudioProcessorEditor</text>
-<text x="820" y="68" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#555" text-anchor="start">Source/Plugin · exists only while the window is open</text>
+<text x="820" y="68" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" fill="#555" text-anchor="start">Source/Editor · exists only while the window is open</text>
 <rect x="820" y="84" width="420" height="290" rx="10" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.4"/>
-<text x="836" y="104" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#5f8a3a" text-anchor="start">NodeCanvas · Source/UI/Canvas</text>
+<text x="836" y="104" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#5f8a3a" text-anchor="start">NodeCanvas · Source/Editor/Canvas</text>
 <text x="836" y="120" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">the graph view; its EditCanvas base owns the managers</text>
 <rect x="836" y="132" width="192" height="26" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1"/>
 <text x="846" y="149.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" fill="#1f1f1f" text-anchor="start">NodeManager</text>
@@ -125,9 +125,9 @@
 <text x="848" y="293" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="700" fill="#1f1f1f" text-anchor="start">Node · RootNode · Modulator · TraversalFlagNode</text>
 <text x="848" y="309" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="700" fill="#1f1f1f" text-anchor="start">Arrow (+ trails)</text>
 <text x="848" y="328" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">child components, one per node and arrow, held in</text>
-<text x="848" y="343" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">NodeManager::nodes and ArrowManager::arrows · Source/UI/Node</text>
+<text x="848" y="343" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">NodeManager::nodes and ArrowManager::arrows · Source/Editor/Nodes</text>
 <rect x="820" y="390" width="420" height="150" rx="10" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.4"/>
-<text x="836" y="410" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#5f8a3a" text-anchor="start">NodeController · Source/Input</text>
+<text x="836" y="410" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="700" fill="#5f8a3a" text-anchor="start">NodeController · Source/Editor/Input</text>
 <text x="836" y="426" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" fill="#555" text-anchor="start">MouseListener on the canvas; routes each gesture to its feature</text>
 <rect x="836" y="438" width="192" height="26" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1"/>
 <text x="846" y="455.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" fill="#1f1f1f" text-anchor="start">NodeGestures</text>
@@ -142,21 +142,21 @@
 <text x="1042" y="523" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#555" text-anchor="start">SelectionGestures owns Clipboard</text>
 <rect x="820" y="556" width="124" height="164" rx="10" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.4"/>
 <text x="830" y="576" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12.5" font-weight="700" fill="#1f1f1f" text-anchor="start">Titlebar</text>
-<text x="830" y="591" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#555" text-anchor="start">Source/UI/Bars</text>
+<text x="830" y="591" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#555" text-anchor="start">Source/Editor/Bars</text>
 <rect x="826" y="600" width="112" height="24" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1"/>
 <text x="836" y="616.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#1f1f1f" text-anchor="start">TempoDisplay</text>
 <rect x="826" y="628" width="112" height="24" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1"/>
 <text x="836" y="644.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#1f1f1f" text-anchor="start">PatchControls</text>
 <rect x="952" y="556" width="134" height="164" rx="10" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.4"/>
 <text x="962" y="576" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12.5" font-weight="700" fill="#1f1f1f" text-anchor="start">BottomBar</text>
-<text x="962" y="591" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#555" text-anchor="start">Source/UI/Bars</text>
+<text x="962" y="591" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#555" text-anchor="start">Source/Editor/Bars</text>
 <rect x="958" y="600" width="122" height="24" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1"/>
 <text x="968" y="616.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#1f1f1f" text-anchor="start">PaintToolSettings</text>
 <rect x="958" y="628" width="122" height="24" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1" stroke-dasharray="6 4"/>
 <text x="968" y="644.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#1f1f1f" text-anchor="start">OrnamentWindow</text>
 <rect x="1094" y="556" width="146" height="164" rx="10" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.4"/>
 <text x="1104" y="576" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="12.5" font-weight="700" fill="#1f1f1f" text-anchor="start">MenuArea</text>
-<text x="1104" y="591" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#555" text-anchor="start">Source/UI/Menus</text>
+<text x="1104" y="591" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" fill="#555" text-anchor="start">Source/Editor/Menus</text>
 <rect x="1100" y="600" width="134" height="24" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1"/>
 <text x="1110" y="616.0" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="10" fill="#1f1f1f" text-anchor="start">MenuBar</text>
 <rect x="1100" y="628" width="134" height="24" rx="5" fill="#eef4e6" stroke="#5f8a3a" stroke-width="1.1"/>

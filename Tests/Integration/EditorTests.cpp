@@ -1,11 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "Plugin/PluginProcessor.h"
-#include "Plugin/PluginEditor.h"
-#include "UI/Canvas/NodeCanvas.h"
-#include "Graph/GraphState.h"
-#include "Graph/NodeFactory.h"
-#include "Graph/ValueTreeIdentifiers.h"
+#include "Processor/PluginProcessor.h"
+#include "Editor/PluginEditor.h"
+#include "Editor/Canvas/NodeCanvas.h"
+#include "Processor/Document/GraphState.h"
+#include "Processor/Document/NodeFactory.h"
+#include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 #include <array>

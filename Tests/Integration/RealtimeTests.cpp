@@ -1,14 +1,14 @@
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "Plugin/PluginProcessor.h"
-#include "Graph/GraphState.h"
-#include "Graph/RTGraphBuilder.h"
-#include "Graph/ValueTreeIdentifiers.h"
+#include "Processor/PluginProcessor.h"
+#include "Processor/Document/GraphState.h"
+#include "Processor/AudioModel/RTGraphBuilder.h"
+#include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
-#include "Graph/NodeFactory.h"
-#include "Graph/OrnamentLibraries.h"
-#include "Graph/OrnamentFigure.h"
+#include "Processor/Document/NodeFactory.h"
+#include "Processor/Document/Ornaments/OrnamentLibraries.h"
+#include "Processor/Document/Ornaments/OrnamentFigure.h"
 
 int main(int argc, char* argv[])
 {

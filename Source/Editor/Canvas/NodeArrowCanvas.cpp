@@ -1,0 +1,84 @@
+#include "NodeArrowCanvas.h"
+#include "Editor/Nodes/Arrow.h"
+#include "Processor/Document/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Canvas/ArrowGestures.h>
+#include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
+
+NodeArrowCanvas::NodeArrowCanvas(ArsNovaUI::CanvasDocument& document) : ArsNovaUI::EditCanvas(document)
+{
+}
+
+void NodeArrowCanvas::treePropertyChanged(const juce::ValueTree& tree, const juce::Identifier& propertyIdentifier)
+{
+    if (propertyIdentifier == ValueTreeIdentifiers::Radius) {
+        asyncUpdates.push_back({ .type = AsyncUpdateType::NodeMoved, .nodeId = tree.getProperty(ArsNovaUI::CanvasIdentifiers::Id) });
+    }
+    else if (propertyIdentifier == ValueTreeIdentifiers::MidiPitch
+        || propertyIdentifier == ValueTreeIdentifiers::MidiVelocity) {
+        asyncUpdates.push_back({ .type   = AsyncUpdateType::ValueChanged,
+                                 .nodeId = tree.getParent().getParent().getProperty(ArsNovaUI::CanvasIdentifiers::Id) });
+    }
+    else if (propertyIdentifier == ValueTreeIdentifiers::NodeColour || propertyIdentifier == ValueTreeIdentifiers::OrnamentUid) {
+        asyncUpdates.push_back({ .type     = AsyncUpdateType::PropertyChanged,
+                                 .nodeId   = tree.getProperty(ArsNovaUI::CanvasIdentifiers::Id),
+                                 .property = propertyIdentifier });
+    }
+    else if (propertyIdentifier == ValueTreeIdentifiers::ArrowDuration) {
+        asyncUpdates.push_back({ .type     = AsyncUpdateType::PropertyChanged,
+                                 .nodeId   = tree.getParent().getParent().getProperty(ArsNovaUI::CanvasIdentifiers::Id),
+                                 .property = propertyIdentifier });
+    }
+    else if (propertyIdentifier == ValueTreeIdentifiers::ArrowType
+        || propertyIdentifier == ValueTreeIdentifiers::ArrowSync
+        || propertyIdentifier == ValueTreeIdentifiers::ArrowXBinding
+        || propertyIdentifier == ValueTreeIdentifiers::ArrowYBinding
+        || propertyIdentifier == ValueTreeIdentifiers::ArrowXMultiplier
+        || propertyIdentifier == ValueTreeIdentifiers::ArrowYMultiplier) {
+        asyncUpdates.push_back({ .type        = AsyncUpdateType::ArrowInfoChanged,
+                                 .nodeId      = tree.getParent().getParent().getProperty(ArsNovaUI::CanvasIdentifiers::Id),
+                                 .childNodeId = tree.getProperty(ArsNovaUI::CanvasIdentifiers::Id) });
+    }
+}
+
+juce::String NodeArrowCanvas::getTooltip()
+{
+    const juce::Point<float> mousePoint = getMouseXYRelative().toFloat().transformedBy(modelTransform);
+
+    Arrow* arrow = static_cast<Arrow*>(hitTester.danglingHeadNear(mousePoint, ArsNovaUI::ArrowGestures::danglingArrowGrabRadius));
+
+    if (arrow == nullptr) {
+        arrow = static_cast<Arrow*>(hitTester.arrowHeadNear(mousePoint, ArsNovaUI::ArrowGestures::arrowHeadGrabRadius));
+    }
+
+    if (arrow == nullptr) {
+        arrow = static_cast<Arrow*>(hitTester.arrowNear(mousePoint, ArsNovaUI::ArrowGestures::arrowHoverRadius));
+    }
+
+    if (arrow == nullptr) {
+        return {};
+    }
+
+    if (arrow->isDangling()) {
+        return "Dangling arrow";
+    }
+
+    if (arrow->isTraversalArrow()) {
+        return "Traversal arrow";
+    }
+
+    if (arrow->isSyncArrow()) {
+        return "Synced arrow";
+    }
+
+    return "Arrow";
+}
+
+std::unique_ptr<ArsNovaUI::CanvasArrow> NodeArrowCanvas::makeArrow(ArsNovaUI::CanvasNode* startNode, ArsNovaUI::CanvasNode* endNode)
+{
+    return std::make_unique<Arrow>(startNode, endNode, document.undoManager);
+}
+
+std::unique_ptr<ArsNovaUI::CanvasArrow> NodeArrowCanvas::makeDanglingArrow(ArsNovaUI::CanvasNode* startNode, juce::Point<int> tipOffset)
+{
+    return std::make_unique<Arrow>(startNode, tipOffset, document.undoManager);
+}

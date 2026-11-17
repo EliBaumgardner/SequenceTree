@@ -6,7 +6,7 @@ Builds/
 *.component
 *.a
 *.dylib
-
+compile_commands.json
 
 # Xcode user settings
 *.xcworkspace
@@ -14,20 +14,15 @@ Builds/
 
 # macOS system files
 .DS_Store
+
 # Agent tooling and local scripts
-
 scripts/
-.opencode/
-GEMINI.md
-docs
-.gemini/
-.obsidian/
-
 .claude/
 .analyst/
 .opencode/
 .gemini/
-GEMINI.md
+.obsidian/
 .mcp.json
+GEMINI.md
 CLAUDE.md
 CLAUDE.local.md

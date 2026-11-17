@@ -1,22 +1,22 @@
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "Plugin/PluginProcessor.h"
-#include "Graph/GraphState.h"
-#include "Graph/RTGraphBuilder.h"
-#include "Graph/TypedProperties.h"
-#include "Graph/ValueTreeIdentifiers.h"
+#include "Processor/PluginProcessor.h"
+#include "Processor/Document/GraphState.h"
+#include "Processor/AudioModel/RTGraphBuilder.h"
+#include "Processor/Document/TypedProperties.h"
+#include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
-#include "Audio/Traversal/TraversalLogic.h"
-#include "Audio/Traversal/TraversalPool.h"
-#include "Audio/Traversal/TraversalRule.h"
-#include "Script/ScriptCompiler.h"
-#include "Graph/NodeFactory.h"
-#include "Graph/StateJson.h"
-#include "Graph/OrnamentLibraries.h"
-#include "Graph/OrnamentFigure.h"
-#include "Input/GraphDocument.h"
+#include "Core/Traversal/TraversalLogic.h"
+#include "Core/Traversal/TraversalPool.h"
+#include "Core/Traversal/TraversalRule.h"
+#include "Core/Script/ScriptCompiler.h"
+#include "Processor/Document/NodeFactory.h"
+#include "Processor/Document/StateJson.h"
+#include "Processor/Document/Ornaments/OrnamentLibraries.h"
+#include "Processor/Document/Ornaments/OrnamentFigure.h"
+#include "Editor/Canvas/GraphDocument.h"
 
 #include <memory>
 #include <cstdlib>

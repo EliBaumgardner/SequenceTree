@@ -1,18 +1,18 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "Plugin/PluginProcessor.h"
-#include "Graph/GraphState.h"
-#include "Graph/NodeFactory.h"
-#include "Graph/TypedProperties.h"
-#include "Graph/ValueTreeIdentifiers.h"
+#include "Processor/PluginProcessor.h"
+#include "Processor/Document/GraphState.h"
+#include "Processor/Document/NodeFactory.h"
+#include "Processor/Document/TypedProperties.h"
+#include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
-#include "Input/GraphDocument.h"
-#include "Input/NodeController.h"
-#include "Input/Gestures/NotePreviewGestures.h"
-#include "UI/Canvas/NodeCanvas.h"
-#include "UI/Node/Node.h"
-#include "UI/Node/RootNode.h"
-#include "UI/Node/Encapsulator.h"
+#include "Editor/Canvas/GraphDocument.h"
+#include "Editor/Input/NodeController.h"
+#include "Editor/Input/Gestures/NotePreviewGestures.h"
+#include "Editor/Canvas/NodeCanvas.h"
+#include "Editor/Nodes/Node.h"
+#include "Editor/Nodes/RootNode.h"
+#include "Editor/Nodes/Encapsulator.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 #include <algorithm>

@@ -1,10 +1,10 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "Graph/OrnamentLibraries.h"
-#include "Graph/OrnamentFigure.h"
-#include "Graph/OrnamentSymbol.h"
-#include "Graph/ValueTreeIdentifiers.h"
+#include "Processor/Document/Ornaments/OrnamentLibraries.h"
+#include "Processor/Document/Ornaments/OrnamentFigure.h"
+#include "Processor/Document/Ornaments/OrnamentSymbol.h"
+#include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 #include <vector>

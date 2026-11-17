@@ -1,0 +1,138 @@
+#include "OrnamentMarks.h"
+#include "Processor/Document/TypedProperties.h"
+#include "Editor/Canvas/NodeCanvas.h"
+#include "Editor/Nodes/Node.h"
+#include "Processor/Document/Ornaments/OrnamentLibraries.h"
+#include "Processor/Document/Ornaments/OrnamentFigure.h"
+#include "Processor/Document/ValueTreeIdentifiers.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
+
+OrnamentMarks::OrnamentMarks(NodeCanvas& nodeCanvas, OrnamentLibraries& ornamentLibraries)
+    : nodeCanvas       (nodeCanvas),
+      ornamentLibraries(ornamentLibraries)
+{
+    ornamentLibraries.libraries.addListener(this);
+}
+
+OrnamentMarks::~OrnamentMarks()
+{
+    ornamentLibraries.libraries.removeListener(this);
+
+    for (const auto& [node, view] : views) {
+        node->removeComponentListener(this);
+    }
+}
+
+void OrnamentMarks::refresh(Node& node)
+{
+    const NodeProperties properties(node.nodeValueTree);
+
+    const juce::String uid = properties.ornamentUid;
+
+    const juce::ValueTree ornament = ornamentLibraries.findOrnament(uid);
+
+    const OrnamentProperties ornamentInfo(ornament);
+
+    ArsNovaUI::SymbolMark mark = ArsNovaUI::SymbolMark::None;
+
+    if (uid.isNotEmpty()) {
+        mark = ArsNovaUI::SymbolMark::Missing;
+    }
+
+    if (uid.isNotEmpty() && OrnamentFigure::statusOf(ornament) != OrnamentStatus::Draft) {
+        mark = ArsNovaUI::SymbolMark::Symbol;
+    }
+
+    if (mark == ArsNovaUI::SymbolMark::None) {
+        views.erase(&node);
+
+        node.removeComponentListener(this);
+
+        return;
+    }
+
+    std::unique_ptr<OrnamentMarkView>& view = views[&node];
+
+    if (view == nullptr) {
+        view = std::make_unique<OrnamentMarkView>();
+
+        view->setInterceptsMouseClicks(true, false);
+        view->setMouseCursor(juce::MouseCursor::ParentCursor);
+
+        nodeCanvas.addChildComponent(*view);
+
+        node.addComponentListener(this);
+    }
+
+    view->mark          = mark;
+    view->symbol        = ornamentInfo.symbol;
+    view->nodeValueTree = node.nodeValueTree;
+
+    if (mark == ArsNovaUI::SymbolMark::Symbol) {
+        view->setTooltip("Ornament");
+    }
+    else {
+        view->setTooltip("Unpublished ornament");
+    }
+
+    place(node);
+
+    view->repaint();
+}
+
+void OrnamentMarks::valueTreeChildAdded(juce::ValueTree&, juce::ValueTree&)
+{
+    refreshAll();
+}
+
+void OrnamentMarks::valueTreeChildRemoved(juce::ValueTree&, juce::ValueTree&, int)
+{
+    refreshAll();
+}
+
+void OrnamentMarks::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier& property)
+{
+    if (property == ValueTreeIdentifiers::OrnamentSymbol) {
+        refreshAll();
+    }
+}
+
+void OrnamentMarks::componentMovedOrResized(juce::Component& component, bool, bool)
+{
+    Node& node = static_cast<Node&>(component);
+
+    place(node);
+}
+
+void OrnamentMarks::componentVisibilityChanged(juce::Component& component)
+{
+    Node& node = static_cast<Node&>(component);
+
+    place(node);
+}
+
+void OrnamentMarks::componentBeingDeleted(juce::Component& component)
+{
+    views.erase(&component);
+}
+
+void OrnamentMarks::place(Node& node)
+{
+    OrnamentMarkView* const    view       = views[&node].get();
+    const juce::Rectangle<int> nodeSquare = node.getBounds().withTrimmedLeft(node.interiorLeftInset);
+    const int                  markHeight = juce::roundToInt(nodeSquare.getHeight() * markHeightRatio);
+
+    view->setBounds(nodeSquare.withHeight(markHeight).withBottomY(nodeSquare.getY()));
+    view->setVisible(node.isVisible());
+}
+
+void OrnamentMarks::refreshAll()
+{
+    for (const auto& [nodeId, node] : nodeCanvas.nodeManager.all()) {
+        if (node != nullptr) {
+            Node& graphNode = static_cast<Node&>(*node);
+
+            refresh(graphNode);
+        }
+    }
+}

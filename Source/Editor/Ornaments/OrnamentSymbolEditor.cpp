@@ -1,0 +1,226 @@
+#include "OrnamentSymbolEditor.h"
+#include <ArsNovaUI/Theme/IconLibrary.h>
+#include "Processor/Document/TypedProperties.h"
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
+#include "Processor/Document/Ornaments/OrnamentLibraries.h"
+#include "Processor/Document/Ornaments/OrnamentSymbol.h"
+
+OrnamentSymbolEditor::OrnamentSymbolEditor(OrnamentLibraries& ornamentLibraries, juce::UndoManager& undoManager)
+    : sizeField        (undoManager),
+      ornamentLibraries(ornamentLibraries),
+      undoManager      (undoManager)
+{
+    ArsNovaUI::IconButton& pencilButton = toolPane.addButton(ArsNovaUI::IconLibrary::get().pencil, "Pencil: draw the symbol", [this]() { tool = SymbolTool::Pencil; });
+
+    toolPane.addButton(ArsNovaUI::IconLibrary::get().eraser, "Eraser: rub out what it touches", [this]() { tool = SymbolTool::Eraser; });
+
+    toolPane.selection = ArsNovaUI::ButtonPane::Selection::Exclusive;
+
+    toolPane.setSelectedButton(&pencilButton);
+
+    clearButton.icon = &ArsNovaUI::IconLibrary::get().remove;
+    clearButton.setTooltip("Clear symbol");
+
+    clearButton.onClick = [this]() {
+        OrnamentProperties properties(ornament);
+
+        this->undoManager.beginNewTransaction();
+
+        properties.symbol.setValue({}, &this->undoManager);
+    };
+
+    sizeField.labelWidth = sizeLabelWidth;
+    sizeField.gap        = sizeFieldGap;
+
+    sizeField.label.setJustificationType(juce::Justification::centredRight);
+    sizeField.label.setText("Size", juce::dontSendNotification);
+
+    sizeField.editor.wheelResponse = ArsNovaUI::ValueEditor::WheelResponse::StepValue;
+    sizeField.editor.backdrop      = ArsNovaUI::ValueEditor::Backdrop::Gauge;
+
+    sizeField.editor.setJustification(juce::Justification::centredLeft);
+    sizeField.editor.setFormat(std::make_unique<ArsNovaUI::NumberFormat>(minBrushPercent, maxBrushPercent, brushDecimalPlaces));
+
+    sizeField.editor.boundValue = brushWidth * percent;
+
+    sizeField.editor.onValueChange = [this]() {
+        brushWidth = static_cast<float>(sizeField.editor.boundValue.getValue()) / percent;
+
+        repaint();
+    };
+
+    addAndMakeVisible(toolPane);
+    addAndMakeVisible(clearButton);
+    addAndMakeVisible(sizeField);
+}
+
+void OrnamentSymbolEditor::paint(juce::Graphics& graphics)
+{
+    ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
+
+    const float strokeWidth = drawingArea.getWidth() * brushWidth;
+    const float dashes[]    = { dashLength, dashLength };
+
+    juce::Path toolOutline;
+
+    graphics.setColour(lookAndFeel.canvasColour);
+    graphics.fillRect(getLocalBounds());
+
+    graphics.setColour(lookAndFeel.borderStrongColour);
+    graphics.drawRoundedRectangle(drawingArea, ArsNovaUI::Theme::paneCornerRadius, ArsNovaUI::Theme::borderThickness);
+
+    graphics.setColour(lookAndFeel.textColour);
+
+    const OrnamentProperties properties(ornament);
+
+    const juce::String storedSymbol = properties.symbol;
+
+    const std::vector<ArsNovaUI::SymbolStroke> symbolStrokes = OrnamentSymbol::read(storedSymbol);
+
+    lookAndFeel.drawStrokeSymbol(graphics, drawingArea, symbolStrokes);
+
+    graphics.strokePath(stroke, juce::PathStrokeType(strokeWidth, juce::PathStrokeType::curved, juce::PathStrokeType::butt));
+
+    if (! cursorPosition.has_value()) {
+        return;
+    }
+
+    toolOutline.addEllipse(juce::Rectangle<float>(strokeWidth, strokeWidth).withCentre(*cursorPosition));
+
+    juce::PathStrokeType(ArsNovaUI::Theme::borderThickness).createDashedStroke(toolOutline, toolOutline, dashes, 2);
+
+    graphics.setColour(lookAndFeel.textColour);
+    graphics.fillPath(toolOutline);
+}
+
+void OrnamentSymbolEditor::resized()
+{
+    const auto bounds = getLocalBounds().toFloat();
+
+    const float side = juce::jmin(bounds.getWidth(), bounds.getHeight()) * (1.0f - drawingInsetRatio * 2.0f);
+
+    auto topRow = getLocalBounds().reduced(toolPaneInset).removeFromTop(toolPaneHeight);
+
+    const int toolPaneWidth  = toolPane.idealWidth(toolPaneHeight);
+    const int sizeFieldWidth = sizeLabelWidth + sizeFieldGap + sizeEditorWidth;
+
+    drawingArea = bounds.withSizeKeepingCentre(side, side);
+
+    toolPane.setBounds(topRow.removeFromLeft(toolPaneWidth));
+    topRow.removeFromLeft(sizeFieldGap);
+
+    sizeField.setBounds(topRow.removeFromLeft(sizeFieldWidth));
+    clearButton.setBounds(getLocalBounds().reduced(clearButtonInset).removeFromTop(clearButtonSize).removeFromRight(clearButtonSize));
+}
+
+void OrnamentSymbolEditor::mouseDown(const juce::MouseEvent& event)
+{
+    lastPoint      = event.position;
+    cursorPosition = event.position;
+
+    if (tool == SymbolTool::Eraser) {
+        undoManager.beginNewTransaction();
+
+        eraseAlong(event.position);
+
+        return;
+    }
+
+    stroke.clear();
+    stroke.startNewSubPath(lastPoint);
+
+    repaint();
+}
+
+void OrnamentSymbolEditor::mouseDrag(const juce::MouseEvent& event)
+{
+    cursorPosition = event.position;
+
+    if (tool == SymbolTool::Eraser) {
+        eraseAlong(event.position);
+
+        return;
+    }
+
+    if (event.position.getDistanceFrom(lastPoint) < pointSpacing) {
+        return;
+    }
+
+    lastPoint = event.position;
+
+    stroke.lineTo(lastPoint);
+
+    repaint();
+}
+
+void OrnamentSymbolEditor::mouseUp(const juce::MouseEvent& event)
+{
+    juce::Path normalised = stroke;
+
+    stroke.clear();
+
+    repaint();
+
+    if (! ornament.isValid() || normalised.getLength() <= 0.0f || drawingArea.isEmpty()) {
+        return;
+    }
+
+    const float unitScale = 1.0f / drawingArea.getWidth();
+
+    normalised.applyTransform(juce::AffineTransform::translation(-drawingArea.getX(), -drawingArea.getY()).scaled(unitScale));
+
+    undoManager.beginNewTransaction();
+
+    OrnamentSymbol::addStroke(ornament, normalised, brushWidth, &undoManager);
+}
+
+void OrnamentSymbolEditor::mouseMove(const juce::MouseEvent& event)
+{
+    cursorPosition = event.position;
+
+    repaint();
+}
+
+void OrnamentSymbolEditor::mouseExit(const juce::MouseEvent& event)
+{
+    cursorPosition.reset();
+
+    repaint();
+}
+
+juce::MouseCursor OrnamentSymbolEditor::getMouseCursor()
+{
+    const ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
+
+    if (tool == SymbolTool::Eraser) {
+        return lookAndFeel.eraserCursor;
+    }
+
+    return lookAndFeel.pencilCursor;
+}
+
+void OrnamentSymbolEditor::eraseAlong(juce::Point<float> target)
+{
+    const float distance    = lastPoint.getDistanceFrom(target);
+    const float radius      = drawingArea.getWidth() * brushWidth * 0.5f;
+    const float stepLength  = juce::jmax(radius * eraserStepRatio, pointSpacing);
+    const float scale       = 1.0f / drawingArea.getWidth();
+    const float eraseRadius = brushWidth * 0.5f;
+
+    const int stepsNeeded = static_cast<int>(std::ceil(distance / stepLength));
+    const int steps       = juce::jmax(1, stepsNeeded);
+
+    repaint();
+
+    if (! ornament.isValid() || drawingArea.isEmpty()) {
+        return;
+    }
+
+    for (int step = 1; step <= steps; ++step) {
+        const auto centre = (lastPoint + (target - lastPoint) * (static_cast<float>(step) / steps) - drawingArea.getPosition()) * scale;
+
+        OrnamentSymbol::erase(ornament, centre, eraseRadius, &undoManager);
+    }
+
+    lastPoint = target;
+}

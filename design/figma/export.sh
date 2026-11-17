@@ -15,7 +15,7 @@ flags=$(python3 - "$build" "$repo" <<'PY'
 import json, shlex, sys
 build, repo = sys.argv[1], sys.argv[2]
 for entry in json.load(open(f"{build}/compile_commands.json")):
-    if entry["file"].endswith("Source/Plugin/PluginEditor.cpp"):
+    if entry["file"].endswith("Source/Editor/PluginEditor.cpp"):
         args = shlex.split(entry["command"])[1:]
         kept, skip = [], False
         for arg in args:
