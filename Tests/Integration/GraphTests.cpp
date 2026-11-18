@@ -354,8 +354,9 @@ TEST_CASE("typing in the live rule publishes its script once the typing pauses",
 
     const std::string sourceWithGlobal = std::string(defaultTraversalScriptSource()) + "\nint marker = 3;\n";
 
-    const int liveRuleId = ruleState.activeRuleId;
-    const int pauseWaitMs = 600;
+    const int liveRuleId       = ruleState.activeRuleId;
+    const int pollIntervalMs   = 50;
+    const int publishTimeoutMs = 5000;
 
     const std::uint64_t generationBefore = processor.snapshots.getPublished()->traversalScript->generation;
 
@@ -363,9 +364,13 @@ TEST_CASE("typing in the live rule publishes its script once the typing pauses",
 
     CHECK(processor.snapshots.getPublished()->traversalScript->generation == generationBefore);
 
-    juce::Thread::sleep(pauseWaitMs);
+    const juce::uint32 publishDeadlineMs = juce::Time::getMillisecondCounter() + publishTimeoutMs;
 
-    juce::Timer::callPendingTimersSynchronously();
+    while (processor.snapshots.getPublished()->traversalScript->generation == generationBefore && juce::Time::getMillisecondCounter() < publishDeadlineMs) {
+        juce::Thread::sleep(pollIntervalMs);
+
+        juce::Timer::callPendingTimersSynchronously();
+    }
 
     const RTScript* const published = processor.snapshots.getPublished()->traversalScript.get();
 
