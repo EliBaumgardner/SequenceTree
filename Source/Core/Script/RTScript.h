@@ -56,8 +56,6 @@ enum class ScriptOpcode
     Greater,
     GreaterOrEqual,
 
-    LogicalAnd,
-    LogicalOr,
     LogicalNot,
 
     Jump,

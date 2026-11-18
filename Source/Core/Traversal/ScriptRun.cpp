@@ -654,8 +654,7 @@ double ScriptRun::realArithmetic(ScriptOpcode opcode, double left, double right)
         case ScriptOpcode::LessOrEqual:    return static_cast<double>(left <= right);
         case ScriptOpcode::Greater:        return static_cast<double>(left > right);
         case ScriptOpcode::GreaterOrEqual: return static_cast<double>(left >= right);
-        case ScriptOpcode::LogicalAnd:     return static_cast<double>(left != 0.0 && right != 0.0);
-        case ScriptOpcode::LogicalOr:      return static_cast<double>(left != 0.0 || right != 0.0);
+
         case ScriptOpcode::LogicalNot:     return static_cast<double>(right == 0.0);
 
         case ScriptOpcode::Divide: {
@@ -690,8 +689,7 @@ int ScriptRun::arithmetic(ScriptOpcode opcode, int left, int right)
         case ScriptOpcode::LessOrEqual:    return static_cast<int>(left <= right);
         case ScriptOpcode::Greater:        return static_cast<int>(left > right);
         case ScriptOpcode::GreaterOrEqual: return static_cast<int>(left >= right);
-        case ScriptOpcode::LogicalAnd:     return static_cast<int>(left != 0 && right != 0);
-        case ScriptOpcode::LogicalOr:      return static_cast<int>(left != 0 || right != 0);
+
         case ScriptOpcode::LogicalNot:     return static_cast<int>(right == 0);
 
         case ScriptOpcode::Divide: {

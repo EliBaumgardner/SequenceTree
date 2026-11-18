@@ -288,6 +288,29 @@ TEST_CASE("and binds tighter than or, and not applies to one operand", "[script]
     CHECK(runFirstFunction("int value() { return 1 or 0 and 0; }") == 1);
 }
 
+static int runShortCircuit(const std::string& expression)
+{
+    return runFirstFunction("int hits;\n"
+                            "int value() { int result = " + expression + "; return hits * 10 + result; }\n"
+                            "int bump() { hits += 1; return 1; }");
+}
+
+TEST_CASE("and skips its right side when the left is false, and or when the left is true", "[script]")
+{
+    CHECK(runShortCircuit("0 and bump()") == 0);
+    CHECK(runShortCircuit("1 or bump()") == 1);
+    CHECK(runShortCircuit("1 and bump()") == 11);
+    CHECK(runShortCircuit("0 or bump()") == 11);
+}
+
+TEST_CASE("and and or give 1 or 0 whatever non-zero numbers they join", "[script]")
+{
+    CHECK(runFirstFunction("int value() { return 2 and 3; }") == 1);
+    CHECK(runFirstFunction("int value() { return 0 or 0; }") == 0);
+    CHECK(runFirstFunction("int value() { return 0.5 and 2; }") == 1);
+    CHECK(runFirstFunction("int value() { return 0 or 7; }") == 1);
+}
+
 TEST_CASE("arithmetic follows precedence and a zero divisor reads 0", "[script]")
 {
     CHECK(runFirstFunction("int value() { return 2 + 3 * 4 - -1; }") == 15);
@@ -691,6 +714,64 @@ TEST_CASE("the compiler refuses functions that would overflow the traversal stac
     CHECK_FALSE(compileTraversalScript(classWith("int value() {\n" + manyLocals + "return 1; }")).succeeded());
     CHECK_FALSE(compileTraversalScript(classWith("int value() { return " + deepExpression + "; }")).succeeded());
     CHECK(compileTraversalScript(classWith("int value() {\n" + fittingLocals + "return 1; }")).succeeded());
+}
+
+TEST_CASE("a call at the deepest point of an expression counts its arguments once toward the stack", "[script]")
+{
+    const std::string helper = "\nint f(int amount) { return amount; }";
+
+    std::string fitting = "f(1)";
+    std::string tooDeep = "f(1)";
+
+    for (int depth = 0; depth < RTScript::maxStack - 1; ++depth) {
+        fitting = "1 + (" + fitting + ")";
+    }
+
+    for (int depth = 0; depth < RTScript::maxStack; ++depth) {
+        tooDeep = "1 + (" + tooDeep + ")";
+    }
+
+    CHECK(runFirstFunction("int value() { return " + fitting + "; }" + helper) == RTScript::maxStack);
+    CHECK_FALSE(compileTraversalScript(classWith("int value() { return " + tooDeep + "; }" + helper)).succeeded());
+}
+
+TEST_CASE("a name declared twice in one block is an error, and a nested block may reuse it", "[script]")
+{
+    const ScriptCompileResult twice     = compileTraversalScript(classWith("int value() { int x = 1; int x = 2; return x; }"));
+    const ScriptCompileResult parameter = compileTraversalScript(classWith("int value(int a) { int a = 2; return a; }"));
+
+    REQUIRE(twice.diagnostics.size() == 1);
+    CHECK(twice.diagnostics.front().message == "'x' is already declared");
+    CHECK_FALSE(parameter.succeeded());
+
+    CHECK(runFirstFunction("int value() { int x = 1; if x == 1 { int x = 5; } return x; }") == 1);
+}
+
+TEST_CASE("traversal cannot be a member or an outside variable, and a local of that name hides the built-in", "[script]")
+{
+    const ScriptCompileResult member = compileTraversalScript(classWith("int traversal;"));
+    const ScriptCompileResult global = compileTraversalScript("int traversal;\n" + classWith(""));
+
+    REQUIRE(member.diagnostics.size() == 1);
+    REQUIRE(global.diagnostics.size() == 1);
+    CHECK(member.diagnostics.front().message.find("'traversal'") != std::string::npos);
+    CHECK(global.diagnostics.front().message.find("'traversal'") != std::string::npos);
+
+    CHECK(runFirstFunction("int value() { int traversal = 7; return traversal; }") == 7);
+}
+
+TEST_CASE("a function body missing its closing brace is reported once, and a variable cut off at the end still reports the class", "[script]")
+{
+    const std::string head = "class Traversal : defaultTraversal {\npublic:\n";
+
+    const ScriptCompileResult unclosedBody = compileTraversalScript(head + "void main() {\n    int a = 1;\n");
+    const ScriptCompileResult cutOffMember = compileTraversalScript(head + "int x");
+
+    REQUIRE(unclosedBody.diagnostics.size() == 1);
+    CHECK(unclosedBody.diagnostics.front().message == "expected '}'");
+
+    REQUIRE(cutOffMember.diagnostics.size() == 2);
+    CHECK(cutOffMember.diagnostics.back().message.find("close the class") != std::string::npos);
 }
 
 TEST_CASE("core::random spreads evenly within the given fraction of its value", "[script]")

@@ -42,8 +42,9 @@
     redo, copy, paste and select all act on the graph (through nodeController's
     selectionGestures). getCommandInfo gives each command its name and keys, and perform runs it.
     commandManager, an EditorCommandManager, listens for those keys on the top-level window and
-    sends each command to the focused component's target, or here when none has one; the
-    OrnamentWindow listens on itself for the same manager's undo and redo keys.
+    sends each command to the focused component's target when that target lists the command, and
+    here otherwise; the OrnamentWindow listens on itself for the same manager's undo and redo keys
+    and lists only those two.
 
     It holds only views and input. The processor owns everything the sound needs, so destroying
     the editor does not affect playback.

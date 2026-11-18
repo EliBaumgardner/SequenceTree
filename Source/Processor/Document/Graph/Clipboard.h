@@ -12,17 +12,18 @@
     The copy-and-paste buffer for nodes. Copying only records trees; pasting is most of the work,
     because a pasted node needs a new id, its arrows must point at the new ids, and each pasted
     node must be decided to be a root or a child. contents holds a copy of each copied node's tree,
-    with its properties, notes and arrows, and a copy of every encapsulation group the copied nodes
-    belong to.
+    with its properties, notes and arrows, and a copy of every encapsulation group whose members
+    were all copied.
 
-    copy fills contents from a list of node ids, first adding every member of any group one of the
-    ids is in, and records what pasting depends on: which nodes were chord members, which had a
-    parent outside the copy, and the traversals each copied tree's root equipped. pasteAt inserts
-    the copies as new nodes centred on a canvas point, as one undo transaction. Each pasted node
-    gets a new id and the arrows between copied nodes are reconnected to the new ids. A node whose
-    parent was not copied becomes a root, or is left out when its type cannot be a root or it was a
-    chord member. Each copied group is recreated around its new members, and pasteAt returns the
-    new ids.
+    copy fills contents from a list of node ids. A group node in the list brings every member of
+    its group; a member in the list brings only itself, and its group is copied only when every
+    member is among the ids. copy also records what pasting depends on: which nodes were chord
+    members, which had a parent outside the copy, and the traversals each copied tree's root
+    equipped. pasteAt inserts the copies as new nodes centred on a canvas point, as one undo
+    transaction. Each pasted node gets a new id and the arrows between copied nodes are
+    reconnected to the new ids. A node whose parent was not copied becomes a root, or is left out
+    when its type cannot be a root or it was a chord member. Each copied group is recreated around
+    its new members, and pasteAt returns the new ids.
 
     SelectionGestures owns it, calls copy with the selected ids and selects the ids pasteAt
     returns. It only reads and writes GraphState, never the canvas.

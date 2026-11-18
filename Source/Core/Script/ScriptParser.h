@@ -24,7 +24,10 @@
     agree; the Emitter does. A Parser lives for one compile, made by compileTraversalScript.
 */
 
-struct ParseFailure {};
+struct ParseFailure
+{
+    bool unclosedBlock = false;
+};
 
 template <typename Value>
 using Parsed = std::expected<Value, ParseFailure>;

@@ -5,12 +5,14 @@ EditorCommandManager::EditorCommandManager(juce::ApplicationCommandTarget& windo
 {
 }
 
-juce::ApplicationCommandTarget* EditorCommandManager::getFirstCommandTarget(juce::CommandID)
+juce::ApplicationCommandTarget* EditorCommandManager::getFirstCommandTarget(juce::CommandID commandID)
 {
     juce::Component* const                focusedComponent = juce::Component::getCurrentlyFocusedComponent();
     juce::ApplicationCommandTarget* const focusedTarget    = findTargetForComponent(focusedComponent);
 
-    if (focusedTarget != nullptr) {
+    const bool focusedTargetHandlesCommand = focusedTarget != nullptr && focusedTarget->getTargetForCommand(commandID) != nullptr;
+
+    if (focusedTargetHandlesCommand) {
         return focusedTarget;
     }
 

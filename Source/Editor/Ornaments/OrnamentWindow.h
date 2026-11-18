@@ -16,7 +16,8 @@
     redo are commands of the editor's EditorCommandManager, whose key mappings the window listens
     to on itself: while focus is inside it the manager sends those two commands here, and perform
     runs them on the UndoManager it is given, which the editor passes as the ornament undo
-    manager, apart from the one for the graph.
+    manager, apart from the one for the graph. The window lists no other command, so the manager
+    sends every other command typed while focus is inside it on to the editor.
 
     BottomBar opens it in a pop-up window, so it takes the CustomLookAndFeel in its constructor
     and sets it on itself.

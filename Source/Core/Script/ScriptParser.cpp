@@ -163,8 +163,14 @@ void Parser::parseClassBody(ClassDeclaration& declaration)
             return;
         }
 
-        if (! parseClassMember(declaration)) {
+        const ParseStatus member = parseClassMember(declaration);
+
+        if (! member) {
             recover();
+
+            if (member.error().unclosedBlock) {
+                return;
+            }
         }
 
         skipTerminators();
@@ -429,7 +435,11 @@ Parsed<std::vector<StatementPtr>> Parser::parseBlock()
 
     while (current().kind != TokenKind::RightBrace) {
         if (current().kind == TokenKind::End) {
-            return fail("expected '}'");
+            std::unexpected<ParseFailure> unclosed = fail("expected '}'");
+
+            unclosed.error().unclosedBlock = true;
+
+            return unclosed;
         }
 
         Parsed<StatementPtr> statement = parseStatement();

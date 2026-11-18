@@ -9,6 +9,7 @@
 
 #include <juce_data_structures/juce_data_structures.h>
 
+#include <limits>
 #include <unordered_map>
 #include <vector>
 
@@ -27,8 +28,8 @@
     getNodeParent and parentIdsOf find nodes by id without searching nodeMap, using an index this
     class's listener on nodeMap keeps current, so undo, redo and paste update it too. replaceState
     loads a saved graph and traversal map, and findNodeMapProblem says in words why a saved node
-    map cannot be loaded (a node of an unknown type, or two nodes with one id), or returns an empty
-    string when it can.
+    map cannot be loaded (a node of an unknown type, a node id outside lowestNodeId to
+    highestNodeId, or two nodes with one id), or returns an empty string when it can.
 
     The processor owns it, and it is used on the message thread only. NodeFactory, Clipboard and
     the input gestures edit it; CanvasTreeListener and RTGraphBuilder listen to nodeMap.
@@ -91,6 +92,8 @@ public:
     static constexpr int defaultProbability       {100};
     static constexpr int defaultModAmount         {0};
     static constexpr int defaultMidiChannel       {1};
+    static constexpr int lowestNodeId             {1};
+    static constexpr int highestNodeId            {std::numeric_limits<int>::max() - 1};
 
 private:
 

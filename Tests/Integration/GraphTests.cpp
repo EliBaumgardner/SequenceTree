@@ -595,6 +595,36 @@ TEST_CASE("a refused state leaves its reason in loadError and a later good state
     CHECK(processor.document.graphState.nodeMap.getNumChildren() == 1);
 }
 
+TEST_CASE("a state with a node id that is missing, below 1 or the largest int is refused with the reason in loadError", "[graph][state]")
+{
+    struct BadId
+    {
+        const char* property;
+        const char* reason;
+    };
+
+    SequenceTreeAudioProcessor processor;
+
+    const BadId badIds[] = {
+        { "\"Id\":\"0\"",          "has the id 0" },
+        { "\"Id\":\"-5\"",         "has the id -5" },
+        { "\"Id\":\"2147483647\"", "has the id 2147483647" },
+        { "",                      "has the id 0" }
+    };
+
+    for (const BadId& badId : badIds) {
+        CAPTURE(badId.property);
+
+        const juce::String state     = nodeMapState("{\"type\":\"RootNodeData\",\"properties\":{" + juce::String(badId.property) + "},\"children\":[]}");
+        const int          stateSize = static_cast<int>(state.getNumBytesAsUTF8());
+
+        processor.setStateInformation(state.toRawUTF8(), stateSize);
+
+        CHECK(processor.loadError.contains(badId.reason));
+        CHECK(processor.document.graphState.nodeMap.getNumChildren() == 0);
+    }
+}
+
 TEST_CASE("a file that is not a SequenceTree patch is refused and leaves the open patch as it was", "[graph][state]")
 {
     SequenceTreeAudioProcessor processor;
@@ -925,6 +955,50 @@ TEST_CASE("a pasted pitch-bound arrow keeps its pitch offset, so moving the past
 
     REQUIRE(originalShift != 0);
     CHECK(pastedShift == originalShift);
+}
+
+TEST_CASE("copying a group node brings its members, and copying one member copies only that node", "[graph][clipboard][encapsulation]")
+{
+    SequenceTreeAudioProcessor processor;
+
+    GraphState& graph = processor.document.graphState;
+
+    Clipboard clipboard(graph, processor.document.undoManager);
+
+    const int rootId   = createRoot(graph, 0, 0);
+    const int firstId  = createChild(graph, rootId, 100, 0);
+    const int secondId = createChild(graph, firstId, 200, 0);
+    const int thirdId  = createChild(graph, secondId, 300, 0);
+
+    const std::vector<int> memberIds { firstId, secondId, thirdId };
+
+    const juce::ValueTree encapsulator   = NodeFactory(graph, nullptr).createEncapsulator(memberIds);
+    const int             encapsulatorId = encapsulator.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+    const std::vector<int> copiedMember { secondId };
+    const std::vector<int> copiedGroup { encapsulatorId };
+
+    clipboard.copy(copiedMember);
+
+    const std::vector<int> pastedMember = clipboard.pasteAt({ 600, 600 });
+
+    REQUIRE(pastedMember.size() == 1);
+    CHECK(graph.getNode(pastedMember.front()).getType() != ValueTreeIdentifiers::EncapsulatorData);
+
+    clipboard.copy(copiedGroup);
+
+    const std::vector<int> pastedGroup = clipboard.pasteAt({ 900, 900 });
+
+    int pastedEncapsulators = 0;
+
+    for (const int pastedId : pastedGroup) {
+        if (graph.getNode(pastedId).getType() == ValueTreeIdentifiers::EncapsulatorData) {
+            ++pastedEncapsulators;
+        }
+    }
+
+    CHECK(pastedGroup.size() == memberIds.size() + 1);
+    CHECK(pastedEncapsulators == 1);
 }
 
 TEST_CASE("undo and redo keep the node index, parent links and published graph in step", "[graph][undo]")

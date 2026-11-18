@@ -37,6 +37,12 @@ void Emitter::declareMembers(std::span<const MemberDeclaration> declarations, st
             continue;
         }
 
+        if (member.name == "traversal") {
+            diagnostics.push_back({ "'traversal' is the running traversal and cannot be a member",
+                                    member.line, member.column, member.length });
+            continue;
+        }
+
         if (static_cast<int>(bindings.size()) >= RTScript::maxMembers) {
             diagnostics.push_back({ "too many variables outside the functions",
                                     member.line, member.column, member.length });
@@ -216,6 +222,10 @@ EmitStatus Emitter::emitDeclare(const Statement& statement)
     ValueType type = statement.declaredType;
 
     int defaultValue = 0;
+
+    if (findScopeLocal(statement.name) != nullptr) {
+        return fail("'" + statement.name + "' is already declared", statement);
+    }
 
     if (statement.value == nullptr) {
         if (type == ValueType::Node) {
@@ -669,6 +679,23 @@ const LocalBinding* Emitter::findLocal(const std::string& name) const
     return nullptr;
 }
 
+const LocalBinding* Emitter::findScopeLocal(const std::string& name) const
+{
+    std::size_t scopeStart = 0;
+
+    if (! emitting.scopeMarks.empty()) {
+        scopeStart = emitting.scopeMarks.back();
+    }
+
+    for (std::size_t index = emitting.locals.size(); index > scopeStart; --index) {
+        if (emitting.locals[index - 1].name == name) {
+            return &emitting.locals[index - 1];
+        }
+    }
+
+    return nullptr;
+}
+
 const FunctionSignature* Emitter::findFunction(const std::string& name) const
 {
     for (const FunctionSignature& signature : functions) {
@@ -977,9 +1004,9 @@ Emitted<ValueType> Emitter::emitCall(const Expression& expression)
         emit(ScriptOpcode::CoreRandom);
     }
     else {
-        emit(ScriptOpcode::Call, signature->index);
-
         emitting.stackDepth -= static_cast<int>(parameterTypes.size());
+
+        emit(ScriptOpcode::Call, signature->index);
     }
 
     return returnType;
@@ -1011,11 +1038,16 @@ Emitted<ValueType> Emitter::emitUnary(const Expression& expression)
 
 Emitted<ValueType> Emitter::emitBinary(const Expression& expression)
 {
+    const bool isLogical        = expression.op == TokenKind::And || expression.op == TokenKind::Or;
     const bool comparesIdentity = expression.op == TokenKind::EqualEqual || expression.op == TokenKind::NotEqual;
 
     const bool producesNumber = expression.op == TokenKind::Plus || expression.op == TokenKind::Minus
                                 || expression.op == TokenKind::Star || expression.op == TokenKind::Slash
                                 || expression.op == TokenKind::Percent;
+
+    if (isLogical) {
+        return emitLogical(expression);
+    }
 
     const Emitted<ValueType> leftType = emitExpression(*expression.left);
 
@@ -1056,6 +1088,54 @@ Emitted<ValueType> Emitter::emitBinary(const Expression& expression)
     if (producesNumber) {
         return numberType;
     }
+
+    return ValueType::Bool;
+}
+
+Emitted<ValueType> Emitter::emitLogical(const Expression& expression)
+{
+    const bool isAnd = expression.op == TokenKind::And;
+
+    ScriptOpcode jumpOpcode = ScriptOpcode::JumpIfTrue;
+
+    int shortCircuitValue = 1;
+
+    const Emitted<ValueType> leftType = emitExpression(*expression.left);
+
+    if (isAnd) {
+        jumpOpcode        = ScriptOpcode::JumpIfFalse;
+        shortCircuitValue = 0;
+    }
+
+    if (! leftType) {
+        return leftType;
+    }
+
+    if (commonType(*leftType, *leftType) == ValueType::Void) {
+        return fail("this operator works on numbers; read a number from a Node, such as 'node.count'", expression);
+    }
+
+    const int shortCircuitJump = emit(jumpOpcode);
+
+    const Emitted<ValueType> rightType = emitExpression(*expression.right);
+
+    if (! rightType) {
+        return rightType;
+    }
+
+    if (! emitConversion(*rightType, ValueType::Bool)) {
+        return fail("this operator works on numbers; read a number from a Node, such as 'node.count'", expression);
+    }
+
+    const int endJump = emit(ScriptOpcode::Jump);
+
+    patch(shortCircuitJump, here());
+
+    --emitting.stackDepth;
+
+    emit(ScriptOpcode::PushInt, shortCircuitValue);
+
+    patch(endJump, here());
 
     return ValueType::Bool;
 }
@@ -1112,8 +1192,6 @@ Emitted<ScriptOpcode> Emitter::binaryOpcode(const Expression& expression)
         case TokenKind::LessOrEqual:    return ScriptOpcode::LessOrEqual;
         case TokenKind::Greater:        return ScriptOpcode::Greater;
         case TokenKind::GreaterOrEqual: return ScriptOpcode::GreaterOrEqual;
-        case TokenKind::And:            return ScriptOpcode::LogicalAnd;
-        case TokenKind::Or:             return ScriptOpcode::LogicalOr;
         default:                        break;
     }
 

@@ -577,6 +577,10 @@ juce::String GraphState::findNodeMapProblem(const juce::ValueTree& restoredNodeM
             return "A node has the unknown type " + node.getType().toString() + ".";
         }
 
+        if (nodeId < lowestNodeId || nodeId > highestNodeId) {
+            return "A node has the id " + juce::String(nodeId) + ", but node ids run from " + juce::String(lowestNodeId) + " to " + juce::String(highestNodeId) + ".";
+        }
+
         if (! seenIds.insert(nodeId).second) {
             return "Two nodes share the id " + juce::String(nodeId) + ".";
         }

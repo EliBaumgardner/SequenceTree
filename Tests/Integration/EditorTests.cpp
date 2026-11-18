@@ -3,10 +3,12 @@
 #include "Processor/PluginProcessor.h"
 #include "Editor/PluginEditor.h"
 #include "Editor/Canvas/NodeCanvas.h"
+#include "Editor/Ornaments/OrnamentWindow.h"
 #include "Processor/Document/Graph/GraphState.h"
 #include "Processor/Document/Graph/NodeFactory.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
+#include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 #include <array>
 #include <memory>
@@ -180,6 +182,41 @@ TEST_CASE("nodes, flags, modulators and groups added to the graph show up in the
 
         CHECK(imagesDiffer(emptyImage, graphImage));
     }
+}
+
+TEST_CASE("a command the ornament window does not list falls through to the editor, and its undo and redo stay with the window", "[editor][commands]")
+{
+    const std::unique_ptr<SequenceTreeAudioProcessor> processor = makeProcessor(juce::AudioProcessor::wrapperType_Standalone);
+
+    const std::unique_ptr<juce::AudioProcessorEditor> editor(processor->createEditor());
+
+    REQUIRE(editor != nullptr);
+
+    SequenceTreeAudioProcessorEditor& sequenceTreeEditor = static_cast<SequenceTreeAudioProcessorEditor&>(*editor);
+
+    juce::ApplicationCommandTarget* const editorTarget = &sequenceTreeEditor;
+
+    ArsNovaUI::CustomLookAndFeel lookAndFeel;
+    EditorCommandManager         commandManager(sequenceTreeEditor);
+
+    OrnamentWindow window(lookAndFeel, processor->document.ornamentLibraries, processor->document.canvasSettings, processor->document.ornamentUndoManager, commandManager);
+
+    const juce::Point<int> windowSize = window.narrowestSize();
+
+    window.setSize(windowSize.x, windowSize.y);
+    window.addToDesktop(0);
+    window.setVisible(true);
+    window.grabKeyboardFocus();
+
+    REQUIRE(juce::Component::getCurrentlyFocusedComponent() == &window);
+
+    CHECK(commandManager.getFirstCommandTarget(juce::StandardApplicationCommandIDs::undo) == &window);
+    CHECK(commandManager.getFirstCommandTarget(juce::StandardApplicationCommandIDs::redo) == &window);
+
+    CHECK(commandManager.getFirstCommandTarget(juce::StandardApplicationCommandIDs::del) == editorTarget);
+    CHECK(commandManager.getFirstCommandTarget(juce::StandardApplicationCommandIDs::copy) == editorTarget);
+    CHECK(commandManager.getFirstCommandTarget(juce::StandardApplicationCommandIDs::paste) == editorTarget);
+    CHECK(commandManager.getFirstCommandTarget(juce::StandardApplicationCommandIDs::selectAll) == editorTarget);
 }
 
 TEST_CASE("the plugin formats reserve room for the host sync button that the standalone does not show", "[editor]")

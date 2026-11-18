@@ -16,7 +16,7 @@ The editor recompiles your script 250 ms after you stop typing. Errors are marke
 
 ## Script structure
 
-A script is one class. Optional `import` lines come first, then the class, closed with `};`. The class name is yours to choose, and the `: defaultTraversal` after it is optional; `defaultTraversal` is the only base class you can name.
+A script is one class. Optional `import` lines come first, then the class, closed with `}`; a `;` after it is optional. The class name is yours to choose, and the `: defaultTraversal` after it is optional; `defaultTraversal` is the only base class you can name.
 
 ```
 import core;
@@ -67,6 +67,8 @@ Numbers mix freely, and the result takes the more precise type: `int` with `floa
 
 A comparison, and `and`, `or` and `not`, give a `bool`. A `bool` counts as 1 or 0 in arithmetic, and any non-zero number stored in a `bool` becomes `true`.
 
+`and` skips its right side when its left side is false, and `or` skips its right side when its left side is true, so a function call on the skipped side does not run.
+
 A decimal is digits, a point, then more digits, as in `0.25`. Forms such as `1.` and `1e10` are not decimals.
 
 ### Variables
@@ -78,6 +80,8 @@ let spread = 0.25;
 ```
 
 `let` takes the type of the value it is given, so it always needs one. A function can hold up to 32 local variables.
+
+A name can be declared once in a block, and a function's parameters count as part of its outermost block. A block inside it can declare the same name again, which hides the outer one until that inner block ends.
 
 ### Control flow
 
@@ -132,6 +136,8 @@ Conditions need no parentheses. A condition must be a number, where 0 is false a
 | `traversal.instance` | Which running copy of that traversal this is. |
 | `traversal.random` | A large non-negative whole number, new on every step. Use `%` to bring it into range, as in `traversal.random % 4`. |
 | `core::random(value, spread)` | A decimal spread evenly around `value`: `core::random(50, 0.5)` is anywhere from 25 to 75. Needs `import core;` at the top of the script. |
+
+`current` and `traversal` cannot be the name of a member or of a variable outside the class. A local variable with either name is allowed and hides the built-in for the rest of its block.
 
 
 ## Node properties

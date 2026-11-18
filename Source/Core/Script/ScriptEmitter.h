@@ -113,10 +113,11 @@ private:
     [[nodiscard]] std::unexpected<EmitFailure> fail(const std::string& message, const Expression& expression);
     [[nodiscard]] std::unexpected<EmitFailure> fail(const std::string& message, const Statement& statement);
 
-    const LocalBinding*      findMember  (const std::string& name) const;
-    const LocalBinding*      findGlobal  (const std::string& name) const;
-    const LocalBinding*      findLocal   (const std::string& name) const;
-    const FunctionSignature* findFunction(const std::string& name) const;
+    const LocalBinding*      findMember    (const std::string& name) const;
+    const LocalBinding*      findGlobal    (const std::string& name) const;
+    const LocalBinding*      findLocal     (const std::string& name) const;
+    const LocalBinding*      findScopeLocal(const std::string& name) const;
+    const FunctionSignature* findFunction  (const std::string& name) const;
 
     int emitInitializer(std::span<const MemberDeclaration> declarations, std::span<const LocalBinding> bindings, ScriptOpcode storeOpcode);
 
@@ -134,8 +135,9 @@ private:
     [[nodiscard]] Emitted<ValueType> emitField     (const Expression& expression);
     [[nodiscard]] Emitted<ValueType> emitCall      (const Expression& expression);
 
-    [[nodiscard]] Emitted<ValueType> emitUnary (const Expression& expression);
-    [[nodiscard]] Emitted<ValueType> emitBinary(const Expression& expression);
+    [[nodiscard]] Emitted<ValueType> emitUnary  (const Expression& expression);
+    [[nodiscard]] Emitted<ValueType> emitBinary (const Expression& expression);
+    [[nodiscard]] Emitted<ValueType> emitLogical(const Expression& expression);
 
     [[nodiscard]] Emitted<const FieldEntry*> nodeField(const Expression& expression);
 
