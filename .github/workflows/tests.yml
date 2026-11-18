@@ -118,11 +118,11 @@ jobs:
         if: matrix.format == 'AU'
         run: |
           killall -9 AudioComponentRegistrar || true
-          auval -a | grep "ST01 ANON"
+          auval -a | grep "ST01 ARNV"
 
       - name: Validate the AU with auval
         if: matrix.format == 'AU'
-        run: auval -strict -v aumu ST01 ANON
+        run: auval -strict -v aumu ST01 ARNV
 
       - name: Validate the AU with pluginval
         if: matrix.format == 'AU' && (success() || failure())
