@@ -50,6 +50,26 @@ struct GestureCanvas
         return child.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
     }
 
+    int dragOutChild(int parentId)
+    {
+        const juce::ModifierKeys shiftLeftButton(juce::ModifierKeys::leftButtonModifier | juce::ModifierKeys::shiftModifier);
+
+        const juce::Point<float> dragEnd { 0.0f, dragOutDistance };
+
+        Node& parentNode = nodeComponent(parentId);
+
+        const juce::MouseEvent press = mouseEventOn(parentNode, {}, shiftLeftButton);
+        const juce::MouseEvent drag  = press.withNewPosition(dragEnd);
+
+        controller.mouseDown(press);
+        controller.mouseDrag(drag);
+        controller.mouseUp(drag);
+
+        const int lastIndex = graph.nodeMap.getNumChildren() - 1;
+
+        return graph.nodeMap.getChild(lastIndex).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+    }
+
     Node& nodeComponent(int nodeId)
     {
         Node* const node = dynamic_cast<Node*>(canvas.nodeManager.find(nodeId));
@@ -98,6 +118,8 @@ struct GestureCanvas
     static constexpr int nodeRowY   = 100;
     static constexpr int nodeRadius = 25;
 
+    static constexpr float dragOutDistance = 80.0f;
+
     SequenceTreeAudioProcessor processor;
 
     GraphState& graph = processor.document.graphState;
@@ -109,29 +131,6 @@ struct GestureCanvas
     NodeController               controller  { canvas, document, notePreview, processor.document.ornamentLibraries };
 };
 
-TEST_CASE("a selection box selects the visible nodes whose centres lie inside it", "[gestures][selection]")
-{
-    GestureCanvas fixture;
-
-    const int rootId   = fixture.addRoot(100);
-    const int insideId = fixture.addChild(rootId, 200);
-
-    fixture.addChild(rootId, 400);
-
-    fixture.canvas.handleAsyncUpdate();
-
-    REQUIRE(fixture.canvas.nodeManager.all().size() == 3);
-
-    fixture.controller.boxSelectionGestures.begin({ 150, 50 });
-    fixture.controller.boxSelectionGestures.update(fixture.mouseEventOn(fixture.canvas, { 250.0f, 150.0f }, {}));
-
-    CHECK(fixture.canvas.selectionBounds == juce::Rectangle<int> { 150, 50, 100, 100 });
-
-    fixture.controller.boxSelectionGestures.finish();
-
-    CHECK(fixture.selectedIds() == std::vector<int> { insideId });
-    CHECK(fixture.canvas.selectionBounds.isEmpty());
-}
 
 TEST_CASE("deleting the selection removes every selected node in one undo transaction", "[gestures][selection]")
 {
@@ -190,26 +189,31 @@ TEST_CASE("two span clicks in one tree group the nodes from the first to the sec
     const int middleId = fixture.addChild(firstId, 300);
     const int lastId   = fixture.addChild(middleId, 400);
 
-    EncapsulationGestures& span = fixture.controller.encapsulationGestures;
+    const juce::ModifierKeys leftButton(juce::ModifierKeys::leftButtonModifier);
 
     fixture.canvas.handleAsyncUpdate();
 
-    span.selectSpanNode(fixture.nodeComponent(firstId));
+    Node& firstNode = fixture.nodeComponent(firstId);
+    Node& lastNode  = fixture.nodeComponent(lastId);
 
-    CHECK(span.spanAnchorNodeId == firstId);
-    CHECK(fixture.nodeComponent(firstId).isOutlined);
+    fixture.canvas.setActiveTool(NodeCanvas::CanvasTool::Span);
 
-    span.selectSpanNode(fixture.nodeComponent(lastId));
+    fixture.controller.mouseDown(fixture.mouseEventOn(firstNode, {}, leftButton));
+
+    CHECK(firstNode.isOutlined);
+
+    fixture.controller.mouseDown(fixture.mouseEventOn(lastNode, {}, leftButton));
 
     const int groupId = fixture.graph.getNode(firstId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1);
 
-    CHECK(span.spanAnchorNodeId == -1);
     REQUIRE(groupId != -1);
     CHECK(fixture.graph.encapsulation.memberIds(groupId) == std::vector<int> { firstId, middleId, lastId });
 
     fixture.canvas.handleAsyncUpdate();
 
-    span.selectSpanNode(fixture.groupComponent(groupId));
+    Encapsulator& groupNode = fixture.groupComponent(groupId);
+
+    fixture.controller.mouseDown(fixture.mouseEventOn(groupNode, {}, leftButton));
 
     CHECK_FALSE(fixture.graph.getNode(groupId).isValid());
     CHECK(static_cast<int>(fixture.graph.getNode(firstId).getProperty(ValueTreeIdentifiers::EncapsulatorId, -1)) == -1);
@@ -225,14 +229,20 @@ TEST_CASE("a span click in another tree starts the span again there instead of g
     const int otherChildId = fixture.addChild(otherRootId, 600);
     const int nodeCount    = fixture.graph.nodeMap.getNumChildren();
 
-    EncapsulationGestures& span = fixture.controller.encapsulationGestures;
+    const juce::ModifierKeys leftButton(juce::ModifierKeys::leftButtonModifier);
 
     fixture.canvas.handleAsyncUpdate();
 
-    span.selectSpanNode(fixture.nodeComponent(firstChildId));
-    span.selectSpanNode(fixture.nodeComponent(otherChildId));
+    Node& firstChild = fixture.nodeComponent(firstChildId);
+    Node& otherChild = fixture.nodeComponent(otherChildId);
 
-    CHECK(span.spanAnchorNodeId == otherChildId);
+    fixture.canvas.setActiveTool(NodeCanvas::CanvasTool::Span);
+
+    fixture.controller.mouseDown(fixture.mouseEventOn(firstChild, {}, leftButton));
+    fixture.controller.mouseDown(fixture.mouseEventOn(otherChild, {}, leftButton));
+
+    CHECK_FALSE(firstChild.isOutlined);
+    CHECK(otherChild.isOutlined);
     CHECK(fixture.graph.nodeMap.getNumChildren() == nodeCount);
 }
 
@@ -251,20 +261,27 @@ TEST_CASE("right-clicking expands a collapsed group, and collapses it from its f
 
     const int groupId = group.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    EncapsulationGestures& expansion = fixture.controller.encapsulationGestures;
+    const juce::ModifierKeys rightButton(juce::ModifierKeys::rightButtonModifier);
 
     fixture.canvas.handleAsyncUpdate();
 
     Encapsulator& groupNode = fixture.groupComponent(groupId);
 
     CHECK_FALSE(groupNode.isExpanded);
-    CHECK(expansion.toggleEncapsulationExpansion(groupNode));
+
+    fixture.controller.mouseDown(fixture.mouseEventOn(groupNode, {}, rightButton));
+
+    Node& middleNode = fixture.nodeComponent(middleId);
+    Node& lastNode   = fixture.nodeComponent(lastId);
+
     CHECK(groupNode.isExpanded);
 
-    CHECK_FALSE(expansion.toggleEncapsulationExpansion(fixture.nodeComponent(middleId)));
+    fixture.controller.mouseDown(fixture.mouseEventOn(middleNode, {}, rightButton));
+
     CHECK(groupNode.isExpanded);
 
-    CHECK(expansion.toggleEncapsulationExpansion(fixture.nodeComponent(lastId)));
+    fixture.controller.mouseDown(fixture.mouseEventOn(lastNode, {}, rightButton));
+
     CHECK_FALSE(groupNode.isExpanded);
 }
 
@@ -282,47 +299,44 @@ TEST_CASE("a child dragged out of an expanded group's member joins the group aft
 
     const int groupId = group.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
 
-    EncapsulationGestures& adoption = fixture.controller.encapsulationGestures;
-
     fixture.canvas.handleAsyncUpdate();
 
     fixture.canvas.encapsulationView.expand(groupId);
 
-    const juce::ValueTree firstChild = NodeFactory(fixture.graph, nullptr).createNode(firstId, ValueTreeIdentifiers::NodeData, { 200, 200, GestureCanvas::nodeRadius });
-    const juce::ValueTree lastChild  = NodeFactory(fixture.graph, nullptr).createNode(lastId, ValueTreeIdentifiers::NodeData, { 300, 200, GestureCanvas::nodeRadius });
+    const int firstChildId = fixture.dragOutChild(firstId);
 
-    const int firstChildId = firstChild.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
-
-    adoption.adoptCreatedChild(firstId, firstChild);
-    adoption.adoptCreatedChild(lastId, lastChild);
+    fixture.dragOutChild(lastId);
 
     CHECK(fixture.graph.encapsulation.memberIds(groupId) == std::vector<int> { firstId, firstChildId, lastId });
 }
 
-TEST_CASE("with the span tool a mouse-down on a node reaches the span gesture, and leaving the tool forgets the span start", "[gestures][controller]")
+TEST_CASE("leaving the span tool forgets the span start, so the next span click starts a new span", "[gestures][encapsulation]")
 {
     GestureCanvas fixture;
 
-    const int rootId  = fixture.addRoot(100);
-    const int childId = fixture.addChild(rootId, 200);
+    const int rootId    = fixture.addRoot(100);
+    const int firstId   = fixture.addChild(rootId, 200);
+    const int secondId  = fixture.addChild(firstId, 300);
+    const int nodeCount = fixture.graph.nodeMap.getNumChildren();
 
     const juce::ModifierKeys leftButton(juce::ModifierKeys::leftButtonModifier);
 
     fixture.canvas.handleAsyncUpdate();
 
-    Node& childNode = fixture.nodeComponent(childId);
-
-    const juce::MouseEvent spanClick = fixture.mouseEventOn(childNode, {}, leftButton);
+    Node& firstNode  = fixture.nodeComponent(firstId);
+    Node& secondNode = fixture.nodeComponent(secondId);
 
     fixture.canvas.setActiveTool(NodeCanvas::CanvasTool::Span);
 
-    fixture.controller.mouseDown(spanClick);
-
-    CHECK(fixture.controller.encapsulationGestures.spanAnchorNodeId == childId);
+    fixture.controller.mouseDown(fixture.mouseEventOn(firstNode, {}, leftButton));
 
     fixture.canvas.setActiveTool(NodeCanvas::CanvasTool::None);
+    fixture.canvas.setActiveTool(NodeCanvas::CanvasTool::Span);
 
-    CHECK(fixture.controller.encapsulationGestures.spanAnchorNodeId == -1);
+    fixture.controller.mouseDown(fixture.mouseEventOn(secondNode, {}, leftButton));
+
+    CHECK(secondNode.isOutlined);
+    CHECK(fixture.graph.nodeMap.getNumChildren() == nodeCount);
 }
 
 TEST_CASE("in arrow mode a shift-drag on the empty canvas draws a selection box and selects the nodes inside it on release", "[gestures][controller]")
@@ -333,6 +347,8 @@ TEST_CASE("in arrow mode a shift-drag on the empty canvas draws a selection box 
     const int insideId = fixture.addChild(rootId, 200);
 
     const juce::ModifierKeys shiftLeftButton(juce::ModifierKeys::leftButtonModifier | juce::ModifierKeys::shiftModifier);
+
+    fixture.addChild(rootId, 400);
 
     fixture.canvas.handleAsyncUpdate();
 
@@ -346,31 +362,7 @@ TEST_CASE("in arrow mode a shift-drag on the empty canvas draws a selection box 
     fixture.controller.mouseUp(fixture.mouseEventOn(fixture.canvas, { 250.0f, 150.0f }, {}));
 
     CHECK(fixture.selectedIds() == std::vector<int> { insideId });
-}
-
-TEST_CASE("a right-click on a collapsed group reaches the expansion gesture", "[gestures][controller]")
-{
-    GestureCanvas fixture;
-
-    const int rootId  = fixture.addRoot(100);
-    const int firstId = fixture.addChild(rootId, 200);
-    const int lastId  = fixture.addChild(firstId, 300);
-
-    const std::vector<int> memberIds { firstId, lastId };
-
-    const juce::ValueTree group = NodeFactory(fixture.graph, nullptr).createEncapsulator(memberIds);
-
-    const int groupId = group.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
-
-    const juce::ModifierKeys rightButton(juce::ModifierKeys::rightButtonModifier);
-
-    fixture.canvas.handleAsyncUpdate();
-
-    Encapsulator& groupNode = fixture.groupComponent(groupId);
-
-    fixture.controller.mouseDown(fixture.mouseEventOn(groupNode, {}, rightButton));
-
-    CHECK(groupNode.isExpanded);
+    CHECK(fixture.canvas.selectionBounds.isEmpty());
 }
 
 TEST_CASE("traversals typed on a root reach the saved document without playing", "[gestures][roots]")

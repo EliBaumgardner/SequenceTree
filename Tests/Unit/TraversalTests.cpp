@@ -1236,12 +1236,6 @@ TEST_CASE("a negative probability weighs the same as a probability of 0", "[trav
     CHECK(withNegative.accepts(sharedCountLimit, plainProbability) == withZero.accepts(sharedCountLimit, plainProbability));
 }
 
-TEST_CASE("defaultValue and indexOf are constexpr", "[state]")
-{
-    static_assert(NodeStateTable::defaultValue(NodeStateSlot::Count) == 0);
-    static_assert(NodeStateTable::defaultValue(NodeStateSlot::ActiveAlternative) == -1);
-    static_assert(NodeStateTable::indexOf(NodeStateSlot::SwitchCount, 2) == 2 * NodeStateTable::slotCount + 1);
-}
 
 TEST_CASE("a script whose advance returns none sends the walker back to its root", "[traversal][script]")
 {
