@@ -12,14 +12,15 @@
 #include "Editor/Bars/Titlebar.h"
 #include "Editor/Bars/BottomBar.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Editor/Canvas/GraphDocument.h"
 #include "Editor/Menus/MenuArea.h"
 #include "Editor/Menus/TraversalMenu.h"
 #include "Editor/Menus/NodeMenu.h"
-#include "Editor/Input/Gestures/NotePreviewGestures.h"
+#include "Editor/Canvas/NotePreviewGestures.h"
 #include "Editor/Rules/TraversalRulesWindow.h"
 #include "Editor/Ornaments/OrnamentWindow.h"
+#include "EditorCommandManager.h"
 #include <ArsNovaUI/Menus/SettingsMenu.h>
 #include <ArsNovaUI/PopupWindow.h>
 #include <ArsNovaUI/ScaledView.h>
@@ -37,8 +38,12 @@
     audioCommandFrames, a VBlankAttachment, runs once per display frame: it applies a play or stop
     change to the Titlebar and has the canvas drain the AudioUIBridge, which is how playback is
     shown. resized lays the parts out, and configureWindowSize sets the zoom and size limits.
-    keyPressed handles the window-wide keys: space toggles playback, delete, undo and redo, copy,
-    paste and select all (through nodeController's selectionGestures).
+    It is the target of the window-wide commands: space toggles playback, and delete, undo and
+    redo, copy, paste and select all act on the graph (through nodeController's
+    selectionGestures). getCommandInfo gives each command its name and keys, and perform runs it.
+    commandManager, an EditorCommandManager, listens for those keys on the top-level window and
+    sends each command to the focused component's target, or here when none has one; the
+    OrnamentWindow listens on itself for the same manager's undo and redo keys.
 
     It holds only views and input. The processor owns everything the sound needs, so destroying
     the editor does not affect playback.
@@ -47,7 +52,7 @@
 class SequenceTreeAudioProcessor;
 
 class SequenceTreeAudioProcessorEditor  : public juce::AudioProcessorEditor,
-                                          public juce::KeyListener
+                                          public juce::ApplicationCommandTarget
 {
 
 public:
@@ -61,7 +66,12 @@ public:
     void setManualMenuBounds   (juce::Rectangle<int> b);
     void parentHierarchyChanged() override;
 
-    bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
+    void getAllCommands(juce::Array<juce::CommandID>& commands) override;
+    void getCommandInfo(juce::CommandID commandID, juce::ApplicationCommandInfo& info) override;
+
+    bool perform(const InvocationInfo& info) override;
+
+    juce::ApplicationCommandTarget* getNextCommandTarget() override;
 
 private:
 
@@ -77,6 +87,8 @@ private:
     SequenceTreeAudioProcessor& audioProcessor;
 
     ArsNovaUI::CustomLookAndFeel lookAndFeel;
+
+    EditorCommandManager commandManager { *this };
 
     std::unique_ptr<juce::PropertiesFile> interfaceSettings;
 
@@ -115,7 +127,8 @@ private:
     ArsNovaUI::PopupWindowLauncher ornamentLauncher {
         "Ornaments",
         [this]() {
-            auto content = std::make_unique<OrnamentWindow>(lookAndFeel, audioProcessor.document.ornamentLibraries, audioProcessor.document.canvasSettings, audioProcessor.document.ornamentUndoManager);
+            auto content = std::make_unique<OrnamentWindow>(lookAndFeel, audioProcessor.document.ornamentLibraries, audioProcessor.document.canvasSettings,
+                                                            audioProcessor.document.ornamentUndoManager, commandManager);
 
             const juce::Point<int> size = content->narrowestSize();
 
@@ -152,6 +165,8 @@ private:
     static constexpr int verticalGutterCount   = 2;
 
     static constexpr float openingScale = 2.0f;
+
+    static constexpr juce::CommandID togglePlaybackCommand = 1;
 
     juce::VBlankAttachment audioCommandFrames;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SequenceTreeAudioProcessorEditor)

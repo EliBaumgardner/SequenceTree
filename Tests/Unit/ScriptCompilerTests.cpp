@@ -377,6 +377,16 @@ TEST_CASE("a decimal too large for an int stores as the largest int", "[script]"
     CHECK(runFirstFunction("int value() { int x = -100000.0 * 100000.0; return x; }") == -2147483647 - 1);
 }
 
+TEST_CASE("a decimal literal too large for a double is reported", "[script]")
+{
+    const std::string hugeDecimal = std::string(400, '9') + ".0";
+
+    const ScriptCompileResult compiled = compileTraversalScript(classWith("double value() { return " + hugeDecimal + "; }"));
+
+    REQUIRE(compiled.diagnostics.size() == 1);
+    CHECK(compiled.diagnostics.front().message.find("too large") != std::string::npos);
+}
+
 TEST_CASE("a decimal written to a node property truncates", "[script]")
 {
     const ScriptCompileResult compiled = compileTraversalScript(classWith(
@@ -548,6 +558,55 @@ TEST_CASE("a trial run reads its own writes and leaves the traversal untouched",
 
     CHECK(fixture.nodeState.get(NodeStateSlot::Count, 1) == 5);
     CHECK(fixture.members[0] == 1);
+}
+
+TEST_CASE("a trial run that writes more nodes than its table holds faults, and a committed run does not", "[script]")
+{
+    constexpr int chainLength = 100;
+
+    const ScriptCompileResult compiled = compileTraversalScript(classWith(
+        "int touch() {\n"
+        "    Node walker = current;\n"
+        "    while walker != none {\n"
+        "        walker.count += 1;\n"
+        "        walker = walker.parent;\n"
+        "    }\n"
+        "    return 7;\n"
+        "}"));
+
+    REQUIRE(compiled.succeeded());
+
+    NodeMap chain;
+
+    for (int id = 1; id <= chainLength; ++id) {
+        RTNode node;
+        node.nodeID   = id;
+        node.parentId = id - 1;
+
+        chain.sortedById.push_back(node);
+    }
+
+    ScriptFixture fixture;
+
+    fixture.nodes = chain;
+
+    ScriptRunContext trialContext = fixture.context(compiled.script, ScriptWrites::Trial, nullptr);
+
+    trialContext.currentNodeId = chainLength;
+
+    ScriptRun trial(trialContext);
+
+    CHECK(trial.call(0, {}) == -1);
+
+    ScriptRunContext commitContext = fixture.context(compiled.script, ScriptWrites::Commit, nullptr);
+
+    commitContext.currentNodeId = chainLength;
+
+    ScriptRun committed(commitContext);
+
+    CHECK(committed.call(0, {}) == 7);
+    CHECK(fixture.nodeState.get(NodeStateSlot::Count, 1) == 1);
+    CHECK(fixture.nodeState.get(NodeStateSlot::Count, chainLength) == 1);
 }
 
 TEST_CASE("a variable declared in a block is gone after it", "[script]")

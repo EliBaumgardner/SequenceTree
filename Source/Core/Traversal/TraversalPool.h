@@ -14,7 +14,7 @@
     without allocating.
 
     prepare reserves the slots. acquire puts a new traversal in a free slot under a run id from
-    nextRunId and sets it up with the pool's choices, mode, script and shared variables, so the
+    nextRunId and sets it up with the pool's mode, script and shared variables, so the
     same type serves playback and note preview. erase removes one, and clear removes them all.
     find and findRunFor look a traversal up by run id, or by its root and traversal key. Next to
     each traversal, a TraversalRuntime records whether a traversal flag or a jump from another tree
@@ -115,10 +115,6 @@ public:
 
             slot.entry.second.runtime = {};
 
-            if (choices == Choices::Fixed) {
-                slot.entry.second.logic.childSelector.selectionRandom = 0;
-            }
-
             slot.entry.second.logic.previewVisitCount = previewVisitCount;
             slot.entry.second.logic.script            = script;
             slot.entry.second.logic.sharedGlobals     = &globals;
@@ -200,7 +196,6 @@ public:
 
     using Entry = std::pair<int, Instance>;
 
-    enum class Choices { Random, Fixed };
 
     struct Slot
     {
@@ -211,7 +206,6 @@ public:
 
     std::uint64_t epoch = 0;
 
-    Choices choices = Choices::Random;
 
     TraversalMode mode = TraversalMode::Live;
 

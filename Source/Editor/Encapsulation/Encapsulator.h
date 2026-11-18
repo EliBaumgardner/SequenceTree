@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Node.h"
+#include "Editor/Nodes/Node.h"
 #include <juce_data_structures/juce_data_structures.h>
 #include <vector>
 

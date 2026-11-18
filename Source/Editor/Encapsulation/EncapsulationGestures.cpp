@@ -2,9 +2,9 @@
 #include "Processor/Document/TypedProperties.h"
 #include "Editor/Canvas/NodeCanvas.h"
 #include "Editor/Nodes/Node.h"
-#include "Editor/Nodes/Encapsulator.h"
-#include "Processor/Document/NodeFactory.h"
-#include "Processor/Document/GraphState.h"
+#include "Encapsulator.h"
+#include "Processor/Document/Graph/NodeFactory.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 

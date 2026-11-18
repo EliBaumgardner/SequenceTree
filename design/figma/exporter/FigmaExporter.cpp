@@ -55,7 +55,7 @@
 #define protected public
 #include "Processor/PluginProcessor.h"
 #include "Editor/PluginEditor.h"
-#include "Editor/Menus/AllowedTraversalsMenu.h"
+#include "Editor/ArrowSettings/AllowedTraversalsMenu.h"
 #include "Editor/Menus/MenuArea.h"
 #include "Editor/Menus/MenuBar.h"
 #include <ArsNovaUI/Menus/ColourSelector.h>

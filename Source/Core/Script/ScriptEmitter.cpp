@@ -117,17 +117,8 @@ void Emitter::emitFunction(const FunctionDeclaration& declaration, const Functio
 
     int defaultReturn = 0;
 
-    locals.clear();
-    scopeMarks.clear();
-    slotMarks.clear();
-    loopStack.clear();
-
-    nextSlot        = 0;
-    highWaterSlot   = 0;
-    stackDepth      = 0;
-    highWaterStack  = 0;
-    currentFunction = &signature;
-
+    emitting                = {};
+    emitting.signature      = &signature;
     function.entry          = here();
     function.parameterCount = static_cast<int>(declaration.parameters.size());
 
@@ -149,36 +140,36 @@ void Emitter::emitFunction(const FunctionDeclaration& declaration, const Functio
     emit(ScriptOpcode::PushInt, defaultReturn);
     emit(ScriptOpcode::Return);
 
-    function.localCount = highWaterSlot;
+    function.localCount = emitting.highWaterSlot;
 
-    if (highWaterStack > RTScript::maxStack) {
+    if (emitting.highWaterStack > RTScript::maxStack) {
         diagnostics.push_back({ "expression nesting is too deep for the traversal stack",
                                 declaration.line, declaration.column, declaration.length });
     }
 
-    if (highWaterSlot > RTScript::maxLocals) {
+    if (emitting.highWaterSlot > RTScript::maxLocals) {
         diagnostics.push_back({ "too many variables for the traversal stack",
                                 declaration.line, declaration.column, declaration.length });
     }
 
-    currentFunction = nullptr;
+    emitting.signature = nullptr;
 }
 
 void Emitter::emitSequence(std::span<const StatementPtr> statements)
 {
     for (const StatementPtr& statement : statements) {
-        const std::size_t scopeDepth = scopeMarks.size();
-        const std::size_t localCount = locals.size();
+        const std::size_t scopeDepth = emitting.scopeMarks.size();
+        const std::size_t localCount = emitting.locals.size();
 
-        const int slotMark = nextSlot;
+        const int slotMark = emitting.nextSlot;
 
         if (! emitStatement(*statement)) {
-            scopeMarks.resize(scopeDepth);
-            slotMarks.resize(scopeDepth);
-            locals.resize(localCount);
+            emitting.scopeMarks.resize(scopeDepth);
+            emitting.slotMarks.resize(scopeDepth);
+            emitting.locals.resize(localCount);
 
-            nextSlot   = slotMark;
-            stackDepth = 0;
+            emitting.nextSlot   = slotMark;
+            emitting.stackDepth = 0;
         }
     }
 }
@@ -403,7 +394,7 @@ EmitStatus Emitter::emitAssignField(const Statement& statement)
 
     emit(ScriptOpcode::StoreNodeField, field.field);
 
-    --nextSlot;
+    --emitting.nextSlot;
 
     return {};
 }
@@ -481,12 +472,13 @@ EmitStatus Emitter::emitFor(const Statement& statement)
     emit(ScriptOpcode::ChildAt);
     emit(ScriptOpcode::StoreLocal, declareLocal(statement.name, ValueType::Node));
 
-    loopStack.push_back({});
+    emitting.loopStack.push_back({});
 
     emitBlock(statement.body);
 
-    LoopFrame frame = std::move(loopStack.back());
-    loopStack.pop_back();
+    LoopFrame frame = std::move(emitting.loopStack.back());
+
+    emitting.loopStack.pop_back();
 
     const int continueTarget = here();
 
@@ -523,12 +515,13 @@ EmitStatus Emitter::emitWhile(const Statement& statement)
 
     const int exitJump = emit(ScriptOpcode::JumpIfFalse);
 
-    loopStack.push_back({});
+    emitting.loopStack.push_back({});
 
     emitBlock(statement.body);
 
-    LoopFrame frame = std::move(loopStack.back());
-    loopStack.pop_back();
+    LoopFrame frame = std::move(emitting.loopStack.back());
+
+    emitting.loopStack.pop_back();
 
     emit(ScriptOpcode::Jump, loopTop);
 
@@ -543,33 +536,33 @@ EmitStatus Emitter::emitWhile(const Statement& statement)
 
 EmitStatus Emitter::emitBreak(const Statement& statement)
 {
-    if (loopStack.empty()) {
+    if (emitting.loopStack.empty()) {
         return fail("'break' is only valid inside a loop", statement);
     }
 
-    loopStack.back().breakJumps.push_back(emit(ScriptOpcode::Jump));
+    emitting.loopStack.back().breakJumps.push_back(emit(ScriptOpcode::Jump));
 
     return {};
 }
 
 EmitStatus Emitter::emitContinue(const Statement& statement)
 {
-    if (loopStack.empty()) {
+    if (emitting.loopStack.empty()) {
         return fail("'continue' is only valid inside a loop", statement);
     }
 
-    loopStack.back().continueJumps.push_back(emit(ScriptOpcode::Jump));
+    emitting.loopStack.back().continueJumps.push_back(emit(ScriptOpcode::Jump));
 
     return {};
 }
 
 EmitStatus Emitter::emitReturn(const Statement& statement)
 {
-    const ValueType returnType = currentFunction->returnType;
+    const ValueType returnType = emitting.signature->returnType;
 
     if (statement.value == nullptr) {
         if (returnType != ValueType::Void) {
-            return fail("'" + currentFunction->name + "' must return " + typeName(returnType), statement);
+            return fail("'" + emitting.signature->name + "' must return " + typeName(returnType), statement);
         }
 
         emit(ScriptOpcode::PushInt, 0);
@@ -579,7 +572,7 @@ EmitStatus Emitter::emitReturn(const Statement& statement)
     }
 
     if (returnType == ValueType::Void) {
-        return fail("'" + currentFunction->name + "' gives no value; use 'return;'", *statement.value);
+        return fail("'" + emitting.signature->name + "' gives no value; use 'return;'", *statement.value);
     }
 
     const Emitted<ValueType> returnedType = emitExpression(*statement.value);
@@ -589,7 +582,7 @@ EmitStatus Emitter::emitReturn(const Statement& statement)
     }
 
     if (!emitConversion(*returnedType, returnType)) {
-        return fail("'" + currentFunction->name + "' must return " + typeName(returnType), *statement.value);
+        return fail("'" + emitting.signature->name + "' must return " + typeName(returnType), *statement.value);
     }
 
     emit(ScriptOpcode::Return);
@@ -599,17 +592,18 @@ EmitStatus Emitter::emitReturn(const Statement& statement)
 
 void Emitter::openScope()
 {
-    scopeMarks.push_back(locals.size());
-    slotMarks.push_back(nextSlot);
+    emitting.scopeMarks.push_back(emitting.locals.size());
+    emitting.slotMarks.push_back(emitting.nextSlot);
 }
 
 void Emitter::closeScope()
 {
-    locals.resize(scopeMarks.back());
-    nextSlot = slotMarks.back();
+    emitting.locals.resize(emitting.scopeMarks.back());
 
-    scopeMarks.pop_back();
-    slotMarks.pop_back();
+    emitting.nextSlot = emitting.slotMarks.back();
+
+    emitting.scopeMarks.pop_back();
+    emitting.slotMarks.pop_back();
 }
 
 void Emitter::patch(int jumpIndex, int target)
@@ -666,9 +660,9 @@ const LocalBinding* Emitter::findGlobal(const std::string& name) const
 
 const LocalBinding* Emitter::findLocal(const std::string& name) const
 {
-    for (std::size_t index = locals.size(); index > 0; --index) {
-        if (locals[index - 1].name == name) {
-            return &locals[index - 1];
+    for (std::size_t index = emitting.locals.size(); index > 0; --index) {
+        if (emitting.locals[index - 1].name == name) {
+            return &emitting.locals[index - 1];
         }
     }
 
@@ -701,18 +695,9 @@ int Emitter::emitInitializer(std::span<const MemberDeclaration> declarations, st
         return -1;
     }
 
-    locals.clear();
-    scopeMarks.clear();
-    slotMarks.clear();
-    loopStack.clear();
-
-    nextSlot        = 0;
-    highWaterSlot   = 0;
-    stackDepth      = 0;
-    highWaterStack  = 0;
-    currentFunction = &signature;
-
-    function.entry = here();
+    emitting           = {};
+    emitting.signature = &signature;
+    function.entry     = here();
 
     for (const MemberDeclaration& variable : declarations) {
         const auto binding = std::ranges::find(bindings, variable.name, &LocalBinding::name);
@@ -722,16 +707,16 @@ int Emitter::emitInitializer(std::span<const MemberDeclaration> declarations, st
         }
 
         if (! emitInitialValue(variable, binding->slot, storeOpcode)) {
-            stackDepth     = 0;
-            highWaterStack = 0;
+            emitting.stackDepth     = 0;
+            emitting.highWaterStack = 0;
         }
     }
 
     emit(ScriptOpcode::PushInt, 0);
     emit(ScriptOpcode::Return);
 
-    function.localCount = highWaterSlot;
-    currentFunction     = nullptr;
+    function.localCount = emitting.highWaterSlot;
+    emitting.signature  = nullptr;
 
     script.functions.push_back(function);
 
@@ -756,7 +741,7 @@ EmitStatus Emitter::emitInitialValue(const MemberDeclaration& variable, int slot
 
     emit(storeOpcode, slot);
 
-    if (highWaterStack > RTScript::maxStack || highWaterSlot > RTScript::maxLocals) {
+    if (emitting.highWaterStack > RTScript::maxStack || emitting.highWaterSlot > RTScript::maxLocals) {
         return fail("this value is nested too deeply for the traversal stack", *variable.value);
     }
 
@@ -771,10 +756,10 @@ int Emitter::emit(ScriptOpcode opcode, Operand operand)
 
     script.instructions.push_back({ opcode, encodedOperand });
 
-    stackDepth += stackDelta(opcode);
+    emitting.stackDepth += stackDelta(opcode);
 
-    if (stackDepth > highWaterStack) {
-        highWaterStack = stackDepth;
+    if (emitting.stackDepth > emitting.highWaterStack) {
+        emitting.highWaterStack = emitting.stackDepth;
     }
 
     return index;
@@ -785,16 +770,18 @@ int Emitter::here() const { return static_cast<int>(script.instructions.size());
 int Emitter::declareLocal(const std::string& name, ValueType type)
 {
     const int slot = allocateSlot();
-    locals.push_back({ name, slot, type });
+
+    emitting.locals.push_back({ name, slot, type });
+
     return slot;
 }
 
 int Emitter::allocateSlot()
 {
-    const int slot = nextSlot++;
+    const int slot = emitting.nextSlot++;
 
-    if (nextSlot > highWaterSlot) {
-        highWaterSlot = nextSlot;
+    if (emitting.nextSlot > emitting.highWaterSlot) {
+        emitting.highWaterSlot = emitting.nextSlot;
     }
 
     return slot;
@@ -921,14 +908,12 @@ Emitted<ValueType> Emitter::emitCall(const Expression& expression)
 {
     const FunctionSignature* const signature = findFunction(expression.name);
 
-    const bool isScoped   = !expression.scope.empty();
-    const bool isImported = std::find(imports.begin(), imports.end(), expression.scope) != imports.end();
-
-    const bool isAdvance    = !isScoped && expression.name == "advance";
-    const bool isPlayNote   = !isScoped && expression.name == "playNote";
-    const bool isCoreRandom = isScoped && expression.scope == "core" && expression.name == "random";
-
-    const bool insideAdvance = currentFunction != nullptr && currentFunction->name == "advance";
+    const bool isScoped      = !expression.scope.empty();
+    const bool isImported    = std::find(imports.begin(), imports.end(), expression.scope) != imports.end();
+    const bool isAdvance     = !isScoped && expression.name == "advance";
+    const bool isPlayNote    = !isScoped && expression.name == "playNote";
+    const bool isCoreRandom  = isScoped && expression.scope == "core" && expression.name == "random";
+    const bool insideAdvance = emitting.signature != nullptr && emitting.signature->name == "advance";
 
     std::vector<ValueType> parameterTypes;
 
@@ -993,7 +978,8 @@ Emitted<ValueType> Emitter::emitCall(const Expression& expression)
     }
     else {
         emit(ScriptOpcode::Call, signature->index);
-        stackDepth -= static_cast<int>(parameterTypes.size());
+
+        emitting.stackDepth -= static_cast<int>(parameterTypes.size());
     }
 
     return returnType;

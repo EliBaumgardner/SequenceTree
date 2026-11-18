@@ -73,22 +73,26 @@ private:
         double recordedAtMs = 0.0;
     };
 
+    template <typename Entry, int capacity>
+    struct Recording
+    {
+        std::array<Entry, capacity> entries {};
+
+        int count = 0;
+    };
+
     static constexpr int arrowCommandCapacity      = 1024;
     static constexpr int recordedHighlightCapacity = 256;
     static constexpr int recordedArrowCapacity     = 512;
     static constexpr int recordedCountCapacity     = 256;
 
-    int numRecordedHighlights = 0;
-    int numRecordedArrows     = 0;
-    int numRecordedCounts     = 0;
-
-    double recordClockMs      = 0.0;
+    double recordClockMs = 0.0;
 
     CommandFifo<BridgeCommands::HighlightCommand> highlights;
     CommandFifo<BridgeCommands::ArrowCommand, arrowCommandCapacity> arrows;
     CommandFifo<BridgeCommands::CountCommand> counts;
 
-    std::array<BridgeCommands::HighlightCommand, recordedHighlightCapacity> recordedHighlights {};
-    std::array<RecordedArrow, recordedArrowCapacity> recordedArrows {};
-    std::array<BridgeCommands::CountCommand, recordedCountCapacity> recordedCounts {};
+    Recording<BridgeCommands::HighlightCommand, recordedHighlightCapacity> recordedHighlights;
+    Recording<RecordedArrow, recordedArrowCapacity>                        recordedArrows;
+    Recording<BridgeCommands::CountCommand, recordedCountCapacity>         recordedCounts;
 };

@@ -26,7 +26,9 @@
     affects. getNode,
     getNodeParent and parentIdsOf find nodes by id without searching nodeMap, using an index this
     class's listener on nodeMap keeps current, so undo, redo and paste update it too. replaceState
-    loads a saved graph and traversal map.
+    loads a saved graph and traversal map, and findNodeMapProblem says in words why a saved node
+    map cannot be loaded (a node of an unknown type, or two nodes with one id), or returns an empty
+    string when it can.
 
     The processor owns it, and it is used on the message thread only. NodeFactory, Clipboard and
     the input gestures edit it; CanvasTreeListener and RTGraphBuilder listen to nodeMap.
@@ -67,6 +69,8 @@ public:
     std::vector<int> nodeIdsBetween(int startNodeId, int endNodeId) const;
 
     static NodeInfo::Kind kindOf(const juce::ValueTree& node);
+
+    static juce::String findNodeMapProblem(const juce::ValueTree& restoredNodeMap);
 
     juce::ValueTree nodeMap;
 

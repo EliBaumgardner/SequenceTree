@@ -59,6 +59,15 @@ private:
 
     bool folderHasMatch(int folderId) const;
 
+    struct ItemRef
+    {
+        bool operator==(const ItemRef&) const = default;
+
+        RuleItemKind kind = RuleItemKind::Rule;
+
+        int id = -1;
+    };
+
     TraversalRuleState& traversalRuleState;
     juce::UndoManager&  undoManager;
 
@@ -69,9 +78,6 @@ private:
 
     std::set<int> collapsedFolders;
 
-    RuleItemKind selectedKind = RuleItemKind::Rule;
-    RuleItemKind renamingKind = RuleItemKind::Rule;
-
-    int selectedId = -1;
-    int renamingId = -1;
+    ItemRef selected;
+    ItemRef renaming;
 };

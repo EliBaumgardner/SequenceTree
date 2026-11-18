@@ -6,7 +6,7 @@
 
 A polyphonic, generative MIDI sequencer. You draw trees of notes, and traversals walk them: counting their visits, branching, looping, spawning one another, and playing many voices at once.
 
-![C++20](https://img.shields.io/badge/C%2B%2B20-1f2328?style=for-the-badge&logo=cplusplus&logoColor=white)
+![C++23](https://img.shields.io/badge/C%2B%2B23-1f2328?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![JUCE 8](https://img.shields.io/badge/JUCE_8-1f2328?style=for-the-badge&logo=juce&logoColor=white)
 ![CMake](https://img.shields.io/badge/CMake-1f2328?style=for-the-badge&logo=cmake&logoColor=white)
 ![Catch2](https://img.shields.io/badge/Catch2-1f2328?style=for-the-badge)

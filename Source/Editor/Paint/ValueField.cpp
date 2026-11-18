@@ -1,7 +1,7 @@
 #include "ValueField.h"
-#include "NodeCanvas.h"
+#include "Editor/Canvas/NodeCanvas.h"
 #include "Editor/Nodes/Node.h"
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 
 ValueField::ValueField(NodeCanvas& nodeCanvas) : nodeCanvas(nodeCanvas)
@@ -85,38 +85,39 @@ void ValueField::refresh()
 void ValueField::paintStroke(juce::Point<float> canvasPosition, bool isStart, bool erase)
 {
     if (isStart) {
-        brushStroke = BrushStroke::Painting;
+        stroke.state = BrushStroke::Painting;
 
         if (erase) {
-            brushStroke = BrushStroke::Erasing;
+            stroke.state = BrushStroke::Erasing;
         }
 
         ensurePaintBuffers();
 
-        std::ranges::fill(strokeMask, 0.0f);
+        std::ranges::fill(stroke.mask, 0.0f);
 
         seedStrokeDensityFromNodes();
 
-        strokePreviousPoint = canvasPosition;
+        stroke.previousPoint = canvasPosition;
 
         startTimerHz(dwellTimerHz);
     }
 
-    brushCurrentPoint = canvasPosition;
+    stroke.currentPoint = canvasPosition;
 
-    accumulateStroke(strokePreviousPoint, canvasPosition);
-    applyPaintToNodes(strokePreviousPoint, canvasPosition);
+    accumulateStroke(stroke.previousPoint, canvasPosition);
 
-    strokePreviousPoint = canvasPosition;
+    applyPaintToNodes(stroke.previousPoint, canvasPosition);
+
+    stroke.previousPoint = canvasPosition;
 }
 
 void ValueField::endStroke()
 {
-    if (brushStroke == BrushStroke::Idle) {
+    if (stroke.state == BrushStroke::Idle) {
         return;
     }
 
-    brushStroke = BrushStroke::Idle;
+    stroke.state = BrushStroke::Idle;
 
     stopTimer();
 }
@@ -361,19 +362,20 @@ void ValueField::accumulateStroke(juce::Point<float> from, juce::Point<float> to
             const float coverage = falloff * falloff;
 
             if (rearm) {
-                strokeMask[index] *= (1.0f - dwellRearm);
+                stroke.mask[index] *= (1.0f - dwellRearm);
             }
 
-            if (coverage <= strokeMask[index]) {
+            if (coverage <= stroke.mask[index]) {
                 continue;
             }
 
-            const float delta   = brushFlow * (coverage - strokeMask[index]);
-            float       painted = density[index] + delta;
+            const float delta = brushFlow * (coverage - stroke.mask[index]);
 
-            strokeMask[index] = coverage;
+            float painted = density[index] + delta;
 
-            if (brushStroke == BrushStroke::Erasing) {
+            stroke.mask[index] = coverage;
+
+            if (stroke.state == BrushStroke::Erasing) {
                 painted = density[index] - delta;
             }
 
@@ -458,8 +460,8 @@ void ValueField::ensurePaintBuffers()
         density.assign(pixelCount, 0.0f);
     }
 
-    if (strokeMask.size() != pixelCount) {
-        strokeMask.assign(pixelCount, 0.0f);
+    if (stroke.mask.size() != pixelCount) {
+        stroke.mask.assign(pixelCount, 0.0f);
     }
 }
 
@@ -523,13 +525,14 @@ void ValueField::seedStrokeDensityFromNodes()
 
 void ValueField::timerCallback()
 {
-    if (brushStroke == BrushStroke::Idle) {
+    if (stroke.state == BrushStroke::Idle) {
         stopTimer();
         return;
     }
 
-    accumulateStroke(brushCurrentPoint, brushCurrentPoint, true);
-    applyPaintToNodes(brushCurrentPoint, brushCurrentPoint);
+    accumulateStroke(stroke.currentPoint, stroke.currentPoint, true);
+
+    applyPaintToNodes(stroke.currentPoint, stroke.currentPoint);
 }
 
 juce::Identifier ValueField::paintLayerValueId() const
@@ -562,7 +565,7 @@ std::optional<float> ValueField::densityUnderNode(const Node& node) const
 
     const std::vector<float>& density = paintDensity[static_cast<size_t>(activePaintLayer)];
 
-    const bool isErasing = brushStroke == BrushStroke::Erasing;
+    const bool isErasing = stroke.state == BrushStroke::Erasing;
 
     const auto nodeCentre = node.getNodeCentre().toFloat().transformedBy(nodeCanvas.viewTransform);
 

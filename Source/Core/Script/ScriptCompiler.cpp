@@ -72,15 +72,13 @@ ScriptCompileResult compileTraversalScript(const std::string& source)
     Parser parser(tokens, result.diagnostics);
 
     const ClassDeclaration declaration = parser.run();
-
-    result.outline = makeOutline(declaration);
+    result.outline                     = makeOutline(declaration);
 
     if (!result.diagnostics.empty()) {
         return result;
     }
 
     Emitter emitter(result.script, result.diagnostics);
-
     emitter.run(declaration);
 
     if (!result.diagnostics.empty()) {

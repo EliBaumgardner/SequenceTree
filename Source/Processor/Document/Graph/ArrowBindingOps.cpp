@@ -1,7 +1,7 @@
 #include "ArrowBindingOps.h"
 #include "GraphState.h"
-#include "TypedProperties.h"
-#include "ValueTreeIdentifiers.h"
+#include "Processor/Document/TypedProperties.h"
+#include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 #include <algorithm>
@@ -143,10 +143,29 @@ ArrowInfo::Settings ArrowBindingOps::getArrowInfo(const juce::ValueTree& arrowTr
     const int storedType     = properties.arrowType;
     const int storedXBinding = properties.xBinding;
     const int storedYBinding = properties.yBinding;
+    const int nodeType       = static_cast<int>(ArrowInfo::Type::Node);
+    const int traversalType  = static_cast<int>(ArrowInfo::Type::Traversal);
+    const int crossRootType  = static_cast<int>(ArrowInfo::Type::CrossRootTree);
+    const int stepIntoType   = static_cast<int>(ArrowInfo::Type::StepIntoTree);
+    const int firstBinding   = static_cast<int>(ArrowInfo::Binding::NoBind);
+    const int lastBinding    = static_cast<int>(ArrowInfo::Binding::DurationBind);
 
-    arrowInfo.type             = static_cast<ArrowInfo::Type>(storedType);
-    arrowInfo.xBinding         = static_cast<ArrowInfo::Binding>(storedXBinding);
-    arrowInfo.yBinding         = static_cast<ArrowInfo::Binding>(storedYBinding);
+    const bool typeIsKnown     = storedType == nodeType || storedType == traversalType || storedType == crossRootType || storedType == stepIntoType;
+    const bool xBindingIsKnown = storedXBinding >= firstBinding && storedXBinding <= lastBinding;
+    const bool yBindingIsKnown = storedYBinding >= firstBinding && storedYBinding <= lastBinding;
+
+    if (typeIsKnown) {
+        arrowInfo.type = static_cast<ArrowInfo::Type>(storedType);
+    }
+
+    if (xBindingIsKnown) {
+        arrowInfo.xBinding = static_cast<ArrowInfo::Binding>(storedXBinding);
+    }
+
+    if (yBindingIsKnown) {
+        arrowInfo.yBinding = static_cast<ArrowInfo::Binding>(storedYBinding);
+    }
+
     arrowInfo.xMultiplier      = properties.xMultiplier;
     arrowInfo.yMultiplier      = properties.yMultiplier;
     arrowInfo.isSynced         = properties.isSynced;

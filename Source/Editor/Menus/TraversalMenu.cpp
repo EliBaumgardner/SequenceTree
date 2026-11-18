@@ -1,10 +1,10 @@
 #include "TraversalMenu.h"
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/Document/TypedProperties.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "Core/Model/NodeInfo.h"
-#include "Editor/Input/Gestures/NotePreviewGestures.h"
+#include "Editor/Canvas/NotePreviewGestures.h"
 
 TraversalMenu::TraversalMenu(NotePreviewGestures& notePreviewGestures, GraphState& graphState, juce::ValueTree colourPresets, juce::UndoManager& undoManager)
     : displayMenu        (undoManager),

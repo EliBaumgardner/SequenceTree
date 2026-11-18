@@ -1,5 +1,5 @@
 #include "TypedProperties.h"
-#include "GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "ValueTreeIdentifiers.h"
 #include "Core/Model/ArrowInfo.h"
 

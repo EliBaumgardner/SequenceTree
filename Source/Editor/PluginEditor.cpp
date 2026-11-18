@@ -41,6 +41,8 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 
     wireCallbacks();
 
+    commandManager.registerAllCommandsForTarget(this);
+
     if (audioProcessor.pendingRestoreState.isValid()) {
         audioProcessor.applyRestoredState();
     }
@@ -77,7 +79,7 @@ SequenceTreeAudioProcessorEditor::SequenceTreeAudioProcessorEditor (SequenceTree
 SequenceTreeAudioProcessorEditor::~SequenceTreeAudioProcessorEditor()
 {
     if (keyListenerTarget != nullptr) {
-        keyListenerTarget->removeKeyListener(this);
+        keyListenerTarget->removeKeyListener(commandManager.getKeyMappings());
     }
 
     audioProcessor.document.graphState.nodeMap.removeListener(&nodeCanvas->treeListener);
@@ -130,67 +132,143 @@ void SequenceTreeAudioProcessorEditor::parentHierarchyChanged()
     }
 
     if (keyListenerTarget != nullptr) {
-        keyListenerTarget->removeKeyListener(this);
+        keyListenerTarget->removeKeyListener(commandManager.getKeyMappings());
     }
 
     keyListenerTarget = top;
 
     if (keyListenerTarget != nullptr) {
-        keyListenerTarget->addKeyListener(this);
+        keyListenerTarget->addKeyListener(commandManager.getKeyMappings());
     }
 }
 
-bool SequenceTreeAudioProcessorEditor::keyPressed (const juce::KeyPress& key, juce::Component*)
+void SequenceTreeAudioProcessorEditor::getAllCommands(juce::Array<juce::CommandID>& commands)
 {
+    const juce::Array<juce::CommandID> editorCommands { togglePlaybackCommand, juce::StandardApplicationCommandIDs::del, juce::StandardApplicationCommandIDs::undo, juce::StandardApplicationCommandIDs::redo,
+                                                       juce::StandardApplicationCommandIDs::copy, juce::StandardApplicationCommandIDs::paste, juce::StandardApplicationCommandIDs::selectAll };
+
+    commands.addArray(editorCommands);
+}
+
+void SequenceTreeAudioProcessorEditor::getCommandInfo(juce::CommandID commandID, juce::ApplicationCommandInfo& info)
+{
+    const juce::ModifierKeys noModifiers;
     const juce::ModifierKeys command      = juce::ModifierKeys::commandModifier;
     const juce::ModifierKeys commandShift = juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier;
 
+    switch (commandID) {
+        case togglePlaybackCommand: {
+            info.setInfo("Play / Pause", "Start or pause playback", "Transport", 0);
+            info.addDefaultKeypress(juce::KeyPress::spaceKey, noModifiers);
+
+            break;
+        }
+        case juce::StandardApplicationCommandIDs::del: {
+            info.setInfo("Delete", "Delete the selected nodes", "Editing", 0);
+            info.addDefaultKeypress(juce::KeyPress::deleteKey, noModifiers);
+            info.addDefaultKeypress(juce::KeyPress::backspaceKey, noModifiers);
+
+            break;
+        }
+        case juce::StandardApplicationCommandIDs::undo: {
+            info.setInfo("Undo", "Undo the last graph edit", "Editing", 0);
+            info.addDefaultKeypress('z', command);
+
+            break;
+        }
+        case juce::StandardApplicationCommandIDs::redo: {
+            info.setInfo("Redo", "Redo the last undone graph edit", "Editing", 0);
+            info.addDefaultKeypress('z', commandShift);
+            info.addDefaultKeypress('y', command);
+
+            break;
+        }
+        case juce::StandardApplicationCommandIDs::copy: {
+            info.setInfo("Copy", "Copy the selected nodes", "Editing", 0);
+            info.addDefaultKeypress('c', command);
+
+            break;
+        }
+        case juce::StandardApplicationCommandIDs::paste: {
+            info.setInfo("Paste", "Paste the copied nodes", "Editing", 0);
+            info.addDefaultKeypress('v', command);
+
+            break;
+        }
+        case juce::StandardApplicationCommandIDs::selectAll: {
+            info.setInfo("Select All", "Select every node on the canvas", "Editing", 0);
+            info.addDefaultKeypress('a', command);
+
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
+bool SequenceTreeAudioProcessorEditor::perform(const InvocationInfo& info)
+{
     SelectionGestures& selectionGestures = nodeController->selectionGestures;
     juce::UndoManager& undoManager       = audioProcessor.document.undoManager;
 
-    if (key == juce::KeyPress::spaceKey) {
-        titleBar->applyPlaybackState(!audioProcessor.playback.isPlaying.load());
+    switch (info.commandID) {
+        case togglePlaybackCommand: {
+            titleBar->applyPlaybackState(!audioProcessor.playback.isPlaying.load());
 
-        return true;
-    }
-
-    if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey) {
-        selectionGestures.deleteSelection();
-        return true;
-    }
-
-    if (key == juce::KeyPress('z', command, 0)) {
-        undoManager.undo();
-        return true;
-    }
-
-    if (key == juce::KeyPress('z', commandShift, 0) || key == juce::KeyPress('y', command, 0)) {
-        undoManager.redo();
-        return true;
-    }
-
-    if (key == juce::KeyPress('c', command, 0)) {
-        selectionGestures.copySelection();
-        return true;
-    }
-
-    if (key == juce::KeyPress('v', command, 0)) {
-        juce::Point<float> pastePoint = nodeCanvas->getLocalPoint(port.get(), port->getLocalBounds().getCentre()).toFloat();
-
-        if (port->getLocalBounds().contains(port->getMouseXYRelative())) {
-            pastePoint = nodeCanvas->getMouseXYRelative().toFloat();
+            return true;
         }
+        case juce::StandardApplicationCommandIDs::del: {
+            selectionGestures.deleteSelection();
 
-        selectionGestures.pasteAt(pastePoint.transformedBy(nodeCanvas->modelTransform).roundToInt());
-        return true;
+            return true;
+        }
+        case juce::StandardApplicationCommandIDs::undo: {
+            undoManager.undo();
+
+            return true;
+        }
+        case juce::StandardApplicationCommandIDs::redo: {
+            undoManager.redo();
+
+            return true;
+        }
+        case juce::StandardApplicationCommandIDs::copy: {
+            selectionGestures.copySelection();
+
+            return true;
+        }
+        case juce::StandardApplicationCommandIDs::paste: {
+            const juce::Point<int> portCentre = port->getLocalBounds().getCentre();
+
+            const bool mouseOverPort = port->getLocalBounds().contains(port->getMouseXYRelative());
+
+            juce::Point<float> pastePoint = nodeCanvas->getLocalPoint(port.get(), portCentre).toFloat();
+
+            if (mouseOverPort) {
+                pastePoint = nodeCanvas->getMouseXYRelative().toFloat();
+            }
+
+            const juce::Point<int> pastePosition = pastePoint.transformedBy(nodeCanvas->modelTransform).roundToInt();
+
+            selectionGestures.pasteAt(pastePosition);
+
+            return true;
+        }
+        case juce::StandardApplicationCommandIDs::selectAll: {
+            nodeCanvas->nodeManager.selectAll();
+
+            return true;
+        }
+        default: {
+            return false;
+        }
     }
+}
 
-    if (key == juce::KeyPress('a', command, 0)) {
-        nodeCanvas->nodeManager.selectAll();
-        return true;
-    }
-
-    return false;
+juce::ApplicationCommandTarget* SequenceTreeAudioProcessorEditor::getNextCommandTarget()
+{
+    return nullptr;
 }
 
 void SequenceTreeAudioProcessorEditor::configureWindowSize()

@@ -39,7 +39,7 @@ void FlagScheduler::dispatchFlags(const RTNode& node, const TraversalKey& hostKe
             continue;
         }
 
-        if (flagNode.flagRemovesTraversal) {
+        if (flagNode.flag.removesTraversal) {
             queueRemoval(flagNode, timing.runId, hostKey, context.traversalMap);
 
             continue;
@@ -103,7 +103,7 @@ bool FlagScheduler::startNextDue(double before, const DispatchContext& context)
 
     const RTNode& flagNode = *flagEntry;
 
-    if (flagNode.nodeType != NodeInfo::Kind::TraversalFlag || flagNode.flagRemovesTraversal) {
+    if (flagNode.nodeType != NodeInfo::Kind::TraversalFlag || flagNode.flag.removesTraversal) {
         return true;
     }
 
@@ -117,7 +117,7 @@ bool FlagScheduler::startNextDue(double before, const DispatchContext& context)
 void FlagScheduler::queueRemoval(const RTNode& flagNode, int hostRunId, const TraversalKey& hostKey,
                                  TraversalPool& traversalMap)
 {
-    const TraversalKey targetKey = flagNode.flagTraversal.key;
+    const TraversalKey targetKey = flagNode.flag.traversal.key;
 
     if (targetKey.typeId <= 0) {
         return;
@@ -169,7 +169,9 @@ void FlagScheduler::queueStart(const RTNode& flagNode, const TraversalKey& hostK
 void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKey& hostKey, double sample,
                                        const DispatchContext& context)
 {
-    const TraversalKey spawnKey = flagNode.flagTraversal.key;
+    const TraversalKey spawnKey = flagNode.flag.traversal.key;
+
+    const RTNode* startEntry = context.nodes.find(flagNode.flag.targetId);
 
     if (spawnKey.typeId <= 0) {
         return;
@@ -178,8 +180,6 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKe
     if (hostKey == spawnKey) {
         return;
     }
-
-    const RTNode* startEntry = context.nodes.find(flagNode.flagTargetId);
 
     if (startEntry == nullptr) {
         return;
@@ -202,7 +202,7 @@ void FlagScheduler::startFlagTraversal(const RTNode& flagNode, const TraversalKe
         }
     }
 
-    TraversalPool::Instance* instance = dispatcher.prepareTraversal(runId, rootId, startNode.nodeID, flagNode.flagTraversal, context);
+    TraversalPool::Instance* instance = dispatcher.prepareTraversal(runId, rootId, startNode.nodeID, flagNode.flag.traversal, context);
 
     if (instance == nullptr) {
         return;

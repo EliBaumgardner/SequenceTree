@@ -1,6 +1,6 @@
 #include "Encapsulator.h"
 
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "Editor/Canvas/NodeCanvas.h"

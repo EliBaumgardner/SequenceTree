@@ -16,7 +16,7 @@ The editor recompiles your script 250 ms after you stop typing. Errors are marke
 
 ## Script structure
 
-A script is one class that builds on `defaultTraversal`. Optional `import` lines come first, then the class, closed with `};`.
+A script is one class. Optional `import` lines come first, then the class, closed with `};`. The class name is yours to choose, and the `: defaultTraversal` after it is optional; `defaultTraversal` is the only base class you can name.
 
 ```
 import core;
@@ -37,12 +37,16 @@ public:
 
 The class holds two kinds of things:
 
-- **Members** are variables declared in the class body, such as `int steps;` or `Node lastPlayed;`. They keep their value from one step to the next. A number member starts at 0 and a `Node` member starts at `none`; you cannot give a member a starting value in its declaration. A class can have up to 32 members.
+- **Members** are variables declared in the class body, such as `int steps;` or `Node lastPlayed;`. They keep their value from one step to the next. A number member starts at 0 and a `Node` member starts at `none`, unless its declaration gives it a starting value, as in `int steps = base + 1;`. A member starts again from its starting value whenever its traversal is reset or the script recompiles. A class can have up to 32 members.
 - **Functions** are written as `type name(parameters) { ... }`. Use `void` for a function that returns nothing. Two names are special:
     - `void main()` runs each time a note ends. It moves the walk with `advance` and chooses what is heard with `playNote`. If a step never calls `playNote`, that step is silent but still keeps time, and the walk carries on.
     - `Node advance(int numSteps)` is optional. Write it to replace how the walk moves. Yours then owns counting, switch counts and sub-loops, and returns the node to land on, or `none` to end the walk. Without it, the built-in walk is used. Your `advance` cannot call `advance` or `playNote` itself; it only chooses where the walk goes.
 
 Any other function you write is a helper you can call from `main` or from other functions. Calls can nest up to 8 deep. `public:` is accepted for readability and changes nothing.
+
+Variables can also be declared outside the class, before or after it, the same way as members and with the same starting values: `int base = 12;`. Every traversal playing the script shares these variables, and they start again from their starting values when the script recompiles.
+
+Starting values run in the order the variables are written, the variables outside the class first and then the members. A starting value that reads a variable not set up yet reads 0, or `none` for a `Node`: after `int a = b; int b = 5;`, `a` is 0.
 
 
 ## Language basics
@@ -56,9 +60,14 @@ The syntax is C-like. Every statement ends with `;`, and a block in `{ }` ends o
 | `int` | A whole number |
 | `float` | A decimal number |
 | `double` | A more precise decimal number |
+| `bool` | `true` or `false` |
 | `Node` | A node in your graph, or `none` |
 
 Numbers mix freely, and the result takes the more precise type: `int` with `float` gives `float`, and anything with `double` gives `double`. Storing a decimal in an `int` drops the fraction. A `Node` and a number never mix.
+
+A comparison, and `and`, `or` and `not`, give a `bool`. A `bool` counts as 1 or 0 in arithmetic, and any non-zero number stored in a `bool` becomes `true`.
+
+A decimal is digits, a point, then more digits, as in `0.25`. Forms such as `1.` and `1e10` are not decimals.
 
 ### Variables
 
@@ -115,8 +124,8 @@ Conditions need no parentheses. A condition must be a number, where 0 is false a
 
 | Name | What it does |
 | --- | --- |
-| `advance(numSteps)` | Moves the walk `numSteps` nodes and returns the node it lands on, or `none` when the walk has ended. Nodes it passes over are skipped entirely and are not counted. Call it from `main`. |
-| `playNote(node, pitch, duration, velocity)` | Plays the next note on `node`. Pitch and velocity are MIDI values, clamped to 0–127. Duration is in milliseconds and sets how long this note lasts. Call it from `main`. |
+| `advance(numSteps)` | Moves the walk `numSteps` nodes and returns the node it lands on, or `none` when the walk has ended. Nodes it passes over are skipped entirely and are not counted. A `numSteps` above 64 counts as 64, and one below 1 leaves the walk on the current node. Call it from `main`. |
+| `playNote(node, pitch, duration, velocity)` | Plays the next note on `node`. Pitch and velocity are MIDI values, clamped to 0–127. Duration is in milliseconds and sets how long this note lasts. A step plays one note: if `main` calls `playNote` more than once, the last call replaces the earlier ones. Call it from `main`. |
 | `current` | The node the walk is on. It can be read but not assigned; move the walk with `advance`. |
 | `children` | The arrows leaving `current`, walked with `for child in children { }`. A child the walk cannot take right now (its count limit, trigger limit or traversal rules rule it out) reads as `none`. |
 | `traversal.id` | Which traversal this is. Every traversal runs its own copy of the script, so this is the traversal whose walk the script is moving. |
@@ -154,7 +163,7 @@ Read a property with a dot, as in `current.pitch` or `child.parent.id`. Only the
 
 ## Limits and errors
 
-Scripts run while audio plays, so they have fixed limits. Each run of a function may take at most 8,192 instructions, which stops a loop that never ends from stalling playback. A run that goes over its budget stops where it is; if `main` had not called `playNote` yet, that step is silent.
+Scripts run while audio plays, so they have fixed limits. Each run of `main` or `advance` may take at most 8,192 instructions, counting every helper function it calls, which stops a loop that never ends from stalling playback. A run that goes over its budget stops where it is; if `main` had not called `playNote` yet, that step is silent.
 
 | Limit | Value |
 | --- | --- |
@@ -163,7 +172,7 @@ Scripts run while audio plays, so they have fixed limits. Each run of a function
 | Local variables per function | 32 |
 | Nested function calls | 8 |
 
-Compile errors are reported with the line and column they occur on, and every error in the script is reported at once. A script with errors is never played: the last version that compiled keeps running until the errors are fixed.
+Compile errors are reported with the line and column they occur on, and every error inside the class is reported at once. An unknown `import` or a malformed class header stops the check at that point, so fix it first. A script with errors is never played: the last version that compiled keeps running until the errors are fixed.
 
 
 ## Examples

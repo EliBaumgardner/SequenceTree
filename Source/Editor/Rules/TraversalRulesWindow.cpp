@@ -22,17 +22,17 @@ TraversalRulesWindow::TraversalRulesWindow(ArsNovaUI::CustomLookAndFeel& lookAnd
     tabBar.tabStrip.onTabClicked       = [this](int ruleId) { viewRule(ruleId); };
     tabBar.tabStrip.onTabClosed        = [this](int ruleId) { closeTab(ruleId); };
 
-    tabBar.transportPane.addButton(ArsNovaUI::IconLibrary::get().play, "Make this the live traversal rule", [this] { makeRuleLive(viewedRuleId); });
+    tabBar.transportPane.addButton(ArsNovaUI::IconLibrary::get().play, "Make this the live traversal rule", [this] { makeRuleLive(viewed.ruleId); });
 
     tabBar.undoRedoPane.addButton(ArsNovaUI::IconLibrary::get().undo, "Undo", [this] {
-        if (activePage != nullptr) {
-            activePage->juce::CodeEditorComponent::undo();
+        if (viewed.page != nullptr) {
+            viewed.page->juce::CodeEditorComponent::undo();
         }
     });
 
     tabBar.undoRedoPane.addButton(ArsNovaUI::IconLibrary::get().redo, "Redo", [this] {
-        if (activePage != nullptr) {
-            activePage->juce::CodeEditorComponent::redo();
+        if (viewed.page != nullptr) {
+            viewed.page->juce::CodeEditorComponent::redo();
         }
     });
 
@@ -80,7 +80,7 @@ void TraversalRulesWindow::paint(juce::Graphics& graphics)
     graphics.setColour(theme.raisedColour);
     graphics.fillRect(getLocalBounds().removeFromBottom(statusBarHeight));
 
-    if (activePage == nullptr) {
+    if (viewed.page == nullptr) {
         graphics.setColour(theme.mutedTextColour);
         graphics.setFont(hintFont);
         graphics.drawFittedText("No rule open. Pick one in the Rules panel.", editorArea.reduced(ArsNovaUI::Theme::windowGutter), juce::Justification::centred, 2);
@@ -139,8 +139,8 @@ void TraversalRulesWindow::resized()
 
     editorArea = bounds;
 
-    if (activePage != nullptr) {
-        activePage->setBounds(bounds);
+    if (viewed.page != nullptr) {
+        viewed.page->setBounds(bounds);
     }
 }
 
@@ -247,11 +247,10 @@ void TraversalRulesWindow::syncWithRuleState()
             continue;
         }
 
-        if (activePage == page->second.get()) {
-            removeChildComponent(activePage);
+        if (viewed.page == page->second.get()) {
+            removeChildComponent(viewed.page);
 
-            activePage        = nullptr;
-            viewedRuleId      = -1;
+            viewed            = {};
             viewedRuleRemoved = true;
         }
 
@@ -261,7 +260,7 @@ void TraversalRulesWindow::syncWithRuleState()
     }
 
     treePanel.treeView.liveRuleId   = state.activeRuleId;
-    treePanel.treeView.viewedRuleId = viewedRuleId;
+    treePanel.treeView.viewedRuleId = viewed.ruleId;
 
     treePanel.treeView.rebuild();
 
@@ -293,7 +292,7 @@ void TraversalRulesWindow::refreshTabs()
         tab.marked = tab.id == liveRuleId;
     }
 
-    tabBar.tabStrip.activeTabId = viewedRuleId;
+    tabBar.tabStrip.activeTabId = viewed.ruleId;
 
     tabBar.tabStrip.resized();
 }
@@ -308,14 +307,12 @@ void TraversalRulesWindow::viewRule(int ruleId)
 
     ArsNovaUI::FilePage* page = match->second.get();
 
-    if (page != activePage) {
-        if (activePage != nullptr) {
-            removeChildComponent(activePage);
+    if (page != viewed.page) {
+        if (viewed.page != nullptr) {
+            removeChildComponent(viewed.page);
         }
 
-        activePage    = page;
-        viewedRuleId  = ruleId;
-        viewedOutline = {};
+        viewed = { .page = page, .ruleId = ruleId };
 
         addAndMakeVisible(page);
 
@@ -343,7 +340,7 @@ void TraversalRulesWindow::closeTab(int ruleId)
 
     tabBar.tabStrip.tabs.erase(tab);
 
-    if (ruleId != viewedRuleId) {
+    if (ruleId != viewed.ruleId) {
         refreshTabs();
 
         return;
@@ -359,11 +356,9 @@ void TraversalRulesWindow::closeTab(int ruleId)
         return;
     }
 
-    removeChildComponent(activePage);
+    removeChildComponent(viewed.page);
 
-    activePage                      = nullptr;
-    viewedRuleId                    = -1;
-    viewedOutline                   = {};
+    viewed                          = {};
     treePanel.treeView.viewedRuleId = -1;
 
     treePanel.treeView.rebuild();
@@ -390,7 +385,7 @@ void TraversalRulesWindow::createPage(int ruleId, const juce::String& source)
     };
 
     page->onCaretMoved = [this, createdPage] {
-        if (createdPage == activePage) {
+        if (createdPage == viewed.page) {
             showCaretPosition();
         }
     };
@@ -400,7 +395,7 @@ void TraversalRulesWindow::createPage(int ruleId, const juce::String& source)
 
 void TraversalRulesWindow::compileViewedPage()
 {
-    if (activePage == nullptr || viewedRuleId < 0) {
+    if (viewed.page == nullptr || viewed.ruleId < 0) {
         setStatus({}, false);
 
         showCaretPosition();
@@ -410,30 +405,30 @@ void TraversalRulesWindow::compileViewedPage()
 
     TraversalRuleState& state = traversalRuleState;
 
-    const juce::String source = activePage->getDocument().getAllContent();
+    const juce::String source = viewed.page->getDocument().getAllContent();
 
     ScriptCompileResult result = compileTraversalScript(source.toStdString());
 
-    const bool isLiveRule = state.activeRuleId == viewedRuleId;
+    const bool isLiveRule = state.activeRuleId == viewed.ruleId;
 
     const int instructionTotal = static_cast<int>(result.script.instructions.size());
 
     const juce::String instructionCount = juce::String(instructionTotal);
 
-    state.setRuleSource(viewedRuleId, source, nullptr);
+    state.setRuleSource(viewed.ruleId, source, nullptr);
 
-    activePage->errorLines.clear();
+    viewed.page->errorLines.clear();
 
     for (const ScriptDiagnostic& diagnostic : result.diagnostics) {
         const int errorLineIndex = diagnostic.line - 1;
 
-        activePage->errorLines.push_back(errorLineIndex);
+        viewed.page->errorLines.push_back(errorLineIndex);
     }
 
-    activePage->repaint();
+    viewed.page->repaint();
 
     if (! result.outline.className.empty() || ! result.outline.entries.empty()) {
-        viewedOutline = result.outline;
+        viewed.outline = result.outline;
     }
 
     showCaretPosition();
@@ -457,14 +452,14 @@ void TraversalRulesWindow::compileViewedPage()
 
 void TraversalRulesWindow::showCaretPosition()
 {
-    juce::StringArray segments = traversalRuleState.pathOf(viewedRuleId);
+    juce::StringArray segments = traversalRuleState.pathOf(viewed.ruleId);
 
     int entry = -1;
 
     caretText = {};
 
-    if (activePage != nullptr) {
-        const juce::CodeDocument::Position caret = activePage->getCaretPos();
+    if (viewed.page != nullptr) {
+        const juce::CodeDocument::Position caret = viewed.page->getCaretPos();
 
         const int lineNumber   = caret.getLineNumber() + 1;
         const int columnNumber = caret.getIndexInLine() + 1;
@@ -473,12 +468,12 @@ void TraversalRulesWindow::showCaretPosition()
         caretText = "Ln " + juce::String(lineNumber) + ", Col " + juce::String(columnNumber);
     }
 
-    if (activePage != nullptr && ! viewedOutline.className.empty()) {
-        segments.add(juce::String(viewedOutline.className));
+    if (viewed.page != nullptr && ! viewed.outline.className.empty()) {
+        segments.add(juce::String(viewed.outline.className));
     }
 
     if (entry >= 0) {
-        segments.add(juce::String(viewedOutline.entries[static_cast<size_t>(entry)].name));
+        segments.add(juce::String(viewed.outline.entries[static_cast<size_t>(entry)].name));
     }
 
     pathBar.segments = segments;
@@ -559,8 +554,8 @@ int TraversalRulesWindow::outlineEntryAt(int line) const
 {
     int found = -1;
 
-    for (int index = 0; index < static_cast<int>(viewedOutline.entries.size()); ++index) {
-        if (viewedOutline.entries[static_cast<size_t>(index)].line <= line) {
+    for (int index = 0; index < static_cast<int>(viewed.outline.entries.size()); ++index) {
+        if (viewed.outline.entries[static_cast<size_t>(index)].line <= line) {
             found = index;
         }
     }

@@ -3,8 +3,8 @@
 #include "Processor/PluginProcessor.h"
 #include "Editor/PluginEditor.h"
 #include "Editor/Canvas/NodeCanvas.h"
-#include "Processor/Document/GraphState.h"
-#include "Processor/Document/NodeFactory.h"
+#include "Processor/Document/Graph/GraphState.h"
+#include "Processor/Document/Graph/NodeFactory.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 

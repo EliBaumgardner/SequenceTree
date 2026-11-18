@@ -3,10 +3,11 @@
 #include "Processor/Document/TypedProperties.h"
 #include <ArsNovaUI/Menus/Dialog.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
+#include "Processor/PluginProcessor.h"
 #include "Processor/Document/StateJson.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 
-PatchControls::PatchControls(juce::AudioProcessor& processor, juce::ValueTree patch, const juce::File& patchFolder)
+PatchControls::PatchControls(SequenceTreeAudioProcessor& processor, juce::ValueTree patch, const juce::File& patchFolder)
     : processor  (processor),
       patch      (patch),
       patchFolder(patchFolder),
@@ -15,7 +16,7 @@ PatchControls::PatchControls(juce::AudioProcessor& processor, juce::ValueTree pa
     nameEditor.fontStyle      = ArsNovaUI::Theme::FontStyle::Regular;
     nameEditor.onEditFinished = [this]() { renamePatch(); };
     nameEditor.setFormat(std::make_unique<ArsNovaUI::TextFormat>(ArsNovaUI::TextFormat::labelTextLength, ArsNovaUI::TextFormat::labelCharacters));
-    nameEditor.setJustification(juce::Justification::centredLeft);
+    nameEditor.setJustification(juce::Justification::centred);
     nameEditor.bindEditor(patch, ValueTreeIdentifiers::PatchName);
     nameEditor.setTooltip("Rename the patch");
 
@@ -50,7 +51,6 @@ void PatchControls::paint(juce::Graphics& graphics)
 void PatchControls::resized()
 {
     const int contentInset = juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio);
-    const int nameInset    = juce::roundToInt(ArsNovaUI::Theme::fieldTextInset);
 
     auto contentBounds = getLocalBounds().reduced(contentInset);
 
@@ -61,8 +61,6 @@ void PatchControls::resized()
 
     openButton.setBounds(contentBounds.removeFromRight(buttonWidth));
 
-    contentBounds.removeFromLeft(nameInset);
-
     nameEditor.setBounds(contentBounds);
 }
 
@@ -71,7 +69,13 @@ int PatchControls::idealWidth(int height) const
     const int inset       = juce::roundToInt(height * ArsNovaUI::Theme::contentInsetRatio);
     const int buttonWidth = juce::roundToInt((height - inset * 2) * ArsNovaUI::Theme::buttonAspectRatio);
 
-    return inset * 2 + juce::roundToInt(ArsNovaUI::Theme::fieldTextInset) + nameWidth + buttonWidth * 2 + separatorGap;
+    const juce::String sampleName = "Untitled" + juce::String::repeatedString("0", nameExtraCharacterCount);
+
+    const juce::Font nameFont = ArsNovaUI::CustomLookAndFeel::get(*this).font(nameEditor.fontStyle, nameEditor.fontHeight);
+
+    const int nameWidth = juce::roundToInt(std::ceil(nameFont.getStringWidthFloat(sampleName)));
+
+    return inset * 2 + nameWidth + buttonWidth * 2 + separatorGap;
 }
 
 void PatchControls::chooseFileToOpen()
@@ -99,6 +103,12 @@ void PatchControls::chooseFileToOpen()
         const int stateSize = static_cast<int>(incomingState.getSize());
 
         processor.setStateInformation(incomingState.getData(), stateSize);
+
+        if (processor.loadError.isNotEmpty()) {
+            juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "Could not open patch", processor.loadError);
+
+            return;
+        }
 
         PatchProperties patchProperties(patch);
 

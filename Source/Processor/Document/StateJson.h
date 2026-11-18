@@ -2,6 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
+#include <cstddef>
 #include <memory>
 
 /*
@@ -14,7 +15,10 @@
 
     read returns nothing when the bytes are not JSON, which includes the binary form older
     versions saved with AudioProcessor::copyXmlToBinary, so the caller falls back to
-    AudioProcessor::getXmlFromBinary for those.
+    AudioProcessor::getXmlFromBinary for those. It also returns nothing when the text nests deeper
+    than maximumNestingDepth, which it checks before parsing so a hostile file cannot overflow the
+    parser's stack, and when an element's "properties" is not an object or its "children" is not
+    an array.
 
     SequenceTreeAudioProcessor uses it in getStateInformation and setStateInformation, which also
     write and read the .sqtree patch files.
@@ -30,9 +34,13 @@ public:
 
     static constexpr const char* patchExtension = ".sqtree";
 
+    static constexpr int maximumNestingDepth = 256;
+
 private:
 
     static std::unique_ptr<juce::XmlElement> toElement(const juce::var& value);
+
+    static int nestingDepth(const char* bytes, std::size_t byteCount);
 
     static constexpr const char* typeKey       = "type";
     static constexpr const char* propertiesKey = "properties";

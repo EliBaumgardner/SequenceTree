@@ -2,11 +2,11 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Processor/PluginProcessor.h"
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/AudioModel/RTGraphBuilder.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
-#include "Processor/Document/NodeFactory.h"
+#include "Processor/Document/Graph/NodeFactory.h"
 #include "Processor/Document/Ornaments/OrnamentLibraries.h"
 #include "Processor/Document/Ornaments/OrnamentFigure.h"
 

@@ -23,7 +23,7 @@ RuleTreeView::RuleTreeView(TraversalRuleState& traversalRuleState, juce::UndoMan
     renameEditor.setJustification(juce::Justification::centredLeft);
 
     renameEditor.onEditFinished = [this] {
-        renamingId = -1;
+        renaming.id = -1;
 
         renameEditor.setVisible(false);
 
@@ -78,7 +78,7 @@ void RuleTreeView::resized()
 
         const int left = rowInset + item.depth * indentWidth + leadingWidth;
 
-        if (renamingId >= 0 && item.kind == renamingKind && item.id == renamingId) {
+        if (renaming.id >= 0 && item.kind == renaming.kind && item.id == renaming.id) {
             const int renameTop   = index * rowHeight;
             const int renameWidth = juce::jmax(0, getWidth() - left - rowInset);
 
@@ -88,8 +88,8 @@ void RuleTreeView::resized()
         }
     }
 
-    if (renamingId >= 0) {
-        renamingId = -1;
+    if (renaming.id >= 0) {
+        renaming.id = -1;
 
         renameEditor.setVisible(false);
     }
@@ -114,8 +114,8 @@ void RuleTreeView::mouseDown(const juce::MouseEvent& event)
         return;
     }
 
-    selectedKind = items[static_cast<size_t>(index)].kind;
-    selectedId   = items[static_cast<size_t>(index)].id;
+    selected.kind = items[static_cast<size_t>(index)].kind;
+    selected.id   = items[static_cast<size_t>(index)].id;
 
     styleRows();
 
@@ -254,8 +254,7 @@ void RuleTreeView::revealRule(int ruleId)
         folderId = traversalRuleState.parentOfFolder(folderId);
     }
 
-    selectedKind = RuleItemKind::Rule;
-    selectedId   = ruleId;
+    selected = { RuleItemKind::Rule, ruleId };
 
     rebuild();
 
@@ -294,12 +293,11 @@ void RuleTreeView::beginRename(RuleItemKind kind, int id)
 
     renameEditor.commitValue();
 
-    renamingKind = kind;
-    renamingId   = id;
+    renaming = { kind, id };
 
     rebuild();
 
-    if (renamingId < 0) {
+    if (renaming.id < 0) {
         return;
     }
 
@@ -318,10 +316,9 @@ void RuleTreeView::addFolder(int parentFolderId)
 
     collapsedFolders.erase(parentFolderId);
 
-    selectedKind = RuleItemKind::Folder;
-    selectedId   = properties.folderId;
+    selected = { RuleItemKind::Folder, properties.folderId };
 
-    beginRename(RuleItemKind::Folder, selectedId);
+    beginRename(RuleItemKind::Folder, selected.id);
 }
 
 void RuleTreeView::showFolders(FolderDisplay display)
@@ -343,14 +340,14 @@ void RuleTreeView::showFolders(FolderDisplay display)
 
 int RuleTreeView::folderForNewItem() const
 {
-    const bool folderExists = traversalRuleState.folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, selectedId).isValid();
+    const bool folderExists = traversalRuleState.folders.getChildWithProperty(ValueTreeIdentifiers::FolderId, selected.id).isValid();
 
-    if (selectedKind == RuleItemKind::Folder && folderExists) {
-        return selectedId;
+    if (selected.kind == RuleItemKind::Folder && folderExists) {
+        return selected.id;
     }
 
-    if (selectedKind == RuleItemKind::Rule) {
-        return traversalRuleState.folderOfRule(selectedId);
+    if (selected.kind == RuleItemKind::Rule) {
+        return traversalRuleState.folderOfRule(selected.id);
     }
 
     return 0;
@@ -392,7 +389,7 @@ void RuleTreeView::addItems(int parentId, int depth)
             row.icon = &ArsNovaUI::IconLibrary::get().chevronDown;
         }
 
-        if (renamingKind != RuleItemKind::Folder || renamingId != id) {
+        if (renaming != ItemRef { RuleItemKind::Folder, id }) {
             row.text = folder.folderName;
         }
 
@@ -427,7 +424,7 @@ void RuleTreeView::addItems(int parentId, int depth)
         row.depth     = depth;
         row.marked    = id == liveRuleId;
 
-        if (renamingKind != RuleItemKind::Rule || renamingId != id) {
+        if (renaming != ItemRef { RuleItemKind::Rule, id }) {
             row.text = properties.ruleName;
         }
 
@@ -443,9 +440,9 @@ void RuleTreeView::styleRows()
 
         Row& row = rows[static_cast<size_t>(index)];
 
-        const bool isSelected   = item.kind == selectedKind && item.id == selectedId;
+        const bool isSelected   = item.kind == selected.kind && item.id == selected.id;
         const bool isDropTarget = reorderGestures.dropPlacement == RuleReorderGestures::DropPlacement::Inside && index == reorderGestures.dropItem;
-        const bool isRenaming   = renamingId >= 0 && item.kind == renamingKind && item.id == renamingId;
+        const bool isRenaming   = renaming.id >= 0 && item.kind == renaming.kind && item.id == renaming.id;
         const bool isViewed     = item.kind == RuleItemKind::Rule && item.id == viewedRuleId;
 
         row.style    = RowStyle::Item;

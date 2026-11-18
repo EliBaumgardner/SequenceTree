@@ -1,12 +1,12 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_data_structures/juce_data_structures.h>
-#include "Editor/Input/Gestures/SelectionGestures.h"
-#include "Editor/Ornaments/OrnamentApplier.h"
+#include "SelectionGestures.h"
+#include "Editor/Ornaments/Marks/OrnamentApplier.h"
 #include <ArsNovaUI/Canvas/CanvasController.h>
-#include "Editor/Input/Gestures/EncapsulationGestures.h"
-#include "Editor/Input/Gestures/NotePreviewGestures.h"
-#include "Editor/Menus/ArrowMenu.h"
+#include "Editor/Encapsulation/EncapsulationGestures.h"
+#include "NotePreviewGestures.h"
+#include "Editor/ArrowSettings/ArrowMenu.h"
 
 /*
     The router for every mouse event on the graph canvas and its nodes: a CanvasController that

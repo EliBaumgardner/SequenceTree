@@ -1,7 +1,7 @@
 #include "SelectionGestures.h"
-#include "Editor/Canvas/NodeCanvas.h"
+#include "NodeCanvas.h"
 #include "Editor/Nodes/Node.h"
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include <ArsNovaUI/Menus/ContextMenu.h>
 
 void SelectionGestures::copySelection()

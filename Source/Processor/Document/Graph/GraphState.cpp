@@ -1,6 +1,6 @@
 #include "GraphState.h"
-#include "TypedProperties.h"
-#include "ValueTreeIdentifiers.h"
+#include "Processor/Document/TypedProperties.h"
+#include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 #include <algorithm>
@@ -562,6 +562,27 @@ NodeInfo::Kind GraphState::kindOf(const juce::ValueTree& node)
     }
 
     return NodeInfo::Kind::Node;
+}
+
+juce::String GraphState::findNodeMapProblem(const juce::ValueTree& restoredNodeMap)
+{
+    std::unordered_set<int> seenIds;
+
+    for (const juce::ValueTree& node : restoredNodeMap) {
+        const int nodeId = node.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+        const bool isUnknownType = kindOf(node) == NodeInfo::Kind::Node && node.getType() != ValueTreeIdentifiers::NodeData;
+
+        if (isUnknownType) {
+            return "A node has the unknown type " + node.getType().toString() + ".";
+        }
+
+        if (! seenIds.insert(nodeId).second) {
+            return "Two nodes share the id " + juce::String(nodeId) + ".";
+        }
+    }
+
+    return {};
 }
 
 void GraphState::setNodeLimitProperties(juce::ValueTree node, juce::UndoManager* undoManager)

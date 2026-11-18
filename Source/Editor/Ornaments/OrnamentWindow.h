@@ -2,8 +2,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "OrnamentBuildPanel.h"
-#include "OrnamentSelectionPanel.h"
+#include "Editor/Ornaments/Builder/OrnamentBuildPanel.h"
+#include "Editor/Ornaments/Library/OrnamentSelectionPanel.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 /*
@@ -12,10 +12,11 @@
     the selection panel's width set by dragging its edge and never below what its content needs.
     narrowestSize is the smallest size that fits both.
 
-    It takes the keys for the whole window. Escape leaves host-picking or arrow mode in the build
-    panel, and Command+Z and Command+Shift+Z (or Command+Y) undo and redo on the UndoManager it
-    is given, which BottomBar passes as the ornament undo manager, apart from the one for the
-    graph.
+    Escape, handled in keyPressed, leaves host-picking or arrow mode in the build panel. Undo and
+    redo are commands of the editor's EditorCommandManager, whose key mappings the window listens
+    to on itself: while focus is inside it the manager sends those two commands here, and perform
+    runs them on the UndoManager it is given, which the editor passes as the ornament undo
+    manager, apart from the one for the graph.
 
     BottomBar opens it in a pop-up window, so it takes the CustomLookAndFeel in its constructor
     and sets it on itself.
@@ -23,24 +24,33 @@
 
 class OrnamentLibraries;
 
-class OrnamentWindow : public juce::Component
+class OrnamentWindow : public juce::Component, public juce::ApplicationCommandTarget
 {
 public:
 
-    OrnamentWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings, juce::UndoManager& undoManager);
+    OrnamentWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings, juce::UndoManager& undoManager,
+                   juce::ApplicationCommandManager& commandManager);
+    ~OrnamentWindow() override;
 
     void paint  (juce::Graphics& graphics) override;
     void resized() override;
 
+    void getAllCommands(juce::Array<juce::CommandID>& commands) override;
+    void getCommandInfo(juce::CommandID commandID, juce::ApplicationCommandInfo& info) override;
+
     bool keyPressed(const juce::KeyPress& key) override;
+    bool perform   (const InvocationInfo& info) override;
 
     juce::Point<int> narrowestSize() const;
+
+    juce::ApplicationCommandTarget* getNextCommandTarget() override;
 
     static constexpr juce::Point<float> openingScale { 1.0f, 2.0f };
 
 private:
 
-    juce::UndoManager& undoManager;
+    juce::UndoManager&               undoManager;
+    juce::ApplicationCommandManager& commandManager;
 
     int selectionPanelWidth = 0;
 

@@ -6,10 +6,10 @@
 #include "Core/Model/RTData.h"
 #include "Core/Model/NodeInfo.h"
 #include "NodeArrowCanvas.h"
-#include "ValueField.h"
+#include "Editor/Paint/ValueField.h"
 #include "AudioCommandDrainer.h"
-#include "EncapsulationView.h"
-#include "Editor/Ornaments/OrnamentMarks.h"
+#include "Editor/Encapsulation/EncapsulationView.h"
+#include "Editor/Ornaments/Marks/OrnamentMarks.h"
 #include "GridMultiplier.h"
 #include "Core/Model/ArrowInfo.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>

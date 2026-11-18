@@ -111,6 +111,15 @@ struct RTNode {
         std::vector<TraversalKey> disabledTraversals;
     };
 
+    struct TraversalFlag
+    {
+        RTtraversal traversal;
+
+        int targetId = -1;
+
+        bool removesTraversal = false;
+    };
+
     static constexpr int probabilityScale = 100;
 
     int nodeID   = 0;
@@ -134,9 +143,7 @@ struct RTNode {
 
     int encapsulationEntryId = -1;
 
-    int         flagTargetId         = -1;
-    bool        flagRemovesTraversal = false;
-    RTtraversal flagTraversal;
+    TraversalFlag flag;
 
     std::vector<RTtraversal>   traversals;
     std::vector<RTNote>        notes;

@@ -9,18 +9,18 @@ ScriptRun::ScriptRun(const ScriptRunContext& runContext)
     : context(runContext)
 {
     memberValues = &context.members;
-    globalValues = &trialGlobals;
+    globalValues = &trial.globals;
     randomState  = (static_cast<unsigned int>(context.randomValue) * randomSeedMultiplier ^ randomSeedOffset) | 1u;
 
     if (context.globals != nullptr) {
-        trialGlobals = context.globals->values;
-        globalValues = &context.globals->values;
+        trial.globals = context.globals->values;
+        globalValues  = &context.globals->values;
     }
 
     if (context.writes == ScriptWrites::Trial) {
-        trialMembers = context.members;
-        memberValues = &trialMembers;
-        globalValues = &trialGlobals;
+        trial.members = context.members;
+        memberValues  = &trial.members;
+        globalValues  = &trial.globals;
     }
 }
 
@@ -59,7 +59,7 @@ int ScriptRun::call(int functionIndex, std::span<const int> arguments)
             return result;
         }
 
-        if (progress == Progress::Faulted) {
+        if (progress == Progress::Faulted || trial.overflowed) {
             return -1;
         }
     }
@@ -512,8 +512,8 @@ int ScriptRun::readContext(ScriptContextValue value) const
 
 int ScriptRun::readState(NodeStateSlot slot, int nodeId) const
 {
-    for (int index = trialWriteCount; index > 0; --index) {
-        const TrialWrite& write = trialWrites[static_cast<std::size_t>(index - 1)];
+    for (int index = trial.writeCount; index > 0; --index) {
+        const TrialWrite& write = trial.writes[static_cast<std::size_t>(index - 1)];
 
         if (write.slot == slot && write.nodeId == nodeId) {
             return write.value;
@@ -566,8 +566,8 @@ void ScriptRun::writeState(NodeStateSlot slot, int nodeId, int value)
         return;
     }
 
-    for (int index = 0; index < trialWriteCount; ++index) {
-        TrialWrite& write = trialWrites[static_cast<std::size_t>(index)];
+    for (int index = 0; index < trial.writeCount; ++index) {
+        TrialWrite& write = trial.writes[static_cast<std::size_t>(index)];
 
         if (write.slot == slot && write.nodeId == nodeId) {
             write.value = value;
@@ -576,8 +576,11 @@ void ScriptRun::writeState(NodeStateSlot slot, int nodeId, int value)
         }
     }
 
-    if (trialWriteCount < trialWriteCapacity) {
-        trialWrites[static_cast<std::size_t>(trialWriteCount++)] = { slot, nodeId, value };
+    if (trial.writeCount < Trial::writeCapacity) {
+        trial.writes[static_cast<std::size_t>(trial.writeCount++)] = { slot, nodeId, value };
+    }
+    else {
+        trial.overflowed = true;
     }
 }
 

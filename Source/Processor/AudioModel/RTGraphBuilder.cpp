@@ -6,7 +6,7 @@
 #include <utility>
 
 #include "AudioSnapshotPublisher.h"
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/Document/Ornaments/OrnamentLibraries.h"
 #include "Processor/Document/Ornaments/OrnamentFigure.h"
 #include "Processor/Document/TypedProperties.h"
@@ -493,7 +493,10 @@ void RTGraphBuilder::createRTNodes(juce::ValueTree rootNodeValueTree, NodeBuildM
                 int childId = childIdTree.getProperty(ArsNovaUI::CanvasIdentifiers::Id);
                 juce::ValueTree childDataTree = graphState.getNode(childId);
 
-                jassert(childDataTree.isValid());
+                if (!childDataTree.isValid()) {
+                    continue;
+                }
+
                 stack.push_back(childDataTree);
             }
         }
@@ -658,14 +661,14 @@ void RTGraphBuilder::fillTraversalFlag(const juce::ValueTree& nodeValueTree, RTN
         return;
     }
 
-    rtNode.flagTraversal        = buildRTtraversal({ std::abs(flagValue), flagInstance });
-    rtNode.flagRemovesTraversal = flagValue < 0;
+    rtNode.flag.traversal        = buildRTtraversal({ std::abs(flagValue), flagInstance });
+    rtNode.flag.removesTraversal = flagValue < 0;
 
     if (flagChildren.getNumChildren() > 0) {
-        rtNode.flagTargetId = flagChildren.getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+        rtNode.flag.targetId = flagChildren.getChild(0).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
     }
-    else if (!rtNode.flagRemovesTraversal) {
-        rtNode.flagTargetId = rtNode.parentId;
+    else if (!rtNode.flag.removesTraversal) {
+        rtNode.flag.targetId = rtNode.parentId;
     }
 }
 

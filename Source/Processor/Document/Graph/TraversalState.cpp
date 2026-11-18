@@ -1,7 +1,7 @@
 #include "TraversalState.h"
 #include "GraphState.h"
-#include "TypedProperties.h"
-#include "ValueTreeIdentifiers.h"
+#include "Processor/Document/TypedProperties.h"
+#include "Processor/Document/ValueTreeIdentifiers.h"
 
 #include <juce_graphics/juce_graphics.h>
 

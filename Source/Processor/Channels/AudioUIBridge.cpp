@@ -2,11 +2,11 @@
 
 void AudioUIBridge::beginRecording()
 {
-    delivery              = CommandDelivery::Record;
-    recordClockMs         = 0.0;
-    numRecordedHighlights = 0;
-    numRecordedArrows     = 0;
-    numRecordedCounts     = 0;
+    delivery                 = CommandDelivery::Record;
+    recordClockMs            = 0.0;
+    recordedHighlights.count = 0;
+    recordedArrows.count     = 0;
+    recordedCounts.count     = 0;
 }
 
 void AudioUIBridge::deliverRecording()
@@ -17,12 +17,12 @@ void AudioUIBridge::deliverRecording()
 
     pushArrowReset(BridgeCommands::allTrails);
 
-    for (int i = 0; i < numRecordedHighlights; ++i) {
-        highlights.push(recordedHighlights[static_cast<size_t>(i)]);
+    for (int i = 0; i < recordedHighlights.count; ++i) {
+        highlights.push(recordedHighlights.entries[static_cast<size_t>(i)]);
     }
 
-    for (int i = 0; i < numRecordedArrows; ++i) {
-        const RecordedArrow& recorded = recordedArrows[static_cast<size_t>(i)];
+    for (int i = 0; i < recordedArrows.count; ++i) {
+        const RecordedArrow& recorded = recordedArrows.entries[static_cast<size_t>(i)];
 
         BridgeCommands::ArrowCommand command = recorded.command;
 
@@ -38,8 +38,8 @@ void AudioUIBridge::deliverRecording()
         arrows.push(command);
     }
 
-    for (int i = 0; i < numRecordedCounts; ++i) {
-        counts.push(recordedCounts[static_cast<size_t>(i)]);
+    for (int i = 0; i < recordedCounts.count; ++i) {
+        counts.push(recordedCounts.entries[static_cast<size_t>(i)]);
     }
 }
 
@@ -52,27 +52,27 @@ void AudioUIBridge::send(const BridgeCommands::HighlightCommand& command)
     }
 
     if (command.kind == BridgeCommands::HighlightKind::ClearEveryNode) {
-        numRecordedHighlights = 0;
+        recordedHighlights.count = 0;
 
         return;
     }
 
     const bool hidesEveryRun = command.kind == BridgeCommands::HighlightKind::Hide && command.runId == -1;
 
-    for (int i = numRecordedHighlights - 1; i >= 0; --i) {
-        const BridgeCommands::HighlightCommand& recorded = recordedHighlights[static_cast<size_t>(i)];
+    for (int i = recordedHighlights.count - 1; i >= 0; --i) {
+        const BridgeCommands::HighlightCommand& recorded = recordedHighlights.entries[static_cast<size_t>(i)];
 
         const bool sameRun = hidesEveryRun || recorded.runId == command.runId;
 
         if (recorded.nodeId == command.nodeId && sameRun) {
-            --numRecordedHighlights;
-            recordedHighlights[static_cast<size_t>(i)] = recordedHighlights[static_cast<size_t>(numRecordedHighlights)];
+            --recordedHighlights.count;
+            recordedHighlights.entries[static_cast<size_t>(i)] = recordedHighlights.entries[static_cast<size_t>(recordedHighlights.count)];
         }
     }
 
-    if (command.kind == BridgeCommands::HighlightKind::Show && numRecordedHighlights < recordedHighlightCapacity) {
-        recordedHighlights[static_cast<size_t>(numRecordedHighlights)] = command;
-        ++numRecordedHighlights;
+    if (command.kind == BridgeCommands::HighlightKind::Show && recordedHighlights.count < recordedHighlightCapacity) {
+        recordedHighlights.entries[static_cast<size_t>(recordedHighlights.count)] = command;
+        ++recordedHighlights.count;
     }
 }
 
@@ -86,8 +86,8 @@ void AudioUIBridge::send(const BridgeCommands::ArrowCommand& command)
 
     const bool resetsTrail = command.kind == BridgeCommands::ArrowKind::TrailReset;
 
-    for (int i = numRecordedArrows - 1; i >= 0; --i) {
-        const BridgeCommands::ArrowCommand& recorded = recordedArrows[static_cast<size_t>(i)].command;
+    for (int i = recordedArrows.count - 1; i >= 0; --i) {
+        const BridgeCommands::ArrowCommand& recorded = recordedArrows.entries[static_cast<size_t>(i)].command;
 
         bool replaced = recorded.trailId == command.trailId
                      && recorded.parentNodeId == command.parentNodeId
@@ -98,14 +98,14 @@ void AudioUIBridge::send(const BridgeCommands::ArrowCommand& command)
         }
 
         if (replaced) {
-            --numRecordedArrows;
-            recordedArrows[static_cast<size_t>(i)] = recordedArrows[static_cast<size_t>(numRecordedArrows)];
+            --recordedArrows.count;
+            recordedArrows.entries[static_cast<size_t>(i)] = recordedArrows.entries[static_cast<size_t>(recordedArrows.count)];
         }
     }
 
-    if (!resetsTrail && numRecordedArrows < recordedArrowCapacity) {
-        recordedArrows[static_cast<size_t>(numRecordedArrows)] = { command, recordClockMs };
-        ++numRecordedArrows;
+    if (!resetsTrail && recordedArrows.count < recordedArrowCapacity) {
+        recordedArrows.entries[static_cast<size_t>(recordedArrows.count)] = { command, recordClockMs };
+        ++recordedArrows.count;
     }
 }
 
@@ -117,17 +117,17 @@ void AudioUIBridge::send(const BridgeCommands::CountCommand& command)
         return;
     }
 
-    for (int i = 0; i < numRecordedCounts; ++i) {
-        if (recordedCounts[static_cast<size_t>(i)].nodeId == command.nodeId) {
-            recordedCounts[static_cast<size_t>(i)] = command;
+    for (int i = 0; i < recordedCounts.count; ++i) {
+        if (recordedCounts.entries[static_cast<size_t>(i)].nodeId == command.nodeId) {
+            recordedCounts.entries[static_cast<size_t>(i)] = command;
 
             return;
         }
     }
 
-    if (numRecordedCounts < recordedCountCapacity) {
-        recordedCounts[static_cast<size_t>(numRecordedCounts)] = command;
-        ++numRecordedCounts;
+    if (recordedCounts.count < recordedCountCapacity) {
+        recordedCounts.entries[static_cast<size_t>(recordedCounts.count)] = command;
+        ++recordedCounts.count;
     }
 }
 

@@ -3,7 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <ArsNovaUI/Menus/ColourSelector.h>
 #include <ArsNovaUI/Editors/LabeledEditor.h>
-#include "Editor/Canvas/ValueField.h"
+#include "ValueField.h"
 #include <ArsNovaUI/Buttons/IconButton.h>
 
 /*

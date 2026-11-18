@@ -2,7 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <ArsNovaUI/Theme/InterfaceIdentifiers.h>
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/Document/TraversalRuleState.h"
 #include "Processor/Document/Ornaments/OrnamentLibraries.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"

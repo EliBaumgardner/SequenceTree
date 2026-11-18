@@ -7,7 +7,7 @@
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "PatchControls.h"
 #include "TempoDisplay.h"
-#include "Editor/Input/NodeController.h"
+#include "Editor/Canvas/NodeController.h"
 
 /*
     The bar along the top of the editor, holding the controls for playback and for what new nodes

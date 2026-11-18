@@ -1,17 +1,17 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Processor/PluginProcessor.h"
-#include "Processor/Document/GraphState.h"
-#include "Processor/Document/NodeFactory.h"
+#include "Processor/Document/Graph/GraphState.h"
+#include "Processor/Document/Graph/NodeFactory.h"
 #include "Processor/Document/Ornaments/OrnamentLibraries.h"
 #include "Processor/Document/Ornaments/OrnamentFigure.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "Editor/Canvas/GraphDocument.h"
-#include "Editor/Ornaments/FigureDocument.h"
+#include "Editor/Ornaments/Builder/FigureDocument.h"
 #include "Editor/Canvas/NodeArrowCanvas.h"
 #include "Editor/Nodes/Node.h"
-#include "Editor/Ornaments/OrnamentCanvas.h"
+#include "Editor/Ornaments/Builder/OrnamentCanvas.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
 #include <memory>

@@ -1,7 +1,7 @@
 #include "Clipboard.h"
 #include "NodeFactory.h"
-#include "TypedProperties.h"
-#include "ValueTreeIdentifiers.h"
+#include "Processor/Document/TypedProperties.h"
+#include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include "GraphState.h"
 
@@ -130,7 +130,19 @@ void Clipboard::connectClipboardNodes(const PasteLayout& layout) const
             if (copiedChild != layout.idMap.end()) {
                 graphState.connectNodes(parentId, copiedChild->second, &undoManager);
 
-                ArrowBindingOps::setArrowInfo(graphState.getConnection(parentId, copiedChild->second), ArrowBindingOps::getArrowInfo(childId), &undoManager);
+                const juce::ValueTree pastedArrow = graphState.getConnection(parentId, copiedChild->second);
+
+                const ArrowProperties sourceProperties(childId);
+
+                ArrowProperties pastedProperties(pastedArrow);
+
+                ArrowBindingOps::setArrowInfo(pastedArrow, ArrowBindingOps::getArrowInfo(childId), &undoManager);
+
+                if (! sourceProperties.pitchOffset.isUsingDefault()) {
+                    const int sourcePitchOffset = sourceProperties.pitchOffset;
+
+                    pastedProperties.pitchOffset.setValue(sourcePitchOffset, &undoManager);
+                }
             }
         }
     }

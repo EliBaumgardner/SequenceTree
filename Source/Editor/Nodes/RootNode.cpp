@@ -1,7 +1,7 @@
 #include "RootNode.h"
 #include "Processor/Document/TypedProperties.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 #include "TraversalFlagFormat.h"
 

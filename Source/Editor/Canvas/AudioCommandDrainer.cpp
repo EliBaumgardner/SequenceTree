@@ -5,7 +5,7 @@
 #include "Editor/Nodes/Node.h"
 #include "Editor/Nodes/Arrow.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/Channels/AudioUIBridge.h"
 
 AudioCommandDrainer::AudioCommandDrainer(NodeCanvas& nodeCanvas, AudioUIBridge& bridge, GraphState& graphState)

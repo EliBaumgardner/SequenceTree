@@ -1,12 +1,12 @@
 #include "EncapsulationView.h"
 #include "Processor/Document/TypedProperties.h"
 
-#include "NodeCanvas.h"
+#include "Editor/Canvas/NodeCanvas.h"
 #include <ArsNovaUI/Canvas/NodeManager.h>
 #include <ArsNovaUI/Canvas/ArrowManager.h>
 #include "Editor/Nodes/Node.h"
-#include "Editor/Nodes/Encapsulator.h"
-#include "Processor/Document/GraphState.h"
+#include "Encapsulator.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 

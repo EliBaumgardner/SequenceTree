@@ -30,7 +30,11 @@
 
     getStateInformation and setStateInformation save and restore the graph, traversal map, rules,
     colour presets, canvas settings, parameters and patch as one ValueTree, which PluginDocument
-    marks with its schemaVersion; a state marked with a newer version is not loaded.
+    marks with its schemaVersion; a state marked with a newer version is not loaded. A state is also
+    refused when it cannot be read, when it is neither a PluginState holding a NodeMap nor a bare
+    NodeMap (the form saved before PluginState existed), or when its node map has an unknown node
+    type or two nodes with one id, and loadError then holds the reason in words; it is empty after
+    a load that succeeded.
     setStateInformation restores the parameters at once, on whichever thread the host calls it
     from, so the host reads them back straight away; the rest of a load is applied by
     applyRestoredState, on the message thread only, which rebuilds the audio model and refreshes
@@ -89,6 +93,8 @@ public:
     };
 
     juce::ValueTree pendingRestoreState;
+
+    juce::String loadError;
 
     static constexpr const char* tempoParameterId     = "tempoMultiplier";
     static constexpr const char* velocityParameterId  = "velocity";

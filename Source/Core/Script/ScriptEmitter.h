@@ -148,25 +148,28 @@ private:
     static ScriptNumber numberKind(ValueType type);
     static const char*  typeName  (ValueType type);
 
+    struct EmittingFunction
+    {
+        std::vector<LocalBinding> locals;
+        std::vector<std::size_t>  scopeMarks;
+        std::vector<int>          slotMarks;
+        std::vector<LoopFrame>    loopStack;
+
+        const FunctionSignature* signature = nullptr;
+
+        int nextSlot       = 0;
+        int highWaterSlot  = 0;
+        int stackDepth     = 0;
+        int highWaterStack = 0;
+    };
+
     RTScript&                      script;
     std::vector<ScriptDiagnostic>& diagnostics;
 
     std::vector<std::string>       imports;
-    std::vector<LocalBinding>      locals;
     std::vector<LocalBinding>      members;
     std::vector<LocalBinding>      globals;
     std::vector<FunctionSignature> functions;
 
-    std::vector<std::size_t> scopeMarks;
-    std::vector<int>         slotMarks;
-
-    std::vector<LoopFrame> loopStack;
-
-    const FunctionSignature* currentFunction = nullptr;
-
-    int nextSlot      = 0;
-    int highWaterSlot = 0;
-
-    int stackDepth     = 0;
-    int highWaterStack = 0;
+    EmittingFunction emitting;
 };

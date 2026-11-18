@@ -1,5 +1,5 @@
 #include "NodeLimitWarning.h"
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Core/Traversal/NodeStateTable.h"
 #include <ArsNovaUI/Menus/Dialog.h>
 

@@ -77,7 +77,7 @@ One block, in order:
 ### 2.4 Output channels
 
 - **The `MidiBuffer`** goes back to the host. The plugin declares itself a synth that only sends MIDI, and its audio buffer is always cleared.
-- **`VirtualMidiOutput`** copies each block's MIDI into a `CommandFifo`. A timer sends those messages to a virtual MIDI port, so other apps can receive them.
+- **`VirtualMidiOutput`** copies each block's MIDI into a `CommandFifo`. A high-resolution timer on its own thread sends those messages to a virtual MIDI port, so other apps can receive them. Each message is stamped with the wall-clock time its block started, not a sample position, so delivery is best effort and does not keep the sample-accurate timing of the host's MIDI output.
 - **`AudioUIBridge`** is the only channel from audio to screen: three `CommandFifo`s (`highlights`, `arrows`, `counts`) of plain command structs. During a replay its `delivery` is `Record`, so commands fold into fixed tables instead and `deliverRecording` sends the net state when the replay ends.
 
 ## 3. The editor
@@ -87,11 +87,11 @@ One block, in order:
 | Member | Folder | Job |
 |---|---|---|
 | `nodeCanvas` (`NodeCanvas`) | `Source/Editor/Canvas/` | draws the graph and applies changes to it |
-| `nodeController` (`NodeController`) | `Source/Editor/Input/` | receives every mouse event on the canvas and routes it |
+| `nodeController` (`NodeController`) | `Source/Editor/Canvas/` | receives every mouse event on the canvas and routes it |
 | `titleBar` (`Titlebar`) | `Source/Editor/Bars/` | transport, tempo, display mode, undo / redo, patches |
 | `bottomBar` (`BottomBar`) | `Source/Editor/Bars/` | canvas tools, arrow bindings, note preview, ornament window |
 | `menuArea` (`MenuArea`) | `Source/Editor/Menus/` | the `MenuBar` plus the `TraversalMenu` and `NodeMenu` panels |
-| `notePreviewGestures` (`NotePreviewGestures`) | `Source/Editor/Input/Gestures/` | note preview settings and requests, shared by `NodeController`, `BottomBar` and `TraversalMenu` |
+| `notePreviewGestures` (`NotePreviewGestures`) | `Source/Editor/Canvas/` | note preview settings and requests, shared by `NodeController`, `BottomBar` and `TraversalMenu` |
 | `traversalRulesLauncher`, `settingsLauncher`, `ornamentLauncher` | ArsNovaUI | the pop-up windows |
 | `port`, `canvasFrame`, `scaledView`, `lookAndFeel`, `tooltipWindow`, `audioCommandFrames` | ArsNovaUI, JUCE, `Source/Editor/Canvas/` | zoom and pan, framing, interface scale, theme, tooltips, the per-frame poll |
 
@@ -165,13 +165,13 @@ The top level follows the two roots, plus the code that uses no JUCE, which both
 | `Source/Core/Script/` | the script compiler and `RTScript` | `Core` |
 | `Source/Core/Traversal/` | one walk and its state | `Core` |
 | `Source/Processor/` | `PluginProcessor`, `PluginDocument` | `Core`, `Processor`, and `Editor/PluginEditor.h` for `createEditor` and `applyRestoredState` |
-| `Source/Processor/Document/` | the document; `Ornaments/` holds the ornament libraries, figures and symbols | `Core`, `Processor` |
+| `Source/Processor/Document/` | the document; `Graph/` holds `GraphState` and the parts and operations built on it, `Ornaments/` the ornament libraries, figures and symbols | `Core`, `Processor` |
 | `Source/Processor/AudioModel/` | `RTGraphBuilder`, `AudioSnapshotPublisher` | `Core`, `Processor` |
 | `Source/Processor/Playback/` | the session, the dispatcher, the schedulers, `PlaybackEngine` | `Core`, `Processor` |
 | `Source/Processor/Channels/` | `AudioUIBridge`, `CommandFifo`, `VirtualMidiOutput` | `Core`, `Processor` |
-| `Source/Editor/` | `PluginEditor` and its components by feature: `Canvas/`, `Input/` (`NodeController` and `Gestures/`), `Nodes/`, `Ornaments/`, `Rules/`, `Bars/`, `Menus/` | everything |
+| `Source/Editor/` | `PluginEditor`, `EditorCommandManager` and the components, one folder per feature: `Canvas/` (the graph canvas, `NodeController` and the gesture features of one class), `Nodes/`, `Encapsulation/`, `ArrowSettings/`, `Paint/`, `Ornaments/` (`OrnamentWindow` with `Builder/` and `Library/`, and `Marks/` for ornaments on the graph), `Rules/`, `Bars/` (the title and bottom bars), `Menus/` (the side panel) | everything |
 
-Each folder reads only the rows above it, and the editor reads the processor, never the reverse, apart from `PluginProcessor.cpp`. `Source/Core/` uses no JUCE and no `ArsNovaUI`; CMake builds it as the `SequenceTreeCore` library, which the plugin and `SequenceTree_Tests` both link. `Source/Processor/Document/` takes `ArsNovaUI`'s canvas identifiers. Includes are written from `Source/` (`"Processor/Document/GraphState.h"`), or by file name within one folder, so an include line names the layer it reaches.
+Each folder reads only the rows above it, and the editor reads the processor, never the reverse, apart from `PluginProcessor.cpp`. `Source/Core/` uses no JUCE and no `ArsNovaUI`; CMake builds it as the `SequenceTreeCore` library, which the plugin and `SequenceTree_Tests` both link. `Source/Processor/Document/` takes `ArsNovaUI`'s canvas identifiers. Includes are written from `Source/` (`"Processor/Document/Graph/GraphState.h"`), or by file name within one folder, so an include line names the layer it reaches.
 
 ## 6. Tests
 

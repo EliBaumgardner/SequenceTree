@@ -97,6 +97,15 @@ private:
     int clampPanelWidth(int newWidth) const;
     int outlineEntryAt (int line) const;
 
+    struct ViewedRule
+    {
+        ArsNovaUI::FilePage* page = nullptr;
+
+        ScriptOutline outline;
+
+        int ruleId = -1;
+    };
+
     ArsNovaUI::PanelResizer resizer;
     juce::Component         sidePanel;
 
@@ -113,17 +122,14 @@ private:
 
     std::unordered_map<int, std::unique_ptr<ArsNovaUI::FilePage>> filePages;
 
-    ArsNovaUI::FilePage* activePage = nullptr;
-
-    ScriptOutline viewedOutline;
+    ViewedRule viewed;
 
     juce::Rectangle<int> editorArea;
 
     juce::String statusText;
     juce::String caretText;
 
-    int viewedRuleId = -1;
-    int panelWidth   = defaultPanelWidth;
+    int panelWidth = defaultPanelWidth;
 
     bool statusIsError = false;
 };

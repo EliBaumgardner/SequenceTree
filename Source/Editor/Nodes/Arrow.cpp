@@ -1,4 +1,4 @@
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/Document/TypedProperties.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 #include "Arrow.h"

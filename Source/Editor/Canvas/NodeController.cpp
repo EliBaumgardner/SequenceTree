@@ -1,10 +1,10 @@
 #include "NodeController.h"
-#include "Editor/Canvas/NodeCanvas.h"
+#include "NodeCanvas.h"
 #include "Editor/Nodes/Node.h"
 #include "Editor/Nodes/Arrow.h"
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 
-#include "Editor/Canvas/GraphDocument.h"
+#include "GraphDocument.h"
 
 
 NodeController::NodeController(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, OrnamentLibraries& ornamentLibraries)

@@ -2,7 +2,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Processor/PluginProcessor.h"
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/Clipboard.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/AudioModel/RTGraphBuilder.h"
 #include "Processor/Document/TypedProperties.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
@@ -12,7 +13,8 @@
 #include "Core/Traversal/TraversalPool.h"
 #include "Core/Traversal/TraversalRule.h"
 #include "Core/Script/ScriptCompiler.h"
-#include "Processor/Document/NodeFactory.h"
+#include "Processor/Document/Graph/NodeFactory.h"
+#include "Processor/Document/Graph/ArrowBindingOps.h"
 #include "Processor/Document/StateJson.h"
 #include "Processor/Document/Ornaments/OrnamentLibraries.h"
 #include "Processor/Document/Ornaments/OrnamentFigure.h"
@@ -493,6 +495,174 @@ TEST_CASE("a session saved by a newer schema version is not loaded", "[graph][st
     CHECK(processor.document.graphState.nodeMap.getNumChildren() == 0);
 }
 
+static std::unique_ptr<juce::XmlElement> readStateText(const juce::String& text)
+{
+    return StateJson::read(text.toRawUTF8(), static_cast<int>(text.getNumBytesAsUTF8()));
+}
+
+static juce::String nodeMapState(const juce::String& nodes)
+{
+    return "{\"type\":\"PluginState\",\"properties\":{},\"children\":[{\"type\":\"NodeMap\",\"properties\":{},\"children\":[" + nodes + "]}]}";
+}
+
+TEST_CASE("a state nested far past any real document is not read, and a shallow one is", "[graph][state]")
+{
+    constexpr int deepLevels    = 300;
+    constexpr int shallowLevels = 10;
+
+    const juce::String opening = "{\"type\":\"Level\",\"properties\":{},\"children\":[";
+    const juce::String closing = "]}";
+
+    const juce::String deepState    = juce::String::repeatedString(opening, deepLevels) + juce::String::repeatedString(closing, deepLevels);
+    const juce::String shallowState = juce::String::repeatedString(opening, shallowLevels) + juce::String::repeatedString(closing, shallowLevels);
+
+    CHECK(readStateText(deepState) == nullptr);
+    CHECK(readStateText(shallowState) != nullptr);
+}
+
+TEST_CASE("brackets, escaped quotes and non-ASCII text inside a value are not counted as nesting", "[graph][state]")
+{
+    constexpr int bracketCount = 500;
+
+    const juce::String brackets = juce::String::repeatedString("[", bracketCount);
+    const juce::String accent   = juce::String::fromUTF8("\xc3\xa9");
+
+    const juce::String state = "{\"type\":\"Root\",\"properties\":{\"Label\":\"" + brackets + "\\\" \\\\ " + accent + " " + brackets + "\"},\"children\":[]}";
+
+    const std::unique_ptr<juce::XmlElement> element = readStateText(state);
+
+    REQUIRE(element != nullptr);
+
+    CHECK(element->getStringAttribute("Label").contains(accent));
+}
+
+TEST_CASE("a state whose properties or children are not an object and an array is not read", "[graph][state]")
+{
+    CHECK(readStateText("{\"type\":\"Root\",\"properties\":\"text\",\"children\":[]}") == nullptr);
+    CHECK(readStateText("{\"type\":\"Root\",\"properties\":{},\"children\":\"text\"}") == nullptr);
+    CHECK(readStateText("{\"type\":\"Root\",\"properties\":{},\"children\":[]}") != nullptr);
+}
+
+TEST_CASE("a state with two nodes sharing an id is not loaded", "[graph][state]")
+{
+    SequenceTreeAudioProcessor processor;
+
+    const juce::String duplicated = nodeMapState("{\"type\":\"RootNodeData\",\"properties\":{\"Id\":\"1\"},\"children\":[]},{\"type\":\"NodeData\",\"properties\":{\"Id\":\"1\"},\"children\":[]}");
+
+    const int duplicatedSize = static_cast<int>(duplicated.getNumBytesAsUTF8());
+
+    processor.setStateInformation(duplicated.toRawUTF8(), duplicatedSize);
+
+    CHECK(processor.document.graphState.nodeMap.getNumChildren() == 0);
+}
+
+TEST_CASE("a state with a node type that does not exist is not loaded", "[graph][state]")
+{
+    SequenceTreeAudioProcessor processor;
+
+    const juce::String unknown = nodeMapState("{\"type\":\"RootNodeData\",\"properties\":{\"Id\":\"1\"},\"children\":[]},{\"type\":\"NotANode\",\"properties\":{\"Id\":\"2\"},\"children\":[]}");
+
+    const int unknownSize = static_cast<int>(unknown.getNumBytesAsUTF8());
+
+    processor.setStateInformation(unknown.toRawUTF8(), unknownSize);
+
+    CHECK(processor.document.graphState.nodeMap.getNumChildren() == 0);
+}
+
+TEST_CASE("a refused state leaves its reason in loadError and a later good state clears it", "[graph][state]")
+{
+    SequenceTreeAudioProcessor processor;
+
+    const juce::String duplicated = nodeMapState("{\"type\":\"RootNodeData\",\"properties\":{\"Id\":\"1\"},\"children\":[]},{\"type\":\"NodeData\",\"properties\":{\"Id\":\"1\"},\"children\":[]}");
+    const juce::String good       = nodeMapState("{\"type\":\"RootNodeData\",\"properties\":{\"Id\":\"1\"},\"children\":[]}");
+    const juce::String notAState  = "not a state";
+
+    const int duplicatedSize = static_cast<int>(duplicated.getNumBytesAsUTF8());
+    const int goodSize       = static_cast<int>(good.getNumBytesAsUTF8());
+    const int notAStateSize  = static_cast<int>(notAState.getNumBytesAsUTF8());
+
+    processor.setStateInformation(duplicated.toRawUTF8(), duplicatedSize);
+
+    CHECK(processor.loadError.contains("share the id 1"));
+
+    processor.setStateInformation(notAState.toRawUTF8(), notAStateSize);
+
+    CHECK(processor.loadError.contains("could not be read"));
+
+    processor.setStateInformation(good.toRawUTF8(), goodSize);
+
+    CHECK(processor.loadError.isEmpty());
+    CHECK(processor.document.graphState.nodeMap.getNumChildren() == 1);
+}
+
+TEST_CASE("a file that is not a SequenceTree patch is refused and leaves the open patch as it was", "[graph][state]")
+{
+    SequenceTreeAudioProcessor processor;
+
+    const juce::String otherDocument  = "{\"type\":\"Settings\",\"properties\":{\"Theme\":\"dark\"},\"children\":[]}";
+    const juce::String withoutNodeMap = "{\"type\":\"PluginState\",\"properties\":{},\"children\":[{\"type\":\"CanvasSettings\",\"properties\":{},\"children\":[]}]}";
+
+    const int rootId             = createRoot(processor.document.graphState, 0, 0);
+    const int otherDocumentSize  = static_cast<int>(otherDocument.getNumBytesAsUTF8());
+    const int withoutNodeMapSize = static_cast<int>(withoutNodeMap.getNumBytesAsUTF8());
+
+    processor.setStateInformation(otherDocument.toRawUTF8(), otherDocumentSize);
+
+    CHECK(processor.loadError.contains("not a SequenceTree patch"));
+    CHECK(processor.document.graphState.nodeMap.getNumChildren() == 1);
+
+    processor.setStateInformation(withoutNodeMap.toRawUTF8(), withoutNodeMapSize);
+
+    CHECK(processor.loadError.contains("not a SequenceTree patch"));
+    CHECK(processor.document.graphState.nodeMap.getNumChildren() == 1);
+    CHECK(processor.document.graphState.getNode(rootId).isValid());
+}
+
+TEST_CASE("a saved patch cut off partway is refused and leaves the open patch as it was", "[graph][state]")
+{
+    SequenceTreeAudioProcessor original;
+    SequenceTreeAudioProcessor processor;
+    juce::MemoryBlock          savedState;
+    juce::TemporaryFile        patchFile { StateJson::patchExtension };
+
+    const int originalRootId = createRoot(original.document.graphState, 0, 0);
+    const int rootId         = createRoot(processor.document.graphState, 0, 0);
+
+    createChild(original.document.graphState, originalRootId, 100, 0);
+
+    original.document.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
+
+    original.getStateInformation(savedState);
+
+    const int cutOffSize = static_cast<int>(savedState.getSize()) / 2;
+
+    processor.setStateInformation(savedState.getData(), cutOffSize);
+
+    CHECK(processor.loadError.isNotEmpty());
+    CHECK(processor.document.graphState.nodeMap.getNumChildren() == 1);
+    CHECK(processor.document.graphState.getNode(rootId).isValid());
+}
+
+TEST_CASE("an arrow type or binding outside its enum reads as the default", "[graph][canvas]")
+{
+    constexpr int outOfRangeType    = 9;
+    constexpr int outOfRangeBinding = -4;
+
+    const ArrowInfo::Settings defaults;
+
+    juce::ValueTree arrow { "Arrow" };
+
+    arrow.setProperty(ValueTreeIdentifiers::ArrowType,     outOfRangeType,    nullptr);
+    arrow.setProperty(ValueTreeIdentifiers::ArrowXBinding, outOfRangeBinding, nullptr);
+    arrow.setProperty(ValueTreeIdentifiers::ArrowYBinding, outOfRangeBinding, nullptr);
+
+    const ArrowInfo::Settings read = ArrowBindingOps::getArrowInfo(arrow);
+
+    CHECK(read.type == defaults.type);
+    CHECK(read.xBinding == defaults.xBinding);
+    CHECK(read.yBinding == defaults.yBinding);
+}
+
 TEST_CASE("the arrow binding multipliers survive saving and restoring the plugin state", "[graph][canvas]")
 {
     SequenceTreeAudioProcessor original;
@@ -699,6 +869,62 @@ TEST_CASE("moving a pitch-bound node transposes around the pitch last typed", "[
 
     REQUIRE_FALSE(nodes.find(childId)->notes.empty());
     CHECK(nodes.find(childId)->notes.front().pitch == 68);
+}
+
+TEST_CASE("a pasted pitch-bound arrow keeps its pitch offset, so moving the pasted child transposes it as it does the original", "[graph][pitch][clipboard]")
+{
+    SequenceTreeAudioProcessor processor;
+
+    GraphState& graph = processor.document.graphState;
+
+    Clipboard clipboard(graph, processor.document.undoManager);
+
+    const int rootId  = createRoot(graph, 0, 0);
+    const int childId = createChild(graph, rootId, 100, 0);
+
+    const std::vector<int> copiedIds { rootId, childId };
+
+    clipboard.copy(copiedIds);
+
+    const std::vector<int> pastedIds = clipboard.pasteAt({ 600, 600 });
+
+    int pastedChildId = 0;
+
+    for (const int pastedId : pastedIds) {
+        if (graph.getNode(pastedId).getType() != ValueTreeIdentifiers::RootNodeData) {
+            pastedChildId = pastedId;
+        }
+    }
+
+    REQUIRE(pastedIds.size() == 2);
+    REQUIRE(pastedChildId != 0);
+
+    const juce::ValueTree originalNote = graph.getMidiNotes(childId).getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+    const juce::ValueTree pastedNote   = graph.getMidiNotes(pastedChildId).getChildWithName(ValueTreeIdentifiers::MidiNoteData);
+
+    REQUIRE(originalNote.isValid());
+    REQUIRE(pastedNote.isValid());
+
+    const int originalStartPitch = originalNote.getProperty(ValueTreeIdentifiers::MidiPitch);
+    const int pastedStartPitch   = pastedNote.getProperty(ValueTreeIdentifiers::MidiPitch);
+
+    NodeInfo::Position originalMoved = graph.getNodePosition(childId);
+    NodeInfo::Position pastedMoved   = graph.getNodePosition(pastedChildId);
+
+    originalMoved.yPosition -= 100;
+    pastedMoved.yPosition   -= 100;
+
+    graph.setNodePosition(graph.getNode(childId), originalMoved, nullptr);
+    graph.setNodePosition(graph.getNode(pastedChildId), pastedMoved, nullptr);
+
+    const int originalEndPitch = originalNote.getProperty(ValueTreeIdentifiers::MidiPitch);
+    const int pastedEndPitch   = pastedNote.getProperty(ValueTreeIdentifiers::MidiPitch);
+
+    const int originalShift = originalEndPitch - originalStartPitch;
+    const int pastedShift   = pastedEndPitch - pastedStartPitch;
+
+    REQUIRE(originalShift != 0);
+    CHECK(pastedShift == originalShift);
 }
 
 TEST_CASE("undo and redo keep the node index, parent links and published graph in step", "[graph][undo]")
@@ -1044,6 +1270,51 @@ TEST_CASE("main's playNote values reach the MIDI output, and the rhythm is uncha
         CHECK(played[index].pitch    == builtIn[index].pitch - 12);
         CHECK(played[index].velocity == juce::jlimit(0, 127, builtIn[index].velocity + 10));
     }
+}
+
+TEST_CASE("a saved patch with branches and a live rule loads and plays exactly as the patch it was saved from", "[graph][state][script]")
+{
+    SequenceTreeAudioProcessor original;
+    SequenceTreeAudioProcessor restored;
+    juce::MemoryBlock          savedState;
+    juce::TemporaryFile        patchFile { StateJson::patchExtension };
+
+    GraphState&         graph     = original.document.graphState;
+    TraversalRuleState& ruleState = original.document.traversalRuleState;
+
+    const std::string shifted = traversalWithMain(
+        "        selectedNode = advance(1);\n"
+        "        playNote(selectedNode, selectedNode.pitch - 12, selectedNode.duration, selectedNode.velocity);");
+
+    const int rootId   = createRoot(graph, 0, 0);
+    const int firstId  = createChild(graph, rootId, 100, 0);
+    const int secondId = createChild(graph, rootId, 100, 100);
+    const int ruleId   = ruleState.addRule(0, nullptr).getProperty(ArsNovaUI::CanvasIdentifiers::Id);
+
+    createChild(graph, firstId, 220, 0);
+    createChild(graph, secondId, 220, 100);
+
+    original.document.patch.setProperty(ValueTreeIdentifiers::PatchFile, patchFile.getFile().getFullPathName(), nullptr);
+
+    ruleState.setRuleSource(ruleId, shifted, nullptr);
+
+    ruleState.activeRuleId.setValue(ruleId, nullptr);
+
+    rebuildAndPublish(original);
+
+    original.getStateInformation(savedState);
+
+    const int savedSize = static_cast<int>(savedState.getSize());
+
+    restored.setStateInformation(savedState.getData(), savedSize);
+
+    const std::vector<PlayedNote> originalNotes = playProcessor(original);
+    const std::vector<PlayedNote> restoredNotes = playProcessor(restored);
+
+    CHECK(restored.loadError.isEmpty());
+    CHECK(restored.document.traversalRuleState.activeRuleId.get() == ruleId);
+    REQUIRE(originalNotes.size() > 4);
+    CHECK(restoredNotes == originalNotes);
 }
 
 TEST_CASE("a main that never plays is silent, and the walk still keeps time", "[graph][script]")

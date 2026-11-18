@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <limits>
 
 void NodeStateTable::prepare()
 {
@@ -59,7 +60,13 @@ int NodeStateTable::increment(NodeStateSlot slot, int nodeId) noexcept
         return defaultValue(slot);
     }
 
-    return ++values[static_cast<std::size_t>(indexOf(slot, row))];
+    int& count = values[static_cast<std::size_t>(indexOf(slot, row))];
+
+    if (count < std::numeric_limits<int>::max()) {
+        ++count;
+    }
+
+    return count;
 }
 
 int NodeStateTable::get(NodeStateSlot slot, int nodeId) const noexcept

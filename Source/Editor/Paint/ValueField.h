@@ -97,17 +97,23 @@ private:
 
     std::optional<float> densityUnderNode(const Node& node) const;
 
+    struct Stroke
+    {
+        std::vector<float> mask;
+
+        juce::Point<float> previousPoint;
+        juce::Point<float> currentPoint;
+
+        BrushStroke state = BrushStroke::Idle;
+    };
+
     NodeCanvas& nodeCanvas;
 
     std::vector<float> fieldWeightedSum;
     std::vector<float> fieldTotalWeight;
     std::vector<float> fieldCoverageProd;
 
-    std::vector<float> strokeMask;
-    juce::Point<float> strokePreviousPoint;
-
-    juce::Point<float> brushCurrentPoint;
-    BrushStroke        brushStroke = BrushStroke::Idle;
+    Stroke stroke;
 
     std::array<float, falloffSteps + 1>       falloffTable {};
     std::array<juce::Colour, colourSteps + 1> colourTable;

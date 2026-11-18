@@ -3,12 +3,12 @@
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "Editor/Nodes/Node.h"
 #include "Editor/Nodes/Arrow.h"
-#include "Editor/Nodes/Encapsulator.h"
+#include "Editor/Encapsulation/Encapsulator.h"
 #include "Editor/Nodes/RootNode.h"
 #include "Editor/Nodes/Modulator.h"
 #include "Editor/Nodes/TraversalFlagNode.h"
 #include "GraphDocument.h"
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 
 #include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>

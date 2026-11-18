@@ -3,8 +3,10 @@
 #include "Core/Traversal/ScriptRun.h"
 #include "Core/Traversal/TraversalLogic.h"
 #include "Core/Script/ScriptCompiler.h"
+#include "Core/Traversal/WeightedPick.h"
 
 #include <algorithm>
+#include <limits>
 #include <vector>
 
 static RTNode makeNode(int id, int parentId, NodeInfo::Kind type, int countLimit, const std::vector<int>& childIds)
@@ -1173,6 +1175,65 @@ TEST_CASE("calling prepare on an already prepared state table resets it idempote
     table.prepare();
     CHECK(table.isPrepared());
     CHECK(table.get(NodeStateSlot::Count, 10) == 0);
+}
+
+TEST_CASE("incrementing a count already at the largest int leaves it there", "[state]")
+{
+    constexpr int largestInt = std::numeric_limits<int>::max();
+
+    NodeStateTable table;
+    table.prepare();
+
+    table.set(NodeStateSlot::Count, 10, largestInt);
+
+    CHECK(table.increment(NodeStateSlot::Count, 10) == largestInt);
+    CHECK(table.get(NodeStateSlot::Count, 10) == largestInt);
+}
+
+static NodeMap weightedShapeWith(int firstProbability, int secondProbability)
+{
+    RTNode weightedRoot = makeNode(1, 0, NodeInfo::Kind::Root, 1, { 2, 3 });
+
+    RTNode first  = makeNode(2, 1, NodeInfo::Kind::Node, 1, {});
+    RTNode second = makeNode(3, 1, NodeInfo::Kind::Node, 1, {});
+
+    first.probability  = firstProbability;
+    second.probability = secondProbability;
+
+    return makeMap({ weightedRoot, first, second });
+}
+
+TEST_CASE("a negative probability walks like a probability of 0, as a node traversal and as a modulator walk", "[traversal][parity][probability]")
+{
+    const int steps = 24;
+
+    const NodeMap negative = weightedShapeWith(-30, 50);
+    const NodeMap zero     = weightedShapeWith(0, 50);
+
+    CHECK(walkPrimary(negative, 1, steps, NativeTraversalRule::instance()) == walkPrimary(zero, 1, steps, NativeTraversalRule::instance()));
+    CHECK(walkModulator(mirrorAsModulators(negative), 1, steps) == walkModulator(mirrorAsModulators(zero), 1, steps));
+}
+
+TEST_CASE("a negative probability weighs the same as a probability of 0", "[traversal][probability]")
+{
+    constexpr int sharedCountLimit    = 1;
+    constexpr int drawnValue          = 30;
+    constexpr int negativeProbability = -30;
+    constexpr int plainProbability    = 50;
+
+    WeightedPick withNegative;
+    WeightedPick withZero;
+
+    withNegative.tally(sharedCountLimit, negativeProbability);
+    withNegative.tally(sharedCountLimit, plainProbability);
+    withZero.tally(sharedCountLimit, 0);
+    withZero.tally(sharedCountLimit, plainProbability);
+
+    REQUIRE(withNegative.draw(drawnValue));
+    REQUIRE(withZero.draw(drawnValue));
+
+    CHECK(withNegative.accepts(sharedCountLimit, negativeProbability) == withZero.accepts(sharedCountLimit, 0));
+    CHECK(withNegative.accepts(sharedCountLimit, plainProbability) == withZero.accepts(sharedCountLimit, plainProbability));
 }
 
 TEST_CASE("defaultValue and indexOf are constexpr", "[state]")

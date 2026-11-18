@@ -4,7 +4,7 @@
 #include "Editor/Nodes/Node.h"
 #include "Editor/Nodes/Arrow.h"
 #include "AllowedTraversalsMenu.h"
-#include "Processor/Document/GraphState.h"
+#include "Processor/Document/Graph/GraphState.h"
 #include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 #include <ArsNovaUI/Menus/ContextMenu.h>

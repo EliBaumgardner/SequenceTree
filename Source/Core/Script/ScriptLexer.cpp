@@ -2,6 +2,7 @@
 #include <limits>
 
 #include <cctype>
+#include <cmath>
 #include <cstdlib>
 
 std::vector<Token> Lexer::run()
@@ -124,6 +125,7 @@ Token Lexer::readNumber()
 
     if (token.kind == TokenKind::Decimal) {
         token.decimalValue = std::strtod(std::string(token.text).c_str(), nullptr);
+        overflowed         = std::isinf(token.decimalValue);
     }
 
     if (overflowed) {

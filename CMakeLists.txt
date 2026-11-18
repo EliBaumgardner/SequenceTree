@@ -82,16 +82,16 @@ target_link_libraries(SequenceTreeCore PRIVATE
 target_sources(SequenceTree PRIVATE
         Source/Processor/PluginProcessor.cpp
         Source/Processor/PluginDocument.cpp
-        Source/Processor/Document/ArrowBindingOps.cpp
-        Source/Processor/Document/Clipboard.cpp
-        Source/Processor/Document/EncapsulationOps.cpp
-        Source/Processor/Document/GraphState.cpp
-        Source/Processor/Document/NodeFactory.cpp
         Source/Processor/Document/StateJson.cpp
         Source/Processor/Document/TraversalRuleState.cpp
-        Source/Processor/Document/TraversalState.cpp
         Source/Processor/Document/TypedProperties.cpp
         Source/Processor/Document/ValueTreeIdentifiers.cpp
+        Source/Processor/Document/Graph/ArrowBindingOps.cpp
+        Source/Processor/Document/Graph/Clipboard.cpp
+        Source/Processor/Document/Graph/EncapsulationOps.cpp
+        Source/Processor/Document/Graph/GraphState.cpp
+        Source/Processor/Document/Graph/NodeFactory.cpp
+        Source/Processor/Document/Graph/TraversalState.cpp
         Source/Processor/Document/Ornaments/OrnamentFigure.cpp
         Source/Processor/Document/Ornaments/OrnamentLibraries.cpp
         Source/Processor/Document/Ornaments/OrnamentSymbol.cpp
@@ -106,53 +106,54 @@ target_sources(SequenceTree PRIVATE
         Source/Processor/Channels/AudioUIBridge.cpp
         Source/Processor/Channels/VirtualMidiOutput.cpp
         Source/Editor/PluginEditor.cpp
-        Source/Editor/Bars/BindPane.cpp
+        Source/Editor/EditorCommandManager.cpp
+        Source/Editor/ArrowSettings/AllowedTraversalsMenu.cpp
+        Source/Editor/ArrowSettings/ArrowMenu.cpp
+        Source/Editor/ArrowSettings/BindPane.cpp
         Source/Editor/Bars/BottomBar.cpp
-        Source/Editor/Bars/PaintToolSettings.cpp
         Source/Editor/Bars/PatchControls.cpp
         Source/Editor/Bars/TempoDisplay.cpp
         Source/Editor/Bars/Titlebar.cpp
         Source/Editor/Canvas/AudioCommandDrainer.cpp
         Source/Editor/Canvas/CanvasFrame.cpp
-        Source/Editor/Canvas/EncapsulationView.cpp
         Source/Editor/Canvas/GraphDocument.cpp
         Source/Editor/Canvas/GridMultiplier.cpp
         Source/Editor/Canvas/NodeArrowCanvas.cpp
         Source/Editor/Canvas/NodeCanvas.cpp
+        Source/Editor/Canvas/NodeController.cpp
         Source/Editor/Canvas/NodeLimitWarning.cpp
-        Source/Editor/Canvas/ValueField.cpp
-        Source/Editor/Input/NodeController.cpp
-        Source/Editor/Input/Gestures/EncapsulationGestures.cpp
-        Source/Editor/Input/Gestures/NotePreviewGestures.cpp
-        Source/Editor/Input/Gestures/SelectionGestures.cpp
-        Source/Editor/Menus/AllowedTraversalsMenu.cpp
-        Source/Editor/Menus/ArrowMenu.cpp
+        Source/Editor/Canvas/NotePreviewGestures.cpp
+        Source/Editor/Canvas/SelectionGestures.cpp
+        Source/Editor/Encapsulation/EncapsulationGestures.cpp
+        Source/Editor/Encapsulation/EncapsulationView.cpp
+        Source/Editor/Encapsulation/Encapsulator.cpp
         Source/Editor/Menus/MenuArea.cpp
         Source/Editor/Menus/MenuBar.cpp
         Source/Editor/Menus/NodeMenu.cpp
         Source/Editor/Menus/TraversalMenu.cpp
         Source/Editor/Nodes/Arrow.cpp
-        Source/Editor/Nodes/Encapsulator.cpp
         Source/Editor/Nodes/Modulator.cpp
         Source/Editor/Nodes/Node.cpp
         Source/Editor/Nodes/RootNode.cpp
         Source/Editor/Nodes/RootRectangle.cpp
         Source/Editor/Nodes/TraversalFlagFormat.cpp
         Source/Editor/Nodes/TraversalFlagNode.cpp
-        Source/Editor/Ornaments/FigureDocument.cpp
-        Source/Editor/Ornaments/OrnamentApplier.cpp
-        Source/Editor/Ornaments/OrnamentBuildPanel.cpp
-        Source/Editor/Ornaments/OrnamentCanvas.cpp
-        Source/Editor/Ornaments/OrnamentFigureController.cpp
-        Source/Editor/Ornaments/OrnamentLibrarySection.cpp
-        Source/Editor/Ornaments/OrnamentMarkView.cpp
-        Source/Editor/Ornaments/OrnamentMarks.cpp
-        Source/Editor/Ornaments/OrnamentNode.cpp
-        Source/Editor/Ornaments/OrnamentPane.cpp
-        Source/Editor/Ornaments/OrnamentSelectionPanel.cpp
-        Source/Editor/Ornaments/OrnamentSymbolEditor.cpp
-        Source/Editor/Ornaments/OrnamentTile.cpp
         Source/Editor/Ornaments/OrnamentWindow.cpp
+        Source/Editor/Ornaments/Builder/FigureDocument.cpp
+        Source/Editor/Ornaments/Builder/OrnamentBuildPanel.cpp
+        Source/Editor/Ornaments/Builder/OrnamentCanvas.cpp
+        Source/Editor/Ornaments/Builder/OrnamentFigureController.cpp
+        Source/Editor/Ornaments/Builder/OrnamentNode.cpp
+        Source/Editor/Ornaments/Builder/OrnamentSymbolEditor.cpp
+        Source/Editor/Ornaments/Library/OrnamentLibrarySection.cpp
+        Source/Editor/Ornaments/Library/OrnamentSelectionPanel.cpp
+        Source/Editor/Ornaments/Library/OrnamentTile.cpp
+        Source/Editor/Ornaments/Marks/OrnamentApplier.cpp
+        Source/Editor/Ornaments/Marks/OrnamentMarkView.cpp
+        Source/Editor/Ornaments/Marks/OrnamentMarks.cpp
+        Source/Editor/Ornaments/Marks/OrnamentPane.cpp
+        Source/Editor/Paint/PaintToolSettings.cpp
+        Source/Editor/Paint/ValueField.cpp
         Source/Editor/Rules/RuleReorderGestures.cpp
         Source/Editor/Rules/RuleTabBar.cpp
         Source/Editor/Rules/RuleTreePanel.cpp
@@ -190,7 +191,11 @@ add_executable(SequenceTree_Tests
 )
 
 target_compile_features(SequenceTree_Tests PRIVATE cxx_std_23)
-target_compile_options(SequenceTree_Tests PRIVATE -Wall -Wextra -Wno-unused-parameter)
+if(MSVC)
+    target_compile_options(SequenceTree_Tests PRIVATE /W4)
+else()
+    target_compile_options(SequenceTree_Tests PRIVATE -Wall -Wextra -Wno-unused-parameter)
+endif()
 target_link_libraries(SequenceTree_Tests PRIVATE SequenceTreeCore Catch2::Catch2WithMain)
 
 catch_discover_tests(SequenceTree_Tests)
@@ -204,7 +209,11 @@ add_executable(SequenceTree_GraphTests
 )
 
 target_compile_features(SequenceTree_GraphTests PRIVATE cxx_std_23)
-target_compile_options(SequenceTree_GraphTests PRIVATE -Wall -Wextra -Wno-unused-parameter)
+if(MSVC)
+    target_compile_options(SequenceTree_GraphTests PRIVATE /W4)
+else()
+    target_compile_options(SequenceTree_GraphTests PRIVATE -Wall -Wextra -Wno-unused-parameter)
+endif()
 
 target_include_directories(SequenceTree_GraphTests PRIVATE Source JUCE/modules ${ARSNOVAUI_PATH})
 

@@ -300,8 +300,8 @@ void TraversalSession::syncActiveTraversals(const NodeMap& nodes)
         if (instance.runtime.asFlag) {
             const RTNode* flagNode = nodes.find(instance.runtime.sourceNodeId);
 
-            if (flagNode != nullptr && flagNode->flagTraversal.key == logic.traversal.key) {
-                logic.traversal = flagNode->flagTraversal;
+            if (flagNode != nullptr && flagNode->flag.traversal.key == logic.traversal.key) {
+                logic.traversal = flagNode->flag.traversal;
             }
 
             continue;

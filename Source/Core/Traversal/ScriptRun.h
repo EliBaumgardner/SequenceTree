@@ -137,9 +137,22 @@ private:
         int value  = 0;
     };
 
+    struct Trial
+    {
+        static constexpr int writeCapacity = 64;
+
+        ScriptMembers members {};
+        ScriptMembers globals {};
+
+        std::array<TrialWrite, writeCapacity> writes {};
+
+        int writeCount = 0;
+
+        bool overflowed = false;
+    };
+
     static constexpr int stackCapacity         = RTScript::maxStack * RTScript::maxCallDepth;
     static constexpr int localCapacity         = RTScript::maxLocals * RTScript::maxCallDepth;
-    static constexpr int trialWriteCapacity    = 64;
     static constexpr int playNoteArgumentCount = 4;
     static constexpr int randomDiscardedBits   = 8;
     static constexpr int xorshiftFirstShift    = 13;
@@ -151,20 +164,17 @@ private:
 
     ScriptRunContext context;
 
-    ScriptMembers trialMembers {};
-    ScriptMembers trialGlobals {};
+    Trial trial;
 
     ScriptMembers* memberValues = nullptr;
     ScriptMembers* globalValues = nullptr;
 
-    std::array<double, stackCapacity>          stack {};
-    std::array<double, localCapacity>          locals {};
-    std::array<Frame, RTScript::maxCallDepth>  frames {};
-    std::array<TrialWrite, trialWriteCapacity> trialWrites {};
+    std::array<double, stackCapacity>         stack {};
+    std::array<double, localCapacity>         locals {};
+    std::array<Frame, RTScript::maxCallDepth> frames {};
 
-    int stackTop        = 0;
-    int frameCount      = 0;
-    int trialWriteCount = 0;
+    int stackTop   = 0;
+    int frameCount = 0;
 
     unsigned int randomState = 1;
 };

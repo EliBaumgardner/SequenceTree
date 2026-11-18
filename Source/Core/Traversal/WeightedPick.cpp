@@ -1,14 +1,18 @@
 #include "WeightedPick.h"
 #include "Core/Model/RTData.h"
 
+#include <algorithm>
+
 void WeightedPick::tally(int countLimit, int probability)
 {
+    const int weight = std::max(probability, 0);
+
     if (countLimit > maxLimit) {
         maxLimit    = countLimit;
-        totalWeight = probability;
+        totalWeight = weight;
     }
     else if (countLimit == maxLimit) {
-        totalWeight += probability;
+        totalWeight += weight;
     }
 }
 
@@ -31,11 +35,13 @@ bool WeightedPick::draw(int randomValue)
 
 bool WeightedPick::accepts(int countLimit, int probability)
 {
+    const int weight = std::max(probability, 0);
+
     if (countLimit != maxLimit) {
         return false;
     }
 
-    runningWeight += probability;
+    runningWeight += weight;
 
     return pick < runningWeight;
 }

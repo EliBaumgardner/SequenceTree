@@ -4,7 +4,7 @@
 
 #include <ArsNovaUI/Canvas/CanvasDocument.h>
 #include <ArsNovaUI/Canvas/CanvasNode.h>
-#include "Processor/Document/NodeFactory.h"
+#include "Processor/Document/Graph/NodeFactory.h"
 
 /*
     The ArsNovaUI::CanvasDocument for the graph: each edit the canvas makes, carried out on

@@ -20,18 +20,18 @@
     the message thread.
 */
 
+class SequenceTreeAudioProcessor;
+
 class PatchControls : public juce::Component
 {
 public:
 
-    PatchControls(juce::AudioProcessor& processor, juce::ValueTree patch, const juce::File& patchFolder);
+    PatchControls(SequenceTreeAudioProcessor& processor, juce::ValueTree patch, const juce::File& patchFolder);
 
     void paint  (juce::Graphics& graphics) override;
     void resized() override;
 
     int idealWidth(int height) const;
-
-    static constexpr int nameWidth = 100;
 
 private:
 
@@ -40,10 +40,13 @@ private:
     void resetPatch      ();
     void confirmReset    ();
 
-    static constexpr int   separatorGap        = 7;
+    static constexpr int nameExtraCharacterCount = 5;
+    static constexpr int separatorGap            = 7;
+
     static constexpr float separatorInsetRatio = 0.2f;
 
-    juce::AudioProcessor& processor;
+    SequenceTreeAudioProcessor& processor;
+
     juce::ValueTree       patch;
     juce::File            patchFolder;
     juce::UndoManager     nameUndoManager;

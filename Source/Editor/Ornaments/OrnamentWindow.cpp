@@ -1,8 +1,10 @@
 #include "OrnamentWindow.h"
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 
-OrnamentWindow::OrnamentWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings, juce::UndoManager& undoManager)
+OrnamentWindow::OrnamentWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, OrnamentLibraries& ornamentLibraries, juce::ValueTree canvasSettings, juce::UndoManager& undoManager,
+                               juce::ApplicationCommandManager& commandManager)
     : undoManager   (undoManager),
+      commandManager(commandManager),
       buildPanel    (ornamentLibraries, canvasSettings, undoManager),
       selectionPanel(ornamentLibraries, undoManager)
 {
@@ -17,8 +19,14 @@ OrnamentWindow::OrnamentWindow(ArsNovaUI::CustomLookAndFeel& lookAndFeel, Orname
 
     addAndMakeVisible(buildPanel);
     addAndMakeVisible(selectionPanel);
+
+    addKeyListener(commandManager.getKeyMappings());
 }
 
+OrnamentWindow::~OrnamentWindow()
+{
+    removeKeyListener(commandManager.getKeyMappings());
+}
 
 void OrnamentWindow::paint(juce::Graphics& graphics)
 {
@@ -42,11 +50,20 @@ void OrnamentWindow::resized()
     buildPanel.setBounds(bounds);
 }
 
+void OrnamentWindow::getAllCommands(juce::Array<juce::CommandID>& commands)
+{
+    const juce::Array<juce::CommandID> ornamentCommands { juce::StandardApplicationCommandIDs::undo, juce::StandardApplicationCommandIDs::redo };
+
+    commands.addArray(ornamentCommands);
+}
+
+void OrnamentWindow::getCommandInfo(juce::CommandID, juce::ApplicationCommandInfo& info)
+{
+    info.setActive(true);
+}
+
 bool OrnamentWindow::keyPressed(const juce::KeyPress& key)
 {
-    const juce::ModifierKeys command      = juce::ModifierKeys::commandModifier;
-    const juce::ModifierKeys commandShift = juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier;
-
     if (key == juce::KeyPress::escapeKey) {
         if (buildPanel.controller.clickMode == OrnamentFigureController::ClickMode::PickHost) {
             buildPanel.controller.switchClickMode(OrnamentFigureController::ClickMode::Build);
@@ -61,13 +78,18 @@ bool OrnamentWindow::keyPressed(const juce::KeyPress& key)
         }
     }
 
-    if (key == juce::KeyPress('z', command, 0)) {
+    return false;
+}
+
+bool OrnamentWindow::perform(const InvocationInfo& info)
+{
+    if (info.commandID == juce::StandardApplicationCommandIDs::undo) {
         undoManager.undo();
 
         return true;
     }
 
-    if (key == juce::KeyPress('z', commandShift, 0) || key == juce::KeyPress('y', command, 0)) {
+    if (info.commandID == juce::StandardApplicationCommandIDs::redo) {
         undoManager.redo();
 
         return true;
@@ -82,4 +104,9 @@ juce::Point<int> OrnamentWindow::narrowestSize() const
     const int              buildHeight   = OrnamentBuildPanel::titlebarHeight + OrnamentBuildPanel::nameInset * 2 + OrnamentBuildPanel::nameHeight;
 
     return { buildPanel.minimumWidth() + selectionSize.x, juce::jmax(buildHeight, selectionSize.y) };
+}
+
+juce::ApplicationCommandTarget* OrnamentWindow::getNextCommandTarget()
+{
+    return nullptr;
 }

@@ -1,6 +1,6 @@
 #include "OrnamentLibraries.h"
 #include "OrnamentFigure.h"
-#include "Processor/Document/ArrowBindingOps.h"
+#include "Processor/Document/Graph/ArrowBindingOps.h"
 #include "Processor/Document/TypedProperties.h"
 #include "Core/Model/ArrowInfo.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>

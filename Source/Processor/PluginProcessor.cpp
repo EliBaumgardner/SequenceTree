@@ -200,6 +200,8 @@ void SequenceTreeAudioProcessor::getStateInformation (juce::MemoryBlock& destDat
 
 void SequenceTreeAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
+    loadError.clear();
+
     if (data == nullptr || sizeInBytes == 0) {
         pendingRestoreState = juce::ValueTree(ValueTreeIdentifiers::NodeMap);
     }
@@ -210,16 +212,44 @@ void SequenceTreeAudioProcessor::setStateInformation (const void* data, int size
             xmlState = getXmlFromBinary(data, sizeInBytes);
         }
 
-        if (xmlState == nullptr)     { DBG("INVALID STATE DATA"); return; }
+        if (xmlState == nullptr) {
+            loadError = "The saved state could not be read. It is not a SequenceTree patch, or it is damaged.";
+
+            return;
+        }
 
         juce::ValueTree restoredTree = juce::ValueTree::fromXml (*xmlState);
 
-        if (!restoredTree.isValid()) { DBG("INVALID STATE TREE"); return; }
+        if (!restoredTree.isValid()) {
+            loadError = "The saved state could not be read. It is not a SequenceTree patch, or it is damaged.";
+
+            return;
+        }
 
         const int savedSchemaVersion = restoredTree.getProperty(ValueTreeIdentifiers::SchemaVersion, 0);
 
         if (savedSchemaVersion > PluginDocument::schemaVersion) {
-            DBG("STATE FROM A NEWER SCHEMA VERSION");
+            loadError = "The saved state was made by a newer version of SequenceTree.";
+
+            return;
+        }
+
+        juce::ValueTree restoredNodeMap = restoredTree;
+
+        if (restoredTree.getType() == ValueTreeIdentifiers::PluginState) {
+            restoredNodeMap = restoredTree.getChildWithName(ValueTreeIdentifiers::NodeMap);
+        }
+
+        if (restoredNodeMap.getType() != ValueTreeIdentifiers::NodeMap) {
+            loadError = "This file is not a SequenceTree patch.";
+
+            return;
+        }
+
+        const juce::String nodeMapProblem = GraphState::findNodeMapProblem(restoredNodeMap);
+
+        if (nodeMapProblem.isNotEmpty()) {
+            loadError = "The saved state is inconsistent. " + nodeMapProblem;
 
             return;
         }

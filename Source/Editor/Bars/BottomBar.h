@@ -5,9 +5,9 @@
 #include <ArsNovaUI/Buttons/ButtonPane.h>
 #include <ArsNovaUI/Editors/LabeledEditor.h>
 #include <ArsNovaUI/Editors/ValueEditor.h>
-#include "PaintToolSettings.h"
-#include "BindPane.h"
-#include "Editor/Ornaments/OrnamentPane.h"
+#include "Editor/Paint/PaintToolSettings.h"
+#include "Editor/ArrowSettings/BindPane.h"
+#include "Editor/Ornaments/Marks/OrnamentPane.h"
 #include <ArsNovaUI/Buttons/ValueSlider.h>
 #include <ArsNovaUI/Menus/ContextMenu.h>
 
@@ -21,13 +21,14 @@
 
 /*
     The bar along the bottom of the editor, holding the controls for the canvas tools: the paint
-    settings, a note preview button with a counts field, a span tool button, an ornament tool
-    button, and two buttons that bind an arrow's x and y extent to pitch or duration. It is a
-    Bar drawn as frosted glass over the NodeCanvas.
+    settings, a note preview button, a span tool button, an ornament tool button, and two buttons
+    that bind an arrow's x and y extent to pitch or duration. It is a Bar drawn as frosted glass
+    over the NodeCanvas.
 
     Each tool button toggles NodeCanvas::activeTool, and the bar sets which of them looks selected
     from NodeCanvas::onActiveToolChanged. Right-clicking the note preview button opens a menu to
-    repeat the preview, which NotePreviewGestures::toggleRepeat sends to the audio thread.
+    repeat the preview, which NotePreviewGestures::toggleRepeat sends to the audio thread, and a
+    count field that sets NotePreviewGestures::count by typing a number or scrolling.
     The ornament button and the two bind buttons are the panes OrnamentPane and BindPane, which
     BottomBar lays out. Right-clicking the ornament button calls OrnamentPane::onWindowRequested,
     which PluginEditor answers by rescanning the OrnamentLibraries and opening the OrnamentWindow;
@@ -65,18 +66,19 @@ private:
 
     void showQuaverMenu();
 
-    static constexpr float captionHeightRatio     = 0.73f;
-    static constexpr float captionKerningFactor   = 0.1f;
-    static constexpr float quaverButtonWidthRatio = 0.34f;
+    static constexpr float captionHeightRatio   = 0.73f;
+    static constexpr float captionKerningFactor = 0.1f;
 
     static constexpr int paintPanelWidth = 165;
-    static constexpr int quaverPaneWidth = 56;
+    static constexpr int countFieldWidth = 150;
+    static constexpr int countLabelWidth = 40;
+    static constexpr int countLabelGap   = 6;
 
     NodeCanvas&          nodeCanvas;
     NotePreviewGestures& notePreviewGestures;
 
-    PaintToolSettings      paintPanel;
-    ArsNovaUI::ValueEditor countsField;
+    PaintToolSettings        paintPanel;
+    ArsNovaUI::LabeledEditor countField;
 
     ArsNovaUI::ButtonPane toolPane;
     ArsNovaUI::ButtonPane quaverPane;

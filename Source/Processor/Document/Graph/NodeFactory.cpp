@@ -1,6 +1,6 @@
 #include "NodeFactory.h"
-#include "TypedProperties.h"
-#include "ValueTreeIdentifiers.h"
+#include "Processor/Document/TypedProperties.h"
+#include "Processor/Document/ValueTreeIdentifiers.h"
 #include <ArsNovaUI/Canvas/CanvasIdentifiers.h>
 
 #include <utility>

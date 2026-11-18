@@ -1,10 +1,17 @@
 #include "StateJson.h"
 
+#include <algorithm>
+#include <cstring>
+
 std::unique_ptr<juce::XmlElement> StateJson::read(const void* data, int sizeInBytes)
 {
     const juce::String text = juce::String::createStringFromData(data, sizeInBytes).trimStart();
 
-    if (! text.startsWithChar('{')) {
+    const char* bytes = text.toRawUTF8();
+
+    const std::size_t byteCount = std::strlen(bytes);
+
+    if (! text.startsWithChar('{') || nestingDepth(bytes, byteCount) > maximumNestingDepth) {
         return nullptr;
     }
 
@@ -43,19 +50,23 @@ std::unique_ptr<juce::XmlElement> StateJson::toElement(const juce::var& value)
 {
     const juce::String tagName = value.getProperty(typeKey, juce::var()).toString();
 
-    if (! value.isObject() || tagName.isEmpty()) {
+    const juce::var propertiesValue = value.getProperty(propertiesKey, juce::var());
+    const juce::var children        = value.getProperty(childrenKey, juce::var());
+
+    const bool propertiesAreWrongType = ! propertiesValue.isVoid() && ! propertiesValue.isObject();
+    const bool childrenAreWrongType   = ! children.isVoid() && ! children.isArray();
+
+    if (! value.isObject() || tagName.isEmpty() || propertiesAreWrongType || childrenAreWrongType) {
         return nullptr;
     }
 
     auto element = std::make_unique<juce::XmlElement>(tagName);
 
-    if (const juce::DynamicObject* properties = value.getProperty(propertiesKey, juce::var()).getDynamicObject()) {
+    if (const juce::DynamicObject* properties = propertiesValue.getDynamicObject()) {
         for (const juce::NamedValueSet::NamedValue& property : properties->getProperties()) {
             element->setAttribute(property.name.toString(), property.value.toString());
         }
     }
-
-    const juce::var children = value.getProperty(childrenKey, juce::var());
 
     for (int index = 0; index < children.size(); ++index) {
         std::unique_ptr<juce::XmlElement> child = toElement(children[index]);
@@ -68,4 +79,36 @@ std::unique_ptr<juce::XmlElement> StateJson::toElement(const juce::var& value)
     }
 
     return element;
+}
+
+int StateJson::nestingDepth(const char* bytes, std::size_t byteCount)
+{
+    int depth   = 0;
+    int deepest = 0;
+
+    bool insideString = false;
+    bool escaped      = false;
+
+    for (std::size_t index = 0; index < byteCount; ++index) {
+        const char character = bytes[index];
+
+        if (escaped) {
+            escaped = false;
+        }
+        else if (insideString && character == '\\') {
+            escaped = true;
+        }
+        else if (character == '"') {
+            insideString = ! insideString;
+        }
+        else if (! insideString && (character == '{' || character == '[')) {
+            ++depth;
+            deepest = std::max(deepest, depth);
+        }
+        else if (! insideString && (character == '}' || character == ']')) {
+            --depth;
+        }
+    }
+
+    return deepest;
 }
