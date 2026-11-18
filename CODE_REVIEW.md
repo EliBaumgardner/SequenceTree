@@ -1,27 +1,27 @@
 # SequenceTree — Code Review
 
 **Repo:** https://github.com/elibaumgardner/SequenceTree
-**Commit reviewed:** `cd0ec6a` — "Organise Source into Core, Processor and Editor". The first draft was written against `4600d21`. On 2026-11-17 every finding was re-checked against the code and re-cited at `cd0ec6a`, the commit this file lands on.
-**Date:** 2026-11-17
+**Commit reviewed:** `507ad4c` — "Drive the encapsulation and selection-box gesture tests through NodeController's mouse events…". The first draft was written against `4600d21` and re-checked at `cd0ec6a` on 2026-11-17. This update re-checks every finding against `507ad4c` and adds Day 2's findings. All of Day 2's fixes landed in `fdefb93`; `507ad4c` itself only reworks the gesture tests.
+**Date:** 2026-11-18
 **Scope:** Daily recurring review. Each day adds new findings, refines old ones, and re-checks earlier ones against the current code.
 
 ## At a glance
 
-- 197 C++ files in `Source/` and `Tests/`, 34,785 lines. 90 `.cpp` files in `Source/`, 8 test files, 169 `TEST_CASE`s.
-- 130 findings were raised on Day 1. After re-checking, none of the 7 Criticals holds as Critical, and one finding holds as High.
+- 199 C++ files in `Source/` and `Tests/`, 35,508 lines. 90 `.cpp` files in `Source/`, 8 test files, 182 `TEST_CASE`s.
+- 134 findings in total: 130 raised on Day 1, 3 new on Day 2, and 1 new unchecked item. Day 2 fixed 23 Day 1 findings — including the only High — and confirmed 2 of the 3 items Day 1 had not yet checked. No new High or Medium findings.
 
 | Status | Count |
 |---|---|
-| Open: High | 1 |
-| Open: Medium | 5 |
-| Open: Low (includes documentation fixes) | 54 |
+| Open: High | 0 |
+| Open: Medium | 3 |
+| Open: Low (includes documentation fixes) | 39 |
 | Needs a test or the owner's decision | 8 |
 | Settled by the owner, or not a defect | 9 |
 | Withdrawn: did not survive re-checking | 29 |
 | Suggestions, not defects | 16 |
 | Duplicates (merged into another finding) | 4 |
-| Fixed | 1 |
-| Not yet checked | 3 |
+| Fixed | 24 |
+| Not yet checked | 2 |
 
 - What is genuinely good: the real-time design is deliberate (pre-allocated pools, lock-free FIFOs, epoch-retired snapshots, a per-call script step budget, and a RealtimeSanitizer test of `processBlock`), listener hygiene in UI code is consistent, the documentation is unusually deep, and traversal and script test coverage is deep.
 
@@ -43,19 +43,13 @@
 
 ## Open — High
 
-### G-M16 — Pasted arrows lose their pitch offset, so the first move after a paste does not shift the pitch
-**High.** `connectClipboardNodes` copies each arrow between copied nodes with `getArrowInfo` / `setArrowInfo` (`Source/Processor/Document/Clipboard.cpp:133`), and neither reads nor writes `ArrowPitchOffset` (`Source/Processor/Document/ArrowBindingOps.cpp:111-156`). A pasted pitch-bound arrow therefore starts with its offset at the default, and `applyArrowPitchOffset` treats a default offset as "record it, don't shift" (`Source/Processor/Document/ArrowBindingOps.cpp:171-175`). The first move of a pasted child records the new offset and leaves its pitch unchanged, where the same move on the source arrow shifts the pitch.
-Fix: copy `ArrowPitchOffset` from the source arrow in `connectClipboardNodes`. Test: copy a pitch-bound parent and child, paste, move the pasted child, and check that its pitch changes as the source's does.
+None open. G-M16, the only High, was fixed in `fdefb93` (see Fixed / re-checked).
 
 ## Open — Medium
 
 ### S-H1 — `and` / `or` are not short-circuited
 **Medium; the owner decides between the two fixes.** `emitBinary` emits the left operand, then the right, then one `LogicalAnd` / `LogicalOr` (`Source/Core/Script/ScriptEmitter.cpp:1034-1044`), so the right side always runs. The original examples do not compile: `advance` returns a `Node`, and `and` / `or` take numbers only (`Source/Core/Script/ScriptEmitter.cpp:1054`). What is affected is a helper with side effects on the right side (one that assigns a member, or calls `playNote` from `main`), as in `ready and bump()`. The user guide says nothing about evaluation order (`documentation/ScriptingLanguage.md:104`).
 Fix: either short-circuit (jump past the right operand on `JumpIfFalse` / `JumpIfTrue`), which changes what existing scripts with such helpers do, or document eager evaluation. Test: `0 and bump()` leaves the member `bump` writes unchanged.
-
-### S-M4 — Member and global initialisers run in declaration order, and the user guide says they are not allowed
-**Medium (documentation).** The user guide says a member cannot take a starting value (`documentation/ScriptingLanguage.md:40`). The developer guide says it can (`documentation/Development.md:91`), the emitter compiles initialisers (`emitInitializer`, `Source/Core/Script/ScriptEmitter.cpp:689-739`), and a test covers them (`Tests/Unit/ScriptCompilerTests.cpp:423`). Initialisers run in declaration order, globals before members (`Source/Core/Traversal/TraversalLogic.cpp:278-320`), so `int a = b; int b = 5;` leaves `a` at 0. The user guide also never mentions out-of-class variables.
-Fix: correct the user guide (initialisers and globals are allowed, run in declaration order, and a variable declared later still reads 0 or `none`). Rejecting a forward reference is optional.
 
 ### G-H6 — Copying one member of a group does not copy the group, contrary to `Clipboard.h`
 **Medium; the owner decides which side is right.** The header promises that copy first adds every member of any group one of the ids is in (`Source/Processor/Document/Clipboard.h:18-19`). `withEncapsulatedMembers` asks `memberIds` of each selected id (`Source/Processor/Document/Clipboard.cpp:354-372`), which returns members only when the id is the group node itself (`Source/Processor/Document/EncapsulationOps.cpp:131-143`). Copying one member therefore copies that node alone, and paste does not recreate its group.
@@ -66,75 +60,56 @@ Fix: either widen through the member's `EncapsulatorId`, or change the header to
 The original fix (clamp the count to 64) is rejected: the seeded counts decide which alternative is sounding, and counts are compared against limits up to 9,999, so a clamp changes what preview plays.
 Settle it: time one preview at count 9,999 with 1, 10 and 50 alternative hosts. Only if that is too slow for one block, look for a way to seed the counts that gives the same alternatives.
 
-### U-H4 — The README badge says C++20; the code needs C++23
-**Medium (documentation).** `README.md:9` shows a C++20 badge, while every target sets `cxx_std_23` (`CMakeLists.txt:34`, `CMakeLists.txt:67`). C++23 is required, not incidental: the script compiler uses `std::expected` (`Source/Core/Script/ScriptParser.h:4`, `Source/Core/Script/ScriptEmitter.h:4`). The original fix's alternative, dropping CMake to C++20, would break the build.
-Fix: change the badge to C++23.
-
 ## Open — Low
 
 ### Documentation gaps (all confirmed; fix in `documentation/ScriptingLanguage.md`)
-- **S-M1** — `advance(n)` moves at most 64 nodes (`Source/Core/Traversal/TraversalLogic.h:105`), and `advance(n)` with `n < 1` stays on the current node (`Source/Processor/Playback/TraversalDispatcher.cpp:31-33`). Neither is documented (`documentation/ScriptingLanguage.md:118`).
-- **S-M8** — Nested calls share the top-level call's 8,192-instruction budget (`Source/Core/Traversal/ScriptRun.cpp:27-60`); the guide says each run of a function gets its own (`documentation/ScriptingLanguage.md:157`). The "host work per step" half is bounded by that same budget.
-- **S-M9** — A second `playNote` in one `main` run replaces the first (`Source/Processor/Playback/TraversalDispatcher.cpp:81-87`). The guide should say one note per step, and the last call wins (`documentation/ScriptingLanguage.md:119`).
-- **S-L5** — The base class is optional and the class name is free (`Source/Core/Script/ScriptParser.cpp:123-144`); the guide presents one fixed form. The trailing `;` half was not checked.
-- **S-L6** — `bool`, `true` and `false` are missing from the Types table (`documentation/ScriptingLanguage.md:54-59`). The `%`-on-`bool` half was not checked.
-- **S-L7** — `1.` and `1e10` are not decimals (`Source/Core/Script/ScriptLexer.cpp:92-134`); the guide should say that only `digits.digits` is.
+- **S-L5** — The trailing `;` half, now checked: the class need not end with `;`. `Parser::run` skips terminators after the class body (`Source/Core/Script/ScriptParser.cpp:23-25`), and `;` lexes as a terminator (`Source/Core/Script/ScriptParser.cpp:301-303`), so `}` alone compiles. The guide still presents the class as "closed with `};`" (`documentation/ScriptingLanguage.md:19`). The base-class half is fixed: the guide now says the name is free and `: defaultTraversal` is optional.
 
 ### Script language
 - **S-M3** — `int x = 1; int x = 2;` in one block compiles: `emitDeclare` and `declareLocal` never check the current scope (`Source/Core/Script/ScriptEmitter.cpp:223-256`, `Source/Core/Script/ScriptEmitter.cpp:785-790`). Fix: report "'x' is already declared" for a binding made since `scopeMarks.back()`; shadowing in a nested block stays legal.
-- **S-H2** — In a trial run, writes to more than 64 distinct node-state pairs are dropped silently (`Source/Core/Traversal/ScriptRun.cpp:561-582`). Needs a script that touches over 64 nodes' state in one peek. Fix: fault the trial call when the table is full.
 - **S-M2** — The ban on `advance` / `playNote` inside `advance` checks only the function named `advance` (`Source/Core/Script/ScriptEmitter.cpp:931`). A helper bypasses it, but the nested call then returns `none` or does nothing, so this is a missing diagnostic, not a safety problem.
-- **S-M6** — A decimal literal too large for `double` becomes `inf` with no diagnostic: `strtod` is unchecked and the integer-overflow flag is reset at the `.` (`Source/Core/Script/ScriptLexer.cpp:112`, `Source/Core/Script/ScriptLexer.cpp:126`).
 - **S-M7** — `-2147483648` cannot be written, because the lexer rejects `2147483648` (`Source/Core/Script/ScriptLexer.cpp:100-118`) before `parseUnary` folds the minus (`Source/Core/Script/ScriptParser.cpp:793-822`).
-- **S-L1** — An unknown import or a bad class header stops parsing (`Source/Core/Script/ScriptParser.cpp:34-60`), so not every error is reported at once as the guide says (`documentation/ScriptingLanguage.md:166`).
+- **S-L2** — Checked on Day 2: a function body missing its `}` produces two diagnostics at the same place. `parseBlock` fails with "expected '}'" at the end of the file (`Source/Core/Script/ScriptParser.cpp:432`), the failure propagates out of `parseClassMember`, `recover()` stops at once because it is already at `End` (`Source/Core/Script/ScriptParser.cpp:311-315`), and `parseClassBody` then adds "expected '}' to close the class" at the same token (`Source/Core/Script/ScriptParser.cpp:160-163`). The guide's "every error is reported at once" does not promise one diagnostic per error, but two for one missing brace is noise. Fix: in `parseClassBody`, do not add the second diagnostic when the failure that just happened was already an "expected '}'".
+- **S-L4** — Checked on Day 2: the stack high-water over-counts by one slot at each call site. `emit` raises the high water from `stackDelta(Call)`, which is +1 (`Source/Core/Script/ScriptEmitter.cpp:1149-1150`, `Source/Core/Script/ScriptEmitter.cpp:759-762`), and only afterwards does `emitCall` subtract the parameter count (`Source/Core/Script/ScriptEmitter.cpp:982`). At run time the call pops its arguments before anything is pushed, so the peak the emitter records (arguments + 1) never occurs. The over-count is conservative — it can only falsely reject a deeply nested expression, never overflow the real stack — so this stays Low. Fix: apply the parameter-count subtraction before the high-water update, or give `Call` a delta that knows the parameter count.
+- **S-L8** — A member named `current` is refused (`Source/Core/Script/ScriptEmitter.cpp:34-37`), but a local of that name is not, and the same holds for `traversal`. Checked on Day 2: a member or local named `traversal` shadows the context value — `emitField` only treats `traversal.id` as the traversal id when no local, member or global of that name exists (`Source/Core/Script/ScriptEmitter.cpp:871-873`) — and a local named `current` shadows the context node the same way, since `emitName` checks locals first. Nothing about this is documented. Fix: refuse `traversal` as a member name like `current`, and either refuse both as locals or document that they shadow the context.
 - **S-L3** — There is no cap on the size of a compiled script; only execution is capped (`Emitter::emit` appends with no limit, `Source/Core/Script/ScriptEmitter.cpp:767-772`).
-- **S-L8** — A member named `current` is refused (`Source/Core/Script/ScriptEmitter.cpp:34-37`), but a local of that name is not. The `traversal` member half was not checked.
 - **S-L9** — The VM reads 0 for an out-of-range field, context or convert operand instead of faulting (`Source/Core/Traversal/ScriptRun.cpp:294`, `Source/Core/Traversal/ScriptRun.cpp:306`). Only hand-built bytecode can reach it; the compiler never emits one. (B-H5 merged here.)
 
 ### Audio and real-time
-- **C1** — `createRTNodes` asserts on an invalid child instead of skipping it (`Source/Processor/AudioModel/RTGraphBuilder.cpp:494-497`), unlike the two sibling passes. Editing cannot leave an arrow to a missing node: `removeNode` disconnects every parent (`Source/Processor/Document/GraphState.cpp:274-276`), and `canConnect` refuses duplicates (`Source/Editor/Canvas/GraphDocument.cpp:159-168`). Only a corrupt or hand-edited state file reaches it. Fix: `continue`, as the siblings do.
 - **A-H1** — The script budget is per call (`Source/Core/Traversal/ScriptRun.cpp:27-60`), so one note can run a few budgets (`main`, `advance`, a trial peek, a modulator decision). The original's "64 trial runs per step" is wrong: `skipAhead` never runs a script, because the scripted path returns first (`Source/Core/Traversal/TraversalLogic.cpp:122-126`). Reaching a block overrun needs a script that spends its whole budget on every call, on many notes ending in one block.
 - **A-H3** — The event cap is a count (`Source/Processor/Playback/EventManager.cpp:29`), and notes left over when it is hit fire at sample 0 of the next block (`Source/Processor/Playback/EventManager.cpp:71-73`). Needs over 4,096 events in one block.
 - **A-M3** — `scheduleNote` drops notes past 1,024 sounding at once (`Source/Processor/Playback/NoteScheduler.cpp:21-23`). A drop counter would be cheap.
-- **A-M4** — The virtual MIDI port is stamped with wall-clock time and drained by a 1 ms timer on its own thread, not the audio thread (`Source/Processor/Channels/VirtualMidiOutput.cpp:44-76`). Document it as best effort.
 - **A-M7** — Pool and connection lookups are linear scans over small arrays, at most 128 slots (`Source/Core/Traversal/TraversalPool.h:81-100`). The 1,024-node cap of `NodeStateTable` is documented (`Source/Core/Traversal/NodeStateTable.h:20-22`).
 - **A-M8** — Overflow of `previewRequests` (16 entries) and of the virtual-MIDI FIFO is set but never read (`Source/Processor/Channels/CommandFifo.h:42`). Needs 16 preview clicks within one block.
 - **A-L1** — The orphan scan runs every block (`handleOrphanNotes`, `Source/Processor/Playback/EventManager.cpp:76`) and the flag scan every event (`startNextDue`, `Source/Processor/Playback/FlagScheduler.cpp:76`), even when nothing changed. Cheap to skip.
 - **A-L3** — Record mode in `AudioUIBridge` drops entries past capacity without a flag and dedups linearly (`send`, `Source/Processor/Channels/AudioUIBridge.cpp:46`).
 
 ### Graph, traversal and state
-- **C4** — `replaceState` clears the document and copies the restored one with no validation (`Source/Processor/Document/GraphState.cpp:373-396`). Reachable only from a file that parses but is corrupt. The "ids from top-level children only" point is wrong: every node is a direct child of `nodeMap`.
 - **G-H2** — `NodeStateTable` does not check its slot argument (`Source/Core/Traversal/NodeStateTable.h:30-44`); no caller passes an invalid one.
-- **G-H5** — One corrupt child makes `StateJson` reject the whole document, with no error detail (`Source/Processor/Document/StateJson.cpp:60-68`). All-or-nothing is a safe failure; reachable only from a corrupt file.
-- **G-H9** — `WeightedPick` does not clamp a negative probability (`Source/Core/Traversal/WeightedPick.cpp:4-13`). The editor allows 0 to 100, so only a hand-edited file reaches it.
+- **G-H5** — One corrupt child makes `StateJson` reject the whole document, with no error detail (`Source/Processor/Document/StateJson.cpp:60-68`). All-or-nothing is a safe failure; reachable only from a corrupt file. Refined on Day 2: the refusal is now deliberate and the user is told the patch could not be read (`Source/Processor/PluginProcessor.cpp:216`), but there is still no per-child detail — a patch with one bad node and a patch with a hundred both report the same sentence.
 - **G-H10** — When a host and its active alternative both have an arrow to the same root, that root's cross-tree count advances twice in one step (`Source/Core/Traversal/TraversalLogic.cpp:174-257`). Two arrows from one host to one root cannot exist (`connectionFor` dedups by child id, `Source/Processor/AudioModel/RTGraphBuilder.cpp:769-781`), and pushing the root on every step of its switch phase is the switch mechanism.
-- **G-H13** — Entry points in `GraphState` and `NodeFactory` check their arguments with `jassert` only (for example `Source/Processor/Document/GraphState.cpp:55-56`); every caller passes a valid parent.
-- **G-H14** — `kindOf` maps an unknown type to `Kind::Node` (`Source/Processor/Document/GraphState.cpp:532-565`); only a corrupt file has one.
-- **G-H15** — `indexNode` overwrites a duplicate id, and `unindexNode` erases it unconditionally (`Source/Processor/Document/GraphState.cpp:598-622`); only a corrupt file has duplicate ids.
+- **G-H13** — Entry points in `GraphState` and `NodeFactory` check their arguments with `jassert` only (for example `Source/Processor/Document/Graph/GraphState.cpp:55-56`); every caller passes a valid parent.
 - **G-H17** — `rebuildAllGraphs` rebuilds root graphs only (`Source/Processor/AudioModel/RTGraphBuilder.cpp:47-53`), so after an ornament change modulator-root graphs keep their old data. Whether a modulator node can carry an ornament was not checked.
-- **G-H19** — `pasteAt` trusts `contents` (`Source/Processor/Document/Clipboard.cpp:65-83`); only `copy` fills it, with distinct ids.
+- **G-H19** — `pasteAt` trusts `contents` (`Source/Processor/Document/Graph/Clipboard.cpp:65-83`); only `copy` fills it, with distinct ids.
 - **G-M6** — The selection random value advances once per step (`Source/Core/Traversal/TraversalLogic.cpp:431-433`), so two weighted picks in one step with the same span pick the same rank.
-- **G-M9** — The real point: `Choices::Fixed` is tested (`Source/Core/Traversal/TraversalPool.h:118`) but never set anywhere, since `choices` starts as `Random` and nothing assigns it (`Source/Core/Traversal/TraversalPool.h:214`), so that mode is dead code. The duplicate-`runId` half is covered by `acquire` resetting the walk (`Source/Core/Traversal/TraversalPool.h:113`).
 - **G-M10** — An async update can publish twice: `updateDurationMaps`, then `publishQueuedGraphs` (`Source/Processor/AudioModel/RTGraphBuilder.cpp:250`, `Source/Processor/AudioModel/RTGraphBuilder.cpp:256`). Cost only.
 - **G-M12** — `rememberOwners` drops a change whose tree has no owner, silently (`Source/Processor/AudioModel/RTGraphBuilder.cpp:706-729`).
-- **G-M14** — `StateJson` drops wrong-typed `properties` / `children` instead of rejecting them (`Source/Processor/Document/StateJson.cpp:52-58`); corrupt file only.
-- **G-M17** — Paste recreates a group only when every member was pasted (`Source/Processor/Document/Clipboard.cpp:398-403`).
-- **G-M18** — `removeMember` does not reset the removed node's own `EncapsulatorId` (`Source/Processor/Document/EncapsulationOps.cpp:116-129`); harmless for its only caller, `removeNode`.
-- **G-M19** — `getArrowInfo` casts stored ints to enums without a range check (`Source/Processor/Document/ArrowBindingOps.cpp:143-149`); corrupt file only.
-- **G-M20** — `StateJson` recurses with no depth limit (`Source/Processor/Document/StateJson.cpp:31-33`, `Source/Processor/Document/StateJson.cpp:60-68`); corrupt file only. A depth cap in `StateJson` would not help on its own, because `juce::JSON::parse` recurses first. (B-H1 merged here.)
-- **G-L2** — `increment` can overflow if a script set a count near `INT_MAX` (`Source/Core/Traversal/NodeStateTable.cpp:48-63`).
+- **G-M17** — Paste recreates a group only when every member was pasted (`Source/Processor/Document/Graph/Clipboard.cpp:398-403`).
+- **G-M18** — `removeMember` does not reset the removed node's own `EncapsulatorId` (`Source/Processor/Document/Graph/EncapsulationOps.cpp:116-129`); harmless for its only caller, `removeNode`.
 - **G-L4** — Note values are copied without range checks; the editor limits them. The original's "`fallbackValue` is unused" is wrong: it is used at `Source/Processor/Playback/NoteScheduler.cpp:32-33` and `Source/Processor/Playback/NoteScheduler.cpp:165`.
+- **G-L6** — New on Day 2. `findNodeMapProblem` refuses an unknown node type and a duplicated id, but it accepts a node id that is missing, 0, negative, or `INT_MAX` (`Source/Processor/Document/Graph/GraphState.cpp:567-586`). A node with no `Id` property reads as id 0 (a `juce::var` with no value converts to 0; the JUCE submodule is empty in this clone, so that conversion was not re-read from source), and 0 is also the "no parent" sentinel, so the node is indexed under an id that means "no node". A node with id `INT_MAX` loads, and `replaceState` then sets `nodeIdIncrement` to it (`Source/Processor/Document/Graph/GraphState.cpp:387-395`), so the next node creation overflows `nodeIdIncrement + 1` (`Source/Processor/Document/Graph/GraphState.cpp:23`), which is signed overflow. Reachable only from a hand-edited patch. Fix: refuse ids below 1 in `findNodeMapProblem` (and, for completeness, above a sane maximum). Test: a patch with a node whose `Id` is `0`, `-5`, or `2147483647` is refused with a reason in `loadError`.
 
 ### UI, build and files
 - **U-H3** — Paint buffers grow with the canvas, but sizes are in points and only the active layer is allocated (`Source/Editor/Canvas/ValueField.cpp:452-463`); the 132 MB figure is overstated.
 - **U-M3** — `makeNode` returns `nullptr` for an unknown tree type with no assertion (`Source/Editor/Canvas/NodeCanvas.cpp:435-470`).
 - **U-M5** — `DisplayMode::Duration` is not offered by the display menu (`Source/Editor/Bars/Titlebar.cpp:185-190`), so its case in `Node` never runs. The real finding is that the mode is dead; its missing rebind is not reachable.
-- **U-M8** — A state that fails to load is reported only with `DBG`, so a release build gives no message (`Source/Processor/PluginProcessor.cpp:213`, `Source/Processor/PluginProcessor.cpp:217`, `Source/Processor/PluginProcessor.cpp:222`). (B-H2 merged here.)
+- **U-L6** — New on Day 2. Editor commands die at the OrnamentWindow instead of falling through to the editor. `EditorCommandManager::getFirstCommandTarget` returns the focused component's target for any command id without asking whether that target lists the command (`Source/Editor/EditorCommandManager.cpp:8-17`), `OrnamentWindow::perform` returns false for everything but undo and redo (`Source/Editor/Ornaments/OrnamentWindow.cpp:84-101`), and `OrnamentWindow::getNextCommandTarget` returns `nullptr` (`Source/Editor/Ornaments/OrnamentWindow.cpp:109-112`). So Space, Delete, Copy, Paste and Select All pressed while focus is inside the OrnamentWindow do nothing, where the same keys in the main window toggle playback or edit the graph. This is not a regression — before `fdefb93` no key listener was registered on that window at all, so those keys did nothing there either — but the new routing now receives the keys and drops the ones the window does not handle instead of letting them reach the editor. Fix: have `getFirstCommandTarget` skip a target that does not list the command, or have `OrnamentWindow::getNextCommandTarget` return the editor.
 - **U-M9** — Node colour resolution is written three times (`Source/Editor/Canvas/NodeCanvas.cpp:117-121`, `Source/Editor/Canvas/NodeCanvas.cpp:207-210`, `Source/Editor/Nodes/Node.cpp:215-225`). The fourth site, in `AudioCommandDrainer`, resolves a traversal colour and is not the same code.
 - **U-M10** — `Node::mouseMove` and `mouseExit` have the same body (`Source/Editor/Nodes/Node.cpp:191-211`).
 - **U-M11** — The VBlank callback marks the frosted backdrop stale every frame (`Source/Editor/PluginEditor.cpp:64-74`), and some refreshes repaint the whole canvas. Cost not measured.
 - **B-H6** — `createDirectory` results are unchecked (`Source/Processor/PluginDocument.cpp:80`, `Source/Processor/Document/Ornaments/OrnamentLibraries.cpp:33`).
-- **B-M1** — The test targets pass `-Wall -Wextra` with no MSVC guard (`CMakeLists.txt:193`, `CMakeLists.txt:207`, `CMakeLists.txt:221`), unlike the plugin and core targets.
+- **B-M1** — Partly fixed in `fdefb93`: `SequenceTree_Tests` and `SequenceTree_GraphTests` now guard `-Wall -Wextra` with `if(MSVC)` / `/W4` (`CMakeLists.txt:194-197`, `CMakeLists.txt:212-216`), but `SequenceTree_RealtimeTests` still passes `-Wall -Wextra` with no MSVC guard (`CMakeLists.txt:230`), so that target would still break on an MSVC build. Fix: give it the same guard; it is the only test target without one.
+- **B-L6** — New on Day 2. The patch autosave write is unchecked too: `getStateInformation` calls `patchFile.replaceWithData(...)` and ignores the result (`Source/Processor/PluginProcessor.cpp:197`), so a patch that fails to save — a read-only folder, a full disk — is silent, and the user is left believing the patch file is current. The state itself is still in the host's own save; only the `.sqtree` copy is at stake. Fix: report the failure the same way `loadError` reports a failed load, or at least `DBG` it. (Related to B-H6, which is the same omission on `createDirectory`.)
 
 ## Needs a test or the owner's decision
 
@@ -144,7 +119,7 @@ Fix: change the badge to C++23.
 - **G-M11** — A child with two parents can get `parentId` 0 when its first parent is built after it (`Source/Processor/Document/GraphState.cpp:142-175`, `Source/Processor/AudioModel/RTGraphBuilder.cpp:462-484`). Test with a shared child under a modulator.
 - **G-H8** — The `insertNodeAfter` half cannot happen (it is only given a newly created child). The `create` half can only happen if a node already in a group can be a span's first click (`Source/Processor/Document/EncapsulationOps.cpp:28-38`). Test that gesture.
 - **G-M3** — After a traversal-arrow jump, Live mode sets the loop limit to endless instead of the new tree's limit (`Source/Core/Traversal/TraversalLogic.cpp:550-552`). The owner's call.
-- **U-M7** — Unverified: editor-level shortcuts may take keys from a focused text editor (`Source/Editor/PluginEditor.cpp:143-190`). Test by typing Space and Cmd+Z in the Rules window.
+- **U-M7** — Partly answered on Day 2. The Rules window never registers the editor's command key mappings — only the main window (`Source/Editor/PluginEditor.cpp:130-142`) and the OrnamentWindow (`Source/Editor/Ornaments/OrnamentWindow.cpp:23`) add `commandManager.getKeyMappings()` as a key listener, and `TraversalRulesWindow` adds no key listener at all — so no editor shortcut can fire while focus is in the Rules window; Space types a space in its code editor. What still needs the runtime test is whether the code editor's own Cmd+Z undoes text there rather than the graph: that is JUCE's `CodeEditorComponent` behaviour, and the JUCE submodule is empty in this clone, so it was not re-read from source.
 - **A-M1** — Suspected: `publish` and `releaseRetiredSnapshots` assume the message thread (`Source/Processor/AudioModel/AudioSnapshotPublisher.cpp:25-47`, `Source/Processor/AudioModel/AudioSnapshotPublisher.cpp:99-102`), and `releaseResources` calls the latter (`Source/Processor/PluginProcessor.cpp:34-39`). Settle it by asserting the message thread there and running under each host.
 
 ## Settled by the owner, or not a defect — do not re-raise
@@ -178,7 +153,7 @@ Fix: change the badge to C++23.
 - **G-M2** — Documented: a script's choice owns the modulator step, as G-H11.
 - **G-M4** — On the first visit `advanceAlternative` returns before choosing (`Source/Core/Traversal/ChildSelector.cpp:36-42`), so the host branch never runs with the count still at 0.
 - **G-M8** — The init functions (`Source/Core/Traversal/TraversalLogic.cpp:299-317`) set the same values whether they first run in a peek or in the committed run; running them earlier has no effect.
-- **G-M13** — The node-map listener fires only for trees attached under `nodeMap`, so the parent chain it reads is fixed (`Source/Processor/AudioModel/RTGraphBuilder.cpp:90-143`). The `isAudioProperty` half was not checked.
+- **G-M13** — The node-map listener fires only for trees attached under `nodeMap`, so the parent chain it reads is fixed (`Source/Processor/AudioModel/RTGraphBuilder.cpp:90-143`). The `isAudioProperty` half was checked on Day 2 and is sound: every identifier in `NodePropertyTable::rows` is a property of a node tree (`Source/Processor/Document/TypedProperties.cpp:6-19`), and the one that also lives on a note tree, `MidiChannel`, still resolves to the right node because `rememberOwners` climbs parents until it finds a tree with a `RootNodeId` (`Source/Processor/AudioModel/RTGraphBuilder.cpp:709-729`).
 - **G-M15** — Documented: only arrows between copied nodes are reconnected, and a node whose parent was not copied becomes a root (`Source/Processor/Document/Clipboard.h:20-24`).
 - **G-L1** — A flag's sign is not part of the traversal it names, so dropping it when collecting keys is right (`Source/Processor/Document/TraversalState.cpp:42-79`); a flag value is a traversal id and cannot be `INT_MIN`.
 - **G-L3** — Node ids start at 1 (`Source/Processor/Document/GraphState.cpp:23`), so `parentId` 0 means no parent. The "parent not built yet" case is G-M11.
@@ -219,23 +194,50 @@ These are opinions about style, tooling or structure. They may be worth doing, b
 
 ## Not yet checked
 
-- **S-L2** (two diagnostics for a missing `}`), **S-L4** (stack high-water over-count), **S-L10** (parser leniencies). Also the unchecked halves named in S-L5, S-L6, S-L8 and G-M13, and the counts in B-L1 to B-L5.
+- **S-L10** (parser leniencies). Also the `%`-on-`bool` half of S-L6, and the counts in B-L1 to B-L5.
+- Whether a patch whose JSON starts with a UTF-8 byte-order mark loads: `StateJson::read` trims leading whitespace and then requires `{` (`Source/Processor/Document/StateJson.cpp:9-15`), and whether `trimStart` strips a BOM is JUCE behaviour the empty submodule in this clone could not answer.
 
 ## Suggested fix order
 
-1. G-M16: copy `ArrowPitchOffset` on paste, with its test.
-2. The owner's decisions: S-H1 (short-circuit or document), G-H6 (widen or change the header), and the questions under "Needs a test or the owner's decision".
-3. Documentation: U-H4, S-M4, and the gaps listed under Open: Low.
-4. S-M3: the duplicate-local diagnostic.
-5. A-H2: measure before deciding.
-6. C1: `continue` on an invalid child, as the sibling passes do (defensive).
+1. The owner's decisions: S-H1 (short-circuit or document), G-H6 (widen or change the header), and the questions under "Needs a test or the owner's decision".
+2. S-M3: the duplicate-local diagnostic.
+3. A-H2: measure before deciding.
+4. G-L6: refuse out-of-range node ids at the load boundary, with its test.
+5. U-L6: let editor commands fall through from the OrnamentWindow, or document that they do not.
+6. Documentation: the trailing-`;` wording in S-L5, and the `traversal` / `current` shadowing in S-L8.
 7. Everything else under Open: Low, while touching those files anyway.
 
 ## Fixed / re-checked
 
 - **B-M4** — The test target no longer lists plugin sources by hand: the `SequenceTreeCore` library, added in `cd0ec6a`, is linked by both the plugin and `SequenceTree_Tests` (`CMakeLists.txt:52`, `CMakeLists.txt:194`).
 
+Fixed in `fdefb93` (Day 2). Behaviour fixes each have a test added in the same commit or in `507ad4c`; documentation fixes are verified against the guide text.
+- **G-M16** — `connectClipboardNodes` now copies the source arrow's `pitchOffset` when it is set (`Source/Processor/Document/Graph/Clipboard.cpp:137-147`), so a pasted pitch-bound arrow transposes on its first move exactly as the source does. Test: "a pasted pitch-bound arrow keeps its pitch offset, so moving the pasted child transposes it as it does the original" (`Tests/Integration/GraphTests.cpp`).
+- **C1** — `createRTNodes` now skips an invalid child with `continue` instead of asserting (`Source/Processor/AudioModel/RTGraphBuilder.cpp:493-497`), as the two sibling passes do.
+- **S-H2** — A trial run that outgrows its write table now faults: `writeState` sets `trial.overflowed` (`Source/Core/Traversal/ScriptRun.cpp:583`) and `call` returns -1 when it is set (`Source/Core/Traversal/ScriptRun.cpp:62`), and `peekNextTarget` treats that -1 as "no peek" via `nodes.find` returning null (`Source/Core/Traversal/TraversalLogic.cpp:329-336`). A committed run is unaffected. Test: "a trial run that writes more nodes than its table holds faults, and a committed run does not" (`Tests/Unit/ScriptCompilerTests.cpp`).
+- **G-H9** — `WeightedPick::tally` and `accepts` clamp a negative probability to 0 (`Source/Core/Traversal/WeightedPick.cpp:8`, `Source/Core/Traversal/WeightedPick.cpp:38`). Tests: the parity walk test and "a negative probability weighs the same as a probability of 0" (`Tests/Unit/TraversalTests.cpp`).
+- **G-L2** — `NodeStateTable::increment` stops at `INT_MAX` instead of overflowing (`Source/Core/Traversal/NodeStateTable.cpp:62-68`). Test: "incrementing a count already at the largest int leaves it there" (`Tests/Unit/TraversalTests.cpp`).
+- **G-M9** — `Choices::Fixed` is gone: the enum, the `choices` member and the branch in `acquire` were removed (`Source/Core/Traversal/TraversalPool.h:115-118`, `Source/Core/Traversal/TraversalPool.h:200-214`), so there is no dead mode left.
+- **G-M14** — `StateJson::toElement` now rejects a `properties` value that is not an object and a `children` value that is not an array (`Source/Processor/Document/StateJson.cpp:53-57`). Test: "a state whose properties or children are not an object and an array is not read" (`Tests/Integration/GraphTests.cpp`).
+- **G-M19** — `getArrowInfo` range-checks the stored type and bindings and falls back to the defaults for out-of-range values (`Source/Processor/Document/Graph/ArrowBindingOps.cpp:143-165`). Test: "an arrow type or binding outside its enum reads as the default" (`Tests/Integration/GraphTests.cpp`).
+- **G-M20** — `StateJson::read` measures the JSON nesting depth before parsing and refuses anything deeper than 256 (`Source/Processor/Document/StateJson.cpp:13-17`, `Source/Processor/Document/StateJson.cpp:83-114`), so `toElement`'s recursion is bounded. Tests: the 300-level deep state is refused, the 10-level one reads, and brackets inside string values are not counted as nesting (`Tests/Integration/GraphTests.cpp`). Note: the pre-check covers the JSON form only; the legacy binary form still goes through JUCE's XML parser, whose depth handling was not checked (JUCE submodule empty).
+- **S-M6** — The lexer now reports a decimal too large for `double`: `strtod`'s result is checked with `std::isinf` (`Source/Core/Script/ScriptLexer.cpp:127-128`). Test: "a decimal literal too large for a double is reported" (`Tests/Unit/ScriptCompilerTests.cpp`).
+- **U-M8** — A failed load is no longer `DBG`-only: `setStateInformation` leaves the reason in `loadError` (`Source/Processor/PluginProcessor.cpp:203-254`) and opening a patch shows it in an alert (`Source/Editor/Bars/PatchControls.cpp:107-108`). Tests: refused states leave their reason in `loadError`, a later good state clears it, and a refused file leaves the open patch untouched (`Tests/Integration/GraphTests.cpp`).
+- **U-H4** — The README badge now says C++23 (`README.md:9`).
+- **S-M4** — The user guide now says members and out-of-class variables can take starting values, that they run in declaration order with globals first, and that reading a variable not set up yet gives 0 or `none` (`documentation/ScriptingLanguage.md:40-48`).
+- **S-M1** — The guide now says `advance(n)` above 64 counts as 64 and below 1 stays put (`documentation/ScriptingLanguage.md:127`).
+- **S-M9** — The guide now says a step plays one note and the last `playNote` wins (`documentation/ScriptingLanguage.md:128`).
+- **S-L6** — `bool` is in the Types table (`documentation/ScriptingLanguage.md:63`).
+- **S-L7** — The guide now says a decimal is digits, a point, then more digits, and that `1.` and `1e10` are not decimals (`documentation/ScriptingLanguage.md:70`).
+- **S-M8** — The guide now says each run of `main` or `advance` gets at most 8,192 instructions, counting every helper it calls (`documentation/ScriptingLanguage.md:166`).
+- **S-L1** — The guide now says every error inside the class is reported at once, and that an unknown import or a malformed class header stops the check at that point (`documentation/ScriptingLanguage.md:175`).
+- **A-M4** — `Architecture.md` now says the virtual MIDI port is best effort: messages are stamped with the wall-clock time their block started, not a sample position (`documentation/Architecture.md`, section 2.4).
+- **C4** — A saved state is now validated at the load boundary before `replaceState` runs: `setStateInformation` refuses an unreadable state, a newer schema version, a non-patch, and a node map with an unknown type or duplicated ids, leaving the reason in `loadError` (`Source/Processor/PluginProcessor.cpp:203-254`, `Source/Processor/Document/Graph/GraphState.cpp:567-586`). `replaceState` itself still does not validate, but its only production caller is `PluginDocument::restore` from `applyRestoredState`, which only ever sees a state that passed that boundary.
+- **G-H14** — An unknown node type in a saved patch is now refused at the load boundary (`Source/Processor/Document/Graph/GraphState.cpp:574-578`), so it can no longer reach `kindOf`'s map-to-`Node` fallback. Test: "a state with a node type that does not exist is not loaded" (`Tests/Integration/GraphTests.cpp`).
+- **G-H15** — Two nodes with one id in a saved patch are now refused at the load boundary (`Source/Processor/Document/Graph/GraphState.cpp:580-582`), so `indexNode` can no longer be fed a duplicate from a file. Test: "a state with two nodes sharing an id is not loaded" (`Tests/Integration/GraphTests.cpp`).
+
 ## Daily log
 
 - **2026-11-17 (Day 1, commit `4600d21`):** First review. Five areas reviewed (audio and real-time, script, graph and traversal, UI and docs, build and tests); 130 findings, 7 of them Critical.
 - **2026-11-17 (re-check, commit `cd0ec6a`):** Every finding re-checked against the code and re-cited at `cd0ec6a`. No Critical survives; one High (G-M16) and five Medium findings remain open. 29 findings are withdrawn and 9 are settled, each with the code that answers it. Four of the original fixes would have broken behaviour: C3's validation (refuses every new node), U-H4's drop to C++20 (breaks `std::expected`), A-H2's clamp (changes what preview plays) and U-L4's `PRIVATE` (splits the JUCE settings).
+- **2026-11-18 (Day 2, commit `507ad4c`):** Re-checked every finding against `507ad4c`. 23 Day 1 findings are fixed, all in `fdefb93`, each with a test: the only High (G-M16, pasted pitch offset), the load-boundary validation (C4, G-H14, G-H15, G-M14, G-M20, U-M8), the trial fault (S-H2), the clamps (G-H9, G-L2), the range checks (G-M19), the decimal-overflow diagnostic (S-M6), the dead code (G-M9), and the documentation (U-H4, S-M4, S-M1, S-M9, S-L6, S-L7, S-M8, S-L1, A-M4, plus the base-class half of S-L5). B-M1 is only partly fixed — `SequenceTree_RealtimeTests` still has no MSVC guard. 3 new Low findings: G-L6 (the validator accepts a missing, zero, negative or `INT_MAX` node id), U-L6 (editor commands die at the OrnamentWindow), B-L6 (the patch autosave write is unchecked). 2 items Day 1 had not checked are now confirmed (S-L2, S-L4); S-L10 and the BOM question remain unchecked. No High findings are open; 3 Medium remain (S-H1, G-H6, A-H2).
