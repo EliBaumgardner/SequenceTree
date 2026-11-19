@@ -4,7 +4,7 @@
 #include <ArsNovaUI/Editors/ValueEditor.h>
 
 /*
-    A pane showing a metronome icon with an editor beside it for the tempo multiplier. The editor
+    A control showing a metronome icon with an editor beside it for the tempo multiplier. The editor
     takes a number between RTtraversal::minimumTempoMultiplier and maximumTempoMultiplier and
     shows it with an "x" suffix.
 

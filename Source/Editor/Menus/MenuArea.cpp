@@ -51,7 +51,7 @@ void MenuArea::resized()
     auto menuColumn = bounds.removeFromRight(menuBarWidth);
 
     menuBar->setBounds(menuColumn);
-    topBar.setBounds(bounds.withHeight(barHeight));
+    topBar.setBounds(bounds.withHeight(stripHeight));
     traversalMenu.setBounds(bounds);
     nodeMenu.setBounds(bounds);
 }

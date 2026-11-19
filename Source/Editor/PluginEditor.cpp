@@ -102,7 +102,7 @@ void SequenceTreeAudioProcessorEditor::resized()
     const int menuBarWidth    = juce::roundToInt(barHeight * MenuArea::menuBarWidthRatio);
     const int resizerWidth    = juce::roundToInt(barHeight * MenuArea::resizerWidthRatio);
     const int fullMenuWidth   = menuBarWidth + resizerWidth + ArsNovaUI::Theme::menuContentWidth + panelSpacing * 2;
-    const int barRowHeight    = barHeight + barCanvasGap;
+    const int barRowHeight    = MenuArea::stripHeight + barCanvasGap;
 
     menuWidth = juce::jlimit(minimumMenuWidth, fullMenuWidth, menuWidth);
 
@@ -112,13 +112,13 @@ void SequenceTreeAudioProcessorEditor::resized()
     auto titleArea        = bounds.removeFromTop(barRowHeight).withTrimmedBottom(barCanvasGap);
     auto bottomArea       = bounds.removeFromBottom(barRowHeight).withTrimmedTop(barCanvasGap);
 
-    canvasFrame->canvasArea = bounds - windowArea.getPosition();
+    canvasFrame->canvasArea = bounds;
 
     menuArea   ->setBounds(menuAreaBounds);
     titleBar   ->setBounds(titleArea);
     bottomBar  ->setBounds(bottomArea);
     port       ->setBounds(windowArea);
-    canvasFrame->setBounds(windowArea);
+    canvasFrame->setBounds(workspace.getLocalBounds());
 
     lookAndFeel.unfrostedArea = nodeCanvas->getLocalArea(&workspace, bounds);
 }

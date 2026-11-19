@@ -1,5 +1,4 @@
 #include "PaintToolSettings.h"
-#include <ArsNovaUI/Theme/IconLibrary.h>
 #include <ArsNovaUI/Theme/CustomLookAndFeel.h>
 #include "Editor/Canvas/NodeCanvas.h"
 
@@ -12,58 +11,48 @@ PaintToolSettings::PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree col
     ValueField& valueField = nodeCanvas.valueField;
     const float brushFlow  = juce::jlimit(minBrushFlow, maxBrushFlow, valueField.brushFlow);
 
-    paintTool.icon       = &ArsNovaUI::IconLibrary::get().brush;
-    colourSelector.shape = ArsNovaUI::ColourSelector::Shape::Circle;
+    colourSelector.shape = ArsNovaUI::ColourSelector::Shape::Square;
+
+    colourLabel.setText("Colour", juce::dontSendNotification);
 
     configureValueFields(valueField, brushFlow);
 
-    paintTool.setTooltip("Brush");
     colourSelector.setTooltip("Brush colour");
 
     componentCallBack();
 
-    addAndMakeVisible(paintTool);
+    addAndMakeVisible(colourLabel);
     addAndMakeVisible(colourSelector);
     addAndMakeVisible(sizeField);
     addAndMakeVisible(flowField);
 }
 
-void PaintToolSettings::paint(juce::Graphics& graphics)
-{
-    ArsNovaUI::CustomLookAndFeel::get(*this).drawPane(graphics, getLocalBounds().toFloat());
-}
 
 void PaintToolSettings::resized()
 {
-    const int contentInset = juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio);
+    const int rowHeight = ArsNovaUI::Theme::popupMenuItemHeight;
+    const int textInset = juce::roundToInt(ArsNovaUI::Theme::popupMenuTextInset);
 
-    auto bounds = getLocalBounds().reduced(contentInset);
+    const int rowWidth         = getWidth() - textInset * 2;
+    const int labelWidth       = rowWidth - editorWidth;
+    const int colourLabelWidth = rowWidth - swatchWidth;
 
-    const int width      = bounds.getWidth();
-    const int widthCell  = juce::roundToInt(width * cellWidthRatio);
-    const int cellSide   = juce::jmin(bounds.getHeight(), widthCell);
-    const int cellGap    = juce::roundToInt(width * ArsNovaUI::Theme::contentSpacingRatio);
-    const int labelWidth = juce::roundToInt(width * labelWidthRatio);
+    juce::Rectangle<int> bounds = getLocalBounds().reduced(textInset, 0);
 
-    paintTool.setBounds(bounds.removeFromLeft(cellSide).withSizeKeepingCentre(cellSide, cellSide));
-    bounds.removeFromLeft(cellGap);
+    const juce::Rectangle<int> colourRow       = bounds.removeFromTop(rowHeight);
+    const juce::Rectangle<int> sizeRow         = bounds.removeFromTop(rowHeight);
+    const juce::Rectangle<int> flowRow         = bounds.removeFromTop(rowHeight);
+    const juce::Rectangle<int> colourLabelArea = colourRow.withTrimmedRight(swatchWidth);
+    const juce::Rectangle<int> swatchArea      = colourRow.withTrimmedLeft(colourLabelWidth);
 
-    colourSelector.setBounds(bounds.removeFromLeft(cellSide).withSizeKeepingCentre(cellSide, cellSide));
-    bounds.removeFromLeft(cellGap);
-
-    const int partGapCount = 3;
-    const int editorWidth  = (bounds.getWidth() - labelWidth * 2 - cellGap * partGapCount) / 2;
-    const int fieldWidth   = labelWidth + cellGap + editorWidth;
+    colourLabel.setBounds(colourLabelArea.withSizeKeepingCentre(colourLabelWidth, editorHeight));
+    colourSelector.setBounds(swatchArea.withSizeKeepingCentre(swatchWidth, editorHeight));
 
     sizeField.labelWidth = labelWidth;
     flowField.labelWidth = labelWidth;
-    sizeField.gap        = cellGap;
-    flowField.gap        = cellGap;
 
-    sizeField.setBounds(bounds.removeFromLeft(fieldWidth));
-    bounds.removeFromLeft(cellGap);
-
-    flowField.setBounds(bounds.removeFromLeft(fieldWidth));
+    sizeField.setBounds(sizeRow.withSizeKeepingCentre(rowWidth, editorHeight));
+    flowField.setBounds(flowRow.withSizeKeepingCentre(rowWidth, editorHeight));
 }
 
 void PaintToolSettings::configureValueFields(ValueField &valueField, const float brushFlow) {
@@ -74,11 +63,9 @@ void PaintToolSettings::configureValueFields(ValueField &valueField, const float
     flowFormat->keepsTrailingZeros = true;
     sizeField.editor.wheelResponse = ArsNovaUI::ValueEditor::WheelResponse::StepValue;
     flowField.editor.wheelResponse = ArsNovaUI::ValueEditor::WheelResponse::StepValue;
-    sizeField.editor.backdrop      = ArsNovaUI::ValueEditor::Backdrop::Underline;
-    flowField.editor.backdrop      = ArsNovaUI::ValueEditor::Backdrop::Underline;
 
-    sizeField.editor.setJustification(juce::Justification::centredLeft);
-    flowField.editor.setJustification(juce::Justification::centredLeft);
+    sizeField.editor.setFontHeight(ArsNovaUI::Theme::textHeight);
+    flowField.editor.setFontHeight(ArsNovaUI::Theme::textHeight);
 
     sizeField.editor.setFormat(std::move(sizeFormat));
     flowField.editor.setFormat(std::move(flowFormat));
@@ -86,11 +73,8 @@ void PaintToolSettings::configureValueFields(ValueField &valueField, const float
     sizeField.editor.boundValue = juce::jmap(valueField.brushRadius, minBrushRadius, maxBrushRadius, 0.0f, 1.0f);
     flowField.editor.boundValue = juce::jmap(brushFlow, minBrushFlow, maxBrushFlow, 0.0f, 1.0f);
 
-    sizeField.label.setJustificationType(juce::Justification::centredRight);
-    flowField.label.setJustificationType(juce::Justification::centredRight);
-
-    sizeField.label.setText("SIZE", juce::dontSendNotification);
-    flowField.label.setText("RATE", juce::dontSendNotification);
+    sizeField.label.setText("Size", juce::dontSendNotification);
+    flowField.label.setText("Rate", juce::dontSendNotification);
 }
 
 void PaintToolSettings::setPaintMode(ValueField::PaintLayer layer)
@@ -109,17 +93,6 @@ void PaintToolSettings::setPaintMode(ValueField::PaintLayer layer)
 }
 
 void PaintToolSettings::componentCallBack() {
-    paintTool.onClick = [this]() {
-        if (nodeCanvas.activeTool == NodeCanvas::CanvasTool::Paint) {
-            nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::None);
-            return;
-        }
-
-        nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::Paint);
-
-        setPaintMode(paintLayer);
-    };
-
     colourSelector.onColourPicked = [this](juce::Colour colour) {
         paintLayerColour() = colour;
 

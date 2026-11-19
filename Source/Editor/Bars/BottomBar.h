@@ -21,14 +21,16 @@
 
 /*
     The bar along the bottom of the editor, holding the controls for the canvas tools: the paint
-    settings, a note preview button, a span tool button, an ornament tool button, and two buttons
+    button, a note preview button, a span tool button, an ornament tool button, and two buttons
     that bind an arrow's x and y extent to pitch or duration. It is a Bar drawn as frosted glass
-    over the NodeCanvas.
+    over the NodeCanvas, with the controls in groups divided by hairlines: paint (the paint
+    button), tools (note, ornament and span) and bind (the two bind buttons).
 
     Each tool button toggles NodeCanvas::activeTool, and the bar sets which of them looks selected
-    from NodeCanvas::onActiveToolChanged. Right-clicking the note preview button opens a menu to
-    repeat the preview, which NotePreviewGestures::toggleRepeat sends to the audio thread, and a
-    count field that sets NotePreviewGestures::count by typing a number or scrolling.
+    from NodeCanvas::onActiveToolChanged. Right-clicking the paint button opens PaintToolSettings
+    as a menu holding the brush colour, size and rate. Right-clicking the note preview button opens
+    a menu to repeat the preview, which NotePreviewGestures::toggleRepeat sends to the audio thread,
+    and a count field that sets NotePreviewGestures::count by typing a number or scrolling.
     The ornament button and the two bind buttons are the panes OrnamentPane and BindPane, which
     BottomBar lays out. Right-clicking the ornament button calls OrnamentPane::onWindowRequested,
     which PluginEditor answers by rescanning the OrnamentLibraries and opening the OrnamentWindow;
@@ -58,18 +60,20 @@ public:
 
     void applyDisplayMode(NodeInfo::DisplayMode mode);
 
-    int narrowestWidth() const;
+    int narrowestWidth();
 
     OrnamentPane ornamentPane;
 
 private:
 
-    void showQuaverMenu();
+    ArsNovaUI::Bar::Layout makeLayout();
 
-    static constexpr float captionHeightRatio   = 0.73f;
-    static constexpr float captionKerningFactor = 0.1f;
+    void configureCountField();
+    void showPaintMenu      ();
+    void showQuaverMenu     ();
 
-    static constexpr int paintPanelWidth = 165;
+    static constexpr float toolInsetRatio = 0.05f;
+
     static constexpr int countFieldWidth = 150;
     static constexpr int countLabelWidth = 40;
     static constexpr int countLabelGap   = 6;
@@ -80,11 +84,13 @@ private:
     PaintToolSettings        paintPanel;
     ArsNovaUI::LabeledEditor countField;
 
+    ArsNovaUI::ButtonPane paintPane;
     ArsNovaUI::ButtonPane toolPane;
     ArsNovaUI::ButtonPane quaverPane;
 
     BindPane bindPane;
 
+    ArsNovaUI::IconButton* paintTool  = nullptr;
     ArsNovaUI::IconButton* quaverTool = nullptr;
     ArsNovaUI::IconButton* spanTool   = nullptr;
 };

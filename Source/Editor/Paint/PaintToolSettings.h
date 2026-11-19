@@ -2,23 +2,23 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <ArsNovaUI/Menus/ColourSelector.h>
+#include <ArsNovaUI/Editors/CaptionLabel.h>
 #include <ArsNovaUI/Editors/LabeledEditor.h>
 #include "ValueField.h"
-#include <ArsNovaUI/Buttons/IconButton.h>
 
 /*
-    The control strip for the paint tool: a button that turns paint mode on and off, a colour
-    selector for the brush, and a size field and a rate field for it. It holds one brush colour
-    for each of ValueField's paint layers (pitch, velocity, duration) and shows the colour of the
-    layer that is current.
+    The settings of the paint tool: a colour selector, a size field and a rate field for the brush,
+    each in a labelled row of menuWidth by menuHeight altogether. It holds one brush colour for
+    each of ValueField's paint layers (pitch, velocity, duration) and shows the colour of the layer
+    that is current.
 
-    The paint button toggles NodeCanvas::activeTool between Paint and None. The colour selector
-    sets the colour of the current layer and passes it to NodeCanvas::valueField as brushColour.
-    The two fields each hold a 0 to 1 value that is scaled into valueField's brushRadius or
-    brushFlow. setPaintMode switches the layer and the colour shown with it; BottomBar's
+    The colour selector sets the colour of the current layer and passes it to
+    NodeCanvas::valueField as brushColour. The two fields each hold a 0 to 1 value that is scaled
+    into valueField's brushRadius or brushFlow. setPaintMode switches the layer and the colour
+    shown with it; BottomBar calls it when the paint button turns paint mode on, and its
     applyDisplayMode calls it when the display mode changes to pitch or velocity.
 
-    BottomBar owns it and lays it out as the left end of the bar.
+    BottomBar owns it and shows it as the menu that the paint button's right-click opens.
 */
 
 class NodeCanvas;
@@ -29,7 +29,6 @@ public:
 
     PaintToolSettings(NodeCanvas& nodeCanvas, juce::ValueTree colourPresets, juce::UndoManager& undoManager);
 
-    void paint(juce::Graphics& graphics) override;
     void resized() override;
 
     void configureValueFields(ValueField& valueField, float brushFlow);
@@ -44,8 +43,12 @@ public:
     static constexpr float minBrushRadius = 1.0f;
     static constexpr float maxBrushRadius = 200.0f;
 
-    static constexpr float cellWidthRatio  = 0.09f;
-    static constexpr float labelWidthRatio = 0.144f;
+    static constexpr int rowCount     = 3;
+    static constexpr int menuWidth    = 150;
+    static constexpr int menuHeight   = rowCount * ArsNovaUI::Theme::popupMenuItemHeight;
+    static constexpr int editorWidth  = 57;
+    static constexpr int editorHeight = 13;
+    static constexpr int swatchWidth  = 30;
 
     NodeCanvas& nodeCanvas;
 
@@ -55,7 +58,7 @@ public:
 
     ValueField::PaintLayer paintLayer = ValueField::PaintLayer::Pitch;
 
-    ArsNovaUI::IconButton     paintTool;
+    ArsNovaUI::CaptionLabel   colourLabel;
     ArsNovaUI::ColourSelector colourSelector;
     ArsNovaUI::LabeledEditor  sizeField;
     ArsNovaUI::LabeledEditor  flowField;

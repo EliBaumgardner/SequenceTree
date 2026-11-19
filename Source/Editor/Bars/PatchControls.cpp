@@ -42,8 +42,6 @@ void PatchControls::paint(juce::Graphics& graphics)
 
     const auto separator = resetButton.getBounds().toFloat().reduced(0.0f, separatorInset).withX(separatorX).withWidth(ArsNovaUI::Theme::borderThickness);
 
-    lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
-
     graphics.setColour(lookAndFeel.borderColour);
     graphics.fillRect(separator);
 }

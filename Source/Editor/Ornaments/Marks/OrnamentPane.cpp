@@ -43,7 +43,11 @@ void OrnamentPane::paintGlyph(juce::Graphics& graphics, juce::Rectangle<float> b
 {
     ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
 
-    const juce::Rectangle<float> glyphArea = lookAndFeel.drawButtonTile(graphics, bounds, state);
+    const juce::Rectangle<float> tile = lookAndFeel.drawButtonTile(graphics, bounds, state);
+
+    const float glyphSide = juce::jmin(tile.getWidth(), tile.getHeight()) * ArsNovaUI::Theme::glyphSizeRatio;
+
+    const juce::Rectangle<float> glyphArea = tile.withSizeKeepingCentre(glyphSide, glyphSide);
 
     const float cellSide      = glyphArea.getHeight() / gridCellsPerHeight;
     const float columnsToEdge = std::floor(glyphArea.getWidth() * 0.5f / cellSide);
@@ -86,7 +90,7 @@ void OrnamentPane::paintGlyph(juce::Graphics& graphics, juce::Rectangle<float> b
     }
 
     if (extent.isEmpty()) {
-        lookAndFeel.drawIcon(graphics, glyphArea, ArsNovaUI::IconLibrary::get().wave, state);
+        lookAndFeel.drawIcon(graphics, tile, ArsNovaUI::IconLibrary::get().wave, state);
 
         return;
     }

@@ -161,7 +161,7 @@ private:
     static constexpr int seedWidth             = 682;
     static constexpr int seedHeight            = 500;
     static constexpr int maximumWindowSide     = 8192;
-    static constexpr int barCanvasGap          = 3;
+    static constexpr int barCanvasGap          = ArsNovaUI::Theme::windowGutter;
     static constexpr int horizontalGutterCount = 3;
     static constexpr int verticalGutterCount   = 2;
 

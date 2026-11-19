@@ -27,7 +27,6 @@ void TempoDisplay::paint(juce::Graphics& graphics)
     const int                     contentInset  = juce::roundToInt(getHeight() * ArsNovaUI::Theme::contentInsetRatio);
     const auto                    contentBounds = getLocalBounds().reduced(contentInset);
 
-    lookAndFeel.drawPane(graphics, getLocalBounds().toFloat());
     lookAndFeel.drawIcon(graphics, contentBounds.withWidth(contentBounds.getHeight()).toFloat(), ArsNovaUI::IconLibrary::get().metronome, ArsNovaUI::ButtonState {});
 }
 

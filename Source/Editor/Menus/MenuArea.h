@@ -39,6 +39,7 @@ public:
     int narrowestHeight() const;
 
     static constexpr int menuIconCount = 3;
+    static constexpr int stripHeight   = 20;
 
     static constexpr float resizerWidthRatio = 0.167f;
     static constexpr float menuBarWidthRatio = 1.0f;

@@ -7,7 +7,7 @@
 #include "Titlebar.h"
 
 Titlebar::Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas, NodeController& nodeController, GraphDocument& graphDocument)
-    : ArsNovaUI::Bar (nodeCanvas, Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
+    : ArsNovaUI::Bar (nodeCanvas, Orientation::Horizontal, 0.0f),
       processor      (processor),
       nodeCanvas     (nodeCanvas),
       nodeController (nodeController),
@@ -17,6 +17,11 @@ Titlebar::Titlebar(SequenceTreeAudioProcessor& processor, NodeCanvas& nodeCanvas
       tempoDisplay   (undoManager),
       patchControls  (processor, processor.document.patch, processor.document.patchFolder)
 {
+    transportPane.look   = ArsNovaUI::ButtonPane::Look::Flat;
+    buttonPane.look      = ArsNovaUI::ButtonPane::Look::Flat;
+    undoRedoPane.look    = ArsNovaUI::ButtonPane::Look::Flat;
+    displaySelector.look = ArsNovaUI::ItemSelector::Look::Flat;
+
     addAndMakeVisible(transportPane);
     addAndMakeVisible(tempoDisplay);
     addAndMakeVisible(buttonPane);
@@ -39,36 +44,14 @@ Titlebar::~Titlebar()
 
 void Titlebar::resized()
 {
-    auto bounds = getContentBounds();
+    const float textHeight = ArsNovaUI::Theme::textHeight;
 
-    int transportPaneWidth = transportPane.idealWidth(bounds.getHeight());
-    int undoRedoPaneWidth  = undoRedoPane.idealWidth(bounds.getHeight());
-    int patchPaneWidth     = patchControls.idealWidth(bounds.getHeight());
-    int modePaneWidth      = buttonPane.idealWidth(bounds.getHeight());
-    int spacing            = contentSpacing;
-
-    float textHeight = ArsNovaUI::Theme::textHeight;
+    const ArsNovaUI::Bar::Layout layout = makeLayout();
 
     tempoDisplay.editor.setFontHeight(textHeight);
     displaySelector.labelEditor.setFontHeight(textHeight);
 
-    transportPane.setBounds(bounds.removeFromLeft(transportPaneWidth));
-    bounds.removeFromLeft(spacing);
-
-    tempoDisplay.setBounds(bounds.removeFromLeft(tempoDisplayWidth));
-    bounds.removeFromLeft(spacing);
-
-    undoRedoPane.setBounds(bounds.removeFromLeft(undoRedoPaneWidth));
-    bounds.removeFromLeft(spacing);
-
-    patchControls.setBounds(bounds.removeFromLeft(patchPaneWidth));
-    bounds.removeFromLeft(spacing);
-
-
-    displaySelector.setBounds(bounds.removeFromRight(displaySelectorWidth));
-    bounds.removeFromRight(spacing);
-
-    buttonPane.setBounds(bounds.removeFromRight(modePaneWidth));
+    placeLayout(layout);
 }
 
 void Titlebar::applyPlaybackState(bool shouldPlay)
@@ -82,15 +65,24 @@ void Titlebar::applyPlaybackState(bool shouldPlay)
     processor.rtGraphBuilder.handleUpdateNowIfNeeded();
 }
 
-int Titlebar::narrowestWidth() const
+int Titlebar::narrowestWidth()
 {
-    const auto bounds = getContentBounds();
+    const ArsNovaUI::Bar::Layout layout = makeLayout();
 
-    const int paneGapCount = 5;
-    const int height       = bounds.getHeight();
+    return layoutWidth(layout);
+}
 
-    return getWidth() - bounds.getWidth() + transportPane.idealWidth(height) + tempoDisplayWidth + undoRedoPane.idealWidth(height) + patchControls.idealWidth(height)
-           + displaySelectorWidth + buttonPane.idealWidth(height) + contentSpacing * paneGapCount;
+ArsNovaUI::Bar::Layout Titlebar::makeLayout()
+{
+    const int height = getContentBounds().getHeight();
+
+    const ArsNovaUI::Bar::Group transportGroup { { &transportPane, transportPane.idealWidth(height) }, { &tempoDisplay, tempoDisplayWidth } };
+    const ArsNovaUI::Bar::Group editGroup      { { &undoRedoPane, undoRedoPane.idealWidth(height) } };
+    const ArsNovaUI::Bar::Group patchGroup     { { &patchControls, patchControls.idealWidth(height) } };
+    const ArsNovaUI::Bar::Group createGroup    { { &buttonPane, buttonPane.idealWidth(height) } };
+    const ArsNovaUI::Bar::Group viewGroup      { { &displaySelector, displaySelectorWidth } };
+
+    return { { transportGroup, editGroup, patchGroup }, { createGroup, viewGroup } };
 }
 
 void Titlebar::configureTransportPane()

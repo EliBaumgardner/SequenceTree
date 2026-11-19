@@ -14,7 +14,9 @@
     are: play, reset and (in a plugin host) host sync buttons; the tempo multiplier; undo and redo;
     patch controls; three buttons that choose whether dragging creates a node, a modulator or a
     traversal flag; and a selector for which property nodes display. It is a Bar drawn as frosted
-    glass over the NodeCanvas.
+    glass over the NodeCanvas, with the controls in groups divided by hairlines: transport (play,
+    reset, host sync, tempo), edit (undo and redo), patch, creation (the three buttons) and view
+    (the display selector).
 
     The play button calls applyPlaybackState, which stores the processor's play state, has
     NodeCanvas::setPlaybackActive equip the roots and start or pause the arrows' progress, and
@@ -44,11 +46,13 @@ public:
 
     void applyPlaybackState(bool shouldPlay);
 
-    int narrowestWidth() const;
+    int narrowestWidth();
 
     std::function<void(NodeInfo::DisplayMode)> onDisplayModeChanged;
 
 private:
+
+    ArsNovaUI::Bar::Layout makeLayout();
 
     void configureTransportPane  ();
     void configureModePane       ();
@@ -60,7 +64,7 @@ private:
 
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
-    static constexpr int tempoDisplayWidth    = 50;
+    static constexpr int tempoDisplayWidth    = 40;
     static constexpr int displaySelectorWidth = 70;
 
     SequenceTreeAudioProcessor& processor;

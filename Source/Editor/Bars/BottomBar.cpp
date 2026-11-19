@@ -11,7 +11,7 @@
 #include "Processor/Document/ValueTreeIdentifiers.h"
 
 BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NotePreviewGestures& notePreviewGestures, juce::ValueTree colourPresets, OrnamentLibraries& ornamentLibraries)
-    : ArsNovaUI::Bar     (nodeCanvas, Orientation::Horizontal, ArsNovaUI::Theme::contentInsetRatio),
+    : ArsNovaUI::Bar     (nodeCanvas, Orientation::Horizontal, 0.0f),
       ornamentPane       (nodeCanvas, ornamentLibraries),
       nodeCanvas         (nodeCanvas),
       notePreviewGestures(notePreviewGestures),
@@ -19,7 +19,18 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NoteP
       countField         (graphDocument.undoManager),
       bindPane           (graphDocument.canvasSettings)
 {
-    auto countFormat = std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit);
+    paintTool = &paintPane.addButton(ArsNovaUI::IconLibrary::get().brush, "Brush",
+        [this]() {
+            if (this->nodeCanvas.activeTool == NodeCanvas::CanvasTool::Paint) {
+                this->nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::None);
+
+                return;
+            }
+
+            this->nodeCanvas.setActiveTool(NodeCanvas::CanvasTool::Paint);
+
+            paintPanel.setPaintMode(paintPanel.paintLayer);
+        });
 
     quaverTool = &quaverPane.addButton(ArsNovaUI::IconLibrary::get().quaver, "Note",
         [this]() {
@@ -42,34 +53,37 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NoteP
         });
 
     nodeCanvas.onActiveToolChanged = [this](NodeCanvas::CanvasTool tool) {
-        paintPanel.paintTool.setSelected(tool == NodeCanvas::CanvasTool::Paint);
+        paintTool->setSelected(tool == NodeCanvas::CanvasTool::Paint);
         spanTool->setSelected(tool == NodeCanvas::CanvasTool::Span);
         quaverTool->setSelected(tool == NodeCanvas::CanvasTool::NotePreview);
         ornamentPane.button->setSelected(tool == NodeCanvas::CanvasTool::Ornament);
     };
 
-    paintPanel.paintTool.state.look = ArsNovaUI::ButtonState::Look::Raised;
-    quaverTool->state.look          = ArsNovaUI::ButtonState::Look::Raised;
-    spanTool->state.look            = ArsNovaUI::ButtonState::Look::Raised;
+    paintTool->state.look  = ArsNovaUI::ButtonState::Look::Raised;
+    quaverTool->state.look = ArsNovaUI::ButtonState::Look::Raised;
+    spanTool->state.look   = ArsNovaUI::ButtonState::Look::Raised;
+
+    paintTool->onRightClick = [this]() {
+        showPaintMenu();
+    };
 
     quaverTool->onRightClick = [this]() {
         showQuaverMenu();
     };
 
-    countFormat->suffix   = "x";
-    countField.labelWidth = countLabelWidth;
-    countField.gap        = countLabelGap;
+    configureCountField();
 
-    countField.label.setText("count", juce::dontSendNotification);
+    paintPane.look          = ArsNovaUI::ButtonPane::Look::Flat;
+    toolPane.look           = ArsNovaUI::ButtonPane::Look::Flat;
+    quaverPane.look         = ArsNovaUI::ButtonPane::Look::Flat;
+    bindPane.look           = ArsNovaUI::ButtonPane::Look::Flat;
+    ornamentPane.look       = ArsNovaUI::ButtonPane::Look::Flat;
+    paintPane.insetRatio    = toolInsetRatio;
+    toolPane.insetRatio     = toolInsetRatio;
+    quaverPane.insetRatio   = toolInsetRatio;
+    ornamentPane.insetRatio = toolInsetRatio;
 
-    countField.editor.backdrop      = ArsNovaUI::ValueEditor::Backdrop::Field;
-    countField.editor.wheelResponse = ArsNovaUI::ValueEditor::WheelResponse::StepValue;
-    countField.editor.setFormat(std::move(countFormat));
-    countField.editor.setTooltip("Preview count");
-
-    countField.editor.boundValue.referTo(notePreviewGestures.count);
-
-    addAndMakeVisible(paintPanel);
+    addAndMakeVisible(paintPane);
     addAndMakeVisible(toolPane);
     addAndMakeVisible(quaverPane);
     addAndMakeVisible(bindPane);
@@ -78,43 +92,9 @@ BottomBar::BottomBar(NodeCanvas& nodeCanvas, GraphDocument& graphDocument, NoteP
 
 void BottomBar::resized()
 {
-    auto bounds = getContentBounds();
+    const ArsNovaUI::Bar::Layout layout = makeLayout();
 
-    const int height        = bounds.getHeight();
-    const int spacing       = contentSpacing;
-    const int toolPaneWidth = toolPane.idealWidth(height);
-    const int quaverWidth   = quaverPane.idealWidth(height);
-    const int bindPaneWidth = bindPane.idealWidth(height);
-    const int ornamentWidth = ornamentPane.idealWidth(height);
-
-    const float textHeight    = ArsNovaUI::Theme::textHeight;
-    const float captionHeight = textHeight * captionHeightRatio;
-
-    ArsNovaUI::CustomLookAndFeel& lookAndFeel = ArsNovaUI::CustomLookAndFeel::get(*this);
-
-    const juce::Font captionFont = lookAndFeel.font(ArsNovaUI::Theme::FontStyle::SemiBold, captionHeight).withExtraKerningFactor(captionKerningFactor);
-
-    paintPanel.sizeField.label.setFont(captionFont);
-    paintPanel.flowField.label.setFont(captionFont);
-
-    paintPanel.sizeField.label.setColour(juce::Label::textColourId, lookAndFeel.dimTextColour);
-    paintPanel.flowField.label.setColour(juce::Label::textColourId, lookAndFeel.dimTextColour);
-
-    paintPanel.sizeField.editor.setFontHeight(textHeight);
-    paintPanel.flowField.editor.setFontHeight(textHeight);
-
-    paintPanel.setBounds(bounds.removeFromLeft(paintPanelWidth));
-
-    bindPane.setBounds(bounds.removeFromRight(bindPaneWidth));
-    bounds.removeFromRight(spacing);
-
-    toolPane.setBounds(bounds.removeFromRight(toolPaneWidth));
-    bounds.removeFromRight(spacing);
-
-    ornamentPane.setBounds(bounds.removeFromRight(ornamentWidth));
-    bounds.removeFromRight(spacing);
-
-    quaverPane.setBounds(bounds.removeFromRight(quaverWidth));
+    placeLayout(layout);
 }
 
 void BottomBar::applyDisplayMode(NodeInfo::DisplayMode mode)
@@ -132,15 +112,54 @@ void BottomBar::applyDisplayMode(NodeInfo::DisplayMode mode)
     }
 }
 
-int BottomBar::narrowestWidth() const
+int BottomBar::narrowestWidth()
 {
-    const auto bounds = getContentBounds();
+    const ArsNovaUI::Bar::Layout layout = makeLayout();
 
-    const int paneGapCount = 4;
-    const int height       = bounds.getHeight();
+    return layoutWidth(layout);
+}
 
-    return getWidth() - bounds.getWidth() + paintPanelWidth + bindPane.idealWidth(height) + toolPane.idealWidth(height) + ornamentPane.idealWidth(height)
-           + quaverPane.idealWidth(height) + contentSpacing * paneGapCount;
+ArsNovaUI::Bar::Layout BottomBar::makeLayout()
+{
+    const int height        = getContentBounds().getHeight();
+    const int paintWidth    = paintPane.idealWidth(height);
+    const int quaverWidth   = quaverPane.idealWidth(height);
+    const int ornamentWidth = ornamentPane.idealWidth(height);
+    const int toolWidth     = toolPane.idealWidth(height);
+    const int bindWidth     = bindPane.idealWidth(height);
+
+    const ArsNovaUI::Bar::Group paintGroup { { &paintPane, paintWidth } };
+    const ArsNovaUI::Bar::Group toolGroup  { { &quaverPane, quaverWidth, unrelatedItemSpace }, { &ornamentPane, ornamentWidth, unrelatedItemSpace }, { &toolPane, toolWidth } };
+    const ArsNovaUI::Bar::Group bindGroup  { { &bindPane, bindWidth } };
+
+    return { { paintGroup }, { toolGroup, bindGroup } };
+}
+
+void BottomBar::configureCountField()
+{
+    auto countFormat = std::make_unique<ArsNovaUI::NumberFormat>(NodeInfo::minimumCountLimit, NodeInfo::maximumCountLimit);
+
+    countFormat->suffix   = "x";
+    countField.labelWidth = countLabelWidth;
+    countField.gap        = countLabelGap;
+
+    countField.label.setText("count", juce::dontSendNotification);
+
+    countField.editor.backdrop      = ArsNovaUI::ValueEditor::Backdrop::Field;
+    countField.editor.wheelResponse = ArsNovaUI::ValueEditor::WheelResponse::StepValue;
+    countField.editor.setFormat(std::move(countFormat));
+    countField.editor.setTooltip("Preview count");
+
+    countField.editor.boundValue.referTo(notePreviewGestures.count);
+}
+
+void BottomBar::showPaintMenu()
+{
+    ArsNovaUI::ContextMenu menu;
+
+    menu.addComponent(paintPanel, PaintToolSettings::menuWidth, PaintToolSettings::menuHeight);
+
+    menu.show(*paintTool);
 }
 
 void BottomBar::showQuaverMenu()

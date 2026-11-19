@@ -26,3 +26,7 @@ scripts/
 GEMINI.md
 CLAUDE.md
 CLAUDE.local.md
+
+# Figma mockup tooling and its npm dependencies
+design/figma/
+node_modules/
