@@ -20,6 +20,7 @@ void BindPane::configureAxis(BindAxis& axis, const juce::String& text)
 {
     axis.button               = &addButton(text + " Binding", [this, &axis]() { toggleAxis(axis); });
     axis.button->onRightClick = [this, &axis]() { showAxisMenu(axis); };
+    axis.button->state.look   = ArsNovaUI::ButtonState::Look::Raised;
     axis.button->setText(text);
 
     axis.multiplierSlider.range  = { minimumBindMultiplier, maximumBindMultiplier, bindMultiplierInterval };
